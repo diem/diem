@@ -47,8 +47,13 @@ impl<R: AsyncRead + Send + Unpin> ReadRecordBytes for R {
             return Ok(None);
         }
 
-        // read record
+        // empty record
         let record_size = u32::from_be_bytes(size_buf.as_ref().try_into()?) as usize;
+        if record_size == 0 {
+            return Ok(Some(Bytes::new()));
+        }
+
+        // read record
         let mut record_buf = BytesMut::with_capacity(record_size);
         self.read_full_buf_or_none(&mut record_buf).await?;
         if record_buf.is_empty() {
@@ -56,5 +61,49 @@ impl<R: AsyncRead + Send + Unpin> ReadRecordBytes for R {
         }
 
         Ok(Some(record_buf.freeze()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::read_record_bytes::ReadRecordBytes;
+    use tokio::runtime::Runtime;
+
+    #[test]
+    fn test_read_record_bytes() {
+        Runtime::new().unwrap().block_on(async {
+            let data = b"abc";
+            let size = (data.len() as u32).to_be_bytes();
+
+            let mut good_record = size.to_vec();
+            good_record.extend_from_slice(data);
+
+            assert_eq!(
+                good_record
+                    .as_slice()
+                    .read_record_bytes()
+                    .await
+                    .unwrap()
+                    .unwrap(),
+                &data[..],
+            );
+
+            let mut eof: &[u8] = &[];
+            assert!(eof.read_record_bytes().await.unwrap().is_none());
+
+            let mut empty = &0u32.to_be_bytes()[..];
+            assert_eq!(empty.read_record_bytes().await.unwrap().unwrap(), &[][..]);
+
+            let mut data_missing = &1u32.to_be_bytes()[..];
+            assert!(data_missing.read_record_bytes().await.is_err());
+
+            let mut bad_len = 10u32.to_be_bytes().to_vec();
+            bad_len.pop();
+            assert!(bad_len.as_slice().read_record_bytes().await.is_err());
+
+            let mut bad_data = 10u32.to_be_bytes().to_vec();
+            bad_data.push(0u8);
+            assert!(bad_data.as_slice().read_record_bytes().await.is_err());
+        })
     }
 }
