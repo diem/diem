@@ -12,7 +12,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: request review
-        uses: ./.github/actions/hyperjump-request-review
+        uses: libra/actions/hyperjump-request-review@a9c5709
         with:
           github-token: ${{ secrets.HYPERJUMP_TOKEN }}
           number: ${{ github.event.client_payload.number }}

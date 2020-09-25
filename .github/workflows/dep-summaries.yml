@@ -30,7 +30,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: fetch base ref
         id: fetch-base-ref
-        uses: ./.github/actions/pr-base-ref
+        uses: libra/actions/pr-base-ref@a9c5709
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -110,14 +110,9 @@ jobs:
     if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' }}
     needs: calc-summaries
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
       - name: annotate PR with LSR diff
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff }}
-        uses: ./.github/actions/comment
+        uses: libra/actions/comment@a9c5709
         with:
           comment: |
             **LSR dependency change summary**:
@@ -128,7 +123,7 @@ jobs:
           delete-older: true
       - name: annotate PR with LEC diff
         if: ${{ needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: ./.github/actions/comment
+        uses: libra/actions/comment@a9c5709
         with:
           comment: |
             **LEC dependency change summary**:
@@ -139,7 +134,7 @@ jobs:
           delete-older: true
       - name: annotate PR with release diff
         if: ${{ needs.calc-summaries.outputs.release-summary-diff }}
-        uses: ./.github/actions/comment
+        uses: libra/actions/comment@a9c5709
         with:
           comment: |
             **release binaries dependency change summary**:
@@ -151,7 +146,7 @@ jobs:
 
       - name: label PR if TCB changed
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: ./.github/actions/labels
+        uses: libra/actions/labels@a9c5709
         with:
           add: tcb-deps-changed
       - name: label PR if tracked deps changed
@@ -162,17 +157,17 @@ jobs:
 
       - name: unlabel PR if TCB changed
         if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: ./.github/actions/labels
+        uses: libra/actions/labels@a9c5709
         with:
           remove: tcb-deps-changed
       - name: unlabel PR if tracked deps changed
         if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff && !needs.calc-summaries.outputs.release-summary-diff }}
-        uses: ./.github/actions/labels
+        uses: libra/actions/labels@a9c5709
         with:
           remove: deps-changed
 
       - name: request dep-audit review if TCB deps changed
+        uses: libra/actions/request-review@a9c5709
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: ./.github/actions/request-review
         with:
           users: ${{ steps.dep-auditors.outputs.list }}
