@@ -40,7 +40,7 @@ public class StdlibDemo {
 
         @Unsigned Long amount = Long.valueOf(1234567);
         Script script =
-            Helpers.encode_peer_to_peer_with_metadata_script(token, payee, amount, new Bytes(new byte[]{}), new Bytes(new byte[]{}));
+            Helpers.encode_peer_to_peer_with_metadata_script(token, payee, amount, Bytes.empty(), Bytes.empty());
 
         ScriptCall.PeerToPeerWithMetadata call = (ScriptCall.PeerToPeerWithMetadata)Helpers.decode_script(script);
         assert(call.amount.equals(amount));
