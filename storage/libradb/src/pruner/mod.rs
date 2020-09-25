@@ -188,14 +188,17 @@ impl Worker {
 
                     // Try to purge the log.
                     if let Err(e) = self.maybe_purge_index() {
-                        error!(
-                            "Failed purging state state node index, ignored. Err: {}",
-                            error = e
+                        warn!(
+                            error = ?e,
+                            "Failed purging state node index, ignored.",
                         );
                     }
                 }
                 Err(e) => {
-                    error!("Error pruning stale state nodes. {:?}", error = e);
+                    error!(
+                        error = ?e,
+                        "Error pruning stale state nodes.",
+                    );
                     // On error, stop retrying vigorously by making next recv() blocking.
                     self.blocking_recv = true;
                 }

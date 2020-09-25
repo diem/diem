@@ -80,7 +80,10 @@ impl StorageService {
             NetworkServer::new("storage", config.storage.address, config.storage.timeout_ms);
         thread::spawn(move || loop {
             if let Err(e) = self.process_one_message(&mut network_server) {
-                warn!("Failed to process message: {}", e);
+                warn!(
+                    error = ?e,
+                    "Failed to process message.",
+                );
             }
         })
     }

@@ -156,9 +156,9 @@ impl LibraDB {
         };
 
         info!(
-            "Opened LibraDB at {:?} in {} ms",
-            path,
-            instant.elapsed().as_millis()
+            path = path,
+            time_ms = %instant.elapsed().as_millis(),
+            "Opened LibraDB.",
         );
 
         Ok(Self::new_with_db(db, prune_window))
@@ -464,8 +464,8 @@ impl LibraDB {
                 }
             }
             Err(err) => warn!(
-                "Failed to get approximate size of column families: {}.",
-                err
+                error = ?err,
+                "Failed to get approximate size of column families.",
             ),
         }
 

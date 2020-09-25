@@ -43,8 +43,8 @@ impl SystemStore {
                 counters
             } else {
                 warn!(
-                    "Base version ({}) ledger counters not found. Assuming zeros.",
-                    base_version
+                    base_version = base_version,
+                    "Base version ledger counters not found. Assuming zeros.",
                 );
                 LedgerCounters::new()
             }

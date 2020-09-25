@@ -45,7 +45,11 @@ impl StorageClient {
         let input_message = lcs::to_bytes(&input)?;
         let result = loop {
             match self.process_one_message(&input_message) {
-                Err(err) => warn!("Failed to communicate with storage service: {}", err),
+                Err(err) => warn!(
+                    error = ?err,
+                    request = ?input,
+                    "Failed to communicate with storage service.",
+                ),
                 Ok(value) => break value,
             }
         };
