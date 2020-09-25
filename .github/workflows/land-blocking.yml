@@ -175,10 +175,10 @@ jobs:
             echo "report.json start"
             cat report.json
             echo "report.json end"
-            msg_text="$msg_text Report:\n$(cat report.json)"
+            msg_text="$msg_text Report: $(cat report.json | tr '\n' ' ')"
           else
             echo "report.json is empty or not found."
-            msg_text="$msg_text Report:\nEmpty"
+            msg_text="$msg_text Report: Empty"
             ret=1
           fi
           if [ $ret -ne 0 ]; then
