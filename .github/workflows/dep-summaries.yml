@@ -11,36 +11,36 @@ on:
       - edited
 
 jobs:
-  annotate-dep-summaries:
+  calc-summaries:
     runs-on: ubuntu-latest
-    name: Annotate PRs with dependency summary changes
+    name: Calculate dependency summary changes
+    if: ${{ github.actor != 'bors-libra' }}
+    outputs:
+      lsr-summary-diff: ${{ steps.verify-lsr.diff }}
+      lec-summary-diff: ${{ steps.verify-lec.diff }}
+      release-summary-diff: ${{ steps.verify-release.diff }}
     steps:
       - name: checkout
-        if: ${{ github.actor != 'bors-libra' }}
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: fetch base ref
         id: fetch-base-ref
-        if: ${{ github.actor != 'bors-libra' }}
         uses: ./.github/actions/pr-base-ref
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: checkout base ref
-        if: ${{ github.actor != 'bors-libra' }}
         uses: actions/checkout@v2
         with:
           ref: ${{ steps.fetch-base-ref.outputs.ref }}
           path: libra-base
 
       - name: generate new summaries
-        if: ${{ github.actor != 'bors-libra' }}
         run: |
           set +e
           cargo x generate-summaries
 
       - name: generate base summaries
-        if: ${{ github.actor != 'bors-libra' }}
         run: |
           set +e
           cd libra-base
@@ -48,7 +48,6 @@ jobs:
 
       - name: diff LSR summary
         id: verify-lsr
-        if: ${{ github.actor != 'bors-libra' }}
         run: |
           output="$(cargo x diff-summary libra-base/target/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
           echo "${output}"
@@ -58,7 +57,6 @@ jobs:
           echo "::set-output name=diff::${output}"
       - name: diff LEC summary
         id: verify-lec
-        if: ${{ github.actor != 'bors-libra' }}
         run: |
           output="$(cargo x diff-summary libra-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
           echo "${output}"
@@ -68,7 +66,6 @@ jobs:
           echo "::set-output name=diff::${output}"
       - name: diff release summary
         id: verify-release
-        if: ${{ github.actor != 'bors-libra' }}
         run: |
           output="$(cargo x diff-summary libra-base/target/summaries/summary-release.toml target/summaries/summary-release.toml)"
           echo "${output}"
@@ -77,8 +74,32 @@ jobs:
           output="${output//$'\r'/'%0D'}"
           echo "::set-output name=diff::${output}"
 
+      - name: read dep-auditors list
+        id: dep-auditors
+        if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
+        run: |
+          output=$(cat ./.github/dep-auditors.json | jq -r 'join(",")')
+          echo "::set-output name=list::${output}"
+      - name: require dep-audit review if TCB deps changed
+        if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
+        uses: ./.github/actions/require-review
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          users: ${{ steps.dep-auditors.outputs.list }}
+
+  annotate-pr:
+    runs-on: ubuntu-latest
+    name: Annotate PR with when summaries change
+    if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' }}
+    needs: calc-summaries
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
       - name: annotate PR with LSR diff
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && steps.verify-lsr.outputs.diff }}
+        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff }}
         uses: ./.github/actions/comment
         with:
           comment: |
@@ -89,7 +110,7 @@ jobs:
           tag: lsr-summary
           delete-older: true
       - name: annotate PR with LEC diff
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && steps.verify-lec.outputs.diff }}
+        if: ${{ needs.calc-summaries.outputs.lec-summary-diff }}
         uses: ./.github/actions/comment
         with:
           comment: |
@@ -100,7 +121,7 @@ jobs:
           tag: lec-summary
           delete-older: true
       - name: annotate PR with release diff
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && steps.verify-release.outputs.diff }}
+        if: ${{ needs.calc-summaries.outputs.release-summary-diff }}
         uses: ./.github/actions/comment
         with:
           comment: |
@@ -112,43 +133,29 @@ jobs:
           delete-older: true
 
       - name: label PR if TCB changed
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && (steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff) }}
+        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
         uses: ./.github/actions/labels
         with:
           add: tcb-deps-changed
       - name: label PR if tracked deps changed
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && (steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff || steps.verify-release.outputs.diff) }}
+        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff || needs.calc-summaries.outputs.release-summary-diff }}
         uses: ./.github/actions/labels
         with:
           add: deps-changed
 
       - name: unlabel PR if TCB changed
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && (!steps.verify-lsr.outputs.diff && !steps.verify-lec.outputs.diff) }}
+        if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff }}
         uses: ./.github/actions/labels
         with:
           remove: tcb-deps-changed
       - name: unlabel PR if tracked deps changed
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && (!steps.verify-lsr.outputs.diff && !steps.verify-lec.outputs.diff && !steps.verify-release.outputs.diff) }}
+        if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff && !needs.calc-summaries.outputs.release-summary-diff }}
         uses: ./.github/actions/labels
         with:
           remove: deps-changed
 
-      - name: read dep-auditors list
-        id: dep-auditors
-        if: ${{ github.actor != 'bors-libra' && (steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff) }}
-        run: |
-          output=$(cat ./.github/dep-auditors.json | jq -r 'join(",")')
-          echo "::set-output name=list::${output}"
-
       - name: request dep-audit review if TCB deps changed
-        if: ${{ github.actor != 'bors-libra' && github.event_name == 'pull_request' && (steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff) }}
+        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
         uses: ./.github/actions/request-review
         with:
-          users: ${{ steps.dep-auditors.outputs.list }}
-
-      - name: require dep-audit review if TCB deps changed
-        if: ${{ github.actor != 'bors-libra' && (steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff) }}
-        uses: ./.github/actions/require-review
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           users: ${{ steps.dep-auditors.outputs.list }}
