@@ -49,4 +49,33 @@ use 0x1::LibraAccount;
 fun cancel_burn<Token>(account: &signer, preburn_address: address) {
     LibraAccount::cancel_burn<Token>(account, preburn_address)
 }
+
+spec fun cancel_burn {
+    use 0x1::CoreAddresses;
+    use 0x1::Errors;
+    use 0x1::Libra;
+
+    aborts_with [check]
+        Errors::REQUIRES_CAPABILITY,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_ARGUMENT,
+        Errors::LIMIT_EXCEEDED,
+        Errors::INVALID_STATE;
+
+    include LibraAccount::CancelBurnAbortsIf<Token>;
+
+    let preburn_value_at_addr = global<Libra::Preburn<Token>>(preburn_address).to_burn.value;
+    let total_preburn_value =
+        global<Libra::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value;
+    let balance_at_addr = LibraAccount::balance<Token>(preburn_address);
+
+    /// The value stored at `Libra::Preburn` under `preburn_address` should become zero.
+    ensures preburn_value_at_addr == 0;
+
+    /// The total value of preburn for `Token` should decrease by the preburned amount.
+    ensures total_preburn_value == old(total_preburn_value) - old(preburn_value_at_addr);
+
+    /// The balance of `Token` at `preburn_address` should increase by the preburned amount.
+    ensures balance_at_addr == old(balance_at_addr) + old(preburn_value_at_addr);
+}
 }

@@ -99,3 +99,49 @@ being <code>preburn_address</code>.
 
 
 </details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>aborts_with</b> [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CancelBurnAbortsIf">LibraAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
+<a name="cancel_burn_preburn_value_at_addr$1"></a>
+<b>let</b> preburn_value_at_addr = <b>global</b>&lt;<a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;&gt;(preburn_address).to_burn.value;
+<a name="cancel_burn_total_preburn_value$2"></a>
+<b>let</b> total_preburn_value =
+    <b>global</b>&lt;<a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value;
+<a name="cancel_burn_balance_at_addr$3"></a>
+<b>let</b> balance_at_addr = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Token&gt;(preburn_address);
+</code></pre>
+
+
+The value stored at <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a></code> under <code>preburn_address</code> should become zero.
+
+
+<pre><code><b>ensures</b> preburn_value_at_addr == 0;
+</code></pre>
+
+
+The total value of preburn for <code>Token</code> should decrease by the preburned amount.
+
+
+<pre><code><b>ensures</b> total_preburn_value == <b>old</b>(total_preburn_value) - <b>old</b>(preburn_value_at_addr);
+</code></pre>
+
+
+The balance of <code>Token</code> at <code>preburn_address</code> should increase by the preburned amount.
+
+
+<pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + <b>old</b>(preburn_value_at_addr);
+</code></pre>
+
+
+
+</details>

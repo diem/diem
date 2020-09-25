@@ -132,8 +132,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>aborts_with</b> [check]
+<pre><code><b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,

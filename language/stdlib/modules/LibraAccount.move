@@ -479,10 +479,9 @@ module LibraAccount {
         include Libra::AbortsIfNoCurrency<Token>;
     }
     spec schema DepositEnsures<Token> {
-        payer: address;
         payee: address;
         amount: u64;
-        ensures global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
+        ensures balance<Token>(payee) == old(balance<Token>(payee)) + amount;
     }
 
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
@@ -542,6 +541,31 @@ module LibraAccount {
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
+    }
+
+    spec fun cancel_burn {
+        include CancelBurnAbortsIf<Token>;
+        include Libra::CancelBurnWithCapEnsures<Token>;
+        let preburn_value_at_addr = global<Libra::Preburn<Token>>(preburn_address).to_burn.value;
+        let balance_at_addr = balance<Token>(preburn_address);
+        ensures balance_at_addr == old(balance_at_addr) + old(preburn_value_at_addr);
+    }
+
+    spec schema CancelBurnAbortsIf<Token> {
+        account: signer;
+        preburn_address: address;
+        let amount = global<Libra::Preburn<Token>>(preburn_address).to_burn.value;
+        aborts_if !exists<Libra::BurnCapability<Token>>(Signer::spec_address_of(account))
+            with Errors::REQUIRES_CAPABILITY;
+        include Libra::CancelBurnWithCapAbortsIf<Token>;
+        include DepositAbortsIf<Token>{
+            payer: preburn_address,
+            payee: preburn_address,
+            amount: amount,
+            metadata: x"",
+            metadata_signature: x""
+        };
+        aborts_if balance<Token>(preburn_address) + amount > max_u64() with Errors::LIMIT_EXCEEDED;
     }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -998,6 +1022,10 @@ module LibraAccount {
         );
         AccountFreezing::create(&new_account);
 
+        assert(
+            exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::not_published(EACCOUNT_OPERATIONS_CAPABILITY)
+        );
         Event::emit_event(
             &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).creation_events,
             CreateAccountEvent { created: new_account_addr, role_id: Roles::get_role_id(new_account_addr) },
@@ -1016,7 +1044,8 @@ module LibraAccount {
         addr: address;
         auth_key_prefix: vector<u8>;
         aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
-        aborts_if !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        aborts_if !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+            with Errors::NOT_PUBLISHED;
         aborts_if exists_at(addr) with Errors::ALREADY_PUBLISHED;
         aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
             with Errors::INVALID_ARGUMENT;

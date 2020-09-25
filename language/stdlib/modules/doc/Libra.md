@@ -1002,16 +1002,12 @@ outstanding in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code>
 <summary>Specification</summary>
 
 
-
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
 Must abort if the account does not have the BurnCapability [B12].
 
 
 <pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
-<b>aborts_with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>, <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>include</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapAbortsIf">CancelBurnWithCapAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapEnsures">CancelBurnWithCapEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
 
@@ -1075,7 +1071,7 @@ reference.
 <pre><code>pragma opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>ensures</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-<a name="0x1_Libra_currency_info$56"></a>
+<a name="0x1_Libra_currency_info$60"></a>
 <b>let</b> currency_info = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="Libra.md#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="Libra.md#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt;;
@@ -1356,7 +1352,7 @@ Calls to this function will fail if <code>account</code> does not have a
 
 
 
-<a name="0x1_Libra_preburn$57"></a>
+<a name="0x1_Libra_preburn$61"></a>
 
 
 <pre><code><b>let</b> preburn = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
@@ -1606,6 +1602,55 @@ at <code>preburn_address</code> does not contain a pending burn request.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapAbortsIf">CancelBurnWithCapAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapEnsures">CancelBurnWithCapEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_CancelBurnWithCapAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapAbortsIf">CancelBurnWithCapAbortsIf</a>&lt;CoinType&gt; {
+    preburn_address: address;
+    <a name="0x1_Libra_info$54"></a>
+    <b>let</b> info = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <a name="0x1_Libra_amount$55"></a>
+    <b>let</b> amount = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address).to_burn.value;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> info.<a href="Libra.md#0x1_Libra_preburn_value">preburn_value</a> &lt; amount <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_CancelBurnWithCapEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_CancelBurnWithCapEnsures">CancelBurnWithCapEnsures</a>&lt;CoinType&gt; {
+    preburn_address: address;
+    <a name="0x1_Libra_preburn_value$56"></a>
+    <b>let</b> preburn_value = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address).to_burn.value;
+    <a name="0x1_Libra_total_preburn_value$57"></a>
+    <b>let</b> total_preburn_value =
+        <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value;
+    <b>ensures</b> preburn_value == 0;
+    <b>ensures</b> total_preburn_value == <b>old</b>(total_preburn_value) - <b>old</b>(preburn_value);
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Libra_burn_now"></a>
 
 ## Function `burn_now`
@@ -1648,7 +1693,7 @@ used for administrative burns, like unpacking an LBR coin or charging fees.
 
 <pre><code><b>include</b> <a href="Libra.md#0x1_Libra_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> preburn.to_burn.value == 0;
-<a name="0x1_Libra_info$58"></a>
+<a name="0x1_Libra_info$62"></a>
 <b>let</b> info = <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
 <b>ensures</b> info.total_value == <b>old</b>(info.total_value) - coin.value;
 </code></pre>
@@ -1664,7 +1709,7 @@ used for administrative burns, like unpacking an LBR coin or charging fees.
     preburn: <a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> coin.value == 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
     <b>include</b> <a href="Libra.md#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
-    <a name="0x1_Libra_info$54"></a>
+    <a name="0x1_Libra_info$58"></a>
     <b>let</b> info = <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> info.total_value &lt; coin.value <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
@@ -2349,7 +2394,7 @@ rate is needed.
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;CoinType&gt; {
     from_value: num;
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_lbr_exchange_rate$55"></a>
+    <a name="0x1_Libra_lbr_exchange_rate$59"></a>
     <b>let</b> lbr_exchange_rate = <a href="Libra.md#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;();
     <b>include</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">FixedPoint32::MultiplyAbortsIf</a>{val: from_value, multiplier: lbr_exchange_rate};
 }

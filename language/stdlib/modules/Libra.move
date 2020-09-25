@@ -313,11 +313,10 @@ module Libra {
         )
     }
     spec fun cancel_burn {
-        pragma aborts_if_is_partial = true;
         /// Must abort if the account does not have the BurnCapability [B12].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
-
-        aborts_with Errors::NOT_PUBLISHED, Errors::LIMIT_EXCEEDED;
+        include CancelBurnWithCapAbortsIf<CoinType>;
+        include CancelBurnWithCapEnsures<CoinType>;
     }
 
     /// Mint a new `Libra` coin of `CoinType` currency worth `value`. The
@@ -613,6 +612,29 @@ module Libra {
         };
 
         coin
+    }
+
+    spec fun cancel_burn_with_capability {
+        include CancelBurnWithCapAbortsIf<CoinType>;
+        include CancelBurnWithCapEnsures<CoinType>;
+    }
+
+    spec schema CancelBurnWithCapAbortsIf<CoinType> {
+        preburn_address: address;
+        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let amount = global<Preburn<CoinType>>(preburn_address).to_burn.value;
+        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        include AbortsIfNoCurrency<CoinType>;
+        aborts_if info.preburn_value < amount with Errors::LIMIT_EXCEEDED;
+    }
+
+    spec schema CancelBurnWithCapEnsures<CoinType> {
+        preburn_address: address;
+        let preburn_value = global<Preburn<CoinType>>(preburn_address).to_burn.value;
+        let total_preburn_value =
+            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value;
+        ensures preburn_value == 0;
+        ensures total_preburn_value == old(total_preburn_value) - old(preburn_value);
     }
 
     /// A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is

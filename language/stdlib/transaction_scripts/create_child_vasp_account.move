@@ -80,7 +80,6 @@ fun create_child_vasp_account<CoinType>(
 spec fun create_child_vasp_account {
     use 0x1::Signer;
     use 0x1::Errors;
-    pragma verify = false; // disabled due to timeout
     aborts_with [check]
         Errors::REQUIRES_ROLE,
         Errors::ALREADY_PUBLISHED,
