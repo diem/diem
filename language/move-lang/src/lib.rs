@@ -40,6 +40,7 @@ use tempfile::NamedTempFile;
 
 pub const MOVE_EXTENSION: &str = "move";
 pub const MOVE_COMPILED_EXTENSION: &str = "mv";
+pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";
 pub const SOURCE_MAP_EXTENSION: &str = "mvsm";
 
 //**************************************************************************************************
@@ -214,7 +215,7 @@ fn generate_interface_files_for_deps(
     deps: &mut Vec<String>,
     interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<()> {
-    if let Some(dir) = generate_interface_files(deps, interface_files_dir_opt)? {
+    if let Some(dir) = generate_interface_files(deps, interface_files_dir_opt, true)? {
         deps.push(dir)
     }
     Ok(())
@@ -223,6 +224,7 @@ fn generate_interface_files_for_deps(
 pub fn generate_interface_files(
     mv_file_locations: &[String],
     interface_files_dir_opt: Option<String>,
+    separate_by_hash: bool,
 ) -> anyhow::Result<Option<String>> {
     let mv_files = {
         let mut v = vec![];
@@ -243,7 +245,8 @@ pub fn generate_interface_files(
 
     let interface_files_dir =
         interface_files_dir_opt.unwrap_or_else(|| command_line::DEFAULT_OUTPUT_DIR.to_string());
-    let hash_dir = {
+    let interface_sub_dir = format!("{}/{}/", interface_files_dir, MOVE_COMPILED_INTERFACES_DIR);
+    let all_addr_dir = if separate_by_hash {
         use std::{
             collections::hash_map::DefaultHasher,
             hash::{Hash, Hasher},
@@ -254,22 +257,19 @@ pub fn generate_interface_files(
             std::fs::read(mv_file)?.hash(&mut hasher)
         }
         // TODO might want a better temp file setup here
-        let dir = format!(
-            "{}/{}_interfaces/{:020}",
-            interface_files_dir,
-            MOVE_COMPILED_EXTENSION,
-            hasher.finish(),
-        );
+        let dir = format!("{}/{:020}", interface_sub_dir, hasher.finish());
 
         dir
+    } else {
+        interface_sub_dir
     };
 
     for mv_file in mv_files {
         let (id, interface_contents) = interface_generator::write_to_string(&mv_file)?;
-        let addr_dir = format!("{}/{:#x}", hash_dir, id.address());
+        let addr_dir = format!("{}/{:#x}", all_addr_dir, id.address());
         let file_path = format!("{}/{}.{}", addr_dir, id.name(), MOVE_EXTENSION);
         // it's possible some files exist but not others due to multithreaded environments
-        if Path::new(&file_path).is_file() {
+        if separate_by_hash && Path::new(&file_path).is_file() {
             continue;
         }
 
@@ -280,13 +280,13 @@ pub fn generate_interface_files(
         // it's possible some files exist but not others due to multithreaded environments
         // Check for the file existing and then safely move the tmp file there if
         // it does not
-        if Path::new(&file_path).is_file() {
+        if separate_by_hash && Path::new(&file_path).is_file() {
             continue;
         }
         std::fs::rename(tmp.path(), file_path)?;
     }
 
-    Ok(Some(hash_dir))
+    Ok(Some(all_addr_dir))
 }
 
 fn has_compiled_module_magic_number(path: &str) -> bool {

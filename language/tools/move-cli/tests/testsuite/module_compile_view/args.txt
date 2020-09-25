@@ -1,2 +1,0 @@
-compile -c
-view move_data/0x00000000000000000000000000000002/modules/Module

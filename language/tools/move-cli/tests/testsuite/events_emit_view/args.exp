@@ -1,5 +1,13 @@
-Command `run emit.move --signers 0xA --args 5 -c`:
-Compiling 2 source file(s)
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
+Command `publish`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
+Command `run emit.move --signers 0xA --args 5`:
+Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [U64(5)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
 Changed resource(s) under 1 address(es):
@@ -11,8 +19,8 @@ Command `view move_data/0x0000000000000000000000000000000a/events/0`:
 00000000::Events::AnEvent {
     i: 5
 }
-Command `run emit.move --signers 0xA --args 6 -c`:
-Compiling 2 source file(s)
+Command `run emit.move --signers 0xA --args 6`:
+Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [U64(6)] }))) as the 1th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
 Changed resource(s) under 1 address(es):

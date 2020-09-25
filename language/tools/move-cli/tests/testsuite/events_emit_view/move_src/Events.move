@@ -1,3 +1,4 @@
+address 0x2 {
 module Events {
     use 0x1::Event;
     use 0x1::Signer;
@@ -16,4 +17,5 @@ module Events {
 
         Event::emit_event(&mut handle.h, AnEvent { i })
     }
+}
 }

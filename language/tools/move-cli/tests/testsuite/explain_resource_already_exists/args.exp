@@ -1,3 +1,7 @@
+Command `publish`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
 Command `run script.move --signers 0xA`:
-Compiling 2 source file(s)
+Compiling transaction script...
 Execution failed because of a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`) in 00000000000000000000000000000002::ResourceExists::f at code offset 8

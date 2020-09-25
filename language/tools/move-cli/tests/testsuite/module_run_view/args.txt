@@ -1,6 +1,8 @@
-run script.move --signers 0xA 0xB --args 6 7
+publish ../../../../../stdlib/modules
+publish move_src
+run script.move --signers 0xA 0xB --args 6 7 --dry-run
 view move_data/0x0000000000000000000000000000000a/resources/0x00000000000000000000000000000002::Test::R
 view move_data/0x0000000000000000000000000000000b/resources/0x00000000000000000000000000000002::Test::R
-run script.move --signers 0xA 0xB --args 6 7 -c
+run script.move --signers 0xA 0xB --args 6 7
 view move_data/0x0000000000000000000000000000000a/resources/0x00000000000000000000000000000002::Test::R
 view move_data/0x0000000000000000000000000000000b/resources/0x00000000000000000000000000000002::Test::R

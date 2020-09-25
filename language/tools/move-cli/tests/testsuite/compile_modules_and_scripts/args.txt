@@ -1,1 +1,2 @@
-compile
+check
+publish move_src/modules

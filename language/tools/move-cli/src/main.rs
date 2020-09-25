@@ -12,17 +12,20 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, compiled_unit::CompiledUnit};
+use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
     access::ScriptAccess,
     errors::VMError,
-    file_format::{CompiledModule, CompiledScript, SignatureToken},
+    file_format::{CompiledScript, SignatureToken},
 };
 
-use anyhow::{anyhow, bail, Result};
-use std::{fs, path::Path};
+use anyhow::{bail, Result};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -31,10 +34,13 @@ struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
     #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA)]
     move_data: String,
-    /// Directory storing Move source files that will be compiled and loaded into the VM before
-    /// script execution.
-    #[structopt(name = "move-src", long = "move-src", default_value = MOVE_SRC)]
-    move_src: String,
+    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
+    #[structopt(
+        name = "move-build-output",
+        long = "build-output",
+        default_value = DEFAULT_BUILD_OUTPUT_DIR
+    )]
+    build_output: String,
     // Command to be run.
     #[structopt(subcommand)]
     cmd: Command,
@@ -42,15 +48,28 @@ struct Move {
 
 #[derive(StructOpt)]
 enum Command {
-    /// Compile the modules in `move_data` and the given script (if any).
-    #[structopt(name = "compile")]
-    Compile {
-        /// Path to script to compile.
-        #[structopt(name = "script")]
-        script_file: Option<String>,
-        /// If true, commit the bytecodes for the compiled modules to disk.
-        #[structopt(long = "commit", short = "c")]
-        commit: bool,
+    /// Type check and verify the specified script and modules against the modules in `move_data`
+    #[structopt(name = "check")]
+    Check {
+        /// The source files to check
+        #[structopt(
+            name = "PATH_TO_SOURCE_FILE",
+            default_value = MOVE_SRC,
+        )]
+        source_files: Vec<String>,
+    },
+    #[structopt(name = "publish")]
+    Publish {
+        /// The source files containing modules to publish
+        #[structopt(
+            name = "PATH_TO_SOURCE_FILE",
+            default_value = MOVE_SRC,
+        )]
+        source_files: Vec<String>,
+        /// If set, the effects of executing `script_file` (i.e., published, updated, and
+        /// deleted resources) will NOT be committed to disk.
+        #[structopt(long = "dry-run", short = "n")]
+        dry_run: bool,
     },
     /// Compile/run a Move script that reads/writes resources stored on disk in `move_data`.
     /// This command compiles each each module stored in `move_src` and loads it into the VM
@@ -77,10 +96,10 @@ enum Command {
         /// By default, no `gas-budget` is specified and gas metering is disabled.
         #[structopt(long = "gas-budget", short = "g")]
         gas_budget: Option<u64>,
-        /// If true, commit the effects of executing `script_file` (i.e., published, updated, and
-        /// deleted resources) to disk.
-        #[structopt(long = "commit", short = "c")]
-        commit: bool,
+        /// If set, the effects of executing `script_file` (i.e., published, updated, and
+        /// deleted resources) will NOT be committed to disk.
+        #[structopt(long = "dry-run", short = "n")]
+        dry_run: bool,
     },
 
     /// Run expected value tests using the given batch file
@@ -107,66 +126,64 @@ enum Command {
 fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
     let dir = Path::new(dir_name);
     if !dir.exists() {
-        fs::create_dir(dir)?
+        fs::create_dir_all(dir)?
     }
     Ok(dir)
 }
 
+/// Generate interface files for published files
+fn generate_interface_files(args: &Move) -> Result<()> {
+    move_lang::generate_interface_files(
+        &[args.move_data.clone()],
+        Some(args.build_output.clone()),
+        false,
+    )?;
+    Ok(())
+}
+
+fn interface_files_dir(build_dir: &str) -> Result<String> {
+    let mut path = PathBuf::from(build_dir);
+    path.push(MOVE_COMPILED_INTERFACES_DIR);
+    let dir = path.into_os_string().into_string().unwrap();
+    maybe_create_dir(&dir)?;
+    Ok(dir)
+}
+
 /// Compile the user modules in `move_src` and the script in `script_file`
-fn compile(
-    args: &Move,
-    script_file: &Option<String>,
-) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
+fn check(args: &Move, files: &[String]) -> Result<()> {
+    println!("Checking Move files...");
+    let interface_dir = interface_files_dir(&args.build_output)?;
+    move_lang::move_check(files, &[interface_dir], None, None)?;
+    Ok(())
+}
+
+fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
     let move_data = maybe_create_dir(&args.move_data)?;
 
-    let mut user_move_src_files = if Path::new(&args.move_src).exists() {
-        move_lang::find_move_filenames(&[args.move_src.clone()], true)?
-    } else {
-        vec![]
-    };
-    if let Some(f) = script_file.as_ref() {
-        user_move_src_files.push(f.to_string())
-    }
+    println!("Compiling Move modules...");
+    let interface_dir = interface_files_dir(&args.build_output)?;
+    let (_, compiled_units) = move_lang::move_compile(files, &[interface_dir], None, None)?;
 
-    let has_user_modules = !user_move_src_files.is_empty();
-    if has_user_modules {
-        println!("Compiling {:?} source file(s)", user_move_src_files.len());
-    }
-
-    let deps = stdlib::stdlib_files();
-    let code_address = Some(MOVE_SRC_ADDRESS);
-    let (_, compilation_units) =
-        move_lang::move_compile(&user_move_src_files, &deps, code_address, None)?;
-
-    let mut modules: Vec<CompiledModule> = stdlib::stdlib_bytecode_files()
+    let num_modules = compiled_units
         .iter()
-        .map(|f| {
-            let bytecode_bytes = fs::read(&f)?;
-            CompiledModule::deserialize(&bytecode_bytes)
-                .map_err(|e| anyhow!("Error deserializing module: {:?}", e))
-        })
-        .collect::<Result<Vec<CompiledModule>>>()?;
-    let mut script_opt = None;
-    for c in compilation_units {
+        .filter(|u| matches!(u,  CompiledUnit::Module {..}))
+        .count();
+    println!("Found and compiled {} modules", num_modules);
+
+    let mut modules = vec![];
+    for c in compiled_units {
         match c {
-            CompiledUnit::Script { script, loc, .. } => {
-                match script_file {
-                    Some(f) => {
-                        if Path::new(f).canonicalize()? == Path::new(loc.file()).canonicalize()? {
-                            script_opt = Some(script)
-                        }
-                    }
-                    None => (),
-                }
-                // TODO: save script bytecodes on disk? where should we put them?
+            CompiledUnit::Script { loc, .. } => {
+                println!(
+                    "Warning: Found script in specified files for publishing. But scripts cannot \
+                     be published. Script found in: {}",
+                    loc.file()
+                );
             }
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
     }
-    Ok((
-        OnDiskStateView::create(move_data.to_path_buf(), &modules)?,
-        script_opt,
-    ))
+    Ok(OnDiskStateView::create(move_data.to_path_buf(), &modules)?)
 }
 
 fn run(
@@ -176,15 +193,49 @@ fn run(
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
     gas_budget: Option<u64>,
-    commit: bool,
+    dry_run: bool,
 ) -> Result<()> {
-    let (state, script_opt) = compile(args, &Some(script_file.to_string()))?;
+    fn compile_script(
+        args: &Move,
+        script_file: &str,
+    ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
+        let move_data = maybe_create_dir(&args.move_data)?;
+
+        println!("Compiling transaction script...");
+        let interface_dir = interface_files_dir(&args.build_output)?;
+        let (_, compiled_units) = move_lang::move_compile(
+            &[script_file.to_string()],
+            &[interface_dir.clone()],
+            None,
+            Some(interface_dir),
+        )?;
+
+        let mut script_opt = None;
+        for c in compiled_units {
+            match c {
+                CompiledUnit::Script { script, .. } => {
+                    if script_opt.is_some() {
+                        bail!("Error: Found more than one script")
+                    }
+                    script_opt = Some(script)
+                }
+                CompiledUnit::Module { ident, .. } => println!(
+                    "Warning: Found module '{}' in file specified for the script. This module \
+                     will not be published.",
+                    ident
+                ),
+            }
+        }
+        Ok((
+            OnDiskStateView::create(move_data.to_path_buf(), &[])?,
+            script_opt,
+        ))
+    }
+
+    let (state, script_opt) = compile_script(args, script_file)?;
     let script = match script_opt {
         Some(s) => s,
-        None => bail!(
-            "Script file {:?} contains module instead of script",
-            script_file
-        ),
+        None => bail!("Unable to find script in file {:?}", script_file),
     };
     let mut script_bytes = vec![];
     script.serialize(&mut script_bytes)?;
@@ -241,7 +292,7 @@ fn run(
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
         explain_effects(&effects, &state)?;
-        maybe_commit_effects(commit, Some(effects), &state)
+        maybe_commit_effects(&args, !dry_run, Some(effects), &state)
     }
 }
 
@@ -297,6 +348,7 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
 
 /// Commit the resources and modules modified by a transaction to disk
 fn maybe_commit_effects(
+    args: &Move,
     commit: bool,
     effects_opt: Option<TransactionEffects>,
     state: &OnDiskStateView,
@@ -328,7 +380,10 @@ fn maybe_commit_effects(
         }
 
         // TODO: print modules to be saved?
-        state.save_modules()?;
+        let modules_saved = state.save_modules()?;
+        if modules_saved {
+            generate_interface_files(args)?;
+        }
         println!("Committed changes.")
     } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
         println!("Discarding changes; re-run with --commit if you would like to keep them.")
@@ -354,7 +409,8 @@ fn explain_type_error(
         .count();
     if expected_num_signers != signers.len() {
         println!(
-            "Execution failed with incorrect number of signers: script expected {:?}, but found {:?}",
+            "Execution failed with incorrect number of signers: script expected {:?}, but found \
+             {:?}",
             expected_num_signers,
             signers.len()
         );
@@ -365,8 +421,9 @@ fn explain_type_error(
     let expected_num_args = script_params.len() - signers.len();
     if expected_num_args != txn_args.len() {
         println!(
-            "Execution failed with incorrect number of arguments: script expected {:?}, but found {:?}",
-	    expected_num_args,
+            "Execution failed with incorrect number of arguments: script expected {:?}, but found \
+             {:?}",
+            expected_num_args,
             txn_args.len()
         );
         return;
@@ -401,12 +458,13 @@ fn explain_error(
 
             if let Some(error_desc) = error_descriptions.get_explanation(&id, abort_code) {
                 println!(
-                        " Abort code details:\nReason:\n  Name: {}\n  Description:{}\nCategory:\n  Name: {}\n  Description:{}",
-                        error_desc.reason.code_name,
-                        error_desc.reason.code_description,
-                        error_desc.category.code_name,
-                        error_desc.category.code_description,
-                    )
+                    " Abort code details:\nReason:\n  Name: {}\n  Description:{}\nCategory:\n  \
+                     Name: {}\n  Description:{}",
+                    error_desc.reason.code_name,
+                    error_desc.reason.code_description,
+                    error_desc.category.code_name,
+                    error_desc.category.code_description,
+                )
             } else {
                 println!()
             }
@@ -425,14 +483,22 @@ fn explain_error(
             code_offset,
         } => {
             let status_explanation = match status_code {
-                    RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`)".to_string(),
-                    MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`)".to_string(),
-                    ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or divide-by-zero)".to_string(),
-                    EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
-                    CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
-                    OUT_OF_GAS => "an out of gas error".to_string(),
-                    _ => format!("a {} error", status_code.status_type()),
-                };
+                RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., \
+                                            `move_to<T>(account)` when there is already a \
+                                            resource of type `T` under `account`)"
+                    .to_string(),
+                MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, \
+                                 `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there \
+                                 is no resource of type `T` at address `a`)"
+                    .to_string(),
+                ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or \
+                                     divide-by-zero)"
+                    .to_string(),
+                EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
+                CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
+                OUT_OF_GAS => "an out of gas error".to_string(),
+                _ => format!("a {} error", status_code.status_type()),
+            };
             // TODO: map to source code location
             let location_explanation = match location {
                 AbortLocation::Module(id) => {
@@ -448,16 +514,22 @@ fn explain_error(
                 status_explanation, location_explanation, code_offset
             )
         }
-        VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH) => {
-	    println!("Execution failed with incorrect number of type arguments: script expected {:?}, but found {:?}", &script.as_inner().type_parameters.len(), vm_type_args.len())
-	}
-        VMStatus::Error(TYPE_MISMATCH) => {
-	    explain_type_error(script, signers, txn_args)
+        VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH) => println!(
+            "Execution failed with incorrect number of type arguments: script expected {:?}, but \
+             found {:?}",
+            &script.as_inner().type_parameters.len(),
+            vm_type_args.len()
+        ),
+        VMStatus::Error(TYPE_MISMATCH) => explain_type_error(script, signers, txn_args),
+        VMStatus::Error(LINKER_ERROR) => {
+            // TODO: is this the only reason we can see LINKER_ERROR?
+            // Can we also see it if someone manually deletes modules in move_data?
+            println!(
+                "Execution failed due to unresolved type argument(s) (i.e., `--type-args \
+                 0x1::M:T` when there is no module named M at 0x1 or no type named T in module \
+                 0x1::M)"
+            );
         }
-	VMStatus::Error(LINKER_ERROR) => {
-	    // TODO: is this the only reason we can see LINKER_ERROR? Can we also see it if someone manually deletes modules in move_data?
-	    println!("Execution failed due to unresolved type argument(s) (i.e., `--type-args 0x1::M:T` when there is no module named M at 0x1 or no type named T in module 0x1::M)");
-	}
         VMStatus::Error(status_code) => {
             println!("Execution failed with unexpected error {:?}", status_code)
         }
@@ -502,13 +574,13 @@ fn main() -> Result<()> {
     let move_args = Move::from_args();
 
     match &move_args.cmd {
-        Command::Compile {
-            script_file,
-            commit,
+        Command::Check { source_files } => check(&move_args, &source_files),
+        Command::Publish {
+            source_files,
+            dry_run,
         } => {
-            let (state, _) = compile(&move_args, &script_file)?;
-            maybe_commit_effects(*commit, None, &state)?;
-            Ok(())
+            let state = publish(&move_args, source_files)?;
+            maybe_commit_effects(&move_args, !dry_run, None, &state)
         }
         Command::Run {
             script_file,
@@ -516,7 +588,7 @@ fn main() -> Result<()> {
             args,
             type_args,
             gas_budget,
-            commit,
+            dry_run,
         } => run(
             &move_args,
             script_file,
@@ -524,7 +596,7 @@ fn main() -> Result<()> {
             args,
             type_args.to_vec(),
             *gas_budget,
-            *commit,
+            *dry_run,
         ),
         Command::Test { file } => test::run_one(
             &Path::new(file),
@@ -536,6 +608,12 @@ fn main() -> Result<()> {
             let move_data = Path::new(&move_args.move_data);
             if move_data.exists() {
                 fs::remove_dir_all(&move_data)?;
+            }
+
+            // delete build_output
+            let build_output = Path::new(&move_args.build_output);
+            if build_output.exists() {
+                fs::remove_dir_all(&build_output)?;
             }
             Ok(())
         }

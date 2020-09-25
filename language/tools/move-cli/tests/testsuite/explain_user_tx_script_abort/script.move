@@ -1,5 +1,5 @@
 script {
     fun main() {
-        abort(17)
+        abort 17
     }
 }

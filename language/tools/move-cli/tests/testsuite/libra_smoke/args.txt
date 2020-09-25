@@ -1,22 +1,25 @@
 # Smoke test that runs a mock of Libra genesis and tries a few basic transactions
 
+# Publish stdlib modules
+publish ../../../../../stdlib/modules
+
 # Run a realistic mock of the genesis process
-run genesis.move --signers 0xA550C18 0xB1E55ED -c
+run genesis.move --signers 0xA550C18 0xB1E55ED
 
 # Create DD account at 0xDD with a balance in each currency
-run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -c
+run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true
 
 # create parent VASP account at 0xA with a balance in each currency
-run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -c
+run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true
 
 # create parent VASP account at 0xB with a balance in each currency
-run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -c
+run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true
 
 # mint 1000 Coin1 to 0xDD
-run ../../../../../stdlib/transaction_scripts/tiered_mint.move --type-args 0x1::Coin1::Coin1 --signers 0xB1E55ED --args 0 0xDD 1000 0 -c
+run ../../../../../stdlib/transaction_scripts/tiered_mint.move --type-args 0x1::Coin1::Coin1 --signers 0xB1E55ED --args 0 0xDD 1000 0
 
 # transfer 700 Coin1 from 0xDD to 0xA
-run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xDD --args 0xA 700 x"" x"" -c
+run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xDD --args 0xA 700 x"" x""
 
 # transfer 500 Coin1 from 0xA to 0xB
-run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xA --args 0xB 500 x"" x"" -c
+run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xA --args 0xB 500 x"" x""

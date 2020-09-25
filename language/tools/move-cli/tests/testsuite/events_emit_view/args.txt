@@ -1,4 +1,6 @@
-run emit.move --signers 0xA --args 5 -c
+publish ../../../../../stdlib/modules
+publish
+run emit.move --signers 0xA --args 5
 view move_data/0x0000000000000000000000000000000a/events/0
-run emit.move --signers 0xA --args 6 -c
+run emit.move --signers 0xA --args 6
 view move_data/0x0000000000000000000000000000000a/events/0

@@ -1,0 +1,3 @@
+publish ../../../../../stdlib/modules
+publish move_src
+view move_data/0x00000000000000000000000000000042/modules/Module.mv

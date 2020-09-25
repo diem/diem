@@ -1,2 +1,2 @@
 publish ../../../../../stdlib/modules
-run script.move
+check script.move

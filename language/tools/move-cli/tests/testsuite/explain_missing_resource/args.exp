@@ -1,3 +1,7 @@
+Command `publish`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
 Command `run script.move`:
-Compiling 2 source file(s)
+Compiling transaction script...
 Execution failed because of a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`) in 00000000000000000000000000000002::MissingResource::f at code offset 2

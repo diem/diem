@@ -1,6 +1,11 @@
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
 Command `run script.move --type-args u64 --signers 0x1 0x2 --args true 10`:
-Compiling 1 source file(s)
+Compiling transaction script...
 [debug] (&) { 00000000000000000000000000000001 }
 [debug] (&) { 00000000000000000000000000000002 }
 [debug] true
 [debug] 10
+Committed changes.

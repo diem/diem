@@ -1,0 +1,6 @@
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
+Command `check script.move`:
+Checking Move files...

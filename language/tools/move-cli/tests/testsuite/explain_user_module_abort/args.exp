@@ -1,3 +1,7 @@
+Command `publish`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
 Command `run script.move`:
-Compiling 2 source file(s)
+Compiling transaction script...
 Execution aborted with code 77 in module 00000000000000000000000000000002::Fail.

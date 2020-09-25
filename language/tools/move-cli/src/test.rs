@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{MOVE_DATA, MOVE_SRC};
+use crate::{DEFAULT_BUILD_OUTPUT_DIR, MOVE_DATA};
 use move_lang::test_utils::*;
 
 use std::{
@@ -67,12 +67,16 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
     let exe_dir = args_path.parent().unwrap();
     let cli_binary_path = Path::new(cli_binary).canonicalize()?;
     let move_data = Path::new(exe_dir).join(MOVE_DATA);
-    let move_src = Path::new(exe_dir).join(MOVE_SRC);
-    let move_src_exists_before = move_src.exists();
+    let build_output = Path::new(exe_dir).join(DEFAULT_BUILD_OUTPUT_DIR);
     assert!(
         !move_data.exists(),
         "tests should never include a {:?} directory",
         MOVE_DATA
+    );
+    assert!(
+        !build_output.exists(),
+        "tests should never include a {:?} directory",
+        DEFAULT_BUILD_OUTPUT_DIR
     );
     let mut output = "".to_string();
     for args_line in args_file {
@@ -97,11 +101,6 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
 
     // post-test cleanup and cleanup checks
     // check that the test command didn't create a move_src dir
-    assert!(
-        move_src_exists_before || !move_src.exists(),
-        "`move clean` failed to eliminate {} directory",
-        MOVE_SRC
-    );
 
     let run_move_clean = !read_bool_var(NO_MOVE_CLEAN);
     if run_move_clean {
@@ -115,6 +114,11 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
             !move_data.exists(),
             "`move clean` failed to eliminate {} directory",
             MOVE_DATA
+        );
+        assert!(
+            !move_data.exists(),
+            "`move clean` failed to eliminate {} directory",
+            DEFAULT_BUILD_OUTPUT_DIR
         );
     }
 

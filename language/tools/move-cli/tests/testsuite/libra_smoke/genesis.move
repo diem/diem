@@ -26,10 +26,10 @@ script {
         let tc_auth_key = dummy_auth_key;
 
         // no script allowlist + allow open publishing
-        let initial_script_allow_list = Vector::empty<vector<u8>>();
+        let initial_script_allow_list = Vector::empty();
         let is_open_module = true;
-        let instruction_schedule = Vector::empty<u8>();
-        let native_schedule = Vector::empty<u8>();
+        let instruction_schedule = Vector::empty();
+        let native_schedule = Vector::empty();
         let chain_id = 0;
 
         LibraAccount::initialize(lr_account, x"00000000000000000000000000000000");

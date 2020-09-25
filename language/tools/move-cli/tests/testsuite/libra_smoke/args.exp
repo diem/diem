@@ -1,5 +1,9 @@
-Command `run genesis.move --signers 0xA550C18 0xB1E55ED -c`:
-Compiling 1 source file(s)
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
+Command `run genesis.move --signers 0xA550C18 0xB1E55ED`:
+Compiling transaction script...
 Emitted 2 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000a550c18), U64(0)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000b1e55ed), U64(1)] }))) as the 1th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -49,8 +53,8 @@ Changed resource(s) under 2 address(es):
     Added type 00000000::TransactionFee::TransactionFee<00000000::Coin2::Coin2>: [[U64(0)], [[U64(0)]]]
     Added type 00000000::TransactionFee::TransactionFee<00000000::LBR::LBR>: [[U64(0)], [[U64(0)]]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true`:
+Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(000000000000000000000000000000dd), U64(2)] }))) as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
@@ -71,8 +75,8 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000a550c18:
     Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(3), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true`:
+Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000a), U64(5)] }))) as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
@@ -89,8 +93,8 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000a550c18:
     Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(4), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true`:
+Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000b), U64(5)] }))) as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
@@ -107,8 +111,8 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000a550c18:
     Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(5), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/tiered_mint.move --type-args 0x1::Coin1::Coin1 --signers 0xB1E55ED --args 0 0xDD 1000 0 -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/tiered_mint.move --type-args 0x1::Coin1::Coin1 --signers 0xB1E55ED --args 0 0xDD 1000 0`:
+Compiling transaction script...
 Emitted 3 events:
 Emitted Value(Container(StructC(RefCell { value: [Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(000000000000000000000000000000dd), U64(1000)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
 Emitted Value(Container(StructC(RefCell { value: [U64(1000), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] }))] }))) as the 0th event to stream [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -122,8 +126,8 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000a550c18:
     Changed type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(1000), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(1), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xDD --args 0xA 700 x"" x"" -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xDD --args 0xA 700 x"" x""`:
+Compiling transaction script...
 Emitted 2 events:
 Emitted Value(Container(StructC(RefCell { value: [U64(700), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(0000000000000000000000000000000a), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
 Emitted Value(Container(StructC(RefCell { value: [U64(700), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(000000000000000000000000000000dd), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
@@ -135,8 +139,8 @@ Changed resource(s) under 2 address(es):
     Changed type 00000000::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(1), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
     Changed type 00000000::LibraAccount::Balance<00000000::Coin1::Coin1>: [[U64(300)]]
 Committed changes.
-Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xA --args 0xB 500 x"" x"" -c`:
-Compiling 1 source file(s)
+Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xA --args 0xB 500 x"" x""`:
+Compiling transaction script...
 Emitted 2 events:
 Emitted Value(Container(StructC(RefCell { value: [U64(500), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(0000000000000000000000000000000b), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
 Emitted Value(Container(StructC(RefCell { value: [U64(500), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(0000000000000000000000000000000a), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]

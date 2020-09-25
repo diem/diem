@@ -1,0 +1,20 @@
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
+Command `publish move_src`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
+Command `view move_data/0x00000000000000000000000000000042/modules/Module.mv`:
+module 00000000.Module {
+resource S {
+	i: u64
+}
+
+public foo(): S {
+	0: CopyLoc[0](Arg0: u64)
+	1: Pack[0](S)
+	2: Ret
+}
+}

@@ -1,5 +1,13 @@
-Command `run script.move --signers 0xA 0xB --args 6 7`:
-Compiling 2 source file(s)
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
+Command `publish move_src`:
+Compiling Move modules...
+Found and compiled 1 modules
+Committed changes.
+Command `run script.move --signers 0xA 0xB --args 6 7 --dry-run`:
+Compiling transaction script...
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000a:
     Added type 00000000::Test::R: [U64(6)]
@@ -10,8 +18,8 @@ Command `view move_data/0x0000000000000000000000000000000a/resources/0x000000000
 Error: `move view <file>` must point to a valid file under move_data
 Command `view move_data/0x0000000000000000000000000000000b/resources/0x00000000000000000000000000000002::Test::R`:
 Error: `move view <file>` must point to a valid file under move_data
-Command `run script.move --signers 0xA 0xB --args 6 7 -c`:
-Compiling 2 source file(s)
+Command `run script.move --signers 0xA 0xB --args 6 7`:
+Compiling transaction script...
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000a:
     Added type 00000000::Test::R: [U64(6)]

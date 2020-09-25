@@ -12,7 +12,7 @@ use move_core_types::{
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
-use move_lang::shared::Address;
+use move_lang::MOVE_COMPILED_EXTENSION;
 use move_vm_runtime::data_cache::RemoteCache;
 use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
@@ -27,7 +27,6 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     fs,
-    io::{Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -39,10 +38,8 @@ pub const MOVE_DATA: &str = "move_data";
 /// Default directory where Move modules live
 pub const MOVE_SRC: &str = "move_src";
 
-/// Store modules under move_src without an explicit `address {}` block under 0x2.
-pub const MOVE_SRC_ADDRESS: Address = Address::new([
-    0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 2u8,
-]);
+/// Default directory for build output
+pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_OUTPUT_DIR;
 
 /// subdirectory of `MOVE_DATA`/<addr> where resources are stored
 const RESOURCES_DIR: &str = "resources";
@@ -132,6 +129,7 @@ impl OnDiskStateView {
         let mut path = self.get_addr_path(module_id.address());
         path.push(MODULES_DIR);
         path.push(module_id.name().to_string());
+        path.set_extension(MOVE_COMPILED_EXTENSION);
         path
     }
 
@@ -174,10 +172,7 @@ impl OnDiskStateView {
 
     fn get_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
         Ok(if path.exists() {
-            let mut bytes = vec![];
-            let mut f = fs::File::open(path)?;
-            f.read_to_end(&mut bytes)?;
-            Some(bytes)
+            Some(fs::read(path)?)
         } else {
             None
         })
@@ -275,8 +270,7 @@ impl OnDiskStateView {
         let lcs = resource
             .simple_serialize(&layout)
             .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
-        let mut f = fs::File::create(path)?;
-        Ok(f.write_all(&lcs)?)
+        Ok(fs::write(path, &lcs)?)
     }
 
     pub fn save_event(
@@ -301,8 +295,7 @@ impl OnDiskStateView {
         // grab the old event log (if any) and append this event to it
         let mut event_log = self.get_events(&path)?;
         event_log.push(event);
-        let mut f = fs::File::create(path)?;
-        Ok(f.write_all(&lcs::to_bytes(&event_log)?)?)
+        Ok(fs::write(path, &lcs::to_bytes(&event_log)?)?)
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
@@ -311,16 +304,17 @@ impl OnDiskStateView {
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
-        let mut f = fs::File::create(path)?;
-        Ok(f.write_all(&module_bytes)?)
+
+        Ok(fs::write(path, &module_bytes)?)
     }
 
     /// Save all the modules in the local cache
-    pub fn save_modules(&self) -> Result<()> {
+    /// Returns true if any modules were saved
+    pub fn save_modules(&self) -> Result<bool> {
         for (id, bytes) in &self.modules {
             self.save_module(id, &bytes)?
         }
-        Ok(())
+        Ok(!self.modules.is_empty())
     }
 }
 
@@ -365,8 +359,8 @@ impl ToString for TypeID {
 impl ToString for StructID {
     fn to_string(&self) -> String {
         let tag = &self.0;
-        // TODO: TypeTag parser insists on leading 0x for StructTag's, so we insert one here. Would be nice to
-        // expose a StructTag parser and get rid of the 0x here
+        // TODO: TypeTag parser insists on leading 0x for StructTag's, so we insert one here.
+        // Would be nice to expose a StructTag parser and get rid of the 0x here
         format!(
             "0x{}::{}::{}{}",
             tag.address,

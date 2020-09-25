@@ -1,5 +1,9 @@
+Command `publish ../../../../../stdlib/modules`:
+Compiling Move modules...
+Found and compiled 41 modules
+Committed changes.
 Command `run script.move`:
-Compiling 1 source file(s)
+Compiling transaction script...
 Execution aborted with code 1 in module 00000000000000000000000000000001::Vector. Abort code details:
 Reason:
   Name: EINDEX_OUT_OF_BOUNDS
