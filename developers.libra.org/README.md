@@ -62,3 +62,7 @@ Get the latest updates to our project by signing up to our [newsletter](https://
 ## License
 
 Libra Core is licensed as [Apache 2.0](https://github.com/libra/libra/blob/master/LICENSE)
+
+## Docs Directory
+
+The [docs directory](./docs/) contains the source files for Libra's Docusaurus documentation. See the [website directory](./website/) [README](./website/README.md) for additional information.
