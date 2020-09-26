@@ -50,3 +50,7 @@ The site is hosted on GitHub pages, via the `gh-pages` branch of the `libra'
 The website is automatically built and published from GitHub Actions - see the
 [config file](https://github.com/libra/libra/blob/master/.github/workflows/developer-site-deploy.yml)
 for details.
+
+## Docs Directory
+
+The [docs directory](./docs/) contains the source files for Libra's Docusaurus documentation. See the [website directory](./website/) [README](./website/README.md) for additional information.
