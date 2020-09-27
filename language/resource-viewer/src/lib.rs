@@ -25,8 +25,6 @@ use std::{
 };
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
-pub use cached_access_path_table::update_mapping;
-
 mod cached_access_path_table;
 mod fat_type;
 mod module_cache;

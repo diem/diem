@@ -171,7 +171,6 @@ default-members = [
     "language/tools/transaction-replay",
     "language/tools/move-explain",
     "language/transaction-builder/generator",
-    "language/resource-viewer",
     "libra-node",
     "secure/key-manager",
     "storage/backup/backup-cli",

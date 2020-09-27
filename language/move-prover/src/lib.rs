@@ -39,7 +39,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     fs::File,
-    io::Read,
+    io::{Read, Write},
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -96,7 +96,7 @@ pub fn run_move_prover<W: WriteColor>(
     }
 
     if options.run_packed_types_gen {
-        return run_packed_types_gen(&env, &targets, now);
+        return run_packed_types_gen(&options, &env, &targets, now);
     }
     check_modifies(&env, &targets);
     if env.has_errors() {
@@ -223,6 +223,7 @@ fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Re
 }
 
 fn run_packed_types_gen(
+    options: &Options,
     env: &GlobalEnv,
     targets: &FunctionTargetsHolder,
     now: Instant,
@@ -235,7 +236,14 @@ fn run_packed_types_gen(
     for ty in packed_types {
         access_path_type_map.insert(ty.access_vector(), ty);
     }
-    // TODO: save to disk, resource-viewer and an LCS schema extractor should look at this
+    let flattened_map = access_path_type_map
+        .into_iter()
+        .map(|(k, v)| (hex::encode(&k), v))
+        .collect::<Vec<_>>();
+    let types_json = serde_json::to_string_pretty(&flattened_map)?;
+    let mut types_file = File::create(options.output_path.clone())?;
+    types_file.write_all(&types_json.as_bytes())?;
+    types_file.write_all(b"\n")?;
 
     let generating_elapsed = now.elapsed();
     info!(

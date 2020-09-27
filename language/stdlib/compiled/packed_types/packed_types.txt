@@ -1,5 +1,88 @@
 [
   [
+    "01020cedee4ec99c20a4db3488d5ffc714bdffc0afc8d40f98f752882f4f36acea",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "Preburn",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LBR",
+            "name": "LBR",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0102d613cb0da978524f76091d31b4e8fcc39dfeeced892018cc6c676eaa602bd1",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        "U64"
+      ]
+    }
+  ],
+  [
+    "0103db96f01bcf7ff5102545b9adca4e1459426299a93e1e5bd5e2b615c89e68ed",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraTransactionPublishingOption",
+      "name": "LibraTransactionPublishingOption",
+      "type_params": []
+    }
+  ],
+  [
+    "0104d053f08c7af753b09e723c26b943c1528ecf5712e4e493a34c0de8c7cd4d17",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraAccount",
+      "name": "WithdrawCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "010d2f17f3620b93ea63907fdfe33d9d1aea2d5324a8e3ddbe27241f02282f11c1",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraVMConfig",
+      "name": "GasConstants",
+      "type_params": []
+    }
+  ],
+  [
+    "010ee20def5ea5259e1e49f3ec33db727f7edd48e595759dc9b37ef2b45bd71f67",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "RecoveryAddress",
+      "name": "RecoveryAddress",
+      "type_params": []
+    }
+  ],
+  [
+    "010f2a1f8fdfd70d8aa505f5c2fd3024baba4ca14635c0a4d4398acb0f5b6a3967",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "Libra",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "Coin1",
+            "name": "Coin1",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
     "0110d33fe260cbf75c282946f4ce8c4da2e0c6ac72e14811372bfc57d9281fbf9b",
     {
       "address": "00000000000000000000000000000001",
@@ -18,12 +101,57 @@
     }
   ],
   [
+    "01123f3746147847a98608e80d193d84d01fe6dd9a41d3dec1ac45ae5d62b8f074",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LibraTransactionPublishingOption",
+            "name": "LibraTransactionPublishingOption",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0113c36400b15300bab522510fc4cee1444c0effb6049ea20bed8ad024c77b2079",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "VASP",
+      "name": "ChildVASP",
+      "type_params": []
+    }
+  ],
+  [
     "011a3c18d19411e76ac7acc442296296225ae5b5644bef0ab21f7efa2986fd9017",
     {
       "address": "00000000000000000000000000000001",
       "module": "AccountFreezing",
       "name": "FreezeEventsHolder",
       "type_params": []
+    }
+  ],
+  [
+    "011b046b3b7b3c4a79ea4e4beed0f3265f95052c1e655a903e525c39f5c488bb8d",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LibraAccount",
+            "name": "WithdrawCapability",
+            "type_params": []
+          }
+        }
+      ]
     }
   ],
   [
@@ -42,6 +170,15 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "011e6638ce73bd5b7ef5abe3ffefec658212ec0acb5fb0cf58e11054c7429cb92c",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraSystem",
+      "name": "LibraSystem",
+      "type_params": []
     }
   ],
   [
@@ -81,11 +218,20 @@
     }
   ],
   [
-    "0124c31086a3c711da971686b9b6878f1a392040ec2ed6024eee2f554beb71c69d",
+    "012282c1c0f4af2341a820c732505236a1150ebb7989fca567922796fa8e2e853a",
     {
       "address": "00000000000000000000000000000001",
-      "module": "LibraTimestamp",
-      "name": "TimeHasStarted",
+      "module": "RegisteredCurrencies",
+      "name": "RegisteredCurrencies",
+      "type_params": []
+    }
+  ],
+  [
+    "0125f9de45a06fbafa9cadfd8f442e44a935c085e6b79478b53fc08bc98a0c2d78",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "MintEvent",
       "type_params": []
     }
   ],
@@ -95,6 +241,15 @@
       "address": "00000000000000000000000000000001",
       "module": "LBR",
       "name": "Reserve",
+      "type_params": []
+    }
+  ],
+  [
+    "01368c921b1e4a3b117f1be9f349983f71ff624f0a7c92a718989942cca2d0e97c",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraConfig",
+      "name": "NewEpochEvent",
       "type_params": []
     }
   ],
@@ -135,11 +290,20 @@
     }
   ],
   [
-    "014326deb3fb20f8254346fbf222b3319927889eb26b2a42e48810563361fa8cb4",
+    "013e931be30d1bbe123a84793a5b502b30386db08f7720ea02e3ff0bd5a76cb4ca",
     {
       "address": "00000000000000000000000000000001",
-      "module": "Event",
-      "name": "EventHandleGenerator",
+      "module": "LibraAccount",
+      "name": "ReceivedPaymentEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "013ff106f0f16155e14bde37e33ce8f2647e6cd9bf19bc3d0adbee70f9a1784e20",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "PreburnEvent",
       "type_params": []
     }
   ],
@@ -162,15 +326,6 @@
     }
   ],
   [
-    "01481b127d46a29910ad31024e76b978df6ed382dc09dcc8a04b182282ce9ba0c0",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "VASP",
-      "name": "VASPOperationsResource",
-      "type_params": []
-    }
-  ],
-  [
     "0148ab3353d4ae86627cd05685542a132ae0481e6410ab28a0e665a6a0fbc272a6",
     {
       "address": "00000000000000000000000000000001",
@@ -189,11 +344,101 @@
     }
   ],
   [
+    "014b290fa2a17ee05d69077e10a8bdfcb15bb5c850b97c4c876b706f54434dceba",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LibraAccount",
+            "name": "KeyRotationCapability",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0151e7c9d282e4b36f91f3d752caba7708ff0129d8d84fd839553d905b9e975b61",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "BurnCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LBR",
+            "name": "LBR",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
     "01551080891c02034478a6da89eefbdff38f1578ff7e46efccd518d06401fbee92",
     {
       "address": "00000000000000000000000000000001",
       "module": "DualAttestation",
       "name": "Credential",
+      "type_params": []
+    }
+  ],
+  [
+    "015bf62b742bf0eb38d698cf8fa2c1df4f9ed11258f104a37cf4f85d84ae6ece47",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraSystem",
+      "name": "ValidatorInfo",
+      "type_params": []
+    }
+  ],
+  [
+    "015f3c18dce32e917db89b0f4cf80827de529b030a455ec5af5160450ecbc9bb89",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "ComplianceKeyRotationEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "016051bdf564da377f22f5b440e1abb277e1d661a2f599da60451352c214eba727",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "FixedPoint32",
+      "name": "FixedPoint32",
+      "type_params": []
+    }
+  ],
+  [
+    "0160c969b574ca075b5ca97c28ae5615078df45b6d493336ab64ec5e3a079e8f70",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountLimits",
+      "name": "AccountLimitMutationCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "0164fb33270e34819179c0740359e0e188dd65b86c451d01306e0165b07d84ffe3",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "ToLBRExchangeRateUpdateEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "0166cef2a6c8f9101a1bb6bb9586d6ba6bf2b940f8d94c845aa420ee3b24de9121",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ValidatorConfig",
+      "name": "Config",
       "type_params": []
     }
   ],
@@ -213,6 +458,33 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "016d1a969de68e60aa351ee444667b00564618e8eddeed57ec39e4f50528ee290c",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LibraSystem",
+            "name": "LibraSystem",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0170df01a050acd0d46afb601ffe53534889aced22334f647611ff713279e57a73",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraAccount",
+      "name": "CreateAccountEvent",
+      "type_params": []
     }
   ],
   [
@@ -288,6 +560,24 @@
     }
   ],
   [
+    "0175bac5067e333e1f7890330cb33c5beac74ff38f899c0d94f9d4022ea15322a6",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "UnfreezeAccountEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01766a2b1e03f7d08a39838c5329f9b093112bc5a5de8f0a1f37c5922ff188d5ad",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraVersion",
+      "name": "LibraVersion",
+      "type_params": []
+    }
+  ],
+  [
     "017933fc250ca47fdf88584591e7e2191520fdf4e47f440e036995257d8082723f",
     {
       "address": "00000000000000000000000000000001",
@@ -303,6 +593,24 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "01794ef83d60ee66878154ab293b9fae46b70729ea0793d3ae4097616530869ef1",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraVMConfig",
+      "name": "LibraVMConfig",
+      "type_params": []
+    }
+  ],
+  [
+    "017cff1dfeb627167d0578945b489e6e9b5082be4a48a4b1f75b156baec658eb15",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "BurnEvent",
+      "type_params": []
     }
   ],
   [
@@ -342,6 +650,15 @@
     }
   ],
   [
+    "01909ace5cff20a5be39701b1766c8ed16e4d4b7c6bc01582dc148991c7abcb06b",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "BaseUrlRotationEvent",
+      "type_params": []
+    }
+  ],
+  [
     "0190e68263acecae0bd3a5a9743faa6048c63cf6340cb32ba533057dca572d4ec5",
     {
       "address": "00000000000000000000000000000001",
@@ -369,11 +686,20 @@
     }
   ],
   [
-    "0196e06cb8bcef838b3cf560ed1faaac4ad85e655eeb891119fc0498bf4d2961bd",
+    "019796b03ec6a44e423209eb9e81fed035d0a0806068bf22e73e2d913334d054aa",
     {
       "address": "00000000000000000000000000000001",
-      "module": "LibraWriteSetManager",
-      "name": "LibraWriteSetManager",
+      "module": "Libra",
+      "name": "CancelBurnEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "019902a9c8deb492420ccaa758f8ca0a63f4232590d0a91cae7c2545a46ea8d5f2",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "VASP",
+      "name": "ParentVASP",
       "type_params": []
     }
   ],
@@ -405,6 +731,24 @@
     }
   ],
   [
+    "019ffb6f30a6c8412eb37132c65960ba00c03aa15e76a4482afc618c55a1efc807",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "Libra",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "Coin2",
+            "name": "Coin2",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
     "01a13858f5493a029359d2126b3aef98e9dace1d86a71be3a514a98b3bd253c847",
     {
       "address": "00000000000000000000000000000001",
@@ -420,6 +764,15 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "01a63e88f1013330b49bdcaff1e276af4735aad9e76c5950bcb07d6c22019640f2",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraAccount",
+      "name": "LibraWriteSetManager",
+      "type_params": []
     }
   ],
   [
@@ -441,6 +794,24 @@
     }
   ],
   [
+    "01ab426b82b34f64869cb07ec0df0a58908cb9058043b0c5113e4f703862d6d619",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "ValidatorConfig",
+            "name": "Config",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
     "01ab4c101bd87d1ef99c8049f0f90d991ef58de714b38ab94b9c0301c5d7ad042a",
     {
       "address": "00000000000000000000000000000001",
@@ -456,6 +827,51 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "01b2895fcdb7651bd2db0a1021acae780c4d4b54b52b9b46962b4e3b9bffe683f9",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LBR",
+      "name": "ReserveComponent",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "Coin2",
+            "name": "Coin2",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01b40c7f1f369e8653c1df137967c45c0c368668fa8dad040a8d8ceec212e155d7",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "TierInfo",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LBR",
+            "name": "LBR",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01b5d92429a8648f99bcf93f1db0f38ab8a255bd9c68083471f8da5d7f35af0d1c",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "SharedEd25519PublicKey",
+      "name": "SharedEd25519PublicKey",
+      "type_params": []
     }
   ],
   [
@@ -479,6 +895,53 @@
             "address": "00000000000000000000000000000001",
             "module": "Coin2",
             "name": "Coin2",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01c2c4723b0bd92ffc1deb11516a1b982543a814d0e53bb31fcc92b074db73c12a",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        "Address"
+      ]
+    }
+  ],
+  [
+    "01c49d3ee42bc2290dbaeca4bd6de81a57d1109c8e5d5c85f929ea1b12144ac381",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LBR",
+      "name": "ReserveComponent",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "Coin1",
+            "name": "Coin1",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01c57e4b1f2f0b310e31551b209d95863037d5d549f41f62d324aeabb6f44e0baf",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraConfig",
+      "name": "LibraConfig",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LibraTransactionPublishingOption",
+            "name": "LibraTransactionPublishingOption",
             "type_params": []
           }
         }
@@ -522,20 +985,20 @@
     }
   ],
   [
+    "01c9ccc5aba203c7a5a0fa74f1e5d94d97b414b86f5086a0a8f6c0ea0e52e7f138",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraAccount",
+      "name": "SentPaymentEvent",
+      "type_params": []
+    }
+  ],
+  [
     "01ca1cdf0d3f9f145c25fbc8b486f00b7dc6c3e0bb70d8e56f754894ee6e2217f7",
     {
       "address": "00000000000000000000000000000001",
       "module": "LibraBlock",
       "name": "BlockMetadata",
-      "type_params": []
-    }
-  ],
-  [
-    "01cab09a6d4937fa7ff6c0c543cb0cbf033a1063d5b76ce1cab71a04c9964856a1",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "LibraTransactionTimeout",
-      "name": "TTL",
       "type_params": []
     }
   ],
@@ -576,6 +1039,24 @@
     }
   ],
   [
+    "01d974fad033f08bd036183fe96e6e80ef392ba3c94662f64e19a445540b381ff9",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "MintCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LBR",
+            "name": "LBR",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
     "01d9b4de2efb7834d7af8f8857f631908ef3c546f479dabfc1da6e0f7585585f2a",
     {
       "address": "00000000000000000000000000000001",
@@ -603,6 +1084,33 @@
     }
   ],
   [
+    "01e1148a58a0a3d06f43d4114f9ac4711cf8431987a3845d09a63f3b9593bcc279",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Libra",
+      "name": "Libra",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "LBR",
+            "name": "LBR",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01e2d51827c76b70cc9f91a1fc28d14edac68d9ff9d7d10466326102dd463f922a",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "FreezeAccountEvent",
+      "type_params": []
+    }
+  ],
+  [
     "01e4097626eacd0ae644bde4b512aebdb30c4a43869a6eb10a04867ac76a8750a4",
     {
       "address": "00000000000000000000000000000001",
@@ -621,6 +1129,15 @@
     }
   ],
   [
+    "01e7ae84f992d29f92e4944c66bbca887bd08035dc29877ba98fd164b2f55074de",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "ReceivedMintEvent",
+      "type_params": []
+    }
+  ],
+  [
     "01f093293c23e7acf8fa7b5d6007a807502b1260aab343e20d0f55fd8f9b9c4ae2",
     {
       "address": "00000000000000000000000000000001",
@@ -636,6 +1153,15 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "01f3f731b194298f1e3247472eb1f71f6eafc6b198004f03887f5a84292cedf406",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ValidatorOperatorConfig",
+      "name": "ValidatorOperatorConfig",
+      "type_params": []
     }
   ],
   [
@@ -672,6 +1198,24 @@
           }
         }
       ]
+    }
+  ],
+  [
+    "01f6e6015dfdc87abb890b5e2eec18bda87af6c3a12ac8372c65b232ec94a68675",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraVMConfig",
+      "name": "GasSchedule",
+      "type_params": []
+    }
+  ],
+  [
+    "01fc85b89061cb030636b232a20908bda195c8fa7f78e18e51e2dc446c760a2573",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "LibraAccount",
+      "name": "KeyRotationCapability",
+      "type_params": []
     }
   ]
 ]
