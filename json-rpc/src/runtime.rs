@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::future::join_all;
 use libra_config::config::{NodeConfig, RoleType};
-use libra_logger::{debug, error, info, Schema};
+use libra_logger::{info, log, Level, Schema};
 use libra_mempool::MempoolClientSender;
 use libra_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use rand::{rngs::OsRng, RngCore};
@@ -53,6 +53,27 @@ struct RpcResponseLog<'a> {
     is_batch: bool,
     response_error: bool,
     response: &'a JsonRpcResponse,
+}
+
+#[macro_export]
+macro_rules! log_response {
+    ($trace_id: expr, $resp: expr, $is_batch: expr) => {
+        let mut level = Level::Debug;
+        if let Some(ref error) = $resp.error {
+            if is_internal_error(error) {
+                level = Level::Error
+            }
+        }
+        log!(
+            level,
+            RpcResponseLog {
+                trace_id: $trace_id,
+                is_batch: $is_batch,
+                response_error: $resp.error.is_some(),
+                response: $resp,
+            }
+        );
+    };
 }
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
@@ -180,11 +201,10 @@ async fn rpc_endpoint_without_metrics(
 
     let mut rng = OsRng;
     let trace_id = rng.next_u64();
-    let request_log = RpcRequestLog {
+    info!(RpcRequestLog {
         trace_id,
         request: data.clone(),
-    };
-    info!(request_log);
+    });
 
     let resp = Ok(if let Value::Array(requests) = data {
         match service.validate_batch_size_limit(requests.len()) {
@@ -202,7 +222,7 @@ async fn rpc_endpoint_without_metrics(
                 });
                 let responses = join_all(futures).await;
                 for resp in &responses {
-                    log_response(trace_id, &resp, true);
+                    log_response!(trace_id, &resp, true);
                 }
                 warp::reply::json(&responses)
             }
@@ -213,7 +233,7 @@ async fn rpc_endpoint_without_metrics(
                     ledger_info.ledger_info().timestamp_usecs(),
                 );
                 set_response_error(&mut resp, err);
-                log_response(trace_id, &resp, true);
+                log_response!(trace_id, &resp, true);
 
                 warp::reply::json(&resp)
             }
@@ -222,26 +242,12 @@ async fn rpc_endpoint_without_metrics(
         // single API call
         let resp =
             rpc_request_handler(data, service, registry, ledger_info, LABEL_SINGLE, trace_id).await;
-        log_response(trace_id, &resp, false);
+        log_response!(trace_id, &resp, false);
 
         warp::reply::json(&resp)
     });
 
     Ok(Box::new(resp) as Box<dyn warp::Reply>)
-}
-
-fn log_response(trace_id: u64, resp: &JsonRpcResponse, is_batch: bool) {
-    let log = RpcResponseLog {
-        trace_id,
-        is_batch,
-        response_error: resp.error.is_some(),
-        response: resp,
-    };
-    if is_internal_error(resp.error.clone()) {
-        error!(log);
-    } else {
-        debug!(log);
-    }
 }
 
 /// Handler of single RPC request
@@ -346,7 +352,7 @@ async fn rpc_request_handler(
 // If a counter label is supplied, also increments the invalid request counter using the label,
 fn set_response_error(response: &mut JsonRpcResponse, error: JsonRpcError) {
     let err_code = error.code;
-    if is_internal_error(Some(error.clone())) {
+    if is_internal_error(&error) {
         counters::INTERNAL_ERRORS.inc();
     } else {
         let label = match err_code {
@@ -363,12 +369,8 @@ fn set_response_error(response: &mut JsonRpcResponse, error: JsonRpcError) {
     response.error = Some(error);
 }
 
-fn is_internal_error(error: Option<JsonRpcError>) -> bool {
-    if let Some(e) = error {
-        e.code <= -32000 && e.code >= -32099
-    } else {
-        false
-    }
+fn is_internal_error(e: &JsonRpcError) -> bool {
+    e.code <= -32000 && e.code >= -32099
 }
 
 fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError> {
