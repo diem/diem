@@ -10,7 +10,9 @@ use crate::{
         transaction_store::TransactionStore,
         ttl_cache::TtlCache,
     },
-    counters, OP_COUNTERS,
+    counters,
+    logging::{LogEntry, LogSchema, TxnsLog},
+    OP_COUNTERS,
 };
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -60,10 +62,8 @@ impl Mempool {
     ) {
         trace_event!("mempool:remove_transaction", {"txn", sender, sequence_number});
         trace!(
-            "[Mempool] Removing transaction from mempool: {}:{}:{}",
-            sender,
-            sequence_number,
-            is_rejected
+            LogSchema::new(LogEntry::RemoveTxn).txns(TxnsLog::new_txn(*sender, sequence_number)),
+            is_rejected = is_rejected
         );
         let metric_label = if is_rejected {
             counters::COMMIT_REJECTED_LABEL
@@ -72,7 +72,6 @@ impl Mempool {
         };
         self.log_latency(*sender, sequence_number, metric_label);
         self.metrics_cache.remove(&(*sender, sequence_number));
-        OP_COUNTERS.inc(&format!("remove_transaction.{}", is_rejected));
 
         let current_seq_number = self
             .sequence_number_cache
@@ -80,10 +79,6 @@ impl Mempool {
             .unwrap_or_default();
 
         if is_rejected {
-            debug!(
-                "[Mempool] transaction is rejected: {}:{}",
-                sender, sequence_number
-            );
             if sequence_number >= current_seq_number {
                 self.transactions
                     .reject_transaction(&sender, sequence_number);
@@ -120,10 +115,9 @@ impl Mempool {
     ) -> MempoolStatus {
         trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
-            "[Mempool] Adding transaction to mempool: {}:{}:{}",
-            &txn.sender(),
-            txn.sequence_number(),
-            db_sequence_number,
+            LogSchema::new(LogEntry::AddTxn)
+                .txns(TxnsLog::new_txn(txn.sender(), txn.sequence_number())),
+            committed_seq_number = db_sequence_number
         );
         let cached_value = self.sequence_number_cache.get(&txn.sender());
         let sequence_number =
@@ -217,12 +211,23 @@ impl Mempool {
         }
         let result_size = result.len();
         // convert transaction pointers to real values
+        let mut block_log = TxnsLog::new();
         let block: Vec<_> = result
             .into_iter()
-            .filter_map(|(address, seq)| self.transactions.get(&address, seq))
+            .filter_map(|(address, seq)| {
+                block_log.add(address, seq);
+                self.transactions.get(&address, seq)
+            })
             .collect();
-        debug!("mempool::get_block: seen_consensus={}, walked={}, seen_after={}, result_size={}, block_size={}",
-               seen_size, txn_walked, seen.len(), result_size, block.len());
+
+        debug!(
+            LogSchema::new(LogEntry::GetBlock).txns(block_log),
+            seen_consensus = seen_size,
+            walked = txn_walked,
+            seen_after = seen.len(),
+            result_size = result_size,
+            block_size = block.len()
+        );
         for transaction in &block {
             self.log_latency(
                 transaction.sender(),

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_metrics::{
-    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
-    IntCounterVec, IntGaugeVec,
+    register_histogram_vec, register_int_counter, register_int_counter_vec, register_int_gauge_vec,
+    HistogramVec, IntCounter, IntCounterVec, IntGaugeVec,
 };
 use once_cell::sync::Lazy;
 
@@ -46,6 +46,10 @@ pub const STATE_SYNC_EVENT_LABEL: &str = "state_sync";
 pub const RECONFIG_EVENT_LABEL: &str = "reconfig";
 pub const PEER_BROADCAST_EVENT_LABEL: &str = "peer_broadcast";
 
+// Mempool network msg failure type labels:
+pub const BROADCAST_TXNS: &str = "broadcast_txns";
+pub const ACK_TXNS: &str = "ack_txns";
+
 /// Counter tracking size of various indices in core mempool
 pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -67,10 +71,18 @@ pub static CORE_MEMPOOL_TXN_COMMIT_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static CORE_MEMPOOL_GC_EVENT_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_core_mempool_gc_event_count",
+        "Number of times a garbage-collection event occurs, regardless of how many txns were actually removed",
+        &["type"])
+       .unwrap()
+});
+
 pub static CORE_MEMPOOL_GC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_core_mempool_gc_latency",
-        "Latency of core mempool garbage collection",
+        "How long a transaction stayed in core mempool before garbage-collected",
         &["type", "status"]
     )
     .unwrap()
@@ -191,9 +203,34 @@ pub static SHARED_MEMPOOL_TRANSACTION_BROADCAST: Lazy<HistogramVec> = Lazy::new(
 
 pub static TASK_SPAWN_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
-        "libra_bounded_executor_spawn_latency",
+        "libra_mempool_bounded_executor_spawn_latency",
         "Time it takes for mempool's coordinator to spawn async tasks",
         &["task"]
+    )
+    .unwrap()
+});
+
+pub static CORE_MEMPOOL_INVARIANT_VIOLATION_COUNT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_mempool_core_mempool_invariant_violated_count",
+        "Number of times a core mempool invariant was violated"
+    )
+    .unwrap()
+});
+
+pub static VM_RECONFIG_UPDATE_FAIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_mempool_vm_reconfig_update_fail_count",
+        "Number of times mempool's VM reconfig update failed"
+    )
+    .unwrap()
+});
+
+pub static NETWORK_SEND_FAIL: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_mempool_network_send_fail_count",
+        "Number of times mempool network send failure occurs",
+        &["type"]
     )
     .unwrap()
 });

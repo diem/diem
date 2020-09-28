@@ -10,7 +10,8 @@ use crate::{
         transaction::{MempoolTransaction, TimelineState},
         ttl_cache::TtlCache,
     },
-    counters, OP_COUNTERS,
+    counters,
+    logging::{LogEntry, LogEvent, LogSchema, TxnsLog},
 };
 use anyhow::{format_err, Result};
 use libra_config::config::MempoolConfig;
@@ -99,7 +100,7 @@ impl TransactionStore {
             ));
         }
 
-        if self.check_if_full(&txn, current_sequence_number) {
+        if self.check_is_full_after_eviction(&txn, current_sequence_number) {
             return MempoolStatus::new(MempoolStatusCode::MempoolIsFull).with_message(format!(
                 "mempool size: {}, capacity: {}",
                 self.system_ttl_index.size(),
@@ -159,17 +160,27 @@ impl TransactionStore {
     /// checks if Mempool is full
     /// If it's full, tries to free some space by evicting transactions from ParkingLot
     /// We only evict on attempt to insert a transaction that would be ready for broadcast upon insertion
-    fn check_if_full(&mut self, txn: &MempoolTransaction, curr_sequence_number: u64) -> bool {
+    fn check_is_full_after_eviction(
+        &mut self,
+        txn: &MempoolTransaction,
+        curr_sequence_number: u64,
+    ) -> bool {
         if self.system_ttl_index.size() >= self.capacity
             && self.check_txn_ready(txn, curr_sequence_number)
         {
-            // try to free some space in Mempool from ParkingLot
+            // try to free some space in Mempool from ParkingLot by evicting a non-ready txn
             if let Some((address, sequence_number)) = self.parking_lot_index.get_poppable() {
                 if let Some(txn) = self
                     .transactions
                     .get_mut(&address)
                     .and_then(|txns| txns.remove(&sequence_number))
                 {
+                    debug!(
+                        LogSchema::new(LogEntry::MempoolFullEvictedTxn).txns(TxnsLog::new_txn(
+                            txn.get_sender(),
+                            txn.get_sequence_number()
+                        ))
+                    );
                     self.index_remove(&txn);
                 }
             }
@@ -263,8 +274,11 @@ impl TransactionStore {
                     }
                 }
             }
-            trace!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
-                address, current_sequence_number, txns.len(), parking_lot_txns,
+            trace!(
+                LogSchema::new(LogEntry::ProcessReadyTxns).account(*address),
+                first_ready_seq_num = current_sequence_number,
+                last_ready_seq_num = sequence_number,
+                num_parked_txns = parking_lot_txns,
             );
             self.track_indices();
         }
@@ -281,9 +295,17 @@ impl TransactionStore {
             txns.clear();
             txns.append(&mut active);
 
+            let mut rm_txns = TxnsLog::new();
             for transaction in txns_for_removal.values() {
+                rm_txns.add(transaction.get_sender(), transaction.get_sequence_number());
                 self.index_remove(transaction);
             }
+            trace!(
+                LogSchema::new(LogEntry::CleanCommittedTxn).txns(rm_txns),
+                "txns cleaned with committing tx {}:{}",
+                address,
+                sequence_number
+            );
         }
     }
 
@@ -301,9 +323,12 @@ impl TransactionStore {
 
     pub(crate) fn reject_transaction(&mut self, account: &AccountAddress, _sequence_number: u64) {
         if let Some(txns) = self.transactions.remove(&account) {
+            let mut txns_log = TxnsLog::new();
             for transaction in txns.values() {
+                txns_log.add(transaction.get_sender(), transaction.get_sequence_number());
                 self.index_remove(&transaction);
             }
+            debug!(LogSchema::new(LogEntry::CleanRejectedTxn).txns(txns_log));
         }
     }
 
@@ -393,26 +418,29 @@ impl TransactionStore {
         by_system_ttl: bool,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
     ) {
-        let (metric_label, index_name, index) = if by_system_ttl {
+        let (metric_label, index, log_event) = if by_system_ttl {
             (
                 counters::GC_SYSTEM_TTL_LABEL,
-                "gc.system_ttl_index",
                 &mut self.system_ttl_index,
+                LogEvent::SystemTTLExpiration,
             )
         } else {
             (
                 counters::GC_CLIENT_EXP_LABEL,
-                "gc.expiration_time_index",
                 &mut self.expiration_time_index,
+                LogEvent::ClientExpiration,
             )
         };
-        OP_COUNTERS.inc(index_name);
+        counters::CORE_MEMPOOL_GC_EVENT_COUNT
+            .with_label_values(&[metric_label])
+            .inc();
 
         let mut gc_txns = index.gc(now);
         // sort the expired txns by order of sequence number per account
         gc_txns.sort_by_key(|key| (key.address, key.sequence_number));
         let mut gc_iter = gc_txns.iter().peekable();
 
+        let mut gc_txns_log = TxnsLog::new();
         while let Some(key) = gc_iter.next() {
             if let Some(txns) = self.transactions.get_mut(&key.address) {
                 let park_range_start = Bound::Excluded(key.sequence_number);
@@ -429,16 +457,16 @@ impl TransactionStore {
                     self.timeline_index.remove(&t);
                 }
                 if let Some(txn) = txns.remove(&key.sequence_number) {
-                    // log the txn to be removed
+                    // TODO log the txn to be removed
                     let is_active = self.priority_index.contains(&txn);
                     let status = if is_active {
                         counters::GC_ACTIVE_TXN_LABEL
                     } else {
                         counters::GC_PARKED_TXN_LABEL
                     };
-                    OP_COUNTERS.inc(&format!("{}.{}", index_name, status));
                     let account = txn.get_sender();
                     let sequence_number = txn.get_sequence_number();
+                    gc_txns_log.add_with_status(account, sequence_number, status);
                     if let Some(&creation_time) = metrics_cache.get(&(account, sequence_number)) {
                         if let Ok(time_delta) = SystemTime::now().duration_since(creation_time) {
                             counters::CORE_MEMPOOL_GC_LATENCY
@@ -452,6 +480,8 @@ impl TransactionStore {
                 }
             }
         }
+
+        debug!(LogSchema::event_log(LogEntry::GCRemoveTxns, log_event).txns(gc_txns_log));
         self.track_indices();
     }
 

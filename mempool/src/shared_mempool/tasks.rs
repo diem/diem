@@ -6,14 +6,15 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
-    network::{MempoolNetworkSender, MempoolSyncMsg},
+    logging::{LogEntry, LogEvent, LogSchema},
+    network::MempoolSyncMsg,
     shared_mempool::types::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
 };
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
@@ -145,24 +146,27 @@ where
         .map(|(_id, txn)| txn)
         .collect::<Vec<_>>();
 
-    let mut network_sender = smp
+    let network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
     let request_id = create_request_id(timeline_id, new_timeline_id);
     let txns_ct = batch_txns.len();
-    if let Err(e) = send_mempool_sync_msg(
+    if let Err(e) = network_sender.send_to(
+        peer.peer_id(),
         MempoolSyncMsg::BroadcastTransactionsRequest {
             request_id: request_id.clone(),
             transactions: batch_txns,
         },
-        peer.peer_id(),
-        &mut network_sender,
     ) {
+        counters::NETWORK_SEND_FAIL
+            .with_label_values(&[counters::BROADCAST_TXNS])
+            .inc();
         error!(
-            "[shared mempool] error broadcasting transactions to peer {:?}: {}",
-            peer, e
+            LogSchema::event_log(LogEntry::BroadcastTransaction, LogEvent::NetworkSendFail)
+                .peer(&peer)
+                .error(&e.into())
         );
     } else {
         let broadcast_time = Instant::now();
@@ -191,21 +195,6 @@ where
     next_backoff
 }
 
-fn send_mempool_sync_msg(
-    msg: MempoolSyncMsg,
-    recipient: PeerId,
-    network_sender: &mut MempoolNetworkSender,
-) -> Result<()> {
-    // Since this is a direct-send, this will only error if the network
-    // module has unexpectedly crashed or shutdown.
-    network_sender.send_to(recipient, msg).map_err(|e| {
-        format_err!(
-            "[shared mempool] failed to direct-send mempool sync message: {}",
-            e
-        )
-    })
-}
-
 // =============================== //
 // tasks processing txn submission //
 // =============================== //
@@ -226,17 +215,20 @@ pub(crate) async fn process_client_transaction_submission<V>(
     log_txn_process_results(&statuses, None);
     let status;
     if statuses.is_empty() {
-        error!("[shared mempool] missing status for client transaction submission");
+        error!(LogSchema::event_log(
+            LogEntry::JsonRpc,
+            LogEvent::MissingTxnProcessResult
+        ));
         return;
     } else {
         status = statuses.remove(0);
     }
 
-    if let Err(e) = callback
-        .send(Ok(status))
-        .map_err(|_| format_err!("[shared mempool] timeout on callback send to AC endpoint"))
-    {
-        error!("[shared mempool] failed to send back transaction submission result to AC endpoint with error: {:?}", e);
+    if callback.send(Ok(status)).is_err() {
+        error!(LogSchema::event_log(
+            LogEntry::JsonRpc,
+            LogEvent::CallbackFail
+        ));
     }
 }
 
@@ -280,14 +272,18 @@ pub(crate) async fn process_transaction_broadcast<V>(
 
     // send back ACK
     let ack_response = gen_ack_response(request_id, results);
-    let mut network_sender = smp
+    let network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
-    if let Err(e) = send_mempool_sync_msg(ack_response, peer.peer_id(), &mut network_sender) {
+    if let Err(e) = network_sender.send_to(peer.peer_id(), ack_response) {
+        counters::NETWORK_SEND_FAIL
+            .with_label_values(&[counters::ACK_TXNS])
+            .inc();
         error!(
-            "[shared mempool] failed to send ACK back to peer {:?}: {}",
-            peer, e
+            LogSchema::event_log(LogEntry::BroadcastACK, LogEvent::NetworkSendFail)
+                .peer(&peer)
+                .error(&e.into())
         );
     }
     notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
@@ -463,18 +459,17 @@ pub(crate) async fn process_state_sync_request(
         .observe(req.transactions.len() as f64);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
-    let result = if let Err(e) = req
+    let result = if req
         .callback
         .send(Ok(CommitResponse {
             msg: "".to_string(),
         }))
-        .map_err(|_| {
-            format_err!("[shared mempool] timeout on callback sending response to Mempool request")
-        }) {
-        error!(
-            "[shared mempool] failed to send back CommitResponse with error: {:?}",
-            e
-        );
+        .is_err()
+    {
+        error!(LogSchema::event_log(
+            LogEntry::StateSyncCommit,
+            LogEvent::CallbackFail
+        ));
         counters::REQUEST_FAIL_LABEL
     } else {
         counters::REQUEST_SUCCESS_LABEL
@@ -518,6 +513,8 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
             )
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
+            // TODO log details of consensus request
+
             // handle rejected txns
             counters::MEMPOOL_SERVICE_TXNS
                 .with_label_values(&[counters::COMMIT_CONSENSUS_LABEL])
@@ -531,13 +528,11 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
         }
     };
     // send back to callback
-    let result = if let Err(e) = callback.send(Ok(resp)).map_err(|_| {
-        format_err!("[shared mempool] timeout on callback sending response to Mempool request")
-    }) {
-        error!(
-            "[shared mempool] failed to send back mempool response with error: {:?}",
-            e
-        );
+    let result = if callback.send(Ok(resp)).is_err() {
+        error!(LogSchema::event_log(
+            LogEntry::Consensus,
+            LogEvent::CallbackFail
+        ));
         counters::REQUEST_FAIL_LABEL
     } else {
         counters::REQUEST_SUCCESS_LABEL
@@ -578,12 +573,20 @@ pub(crate) async fn process_config_update<V>(
 ) where
     V: TransactionValidation,
 {
+    info!(
+        LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Process)
+            .reconfig_update(config_update.clone())
+    );
+
     // restart VM validator
-    validator
+    if let Err(e) = validator
         .write()
-        .unwrap()
+        .expect("failed to acquire VM validator lock")
         .restart(config_update)
-        .expect("failed to restart VM validator");
+    {
+        counters::VM_RECONFIG_UPDATE_FAIL_COUNT.inc();
+        error!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::VMUpdateFail).error(&e));
+    }
 }
 
 /// creates uniques request id for the batch in the format "{start_id}_{end_id}"
