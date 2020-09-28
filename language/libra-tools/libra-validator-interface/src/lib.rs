@@ -1,6 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod json_rpc_interface;
+mod storage_interface;
+
+pub use crate::storage_interface::DBDebuggerInterface;
+pub use json_rpc_interface::JsonRpcDebuggerInterface;
+
 use anyhow::{bail, Result};
 use libra_state_view::StateView;
 use libra_types::{
@@ -12,7 +18,7 @@ use libra_types::{
 };
 use std::convert::TryFrom;
 
-pub trait StorageDebuggerInterface {
+pub trait LibraValidatorInterface {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,
@@ -28,12 +34,12 @@ pub trait StorageDebuggerInterface {
 }
 
 pub struct DebuggerStateView<'a> {
-    db: &'a dyn StorageDebuggerInterface,
+    db: &'a dyn LibraValidatorInterface,
     version: Version,
 }
 
 impl<'a> DebuggerStateView<'a> {
-    pub fn new(db: &'a dyn StorageDebuggerInterface, version: Version) -> Self {
+    pub fn new(db: &'a dyn LibraValidatorInterface, version: Version) -> Self {
         Self { db, version }
     }
 }

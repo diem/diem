@@ -3,7 +3,7 @@
 
 mod bisection_tests;
 
-use crate::StorageDebuggerInterface;
+use crate::LibraValidatorInterface;
 use anyhow::{bail, Result};
 use libra_types::{
     account_address::AccountAddress,
@@ -41,7 +41,7 @@ impl TestInterface {
     }
 }
 
-impl StorageDebuggerInterface for TestInterface {
+impl LibraValidatorInterface for TestInterface {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::transaction_debugger_interface::StorageDebuggerInterface;
+use crate::LibraValidatorInterface;
 use anyhow::{bail, Result};
 use libra_json_rpc_client::{JsonRpcBatch, JsonRpcClient, JsonRpcResponse};
 use libra_types::{
@@ -11,7 +11,7 @@ use libra_types::{
 };
 use reqwest::Url;
 
-pub(crate) struct JsonRpcDebuggerInterface {
+pub struct JsonRpcDebuggerInterface {
     client: JsonRpcClient,
 }
 
@@ -32,7 +32,7 @@ impl JsonRpcDebuggerInterface {
     }
 }
 
-impl StorageDebuggerInterface for JsonRpcDebuggerInterface {
+impl LibraValidatorInterface for JsonRpcDebuggerInterface {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,

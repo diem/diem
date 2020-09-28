@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc_debugger::JsonRpcDebuggerInterface, storage_debugger::DBDebuggerInterface};
 use anyhow::{bail, format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
@@ -9,33 +8,29 @@ use libra_types::{
     account_state::AccountState,
     transaction::{ChangeSet, Transaction, TransactionOutput, Version},
 };
+use libra_validator_interface::{
+    DBDebuggerInterface, DebuggerStateView, JsonRpcDebuggerInterface, LibraValidatorInterface,
+};
 use libra_vm::{
     data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor,
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
 use move_lang::{compiled_unit::CompiledUnit, move_compile_no_report, shared::Address};
-use move_vm_runtime::{move_vm::MoveVM, session::Session};
+use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{convert::TryFrom, path::Path};
 use vm::errors::VMResult;
 
-pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
-use move_vm_runtime::logging::NoContextLog;
-
 #[cfg(test)]
 mod unit_tests;
 
-mod json_rpc_debugger;
-mod storage_debugger;
-mod transaction_debugger_interface;
-
 pub struct LibraDebugger {
-    debugger: Box<dyn StorageDebuggerInterface>,
+    debugger: Box<dyn LibraValidatorInterface>,
 }
 
 impl LibraDebugger {
-    pub fn new(debugger: Box<dyn StorageDebuggerInterface>) -> Self {
+    pub fn new(debugger: Box<dyn LibraValidatorInterface>) -> Self {
         Self { debugger }
     }
 

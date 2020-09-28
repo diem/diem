@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::StorageDebuggerInterface;
+use crate::LibraValidatorInterface;
 use anyhow::{anyhow, Result};
 use libra_types::{
     account_address::AccountAddress,
@@ -12,7 +12,7 @@ use libradb::LibraDB;
 use std::{path::Path, sync::Arc};
 use storage_interface::DbReader;
 
-pub(crate) struct DBDebuggerInterface(Arc<dyn DbReader>);
+pub struct DBDebuggerInterface(Arc<dyn DbReader>);
 
 impl DBDebuggerInterface {
     pub fn open<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
@@ -20,7 +20,7 @@ impl DBDebuggerInterface {
     }
 }
 
-impl StorageDebuggerInterface for DBDebuggerInterface {
+impl LibraValidatorInterface for DBDebuggerInterface {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,

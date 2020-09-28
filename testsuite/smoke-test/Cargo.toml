@@ -42,7 +42,7 @@ libra-swarm = { path = "../libra-swarm", version = "0.1.0"}
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-time = { path = "../../common/time", version = "0.1.0" }
 libra-trace = { path = "../../common/trace", version = "0.1.0" }
-libra-transaction-replay = { path = "../../language/tools/transaction-replay", version = "0.1.0" }
+libra-transaction-replay = { path = "../../language/libra-tools/transaction-replay", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

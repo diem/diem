@@ -3443,9 +3443,9 @@ dependencies = [
  "anyhow",
  "difference",
  "libra-canonical-serialization",
- "libra-json-rpc-client",
  "libra-state-view",
  "libra-types",
+ "libra-validator-interface",
  "libra-vm",
  "libra-workspace-hack",
  "libradb",
@@ -3453,11 +3453,8 @@ dependencies = [
  "move-lang",
  "move-vm-runtime",
  "move-vm-types",
- "reqwest",
  "resource-viewer",
- "scratchpad",
  "stdlib",
- "storage-interface",
  "structopt 0.3.18",
  "vm",
 ]
@@ -3491,6 +3488,22 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tiny-keccak",
+]
+
+[[package]]
+name = "libra-validator-interface"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "libra-canonical-serialization",
+ "libra-json-rpc-client",
+ "libra-state-view",
+ "libra-types",
+ "libra-workspace-hack",
+ "libradb",
+ "reqwest",
+ "scratchpad",
+ "storage-interface",
 ]
 
 [[package]]

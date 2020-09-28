@@ -42,7 +42,7 @@ fn test_replay_tooling() {
         .get_account_address_from_parameter("0")
         .unwrap();
     let script_path = workspace_builder::workspace_root()
-        .join("language/tools/transaction-replay/examples/account_exists.move");
+        .join("language/libra-tools/transaction-replay/examples/account_exists.move");
 
     let bisect_result = json_debugger
         .bisect_transactions_by_script(script_path.to_str().unwrap(), account, 0, txn.version)
