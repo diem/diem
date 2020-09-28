@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.12.3"
-chrono = "0.4.15"
+chrono = "0.4.18"
 enum_dispatch = "0.3.3"
 rand = "0.7.3"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }

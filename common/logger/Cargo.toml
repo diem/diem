@@ -12,7 +12,7 @@ edition = "2018"
 # Do NOT add any inter-project dependencies.
 # This is to avoid ever having a circular dependency with the libra-logger crate.
 [dependencies]
-chrono = "0.4.15"
+chrono = "0.4.18"
 erased-serde = "0.3.12"
 hex = "0.4.2"
 libra-log-derive = { path = "derive", version = "0.1.0" }
