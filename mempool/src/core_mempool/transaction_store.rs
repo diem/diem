@@ -457,7 +457,6 @@ impl TransactionStore {
                     self.timeline_index.remove(&t);
                 }
                 if let Some(txn) = txns.remove(&key.sequence_number) {
-                    // TODO log the txn to be removed
                     let is_active = self.priority_index.contains(&txn);
                     let status = if is_active {
                         counters::GC_ACTIVE_TXN_LABEL

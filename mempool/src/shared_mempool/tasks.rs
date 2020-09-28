@@ -10,6 +10,7 @@ use crate::{
     network::MempoolSyncMsg,
     shared_mempool::types::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
+        SubmissionStatusBundle,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -23,7 +24,6 @@ use libra_types::{
     on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
-    PeerId,
 };
 use std::{
     cmp,
@@ -210,25 +210,18 @@ pub(crate) async fn process_client_transaction_submission<V>(
     let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
         .with_label_values(&["client"])
         .start_timer();
-    let mut statuses =
+    let statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(&statuses, None);
-    let status;
-    if statuses.is_empty() {
-        error!(LogSchema::event_log(
-            LogEntry::JsonRpc,
-            LogEvent::MissingTxnProcessResult
-        ));
-        return;
-    } else {
-        status = statuses.remove(0);
-    }
 
-    if callback.send(Ok(status)).is_err() {
-        error!(LogSchema::event_log(
-            LogEntry::JsonRpc,
-            LogEvent::CallbackFail
-        ));
+    if let Some(status) = statuses.get(0) {
+        if callback.send(Ok(status.1.clone())).is_err() {
+            error!(LogSchema::event_log(
+                LogEntry::JsonRpc,
+                LogEvent::CallbackFail
+            ));
+            counters::CLIENT_CALLBACK_FAIL.inc();
+        }
     }
 }
 
@@ -247,28 +240,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .start_timer();
     // process transactions and log the result
     let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
-    log_txn_process_results(&results, Some(peer.peer_id()));
-
-    // we assume that the results contains a vec of the same length of transactions
-    debug_assert_eq!(results.len(), transactions.len());
-
-    // security log all the failed transactions
-    let failed_transactions = results
-        .iter()
-        // create iterator of tuple (VM status, transaction)
-        .map(|(_, maybe_vm_status)| maybe_vm_status)
-        .zip(transactions.iter())
-        // VM status will be set if the transaction failed
-        .filter(|(maybe_vm_status, _)| maybe_vm_status.is_some());
-
-    for (maybe_vm_status, failed_transaction) in failed_transactions {
-        error!(
-            SecurityEvent::InvalidTransactionMempool,
-            failed_transaction = failed_transaction,
-            vm_status = maybe_vm_status,
-            from_peer = peer,
-        );
-    }
+    log_txn_process_results(&results, Some(peer.clone()));
 
     // send back ACK
     let ack_response = gen_ack_response(request_id, results);
@@ -289,15 +261,16 @@ pub(crate) async fn process_transaction_broadcast<V>(
     notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
 }
 
-fn gen_ack_response(request_id: String, results: Vec<SubmissionStatus>) -> MempoolSyncMsg {
+fn gen_ack_response(request_id: String, results: Vec<SubmissionStatusBundle>) -> MempoolSyncMsg {
     let mut backoff = false;
     let retry_txns = results
         .into_iter()
         .enumerate()
         .filter_map(|(idx, result)| {
-            backoff = backoff || result.0.code == MempoolStatusCode::MempoolIsFull;
+            let submission_status = result.1;
+            backoff = backoff || submission_status.0.code == MempoolStatusCode::MempoolIsFull;
 
-            if is_txn_retryable(result) {
+            if is_txn_retryable(submission_status) {
                 Some(idx as u64)
             } else {
                 None
@@ -324,7 +297,7 @@ pub(crate) async fn process_incoming_transactions<V>(
     smp: &SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
-) -> Vec<SubmissionStatus>
+) -> Vec<SubmissionStatusBundle>
 where
     V: TransactionValidation,
 {
@@ -351,15 +324,21 @@ where
                     return Some((t, sequence_number));
                 } else {
                     statuses.push((
-                        MempoolStatus::new(MempoolStatusCode::VmError),
-                        Some(DiscardedVMStatus::SEQUENCE_NUMBER_TOO_OLD),
+                        t,
+                        (
+                            MempoolStatus::new(MempoolStatusCode::VmError),
+                            Some(DiscardedVMStatus::SEQUENCE_NUMBER_TOO_OLD),
+                        ),
                     ));
                 }
             } else {
                 // failed to get transaction
                 statuses.push((
-                    MempoolStatus::new(MempoolStatusCode::VmError),
-                    Some(DiscardedVMStatus::RESOURCE_DOES_NOT_EXIST),
+                    t,
+                    (
+                        MempoolStatus::new(MempoolStatusCode::VmError),
+                        Some(DiscardedVMStatus::RESOURCE_DOES_NOT_EXIST),
+                    ),
                 ));
             }
             None
@@ -394,19 +373,22 @@ where
                         let ranking_score = validation_result.score();
                         let governance_role = validation_result.governance_role();
                         let mempool_status = mempool.add_txn(
-                            transaction,
+                            transaction.clone(),
                             gas_amount,
                             ranking_score,
                             sequence_number,
                             timeline_state,
                             governance_role,
                         );
-                        statuses.push((mempool_status, None));
+                        statuses.push((transaction, (mempool_status, None)));
                     }
                     Some(validation_status) => {
                         statuses.push((
-                            MempoolStatus::new(MempoolStatusCode::VmError),
-                            Some(validation_status),
+                            transaction.clone(),
+                            (
+                                MempoolStatus::new(MempoolStatusCode::VmError),
+                                Some(validation_status),
+                            ),
                         ));
                     }
                 }
@@ -418,14 +400,20 @@ where
 }
 
 // TODO update counters to ID peers using PeerNetworkId
-fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>) {
+fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<PeerNetworkId>) {
     let sender = match sender {
         Some(peer) => peer.to_string(),
         None => "client".to_string(),
     };
-    for (mempool_status, vm_status) in results.iter() {
-        if vm_status.is_some() {
+    for (txn, (mempool_status, maybe_vm_status)) in results.iter() {
+        if let Some(vm_status) = maybe_vm_status {
             // log vm validation failure
+            error!(
+                SecurityEvent::InvalidTransactionMempool,
+                failed_transaction = txn,
+                vm_status = vm_status,
+                sender = sender,
+            );
             counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                 .with_label_values(&["validation_failed".to_string().deref(), &sender])
                 .inc();

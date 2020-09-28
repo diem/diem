@@ -190,6 +190,9 @@ pub struct TransactionExclusion {
 /// Submission Status is represented as combination of vm_validator internal status and core mempool insertion status
 pub type SubmissionStatus = (MempoolStatus, Option<DiscardedVMStatus>);
 
+/// A txn's submission status coupled with the txn itself.
+pub type SubmissionStatusBundle = (SignedTransaction, SubmissionStatus);
+
 /// sender type: used to enqueue new transactions to shared mempool by client endpoints
 pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;

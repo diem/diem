@@ -234,3 +234,11 @@ pub static NETWORK_SEND_FAIL: Lazy<IntCounterVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static CLIENT_CALLBACK_FAIL: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_mempool_json_rpc_callback_fail_count",
+        "Number of times callback to JSON RPC failed in mempool"
+    )
+    .unwrap()
+});
