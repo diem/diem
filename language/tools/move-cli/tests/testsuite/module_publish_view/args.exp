@@ -1,11 +1,7 @@
 Command `publish ../../../../../stdlib/modules`:
-Compiling Move modules...
-Found and compiled 41 modules
-Committed changes.
-Command `publish move_src`:
+Command `publish move_src -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Committed changes.
 Command `view move_data/0x00000000000000000000000000000042/modules/Module.mv`:
 module 00000000.Module {
 resource S {

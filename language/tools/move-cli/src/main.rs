@@ -32,16 +32,19 @@ use structopt::StructOpt;
 #[structopt(name = "Move", about = "CLI frontend for Move compiler and VM")]
 struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
-    #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA)]
+    #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA, global = true)]
     move_data: String,
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
     #[structopt(
         name = "move-build-output",
         long = "build-output",
-        default_value = DEFAULT_BUILD_OUTPUT_DIR
+        default_value = DEFAULT_BUILD_OUTPUT_DIR,
+        global = true,
     )]
     build_output: String,
-    // Command to be run.
+    /// Print additional diagnostics
+    #[structopt(name = "verbose", short = "v", global = true)]
+    verbose: bool,
     #[structopt(subcommand)]
     cmd: Command,
 }
@@ -150,7 +153,9 @@ fn interface_files_dir(build_dir: &str) -> Result<String> {
 
 /// Compile the user modules in `move_src` and the script in `script_file`
 fn check(args: &Move, files: &[String]) -> Result<()> {
-    println!("Checking Move files...");
+    if args.verbose {
+        println!("Checking Move files...");
+    }
     let interface_dir = interface_files_dir(&args.build_output)?;
     move_lang::move_check(files, &[interface_dir], None, None)?;
     Ok(())
@@ -159,7 +164,9 @@ fn check(args: &Move, files: &[String]) -> Result<()> {
 fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
     let move_data = maybe_create_dir(&args.move_data)?;
 
-    println!("Compiling Move modules...");
+    if args.verbose {
+        println!("Compiling Move modules...")
+    }
     let interface_dir = interface_files_dir(&args.build_output)?;
     let (_, compiled_units) = move_lang::move_compile(files, &[interface_dir], None, None)?;
 
@@ -167,17 +174,21 @@ fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
         .iter()
         .filter(|u| matches!(u,  CompiledUnit::Module {..}))
         .count();
-    println!("Found and compiled {} modules", num_modules);
+    if args.verbose {
+        println!("Found and compiled {} modules", num_modules)
+    }
 
     let mut modules = vec![];
     for c in compiled_units {
         match c {
             CompiledUnit::Script { loc, .. } => {
-                println!(
-                    "Warning: Found script in specified files for publishing. But scripts cannot \
-                     be published. Script found in: {}",
-                    loc.file()
-                );
+                if args.verbose {
+                    println!(
+                        "Warning: Found script in specified files for publishing. But scripts cannot \
+                         be published. Script found in: {}",
+                        loc.file()
+                    )
+                }
             }
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
@@ -200,7 +211,9 @@ fn run(
     ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
         let move_data = maybe_create_dir(&args.move_data)?;
 
-        println!("Compiling transaction script...");
+        if args.verbose {
+            println!("Compiling transaction script...")
+        }
         let interface_dir = interface_files_dir(&args.build_output)?;
         let (_, compiled_units) = move_lang::move_compile(
             &[script_file.to_string()],
@@ -218,11 +231,15 @@ fn run(
                     }
                     script_opt = Some(script)
                 }
-                CompiledUnit::Module { ident, .. } => println!(
+                CompiledUnit::Module { ident, .. } => {
+                    if args.verbose {
+                        println!(
                     "Warning: Found module '{}' in file specified for the script. This module \
                      will not be published.",
                     ident
-                ),
+                    )
+                    }
+                }
             }
         }
         Ok((
@@ -292,7 +309,9 @@ fn run(
         )
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        explain_effects(&effects, &state)?;
+        if args.verbose {
+            explain_effects(&effects, &state)?
+        }
         maybe_commit_effects(&args, !dry_run, Some(effects), &state)
     }
 }
@@ -380,14 +399,13 @@ fn maybe_commit_effects(
             }
         }
 
-        // TODO: print modules to be saved?
         let modules_saved = state.save_modules()?;
         if modules_saved {
             generate_interface_files(args)?;
         }
-        println!("Committed changes.")
+        state.save_modules()?;
     } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
-        println!("Discarding changes; re-run with --commit if you would like to keep them.")
+        println!("Discarding changes; re-run without --dry-run if you would like to keep them.")
     }
 
     Ok(())
