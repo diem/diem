@@ -717,10 +717,6 @@ jobs:
                 command: |
                   #signs the pushed image
                   docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-latest
-            - run:
-                name: docker image pruning.
-                command: |
-                  scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}"" -p ${DOCKERHUB_PASSWORD}" -x
 
   docker-update-base-images:
     executor: vm-medium-executor
@@ -804,7 +800,14 @@ jobs:
             docker/build_push.sh -u -b ${BRANCH} -n validator
             docker/build_push.sh -u -b ${BRANCH} -n validator-tcb
             docker/build_push.sh -u -b ${BRANCH} -n cluster-test
-            #push to novi ecr with standard names, and older names.
+      - run:
+          name: docker image pruning.
+          command: |
+            scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}" -p "${DOCKERHUB_PASSWORD}" -x
+      - run:
+          name: push to novi ecr
+          command: |
+            #push to novi ecr with standard names
             GIT_REV=$(git rev-parse --short=8 HEAD)
             aws ecr get-login-password --region ${AWS_REGION} | \
             docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
