@@ -121,7 +121,7 @@ impl JsonRpcRequest {
     }
 
     /// Return AccountAddress by try parse from params[index]
-    fn parse_account_address(&self, index: usize) -> Result<AccountAddress> {
+    fn parse_account_address(&self, index: usize) -> Result<AccountAddress, JsonRpcError> {
         self.try_parse_param(index, "account address")
     }
 
@@ -130,7 +130,7 @@ impl JsonRpcRequest {
     ///   2. call TryFrom<String> to create target T instance.
     /// The name argument is for creating helpful error messsage in case deserialization
     /// failed.
-    fn try_parse_param<T>(&self, index: usize, name: &str) -> Result<T>
+    fn try_parse_param<T>(&self, index: usize, name: &str) -> Result<T, JsonRpcError>
     where
         T: TryFrom<String>,
     {
@@ -166,6 +166,24 @@ impl JsonRpcRequest {
         Ok(version)
     }
 
+    fn parse_signed_transaction(
+        &self,
+        index: usize,
+        name: &str,
+    ) -> Result<SignedTransaction, JsonRpcError> {
+        Ok(self
+            ._parse_signed_transaction(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))?)
+    }
+
+    fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey, JsonRpcError> {
+        Ok(self
+            ._parse_event_key(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))?)
+    }
+
+    // the following methods should not be called directly as they return error causes internal error
+    // call related wrapper method for parsing param.
     fn _parse_event_key(&self, val: Value) -> Result<EventKey> {
         let raw: String = serde_json::from_value(val)?;
         Ok(EventKey::try_from(&hex::decode(raw)?[..])?)
@@ -174,18 +192,6 @@ impl JsonRpcRequest {
     fn _parse_signed_transaction(&self, val: Value) -> Result<SignedTransaction> {
         let raw: String = serde_json::from_value(val)?;
         Ok(lcs::from_bytes(&hex::decode(raw)?)?)
-    }
-
-    fn parse_signed_transaction(&self, index: usize, name: &str) -> Result<SignedTransaction> {
-        Ok(self
-            ._parse_signed_transaction(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
-    }
-
-    fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey> {
-        Ok(self
-            ._parse_event_key(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
     }
 }
 
