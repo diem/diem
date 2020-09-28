@@ -99,7 +99,7 @@ jobs:
           echo "::set-output name=list::${output}"
       - name: require dep-audit review if TCB deps changed
         if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
-        uses: ./.github/actions/require-review
+        uses: libra/actions/require-review@a9c5709
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           users: ${{ steps.dep-auditors.outputs.list }}
@@ -151,7 +151,7 @@ jobs:
           add: tcb-deps-changed
       - name: label PR if tracked deps changed
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff || needs.calc-summaries.outputs.release-summary-diff }}
-        uses: ./.github/actions/labels
+        uses: libra/actions/labels@a9c5709
         with:
           add: deps-changed
 
