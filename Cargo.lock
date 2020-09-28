@@ -69,9 +69,9 @@ dependencies = [
 
 [[package]]
 name = "aes"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7001367fde4c768a19d1029f0a8be5abd9308e1119846d5bd9ad26297b8faf5"
+checksum = "dd2bc6d3f370b5666245ff421e231cba4353df936e26986d2918e61a8fd6aef6"
 dependencies = [
  "aes-soft",
  "aesni",
@@ -80,9 +80,9 @@ dependencies = [
 
 [[package]]
 name = "aes-gcm"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86f5007801316299f922a6198d1d09a0bae95786815d066d5880d13f7c45ead1"
+checksum = "0301c9e9c443494d970a07885e8cf3e587bae8356a1d5abd0999068413f7205f"
 dependencies = [
  "aead",
  "aes",
@@ -93,23 +93,23 @@ dependencies = [
 
 [[package]]
 name = "aes-soft"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4925647ee64e5056cf231608957ce7c81e12d6d6e316b9ce1404778cc1d35fa7"
+checksum = "63dd91889c49327ad7ef3b500fd1109dbd3c509a03db0d4a9ce413b79f575cb6"
 dependencies = [
  "block-cipher",
  "byteorder",
- "opaque-debug 0.2.3",
+ "opaque-debug 0.3.0",
 ]
 
 [[package]]
 name = "aesni"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d050d39b0b7688b3a3254394c3e30a9d66c41dcf9b05b0e2dbdc623f6505d264"
+checksum = "0a6fe808308bb07d393e2ea47780043ec47683fcf19cf5efc8ca51c50cc8c68a"
 dependencies = [
  "block-cipher",
- "opaque-debug 0.2.3",
+ "opaque-debug 0.3.0",
 ]
 
 [[package]]
@@ -402,9 +402,9 @@ dependencies = [
 
 [[package]]
 name = "block-cipher"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa136449e765dc7faa244561ccae839c394048667929af599b5d931ebe7b7f10"
+checksum = "f337a3e6da609650eb74e02bc9fac7b735049f7623ab12f2e4c719316fcc7e80"
 dependencies = [
  "generic-array 0.14.4",
 ]
