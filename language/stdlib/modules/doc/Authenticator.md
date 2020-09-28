@@ -206,9 +206,8 @@ Compute an authentication key for the ed25519 public key <code>public_key</code>
 
 
 <pre><code>pragma opaque = <b>true</b>;
-pragma verify = <b>false</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Authenticator.md#0x1_Authenticator_spec_ed25519_authentication_key">spec_ed25519_authentication_key</a>(public_key);
+<b>ensures</b> [abstract] result == <a href="Authenticator.md#0x1_Authenticator_spec_ed25519_authentication_key">spec_ed25519_authentication_key</a>(public_key);
 </code></pre>
 
 
@@ -308,6 +307,8 @@ Return the threshold for the multisig policy <code>k</code>
 
 ## Module Specification
 
+We use an uninterpreted function to represent the result of key construction. The actual value
+does not matter for the verification of callers.
 
 
 <a name="0x1_Authenticator_spec_ed25519_authentication_key"></a>

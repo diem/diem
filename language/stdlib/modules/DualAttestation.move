@@ -333,11 +333,12 @@ module DualAttestation {
         /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
         /// message is not important for the verification problem, as long as the prover considers both
         /// messages which fail verification and which do not.
-        pragma opaque = true, verify = false;
+        pragma opaque;
         aborts_if false;
-        ensures result == spec_dual_attestation_message(payer, metadata, deposit_value);
+        ensures [abstract] result == spec_dual_attestation_message(payer, metadata, deposit_value);
     }
-    /// Uninterpreted function for `Self::dual_attestation_message`.
+    /// Uninterpreted function for `Self::dual_attestation_message`. The actual value does not matter for
+    /// the verification problem.
     spec define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
 
     /// Helper function to check validity of a signature when dual attestion is required.

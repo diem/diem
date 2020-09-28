@@ -280,7 +280,6 @@ module LibraAccount {
     }
 
     spec fun staple_lbr {
-        pragma verify=false; /// > TODO: disabled due to timeout
         pragma opaque;
         // Verification of this function is unstable (butterfly effect).
         pragma verify_duration_estimate = 100;

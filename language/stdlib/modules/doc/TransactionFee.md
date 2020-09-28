@@ -340,13 +340,6 @@ underlying fiat.
 <summary>Specification</summary>
 
 
-> TODO: this times out and likely is also not fully correct yet.
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
 Must abort if the account does not have the TreasuryCompliance role [B12].
 
 

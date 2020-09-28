@@ -99,15 +99,3 @@
 
 
 </details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-</details>

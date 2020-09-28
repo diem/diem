@@ -1023,13 +1023,6 @@ credits the LBR reserve.
 
 
 
-<pre><code>pragma verify=<b>false</b>;
-</code></pre>
-
-
-> TODO: disabled due to timeout
-
-
 <pre><code>pragma opaque;
 pragma verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);

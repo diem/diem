@@ -92,9 +92,6 @@ module Genesis {
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
         LibraTimestamp::set_time_has_started(lr_account);
     }
-    spec fun initialize {
-        pragma verify = false; // TODO: times out
-    }
 
 }
 }
