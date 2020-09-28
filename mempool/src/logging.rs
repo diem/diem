@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::shared_mempool::types::{CommitNotification, ConsensusRequest};
 use anyhow::Error;
 use libra_config::config::PeerNetworkId;
 use libra_logger::Schema;
@@ -69,7 +70,10 @@ pub struct LogSchema<'a> {
     #[schema(display)]
     txns: Option<TxnsLog>,
     account: Option<AccountAddress>,
-    //    sequence_number: Option<u64>,
+    #[schema(display)]
+    consensus_msg: Option<&'a ConsensusRequest>,
+    #[schema(display)]
+    state_sync_msg: Option<&'a CommitNotification>,
 }
 
 impl<'a> LogSchema<'a> {
@@ -91,6 +95,8 @@ impl<'a> LogSchema<'a> {
             reconfig_update: None,
             account: None,
             txns: None,
+            consensus_msg: None,
+            state_sync_msg: None,
         }
     }
 }
@@ -109,9 +115,7 @@ pub enum LogEntry {
     StateSyncCommit,
     BroadcastTransaction,
     BroadcastACK,
-
     InvariantViolated,
-
     AddTxn,
     RemoveTxn,
     MempoolFullEvictedTxn,
@@ -129,6 +133,7 @@ pub enum LogEvent {
     Live,
     Terminated,
 
+    // VM reconfig events
     Received,
     Process,
     VMUpdateFail,
@@ -136,7 +141,7 @@ pub enum LogEvent {
     CallbackFail,
     NetworkSendFail,
 
-    // garbage-collect remove txns events
+    // garbage-collect txns events
     SystemTTLExpiration,
     ClientExpiration,
 }

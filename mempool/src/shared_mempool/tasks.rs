@@ -442,6 +442,9 @@ pub(crate) async fn process_state_sync_request(
     req: CommitNotification,
 ) {
     let start_time = Instant::now();
+    debug!(
+        LogSchema::event_log(LogEntry::StateSyncCommit, LogEvent::Received).state_sync_msg(&req)
+    );
     counters::MEMPOOL_SERVICE_TXNS
         .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
         .observe(req.transactions.len() as f64);
@@ -471,6 +474,7 @@ pub(crate) async fn process_state_sync_request(
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
     //start latency timer
     let start_time = Instant::now();
+    debug!(LogSchema::event_log(LogEntry::Consensus, LogEvent::Received).consensus_msg(&req));
 
     let (resp, callback, counter_label) = match req {
         ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
@@ -501,8 +505,6 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
             )
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
-            // TODO log details of consensus request
-
             // handle rejected txns
             counters::MEMPOOL_SERVICE_TXNS
                 .with_label_values(&[counters::COMMIT_CONSENSUS_LABEL])

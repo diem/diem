@@ -27,6 +27,7 @@ use libra_types::{
 };
 use std::{
     collections::HashMap,
+    fmt,
     pin::Pin,
     sync::{Arc, Mutex, RwLock},
     task::Waker,
@@ -142,6 +143,31 @@ pub enum ConsensusRequest {
     ),
 }
 
+impl fmt::Display for ConsensusRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let payload = match self {
+            ConsensusRequest::GetBlockRequest(block_size, excluded_txns, _) => {
+                let mut txns_str = "".to_string();
+                for tx in excluded_txns.iter() {
+                    txns_str += &format!("{} ", tx);
+                }
+                format!(
+                    "GetBlockRequest [block_size: {}, excluded_txns: {}]",
+                    block_size, txns_str
+                )
+            }
+            ConsensusRequest::RejectNotification(rejected_txns, _) => {
+                let mut txns_str = "".to_string();
+                for tx in rejected_txns.iter() {
+                    txns_str += &format!("{} ", tx);
+                }
+                format!("RejectNotification [rejected_txns: {}]", txns_str)
+            }
+        };
+        write!(f, "{}", payload)
+    }
+}
+
 /// Response setn from mempool to consensus
 pub enum ConsensusResponse {
     /// block to submit to consensus
@@ -164,6 +190,20 @@ pub struct CommitNotification {
     pub callback: oneshot::Sender<Result<CommitResponse>>,
 }
 
+impl fmt::Display for CommitNotification {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut txns = "".to_string();
+        for txn in self.transactions.iter() {
+            txns += &format!("{} ", txn);
+        }
+        write!(
+            f,
+            "CommitNotification [block_timestamp_usecs: {}, txns: {}]",
+            self.block_timestamp_usecs, txns
+        )
+    }
+}
+
 /// ACK response to commit notification
 #[derive(Debug)]
 pub struct CommitResponse {
@@ -179,12 +219,24 @@ pub struct CommittedTransaction {
     pub sequence_number: u64,
 }
 
+impl fmt::Display for CommittedTransaction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.sender, self.sequence_number,)
+    }
+}
+
 /// excluded txn
 pub struct TransactionExclusion {
     /// sender
     pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
+}
+
+impl fmt::Display for TransactionExclusion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.sender, self.sequence_number,)
+    }
 }
 
 /// Submission Status is represented as combination of vm_validator internal status and core mempool insertion status
