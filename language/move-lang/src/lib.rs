@@ -37,6 +37,7 @@ use std::{
     str::Chars,
 };
 use tempfile::NamedTempFile;
+use libra_temppath::TempPath;
 
 pub const MOVE_EXTENSION: &str = "move";
 pub const MOVE_COMPILED_EXTENSION: &str = "mv";
@@ -242,7 +243,11 @@ pub fn generate_interface_files(
     }
 
     let interface_files_dir =
-        interface_files_dir_opt.unwrap_or_else(|| command_line::DEFAULT_OUTPUT_DIR.to_string());
+        interface_files_dir_opt.unwrap_or_else(|| {
+            let temp_path = TempPath::new();
+            temp_path.create_as_dir().expect("Create temp dir fail.");
+            temp_path.path().to_str().unwrap().to_owned()
+        });
     let hash_dir = {
         use std::{
             collections::hash_map::DefaultHasher,

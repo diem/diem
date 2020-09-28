@@ -3900,6 +3900,7 @@ dependencies = [
  "hex",
  "ir-to-bytecode",
  "libra-canonical-serialization",
+ "libra-temppath",
  "libra-types",
  "libra-workspace-hack",
  "move-core-types",
