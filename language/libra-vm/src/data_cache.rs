@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
-use crate::create_access_path;
-use libra_logger::prelude::*;
-use libra_state_view::StateView;
+use crate::{create_access_path, logger::LibraLogger};
+use libra_state_view::{StateView, StateViewId};
 use libra_types::{
     access_path::AccessPath,
     on_chain_config::ConfigStorage,
@@ -16,6 +15,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_types::logger::Logger;
 use std::collections::btree_map::BTreeMap;
 use vm::errors::*;
 
@@ -74,7 +74,20 @@ impl<'block> StateView for StateViewCache<'block> {
                 Ok(remote_data) => Ok(remote_data),
                 // TODO: should we forward some error info?
                 Err(e) => {
-                    error!("[VM] Error getting data from storage for {:?}", access_path);
+                    // create a LibraLogger from the `data_view` in scope. This logger
+                    // does not carry proper information about the specific transaction and
+                    // context, but this error is related to the given `StateView` rather
+                    // than the transaction.
+                    // Also this API does not make it easy to plug in a `Logger`
+                    let logger = LibraLogger::new(self.data_view.id(), 0);
+                    Logger::crit(
+                        &logger,
+                        format!(
+                            "[VM, StateView] Error getting data from storage for {:?}",
+                            access_path
+                        )
+                        .as_str(),
+                    );
                     Err(e)
                 }
             },
@@ -87,6 +100,10 @@ impl<'block> StateView for StateViewCache<'block> {
 
     fn is_genesis(&self) -> bool {
         self.data_view.is_genesis()
+    }
+
+    fn id(&self) -> StateViewId {
+        self.data_view.id()
     }
 }
 

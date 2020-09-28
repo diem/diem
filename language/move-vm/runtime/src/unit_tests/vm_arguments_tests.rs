@@ -11,6 +11,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
+    logger::StdErrLogger,
     values::Value,
 };
 use vm::{
@@ -174,10 +175,11 @@ fn call_script_with_args_ty_args_signers(
 ) -> VMResult<()> {
     let move_vm = MoveVM::new();
     let remote_view = RemoteStore {};
+    let logger = StdErrLogger;
     let mut session = move_vm.new_session(&remote_view);
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
-    session.execute_script(script, ty_args, args, signers, &mut cost_strategy)
+    session.execute_script(script, ty_args, args, signers, &mut cost_strategy, &logger)
 }
 
 fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {

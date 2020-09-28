@@ -7,14 +7,15 @@ use crate::{
     loader::Loader,
     session::Session,
 };
-use libra_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     vm_status::StatusCode,
 };
-use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
+use move_vm_types::{
+    data_store::DataStore, gas_schedule::CostStrategy, logger::Logger, values::Value,
+};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
@@ -47,13 +48,14 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         // deserialize the module. Perform bounds check. After this indexes can be
         // used with the `[]` operator
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
             Err(err) => {
-                warn!("[VM] module deserialization failed {:?}", err);
+                logger.warn(format!("[VM] module deserialization failed {:?}", err).as_str());
                 return Err(err.finish(Location::Undefined));
             }
         };
@@ -80,8 +82,11 @@ impl VMRuntime {
         };
 
         // perform bytecode and loading verification
-        self.loader
-            .verify_module_verify_no_missing_dependencies(&compiled_module, data_store)?;
+        self.loader.verify_module_verify_no_missing_dependencies(
+            &compiled_module,
+            data_store,
+            logger,
+        )?;
 
         data_store.publish_module(&module_id, module)
     }
@@ -94,6 +99,7 @@ impl VMRuntime {
         senders: Vec<AccountAddress>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         // signer helper closure
         fn is_signer_reference(s: &SignatureToken) -> bool {
@@ -105,7 +111,9 @@ impl VMRuntime {
         }
 
         // load the script, perform verification
-        let (main, type_params) = self.loader.load_script(&script, &ty_args, data_store)?;
+        let (main, type_params) = self
+            .loader
+            .load_script(&script, &ty_args, data_store, logger)?;
 
         // Build the arguments list for the main and check the arguments are of restricted types.
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
@@ -138,6 +146,7 @@ impl VMRuntime {
             data_store,
             cost_strategy,
             &self.loader,
+            logger,
         )
     }
 
@@ -149,12 +158,13 @@ impl VMRuntime {
         args: Vec<Value>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
         let (func, type_params) =
             self.loader
-                .load_function(function_name, module, &ty_args, data_store)?;
+                .load_function(function_name, module, &ty_args, data_store, logger)?;
 
         // check the arguments provided are of restricted types
         check_args(&args).map_err(|e| e.finish(Location::Module(module.clone())))?;
@@ -167,6 +177,7 @@ impl VMRuntime {
             data_store,
             cost_strategy,
             &self.loader,
+            logger,
         )
     }
 }

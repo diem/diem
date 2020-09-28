@@ -22,8 +22,8 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, LibraVMValidator,
-    VMExecutor, VMValidator,
+    data_cache::RemoteStorage, logger::NoLogLogger, txn_effects_to_writeset_and_events, LibraVM,
+    LibraVMValidator, VMExecutor, VMValidator,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -315,6 +315,7 @@ impl FakeExecutor {
             let vm = MoveVM::new();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
+            let logger = NoLogLogger;
             session
                 .execute_function(
                     &Self::module(module_name),
@@ -323,6 +324,7 @@ impl FakeExecutor {
                     args,
                     *sender,
                     &mut cost_strategy,
+                    &logger,
                 )
                 .unwrap_or_else(|e| {
                     panic!(
@@ -353,6 +355,7 @@ impl FakeExecutor {
         let vm = MoveVM::new();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
+        let logger = NoLogLogger;
         session
             .execute_function(
                 &Self::module(module_name),
@@ -361,6 +364,7 @@ impl FakeExecutor {
                 args,
                 *sender,
                 &mut cost_strategy,
+                &logger,
             )
             .map_err(|e| e.into_vm_status())?;
         let effects = session.finish().expect("Failed to generate txn effects");

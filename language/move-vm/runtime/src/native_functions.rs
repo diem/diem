@@ -12,6 +12,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::runtime_types::Type,
+    logger::Logger,
     natives::function::{NativeContext, NativeResult},
     values::Value,
 };
@@ -117,20 +118,20 @@ impl NativeFunction {
     }
 }
 
-pub(crate) struct FunctionContext<'a> {
-    interpreter: &'a mut Interpreter,
+pub(crate) struct FunctionContext<'a, L: Logger> {
+    interpreter: &'a mut Interpreter<L>,
     data_store: &'a mut dyn DataStore,
     cost_strategy: &'a CostStrategy<'a>,
     resolver: &'a Resolver<'a>,
 }
 
-impl<'a> FunctionContext<'a> {
+impl<'a, L: Logger> FunctionContext<'a, L> {
     pub(crate) fn new(
-        interpreter: &'a mut Interpreter,
+        interpreter: &'a mut Interpreter<L>,
         data_store: &'a mut dyn DataStore,
         cost_strategy: &'a mut CostStrategy,
         resolver: &'a Resolver<'a>,
-    ) -> FunctionContext<'a> {
+    ) -> FunctionContext<'a, L> {
         FunctionContext {
             interpreter,
             data_store,
@@ -140,7 +141,7 @@ impl<'a> FunctionContext<'a> {
     }
 }
 
-impl<'a> NativeContext for FunctionContext<'a> {
+impl<'a, L: Logger> NativeContext for FunctionContext<'a, L> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())

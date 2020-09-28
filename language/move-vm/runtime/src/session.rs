@@ -10,7 +10,7 @@ use move_core_types::{
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_types::{gas_schedule::CostStrategy, values::Value};
+use move_vm_types::{gas_schedule::CostStrategy, logger::Logger, values::Value};
 use vm::errors::*;
 
 pub struct Session<'r, 'l, R> {
@@ -27,6 +27,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Value>,
         _sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         self.runtime.execute_function(
             module,
@@ -35,6 +36,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             args,
             &mut self.data_cache,
             cost_strategy,
+            logger,
         )
     }
 
@@ -45,6 +47,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Value>,
         senders: Vec<AccountAddress>,
         cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         self.runtime.execute_script(
             script,
@@ -53,6 +56,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             senders,
             &mut self.data_cache,
             cost_strategy,
+            logger,
         )
     }
 
@@ -61,9 +65,10 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         module: Vec<u8>,
         sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         self.runtime
-            .publish_module(module, sender, &mut self.data_cache, cost_strategy)
+            .publish_module(module, sender, &mut self.data_cache, cost_strategy, logger)
     }
 
     pub fn num_mutated_accounts(&self) -> u64 {

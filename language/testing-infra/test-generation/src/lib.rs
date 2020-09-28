@@ -24,7 +24,7 @@ use language_e2e_tests::executor::FakeExecutor;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
-use libra_vm::LibraVM;
+use libra_vm::{logger::NoLogLogger, LibraVM};
 use module_generation::generate_module;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
@@ -106,7 +106,8 @@ fn execute_function_in_module<S: StateView>(
 
         let internals = libra_vm.internals();
 
-        let gas_schedule = internals.gas_schedule()?;
+        let logger = NoLogLogger;
+        let gas_schedule = internals.gas_schedule(&logger)?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
             let sender = AccountAddress::random();
             let mut mod_blob = vec![];
@@ -115,7 +116,7 @@ fn execute_function_in_module<S: StateView>(
                 .expect("Module serialization error");
             let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
             txn_context
-                .publish_module(mod_blob, sender, &mut cost_strategy)
+                .publish_module(mod_blob, sender, &mut cost_strategy, &logger)
                 .map_err(|e| e.into_vm_status())?;
             txn_context
                 .execute_function(
@@ -125,6 +126,7 @@ fn execute_function_in_module<S: StateView>(
                     args,
                     sender,
                     &mut cost_strategy,
+                    &logger,
                 )
                 .map_err(|e| e.into_vm_status())
         })

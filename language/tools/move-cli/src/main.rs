@@ -22,6 +22,7 @@ use vm::{
 };
 
 use anyhow::{anyhow, bail, Result};
+use move_vm_types::logger::StdErrLogger;
 use std::{fs, path::Path};
 use structopt::StructOpt;
 
@@ -219,6 +220,7 @@ fn run(
         })
         .collect();
 
+    let logger = StdErrLogger;
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -227,6 +229,7 @@ fn run(
         vm_args,
         signer_addresses.clone(),
         &mut cost_strategy,
+        &logger,
     );
 
     if let Err(err) = res {

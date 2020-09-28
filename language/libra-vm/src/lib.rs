@@ -116,6 +116,7 @@ pub mod transaction_metadata;
 
 pub mod libra_transaction_executor;
 pub mod libra_transaction_validator;
+pub mod logger;
 pub mod system_module_names;
 
 pub use crate::{

@@ -21,6 +21,7 @@ use std::{convert::TryFrom, path::Path};
 use vm::errors::VMResult;
 
 pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
+use move_vm_types::logger::StdErrLogger;
 
 #[cfg(test)]
 mod unit_tests;
@@ -165,12 +166,14 @@ impl LibraDebugger {
         let is_version_ok = |version| {
             self.run_session_at_version(version, |session| {
                 let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
+                let logger = StdErrLogger;
                 session.execute_script(
                     predicate.clone(),
                     vec![],
                     vec![],
                     vec![libra_root_address(), sender],
                     &mut cost_strategy,
+                    &logger,
                 )
             })
             .map(|_| ())

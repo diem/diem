@@ -5,7 +5,10 @@ use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},
 };
-use move_vm_types::values::{self, Locals};
+use move_vm_types::{
+    logger::Logger,
+    values::{self, Locals},
+};
 use std::{
     collections::BTreeSet,
     io::{self, Write},
@@ -96,14 +99,14 @@ impl DebugContext {
         }
     }
 
-    pub(crate) fn debug_loop(
+    pub(crate) fn debug_loop<L: Logger>(
         &mut self,
         function_desc: &Function,
         locals: &Locals,
         pc: u16,
         instr: &Bytecode,
         resolver: &Loader,
-        interp: &Interpreter,
+        interp: &Interpreter<L>,
     ) {
         let instr_string = format!("{:?}", instr);
         let function_string = function_desc.pretty_string();

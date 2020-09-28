@@ -10,7 +10,10 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::{
+    gas_schedule::{zero_cost_schedule, CostStrategy},
+    logger::StdErrLogger,
+};
 use std::{path::PathBuf, sync::Arc, thread};
 use vm::CompiledModule;
 
@@ -56,6 +59,7 @@ impl Adapter {
     fn publish_modules(&mut self, modules: Vec<CompiledModule>) {
         let mut session = self.vm.new_session(&self.store);
         let cost_table = zero_cost_schedule();
+        let logger = StdErrLogger;
         let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
         for module in modules {
             let mut binary = vec![];
@@ -63,7 +67,7 @@ impl Adapter {
                 .serialize(&mut binary)
                 .unwrap_or_else(|_| panic!("failure in module serialization: {:#?}", module));
             session
-                .publish_module(binary, WORKING_ACCOUNT, &mut cost_strategy)
+                .publish_module(binary, WORKING_ACCOUNT, &mut cost_strategy, &logger)
                 .unwrap_or_else(|_| panic!("failure publishing module: {:#?}", module));
         }
         let data = session.finish().expect("failure getting write set");
@@ -87,6 +91,7 @@ impl Adapter {
                 children.push(thread::spawn(move || {
                     let cost_table = zero_cost_schedule();
                     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+                    let logger = StdErrLogger;
                     let mut session = vm.new_session(&data_store);
                     session
                         .execute_function(
@@ -96,6 +101,7 @@ impl Adapter {
                             vec![],
                             WORKING_ACCOUNT,
                             &mut cost_strategy,
+                            &logger,
                         )
                         .unwrap_or_else(|_| {
                             panic!("Failure executing {:?}::{:?}", module_id, name)
@@ -111,6 +117,7 @@ impl Adapter {
     fn call_function(&self, module: &ModuleId, name: &IdentStr) {
         let cost_table = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+        let logger = StdErrLogger;
         let mut session = self.vm.new_session(&self.store);
         session
             .execute_function(
@@ -120,6 +127,7 @@ impl Adapter {
                 vec![],
                 WORKING_ACCOUNT,
                 &mut cost_strategy,
+                &logger,
             )
             .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name));
     }

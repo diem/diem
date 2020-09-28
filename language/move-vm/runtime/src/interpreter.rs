@@ -6,7 +6,6 @@ use crate::{
     native_functions::FunctionContext,
     trace,
 };
-use libra_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
@@ -16,6 +15,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::runtime_types::Type,
+    logger::Logger,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
@@ -56,14 +56,16 @@ macro_rules! set_err_info {
 ///
 /// An `Interpreter` instance is a stand alone execution context for a function.
 /// It mimics execution on a single thread, with an call stack and an operand stack.
-pub(crate) struct Interpreter {
+pub(crate) struct Interpreter<L: Logger> {
     /// Operand stack, where Move `Value`s are stored for stack operations.
     operand_stack: Stack,
     /// The stack of active functions.
     call_stack: CallStack,
+    // Logger to report information to clients
+    logger: L,
 }
 
-impl Interpreter {
+impl<L: Logger> Interpreter<L> {
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
@@ -73,19 +75,21 @@ impl Interpreter {
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
+        logger: &L,
     ) -> VMResult<()> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new();
+        let mut interp = Self::new(logger.clone());
         interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new() -> Self {
+    fn new(logger: L) -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
+            logger,
         }
     }
 
@@ -328,15 +332,17 @@ impl Interpreter {
         data_store: &'a mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
+        logger: &impl Logger,
     ) -> PartialVMResult<&'a mut GlobalValue> {
         match data_store.load_resource(addr, ty) {
             Ok(gv) => Ok(gv),
             Err(e) => {
-                error!(
-                    "[VM] error loading resource at ({}, {:?}): {:?} from data store",
-                    account = addr,
-                    type = ty,
-                    error = e
+                logger.crit(
+                    format!(
+                        "[VM] error loading resource at ({}, {:?}): {:?} from data store",
+                        addr, ty, e
+                    )
+                    .as_str(),
                 );
                 Err(e)
             }
@@ -350,7 +356,7 @@ impl Interpreter {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let g = Self::load_resource(data_store, addr, ty)?.borrow_global()?;
+        let g = Self::load_resource(data_store, addr, ty, &self.logger)?.borrow_global()?;
         let size = g.size();
         self.operand_stack.push(g)?;
         Ok(size)
@@ -363,7 +369,7 @@ impl Interpreter {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let gv = Self::load_resource(data_store, addr, ty)?;
+        let gv = Self::load_resource(data_store, addr, ty, &self.logger)?;
         let mem_size = gv.size();
         let exists = gv.exists()?;
         self.operand_stack.push(Value::bool(exists))?;
@@ -377,7 +383,7 @@ impl Interpreter {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = Self::load_resource(data_store, addr, ty)?.move_from()?;
+        let resource = Self::load_resource(data_store, addr, ty, &self.logger)?.move_from()?;
         let size = resource.size();
         self.operand_stack.push(resource)?;
         Ok(size)
@@ -392,7 +398,7 @@ impl Interpreter {
         resource: Value,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
         let size = resource.size();
-        Self::load_resource(data_store, addr, ty)?.move_to(resource)?;
+        Self::load_resource(data_store, addr, ty, &self.logger)?.move_to(resource)?;
         Ok(size)
     }
 
@@ -404,7 +410,8 @@ impl Interpreter {
     fn maybe_core_dump(&self, mut err: VMError, current_frame: &Frame) -> VMError {
         // a verification error cannot happen at runtime so change it into an invariant violation.
         if err.status_type() == StatusType::Verification {
-            error!("Verification error during runtime: {:?}", error = err);
+            self.logger
+                .crit(format!("Verification error during runtime: {:?}", err).as_str());
             let new_err = PartialVMError::new(StatusCode::VERIFICATION_ERROR);
             let new_err = match err.message() {
                 None => new_err,
@@ -414,10 +421,12 @@ impl Interpreter {
         }
         if err.status_type() == StatusType::InvariantViolation {
             let state = self.get_internal_state(current_frame);
-            error!(
-                "Error: {:?}\nCORE DUMP: >>>>>>>>>>>>\n{}\n<<<<<<<<<<<<\n",
-                error = err,
-                state = state,
+            self.logger.crit(
+                format!(
+                    "Error: {:?}\nCORE DUMP: >>>>>>>>>>>>\n{}\n<<<<<<<<<<<<\n",
+                    err, state
+                )
+                .as_str(),
             );
         }
         err
@@ -674,10 +683,10 @@ impl Frame {
     }
 
     /// Execute a Move function until a return or a call opcode is found.
-    fn execute_code(
+    fn execute_code<L: Logger>(
         &mut self,
         resolver: &Resolver,
-        interpreter: &mut Interpreter,
+        interpreter: &mut Interpreter<L>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<ExitCode> {
@@ -688,10 +697,10 @@ impl Frame {
             })
     }
 
-    fn execute_code_impl(
+    fn execute_code_impl<L: Logger>(
         &mut self,
         resolver: &Resolver,
-        interpreter: &mut Interpreter,
+        interpreter: &mut Interpreter<L>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> PartialVMResult<ExitCode> {

@@ -8,7 +8,6 @@ use bytecode_verifier::{
     RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use libra_crypto::HashValue;
-use libra_logger::prelude::*;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -18,6 +17,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::{StructType, Type},
+    logger::Logger,
 };
 use std::{
     collections::HashMap,
@@ -142,14 +142,19 @@ impl ModuleCache {
     // The VM is pretty much stopped waiting for this to finish
     //
 
-    fn insert(&mut self, id: ModuleId, module: CompiledModule) -> VMResult<Arc<Module>> {
+    fn insert(
+        &mut self,
+        id: ModuleId,
+        module: CompiledModule,
+        logger: &impl Logger,
+    ) -> VMResult<Arc<Module>> {
         if let Some(module) = self.module_at(&id) {
             return Ok(module);
         }
 
         // we need this operation to be transactional, if an error occurs we must
         // leave a clean state
-        self.add_module(&module)?;
+        self.add_module(&module, logger)?;
         match Module::new(module, self) {
             Ok(module) => Ok(Arc::clone(self.modules.insert(id, module))),
             Err((err, module)) => {
@@ -164,17 +169,18 @@ impl ModuleCache {
         }
     }
 
-    fn add_module(&mut self, module: &CompiledModule) -> VMResult<()> {
+    fn add_module(&mut self, module: &CompiledModule, logger: &impl Logger) -> VMResult<()> {
         let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_field_types(module, starting_idx).map_err(|err| {
-            // clean up the structs that were cached
-            self.structs.truncate(starting_idx);
-            err.finish(Location::Undefined)
-        })?;
+        self.load_field_types(module, starting_idx, logger)
+            .map_err(|err| {
+                // clean up the structs that were cached
+                self.structs.truncate(starting_idx);
+                err.finish(Location::Undefined)
+            })?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
             let function = Function::new(findex, func, module);
@@ -208,6 +214,7 @@ impl ModuleCache {
         &mut self,
         module: &CompiledModule,
         starting_idx: usize,
+        logger: &impl Logger,
     ) -> PartialVMResult<()> {
         let mut field_types = vec![];
         for struct_def in module.struct_defs() {
@@ -235,7 +242,7 @@ impl ModuleCache {
                     // it should exist.
                     // So in the spirit of not crashing we just rewrite the entire `Arc`
                     // over and log the issue.
-                    error!("Arc<StructType> cannot have any live reference while publishing");
+                    logger.crit("Arc<StructType> cannot have any live reference while publishing");
                     let mut struct_type = (*self.structs[struct_idx]).clone();
                     struct_type.fields = fields;
                     self.structs[struct_idx] = Arc::new(struct_type);
@@ -432,6 +439,7 @@ impl Loader {
         script_blob: &[u8],
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
@@ -439,7 +447,8 @@ impl Loader {
         let main = match opt_main {
             Some(main) => main,
             None => {
-                let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
+                let ver_script =
+                    self.deserialize_and_verify_script(script_blob, data_store, logger)?;
                 let script =
                     Script::new(ver_script, &hash_value, &self.module_cache.lock().unwrap())?;
                 self.scripts
@@ -453,7 +462,7 @@ impl Loader {
         // verify type arguments
         let mut type_params = vec![];
         for ty in ty_args {
-            type_params.push(self.load_type(ty, data_store)?);
+            type_params.push(self.load_type(ty, data_store, logger)?);
         }
         self.verify_ty_args(main.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Script))?;
@@ -469,11 +478,14 @@ impl Loader {
         &self,
         script: &[u8],
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<CompiledScript> {
         let script = match CompiledScript::deserialize(script) {
             Ok(script) => script,
             Err(err) => {
-                error!("[VM] deserializer for script returned error: {:?}", err);
+                logger.crit(
+                    format!("[VM] deserializer for script returned error: {:?}", err).as_str(),
+                );
                 let msg = format!("Deserialization error: {:?}", err);
                 return Err(PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
                     .with_message(msg)
@@ -485,15 +497,18 @@ impl Loader {
             Ok(_) => {
                 // verify dependencies
                 let deps = script_dependencies(&script);
-                let loaded_deps =
-                    self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?;
+                let loaded_deps = self
+                    .load_dependencies_verify_no_missing_dependencies(deps, data_store, logger)?;
                 self.verify_script_dependencies(&script, loaded_deps)?;
                 Ok(script)
             }
             Err(err) => {
-                error!(
-                    "[VM] bytecode verifier returned errors for script: {:?}",
-                    err
+                logger.crit(
+                    format!(
+                        "[VM] bytecode verifier returned errors for script: {:?}",
+                        err
+                    )
+                    .as_str(),
                 );
                 Err(err)
             }
@@ -536,8 +551,9 @@ impl Loader {
         module_id: &ModuleId,
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-        self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
+        self.load_module_expect_no_missing_dependencies(module_id, data_store, logger)?;
         let idx = self
             .module_cache
             .lock()
@@ -549,7 +565,7 @@ impl Loader {
         // verify type arguments
         let mut type_params = vec![];
         for ty in ty_args {
-            type_params.push(self.load_type(ty, data_store)?);
+            type_params.push(self.load_type(ty, data_store, logger)?);
         }
         self.verify_ty_args(func.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
@@ -566,16 +582,18 @@ impl Loader {
         &self,
         module: &CompiledModule,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<()> {
-        self.verify_module(module, data_store, true)
+        self.verify_module(module, data_store, true, logger)
     }
 
     fn verify_module_expect_no_missing_dependencies(
         &self,
         module: &CompiledModule,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<()> {
-        self.verify_module(module, data_store, false)
+        self.verify_module(module, data_store, false, logger)
     }
 
     fn verify_module(
@@ -583,6 +601,7 @@ impl Loader {
         module: &CompiledModule,
         data_store: &mut impl DataStore,
         verify_no_missing_modules: bool,
+        logger: &impl Logger,
     ) -> VMResult<()> {
         DuplicationChecker::verify_module(&module)?;
         SignatureChecker::verify_module(&module)?;
@@ -596,9 +615,9 @@ impl Loader {
 
         let deps = module_dependencies(&module);
         let loaded_deps = if verify_no_missing_modules {
-            self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?
+            self.load_dependencies_verify_no_missing_dependencies(deps, data_store, logger)?
         } else {
-            self.load_dependencies_expect_no_missing_dependencies(deps, data_store)?
+            self.load_dependencies_expect_no_missing_dependencies(deps, data_store, logger)?
         };
 
         self.verify_module_dependencies(module, loaded_deps)
@@ -660,7 +679,12 @@ impl Loader {
     // Helpers for loading and verification
     //
 
-    fn load_type(&self, type_tag: &TypeTag, data_store: &mut impl DataStore) -> VMResult<Type> {
+    fn load_type(
+        &self,
+        type_tag: &TypeTag,
+        data_store: &mut impl DataStore,
+        logger: &impl Logger,
+    ) -> VMResult<Type> {
         Ok(match type_tag {
             TypeTag::Bool => Type::Bool,
             TypeTag::U8 => Type::U8,
@@ -668,10 +692,10 @@ impl Loader {
             TypeTag::U128 => Type::U128,
             TypeTag::Address => Type::Address,
             TypeTag::Signer => Type::Signer,
-            TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
+            TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store, logger)?)),
             TypeTag::Struct(struct_tag) => {
                 let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module_verify_no_missing_dependencies(&module_id, data_store)?;
+                self.load_module_verify_no_missing_dependencies(&module_id, data_store, logger)?;
                 let (idx, struct_type) = self
                     .module_cache
                     .lock()
@@ -684,7 +708,7 @@ impl Loader {
                 } else {
                     let mut type_params = vec![];
                     for ty_param in &struct_tag.type_params {
-                        type_params.push(self.load_type(ty_param, data_store)?);
+                        type_params.push(self.load_type(ty_param, data_store, logger)?);
                     }
                     self.verify_ty_args(&struct_type.type_parameters, &type_params)
                         .map_err(|e| e.finish(Location::Undefined))?;
@@ -712,6 +736,7 @@ impl Loader {
         id: &ModuleId,
         data_store: &mut impl DataStore,
         verify_no_missing_modules: bool,
+        logger: &impl Logger,
     ) -> VMResult<Arc<Module>> {
         // kept private to `load_module` to prevent verification errors from leaking
         // and not being marked as invariant violations
@@ -719,12 +744,13 @@ impl Loader {
             loader: &Loader,
             bytes: Vec<u8>,
             data_store: &mut impl DataStore,
+            logger: &impl Logger,
         ) -> VMResult<CompiledModule> {
             let module = CompiledModule::deserialize(&bytes).map_err(|_| {
                 PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
                     .finish(Location::Undefined)
             })?;
-            loader.verify_module_expect_no_missing_dependencies(&module, data_store)?;
+            loader.verify_module_expect_no_missing_dependencies(&module, data_store, logger)?;
             Ok(module)
         }
 
@@ -736,14 +762,17 @@ impl Loader {
             Ok(bytes) => bytes,
             Err(err) if verify_no_missing_modules => return Err(err),
             Err(err) => {
-                error!("[VM] Error fetching module with id {:?}", id);
-                return Err(expect_no_verification_errors(err));
+                logger.crit(format!("[VM] Error fetching module with id {:?}", id).as_str());
+                return Err(expect_no_verification_errors(err, logger));
             }
         };
 
-        let module = deserialize_and_verify_module(self, bytes, data_store)
-            .map_err(expect_no_verification_errors)?;
-        self.module_cache.lock().unwrap().insert(id.clone(), module)
+        let module = deserialize_and_verify_module(self, bytes, data_store, logger)
+            .map_err(|err| expect_no_verification_errors(err, logger))?;
+        self.module_cache
+            .lock()
+            .unwrap()
+            .insert(id.clone(), module, logger)
     }
 
     // Returns a verifier error if the module does not exist
@@ -751,8 +780,9 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<Arc<Module>> {
-        self.load_module(id, data_store, true)
+        self.load_module(id, data_store, true, logger)
     }
 
     // Expects all modules to be on chain. Gives an invariant violation if it is not found
@@ -760,8 +790,9 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<Arc<Module>> {
-        self.load_module(id, data_store, false)
+        self.load_module(id, data_store, false, logger)
     }
 
     // Returns a verifier error if the module does not exist
@@ -769,9 +800,10 @@ impl Loader {
         &self,
         deps: Vec<ModuleId>,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<Vec<Arc<Module>>> {
         deps.into_iter()
-            .map(|dep| self.load_module_verify_no_missing_dependencies(&dep, data_store))
+            .map(|dep| self.load_module_verify_no_missing_dependencies(&dep, data_store, logger))
             .collect()
     }
 
@@ -780,9 +812,10 @@ impl Loader {
         &self,
         deps: Vec<ModuleId>,
         data_store: &mut impl DataStore,
+        logger: &impl Logger,
     ) -> VMResult<Vec<Arc<Module>>> {
         deps.into_iter()
-            .map(|dep| self.load_module_expect_no_missing_dependencies(&dep, data_store))
+            .map(|dep| self.load_module_expect_no_missing_dependencies(&dep, data_store, logger))
             .collect()
     }
 
@@ -1651,7 +1684,7 @@ fn module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
     deps
 }
 
-fn expect_no_verification_errors(err: VMError) -> VMError {
+fn expect_no_verification_errors(err: VMError, logger: &impl Logger) -> VMError {
     match err.status_type() {
         status_type @ StatusType::Deserialization | status_type @ StatusType::Verification => {
             let message = format!(
@@ -1667,7 +1700,7 @@ fn expect_no_verification_errors(err: VMError) -> VMError {
                 _ => unreachable!(),
             };
 
-            error!("[VM] {}", error = message);
+            logger.crit(format!("[VM] {}", message).as_str());
             PartialVMError::new(major_status)
                 .with_message(message)
                 .at_indices(indices)
