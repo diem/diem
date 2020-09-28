@@ -4018,7 +4018,6 @@ version = "0.1.0"
 dependencies = [
  "libra-canonical-serialization",
  "libra-crypto",
- "libra-types",
  "libra-workspace-hack",
  "mirai-annotations",
  "move-core-types",
@@ -7011,6 +7010,7 @@ dependencies = [
  "libra-vm",
  "libra-workspace-hack",
  "libradb",
+ "move-core-types",
  "rand 0.7.3",
  "scratchpad",
  "storage-interface",

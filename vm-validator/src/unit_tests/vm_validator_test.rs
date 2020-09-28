@@ -8,11 +8,12 @@ use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
     chain_id::ChainId,
     test_helpers::transaction_test_helpers,
-    transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
+    transaction::{Module, Script, TransactionArgument},
     vm_status::StatusCode,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
+use move_core_types::gas_schedule::MAX_TRANSACTION_SIZE_IN_BYTES;
 use rand::SeedableRng;
 use std::u64;
 use storage_interface::DbReaderWriter;
@@ -123,7 +124,7 @@ fn test_validate_known_script_too_large_args() {
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(Script::new(
-            vec![42; MAX_TRANSACTION_SIZE_IN_BYTES],
+            vec![42; MAX_TRANSACTION_SIZE_IN_BYTES as usize],
             vec![],
             vec![],
         )), /* generate a

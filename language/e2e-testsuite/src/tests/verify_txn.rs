@@ -17,11 +17,11 @@ use libra_types::{
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
-    transaction::{Script, TransactionArgument, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES},
+    transaction::{Script, TransactionArgument, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode},
 };
 use move_core_types::{
-    gas_schedule::{GasAlgebra, GasConstants},
+    gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
 };
@@ -295,7 +295,7 @@ fn verify_simple_payment() {
         .script(Script::new(
             p2p_script.clone(),
             vec![lbr_type_tag()],
-            vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
+            vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
         ))
         .sequence_number(10)
         .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
