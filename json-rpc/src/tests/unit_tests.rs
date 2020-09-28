@@ -278,6 +278,22 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_metadata invalid arguments: version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param version(params[0]): should be <= known latest version {}", version),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
             "get_account invalid param data type",
             json!({"jsonrpc": "2.0", "method": "get_account", "params": [false], "id": 1}),
             json!({
@@ -339,6 +355,18 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "libra_chain_id": ChainId::test().id(),
                 "libra_ledger_timestampusec": timestamp,
                 "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions: start_version is too big, returns empty array",
+            json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [version+1, 1, true], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": []
             }),
         ),
         (
@@ -422,6 +450,18 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_events: start param is too big",
+            json!({"jsonrpc": "2.0", "method": "get_events", "params": ["13000000000000000000000000000000000000000a550c18", version+1, 1], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": []
+            }),
+        ),
+        (
             "get_events: invalid limit param",
             json!({"jsonrpc": "2.0", "method": "get_events", "params": ["13000000000000000000000000000000000000000a550c18", 1, "invalid"], "id": 1}),
             json!({
@@ -486,6 +526,18 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_account_transaction: seq number is too big",
+            json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", version+1, false], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": null
+            }),
+        ),
+        (
             "get_account_transactions: invalid account",
             json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["invalid", 1, 2, false], "id": 1}),
             json!({
@@ -515,6 +567,18 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "libra_chain_id": ChainId::test().id(),
                 "libra_ledger_timestampusec": timestamp,
                 "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions: start param is too big",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["0000000000000000000000000A550C18", version+1, 2, false], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": []
             }),
         ),
         (
@@ -555,7 +619,23 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param known version(params[0]): should be unsigned int64",
+                    "message": "Invalid param version(params[0]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_state_proof: version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_state_proof", "params": [version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param version(params[0]): should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -572,6 +652,70 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "error": {
                     "code": -32602,
                     "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_state_with_proof: invalid version",
+            json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", "invalid", null], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param version(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_state_with_proof: invalid ledger version",
+            json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", version, "invalid"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param ledger version for proof(params[2]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_state_with_proof: version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", version+1, null], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param version(params[1]): should be <= known latest version {}", version),
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_state_with_proof: ledger version is too large",
+            json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", null, version+1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": format!("Invalid param ledger version for proof(params[2]): should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
