@@ -345,7 +345,7 @@ impl Display for PerformanceBenchmark {
         } else if self.percent_nodes_down == 0 {
             write!(f, "all up")?;
         } else {
-            write!(f, "{}% down, gas price", self.percent_nodes_down)?;
+            write!(f, "{}% down", self.percent_nodes_down)?;
         }
         if self.gas_price != 0 {
             write!(f, ", gas price {}", self.gas_price)?;
