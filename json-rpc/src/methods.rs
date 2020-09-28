@@ -267,7 +267,7 @@ async fn get_account(
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
     let chain_id = service.chain_id().id();
-    if request.params.len() > 0 {
+    if !request.params.is_empty() {
         let version = request.parse_version_param(0, "version")?;
         Ok(BlockMetadata {
             version,
