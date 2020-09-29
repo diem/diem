@@ -21,6 +21,7 @@ pub mod and_then;
 pub mod boxed;
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 pub mod memory;
+pub mod proxy_protocol;
 pub mod tcp;
 
 /// Origin of how a Connection was established.

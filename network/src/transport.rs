@@ -5,10 +5,7 @@ use crate::{
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
-        wire::{
-            handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
-            proxy_protocol,
-        },
+        wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
     },
 };
 use futures::{
@@ -24,7 +21,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use libra_types::{chain_id::ChainId, PeerId};
-use netcore::transport::{tcp, ConnectionOrigin, Transport};
+use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
 use serde::{export::Formatter, Serialize};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
