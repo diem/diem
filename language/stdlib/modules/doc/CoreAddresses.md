@@ -15,6 +15,7 @@ Module providing well-known addresses and related logic.
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
+-  [Function `CORE_CODE_ADDRESS`](#0x1_CoreAddresses_CORE_CODE_ADDRESS)
 -  [Function `assert_libra_root`](#0x1_CoreAddresses_assert_libra_root)
 -  [Function `assert_treasury_compliance`](#0x1_CoreAddresses_assert_treasury_compliance)
 -  [Function `assert_vm`](#0x1_CoreAddresses_assert_vm)
@@ -176,6 +177,32 @@ is no signer for the transaction.
 
 <pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">VM_RESERVED_ADDRESS</a>(): address {
     0x0
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_CoreAddresses_CORE_CODE_ADDRESS"></a>
+
+## Function `CORE_CODE_ADDRESS`
+
+The reserved address where all core modules are published. No
+account can be created at this address.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_CORE_CODE_ADDRESS">CORE_CODE_ADDRESS</a>(): address
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_CORE_CODE_ADDRESS">CORE_CODE_ADDRESS</a>(): address {
+    0x1
 }
 </code></pre>
 

@@ -40,6 +40,12 @@ module CoreAddresses {
         0x0
     }
 
+    /// The reserved address where all core modules are published. No
+    /// account can be created at this address.
+    public fun CORE_CODE_ADDRESS(): address {
+        0x1
+    }
+
     /// The operation can only be performed by the account at 0xA550C18 (Libra Root)
     const ELIBRA_ROOT: u64 = 0;
     /// The operation can only be performed by the account at 0xB1E55ED (Treasury & Compliance)

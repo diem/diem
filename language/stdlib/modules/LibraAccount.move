@@ -178,6 +178,8 @@ module LibraAccount {
     const EACCOUNT_OPERATIONS_CAPABILITY: u64 = 22;
     /// The `LibraWriteSetManager` was not in the required state
     const EWRITESET_MANAGER: u64 = 23;
+    /// An account cannot be created at the reserved core code address of 0x1
+    const ECANNOT_CREATE_AT_CORE_CODE: u64 = 24;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -902,6 +904,10 @@ module LibraAccount {
             new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(),
             Errors::invalid_argument(ECANNOT_CREATE_AT_VM_RESERVED)
         );
+        assert(
+            new_account_addr != CoreAddresses::CORE_CODE_ADDRESS(),
+            Errors::invalid_argument(ECANNOT_CREATE_AT_CORE_CODE)
+        );
 
         // Construct authentication key.
         let authentication_key = auth_key_prefix;
@@ -958,6 +964,7 @@ module LibraAccount {
         addr: address;
         auth_key_prefix: vector<u8>;
         aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
+        aborts_if addr == CoreAddresses::CORE_CODE_ADDRESS() with Errors::INVALID_ARGUMENT;
         aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
         // There is an invariant below that says that there is always an AccountOperationsCapability
         // after Genesis, so this can only abort during Genesis.
