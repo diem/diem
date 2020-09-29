@@ -30,3 +30,4 @@ resource-viewer = { path = "../../../language/resource-viewer", version = "0.1.0
 stdlib = { path = "../../../language/stdlib", version = "0.1.0" }
 move-lang = { path = "../../../language/move-lang", version = "0.0.1" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+difference = "2.0.0"

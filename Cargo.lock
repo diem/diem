@@ -3410,6 +3410,7 @@ name = "libra-transaction-replay"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "difference",
  "libra-canonical-serialization",
  "libra-json-rpc-client",
  "libra-state-view",

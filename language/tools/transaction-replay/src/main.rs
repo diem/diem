@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use difference::Changeset;
 use libra_transaction_replay::LibraDebugger;
 use libra_types::{account_address::AccountAddress, transaction::Version};
 use std::path::PathBuf;
@@ -36,6 +37,13 @@ enum Command {
         #[structopt(parse(try_from_str))]
         account: AccountAddress,
         version: Version,
+    },
+    #[structopt(name = "diff-account")]
+    DiffAccount {
+        #[structopt(parse(try_from_str))]
+        account: AccountAddress,
+        base_version: Version,
+        revision: Version,
     },
     #[structopt(name = "bisect-transaction")]
     BisectTransaction {
@@ -90,6 +98,28 @@ fn main() -> Result<()> {
                 .annotate_account_state_at_version(account, version)?
                 .expect("Account not found")
         ),
+        Command::DiffAccount {
+            account,
+            base_version,
+            revision,
+        } => {
+            let base_annotation = format!(
+                "{}",
+                debugger
+                    .annotate_account_state_at_version(account, base_version)?
+                    .expect("Account not found")
+            );
+            let revision_annotation = format!(
+                "{}",
+                debugger
+                    .annotate_account_state_at_version(account, revision)?
+                    .expect("Account not found")
+            );
+            println!(
+                "{}",
+                Changeset::new(&base_annotation, &revision_annotation, "\n")
+            );
+        }
         Command::BisectTransaction {
             sender,
             script_path,
