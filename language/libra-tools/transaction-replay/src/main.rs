@@ -5,7 +5,9 @@ use anyhow::Result;
 use difference::Changeset;
 use libra_transaction_replay::LibraDebugger;
 use libra_types::{account_address::AccountAddress, transaction::Version};
+use move_vm_test_utils::ChangeSet;
 use std::path::PathBuf;
+use stdlib::build_stdlib;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -53,6 +55,8 @@ enum Command {
         sender: AccountAddress,
         begin: Version,
         end: Version,
+        #[structopt(long)]
+        rebuild_stdlib: bool,
     },
 }
 
@@ -125,6 +129,7 @@ fn main() -> Result<()> {
             script_path,
             begin,
             end,
+            rebuild_stdlib: reload_stdlib,
         } => println!(
             "{:?}",
             debugger.bisect_transactions_by_script(
@@ -132,6 +137,17 @@ fn main() -> Result<()> {
                 sender,
                 begin,
                 end,
+                if reload_stdlib {
+                    let mut change_set = ChangeSet::new();
+                    for (_, module) in build_stdlib().into_iter() {
+                        let mut bytes = vec![];
+                        module.serialize(&mut bytes)?;
+                        change_set.publish_module(module.self_id(), bytes)?;
+                    }
+                    Some(change_set)
+                } else {
+                    None
+                },
             )
         ),
     }

@@ -99,7 +99,6 @@ members = [
     "language/move-lang/functional-tests",
     "language/move-prover/test-utils",
     "language/move-vm/integration-tests",
-    "language/move-vm/test-utils",
     "language/vm/serializer-tests",
     "network/memsocket",
     "network/socket-bench-server",

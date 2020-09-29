@@ -17,6 +17,7 @@ use libra_vm::{
 use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
 use move_lang::{compiled_unit::CompiledUnit, move_compile_no_report, shared::Address};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
+use move_vm_test_utils::{ChangeSet as MoveChanges, DeltaStorage};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{convert::TryFrom, path::Path};
@@ -132,13 +133,20 @@ impl LibraDebugger {
         self.debugger.get_version_by_account_sequence(account, seq)
     }
 
-    pub fn run_session_at_version<F>(&self, version: Version, f: F) -> Result<ChangeSet>
+    pub fn run_session_at_version<F>(
+        &self,
+        version: Version,
+        override_changeset: Option<MoveChanges>,
+        f: F,
+    ) -> Result<ChangeSet>
     where
-        F: FnOnce(&mut Session<RemoteStorage<DebuggerStateView>>) -> VMResult<()>,
+        F: FnOnce(&mut Session<DeltaStorage<RemoteStorage<DebuggerStateView>>>) -> VMResult<()>,
     {
         let move_vm = MoveVM::new();
         let state_view = DebuggerStateView::new(&*self.debugger, version);
-        let remote_storage = RemoteStorage::new(&state_view);
+        let state_view_storage = RemoteStorage::new(&state_view);
+        let move_changes = override_changeset.unwrap_or_else(MoveChanges::new);
+        let remote_storage = DeltaStorage::new(&state_view_storage, &move_changes);
         let mut session = move_vm.new_session(&remote_storage);
         f(&mut session).map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
         let txn_effect = session
@@ -155,11 +163,14 @@ impl LibraDebugger {
         sender: AccountAddress,
         begin: Version,
         end: Version,
+        override_changeset: Option<MoveChanges>,
     ) -> Result<Option<Version>> {
+        // TODO: The code here is compiled against the local move stdlib instead of the one from on
+        // chain storage.
         let predicate = compile_move_script(code_path, sender)?;
         let gas_table = zero_cost_schedule();
         let is_version_ok = |version| {
-            self.run_session_at_version(version, |session| {
+            self.run_session_at_version(version, override_changeset.clone(), |session| {
                 let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
                 let log_context = NoContextLog::new();
                 session.execute_script(
@@ -187,7 +198,7 @@ impl LibraDebugger {
     where
         F: Fn(Version) -> Result<()>,
     {
-        if self.get_latest_version()? < end || begin > end {
+        if self.get_latest_version()? + 1 < end || begin > end {
             bail!("Unexpected Version");
         }
 

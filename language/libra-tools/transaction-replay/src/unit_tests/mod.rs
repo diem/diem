@@ -5,12 +5,16 @@ mod bisection_tests;
 
 use crate::LibraValidatorInterface;
 use anyhow::{bail, Result};
+use compiled_stdlib::StdLibOptions;
 use libra_types::{
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    transaction::{Transaction, Version},
+    transaction::{Transaction, Version, WriteSetPayload},
+    write_set::WriteOp,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryFrom};
+use vm_genesis::generate_genesis_change_set_for_testing;
 
 pub struct TestInterface {
     state_db: HashMap<(Version, AccountAddress), AccountStateBlob>,
@@ -37,6 +41,30 @@ impl TestInterface {
             state_db: HashMap::new(),
             transaction_store: vec![],
             latest_version: version,
+        }
+    }
+
+    pub fn genesis() -> Self {
+        let changeset = generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
+        let mut state_db = HashMap::new();
+        for (ap, op) in changeset.write_set().iter() {
+            match op {
+                WriteOp::Value(v) => state_db
+                    .entry((0, ap.address))
+                    .or_insert_with(AccountState::default)
+                    .insert(ap.path.clone(), v.clone()),
+                _ => panic!("Unexpected delete"),
+            };
+        }
+        Self {
+            state_db: state_db
+                .into_iter()
+                .map(|(k, v)| (k, AccountStateBlob::try_from(&v).unwrap()))
+                .collect(),
+            transaction_store: vec![Transaction::GenesisTransaction(WriteSetPayload::Direct(
+                changeset,
+            ))],
+            latest_version: 1,
         }
     }
 }

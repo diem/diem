@@ -44,7 +44,7 @@ fn test_replay_tooling() {
         .join("language/libra-tools/transaction-replay/examples/account_exists.move");
 
     let bisect_result = json_debugger
-        .bisect_transactions_by_script(script_path.to_str().unwrap(), account, 0, txn.version)
+        .bisect_transactions_by_script(script_path.to_str().unwrap(), account, 0, txn.version, None)
         .unwrap()
         .unwrap();
 

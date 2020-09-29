@@ -3458,6 +3458,7 @@ name = "libra-transaction-replay"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "compiled-stdlib",
  "difference",
  "libra-canonical-serialization",
  "libra-state-view",
@@ -3469,11 +3470,13 @@ dependencies = [
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "resource-viewer",
  "stdlib",
  "structopt 0.3.18",
  "vm",
+ "vm-genesis",
 ]
 
 [[package]]
