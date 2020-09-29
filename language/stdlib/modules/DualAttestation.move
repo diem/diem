@@ -513,15 +513,15 @@ module DualAttestation {
 
     spec schema PreserveCredentialExistence {
         /// The existence of Preburn is preserved.
-        ensures forall addr1: address:
-            old(exists<Credential>(addr1)) ==>
-                exists<Credential>(addr1);
+        ensures forall addr: address:
+            old(exists<Credential>(addr)) ==>
+                exists<Credential>(addr);
     }
     spec schema PreserveCredentialAbsence {
         /// The absence of Preburn is preserved.
-        ensures forall addr1: address:
-            old(!exists<Credential>(addr1)) ==>
-                !exists<Credential>(addr1);
+        ensures forall addr: address:
+            old(!exists<Credential>(addr)) ==>
+                !exists<Credential>(addr);
     }
     spec module {
         /// The permission "RotateDualAttestationInfo(addr)" is not transferred [D25].
@@ -531,10 +531,10 @@ module DualAttestation {
         /// "Credential" resources are only published under ParentVASP or DD accounts.
         apply PreserveCredentialAbsence to * except publish_credential;
         apply Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created} to publish_credential;
-        invariant [global] forall addr1: address:
-            exists<Credential>(addr1) ==>
-                (Roles::spec_has_parent_VASP_role_addr(addr1) ||
-                Roles::spec_has_designated_dealer_role_addr(addr1));
+        invariant [global] forall addr: address:
+            exists<Credential>(addr) ==>
+                (Roles::spec_has_parent_VASP_role_addr(addr) ||
+                Roles::spec_has_designated_dealer_role_addr(addr));
     }
 
     /// Only set_microlibra_limit can change the limit [B15].
@@ -550,8 +550,8 @@ module DualAttestation {
     /// Only rotate_compliance_public_key can rotate the compliance public key [B25].
     spec schema CompliancePublicKeyRemainsSame {
         /// The compliance public key stays constant.
-        ensures forall addr1: address where old(exists<Credential>(addr1)):
-            global<Credential>(addr1).compliance_public_key == old(global<Credential>(addr1).compliance_public_key);
+        ensures forall addr: address where old(exists<Credential>(addr)):
+            global<Credential>(addr).compliance_public_key == old(global<Credential>(addr).compliance_public_key);
     }
     spec module {
         apply CompliancePublicKeyRemainsSame to * except rotate_compliance_public_key;
@@ -560,8 +560,8 @@ module DualAttestation {
     /// Only rotate_base_url can rotate the base url [B25].
     spec schema BaseURLRemainsSame {
         /// The base url stays constant.
-        ensures forall addr1: address where old(exists<Credential>(addr1)):
-            global<Credential>(addr1).base_url == old(global<Credential>(addr1).base_url);
+        ensures forall addr: address where old(exists<Credential>(addr)):
+            global<Credential>(addr).base_url == old(global<Credential>(addr).base_url);
     }
     spec module {
         apply BaseURLRemainsSame to * except rotate_base_url;

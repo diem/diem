@@ -1131,8 +1131,8 @@ module Libra {
 
         /// Checks whether the currency has a mint capability.  This is only relevant for
         /// SCS coins
-        define spec_has_mint_capability<CoinType>(addr1: address): bool {
-            exists<MintCapability<CoinType>>(addr1)
+        define spec_has_mint_capability<CoinType>(addr: address): bool {
+            exists<MintCapability<CoinType>>(addr)
         }
 
         /// Returns true if a BurnCapability for CoinType exists at addr.
@@ -1271,9 +1271,9 @@ module Libra {
         /// Only TreasuryCompliance can have BurnCapability [B12].
         /// If an account has BurnCapability, it is a TreasuryCompliance account.
         invariant [global] forall coin_type: type:
-            forall addr1: address:
-                exists<BurnCapability<coin_type>>(addr1) ==>
-                    Roles::spec_has_treasury_compliance_role_addr(addr1);
+            forall addr: address:
+                exists<BurnCapability<coin_type>>(addr) ==>
+                    Roles::spec_has_treasury_compliance_role_addr(addr);
 
         /// BurnCapability is not transferrable [D12]. BurnCapability can be extracted from an
         /// account, but is always moved back to the original account. This is the case in
@@ -1332,9 +1332,9 @@ module Libra {
         /// Only DesignatedDealer can have Preburn [B12].
         /// If an account has Preburn, it is a DesignatedDealer account.
         invariant [global] forall coin_type: type:
-            forall addr1: address:
-                exists<Preburn<coin_type>>(addr1) ==>
-                    Roles::spec_has_designated_dealer_role_addr(addr1);
+            forall addr: address:
+                exists<Preburn<coin_type>>(addr) ==>
+                    Roles::spec_has_designated_dealer_role_addr(addr);
 
         /// Preburn is not transferrable [D13].
         apply PreservePreburnExistence<CoinType> to *<CoinType>;

@@ -4085,9 +4085,9 @@ The absence of KeyRotationCap is preserved.
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PreserveKeyRotationCapAbsence">PreserveKeyRotationCapAbsence</a> {
-    <b>ensures</b> <b>forall</b> addr1: address:
-        <b>old</b>(!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || !<a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr1)) ==&gt;
-            (!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || !<a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr1));
+    <b>ensures</b> <b>forall</b> addr: address:
+        <b>old</b>(!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr) || !<a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr)) ==&gt;
+            (!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr) || !<a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr));
 }
 </code></pre>
 
@@ -4115,8 +4115,8 @@ Every account holds either no key rotation capability (because KeyRotationCapabi
 or the key rotation capability for addr itself [B26].
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
-    <a href="LibraAccount.md#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr):
+    <a href="LibraAccount.md#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr) || <a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr);
 </code></pre>
 
 
@@ -4142,9 +4142,9 @@ The absence of WithdrawCap is preserved.
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PreserveWithdrawCapAbsence">PreserveWithdrawCapAbsence</a> {
-    <b>ensures</b> <b>forall</b> addr1: address:
-        <b>old</b>(!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).withdrawal_capability)) ==&gt;
-            (!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).withdrawal_capability));
+    <b>ensures</b> <b>forall</b> addr: address:
+        <b>old</b>(!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability)) ==&gt;
+            (!<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability));
 }
 </code></pre>
 
@@ -4172,8 +4172,8 @@ Every account holds either no withdraw capability (because withdraw cap has been
 or the withdraw capability for addr itself [B27].
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
-    <a href="LibraAccount.md#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr1) || <a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr1);
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr):
+    <a href="LibraAccount.md#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr) || <a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr);
 </code></pre>
 
 
@@ -4181,7 +4181,7 @@ or the withdraw capability for addr itself [B27].
 Every address that has a published RoleId also has a published Account.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1): <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr1);
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr): <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr);
 </code></pre>
 
 
@@ -4192,8 +4192,8 @@ only rotate_authentication_key can rotate authentication_key [B26].
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_AuthenticationKeyRemainsSame">AuthenticationKeyRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1)):
-        <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).authentication_key == <b>old</b>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).authentication_key);
+    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr)):
+        <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key == <b>old</b>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key);
 }
 </code></pre>
 
@@ -4211,8 +4211,8 @@ only withdraw_from and its helper and clients can withdraw [B27].
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_BalanceNotDecrease">BalanceNotDecrease</a>&lt;Token&gt; {
-    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1)):
-        <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1).coin.value &gt;= <b>old</b>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1).coin.value);
+    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)):
+        <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr).coin.value &gt;= <b>old</b>(<b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr).coin.value);
 }
 </code></pre>
 

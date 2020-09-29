@@ -306,8 +306,8 @@ module ValidatorConfig {
     /// owner via signing the transaction. But other functions in this module could also
     /// change the operator_account field of ValidatorConfig, and this shows that they do not.
     spec schema OperatorRemainsSame {
-        ensures forall addr1: address where old(exists<ValidatorConfig>(addr1)):
-            global<ValidatorConfig>(addr1).operator_account == old(global<ValidatorConfig>(addr1).operator_account);
+        ensures forall addr: address where old(exists<ValidatorConfig>(addr)):
+            global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
     spec module {
         ///  set_operator, remove_operator can change the operator account [B24].
@@ -318,8 +318,8 @@ module ValidatorConfig {
     /// in LibraSystem so we don't have to check whether every validator address has a validator role.
     /// <a name="ValidatorConfigImpliesValidatorRole"></a>
     spec module {
-        invariant [global] forall addr1: address where exists_config(addr1):
-            Roles::spec_has_validator_role_addr(addr1);
+        invariant [global] forall addr: address where exists_config(addr):
+            Roles::spec_has_validator_role_addr(addr);
     }
 }
 }

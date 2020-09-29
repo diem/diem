@@ -1772,9 +1772,9 @@ module LibraAccount {
     }
     spec schema PreserveKeyRotationCapAbsence {
         /// The absence of KeyRotationCap is preserved.
-        ensures forall addr1: address:
-            old(!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1)) ==>
-                (!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1));
+        ensures forall addr: address:
+            old(!exists<LibraAccount>(addr) || !spec_has_key_rotation_cap(addr)) ==>
+                (!exists<LibraAccount>(addr) || !spec_has_key_rotation_cap(addr));
     }
     spec module {
         /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
@@ -1789,8 +1789,8 @@ module LibraAccount {
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
         /// or the key rotation capability for addr itself [B26].
-        invariant [global] forall addr1: address where exists_at(addr1):
-            delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
+        invariant [global] forall addr: address where exists_at(addr):
+            delegated_key_rotation_capability(addr) || spec_holds_own_key_rotation_cap(addr);
     }
 
     spec schema EnsuresWithdrawalCap {
@@ -1800,9 +1800,9 @@ module LibraAccount {
     }
     spec schema PreserveWithdrawCapAbsence {
         /// The absence of WithdrawCap is preserved.
-        ensures forall addr1: address:
-            old(!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability)) ==>
-                (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability));
+        ensures forall addr: address:
+            old(!exists<LibraAccount>(addr) || Option::is_none(global<LibraAccount>(addr).withdrawal_capability)) ==>
+                (!exists<LibraAccount>(addr) || Option::is_none(global<LibraAccount>(addr).withdrawal_capability));
     }
     spec module {
         /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
@@ -1817,8 +1817,8 @@ module LibraAccount {
 
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
         /// or the withdraw capability for addr itself [B27].
-        invariant [global] forall addr1: address where exists_at(addr1):
-            delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
+        invariant [global] forall addr: address where exists_at(addr):
+            delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
     }
 
     // TODO (dd): For each account type, specify that it is set up properly, including other
@@ -1826,13 +1826,13 @@ module LibraAccount {
 
     spec module {
         /// Every address that has a published RoleId also has a published Account.
-        invariant [global] forall addr1: address where exists_at(addr1): exists<Roles::RoleId>(addr1);
+        invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
     }
 
     /// only rotate_authentication_key can rotate authentication_key [B26].
     spec schema AuthenticationKeyRemainsSame {
-        ensures forall addr1: address where old(exists_at(addr1)):
-            global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
+        ensures forall addr: address where old(exists_at(addr)):
+            global<LibraAccount>(addr).authentication_key == old(global<LibraAccount>(addr).authentication_key);
     }
     spec module {
         apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
@@ -1840,8 +1840,8 @@ module LibraAccount {
 
     /// only withdraw_from and its helper and clients can withdraw [B27].
     spec schema BalanceNotDecrease<Token> {
-        ensures forall addr1: address where old(exists<Balance<Token>>(addr1)):
-            global<Balance<Token>>(addr1).coin.value >= old(global<Balance<Token>>(addr1).coin.value);
+        ensures forall addr: address where old(exists<Balance<Token>>(addr)):
+            global<Balance<Token>>(addr).coin.value >= old(global<Balance<Token>>(addr).coin.value);
     }
     spec module {
         apply BalanceNotDecrease<Token> to *<Token> except withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr, preburn, pay_from, epilogue, failure_epilogue, success_epilogue;

@@ -183,8 +183,8 @@ This invariant is useful in LibraSystem so we don't have to check whether
 every validator address has a validator role.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1:address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr1):
-    <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr1);
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr:address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr):
+    <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr);
 </code></pre>
 
 

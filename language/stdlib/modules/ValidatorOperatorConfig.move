@@ -60,8 +60,8 @@ module ValidatorOperatorConfig {
     /// This invariant is useful in LibraSystem so we don't have to check whether
     /// every validator address has a validator role.
     spec module {
-        invariant [global] forall addr1:address where has_validator_operator_config(addr1):
-            Roles::spec_has_validator_operator_role_addr(addr1);
+        invariant [global] forall addr:address where has_validator_operator_config(addr):
+            Roles::spec_has_validator_operator_role_addr(addr);
     }
 
 }
