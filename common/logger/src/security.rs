@@ -32,7 +32,7 @@ pub enum SecurityEvent {
 
     // Consensus
     // ---------
-    /// Consensus received an invalid message (not well-formed or incorrect signature)
+    /// Consensus received an invalid message (not well-formed, invalid vote data or incorrect signature)
     ConsensusInvalidMessage,
 
     /// Consensus received an equivocating vote
@@ -40,9 +40,6 @@ pub enum SecurityEvent {
 
     /// Consensus received an invalid proposal
     InvalidConsensusProposal,
-
-    /// Consensus received an invalid vote
-    InvalidConsensusVote,
 
     /// Consensus received an invalid new round message
     InvalidConsensusRound,

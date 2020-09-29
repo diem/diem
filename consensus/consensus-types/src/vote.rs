@@ -138,6 +138,8 @@ impl Vote {
                 .verify(self.author(), &self.timeout(), timeout_signature)
                 .context("Failed to verify Timeout Vote")?;
         }
+        // Let us verify the vote data as well
+        self.vote_data().verify()?;
         Ok(())
     }
 }
