@@ -23,7 +23,10 @@ use futures::{
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::{config::PeerNetworkId, network_id::NodeNetworkId};
+use libra_config::{
+    config::PeerNetworkId,
+    network_id::{NetworkId, NodeNetworkId},
+};
 use libra_logger::prelude::*;
 use libra_trace::prelude::*;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
@@ -171,11 +174,22 @@ pub(crate) async fn coordinator<V>(
                                 };
                             }
                             Event::RpcRequest((peer_id, msg, res_tx)) => {
-                                error!(
-                                    SecurityEvent::InvalidNetworkEventMempool,
-                                    message = msg,
-                                    peer_id = peer_id,
-                                );
+                                match network_id.network_id() {
+                                    NetworkId::Validator | NetworkId::Private(_) => {
+                                        error!(
+                                            SecurityEvent::InvalidNetworkEventMempool,
+                                            message = msg,
+                                            peer_id = peer_id,
+                                        );
+                                    }
+                                    _ => {
+                                        error!(
+                                            SecurityEvent::InvalidNetworkEventMempool,
+                                            peer_id = peer_id,
+                                        );
+                                    }
+                                }
+                                debug_assert!(false, "Unexpected network event rpc request");
                             }
                         }
                     },

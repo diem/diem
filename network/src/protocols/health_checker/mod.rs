@@ -35,7 +35,7 @@ use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use libra_config::network_id::NetworkContext;
+use libra_config::network_id::{NetworkContext, NetworkId};
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
@@ -200,28 +200,40 @@ where
                         },
                         Ok(Event::RpcRequest((peer_id, msg, res_tx))) => {
                             match msg {
-                            HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
-                            _ => {
-                                warn!(
-                                    SecurityEvent::InvalidHealthCheckerMsg,
-                                    NetworkSchema::new(&self.network_context)
-                                        .remote_peer(&peer_id),
-                                    rpc_message = msg,
-                                    "{} Unexpected RPC message from {}",
-                                    self.network_context,
-                                    peer_id
-                                );
-                            },
+                                HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
+                                _ => {
+                                    warn!(
+                                        SecurityEvent::InvalidHealthCheckerMsg,
+                                        NetworkSchema::new(&self.network_context)
+                                            .remote_peer(&peer_id),
+                                        rpc_message = msg,
+                                        "{} Unexpected RPC message from {}",
+                                        self.network_context,
+                                        peer_id
+                                    );
+                                },
                             };
                         }
                         Ok(Event::Message(msg)) => {
-                            error!(
-                                SecurityEvent::InvalidNetworkEventHC,
-                                NetworkSchema::new(&self.network_context),
-                                "{} Unexpected network event: {:?}",
-                                self.network_context,
-                                msg
-                            );
+                            match self.network_context.network_id() {
+                                NetworkId::Validator | NetworkId::Private(_) => {
+                                     error!(
+                                        SecurityEvent::InvalidNetworkEventHC,
+                                        NetworkSchema::new(&self.network_context),
+                                        "{} Unexpected network event: {:?}",
+                                        self.network_context,
+                                        msg
+                                    );
+                                },
+                                _ => {
+                                    error!(
+                                        SecurityEvent::InvalidNetworkEventHC,
+                                        NetworkSchema::new(&self.network_context),
+                                        "{} Unexpected network event",
+                                        self.network_context
+                                    );
+                                },
+                            }
                             debug_assert!(false, "Unexpected network event");
                         },
                         Err(err) => {
