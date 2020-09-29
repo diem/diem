@@ -34,15 +34,10 @@ fun publish_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) 
 spec fun publish_shared_ed25519_public_key {
     use 0x1::Errors;
     use 0x1::LibraAccount;
-    use 0x1::Signer;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include SharedEd25519PublicKey::PublishAbortsIf{key: public_key};
     include SharedEd25519PublicKey::PublishEnsures{key: public_key};
-
-    // TODO: The following line is added to help Prover verifying the
-    // "aborts_with [check]" spec. This fact can be inferred from the successful
-    // termination of the prologue functions, but Prover cannot figure it out currently.
-    requires LibraAccount::exists_at(Signer::spec_address_of(account));
 
     aborts_with [check]
         Errors::INVALID_STATE,

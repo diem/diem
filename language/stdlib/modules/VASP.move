@@ -46,12 +46,18 @@ module VASP {
         assert(!is_vasp(vasp_addr), Errors::already_published(EPARENT_OR_CHILD_VASP));
         move_to(vasp, ParentVASP { num_children: 0 });
     }
+
     spec fun publish_parent_vasp_credential {
         include LibraTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotParentVasp{account: vasp};
         let vasp_addr = Signer::spec_address_of(vasp);
         aborts_if is_vasp(vasp_addr) with Errors::ALREADY_PUBLISHED;
+        include PublishParentVASPEnsures{vasp_addr: vasp_addr};
+    }
+
+    spec schema PublishParentVASPEnsures {
+        vasp_addr: address;
         ensures is_parent(vasp_addr);
         ensures spec_get_num_children(vasp_addr) == 0;
     }

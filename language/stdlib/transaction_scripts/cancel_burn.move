@@ -55,6 +55,7 @@ spec fun cancel_burn {
     use 0x1::Errors;
     use 0x1::Libra;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include LibraAccount::CancelBurnAbortsIf<Token>;
 
     let preburn_value_at_addr = global<Libra::Preburn<Token>>(preburn_address).to_burn.value;

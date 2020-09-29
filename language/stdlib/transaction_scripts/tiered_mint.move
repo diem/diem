@@ -70,6 +70,7 @@ fun tiered_mint<CoinType>(
 spec fun tiered_mint {
     use 0x1::Errors;
 
+    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
     include LibraAccount::TieredMintAbortsIf<CoinType>;
     include LibraAccount::TieredMintEnsures<CoinType>;

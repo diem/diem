@@ -81,6 +81,7 @@ spec fun create_child_vasp_account {
     use 0x1::Signer;
     use 0x1::Errors;
 
+    include LibraAccount::TransactionChecks{sender: parent_vasp}; // properties checked by the prologue.
     let parent_addr = Signer::spec_address_of(parent_vasp);
     let parent_cap = LibraAccount::spec_get_withdraw_cap(parent_addr);
     include LibraAccount::CreateChildVASPAccountAbortsIf<CoinType>{

@@ -1,7 +1,6 @@
 script {
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
-use 0x1::Errors;
 
 /// # Summary
 /// Creates a Validator Operator account. This transaction can only be sent by the Libra
@@ -60,17 +59,23 @@ fun create_validator_operator_account(
 /// Only Libra root may create Validator Operator accounts
 /// Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
 /// Checks that above table includes all error categories.
-/// The verifier find aborts that are not documented, and cannot occur in practice:
-/// * INVALID_STATE comes from `assert_operating()` in `ValidatorOperatorConfig::publish`, which should
-///   always be true during a transaction.
+/// The verifier finds an abort that is not documented, and cannot occur in practice:
 /// * REQUIRES_ROLE comes from `Roles::assert_libra_root`. However, assert_libra_root checks the literal
 ///   Libra root address before checking the role, and the role abort is unreachable in practice, since
 ///   only Libra root has the Libra root role.
 spec fun create_validator_operator_account {
-    aborts_with [check] Errors::INVALID_ARGUMENT, Errors::NOT_PUBLISHED, Errors::REQUIRES_ADDRESS, Errors::ALREADY_PUBLISHED, Errors::INVALID_STATE, Errors::REQUIRES_ROLE;
+    use 0x1::Errors;
+
+    include LibraAccount::TransactionChecks{sender: lr_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
     include LibraAccount::CreateValidatorOperatorAccountAbortsIf;
     include LibraAccount::CreateValidatorOperatorAccountEnsures;
-    }
 
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::NOT_PUBLISHED,
+        Errors::REQUIRES_ADDRESS,
+        Errors::ALREADY_PUBLISHED,
+        Errors::REQUIRES_ROLE;
+}
 }

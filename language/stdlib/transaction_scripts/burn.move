@@ -58,7 +58,9 @@ fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) 
 }
 spec fun burn {
     use 0x1::Errors;
+    use 0x1::LibraAccount;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
     include Libra::BurnAbortsIf<Token>;
     include Libra::BurnEnsures<Token>;

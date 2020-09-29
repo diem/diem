@@ -51,6 +51,7 @@ spec fun add_recovery_rotation_capability {
     use 0x1::Signer;
     use 0x1::Errors;
 
+    include LibraAccount::TransactionChecks{sender: to_recover_account}; // properties checked by the prologue.
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf{account: to_recover_account};
     include LibraAccount::ExtractKeyRotationCapabilityEnsures{account: to_recover_account};
 

@@ -60,4 +60,23 @@ fun create_designated_dealer<Currency>(
         add_all_currencies
     );
 }
+
+spec fun create_designated_dealer {
+    use 0x1::Errors;
+
+    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
+    include LibraAccount::CreateDesignatedDealerAbortsIf<Currency>{
+        creator_account: tc_account, new_account_address: addr};
+    include LibraAccount::CreateDesignatedDealerEnsures<Currency>{new_account_address: addr};
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::REQUIRES_ADDRESS,
+        Errors::NOT_PUBLISHED,
+        Errors::ALREADY_PUBLISHED,
+        Errors::REQUIRES_ROLE; // TODO: undocumented abort code
+                               // from Roles::AbortsIfNotTreasuryCompliance, occurs together with REQUIRES_ADDRESS
+
+}
 }

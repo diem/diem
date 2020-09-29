@@ -71,6 +71,7 @@ spec fun peer_to_peer_with_metadata {
     use 0x1::Errors;
     pragma verify;
 
+    include LibraAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
     let payer_addr = Signer::spec_address_of(payer);
     let cap = LibraAccount::spec_get_withdraw_cap(payer_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};

@@ -36,9 +36,11 @@ fun add_currency_to_account<Currency>(account: &signer) {
 }
 spec fun add_currency_to_account {
     use 0x1::Errors;
+    use 0x1::Signer;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include LibraAccount::AddCurrencyAbortsIf<Currency>;
-    include LibraAccount::AddCurrencyEnsures<Currency>;
+    include LibraAccount::AddCurrencyEnsures<Currency>{addr: Signer::spec_address_of(account)};
 
     aborts_with [check]
         Errors::NOT_PUBLISHED,

@@ -44,7 +44,9 @@ fun rotate_authentication_key_with_recovery_address(
 }
 spec fun rotate_authentication_key_with_recovery_address {
     use 0x1::Errors;
+    use 0x1::LibraAccount;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
     include RecoveryAddress::RotateAuthenticationKeyEnsures;
 

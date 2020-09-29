@@ -35,10 +35,12 @@ use 0x1::RecoveryAddress;
 fun create_recovery_address(account: &signer) {
     RecoveryAddress::publish(account, LibraAccount::extract_key_rotation_capability(account))
 }
+
 spec fun create_recovery_address {
     use 0x1::Signer;
     use 0x1::Errors;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
     include LibraAccount::ExtractKeyRotationCapabilityEnsures;
 
@@ -59,11 +61,6 @@ spec fun create_recovery_address {
     ensures RecoveryAddress::spec_is_recovery_address(account_addr);
     ensures len(RecoveryAddress::spec_get_rotation_caps(account_addr)) == 1;
     ensures RecoveryAddress::spec_get_rotation_caps(account_addr)[0] == old(rotation_cap);
-
-    // TODO: The following line is added to help Prover verifying the
-    // "aborts_with [check]" spec. This fact can be inferred from the successful
-    // termination of the prologue functions, but Prover cannot figure it out currently.
-    requires LibraAccount::exists_at(account_addr);
 
     aborts_with [check]
         Errors::INVALID_STATE,

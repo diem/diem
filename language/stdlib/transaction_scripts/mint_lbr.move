@@ -93,6 +93,7 @@ fun mint_lbr(account: &signer, amount_lbr: u64) {
 //
 spec fun mint_lbr {
     use 0x1::Signer;
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
     let cap = LibraAccount::spec_get_withdraw_cap(account_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};

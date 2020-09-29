@@ -452,6 +452,7 @@ module LibraAccount {
         modifies global<LibraAccount>(payee);
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payee));
         ensures exists<LibraAccount>(payee);
+        ensures exists<Balance<Token>>(payee);
         ensures global<LibraAccount>(payee).withdrawal_capability
             == old(global<LibraAccount>(payee).withdrawal_capability);
         include DepositAbortsIf<Token>{amount: to_deposit.value};
@@ -826,8 +827,12 @@ module LibraAccount {
         let payer = cap.account_address;
         modifies global<LibraAccount>(payer);
         modifies global<LibraAccount>(payee);
+        modifies global<Balance<Token>>(payer);
+        modifies global<Balance<Token>>(payee);
         ensures exists_at(payer);
         ensures exists_at(payee);
+        ensures exists<Balance<Token>>(payer);
+        ensures exists<Balance<Token>>(payee);
         ensures global<LibraAccount>(payer).withdrawal_capability ==
             old(global<LibraAccount>(payer).withdrawal_capability);
         include PayFromAbortsIf<Token>;
@@ -970,26 +975,32 @@ module LibraAccount {
         let new_account_addr = Signer::spec_address_of(new_account);
         aborts_if !Roles::spec_can_hold_balance_addr(new_account_addr) with Errors::INVALID_ARGUMENT;
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_addr};
-        include AddCurrencyEnsures<Token>{account: new_account};
-        include add_all_currencies && !exists<Balance<Coin1>>(new_account_addr)
-            ==> AddCurrencyEnsures<Coin1>{account: new_account};
-        include add_all_currencies && !exists<Balance<Coin2>>(new_account_addr)
-            ==> AddCurrencyEnsures<Coin2>{account: new_account};
-        include add_all_currencies && !exists<Balance<LBR>>(new_account_addr)
-            ==> AddCurrencyEnsures<LBR>{account: new_account};
+        include AddCurrencyForAccountEnsures<Token>{addr: new_account_addr};
     }
 
     spec schema AddCurrencyForAccountAbortsIf<Token> {
         addr: address;
         add_all_currencies: bool;
         include Libra::AbortsIfNoCurrency<Token>;
-        aborts_if exists<Balance<Token>>(addr);
+        aborts_if exists<Balance<Token>>(addr) with Errors::ALREADY_PUBLISHED;
         include add_all_currencies && !exists<Balance<Coin1>>(addr)
             ==> Libra::AbortsIfNoCurrency<Coin1>;
         include add_all_currencies && !exists<Balance<Coin2>>(addr)
             ==> Libra::AbortsIfNoCurrency<Coin2>;
         include add_all_currencies && !exists<Balance<LBR>>(addr)
             ==> Libra::AbortsIfNoCurrency<LBR>;
+    }
+
+    spec schema AddCurrencyForAccountEnsures<Token> {
+        addr: address;
+        add_all_currencies: bool;
+        include AddCurrencyEnsures<Token>;
+        include add_all_currencies && !exists<Balance<Coin1>>(addr)
+            ==> AddCurrencyEnsures<Coin1>;
+        include add_all_currencies && !exists<Balance<Coin2>>(addr)
+            ==> AddCurrencyEnsures<Coin2>;
+        include add_all_currencies && !exists<Balance<LBR>>(addr)
+            ==> AddCurrencyEnsures<LBR>;
     }
 
 
@@ -1157,6 +1168,35 @@ module LibraAccount {
         make_account(new_dd_account, auth_key_prefix)
     }
 
+    spec fun create_designated_dealer {
+        include CreateDesignatedDealerAbortsIf<CoinType>;
+        include CreateDesignatedDealerEnsures<CoinType>;
+    }
+
+    spec schema CreateDesignatedDealerAbortsIf<CoinType> {
+        creator_account: signer;
+        new_account_address: address;
+        auth_key_prefix: vector<u8>;
+        add_all_currencies: bool;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
+        aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<DesignatedDealer::Dealer>(new_account_address) with Errors::ALREADY_PUBLISHED;
+        include if (add_all_currencies)
+                    DesignatedDealer::AddCurrencyAbortsIf<Coin1>{dd_addr: new_account_address}
+                    && DesignatedDealer::AddCurrencyAbortsIf<Coin2>{dd_addr: new_account_address}
+                else DesignatedDealer::AddCurrencyAbortsIf<CoinType>{dd_addr: new_account_address};
+        include AddCurrencyForAccountAbortsIf<CoinType>{addr: new_account_address};
+        include MakeAccountAbortsIf{addr: new_account_address};
+    }
+
+    spec schema CreateDesignatedDealerEnsures<CoinType> {
+        new_account_address: address;
+        ensures exists<DesignatedDealer::Dealer>(new_account_address);
+        ensures exists_at(new_account_address);
+        ensures Roles::spec_has_designated_dealer_role_addr(new_account_address);
+        include AddCurrencyForAccountEnsures<CoinType>{addr: new_account_address};
+    }
     ///////////////////////////////////////////////////////////////////////////
     // VASP methods
     ///////////////////////////////////////////////////////////////////////////
@@ -1178,6 +1218,32 @@ module LibraAccount {
         DualAttestation::publish_credential(&new_account, creator_account, human_name);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
+    }
+
+    spec fun create_parent_vasp_account {
+        include CreateParentVASPAccountAbortsIf<Token>;
+        include CreateParentVASPAccountEnsures<Token>;
+    }
+
+    spec schema CreateParentVASPAccountAbortsIf<Token> {
+        creator_account: signer;
+        new_account_address: address;
+        auth_key_prefix: vector<u8>;
+        add_all_currencies: bool;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
+        aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
+        aborts_if VASP::is_vasp(new_account_address) with Errors::ALREADY_PUBLISHED;
+        include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
+        include MakeAccountAbortsIf{addr: new_account_address};
+    }
+
+    spec schema CreateParentVASPAccountEnsures<Token> {
+        new_account_address: address;
+        include VASP::PublishParentVASPEnsures{vasp_addr: new_account_address};
+        ensures exists_at(new_account_address);
+        ensures Roles::spec_has_parent_VASP_role_addr(new_account_address);
+        include AddCurrencyForAccountEnsures<Token>{addr: new_account_address};
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
@@ -1207,6 +1273,7 @@ module LibraAccount {
             parent_addr: Signer::spec_address_of(parent),
             child_addr: new_account_address,
         };
+        include AddCurrencyForAccountEnsures<Token>{addr: new_account_address};
     }
 
     spec schema CreateChildVASPAccountAbortsIf<Token> {
@@ -1224,6 +1291,7 @@ module LibraAccount {
     spec schema CreateChildVASPAccountEnsures<Token> {
         parent_addr: address;
         child_addr: address;
+        add_all_currencies: bool;
         include VASP::PublishChildVASPEnsures;
         ensures exists_at(child_addr);
         ensures Roles::spec_has_child_VASP_role_addr(child_addr);
@@ -1267,7 +1335,7 @@ module LibraAccount {
     }
     spec fun add_currency {
         include AddCurrencyAbortsIf<Token>;
-        include AddCurrencyEnsures<Token>;
+        include AddCurrencyEnsures<Token>{addr: Signer::spec_address_of(account)};
     }
     spec schema AddCurrencyAbortsIf<Token> {
         account: signer;
@@ -1281,8 +1349,7 @@ module LibraAccount {
     }
 
     spec schema AddCurrencyEnsures<Token> {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
+        addr: address;
         /// This publishes a `Balance<Currency>` to the caller's account
         ensures exists<Balance<Token>>(addr);
         ensures global<Balance<Token>>(addr)
@@ -1380,6 +1447,7 @@ module LibraAccount {
             max_transaction_fee,
             txn_expiration_time_seconds: txn_expiration_time,
         };
+        ensures prologue_guarantees(sender);
     }
     spec schema AbortsIfModulePrologue<Token> {
         sender: signer;
@@ -1436,6 +1504,7 @@ module LibraAccount {
             max_transaction_fee,
             txn_expiration_time_seconds: txn_expiration_time,
         };
+        ensures prologue_guarantees(sender);
     }
     spec schema AbortsIfScriptPrologue<Token> {
         sender: signer;
@@ -1451,6 +1520,17 @@ module LibraAccount {
         include LibraTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
         /// Covered: L74 (Match 8)
         aborts_if !LibraTransactionPublishingOption::spec_is_script_allowed(sender, script_hash) with Errors::INVALID_STATE;
+    }
+
+    spec define prologue_guarantees(sender: signer) : bool {
+        let addr = Signer::spec_address_of(sender);
+        LibraTimestamp::is_operating() && exists_at(addr) && !AccountFreezing::account_is_frozen(addr)
+    }
+
+    /// Used in transaction script to specify properties checked by the prologue.
+    spec schema TransactionChecks {
+        sender: signer;
+        requires prologue_guarantees(sender);
     }
 
     /// The prologue for WriteSet transaction
@@ -1481,6 +1561,7 @@ module LibraAccount {
 
     spec fun writeset_prologue {
         include AbortsIfWritesetPrologue {txn_expiration_time_seconds: txn_expiration_time};
+        ensures prologue_guarantees(sender);
     }
 
     spec schema AbortsIfWritesetPrologue {

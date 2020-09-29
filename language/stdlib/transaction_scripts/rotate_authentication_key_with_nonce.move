@@ -43,6 +43,7 @@ spec fun rotate_authentication_key_with_nonce {
     use 0x1::Signer;
     use 0x1::Errors;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
     include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;

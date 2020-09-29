@@ -191,8 +191,20 @@ or if there is already a VASP (child or parent) at this account.
 <a name="0x1_VASP_vasp_addr$14"></a>
 <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp);
 <b>aborts_if</b> <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>ensures</b> <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
-<b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(vasp_addr) == 0;
+<b>include</b> <a href="VASP.md#0x1_VASP_PublishParentVASPEnsures">PublishParentVASPEnsures</a>{vasp_addr: vasp_addr};
+</code></pre>
+
+
+
+
+<a name="0x1_VASP_PublishParentVASPEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_PublishParentVASPEnsures">PublishParentVASPEnsures</a> {
+    vasp_addr: address;
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(vasp_addr) == 0;
+}
 </code></pre>
 
 

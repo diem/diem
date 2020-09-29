@@ -50,9 +50,11 @@ fun preburn<Token>(account: &signer, amount: u64) {
 }
 
 spec fun preburn {
-    use 0x1::Signer;
     use 0x1::Errors;
+    use 0x1::Signer;
+    pragma verify;
 
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
     let cap = LibraAccount::spec_get_withdraw_cap(account_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};

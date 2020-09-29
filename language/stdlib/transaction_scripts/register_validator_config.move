@@ -1,6 +1,5 @@
 script {
 use 0x1::ValidatorConfig;
-use 0x1::Errors;
 
 /// # Summary
 /// Updates a validator's configuration. This does not reconfigure the system and will not update
@@ -58,10 +57,16 @@ fun register_validator_config(
 
 /// Access control rule is that only the validator operator for a validator may set
 /// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
- spec fun register_validator_config {
-    aborts_with [check] Errors::INVALID_ARGUMENT, Errors::NOT_PUBLISHED;
+spec fun register_validator_config {
+    use 0x1::Errors;
+    use 0x1::LibraAccount;
+
+    include LibraAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
     include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
     ensures ValidatorConfig::is_valid(validator_account);
- }
 
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::NOT_PUBLISHED;
+}
 }

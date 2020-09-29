@@ -52,7 +52,9 @@ fun update_exchange_rate<Currency>(
 }
 spec fun update_exchange_rate {
     use 0x1::Errors;
+    use 0x1::LibraAccount;
 
+    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
     include FixedPoint32::CreateFromRationalAbortsIf{
         numerator: new_exchange_rate_numerator,

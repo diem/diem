@@ -58,4 +58,22 @@ fun create_parent_vasp_account<CoinType>(
         add_all_currencies
     );
 }
+
+spec fun create_parent_vasp_account {
+    use 0x1::Errors;
+
+    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
+    include LibraAccount::CreateParentVASPAccountAbortsIf<CoinType>{creator_account: tc_account};
+    include LibraAccount::CreateParentVASPAccountEnsures<CoinType>;
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::REQUIRES_ADDRESS,
+        Errors::NOT_PUBLISHED,
+        Errors::ALREADY_PUBLISHED,
+        Errors::REQUIRES_ROLE; // TODO: undocumented abort code
+                               // from Roles::AbortsIfNotTreasuryCompliance, occurs together with REQUIRES_ADDRESS
+
+}
 }
