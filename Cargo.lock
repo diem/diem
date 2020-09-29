@@ -5933,6 +5933,7 @@ dependencies = [
  "debug-interface",
  "generate-key",
  "hex",
+ "libc",
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
