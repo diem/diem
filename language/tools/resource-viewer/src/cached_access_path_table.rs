@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use std::collections::btree_map::BTreeMap;
 
 pub const PACKED_TYPE_MAP_BYTES: &[u8] =
-    std::include_bytes!("../../stdlib/compiled/packed_types/packed_types.txt");
+    std::include_bytes!("../../../stdlib/compiled/packed_types/packed_types.txt");
 
 static STAGED_TYPE_MAP: Lazy<BTreeMap<Vec<u8>, StructTag>> = Lazy::new(build_mapping);
 
