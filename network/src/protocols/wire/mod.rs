@@ -10,3 +10,4 @@
 
 pub mod handshake;
 pub mod messaging;
+pub mod proxy_protocol;
