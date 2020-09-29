@@ -27,7 +27,7 @@ fn burn_txn_fees() {
         blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *sender.address(),
                 sender.auth_key_prefix(),
@@ -41,7 +41,7 @@ fn burn_txn_fees() {
     executor.execute_and_apply(
         dd.transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *sender.address(),
                 10_000_000,
                 vec![],
@@ -75,7 +75,7 @@ fn burn_txn_fees() {
         status.gas_used()
     };
 
-    let coin1_ty = TypeTag::Struct(StructTag {
+    let coin1_tmp_ty = TypeTag::Struct(StructTag {
         address: account_config::CORE_CODE_ADDRESS,
         module: Identifier::new("Coin1").unwrap(),
         name: Identifier::new("Coin1").unwrap(),
@@ -85,7 +85,7 @@ fn burn_txn_fees() {
     let output = executor.execute_and_apply(
         blessed
             .transaction()
-            .script(encode_burn_txn_fees_script(coin1_ty))
+            .script(encode_burn_txn_fees_script(coin1_tmp_ty))
             .sequence_number(1)
             .sign(),
     );

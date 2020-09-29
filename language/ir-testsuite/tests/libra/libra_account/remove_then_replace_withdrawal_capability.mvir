@@ -1,5 +1,5 @@
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 import 0x1.Signer;
 
@@ -17,7 +17,7 @@ main(sender: &signer) {
   assert(LibraAccount.delegated_withdraw_capability(copy(sender_addr)), 51);
 
   // and the sender should be able to withdraw with this cap
-  LibraAccount.pay_from<LBR.LBR>(&cap, copy(sender_addr), 100, h"", h"");
+  LibraAccount.pay_from<Coin1.Coin1>(&cap, copy(sender_addr), 100, h"", h"");
 
   // restoring the capability should flip the flag back
   LibraAccount.restore_withdraw_capability(move(cap));

@@ -6,14 +6,14 @@
 //! sender: blessed
 script {
 use 0x1::DualAttestation;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
 use 0x1::LibraTimestamp;
 use 0x1::VASP;
 fun main(lr_account: &signer) {
     let add_all_currencies = false;
 
-    LibraAccount::create_parent_vasp_account<LBR>(
+    LibraAccount::create_parent_vasp_account<Coin1>(
         lr_account,
         {{parent}},
         {{parent::auth_key}},
@@ -44,18 +44,18 @@ fun main(lr_account: &signer) {
 //! sender: parent
 script {
 use 0x1::LibraAccount;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use 0x1::VASP;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let add_all_currencies = false;
     assert(VASP::num_children({{parent}}) == 0, 2010);
-    LibraAccount::create_child_vasp_account<LBR>(
+    LibraAccount::create_child_vasp_account<Coin1>(
         parent_vasp, 0xAA, copy dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 1, 2011);
     assert(VASP::parent_address(0xAA) == {{parent}}, 2012);
-    LibraAccount::create_child_vasp_account<LBR>(
+    LibraAccount::create_child_vasp_account<Coin1>(
         parent_vasp, 0xBB, dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 2, 2013);

@@ -44,7 +44,7 @@ proptest! {
         let mut executor = FakeExecutor::from_genesis_file();
         let mut accounts = vec![];
         let libra_root = Account::new_libra_root();
-        let coins = vec![account::lbr_currency_code(), account::coin1_currency_code(), account::coin2_currency_code()];
+        let coins = vec![account::coin1_tmp_currency_code()];
         // Create a number of accounts
         for i in 0..10 {
             let account = Account::new();

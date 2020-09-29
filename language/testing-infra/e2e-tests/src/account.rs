@@ -11,7 +11,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, RoleId, COIN1_NAME, COIN2_NAME, LBR_NAME,
+        BalanceResource, RoleId, COIN1_NAME,
     },
     chain_id::ChainId,
     event::EventHandle,
@@ -34,16 +34,12 @@ use vm_genesis::GENESIS_KEYPAIR;
 // TTL is 86400s. Initial time was set to 0.
 pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
 
-pub fn lbr_currency_code() -> Identifier {
-    from_currency_code_string(LBR_NAME).unwrap()
-}
-
-pub fn coin1_currency_code() -> Identifier {
+pub fn coin1_tmp_currency_code() -> Identifier {
     from_currency_code_string(COIN1_NAME).unwrap()
 }
 
-pub fn coin2_currency_code() -> Identifier {
-    from_currency_code_string(COIN2_NAME).unwrap()
+pub fn currency_code(code: &str) -> Identifier {
+    from_currency_code_string(code).unwrap()
 }
 
 /// Details about a Libra account.
@@ -273,7 +269,7 @@ impl TransactionBuilder {
                 .unwrap_or_else(|| gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
-                .unwrap_or_else(|| LBR_NAME.to_owned()),
+                .unwrap_or_else(|| COIN1_NAME.to_owned()),
             self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
             ChainId::test(),
         )
@@ -288,7 +284,7 @@ impl TransactionBuilder {
                 .unwrap_or_else(|| gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
-                .unwrap_or_else(|| LBR_NAME.to_owned()),
+                .unwrap_or_else(|| COIN1_NAME.to_owned()),
             self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
             self.chain_id.unwrap_or_else(ChainId::test),
         )
@@ -484,7 +480,7 @@ impl AccountData {
         Self::with_account(
             Account::new(),
             balance,
-            lbr_currency_code(),
+            coin1_tmp_currency_code(),
             sequence_number,
             AccountRoleSpecifier::ParentVASP,
         )
@@ -494,7 +490,7 @@ impl AccountData {
         Self::with_account(
             Account::new(),
             0,
-            lbr_currency_code(),
+            coin1_tmp_currency_code(),
             0,
             AccountRoleSpecifier::LibraRoot,
         )

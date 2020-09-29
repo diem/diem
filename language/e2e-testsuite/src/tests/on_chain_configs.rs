@@ -117,10 +117,10 @@ fn updated_limit_allows_txn() {
         &TransactionStatus::Keep(KeptVMStatus::Executed)
     ));
     let sender_balance = executor
-        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
         .expect("sender balance must exist");
     let receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::lbr_currency_code())
+        .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
         .expect("receiver balcne must exist");
 
     assert_eq!(3_999_990, sender_balance.coin());

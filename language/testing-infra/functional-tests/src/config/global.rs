@@ -20,7 +20,7 @@ use std::{
 
 static DEFAULT_BALANCE: Lazy<Balance> = Lazy::new(|| Balance {
     amount: 1_000_000,
-    currency_code: account_config::from_currency_code_string(account_config::LBR_NAME).unwrap(),
+    currency_code: account_config::from_currency_code_string(account_config::COIN1_NAME).unwrap(),
 });
 
 #[derive(Debug)]
@@ -42,9 +42,9 @@ impl FromStr for Balance {
 
     fn from_str(s: &str) -> Result<Self> {
         // TODO: Try to get this from the on-chain config?
-        let coin_types = vec!["LBR", "Coin1", "Coin2"];
+        let coin_types = vec!["LBR", "Coin1"];
         let mut coin_type: Vec<&str> = coin_types.into_iter().filter(|x| s.ends_with(x)).collect();
-        let currency_code = coin_type.pop().unwrap_or("LBR");
+        let currency_code = coin_type.pop().unwrap_or("Coin1");
         if !coin_type.is_empty() {
             return Err(ErrorKind::Other(
                 "Multiple coin types supplied for account. Accounts are single currency"

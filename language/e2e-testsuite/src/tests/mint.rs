@@ -25,7 +25,7 @@ fn tiered_mint_designated_dealer() {
         blessed
             .transaction()
             .script(encode_create_designated_dealer_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *dd.address(),
                 dd.auth_key_prefix(),
@@ -41,7 +41,7 @@ fn tiered_mint_designated_dealer() {
         blessed
             .transaction()
             .script(encode_tiered_mint_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 1,
                 *dd.address(),
                 mint_amount_one,
@@ -54,7 +54,7 @@ fn tiered_mint_designated_dealer() {
         .read_account_resource(&dd)
         .expect("receiver must exist");
     let dd_balance = executor
-        .read_balance_resource(&dd, account::coin1_currency_code())
+        .read_balance_resource(&dd, account::coin1_tmp_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(mint_amount_one, dd_balance.coin());
     assert_eq!(0, dd_post_mint.sequence_number());
@@ -66,7 +66,7 @@ fn tiered_mint_designated_dealer() {
         blessed
             .transaction()
             .script(encode_tiered_mint_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 2,
                 *dd.address(),
                 mint_amount_two,
@@ -76,7 +76,7 @@ fn tiered_mint_designated_dealer() {
             .sign(),
     );
     let dd_balance = executor
-        .read_balance_resource(&dd, account::coin1_currency_code())
+        .read_balance_resource(&dd, account::coin1_tmp_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(mint_amount_one + mint_amount_two, dd_balance.coin());
 
@@ -86,7 +86,7 @@ fn tiered_mint_designated_dealer() {
         blessed
             .transaction()
             .script(encode_tiered_mint_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 3,
                 *dd.address(),
                 mint_amount_one,
@@ -119,7 +119,7 @@ fn mint_to_existing_not_dd() {
         blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *receiver.address(),
                 receiver.auth_key_prefix(),
@@ -135,7 +135,7 @@ fn mint_to_existing_not_dd() {
         blessed
             .transaction()
             .script(encode_tiered_mint_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *receiver.address(),
                 mint_amount,
@@ -169,7 +169,7 @@ fn mint_to_new_account() {
     let output = executor.execute_transaction(
         tc.transaction()
             .script(encode_tiered_mint_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *new_account.address(),
                 mint_amount,
@@ -193,12 +193,12 @@ fn tiered_update_exchange_rate() {
     let mut executor = FakeExecutor::from_genesis_file();
     let blessed = Account::new_blessed_tc();
 
-    // set coin1 rate to 1.23 COIN1
+    // set coin1_tmp rate to 1.23 Coin1
     executor.execute_and_apply(
         blessed
             .transaction()
             .script(encode_update_exchange_rate_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 123,
                 100,

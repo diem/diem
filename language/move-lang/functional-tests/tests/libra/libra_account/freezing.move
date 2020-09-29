@@ -83,9 +83,9 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::LibraAccount;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 fun main(lr_account: &signer) {
-    LibraAccount::create_parent_vasp_account<LBR>(
+    LibraAccount::create_parent_vasp_account<Coin1>(
         lr_account,
         {{vasp}},
         {{vasp::auth_key}},
@@ -101,10 +101,10 @@ fun main(lr_account: &signer) {
 //! sender: vasp
 script {
 use 0x1::LibraAccount;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
-    LibraAccount::create_child_vasp_account<LBR>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
+    LibraAccount::create_child_vasp_account<Coin1>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
 }
 }
 // check: "Keep(EXECUTED)"

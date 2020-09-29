@@ -11,7 +11,7 @@ use executor_test_helpers::{
 use executor_types::BlockExecutor;
 use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{coin1_tag, libra_root_address, treasury_compliance_account_address},
+    account_config::{coin1_tmp_tag, libra_root_address, treasury_compliance_account_address},
     account_state::AccountState,
     transaction::{Script, Transaction, WriteSetPayload},
     trusted_state::{TrustedState, TrustedStateChange},
@@ -101,7 +101,7 @@ fn test_reconfiguration() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -248,7 +248,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -429,7 +429,7 @@ fn test_extend_allowlist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             validator_account,
             1_000_000,
             vec![],

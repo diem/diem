@@ -606,13 +606,13 @@ module LibraTest {
     }
 
     /// and returns a new coin whose value is equal to the sum of the two inputs.
-    public fun join<CoinType>(coin1: Libra<CoinType>, coin2: Libra<CoinType>): Libra<CoinType>  {
-        deposit(&mut coin1, coin2);
-        coin1
+    public fun join<CoinType>(coin1_tmp: Libra<CoinType>, coin2: Libra<CoinType>): Libra<CoinType>  {
+        deposit(&mut coin1_tmp, coin2);
+        coin1_tmp
     }
     spec fun join {
-        aborts_if coin1.value + coin2.value > max_u64();
-        ensures result.value == coin1.value + coin2.value;
+        aborts_if coin1_tmp.value + coin2.value > max_u64();
+        ensures result.value == coin1_tmp.value + coin2.value;
     }
 
 

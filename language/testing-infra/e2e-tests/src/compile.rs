@@ -17,16 +17,22 @@ pub fn compile_module_with_address(
     address: &AccountAddress,
     file_name: &str,
     code: &str,
-) -> Module {
-    let compiler = Compiler {
+) -> (CompiledModule, Module) {
+    let compiled_module = Compiler {
         address: *address,
         ..Compiler::default()
-    };
-    Module::new(
-        compiler
-            .into_module_blob(file_name, code)
-            .expect("Module compilation failed"),
-    )
+    }
+    .into_compiled_module(file_name, code)
+    .expect("Module compilation failed");
+    let module = Module::new(
+        Compiler {
+            address: *address,
+            ..Compiler::default()
+        }
+        .into_module_blob(file_name, code)
+        .expect("Module compilation failed"),
+    );
+    (compiled_module, module)
 }
 
 /// Compile the provided Move code into a blob which can be used as the code to be executed

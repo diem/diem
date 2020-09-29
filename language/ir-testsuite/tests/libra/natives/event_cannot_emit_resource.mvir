@@ -1,14 +1,14 @@
 
 import 0x1.Event;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 main() {
-    let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
-    let zero: Libra.Libra<LBR.LBR>;
-    handle = Event.new_event_handle<Libra.Libra<LBR.LBR>>();
-    zero = Libra.zero<LBR.LBR>();
-    Event.emit_event<Libra.Libra<LBR.LBR>>(&mut handle, move(zero));
-    Event.destroy_handle<Libra.Libra<LBR.LBR>>(move(handle));
+    let handle: Event.EventHandle<Libra.Libra<Coin1.Coin1>>;
+    let zero: Libra.Libra<Coin1.Coin1>;
+    handle = Event.new_event_handle<Libra.Libra<Coin1.Coin1>>();
+    zero = Libra.zero<Coin1.Coin1>();
+    Event.emit_event<Libra.Libra<Coin1.Coin1>>(&mut handle, move(zero));
+    Event.destroy_handle<Libra.Libra<Coin1.Coin1>>(move(handle));
     return;
 }
 

@@ -8,7 +8,7 @@ use libra_crypto::HashValue;
 #[cfg(test)]
 use libra_types::{
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
+    account_config::coin1_tmp_tag,
     block_info::BlockInfo,
     ledger_info::LedgerInfo,
     on_chain_config::ValidatorSet,
@@ -179,7 +179,7 @@ impl MockStorage {
         let sender = AccountAddress::random();
         let receiver = AuthenticationKey::random();
         let program = encode_peer_to_peer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tmp_tag(),
             receiver.derived_address(),
             1,
             vec![],

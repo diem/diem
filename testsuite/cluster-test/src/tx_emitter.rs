@@ -764,7 +764,7 @@ fn gen_mint_request(
     let receiver = faucet_account.address;
     gen_submit_transaction_request(
         transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
+            account_config::coin1_tmp_tag(),
             receiver,
             num_coins,
             vec![],
@@ -785,7 +785,7 @@ fn gen_transfer_txn_request(
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
+            account_config::coin1_tmp_tag(),
             *receiver,
             num_coins,
             vec![],
@@ -807,7 +807,7 @@ fn gen_create_child_txn_request(
     let add_all_currencies = false;
     gen_submit_transaction_request(
         transaction_builder::encode_create_child_vasp_account_script(
-            account_config::coin1_tag(),
+            account_config::coin1_tmp_tag(),
             *receiver,
             receiver_auth_key_prefix,
             add_all_currencies,
@@ -827,7 +827,7 @@ fn gen_create_account_txn_request(
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
+            account_config::coin1_tmp_tag(),
             0,
             *receiver,
             auth_key_prefix,
@@ -848,7 +848,7 @@ fn gen_mint_txn_request(
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
+            account_config::coin1_tmp_tag(),
             *receiver,
             num_coins,
             vec![],

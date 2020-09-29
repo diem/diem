@@ -313,14 +313,8 @@ fn create_and_initialize_testnet_minting(
     public_key: &Ed25519PublicKey,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
-    let coin1_tag = account_config::type_tag_for_currency_code(
-        account_config::from_currency_code_string("Coin1").unwrap(),
-    );
-    let coin2_tag = account_config::type_tag_for_currency_code(
-        account_config::from_currency_code_string("Coin2").unwrap(),
-    );
     let create_dd_script = encode_create_designated_dealer_script(
-        coin1_tag.clone(),
+        account_config::coin1_tmp_tag(),
         0,
         account_config::testnet_dd_account_address(),
         genesis_auth_key.prefix().to_vec(),
@@ -328,16 +322,8 @@ fn create_and_initialize_testnet_minting(
         true,                  // add_all_currencies
     );
 
-    let mint_max_coin1 = transaction_builder::encode_tiered_mint_script(
-        coin1_tag,
-        0,
-        account_config::testnet_dd_account_address(),
-        std::u64::MAX / 2,
-        3,
-    );
-
-    let mint_max_coin2 = transaction_builder::encode_tiered_mint_script(
-        coin2_tag,
+    let mint_max_coin1_tmp = transaction_builder::encode_tiered_mint_script(
+        account_config::coin1_tmp_tag(),
         0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
@@ -357,7 +343,7 @@ fn create_and_initialize_testnet_minting(
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
-        vec![account_config::coin1_tag()],
+        vec![account_config::coin1_tmp_tag()],
         vec![
             Value::transaction_argument_signer_reference(
                 account_config::treasury_compliance_account_address(),
@@ -368,47 +354,16 @@ fn create_and_initialize_testnet_minting(
         ],
     );
 
-    exec_function(
-        session,
-        log_context,
-        account_config::treasury_compliance_account_address(),
-        "DesignatedDealer",
-        "update_tier",
-        vec![account_config::type_tag_for_currency_code(
-            account_config::from_currency_code_string(account_config::COIN2_NAME).unwrap(),
-        )],
-        vec![
-            Value::transaction_argument_signer_reference(
-                account_config::treasury_compliance_account_address(),
-            ),
-            Value::address(account_config::testnet_dd_account_address()),
-            Value::u64(3),
-            Value::u64(std::u64::MAX),
-        ],
-    );
-
-    // mint the coins, and mint LBR
+    // mint Coin1.
     let treasury_compliance_account_address = account_config::treasury_compliance_account_address();
     exec_script(
         session,
         log_context,
         treasury_compliance_account_address,
-        &mint_max_coin1,
-    );
-    exec_script(
-        session,
-        log_context,
-        treasury_compliance_account_address,
-        &mint_max_coin2,
+        &mint_max_coin1_tmp,
     );
 
     let testnet_dd_account_address = account_config::testnet_dd_account_address();
-    exec_script(
-        session,
-        log_context,
-        testnet_dd_account_address,
-        &transaction_builder::encode_mint_lbr_script(std::u64::MAX / 2),
-    );
     exec_script(
         session,
         log_context,

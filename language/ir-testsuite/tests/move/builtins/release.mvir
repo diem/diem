@@ -1,9 +1,9 @@
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 
 main(account: &signer) {
-    let coin: Libra.Libra<LBR.LBR>;
-    coin = Libra.zero<LBR.LBR>();
+    let coin: Libra.Libra<Coin1.Coin1>;
+    coin = Libra.zero<Coin1.Coin1>();
     _ = move(coin);
 
     return;

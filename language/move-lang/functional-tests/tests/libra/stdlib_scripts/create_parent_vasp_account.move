@@ -10,7 +10,7 @@ stdlib_script::create_parent_vasp_account
 
 //! new-transaction
 //! sender: bob
-//! type-args: 0x1::Coin2::Coin2
+//! type-args: 0x1::Coin1::Coin1
 //! args: {{child}}, {{child::auth_key}}, true, 0
 stdlib_script::create_child_vasp_account
 // check: "Keep(EXECUTED)"

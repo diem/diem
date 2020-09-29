@@ -4,7 +4,7 @@
 
 //! sender: alice
 module AlicePays {
-    use 0x1::LBR::LBR;
+    use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
 
     resource struct T {
@@ -19,7 +19,7 @@ module AlicePays {
 
     public fun pay(payee: address, amount: u64) acquires T {
         let t = borrow_global<T>({{alice}});
-        LibraAccount::pay_from<LBR>(
+        LibraAccount::pay_from<Coin1>(
             &t.cap,
             payee,
             amount,
@@ -46,15 +46,15 @@ fun main(sender: &signer) {
 //! sender: bob
 script {
 use {{alice}}::AlicePays;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
 
 fun main() {
-    let carol_prev_balance = LibraAccount::balance<LBR>({{carol}});
-    let alice_prev_balance = LibraAccount::balance<LBR>({{alice}});
+    let carol_prev_balance = LibraAccount::balance<Coin1>({{carol}});
+    let alice_prev_balance = LibraAccount::balance<Coin1>({{alice}});
     AlicePays::pay({{carol}}, 10);
-    assert(carol_prev_balance + 10 == LibraAccount::balance<LBR>({{carol}}), 0);
-    assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
+    assert(carol_prev_balance + 10 == LibraAccount::balance<Coin1>({{carol}}), 0);
+    assert(alice_prev_balance - 10 == LibraAccount::balance<Coin1>({{alice}}), 1);
 }
 }
 // check: "Keep(EXECUTED)"

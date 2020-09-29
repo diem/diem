@@ -32,7 +32,7 @@ The Libra network consists of different types of actors:
   * **Verifying clients**. By default, clients are bootstrapped with a state and a set of validator, and can thus be epoch-aware by syncing this state with the blockchain. This way, a verifying client can verify the proofs carried in every response they obtain from full nodes they query. A full node, for instance, is a verifying client. A developer could develop a custom verifying client with the LPN specifications for specific applications, for instance, a light weight client that only keeps the more recent subset of account state.
   * **Non-verifying clients**. A client might query a third-party to access the state of the blockchain without verifying the signatures from the validators. The optional JSON-RPC protocol supports this mode of operation, and developers are also free to build other systems that accomplish this task. This specification does not define how a client should find such a service. As an example, some clients could run their own full nodes that expose the JSON-RPC protocol and access these endpoints under secure channels. In this setup, a non-verifying client delegates proof verification to the full node.
 
-Below is a recapitulating diagram of the Libra network. The arrow tail signifies the sender of a network request and the arrow head is the receiver of the network request.
+Below is a recapicoin1_tmpating diagram of the Libra network. The arrow tail signifies the sender of a network request and the arrow head is the receiver of the network request.
 
 ## The Libra network
 

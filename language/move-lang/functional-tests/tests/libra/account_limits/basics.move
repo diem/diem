@@ -203,13 +203,10 @@ fun main() {
 script {
 use 0x1::AccountLimits;
 use 0x1::Coin1::Coin1;
-use 0x1::Coin2::Coin2;
 fun main() {
     assert(AccountLimits::has_limits_published<Coin1>({{bob}}), 1);
-    assert(!AccountLimits::has_limits_published<Coin2>({{bob}}), 2);
 
     assert(!AccountLimits::has_limits_published<Coin1>({{alice}}), 3);
-    assert(!AccountLimits::has_limits_published<Coin2>({{alice}}), 4);
 }
 }
 // check: "Keep(EXECUTED)"

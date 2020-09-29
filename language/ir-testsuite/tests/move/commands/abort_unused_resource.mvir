@@ -1,9 +1,9 @@
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 
 main() {
-    let z: Libra.Libra<LBR.LBR>;
-    z = Libra.zero<LBR.LBR>();
+    let z: Libra.Libra<Coin1.Coin1>;
+    z = Libra.zero<Coin1.Coin1>();
     // z is allowed to be unused
     abort 0;
 }

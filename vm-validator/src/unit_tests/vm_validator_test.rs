@@ -5,7 +5,7 @@ use crate::vm_validator::{TransactionValidation, VMValidator};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
-    account_config::{lbr_type_tag, LBR_NAME},
+    account_config::{coin1_tmp_tag, COIN1_NAME},
     chain_id::ChainId,
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument},
@@ -79,7 +79,7 @@ fn test_validate_transaction() {
 
     let address = account_config::libra_root_address();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -101,7 +101,7 @@ fn test_validate_invalid_signature() {
 
     let address = account_config::libra_root_address();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
@@ -132,8 +132,8 @@ fn test_validate_known_script_too_large_args() {
              * longer than the
              * max size */
         0,
-        0,                   /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
+        0,                     /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
         None,
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -155,9 +155,9 @@ fn test_validate_max_gas_units_above_max() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
-        0,                   /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
-        Some(u64::MAX),      // Max gas units
+        0,                     /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
+        Some(u64::MAX),        // Max gas units
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(
@@ -178,9 +178,9 @@ fn test_validate_max_gas_units_below_min() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
-        0,                   /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
-        Some(1),             // Max gas units
+        0,                     /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
+        Some(1),               // Max gas units
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(
@@ -201,8 +201,8 @@ fn test_validate_max_gas_price_above_bounds() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
-        u64::MAX,            /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
+        u64::MAX,              /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
         None,
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -221,7 +221,7 @@ fn test_validate_max_gas_price_below_bounds() {
 
     let address = account_config::libra_root_address();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -230,8 +230,8 @@ fn test_validate_max_gas_price_below_bounds() {
         Some(program),
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
-        0,                   /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
+        0,                     /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
         None,
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -303,7 +303,7 @@ fn test_validate_invalid_auth_key() {
 
     let address = account_config::libra_root_address();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -322,7 +322,7 @@ fn test_validate_account_doesnt_exist() {
     let address = account_config::libra_root_address();
     let random_account_addr = account_address::AccountAddress::random();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
@@ -330,8 +330,8 @@ fn test_validate_account_doesnt_exist() {
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
         0,
-        1,                   /* max gas price */
-        LBR_NAME.to_owned(), /* gas currency code */
+        1,                     /* max gas price */
+        COIN1_NAME.to_owned(), /* gas currency code */
         None,
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -347,7 +347,7 @@ fn test_validate_sequence_number_too_new() {
 
     let address = account_config::libra_root_address();
     let program =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -365,7 +365,7 @@ fn test_validate_invalid_arguments() {
 
     let address = account_config::libra_root_address();
     let (program_script, _) =
-        encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![])
+        encode_peer_to_peer_with_metadata_script(coin1_tmp_tag(), address, 100, vec![], vec![])
             .into_inner();
     let program = Script::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
@@ -410,7 +410,7 @@ fn test_validate_expiration_time() {
         None, /* script */
         0,    /* expiration_time */
         0,    /* gas_unit_price */
-        LBR_NAME.to_owned(),
+        COIN1_NAME.to_owned(),
         None, /* max_gas_amount */
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();

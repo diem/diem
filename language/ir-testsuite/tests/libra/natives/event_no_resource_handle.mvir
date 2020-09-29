@@ -1,10 +1,10 @@
 import 0x1.Event;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 main() {
-    let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
-    handle = Event.new_event_handle<Libra.Libra<LBR.LBR>>();
-    Event.destroy_handle<Libra.Libra<LBR.LBR>>(move(handle));
+    let handle: Event.EventHandle<Libra.Libra<Coin1.Coin1>>;
+    handle = Event.new_event_handle<Libra.Libra<Coin1.Coin1>>();
+    Event.destroy_handle<Libra.Libra<Coin1.Coin1>>(move(handle));
     return;
 }
 // check: CONSTRAINT_KIND_MISMATCH

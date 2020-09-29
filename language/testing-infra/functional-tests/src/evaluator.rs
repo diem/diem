@@ -15,7 +15,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::LBR_NAME,
+    account_config::COIN1_NAME,
     block_metadata::BlockMetadata,
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
@@ -312,7 +312,7 @@ fn get_transaction_parameters<'a>(
     let gas_currency_code = config
         .gas_currency_code
         .clone()
-        .unwrap_or_else(|| LBR_NAME.to_owned());
+        .unwrap_or_else(|| COIN1_NAME.to_owned());
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {

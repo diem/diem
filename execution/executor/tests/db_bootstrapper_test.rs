@@ -18,7 +18,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        coin1_tmp_tag, from_currency_code_string, testnet_dd_account_address,
         treasury_compliance_account_address, BalanceResource, COIN1_NAME,
     },
     account_state::AccountState,
@@ -130,7 +130,7 @@ fn get_mint_transaction(
         libra_root_key.clone(),
         libra_root_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             *account,
             amount,
             vec![],
@@ -152,7 +152,7 @@ fn get_account_transaction(
         libra_root_key.clone(),
         libra_root_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             0,
             *account,
             account_auth_key.prefix().to_vec(),
@@ -175,7 +175,7 @@ fn get_transfer_transaction(
         sender_key.clone(),
         sender_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             recipient,
             amount,
             vec![],
@@ -287,7 +287,7 @@ fn test_pre_genesis() {
                 WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
-                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tag())),
+                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tmp_tag())),
                 WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1000)).unwrap()),
             ),
         ])
@@ -296,7 +296,7 @@ fn test_pre_genesis() {
         vec![ContractEvent::new(
             on_chain_config::new_epoch_event_key(),
             0,
-            coin1_tag(),
+            coin1_tmp_tag(),
             vec![],
         )],
     )));
@@ -355,7 +355,7 @@ fn test_new_genesis() {
                 WriteOp::Value(lcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
             ),
             (
-                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tag())),
+                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tmp_tag())),
                 WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1_000_000)).unwrap()),
             ),
         ])
@@ -364,7 +364,7 @@ fn test_new_genesis() {
         vec![ContractEvent::new(
             *configuration.events().key(),
             0,
-            coin1_tag(),
+            coin1_tmp_tag(),
             vec![],
         )],
     )));

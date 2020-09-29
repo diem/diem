@@ -9,7 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{libra_root_address, validator_set_address, LBR_NAME},
+    account_config::{libra_root_address, validator_set_address, COIN1_NAME},
     chain_id::ChainId,
     contract_event::ContractEvent,
     event::EventKey,
@@ -313,7 +313,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         program,
         0,
         0,
-        LBR_NAME.to_owned(),
+        COIN1_NAME.to_owned(),
         0,
         ChainId::test(),
     );

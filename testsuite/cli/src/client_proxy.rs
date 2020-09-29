@@ -24,7 +24,7 @@ use libra_types::{
     account_config::{
         from_currency_code_string, libra_root_address, testnet_dd_account_address,
         treasury_compliance_account_address, type_tag_for_currency_code,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, COIN1_NAME,
     },
     account_state::AccountState,
     chain_id::ChainId,
@@ -813,7 +813,7 @@ impl ClientProxy {
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            gas_currency_code.unwrap_or_else(|| LBR_NAME.to_owned()),
+            gas_currency_code.unwrap_or_else(|| COIN1_NAME.to_owned()),
             TX_EXPIRATION,
             self.chain_id,
         ))
@@ -1588,7 +1588,7 @@ impl ClientProxy {
             sender_account.sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            gas_currency_code.unwrap_or_else(|| LBR_NAME.to_owned()),
+            gas_currency_code.unwrap_or_else(|| COIN1_NAME.to_owned()),
             TX_EXPIRATION,
             self.chain_id,
         )

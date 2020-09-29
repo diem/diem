@@ -8,7 +8,6 @@ module DesignatedDealer {
     use 0x1::Roles;
     use 0x1::Signer;
     use 0x1::Coin1::Coin1;
-    use 0x1::Coin2::Coin2;
 
     /// A `DesignatedDealer` always holds this `Dealer` resource regardless of the
     /// currencies it can hold. All `ReceivedMintEvent` events for all
@@ -98,7 +97,6 @@ module DesignatedDealer {
         move_to(dd, Dealer { mint_event_handle: Event::new_event_handle<ReceivedMintEvent>(dd) });
         if (add_all_currencies) {
             add_currency<Coin1>(dd, tc_account);
-            add_currency<Coin2>(dd, tc_account);
         } else {
             add_currency<CoinType>(dd, tc_account);
         };
@@ -111,14 +109,13 @@ module DesignatedDealer {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotDesignatedDealer{account: dd};
         aborts_if exists<Dealer>(dd_addr) with Errors::ALREADY_PUBLISHED;
-        include if (add_all_currencies)
-                    AddCurrencyAbortsIf<Coin1>{dd_addr: dd_addr} && AddCurrencyAbortsIf<Coin2>{dd_addr: dd_addr}
+        include if (add_all_currencies) AddCurrencyAbortsIf<Coin1>{dd_addr: dd_addr}
                 else AddCurrencyAbortsIf<CoinType>{dd_addr: dd_addr};
 
         modifies global<Dealer>(dd_addr);
         ensures exists<Dealer>(dd_addr);
-        modifies global<TierInfo<CoinType>>(dd_addr), global<TierInfo<Coin1>>(dd_addr), global<TierInfo<Coin2>>(dd_addr);
-        ensures if (add_all_currencies) exists<TierInfo<Coin1>>(dd_addr) && exists<TierInfo<Coin2>>(dd_addr) else exists<TierInfo<CoinType>>(dd_addr);
+        modifies global<TierInfo<CoinType>>(dd_addr), global<TierInfo<Coin1>>(dd_addr);
+        ensures if (add_all_currencies) exists<TierInfo<Coin1>>(dd_addr) else exists<TierInfo<CoinType>>(dd_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////

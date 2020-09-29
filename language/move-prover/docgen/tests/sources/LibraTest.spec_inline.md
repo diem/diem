@@ -1637,7 +1637,7 @@ zero. Does not abort.
 and returns a new coin whose value is equal to the sum of the two inputs.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="LibraTest.md#0x1_LibraTest_join">join</a>&lt;CoinType&gt;(coin1: <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;, coin2: <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;): <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTest.md#0x1_LibraTest_join">join</a>&lt;CoinType&gt;(coin1_tmp: <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;, coin2: <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;): <a href="LibraTest.md#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1646,9 +1646,9 @@ and returns a new coin whose value is equal to the sum of the two inputs.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="LibraTest.md#0x1_LibraTest_join">join</a>&lt;CoinType&gt;(coin1: <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;, coin2: <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;): <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;  {
-    <a href="LibraTest.md#0x1_LibraTest_deposit">deposit</a>(&<b>mut</b> coin1, coin2);
-    coin1
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTest.md#0x1_LibraTest_join">join</a>&lt;CoinType&gt;(coin1_tmp: <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;, coin2: <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;): <a href="LibraTest.md#0x1_LibraTest_Libra">Libra</a>&lt;CoinType&gt;  {
+    <a href="LibraTest.md#0x1_LibraTest_deposit">deposit</a>(&<b>mut</b> coin1_tmp, coin2);
+    coin1_tmp
 }
 </code></pre>
 
@@ -1661,8 +1661,8 @@ and returns a new coin whose value is equal to the sum of the two inputs.
 
 
 
-<pre><code><b>aborts_if</b> coin1.value + coin2.value &gt; max_u64();
-<b>ensures</b> result.value == coin1.value + coin2.value;
+<pre><code><b>aborts_if</b> coin1_tmp.value + coin2.value &gt; max_u64();
+<b>ensures</b> result.value == coin1_tmp.value + coin2.value;
 </code></pre>
 
 

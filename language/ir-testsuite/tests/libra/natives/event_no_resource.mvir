@@ -1,15 +1,15 @@
 module ResourceHandle {
     import 0x1.Event;
-import 0x1.LBR;
+import 0x1.Coin1;
     import 0x1.Libra;
     resource T {
-        foo: Event.EventHandle<Libra.Libra<LBR.LBR>>
+        foo: Event.EventHandle<Libra.Libra<Coin1.Coin1>>
         // check: CONSTRAINT_KIND_MISMATCH
     }
 
     public new(): Self.T {
-        let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
-        handle = Event.new_event_handle<Libra.Libra<LBR.LBR>>();
+        let handle: Event.EventHandle<Libra.Libra<Coin1.Coin1>>;
+        handle = Event.new_event_handle<Libra.Libra<Coin1.Coin1>>();
         return T { foo: move(handle) };
     }
 }

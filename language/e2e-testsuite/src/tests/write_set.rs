@@ -9,7 +9,7 @@ use language_e2e_tests::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
-    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
+    account_config::{coin1_tmp_tag, CORE_CODE_ADDRESS},
     chain_id::{ChainId, NamedChain},
     contract_event::ContractEvent,
     on_chain_config::new_epoch_event_key,
@@ -121,7 +121,10 @@ fn verify_and_execute_writeset() {
         .read_account_resource(new_account_data.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(new_account_data.account(), account::lbr_currency_code())
+        .read_balance_resource(
+            new_account_data.account(),
+            account::coin1_tmp_currency_code(),
+        )
         .expect("sender balance must exist");
 
     assert_eq!(2, updated_libra_root_account.sequence_number());
@@ -185,7 +188,7 @@ fn bad_writesets() {
     );
 
     // (2) The WriteSet contains a reconfiguration event, will be dropped.
-    let event = ContractEvent::new(new_epoch_event_key(), 0, lbr_type_tag(), vec![]);
+    let event = ContractEvent::new(new_epoch_event_key(), 0, coin1_tmp_tag(), vec![]);
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
@@ -329,7 +332,10 @@ fn transfer_and_execute_writeset() {
         .read_account_resource(new_account_data.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(new_account_data.account(), account::lbr_currency_code())
+        .read_balance_resource(
+            new_account_data.account(),
+            account::coin1_tmp_currency_code(),
+        )
         .expect("sender balance must exist");
 
     assert_eq!(2, updated_libra_root_account.sequence_number());

@@ -650,47 +650,6 @@ pub enum ScriptCall {
     },
 
     /// # Summary
-    /// Mints LBR from the sending account's constituent coins by depositing in the
-    /// on-chain LBR reserve. Deposits the newly-minted LBR into the sending
-    /// account. Can be sent by any account that can hold balances for the constituent
-    /// currencies for LBR and LBR.
-    ///
-    /// # Technical Description
-    /// Mints `amount_lbr` LBR from the sending account's constituent coins and deposits the
-    /// resulting LBR into the sending account.
-    ///
-    /// ## Events
-    /// Successful execution of this script emits three events:
-    /// * A `LibraAccount::SentPaymentEvent` with the Coin1 currency code, and a
-    /// `LibraAccount::SentPaymentEvent` with the Coin2 currency code on `account`'s
-    /// `LibraAccount::LibraAccount` `sent_events` handle with the `amounts` for each event being the
-    /// components amounts of `amount_lbr` LBR; and
-    /// * A `LibraAccount::ReceivedPaymentEvent` on `account`'s `LibraAccount::LibraAccount`
-    /// `received_events` handle with the LBR currency code and amount field equal to `amount_lbr`.
-    ///
-    /// # Parameters
-    /// | Name         | Type      | Description                                      |
-    /// | ------       | ------    | -------------                                    |
-    /// | `account`    | `&signer` | The signer reference of the sending account.     |
-    /// | `amount_lbr` | `u64`     | The amount of LBR (in microlibra) to be created. |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                     | Description                                                                      |
-    /// | ----------------           | --------------                                   | -------------                                                                    |
-    /// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `account` doesn't hold a balance in one of the backing currencies of LBR.        |
-    /// | `Errors::INVALID_ARGUMENT` | `LBR::EZERO_LBR_MINT_NOT_ALLOWED`                | `amount_lbr` passed in was zero.                                                 |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LBR::ECOIN1`                                    | The amount of `Coin1` needed for the specified LBR would exceed `LBR::MAX_U64`.  |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LBR::ECOIN2`                                    | The amount of `Coin2` needed for the specified LBR would exceed `LBR::MAX_U64`.  |
-    /// | `Errors::INVALID_STATE`    | `Libra::EMINTING_NOT_ALLOWED`                    | Minting of LBR is not allowed currently.                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | `account` doesn't hold a balance in LBR.                                         |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `account` has exceeded its daily withdrawal limits for the backing coins of LBR. |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `account` has exceeded its daily deposit limits for LBR.                         |
-    ///
-    /// # Related Scripts
-    /// * `Script::unmint_lbr`
-    MintLbr { amount_lbr: u64 },
-
-    /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
     /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
     /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
@@ -1332,44 +1291,6 @@ pub enum ScriptCall {
     },
 
     /// # Summary
-    /// Withdraws a specified amount of LBR from the transaction sender's account, and unstaples the
-    /// withdrawn LBR into its constituent coins. Deposits each of the constituent coins to the
-    /// transaction sender's balances. Any account that can hold balances that has the correct balances
-    /// may send this transaction.
-    ///
-    /// # Technical Description
-    /// Withdraws `amount_lbr` LBR coins from the `LibraAccount::Balance<LBR::LBR>` balance held under
-    /// `account`. Withdraws the backing coins for the LBR coins from the on-chain reserve in the
-    /// `LBR::Reserve` resource published under `0xA550C18`. It then deposits each of the backing coins
-    /// into balance resources published under `account`.
-    ///
-    /// ## Events
-    /// Successful execution of this transaction will emit two `LibraAccount::SentPaymentEvent`s. One
-    /// for each constituent currency that is unstapled and returned to the sending `account`'s
-    /// balances.
-    ///
-    /// # Parameters
-    /// | Name         | Type      | Description                                                     |
-    /// | ------       | ------    | -------------                                                   |
-    /// | `account`    | `&signer` | The signer reference of the sending account of the transaction. |
-    /// | `amount_lbr` | `u64`     | The amount of microlibra to unstaple.                           |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                             | Description                                                                               |
-    /// | ----------------           | --------------                                           | -------------                                                                             |
-    /// | `Errors::INVALID_STATE`    | `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The `LibraAccount::WithdrawCapability` for `account` has previously been extracted.       |
-    /// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't have a balance in LBR.                                                  |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EINSUFFICIENT_BALANCE`                    | `amount_lbr` is greater than the balance of LBR in `account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `Libra::ECOIN`                                           | `amount_lbr` is zero.                                                                     |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`               | `account` has exceeded its daily withdrawal limits for LBR.                               |
-    /// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`                  | `account` has exceeded its daily deposit limits for one of the backing currencies of LBR. |
-    /// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`         | `account` doesn't hold a balance in one or both of the backing currencies of LBR.         |
-    ///
-    /// # Related Scripts
-    /// * `Script::mint_lbr`
-    UnmintLbr { amount_lbr: u64 },
-
-    /// # Summary
     /// Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
     /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
     /// payments over this limit must be checked for dual attestation.
@@ -1603,7 +1524,6 @@ impl ScriptCall {
                 sliding_nonce,
                 to_freeze_account,
             } => encode_freeze_account_script(sliding_nonce, to_freeze_account),
-            MintLbr { amount_lbr } => encode_mint_lbr_script(amount_lbr),
             PeerToPeerWithMetadata {
                 currency,
                 payee,
@@ -1706,7 +1626,6 @@ impl ScriptCall {
                 sliding_nonce,
                 to_unfreeze_account,
             } => encode_unfreeze_account_script(sliding_nonce, to_unfreeze_account),
-            UnmintLbr { amount_lbr } => encode_unmint_lbr_script(amount_lbr),
             UpdateDualAttestationLimit {
                 sliding_nonce,
                 new_micro_lbr_limit,
@@ -2470,53 +2389,6 @@ pub fn encode_freeze_account_script(
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(to_freeze_account),
         ],
-    )
-}
-
-/// # Summary
-/// Mints LBR from the sending account's constituent coins by depositing in the
-/// on-chain LBR reserve. Deposits the newly-minted LBR into the sending
-/// account. Can be sent by any account that can hold balances for the constituent
-/// currencies for LBR and LBR.
-///
-/// # Technical Description
-/// Mints `amount_lbr` LBR from the sending account's constituent coins and deposits the
-/// resulting LBR into the sending account.
-///
-/// ## Events
-/// Successful execution of this script emits three events:
-/// * A `LibraAccount::SentPaymentEvent` with the Coin1 currency code, and a
-/// `LibraAccount::SentPaymentEvent` with the Coin2 currency code on `account`'s
-/// `LibraAccount::LibraAccount` `sent_events` handle with the `amounts` for each event being the
-/// components amounts of `amount_lbr` LBR; and
-/// * A `LibraAccount::ReceivedPaymentEvent` on `account`'s `LibraAccount::LibraAccount`
-/// `received_events` handle with the LBR currency code and amount field equal to `amount_lbr`.
-///
-/// # Parameters
-/// | Name         | Type      | Description                                      |
-/// | ------       | ------    | -------------                                    |
-/// | `account`    | `&signer` | The signer reference of the sending account.     |
-/// | `amount_lbr` | `u64`     | The amount of LBR (in microlibra) to be created. |
-///
-/// # Common Abort Conditions
-/// | Error Category             | Error Reason                                     | Description                                                                      |
-/// | ----------------           | --------------                                   | -------------                                                                    |
-/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `account` doesn't hold a balance in one of the backing currencies of LBR.        |
-/// | `Errors::INVALID_ARGUMENT` | `LBR::EZERO_LBR_MINT_NOT_ALLOWED`                | `amount_lbr` passed in was zero.                                                 |
-/// | `Errors::LIMIT_EXCEEDED`   | `LBR::ECOIN1`                                    | The amount of `Coin1` needed for the specified LBR would exceed `LBR::MAX_U64`.  |
-/// | `Errors::LIMIT_EXCEEDED`   | `LBR::ECOIN2`                                    | The amount of `Coin2` needed for the specified LBR would exceed `LBR::MAX_U64`.  |
-/// | `Errors::INVALID_STATE`    | `Libra::EMINTING_NOT_ALLOWED`                    | Minting of LBR is not allowed currently.                                         |
-/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | `account` doesn't hold a balance in LBR.                                         |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `account` has exceeded its daily withdrawal limits for the backing coins of LBR. |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `account` has exceeded its daily deposit limits for LBR.                         |
-///
-/// # Related Scripts
-/// * `Script::unmint_lbr`
-pub fn encode_mint_lbr_script(amount_lbr: u64) -> Script {
-    Script::new(
-        MINT_LBR_CODE.to_vec(),
-        vec![],
-        vec![TransactionArgument::U64(amount_lbr)],
     )
 }
 
@@ -3311,50 +3183,6 @@ pub fn encode_unfreeze_account_script(
 }
 
 /// # Summary
-/// Withdraws a specified amount of LBR from the transaction sender's account, and unstaples the
-/// withdrawn LBR into its constituent coins. Deposits each of the constituent coins to the
-/// transaction sender's balances. Any account that can hold balances that has the correct balances
-/// may send this transaction.
-///
-/// # Technical Description
-/// Withdraws `amount_lbr` LBR coins from the `LibraAccount::Balance<LBR::LBR>` balance held under
-/// `account`. Withdraws the backing coins for the LBR coins from the on-chain reserve in the
-/// `LBR::Reserve` resource published under `0xA550C18`. It then deposits each of the backing coins
-/// into balance resources published under `account`.
-///
-/// ## Events
-/// Successful execution of this transaction will emit two `LibraAccount::SentPaymentEvent`s. One
-/// for each constituent currency that is unstapled and returned to the sending `account`'s
-/// balances.
-///
-/// # Parameters
-/// | Name         | Type      | Description                                                     |
-/// | ------       | ------    | -------------                                                   |
-/// | `account`    | `&signer` | The signer reference of the sending account of the transaction. |
-/// | `amount_lbr` | `u64`     | The amount of microlibra to unstaple.                           |
-///
-/// # Common Abort Conditions
-/// | Error Category             | Error Reason                                             | Description                                                                               |
-/// | ----------------           | --------------                                           | -------------                                                                             |
-/// | `Errors::INVALID_STATE`    | `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` | The `LibraAccount::WithdrawCapability` for `account` has previously been extracted.       |
-/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't have a balance in LBR.                                                  |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EINSUFFICIENT_BALANCE`                    | `amount_lbr` is greater than the balance of LBR in `account`.                             |
-/// | `Errors::INVALID_ARGUMENT` | `Libra::ECOIN`                                           | `amount_lbr` is zero.                                                                     |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`               | `account` has exceeded its daily withdrawal limits for LBR.                               |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`                  | `account` has exceeded its daily deposit limits for one of the backing currencies of LBR. |
-/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`         | `account` doesn't hold a balance in one or both of the backing currencies of LBR.         |
-///
-/// # Related Scripts
-/// * `Script::mint_lbr`
-pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
-    Script::new(
-        UNMINT_LBR_CODE.to_vec(),
-        vec![],
-        vec![TransactionArgument::U64(amount_lbr)],
-    )
-}
-
-/// # Summary
 /// Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
 /// only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 /// payments over this limit must be checked for dual attestation.
@@ -3625,12 +3453,6 @@ fn decode_freeze_account_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_mint_lbr_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::MintLbr {
-        amount_lbr: decode_u64_argument(script.args().get(0)?.clone())?,
-    })
-}
-
 fn decode_peer_to_peer_with_metadata_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::PeerToPeerWithMetadata {
         currency: script.ty_args().get(0)?.clone(),
@@ -3755,12 +3577,6 @@ fn decode_unfreeze_account_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_unmint_lbr_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::UnmintLbr {
-        amount_lbr: decode_u64_argument(script.args().get(0)?.clone())?,
-    })
-}
-
 fn decode_update_dual_attestation_limit_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::UpdateDualAttestationLimit {
         sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
@@ -3851,7 +3667,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         FREEZE_ACCOUNT_CODE.to_vec(),
         Box::new(decode_freeze_account_script),
     );
-    map.insert(MINT_LBR_CODE.to_vec(), Box::new(decode_mint_lbr_script));
     map.insert(
         PEER_TO_PEER_WITH_METADATA_CODE.to_vec(),
         Box::new(decode_peer_to_peer_with_metadata_script),
@@ -3913,7 +3728,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         UNFREEZE_ACCOUNT_CODE.to_vec(),
         Box::new(decode_unfreeze_account_script),
     );
-    map.insert(UNMINT_LBR_CODE.to_vec(), Box::new(decode_unmint_lbr_script));
     map.insert(
         UPDATE_DUAL_ATTESTATION_LIMIT_CODE.to_vec(),
         Box::new(decode_update_dual_attestation_limit_script),
@@ -4107,18 +3921,6 @@ const FREEZE_ACCOUNT_CODE: &[u8] = &[
     11, 0, 10, 2, 17, 0, 2,
 ];
 
-const MINT_LBR_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 2, 2, 4, 3, 6, 15, 5, 21, 16, 7, 37, 99, 8, 136, 1,
-    16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 1, 2, 0, 0, 4, 3, 2, 0, 1, 6, 12, 1, 8, 0, 0, 2, 6,
-    8, 0, 3, 2, 6, 12, 3, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 18, 87, 105,
-    116, 104, 100, 114, 97, 119, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 27, 101, 120, 116,
-    114, 97, 99, 116, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108,
-    105, 116, 121, 27, 114, 101, 115, 116, 111, 114, 101, 95, 119, 105, 116, 104, 100, 114, 97,
-    119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 10, 115, 116, 97, 112, 108, 101, 95,
-    108, 98, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 1, 9, 11, 0, 17, 0, 12, 2,
-    14, 2, 10, 1, 17, 2, 11, 2, 17, 1, 2,
-];
-
 const PEER_TO_PEER_WITH_METADATA_CODE: &[u8] = &[
     161, 28, 235, 11, 1, 0, 0, 0, 7, 1, 0, 2, 2, 2, 4, 3, 6, 16, 4, 22, 2, 5, 24, 29, 7, 53, 97, 8,
     150, 1, 16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 2, 3, 1, 1, 0, 4, 1, 3, 0, 1, 5, 1, 6, 12,
@@ -4292,18 +4094,6 @@ const UNFREEZE_ACCOUNT_CODE: &[u8] = &[
     117, 110, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
     97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 7, 10, 0, 10,
     1, 17, 1, 11, 0, 10, 2, 17, 0, 2,
-];
-
-const UNMINT_LBR_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 2, 2, 4, 3, 6, 15, 5, 21, 16, 7, 37, 101, 8, 138, 1,
-    16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 1, 2, 0, 0, 4, 3, 2, 0, 1, 6, 12, 1, 8, 0, 0, 2, 6,
-    8, 0, 3, 2, 6, 12, 3, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 18, 87, 105,
-    116, 104, 100, 114, 97, 119, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 27, 101, 120, 116,
-    114, 97, 99, 116, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108,
-    105, 116, 121, 27, 114, 101, 115, 116, 111, 114, 101, 95, 119, 105, 116, 104, 100, 114, 97,
-    119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 12, 117, 110, 115, 116, 97, 112, 108,
-    101, 95, 108, 98, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 1, 9, 11, 0, 17,
-    0, 12, 2, 14, 2, 10, 1, 17, 2, 11, 2, 17, 1, 2,
 ];
 
 const UPDATE_DUAL_ATTESTATION_LIMIT_CODE: &[u8] = &[

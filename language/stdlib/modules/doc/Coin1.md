@@ -60,7 +60,7 @@
     <a href="Libra.md#0x1_Libra_register_SCS_currency">Libra::register_SCS_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(
         lr_account,
         tc_account,
-        <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2), // exchange rate <b>to</b> <a href="LBR.md#0x1_LBR">LBR</a>
+        <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="LBR.md#0x1_LBR">LBR</a>
         1000000, // scaling_factor = 10^6
         100,     // fractional_part = 10^2
         b"<a href="Coin1.md#0x1_Coin1">Coin1</a>"

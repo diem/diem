@@ -1,9 +1,9 @@
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 main() {
-    let resource1: Libra.Libra<LBR.LBR>;
-    let resource_ref: &mut Libra.Libra<LBR.LBR>;
-    resource1 = Libra.zero<LBR.LBR>();
+    let resource1: Libra.Libra<Coin1.Coin1>;
+    let resource_ref: &mut Libra.Libra<Coin1.Coin1>;
+    resource1 = Libra.zero<Coin1.Coin1>();
     resource_ref = &mut resource1;
     *move(resource_ref) = move(resource1);
     return;

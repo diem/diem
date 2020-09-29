@@ -2,7 +2,6 @@ script {
     use 0x1::AccountFreezing;
     use 0x1::ChainId;
     use 0x1::Coin1;
-    use 0x1::Coin2;
     use 0x1::DualAttestation;
     use 0x1::LBR;
     use 0x1::Libra;
@@ -44,7 +43,6 @@ script {
 
         // Currency setup
         Coin1::initialize(lr_account, tc_account);
-        Coin2::initialize(lr_account, tc_account);
 
         LBR::initialize(
             lr_account,

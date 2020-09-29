@@ -38,7 +38,7 @@ fn failed_transaction_cleanup_test() {
         gas_left,
         &txn_data,
         &data_cache,
-        &account::lbr_currency_code(),
+        &account::coin1_tmp_currency_code(),
         &log_context,
     );
     assert!(!out1.write_set().is_empty());
@@ -57,7 +57,7 @@ fn failed_transaction_cleanup_test() {
         gas_left,
         &txn_data,
         &data_cache,
-        &account::lbr_currency_code(),
+        &account::coin1_tmp_currency_code(),
         &log_context,
     );
     assert!(out2.write_set().is_empty());

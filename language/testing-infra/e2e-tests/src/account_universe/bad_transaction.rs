@@ -12,7 +12,7 @@ use libra_crypto::{
 };
 use libra_proptest_helpers::Index;
 use libra_types::{
-    account_config::LBR_NAME,
+    account_config::COIN1_NAME,
     transaction::{Script, SignedTransaction, TransactionStatus},
     vm_status::StatusCode,
 };
@@ -50,7 +50,7 @@ impl AUTransactionGen for SequenceNumberMismatchGen {
             seq,
             gas_costs::TXN_RESERVED,
             0,
-            LBR_NAME.to_string(),
+            COIN1_NAME.to_string(),
         );
 
         (
@@ -91,7 +91,7 @@ impl AUTransactionGen for InsufficientBalanceGen {
             sender.sequence_number,
             max_gas_unit,
             self.gas_unit_price,
-            LBR_NAME.to_string(),
+            COIN1_NAME.to_string(),
         );
 
         // TODO: Move such config to AccountUniverse

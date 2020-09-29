@@ -38,7 +38,7 @@ pub fn get_modified_memory<'env>(
 /// This makes some simplifying assumptions that are not correct in general, but hold for the
 /// current Libra Framework:
 /// - Transaction scripts have at most 1 type argument
-/// - The only values that can be bound to a transaction script type argument are Coin1, Coin2, and
+/// - The only values that can be bound to a transaction script type argument are Coin1 and
 ///   LBR. Passing any other values will lead to an aborted transaction.
 /// The first assumption is checked and will trigger an assert failure if violated. The second
 /// is unchecked, but would be a nice property for the prover.
@@ -57,15 +57,14 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
                         "Invariant violation: usage analysis should be run before calling this",
                     );
                 packed_types.extend(annotation.closed_types.clone());
-                // instantiate the tx script open types with Coin1, Coin2, LBR
+                // instantiate the tx script open types with Coin1, LBR
                 if is_script {
                     let num_type_parameters = func_env.get_type_parameters().len();
                     assert!(num_type_parameters <= 1, "Assuming that transaction scripts have <= 1 type parameters for simplicity. If there can be >1 type parameter, the code here must account for all permutations of type params");
 
                     if num_type_parameters == 1 {
                         let coin_types: Vec<Type> = vec![
-                            account_config::coin1_tag(),
-                            account_config::coin2_tag(),
+                            account_config::coin1_tmp_tag(),
                             account_config::lbr_type_tag(),
                         ]
                         .into_iter()

@@ -337,7 +337,6 @@ and default tiers for each known currency at launch.
     move_to(dd, <a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a> { mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd) });
     <b>if</b> (add_all_currencies) {
         <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(dd, tc_account);
-        <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(dd, tc_account);
     } <b>else</b> {
         <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd, tc_account);
     };
@@ -359,13 +358,12 @@ and default tiers for each known currency at launch.
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>{account: dd};
 <b>aborts_if</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>include</b> <b>if</b> (add_all_currencies)
-            <a href="DesignatedDealer.md#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;{dd_addr: dd_addr} && <a href="DesignatedDealer.md#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;{dd_addr: dd_addr}
+<b>include</b> <b>if</b> (add_all_currencies) <a href="DesignatedDealer.md#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;{dd_addr: dd_addr}
         <b>else</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;CoinType&gt;{dd_addr: dd_addr};
 <b>modifies</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
 <b>ensures</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
-<b>modifies</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr), <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(dd_addr);
-<b>ensures</b> <b>if</b> (add_all_currencies) <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr) && <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(dd_addr) <b>else</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>modifies</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr);
+<b>ensures</b> <b>if</b> (add_all_currencies) <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr) <b>else</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
 
 

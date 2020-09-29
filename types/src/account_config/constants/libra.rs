@@ -31,7 +31,7 @@ pub fn type_tag_for_currency_code(currency_code: Identifier) -> TypeTag {
 pub fn from_currency_code_string(currency_code_string: &str) -> Result<Identifier> {
     // In addition to the constraints for valid Move identifiers, currency codes
     // should consist entirely of alphanumeric characters (e.g., no underscores).
-    // TODO: After Coin1 and Coin2 are removed, this should require uppercase as well.
+    // TODO: After Coin1 is renamed , this should require uppercase as well.
     if !currency_code_string.chars().all(char::is_alphanumeric) {
         bail!("Invalid currency code '{}'", currency_code_string)
     }

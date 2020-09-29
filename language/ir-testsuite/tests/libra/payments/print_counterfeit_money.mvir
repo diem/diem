@@ -1,7 +1,7 @@
 //! account: default, 100000
 
 module M {
-    import 0x1.LBR;
+    import 0x1.Coin1;
     import 0x1.Libra;
     import 0x1.Signer;
 
@@ -28,13 +28,13 @@ module M {
 
     public become_rich(account: &signer) acquires R {
         let fake: Self.FakeCoin;
-        let real: Libra.Libra<LBR.LBR>;
+        let real: Libra.Libra<Coin1.Coin1>;
 
         fake = FakeCoin { value: 400000 };
 
-        real = Self.transmute<Self.FakeCoin, Libra.Libra<LBR.LBR>>(copy(account), move(fake));
+        real = Self.transmute<Self.FakeCoin, Libra.Libra<Coin1.Coin1>>(copy(account), move(fake));
 
-        Libra.destroy_zero<LBR.LBR>(move(real));
+        Libra.destroy_zero<Coin1.Coin1>(move(real));
 
         return;
     }
@@ -43,12 +43,12 @@ module M {
 //! new-transaction
 import {{default}}.M;
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Signer;
 
 main(account: &signer) {
     M.become_rich(copy(account));
-    assert(LibraAccount.balance<LBR.LBR>(Signer.address_of(move(account))) == 500000, 42);
+    assert(LibraAccount.balance<Coin1.Coin1>(Signer.address_of(move(account))) == 500000, 42);
     return;
 }
 

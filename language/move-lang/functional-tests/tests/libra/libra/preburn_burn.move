@@ -241,8 +241,8 @@ use 0x1::Libra::{Self, Libra};
 use 0x1::Coin1::Coin1;
 use {{default}}::Holder;
 fun main(account: &signer) {
-    let (coin1, coin2) = Holder::get<Libra<Coin1>>({{blessed}});
-    Libra::preburn_to(account, coin1);
+    let (coin1_tmp, coin2) = Holder::get<Libra<Coin1>>({{blessed}});
+    Libra::preburn_to(account, coin1_tmp);
     Libra::preburn_to(account, coin2);
 }
 }

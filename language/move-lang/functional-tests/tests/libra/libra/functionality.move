@@ -17,35 +17,24 @@ module BurnCapabilityHolder {
 script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
-use 0x1::Coin2::Coin2;
 use 0x1::Offer;
 fun main(account: &signer) {
-    let coin1 = Libra::mint<Coin1>(account, 10000);
-    let coin2 = Libra::mint<Coin2>(account, 10000);
-    assert(Libra::value<Coin1>(&coin1) == 10000, 0);
-    assert(Libra::value<Coin2>(&coin2) == 10000, 1);
-    assert(Libra::value<Coin2>(&coin2) == 10000, 1);
+    let coin1_tmp = Libra::mint<Coin1>(account, 10000);
+    assert(Libra::value<Coin1>(&coin1_tmp) == 10000, 0);
 
-    let (coin11, coin12) = Libra::split(coin1, 5000);
-    let (coin21, coin22) = Libra::split(coin2, 5000);
-    assert(Libra::value<Coin1>(&coin11) == 5000 , 0);
-    assert(Libra::value<Coin2>(&coin21) == 5000 , 1);
-    assert(Libra::value<Coin1>(&coin12) == 5000 , 2);
-    assert(Libra::value<Coin2>(&coin22) == 5000 , 3);
-    let tmp = Libra::withdraw(&mut coin11, 1000);
-    assert(Libra::value<Coin1>(&coin11) == 4000 , 4);
+    let (coin1_tmp1, coin1_tmp2) = Libra::split(coin1_tmp, 5000);
+    assert(Libra::value<Coin1>(&coin1_tmp1) == 5000 , 0);
+    assert(Libra::value<Coin1>(&coin1_tmp2) == 5000 , 2);
+    let tmp = Libra::withdraw(&mut coin1_tmp1, 1000);
+    assert(Libra::value<Coin1>(&coin1_tmp1) == 4000 , 4);
     assert(Libra::value<Coin1>(&tmp) == 1000 , 5);
-    Libra::deposit(&mut coin11, tmp);
-    assert(Libra::value<Coin1>(&coin11) == 5000 , 6);
-    let coin1 = Libra::join(coin11, coin12);
-    let coin2 = Libra::join(coin21, coin22);
-    assert(Libra::value<Coin1>(&coin1) == 10000, 7);
-    assert(Libra::value<Coin2>(&coin2) == 10000, 8);
-    Offer::create(account, coin1, {{blessed}});
-    Offer::create(account, coin2, {{blessed}});
+    Libra::deposit(&mut coin1_tmp1, tmp);
+    assert(Libra::value<Coin1>(&coin1_tmp1) == 5000 , 6);
+    let coin1_tmp = Libra::join(coin1_tmp1, coin1_tmp2);
+    assert(Libra::value<Coin1>(&coin1_tmp) == 10000, 7);
+    Offer::create(account, coin1_tmp, {{blessed}});
 
     Libra::destroy_zero(Libra::zero<Coin1>());
-    Libra::destroy_zero(Libra::zero<Coin2>());
 }
 }
 // check: "Keep(EXECUTED)"
@@ -208,10 +197,10 @@ script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
 fun main(account: &signer) {
-    let coin1 = Libra::mint<Coin1>(account, 1);
-    let tmp = Libra::withdraw(&mut coin1, 10);
+    let coin1_tmp = Libra::mint<Coin1>(account, 1);
+    let tmp = Libra::withdraw(&mut coin1_tmp, 10);
     Libra::destroy_zero(tmp);
-    Libra::destroy_zero(coin1);
+    Libra::destroy_zero(coin1_tmp);
 }
 }
 // check: "Keep(ABORTED { code: 2824,"

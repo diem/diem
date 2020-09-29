@@ -7,15 +7,15 @@
 //! gas-price: 0
 
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 
 main(account: &signer, receiver: address) {
-    let coins: Libra.Libra<LBR.LBR>;
+    let coins: Libra.Libra<Coin1.Coin1>;
     let with_cap: LibraAccount.WithdrawCapability;
 
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<LBR.LBR>(&with_cap, move(receiver), 200, h"", h"");
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, move(receiver), 200, h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
 
     return;
@@ -28,7 +28,7 @@ main(account: &signer, receiver: address) {
 //! sender: alice
 
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Signer;
 
 main(account: &signer) {
@@ -36,7 +36,7 @@ main(account: &signer) {
     let sender: address;
 
     sender = Signer.address_of(move(account));
-    balance = LibraAccount.balance<LBR.LBR>(move(sender));
+    balance = LibraAccount.balance<Coin1.Coin1>(move(sender));
     assert(move(balance) <= 999800, 42);
 
     return;
@@ -48,7 +48,7 @@ main(account: &signer) {
 //! new-transaction
 //! sender: bob
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Signer;
 
 main(account: &signer) {
@@ -56,7 +56,7 @@ main(account: &signer) {
     let sender: address;
 
     sender = Signer.address_of(move(account));
-    balance = LibraAccount.balance<LBR.LBR>(move(sender));
+    balance = LibraAccount.balance<Coin1.Coin1>(move(sender));
     assert(move(balance) == 900200, 42);
 
     return;

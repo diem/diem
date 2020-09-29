@@ -176,7 +176,7 @@ fn account_limits() {
         blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *vasp_a.address(),
                 vasp_a.auth_key_prefix(),
@@ -191,7 +191,7 @@ fn account_limits() {
         blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *vasp_b.address(),
                 vasp_b.auth_key_prefix(),
@@ -208,7 +208,7 @@ fn account_limits() {
         vasp_a
             .transaction()
             .script(encode_create_child_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a_child.address(),
                 vasp_a_child.auth_key_prefix(),
                 true,
@@ -222,7 +222,7 @@ fn account_limits() {
         vasp_b
             .transaction()
             .script(encode_create_child_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_b_child.address(),
                 vasp_b_child.auth_key_prefix(),
                 true,
@@ -253,7 +253,7 @@ fn account_limits() {
     executor.execute_and_apply(
         dd.transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a.address(),
                 2 * mint_amount,
                 vec![],
@@ -266,7 +266,7 @@ fn account_limits() {
     executor.execute_and_apply(
         dd.transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_b.address(),
                 2 * mint_amount,
                 vec![],
@@ -316,7 +316,7 @@ fn account_limits() {
             vasp_b
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a.address(),
                     mint_amount + 1,
                     vec![],
@@ -335,7 +335,7 @@ fn account_limits() {
             vasp_b
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     mint_amount + 1,
                     vec![],
@@ -353,7 +353,7 @@ fn account_limits() {
         vasp_a
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a_child.address(),
                 mint_amount + 1,
                 vec![],
@@ -369,7 +369,7 @@ fn account_limits() {
         vasp_a_child
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_b_child.address(),
                 mint_amount + 1,
                 vec![],
@@ -385,7 +385,7 @@ fn account_limits() {
         vasp_b_child
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a_child.address(),
                 mint_amount,
                 vec![],
@@ -401,7 +401,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             dd.transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],
@@ -422,7 +422,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             dd.transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],
@@ -460,7 +460,7 @@ fn account_limits() {
         vasp_a
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a_child.address(),
                 1001,
                 vec![],
@@ -476,7 +476,7 @@ fn account_limits() {
         vasp_a_child
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_b_child.address(),
                 1000,
                 vec![],
@@ -493,7 +493,7 @@ fn account_limits() {
             vasp_a
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_b.address(),
                     1,
                     vec![],
@@ -512,7 +512,7 @@ fn account_limits() {
             vasp_a_child
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_b_child.address(),
                     1,
                     vec![],
@@ -531,7 +531,7 @@ fn account_limits() {
             vasp_a_child
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *dd.address(),
                     1,
                     vec![],
@@ -552,7 +552,7 @@ fn account_limits() {
             vasp_a_child
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *dd.address(),
                     1,
                     vec![],
@@ -573,11 +573,11 @@ fn account_limits() {
     // Set vasp A's max holding to its current balance across all accounts
     {
         let a_parent_balance = executor
-            .read_balance_resource(&vasp_a, account::coin1_currency_code())
+            .read_balance_resource(&vasp_a, account::coin1_tmp_currency_code())
             .unwrap()
             .coin();
         let a_child_balance = executor
-            .read_balance_resource(&vasp_a_child, account::coin1_currency_code())
+            .read_balance_resource(&vasp_a_child, account::coin1_tmp_currency_code())
             .unwrap()
             .coin();
         let a_balance = a_parent_balance + a_child_balance;
@@ -616,7 +616,7 @@ fn account_limits() {
             vasp_b
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],
@@ -634,7 +634,7 @@ fn account_limits() {
         vasp_a
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_b_child.address(),
                 10,
                 vec![],
@@ -650,7 +650,7 @@ fn account_limits() {
         vasp_b
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a_child.address(),
                 10,
                 vec![],
@@ -667,7 +667,7 @@ fn account_limits() {
             vasp_b
                 .transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],
@@ -685,7 +685,7 @@ fn account_limits() {
         vasp_a_child
             .transaction()
             .script(encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *vasp_a.address(),
                 1100,
                 vec![],
@@ -701,7 +701,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             dd.transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],
@@ -723,7 +723,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             dd.transaction()
                 .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *vasp_a_child.address(),
                     1,
                     vec![],

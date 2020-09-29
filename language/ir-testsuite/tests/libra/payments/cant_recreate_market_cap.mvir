@@ -1,10 +1,9 @@
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
-// import 0x1.Roles;
 
 main(account: &signer) {
-    // This will fail because the sender is not 0x0
-    LBR.initialize(copy(account),  copy(account));
+    // This will fail because Coin1 has already been initialized
+    Coin1.initialize(copy(account),  copy(account));
     return;
 }
 

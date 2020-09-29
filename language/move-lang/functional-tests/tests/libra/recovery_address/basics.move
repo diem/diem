@@ -13,12 +13,12 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
 fun main(tc_account: &signer) {
     let add_all_currencies = false;
 
-    LibraAccount::create_parent_vasp_account<LBR>(
+    LibraAccount::create_parent_vasp_account<Coin1>(
         tc_account,
         {{parent1}},
         {{parent1::auth_key}},
@@ -26,7 +26,7 @@ fun main(tc_account: &signer) {
         add_all_currencies,
     );
 
-    LibraAccount::create_parent_vasp_account<LBR>(
+    LibraAccount::create_parent_vasp_account<Coin1>(
         tc_account,
         {{parent2}},
         {{parent2::auth_key}},
@@ -42,11 +42,11 @@ fun main(tc_account: &signer) {
 //! new-transaction
 //! sender: parent1
 script {
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::create_child_vasp_account<LBR>(account, {{child1}}, {{child1::auth_key}}, false);
-    LibraAccount::create_child_vasp_account<LBR>(account, {{child2}}, {{child2::auth_key}}, false)
+    LibraAccount::create_child_vasp_account<Coin1>(account, {{child1}}, {{child1::auth_key}}, false);
+    LibraAccount::create_child_vasp_account<Coin1>(account, {{child2}}, {{child2::auth_key}}, false)
 }
 }
 // check: "Keep(EXECUTED)"

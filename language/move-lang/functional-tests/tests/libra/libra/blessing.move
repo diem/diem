@@ -3,20 +3,14 @@
 script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
-use 0x1::Coin2::Coin2;
-// Make sure that Coin1 and Coin2 are registered. Make sure that the rules
+// Make sure that Coin1 is registered. Make sure that the rules
 // relating to SCS and synthetic currencies are consistent
 fun main() {
     assert(Libra::is_currency<Coin1>(), 1);
-    assert(Libra::is_currency<Coin2>(), 2);
     assert(!Libra::is_synthetic_currency<Coin1>(), 2);
-    assert(!Libra::is_synthetic_currency<Coin2>(), 3);
     assert(Libra::is_SCS_currency<Coin1>(), 4);
-    assert(Libra::is_SCS_currency<Coin2>(), 5);
     Libra::assert_is_currency<Coin1>();
-    Libra::assert_is_currency<Coin2>();
     Libra::assert_is_SCS_currency<Coin1>();
-    Libra::assert_is_SCS_currency<Coin2>();
 }
 }
 // check: "Keep(EXECUTED)"

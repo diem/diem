@@ -17,7 +17,7 @@ As mentioned above, some transactions between VASPs must use off-chain protocols
 
 ### Currencies
 
-There are three currencies in testnet: `Coin1`, `Coin2` (stablecoins), and `LBR` (synthetic currency composed of 50% `Coin1` and 50% `Coin2`). At the Move level, these are different generic instantiation of the same `Libra` type (i.e.`Libra<Coin1>`, `Libra<Coin2>`, `Libra<LBR>`).
+There are two currencies in testnet: `Coin1` (stablecoin), and `LBR` (synthetic currency that is currently a stub and will be updated once the final composition is determined). At the Move level, these are different generic instantiation of the same `Libra` type (i.e.`Libra<Coin1>`, `Libra<LBR>`).
 
 ### Addresses, Authentication Keys, and Cryptographic Keys
 

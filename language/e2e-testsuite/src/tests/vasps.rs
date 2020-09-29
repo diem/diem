@@ -21,7 +21,7 @@ fn valid_creator_already_vasp() {
         treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *account.address(),
                 account.auth_key_prefix(),
@@ -65,7 +65,7 @@ fn max_child_accounts_for_vasp() {
         treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 0,
                 *account.address(),
                 account.auth_key_prefix(),
@@ -82,7 +82,7 @@ fn max_child_accounts_for_vasp() {
             account
                 .transaction()
                 .script(encode_create_child_vasp_account_script(
-                    account_config::coin1_tag(),
+                    account_config::coin1_tmp_tag(),
                     *child.address(),
                     child.auth_key_prefix(),
                     false,
@@ -98,7 +98,7 @@ fn max_child_accounts_for_vasp() {
         account
             .transaction()
             .script(encode_create_child_vasp_account_script(
-                account_config::coin1_tag(),
+                account_config::coin1_tmp_tag(),
                 *child.address(),
                 child.auth_key_prefix(),
                 false,

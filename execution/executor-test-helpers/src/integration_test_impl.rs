@@ -10,7 +10,7 @@ use executor_types::BlockExecutor;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
-        coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        coin1_tmp_tag, from_currency_code_string, testnet_dd_account_address,
         treasury_compliance_account_address, COIN1_NAME,
     },
     account_state::AccountState,
@@ -77,7 +77,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             0,
             account1,
             account1_auth_key.prefix().to_vec(),
@@ -92,7 +92,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             0,
             account2,
             account2_auth_key.prefix().to_vec(),
@@ -107,7 +107,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             0,
             account3,
             account3_auth_key.prefix().to_vec(),
@@ -123,7 +123,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account1,
             2_000_000,
             vec![],
@@ -138,7 +138,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account2,
             1_200_000,
             vec![],
@@ -153,7 +153,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account3,
             1_000_000,
             vec![],
@@ -169,7 +169,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account2,
             20_000,
             vec![],
@@ -185,7 +185,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         privkey2,
         pubkey2,
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account3,
             10_000,
             vec![],
@@ -201,7 +201,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tag(),
+            coin1_tmp_tag(),
             account3,
             70_000,
             vec![],
@@ -223,7 +223,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
             privkey1.clone(),
             pubkey1.clone(),
             Some(encode_peer_to_peer_with_metadata_script(
-                coin1_tag(),
+                coin1_tmp_tag(),
                 account3,
                 10_000,
                 vec![],

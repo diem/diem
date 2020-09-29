@@ -49,13 +49,13 @@ fn single_peer_to_peer_with_event() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
         .expect("sender balance must exist");
     let updated_receiver = executor
         .read_account_resource(receiver.account())
         .expect("receiver must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::lbr_currency_code())
+        .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -110,7 +110,7 @@ fn single_peer_to_peer_with_padding() {
 
         Script::new(
             script_bytes,
-            vec![account_config::lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             vec![
                 TransactionArgument::Address(*receiver.address()),
                 TransactionArgument::U64(transfer_amount),
@@ -144,10 +144,10 @@ fn single_peer_to_peer_with_padding() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
         .expect("sender balance must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::lbr_currency_code())
+        .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -194,10 +194,10 @@ fn few_peer_to_peer_with_event() {
         }
 
         let original_sender_balance = executor
-            .read_balance_resource(sender.account(), account::lbr_currency_code())
+            .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
             .expect("sender balance must exist");
         let original_receiver_balance = executor
-            .read_balance_resource(receiver.account(), account::lbr_currency_code())
+            .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
             .expect("receiver balcne must exist");
         executor.apply_write_set(txn_output.write_set());
 
@@ -208,13 +208,13 @@ fn few_peer_to_peer_with_event() {
             .read_account_resource(sender.account())
             .expect("sender must exist");
         let updated_sender_balance = executor
-            .read_balance_resource(sender.account(), account::lbr_currency_code())
+            .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
             .expect("sender balance must exist");
         let updated_receiver = executor
             .read_account_resource(receiver.account())
             .expect("receiver must exist");
         let updated_receiver_balance = executor
-            .read_balance_resource(receiver.account(), account::lbr_currency_code())
+            .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
             .expect("receiver balance must exist");
         assert_eq!(receiver_balance, updated_receiver_balance.coin());
         assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -372,12 +372,12 @@ fn check_and_apply_transfer_output(
             .read_account_resource(&sender)
             .expect("sender must exist");
         let sender_balance = executor
-            .read_balance_resource(&sender, account::lbr_currency_code())
+            .read_balance_resource(&sender, account::coin1_tmp_currency_code())
             .expect("sender balance must exist");
         let sender_initial_balance = sender_balance.coin();
         let sender_seq_num = sender_resource.sequence_number();
         let receiver_initial_balance = executor
-            .read_balance_resource(&receiver, account::lbr_currency_code())
+            .read_balance_resource(&receiver, account::coin1_tmp_currency_code())
             .expect("receiver balance must exist")
             .coin();
 
@@ -392,10 +392,10 @@ fn check_and_apply_transfer_output(
             .read_account_resource(&sender)
             .expect("sender must exist");
         let updated_sender_balance = executor
-            .read_balance_resource(&sender, account::lbr_currency_code())
+            .read_balance_resource(&sender, account::coin1_tmp_currency_code())
             .expect("sender balance must exist");
         let updated_receiver_balance = executor
-            .read_balance_resource(&receiver, account::lbr_currency_code())
+            .read_balance_resource(&receiver, account::coin1_tmp_currency_code())
             .expect("receiver balance must exist");
         assert_eq!(receiver_balance, updated_receiver_balance.coin());
         assert_eq!(sender_balance, updated_sender_balance.coin());

@@ -55,7 +55,7 @@ fn build_global_config_1() {
     assert!(config.accounts.contains_key("default"));
     assert!(config.accounts.contains_key("alice"));
     let bob = config.accounts.get("bob").unwrap();
-    assert_eq!(bob.balance(IdentStr::new("LBR").unwrap()), 2000);
+    assert_eq!(bob.balance(IdentStr::new("Coin1").unwrap()), 2000);
     assert_eq!(bob.sequence_number(), 10);
 }
 
@@ -85,19 +85,19 @@ fn build_global_config_4() {
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(IdentStr::new("LBR").unwrap()), 50);
+    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 50);
 }
 
 #[rustfmt::skip]
 #[test]
 fn build_global_config_5() {
     let config = parse_and_build_config(r"
-        //! account: default, 50LBR,
+        //! account: default, 50Coin1,
     ").unwrap();
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(IdentStr::new("LBR").unwrap()), 50);
+    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 50);
 }
 
 #[rustfmt::skip]

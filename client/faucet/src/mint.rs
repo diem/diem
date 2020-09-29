@@ -5,7 +5,7 @@ use anyhow::Result;
 use libra_crypto::traits::SigningKey;
 use libra_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address, type_tag_for_currency_code,
-    LBR_NAME,
+    COIN1_NAME,
 };
 use std::{convert::From, fmt};
 
@@ -134,7 +134,7 @@ impl Service {
             seq,
             1_000_000,
             0,
-            LBR_NAME.to_owned(),
+            COIN1_NAME.to_owned(),
             30,
             self.chain_id,
         )

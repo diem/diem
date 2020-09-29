@@ -1,19 +1,19 @@
 module A {
-import 0x1.LBR;
+import 0x1.Coin1;
     import 0x1.Libra;
-    resource T {fr: Libra.Libra<LBR.LBR>}
+    resource T {fr: Libra.Libra<Coin1.Coin1>}
 
-    public new(y: Libra.Libra<LBR.LBR>): Self.T {
+    public new(y: Libra.Libra<Coin1.Coin1>): Self.T {
         return T{fr: move(y)};
     }
     public destroy(a: Self.T) {
-        let fr: Libra.Libra<LBR.LBR>;
+        let fr: Libra.Libra<Coin1.Coin1>;
         T { fr } = move(a);
-        Libra.destroy_zero<LBR.LBR>(move(fr));
+        Libra.destroy_zero<Coin1.Coin1>(move(fr));
         return;
     }
-    public t(this: &mut Self.T, y: Libra.Libra<LBR.LBR>) {
-        let x: &mut Libra.Libra<LBR.LBR>;
+    public t(this: &mut Self.T, y: Libra.Libra<Coin1.Coin1>) {
+        let x: &mut Libra.Libra<Coin1.Coin1>;
         x = &mut move(this).fr;
         *move(x) = move(y);
         return;

@@ -5,7 +5,7 @@ use serde_json::json;
 
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
-    account_config::coin1_tag,
+    account_config::coin1_tmp_tag,
     transaction::{Transaction, TransactionPayload},
 };
 use transaction_builder_generated::stdlib;
@@ -53,27 +53,16 @@ fn create_test_cases() -> Vec<Test> {
                         "mint_events_key": "05000000000000000000000000000000000000000a550c18",
                         "preburn_events_key": "07000000000000000000000000000000000000000a550c18",
                         "scaling_factor": 1000000,
-                        "to_lbr_exchange_rate": 0.5
+                        "to_lbr_exchange_rate": 1.0,
                       },
                       {
                         "burn_events_key": "0b000000000000000000000000000000000000000a550c18",
                         "cancel_burn_events_key": "0d000000000000000000000000000000000000000a550c18",
-                        "code": "Coin2",
+                        "code": "LBR",
                         "exchange_rate_update_events_key": "0e000000000000000000000000000000000000000a550c18",
-                        "fractional_part": 100,
+                        "fractional_part": 1000,
                         "mint_events_key": "0a000000000000000000000000000000000000000a550c18",
                         "preburn_events_key": "0c000000000000000000000000000000000000000a550c18",
-                        "scaling_factor": 1000000,
-                        "to_lbr_exchange_rate": 0.5
-                      },
-                      {
-                        "burn_events_key": "10000000000000000000000000000000000000000a550c18",
-                        "cancel_burn_events_key": "12000000000000000000000000000000000000000a550c18",
-                        "code": "LBR",
-                        "exchange_rate_update_events_key": "13000000000000000000000000000000000000000a550c18",
-                        "fractional_part": 1000,
-                        "mint_events_key": "0f000000000000000000000000000000000000000a550c18",
-                        "preburn_events_key": "11000000000000000000000000000000000000000a550c18",
                         "scaling_factor": 1000000,
                         "to_lbr_exchange_rate": 1.0
                       }
@@ -136,17 +125,13 @@ fn create_test_cases() -> Vec<Test> {
                         "authentication_key": null,
                         "balances": [
                             {
-                                "amount": 4611686018427387903 as u64,
+                                "amount": 9223370036854775807 as u64,
                                 "currency": "Coin1"
                             },
                             {
-                                "amount": 4611686018427387903 as u64,
-                                "currency": "Coin2"
-                            },
-                            {
-                                "amount": 9223370036854775807 as u64,
+                                "amount": 0 as u64,
                                 "currency": "LBR"
-                            }
+                            },
                         ],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
@@ -163,10 +148,6 @@ fn create_test_cases() -> Vec<Test> {
                                     "amount": 0,
                                     "currency": "Coin1"
                                 },
-                                {
-                                    "amount": 0,
-                                    "currency": "Coin2"
-                                }
                             ],
                             "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
                             "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
@@ -190,7 +171,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 997000000000 as u64, "currency": "LBR"}],
+                        "balances": [{"amount": 997000000000 as u64, "currency": "Coin1"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -224,7 +205,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 3000000000 as u64, "currency": "LBR"}],
+                        "balances": [{"amount": 3000000000 as u64, "currency": "Coin1"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -279,7 +260,7 @@ fn create_test_cases() -> Vec<Test> {
                         "events": [
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "LBR"},
+                                    "amount": {"amount": 200000 as u64, "currency": "Coin1"},
                                     "metadata": "",
                                     "receiver": receiver.address.to_string(),
                                     "sender": sender.address.to_string(),
@@ -291,7 +272,7 @@ fn create_test_cases() -> Vec<Test> {
                             },
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "LBR"},
+                                    "amount": {"amount": 200000 as u64, "currency": "Coin1"},
                                     "metadata": "",
                                     "receiver": receiver.address.to_string(),
                                     "sender": sender.address.to_string(),
@@ -307,13 +288,13 @@ fn create_test_cases() -> Vec<Test> {
                         "transaction": {
                             "chain_id": 4,
                             "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
-                            "gas_currency": "LBR",
+                            "gas_currency": "Coin1",
                             "gas_unit_price": 0,
                             "max_gas_amount": 1000000,
                             "public_key": sender.public_key.to_string(),
                             "script": {
                                 "amount": 200000,
-                                "currency": "LBR",
+                                "currency": "Coin1",
                                 "metadata": "",
                                 "metadata_signature": "",
                                 "receiver": receiver.address.to_string(),
@@ -388,7 +369,7 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "preburn & burn events",
             run: |env: &mut testing::Env| {
-                let script = stdlib::encode_preburn_script(coin1_tag(), 100);
+                let script = stdlib::encode_preburn_script(coin1_tmp_tag(), 100);
                 let txn = env.create_txn(&env.dd, script);
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
@@ -405,7 +386,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type": "sentpayment"
                             },
                             "key": "0400000000000000000000000000000000000000000000dd",
-                            "sequence_number": 4,
+                            "sequence_number": 2,
                             "transaction_version": version
                         },
                         {
@@ -425,7 +406,7 @@ fn create_test_cases() -> Vec<Test> {
 
                 let burn_txn = env.create_txn(
                     &env.tc,
-                    stdlib::encode_burn_script(coin1_tag(), 0, env.dd.address),
+                    stdlib::encode_burn_script(coin1_tmp_tag(), 0, env.dd.address),
                 );
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -449,13 +430,13 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "cancel burn event",
             run: |env: &mut testing::Env| {
-                let script = stdlib::encode_preburn_script(coin1_tag(), 100);
+                let script = stdlib::encode_preburn_script(coin1_tmp_tag(), 100);
                 let txn = env.create_txn(&env.dd, script);
                 env.submit_and_wait(txn);
 
                 let cancel_burn_txn = env.create_txn(
                     &env.tc,
-                    stdlib::encode_cancel_burn_script(coin1_tag(), env.dd.address),
+                    stdlib::encode_cancel_burn_script(coin1_tmp_tag(), env.dd.address),
                 );
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -481,7 +462,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type":"receivedpayment"
                             },
                             "key":"0300000000000000000000000000000000000000000000dd",
-                            "sequence_number":3,
+                            "sequence_number":1,
                             "transaction_version":version
                         }
                     ]),
@@ -495,7 +476,7 @@ fn create_test_cases() -> Vec<Test> {
             run: |env: &mut testing::Env| {
                 let txn = env.create_txn(
                     &env.tc,
-                    stdlib::encode_update_exchange_rate_script(coin1_tag(), 0, 1, 4),
+                    stdlib::encode_update_exchange_rate_script(coin1_tmp_tag(), 0, 1, 4),
                 );
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
@@ -521,7 +502,13 @@ fn create_test_cases() -> Vec<Test> {
             run: |env: &mut testing::Env| {
                 let txn = env.create_txn(
                     &env.tc,
-                    stdlib::encode_tiered_mint_script(coin1_tag(), 0, env.dd.address, 1_000_000, 1),
+                    stdlib::encode_tiered_mint_script(
+                        coin1_tmp_tag(),
+                        0,
+                        env.dd.address,
+                        1_000_000,
+                        1,
+                    ),
                 );
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
@@ -535,7 +522,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type":"receivedmint"
                             },
                             "key":"0000000000000000000000000000000000000000000000dd",
-                            "sequence_number":2,
+                            "sequence_number":1,
                             "transaction_version":version
                         },
                         {
@@ -555,7 +542,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type":"receivedpayment"
                             },
                             "key":"0300000000000000000000000000000000000000000000dd",
-                            "sequence_number":4,
+                            "sequence_number":2,
                             "transaction_version":version
 
                         }

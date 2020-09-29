@@ -23,7 +23,6 @@ For documentation of transaction scripts which constitute the client API, see
 -  [0x1::Authenticator](Authenticator.md#0x1_Authenticator)
 -  [0x1::ChainId](ChainId.md#0x1_ChainId)
 -  [0x1::Coin1](Coin1.md#0x1_Coin1)
--  [0x1::Coin2](Coin2.md#0x1_Coin2)
 -  [0x1::Compare](Compare.md#0x1_Compare)
 -  [0x1::CoreAddresses](CoreAddresses.md#0x1_CoreAddresses)
 -  [0x1::Debug](Debug.md#0x1_Debug)

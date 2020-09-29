@@ -3,14 +3,14 @@
 
 //! sender: Alice
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 
 main(account: &signer) {
     let with_cap: LibraAccount.WithdrawCapability;
 
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{bob}}, 42, h"", h"");
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{bob}}, 42, h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
 
     return;

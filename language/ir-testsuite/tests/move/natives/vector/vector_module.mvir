@@ -1,60 +1,60 @@
 module M {
-import 0x1.LBR;
+import 0x1.Coin1;
     import 0x1.Libra;
     import 0x1.Vector;
     import 0x1.Signer;
-    resource Coins { f: vector<Libra.Libra<LBR.LBR>> }
+    resource Coins { f: vector<Libra.Libra<Coin1.Coin1>> }
 
     public new(account: &signer) {
-        let coin_vec: vector<Libra.Libra<LBR.LBR>>;
+        let coin_vec: vector<Libra.Libra<Coin1.Coin1>>;
         let coins: Self.Coins;
-        coin_vec = Vector.empty<Libra.Libra<LBR.LBR>>();
+        coin_vec = Vector.empty<Libra.Libra<Coin1.Coin1>>();
         coins = Coins { f: move(coin_vec)};
 
         move_to<Coins>(move(account), move(coins));
         return;
     }
 
-    public put_coin(account: &signer, coin: Libra.Libra<LBR.LBR>) acquires Coins {
+    public put_coin(account: &signer, coin: Libra.Libra<Coin1.Coin1>) acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut vector<Libra.Libra<LBR.LBR>>;
+        let v_ref: &mut vector<Libra.Libra<Coin1.Coin1>>;
 
         coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
         v_ref = &mut move(coins_ref).f;
-        Vector.push_back<Libra.Libra<LBR.LBR>>(move(v_ref), move(coin));
+        Vector.push_back<Libra.Libra<Coin1.Coin1>>(move(v_ref), move(coin));
         return;
     }
 
     public get_value(account: &signer, i: u64): u64 acquires Coins {
         let coins_ref: &Self.Coins;
-        let v_ref: &vector<Libra.Libra<LBR.LBR>>;
-        let coin_ref: &Libra.Libra<LBR.LBR>;
+        let v_ref: &vector<Libra.Libra<Coin1.Coin1>>;
+        let coin_ref: &Libra.Libra<Coin1.Coin1>;
 
         coins_ref = borrow_global<Coins>(Signer.address_of(move(account)));
         v_ref = &move(coins_ref).f;
-        coin_ref = Vector.borrow<Libra.Libra<LBR.LBR>>(move(v_ref), move(i));
+        coin_ref = Vector.borrow<Libra.Libra<Coin1.Coin1>>(move(v_ref), move(i));
 
-        return Libra.value<LBR.LBR>(move(coin_ref));
+        return Libra.value<Coin1.Coin1>(move(coin_ref));
     }
 
-    public pop(account: &signer): Libra.Libra<LBR.LBR> acquires Coins {
+    public pop(account: &signer): Libra.Libra<Coin1.Coin1> acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut vector<Libra.Libra<LBR.LBR>>;
+        let v_ref: &mut vector<Libra.Libra<Coin1.Coin1>>;
 
         coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
         v_ref = &mut move(coins_ref).f;
-        return Vector.pop_back<Libra.Libra<LBR.LBR>>(move(v_ref));
+        return Vector.pop_back<Libra.Libra<Coin1.Coin1>>(move(v_ref));
     }
 }
 
 //! new-transaction
 import {{default}}.M;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Libra;
 
 main(account: &signer) {
     M.new(copy(account));
-    M.put_coin(copy(account), Libra.zero<LBR.LBR>());
+    M.put_coin(copy(account), Libra.zero<Coin1.Coin1>());
 
     return;
 }

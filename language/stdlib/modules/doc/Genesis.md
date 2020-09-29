@@ -47,7 +47,6 @@
 
     // Currency setup
     <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(lr_account, tc_account);
-    <a href="Coin2.md#0x1_Coin2_initialize">Coin2::initialize</a>(lr_account, tc_account);
 
     <a href="LBR.md#0x1_LBR_initialize">LBR::initialize</a>(
         lr_account,

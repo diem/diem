@@ -10,12 +10,11 @@ module LibraAccount {
     use 0x1::ChainId;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::Coin1::Coin1;
-    use 0x1::Coin2::Coin2;
     use 0x1::DualAttestation;
     use 0x1::Errors;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
-    use 0x1::LBR::{Self, LBR};
+    use 0x1::LBR::LBR;
     use 0x1::LCS;
     use 0x1::LibraConfig;
     use 0x1::LibraTimestamp;
@@ -268,129 +267,6 @@ module LibraAccount {
                 !VASP::spec_is_same_vasp(payee, payer)
             }
         }
-    }
-
-    /// Use `cap` to mint `amount_lbr` LBR by withdrawing the appropriate quantity of reserve assets
-    /// from `cap.address`, giving them to the LBR reserve, and depositing the LBR into
-    /// `cap.address`.
-    /// The `payee` address in the `SentPaymentEvent`s emitted by this function is the LBR reserve
-    /// address to signify that this was a special payment that debits the `cap.addr`'s balance and
-    /// credits the LBR reserve.
-    public fun staple_lbr(cap: &WithdrawCapability, amount_lbr: u64)
-    acquires LibraAccount, Balance, AccountOperationsCapability {
-        LibraTimestamp::assert_operating();
-        let cap_address = cap.account_address;
-        // use the LBR reserve address as `payee_address`
-        let payee_address = LBR::reserve_address();
-        let (amount_coin1, amount_coin2) = LBR::calculate_component_amounts_for_lbr(amount_lbr);
-        let coin1 = withdraw_from<Coin1>(cap, payee_address, amount_coin1, x"");
-        let coin2 = withdraw_from<Coin2>(cap, payee_address, amount_coin2, x"");
-        // Create `amount_lbr` LBR
-        let lbr = LBR::create(amount_lbr, coin1, coin2);
-        // use the reserved address as the payer for the LBR payment because the funds did not come
-        // from an existing balance
-        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
-    }
-
-    spec fun staple_lbr {
-        pragma opaque;
-        // Verification of this function is unstable (butterfly effect).
-        pragma verify_duration_estimate = 100;
-        modifies global<LibraAccount>(cap.account_address);
-        modifies global<Balance<Coin1>>(cap.account_address);
-        modifies global<Balance<Coin2>>(cap.account_address);
-        modifies global<Balance<LBR>>(cap.account_address);
-        modifies global<Libra::CurrencyInfo<LBR>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        modifies global<LBR::Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        ensures exists<LibraAccount>(cap.account_address);
-        ensures global<LibraAccount>(cap.account_address).withdrawal_capability
-            == old(global<LibraAccount>(cap.account_address).withdrawal_capability);
-        include StapleLBRAbortsIf;
-        include StapleLBREnsures;
-    }
-
-    spec schema StapleLBRAbortsIf {
-        use 0x1::FixedPoint32;
-        cap: WithdrawCapability;
-        amount_lbr: u64;
-        let reserve = global<LBR::Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        let amount_coin1 = FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) + 1;
-        let amount_coin2 = FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin2.ratio) + 1;
-        aborts_if amount_lbr == 0 with Errors::INVALID_ARGUMENT;
-        aborts_if reserve.coin1.backing.value + amount_coin1 > MAX_U64 with Errors::LIMIT_EXCEEDED;
-        aborts_if reserve.coin2.backing.value + amount_coin2 > MAX_U64 with Errors::LIMIT_EXCEEDED;
-        include LibraTimestamp::AbortsIfNotOperating;
-        include Libra::MintAbortsIf<LBR>{value: amount_lbr};
-        include LBR::CalculateComponentAmountsForLBRAbortsIf;
-        include WithdrawFromAbortsIf<Coin1>{
-            payee: LBR::reserve_address(), amount: amount_coin1};
-        include WithdrawFromAbortsIf<Coin2>{
-            payee: LBR::reserve_address(), amount: amount_coin2};
-        include DepositAbortsIf<LBR>{
-            payer: CoreAddresses::VM_RESERVED_ADDRESS(),
-            payee: cap.account_address,
-            amount: amount_lbr,
-            metadata: x"",
-            metadata_signature: x"",
-        };
-        aborts_if global<Balance<LBR>>(cap.account_address).coin.value + amount_lbr > max_u64() with Errors::LIMIT_EXCEEDED;
-    }
-
-    spec schema StapleLBREnsures {
-        use 0x1::FixedPoint32;
-        cap: WithdrawCapability;
-        amount_lbr: u64;
-        let reserve = global<LBR::Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        let amount_coin1 = FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) + 1;
-        let amount_coin2 = FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin2.ratio) + 1;
-        let total_value_coin1 = global<Libra::CurrencyInfo<Coin1>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value;
-        let total_value_coin2 = global<Libra::CurrencyInfo<Coin2>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value;
-        let total_value_lbr = global<Libra::CurrencyInfo<LBR>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value;
-
-        // Coin1 and Coin2 balances of cap.account_address decrease by the right amounts.
-        ensures global<Balance<Coin1>>(cap.account_address).coin.value
-            == old(global<Balance<Coin1>>(cap.account_address).coin.value) - amount_coin1;
-        ensures global<Balance<Coin2>>(cap.account_address).coin.value
-            == old(global<Balance<Coin2>>(cap.account_address).coin.value) - amount_coin2;
-
-        // Reserve backing for Coin1 and Coin2 increase by the right amounts.
-        ensures Libra::value(reserve.coin1.backing)
-            == old(Libra::value(reserve.coin1.backing)) + amount_coin1;
-        ensures Libra::value(reserve.coin2.backing)
-            == old(Libra::value(reserve.coin2.backing)) + amount_coin2;
-
-        // the total values of Coin1 and Coin2 stay the same
-        ensures total_value_coin1 == old(total_value_coin1);
-        ensures total_value_coin2 == old(total_value_coin2);
-
-        // the total value of LBR increases by amount_lbr.
-        ensures total_value_lbr == old(total_value_lbr) + amount_lbr;
-
-        // the LBR balance for cap_address increases by amount_lbr
-        ensures global<Balance<LBR>>(cap.account_address).coin.value
-            == old(global<Balance<LBR>>(cap.account_address).coin.value) + amount_lbr;
-    }
-
-    /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
-    /// LBR reserve, and deposit them to `cap.address`.
-    /// The `payer` address in the` RecievedPaymentEvent`s emitted by this function will be the LBR
-    /// reserve address to signify that this was a special payment that credits
-    /// `cap.address`'s balance and credits the LBR reserve.
-    public fun unstaple_lbr(cap: &WithdrawCapability, amount_lbr: u64)
-    acquires LibraAccount, Balance, AccountOperationsCapability {
-        LibraTimestamp::assert_operating();
-        // use the reserved address as the payee because the funds will be burned
-        let lbr = withdraw_from<LBR>(cap, CoreAddresses::VM_RESERVED_ADDRESS(), amount_lbr, x"");
-        let (coin1, coin2) = LBR::unpack(lbr);
-        // These funds come from the LBR reserve, so use the LBR reserve address as the payer
-        let payer_address = LBR::reserve_address();
-        let payee_address = cap.account_address;
-        deposit(payer_address, payee_address, coin1, x"", x"");
-        deposit(payer_address, payee_address, coin2, x"", x"")
-    }
-    spec fun unstaple_lbr {
-        /// > TODO: timeout
-        pragma verify = false;
     }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
@@ -962,9 +838,6 @@ module LibraAccount {
             if (!exists<Balance<Coin1>>(new_account_addr)) {
                 add_currency<Coin1>(new_account);
             };
-            if (!exists<Balance<Coin2>>(new_account_addr)) {
-                add_currency<Coin2>(new_account);
-            };
             if (!exists<Balance<LBR>>(new_account_addr)) {
                 add_currency<LBR>(new_account);
             };
@@ -985,8 +858,6 @@ module LibraAccount {
         aborts_if exists<Balance<Token>>(addr) with Errors::ALREADY_PUBLISHED;
         include add_all_currencies && !exists<Balance<Coin1>>(addr)
             ==> Libra::AbortsIfNoCurrency<Coin1>;
-        include add_all_currencies && !exists<Balance<Coin2>>(addr)
-            ==> Libra::AbortsIfNoCurrency<Coin2>;
         include add_all_currencies && !exists<Balance<LBR>>(addr)
             ==> Libra::AbortsIfNoCurrency<LBR>;
     }
@@ -997,8 +868,6 @@ module LibraAccount {
         include AddCurrencyEnsures<Token>;
         include add_all_currencies && !exists<Balance<Coin1>>(addr)
             ==> AddCurrencyEnsures<Coin1>;
-        include add_all_currencies && !exists<Balance<Coin2>>(addr)
-            ==> AddCurrencyEnsures<Coin2>;
         include add_all_currencies && !exists<Balance<LBR>>(addr)
             ==> AddCurrencyEnsures<LBR>;
     }
@@ -1182,9 +1051,7 @@ module LibraAccount {
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if exists<DesignatedDealer::Dealer>(new_account_address) with Errors::ALREADY_PUBLISHED;
-        include if (add_all_currencies)
-                    DesignatedDealer::AddCurrencyAbortsIf<Coin1>{dd_addr: new_account_address}
-                    && DesignatedDealer::AddCurrencyAbortsIf<Coin2>{dd_addr: new_account_address}
+        include if (add_all_currencies) DesignatedDealer::AddCurrencyAbortsIf<Coin1>{dd_addr: new_account_address}
                 else DesignatedDealer::AddCurrencyAbortsIf<CoinType>{dd_addr: new_account_address};
         include AddCurrencyForAccountAbortsIf<CoinType>{addr: new_account_address};
         include MakeAccountAbortsIf{addr: new_account_address};
@@ -1548,7 +1415,7 @@ module LibraAccount {
         assert(Roles::has_libra_root_role(sender), Errors::invalid_argument(PROLOGUE_INVALID_WRITESET_SENDER));
 
         // Currency code don't matter here as it won't be charged anyway. Gas constants are ommitted.
-        prologue_common<LBR::LBR>(
+        prologue_common<Coin1>(
             sender,
             txn_sequence_number,
             txn_public_key,
@@ -1576,7 +1443,7 @@ module LibraAccount {
         /// Must abort if the signer does not have the LibraRoot role [[H8]][PERMISSION].
         /// Covered: L146 (Match 0)
         aborts_if !Roles::spec_has_libra_root_role_addr(transaction_sender) with Errors::INVALID_ARGUMENT;
-        include AbortsIfPrologueCommon<LBR::LBR>{
+        include AbortsIfPrologueCommon<Coin1>{
             transaction_sender,
             max_transaction_fee: 0,
         };
@@ -1779,7 +1646,7 @@ module LibraAccount {
             UpgradeEvent { writeset_payload },
         );
         // Currency code don't matter here as it won't be charged anyway.
-        epilogue<LBR::LBR>(lr_account, txn_sequence_number, 0, 0, 0);
+        epilogue<Coin1>(lr_account, txn_sequence_number, 0, 0, 0);
         if (should_trigger_reconfiguration) LibraConfig::reconfigure(lr_account)
     }
 

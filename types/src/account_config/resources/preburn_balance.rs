@@ -3,7 +3,7 @@
 
 use crate::{
     access_path::AccessPath,
-    account_config::constants::{lbr_type_tag, CORE_CODE_ADDRESS, LIBRA_MODULE_NAME},
+    account_config::constants::{coin1_tmp_tag, CORE_CODE_ADDRESS, LIBRA_MODULE_NAME},
 };
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
@@ -50,6 +50,6 @@ impl MoveResource for PreburnResource {
     const STRUCT_NAME: &'static str = "Preburn";
 
     fn type_params() -> Vec<TypeTag> {
-        vec![lbr_type_tag()]
+        vec![coin1_tmp_tag()]
     }
 }

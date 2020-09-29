@@ -13,7 +13,7 @@ use language_e2e_tests::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{self, lbr_type_tag},
+    account_config,
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
@@ -36,7 +36,7 @@ fn verify_signature() {
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_peer_to_peer_with_metadata_script(
-        lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
         *sender.address(),
         100,
         vec![],
@@ -65,7 +65,7 @@ fn verify_reserved_sender() {
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_peer_to_peer_with_metadata_script(
-        lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
         *sender.address(),
         100,
         vec![],
@@ -114,7 +114,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -127,7 +127,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -150,7 +150,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(1)
@@ -167,7 +167,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(11)
@@ -184,7 +184,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -204,7 +204,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -226,7 +226,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -244,7 +244,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -262,7 +262,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -278,7 +278,11 @@ fn verify_simple_payment() {
     let txn = sender
         .account()
         .transaction()
-        .script(Script::new(p2p_script.clone(), vec![lbr_type_tag()], args))
+        .script(Script::new(
+            p2p_script.clone(),
+            vec![account_config::coin1_tmp_tag()],
+            args,
+        ))
         .sequence_number(10)
         .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
         .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
@@ -294,7 +298,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
         ))
         .sequence_number(10)
@@ -315,7 +319,11 @@ fn verify_simple_payment() {
     let txn = sender
         .account()
         .transaction()
-        .script(Script::new(p2p_script.clone(), vec![lbr_type_tag()], args))
+        .script(Script::new(
+            p2p_script.clone(),
+            vec![account_config::coin1_tmp_tag()],
+            args,
+        ))
         .sequence_number(10)
         .max_gas_amount(100_000)
         .gas_unit_price(1)
@@ -330,7 +338,11 @@ fn verify_simple_payment() {
     let txn = sender
         .account()
         .transaction()
-        .script(Script::new(p2p_script, vec![lbr_type_tag()], vec![]))
+        .script(Script::new(
+            p2p_script,
+            vec![account_config::coin1_tmp_tag()],
+            vec![],
+        ))
         .sequence_number(10)
         .max_gas_amount(100_000)
         .gas_unit_price(1)
@@ -429,7 +441,7 @@ pub fn test_publish_from_libra_root() {
         ",
     );
 
-    let random_module = compile_module_with_address(sender.address(), "file_name", &module);
+    let random_module = compile_module_with_address(sender.address(), "file_name", &module).1;
     let txn = sender
         .account()
         .transaction()
@@ -459,7 +471,7 @@ fn verify_expiration_time() {
         None, /* script */
         0,    /* expiration_time */
         0,    /* gas_unit_price */
-        account_config::LBR_NAME.to_owned(),
+        account_config::COIN1_NAME.to_owned(),
         None, /* max_gas_amount */
     );
     assert_prologue_parity!(
@@ -570,7 +582,7 @@ pub fn test_no_publishing_libra_root_sender() {
     );
 
     let random_module =
-        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &module);
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &module).1;
     let txn = sender
         .transaction()
         .module(random_module)
@@ -616,7 +628,7 @@ pub fn test_open_publishing_invalid_address() {
         ",
     );
 
-    let random_module = compile_module_with_address(receiver.address(), "file_name", &module);
+    let random_module = compile_module_with_address(receiver.address(), "file_name", &module).1;
     let txn = sender
         .account()
         .transaction()
@@ -673,7 +685,7 @@ pub fn test_open_publishing() {
         ",
     );
 
-    let random_module = compile_module_with_address(sender.address(), "file_name", &program);
+    let random_module = compile_module_with_address(sender.address(), "file_name", &program).1;
     let txn = sender
         .account()
         .transaction()
@@ -1062,7 +1074,7 @@ fn charge_gas_invalid_args() {
             StdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
-            vec![account_config::lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             // Don't pass any arguments
             vec![],
         ))

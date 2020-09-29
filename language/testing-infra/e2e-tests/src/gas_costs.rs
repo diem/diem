@@ -35,7 +35,7 @@ pub static CREATE_ACCOUNT_FIRST: Lazy<u64> = Lazy::new(|| {
         &receiver,
         10,
         20_000,
-        account_config::lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
     );
     compute_gas_used(txn, &mut executor)
 });
@@ -55,14 +55,14 @@ pub static CREATE_ACCOUNT_NEXT: Lazy<u64> = Lazy::new(|| {
             &Account::new(),
             10,
             20_000,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
         create_account_txn(
             sender.account(),
             &Account::new(),
             11,
             20_000,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
     ];
     let output = &executor
@@ -90,7 +90,7 @@ pub static CREATE_ACCOUNT_TOO_LOW_FIRST: Lazy<u64> = Lazy::new(|| {
         &receiver,
         10,
         balance + 1,
-        account_config::lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
     );
     compute_gas_used(txn, &mut executor)
 });
@@ -113,14 +113,14 @@ pub static CREATE_ACCOUNT_TOO_LOW_NEXT: Lazy<u64> = Lazy::new(|| {
             &Account::new(),
             10,
             10,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
         create_account_txn(
             sender.account(),
             &Account::new(),
             11,
             balance,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
     ];
     let output = &executor
@@ -146,7 +146,7 @@ pub static CREATE_EXISTING_ACCOUNT_FIRST: Lazy<u64> = Lazy::new(|| {
         receiver.account(),
         10,
         20_000,
-        account_config::lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
     );
     compute_gas_used(txn, &mut executor)
 });
@@ -168,14 +168,14 @@ pub static CREATE_EXISTING_ACCOUNT_NEXT: Lazy<u64> = Lazy::new(|| {
             &Account::new(),
             10,
             20_000,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
         create_account_txn(
             sender.account(),
             receiver.account(),
             11,
             20_000,
-            account_config::lbr_type_tag(),
+            account_config::coin1_tmp_tag(),
         ),
     ];
     let output = &executor

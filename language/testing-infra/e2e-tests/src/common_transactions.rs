@@ -8,7 +8,6 @@ use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_types::{
     account_config,
-    account_config::lbr_type_tag,
     transaction::{RawTransaction, Script, SignedTransaction, TransactionArgument},
 };
 use move_core_types::language_storage::TypeTag;
@@ -135,7 +134,7 @@ pub fn peer_to_peer_txn(
             StdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
-            vec![lbr_type_tag()],
+            vec![account_config::coin1_tmp_tag()],
             args,
         ))
         .sequence_number(seq_num)

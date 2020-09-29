@@ -7,7 +7,7 @@ use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
-    account_config::LBR_NAME,
+    account_config::COIN1_NAME,
     chain_id::ChainId,
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, RawTransaction, Script, SignedTransaction},
@@ -79,7 +79,7 @@ impl TestTransaction {
             Script::new(vec![], vec![], vec![]),
             max_gas_amount,
             self.gas_price,
-            LBR_NAME.to_owned(),
+            COIN1_NAME.to_owned(),
             exp_timestamp_secs,
             ChainId::test(),
         );

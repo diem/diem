@@ -36,17 +36,6 @@
       "to_lbr_exchange_rate": 0.5
     },
     {
-      "burn_events_key": "07000000000000000000000000000000000000000a550c18",
-      "cancel_burn_events_key": "09000000000000000000000000000000000000000a550c18",
-      "code": "Coin2",
-      "exchange_rate_update_events_key": "0a000000000000000000000000000000000000000a550c18",
-      "fractional_part": 100,
-      "mint_events_key": "06000000000000000000000000000000000000000a550c18",
-      "preburn_events_key": "08000000000000000000000000000000000000000a550c18",
-      "scaling_factor": 1000000,
-      "to_lbr_exchange_rate": 0.5
-    },
-    {
       "burn_events_key": "0c000000000000000000000000000000000000000a550c18",
       "cancel_burn_events_key": "0e000000000000000000000000000000000000000a550c18",
       "code": "LBR",

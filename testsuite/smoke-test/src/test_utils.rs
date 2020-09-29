@@ -20,8 +20,6 @@ pub fn compare_balances(
         .map(|balance_str| {
             let (currency_code, stripped_str) = if balance_str.ends_with("Coin1") {
                 ("Coin1", balance_str.trim_end_matches("Coin1"))
-            } else if balance_str.ends_with("Coin2") {
-                ("Coin2", balance_str.trim_end_matches("Coin2"))
             } else if balance_str.ends_with("LBR") {
                 ("LBR", balance_str.trim_end_matches("LBR"))
             } else {

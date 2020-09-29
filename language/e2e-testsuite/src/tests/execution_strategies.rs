@@ -25,7 +25,7 @@ fn txn(seq_num: u64) -> SignedTransaction {
         &account,
         seq_num + 1,
         0,
-        account_config::lbr_type_tag(),
+        account_config::coin1_tmp_tag(),
     )
 }
 

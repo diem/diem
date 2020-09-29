@@ -16,7 +16,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{
-        coin1_tag, testnet_dd_account_address, treasury_compliance_account_address,
+        coin1_tmp_tag, testnet_dd_account_address, treasury_compliance_account_address,
         AccountResource, COIN1_NAME,
     },
     block_info::BlockInfo,
@@ -122,7 +122,7 @@ impl TransactionGenerator {
                     &self.genesis_key,
                     self.genesis_key.public_key(),
                     encode_create_parent_vasp_account_script(
-                        coin1_tag(),
+                        coin1_tmp_tag(),
                         0,
                         account.address,
                         account.auth_key_prefix(),
@@ -154,7 +154,7 @@ impl TransactionGenerator {
                     &self.genesis_key,
                     self.genesis_key.public_key(),
                     encode_peer_to_peer_with_metadata_script(
-                        coin1_tag(),
+                        coin1_tmp_tag(),
                         account.address,
                         init_account_balance,
                         vec![],
@@ -189,7 +189,7 @@ impl TransactionGenerator {
                     &sender.private_key,
                     sender.public_key.clone(),
                     encode_peer_to_peer_with_metadata_script(
-                        coin1_tag(),
+                        coin1_tmp_tag(),
                         receiver.address,
                         1, /* amount */
                         vec![],

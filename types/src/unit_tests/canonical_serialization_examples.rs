@@ -6,7 +6,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::LBR_NAME,
+    account_config::COIN1_NAME,
     chain_id::ChainId,
     transaction::{
         ChangeSet, RawTransaction, Script, TransactionArgument, TransactionPayload, WriteSetPayload,
@@ -81,7 +81,7 @@ fn test_raw_transaction_with_a_program_canonical_serialization_example() {
         get_common_program(),
         10000,
         20000,
-        LBR_NAME.to_owned(),
+        COIN1_NAME.to_owned(),
         86400,
         ChainId::test(),
     );
@@ -89,7 +89,8 @@ fn test_raw_transaction_with_a_program_canonical_serialization_example() {
     let expected_output = vec![
         58, 36, 166, 30, 5, 209, 41, 202, 206, 158, 14, 252, 139, 201, 227, 56, 32, 0, 0, 0, 0, 0,
         0, 0, 1, 4, 109, 111, 118, 101, 0, 1, 1, 239, 190, 173, 222, 13, 208, 254, 202, 16, 39, 0,
-        0, 0, 0, 0, 0, 32, 78, 0, 0, 0, 0, 0, 0, 3, 76, 66, 82, 128, 81, 1, 0, 0, 0, 0, 0, 4,
+        0, 0, 0, 0, 0, 32, 78, 0, 0, 0, 0, 0, 0, 5, 67, 111, 105, 110, 49, 128, 81, 1, 0, 0, 0, 0,
+        0, 4,
     ];
 
     let actual_output = to_bytes(&input).unwrap();
@@ -114,8 +115,8 @@ fn test_raw_transaction_with_a_write_set_canonical_serialization_example() {
         33, 1, 33, 125, 166, 198, 179, 225, 159, 24, 37, 207, 178, 103, 109, 174, 204, 227, 191,
         61, 224, 60, 242, 102, 71, 199, 141, 240, 11, 55, 27, 37, 204, 151, 0, 196, 198, 63, 128,
         199, 75, 17, 38, 62, 66, 30, 191, 132, 134, 164, 227, 9, 1, 33, 125, 166, 198, 179, 225,
-        159, 24, 1, 4, 202, 254, 208, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 76,
-        66, 82, 255, 255, 255, 255, 255, 255, 255, 255, 4,
+        159, 24, 1, 4, 202, 254, 208, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 67,
+        111, 105, 110, 49, 255, 255, 255, 255, 255, 255, 255, 255, 4,
     ];
     let actual_output = to_bytes(&input).unwrap();
     assert_eq!(expected_output, actual_output);

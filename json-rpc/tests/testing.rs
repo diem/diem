@@ -7,7 +7,7 @@ use libra_json_rpc_types::response::JsonRpcResponse;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{
-        lbr_type_tag, testnet_dd_account_address, treasury_compliance_account_address, LBR_NAME,
+        coin1_tmp_tag, testnet_dd_account_address, treasury_compliance_account_address, COIN1_NAME,
     },
     chain_id::ChainId,
     transaction::SignedTransaction,
@@ -66,7 +66,7 @@ impl Env {
         let vasp = Account::gen();
         let script =
             transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
-                lbr_type_tag(),
+                coin1_tmp_tag(),
                 0, // sliding nonce
                 vasp.address,
                 vasp.auth_key().prefix().to_vec(),
@@ -81,7 +81,7 @@ impl Env {
     pub fn create_child_vasp(&mut self, parent_vasp_index: usize, amount: u64) {
         let child = Account::gen();
         let script = transaction_builder_generated::stdlib::encode_create_child_vasp_account_script(
-            lbr_type_tag(),
+            coin1_tmp_tag(),
             child.address,
             child.auth_key().prefix().to_vec(),
             false, /* add all currencies */
@@ -95,7 +95,7 @@ impl Env {
     pub fn transfer_coins_to_vasp(&mut self, index: usize, amount: u64) {
         let script =
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                lbr_type_tag(),
+                coin1_tmp_tag(),
                 self.vasps[index].address,
                 amount,
                 vec![],
@@ -126,7 +126,7 @@ impl Env {
         let receiver_address = self.vasps[rid].children[rcid].address;
         let script =
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                lbr_type_tag(),
+                coin1_tmp_tag(),
                 receiver_address,
                 amount,
                 // todo: add metadata
@@ -161,7 +161,7 @@ impl Env {
             seq,
             1_000_000,
             0,
-            LBR_NAME.to_owned(),
+            COIN1_NAME.to_owned(),
             30,
             ChainId::test(),
         )

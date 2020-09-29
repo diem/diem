@@ -30,3 +30,4 @@ libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = 
 libra-config =  { path = "../../../config", version = "0.1.0" }
 compiled-stdlib = { path = "../../stdlib/compiled",  version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+hex = "0.4.2"

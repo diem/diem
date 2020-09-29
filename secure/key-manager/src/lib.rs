@@ -35,7 +35,7 @@ use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::LBR_NAME,
+    account_config::COIN1_NAME,
     chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
@@ -399,7 +399,7 @@ pub fn build_rotation_transaction(
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        LBR_NAME.to_owned(),
+        COIN1_NAME.to_owned(),
         expiration_timestamp_secs,
         chain_id,
     )

@@ -18,7 +18,7 @@ use libra_crypto::{
 use libra_types::{
     account_address::{self, AccountAddress},
     account_config::{
-        from_currency_code_string, lbr_type_tag, type_tag_for_currency_code, LBR_NAME,
+        coin1_tmp_tag, from_currency_code_string, type_tag_for_currency_code, COIN1_NAME,
     },
     chain_id::ChainId,
     transaction::{
@@ -364,7 +364,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     };
 
     let program = encode_peer_to_peer_with_metadata_script(
-        lbr_type_tag(),
+        coin1_tmp_tag(),
         receiver_address,
         num_coins,
         metadata,
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        LBR_NAME.to_owned(),
+        COIN1_NAME.to_owned(),
         expiration_timestamp_secs,
         ChainId::new(chain_id),
     );
@@ -650,7 +650,7 @@ mod test {
         let expiration_timestamp_secs = 0;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
-        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+        let coin_ident = std::ffi::CString::new(COIN1_NAME).expect("Invalid ident");
 
         let mut script_buf: *mut u8 = std::ptr::null_mut();
         let script_buf_ptr = &mut script_buf;
@@ -728,7 +728,7 @@ mod test {
         let mut buf2: *mut u8 = std::ptr::null_mut();
         let buf_ptr2 = &mut buf2;
         let mut len2: usize = 0;
-        let coin_idnet = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+        let coin_idnet = std::ffi::CString::new(COIN1_NAME).expect("Invalid ident");
         let result2 = unsafe {
             libra_SignedTransactionBytes_from(
                 private_key_bytes.as_ptr(),
@@ -839,7 +839,7 @@ mod test {
         let amount = 100_000_000;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
-        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+        let coin_ident = std::ffi::CString::new(COIN1_NAME).expect("Invalid ident");
 
         let mut script_buf: *mut u8 = std::ptr::null_mut();
         let script_buf_ptr = &mut script_buf;
@@ -894,7 +894,7 @@ mod test {
     /// Generate a add currency to account script and deserialize
     #[test]
     fn test_lcs_add_currency_to_account_transaction_script() {
-        let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
+        let coin_ident = std::ffi::CString::new(COIN1_NAME).expect("Invalid ident");
 
         let mut script_buf: *mut u8 = std::ptr::null_mut();
         let script_buf_ptr = &mut script_buf;
@@ -1080,7 +1080,7 @@ mod test {
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
 
         let program = encode_peer_to_peer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tmp_tag(),
             receiver,
             amount,
             metadata.clone(),
@@ -1093,7 +1093,7 @@ mod test {
                 program,
                 max_gas_amount,
                 gas_unit_price,
-                LBR_NAME.to_owned(),
+                COIN1_NAME.to_owned(),
                 expiration_timestamp_secs,
                 ChainId::test(),
             ),

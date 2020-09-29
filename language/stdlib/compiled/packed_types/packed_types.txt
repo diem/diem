@@ -83,24 +83,6 @@
     }
   ],
   [
-    "0110d33fe260cbf75c282946f4ce8c4da2e0c6ac72e14811372bfc57d9281fbf9b",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Libra",
-      "name": "CurrencyInfo",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "01123f3746147847a98608e80d193d84d01fe6dd9a41d3dec1ac45ae5d62b8f074",
     {
       "address": "00000000000000000000000000000001",
@@ -188,24 +170,6 @@
       "module": "DesignatedDealer",
       "name": "Dealer",
       "type_params": []
-    }
-  ],
-  [
-    "01207c54074f90e1001b01acd5329c4a5b2a9d66cde5df80ed38bc1aa021feefed",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Libra",
-      "name": "Preburn",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
     }
   ],
   [
@@ -326,24 +290,6 @@
     }
   ],
   [
-    "0148ab3353d4ae86627cd05685542a132ae0481e6410ab28a0e665a6a0fbc272a6",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "LibraAccount",
-      "name": "Balance",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "014b290fa2a17ee05d69077e10a8bdfcb15bb5c850b97c4c876b706f54434dceba",
     {
       "address": "00000000000000000000000000000001",
@@ -440,24 +386,6 @@
       "module": "ValidatorConfig",
       "name": "Config",
       "type_params": []
-    }
-  ],
-  [
-    "01687bf580492aa6c5257639c5209bd1d9f6faa38cefcec7b14e88a92967e036a9",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Libra",
-      "name": "MintCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
     }
   ],
   [
@@ -578,24 +506,6 @@
     }
   ],
   [
-    "017933fc250ca47fdf88584591e7e2191520fdf4e47f440e036995257d8082723f",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Libra",
-      "name": "BurnCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "01794ef83d60ee66878154ab293b9fae46b70729ea0793d3ae4097616530869ef1",
     {
       "address": "00000000000000000000000000000001",
@@ -611,24 +521,6 @@
       "module": "Libra",
       "name": "BurnEvent",
       "type_params": []
-    }
-  ],
-  [
-    "0181d87d30c2c8ccfd6c39bdc93bc6293b5349822875c4b00e579354a781e71a81",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "TransactionFee",
-      "name": "TransactionFee",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "LBR",
-            "name": "LBR",
-            "type_params": []
-          }
-        }
-      ]
     }
   ],
   [
@@ -731,24 +623,6 @@
     }
   ],
   [
-    "019ffb6f30a6c8412eb37132c65960ba00c03aa15e76a4482afc618c55a1efc807",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Libra",
-      "name": "Libra",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "01a13858f5493a029359d2126b3aef98e9dace1d86a71be3a514a98b3bd253c847",
     {
       "address": "00000000000000000000000000000001",
@@ -812,42 +686,6 @@
     }
   ],
   [
-    "01ab4c101bd87d1ef99c8049f0f90d991ef58de714b38ab94b9c0301c5d7ad042a",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountLimits",
-      "name": "LimitsDefinition",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "01b2895fcdb7651bd2db0a1021acae780c4d4b54b52b9b46962b4e3b9bffe683f9",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "LBR",
-      "name": "ReserveComponent",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "01b40c7f1f369e8653c1df137967c45c0c368668fa8dad040a8d8ceec212e155d7",
     {
       "address": "00000000000000000000000000000001",
@@ -884,24 +722,6 @@
     }
   ],
   [
-    "01c2ab0029e907c5912aee02f8e6f01142557648b0db0214089cb4a6e52f51a67d",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DesignatedDealer",
-      "name": "TierInfo",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
     "01c2c4723b0bd92ffc1deb11516a1b982543a814d0e53bb31fcc92b074db73c12a",
     {
       "address": "00000000000000000000000000000001",
@@ -909,24 +729,6 @@
       "name": "Option",
       "type_params": [
         "Address"
-      ]
-    }
-  ],
-  [
-    "01c49d3ee42bc2290dbaeca4bd6de81a57d1109c8e5d5c85f929ea1b12144ac381",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "LBR",
-      "name": "ReserveComponent",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin1",
-            "name": "Coin1",
-            "type_params": []
-          }
-        }
       ]
     }
   ],
@@ -1162,24 +964,6 @@
       "module": "ValidatorOperatorConfig",
       "name": "ValidatorOperatorConfig",
       "type_params": []
-    }
-  ],
-  [
-    "01f69f6b7b1ff23ab4670d435314c8bc3da82822b38643dee5c71c2e171fd6a868",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "TransactionFee",
-      "name": "TransactionFee",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "Coin2",
-            "name": "Coin2",
-            "type_params": []
-          }
-        }
-      ]
     }
   ],
   [

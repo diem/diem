@@ -1,5 +1,5 @@
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 
 main() {
     let addr: address;
@@ -8,7 +8,7 @@ main() {
 
     addr = 0x011111111111111110;
     account_exists = LibraAccount.exists_at(copy(addr));
-    account_balance = LibraAccount.balance<LBR.LBR>(move(addr));
+    account_balance = LibraAccount.balance<Coin1.Coin1>(move(addr));
     return;
 }
 // check: "Keep(ABORTED { code: 4869,"

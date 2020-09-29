@@ -16,7 +16,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use libra_logger::prelude::*;
 use libra_types::{
-    account_config::{lbr_type_tag, LBR_NAME},
+    account_config::{coin1_tmp_tag, COIN1_NAME},
     chain_id::ChainId,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
@@ -117,7 +117,7 @@ impl Experiment for ValidatorVersioning {
         let account_2 = context.tx_emitter.take_account();
 
         let txn_payload = TransactionPayload::Script(encode_peer_to_peer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tmp_tag(),
             account_2.address,
             1,
             vec![],
@@ -136,7 +136,7 @@ impl Experiment for ValidatorVersioning {
                 account.sequence_number,
                 123456,
                 0,
-                LBR_NAME.to_owned(),
+                COIN1_NAME.to_owned(),
                 10,
                 ChainId::test(),
             )
@@ -176,7 +176,7 @@ impl Experiment for ValidatorVersioning {
             faucet_account.sequence_number,
             123456,
             0,
-            LBR_NAME.to_owned(),
+            COIN1_NAME.to_owned(),
             10,
             ChainId::test(),
         )

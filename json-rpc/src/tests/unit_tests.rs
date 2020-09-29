@@ -29,7 +29,7 @@ use libra_metrics::get_all_metrics;
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, AccountResource, FreezingBit, LBR_NAME},
+    account_config::{from_currency_code_string, AccountResource, FreezingBit, COIN1_NAME},
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     chain_id::ChainId,
@@ -935,7 +935,7 @@ fn test_get_account() {
         .expect("account does not exist");
     let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
     let expected_resource_balances: Vec<_> = expected_resource
-        .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
+        .get_balance_resources(&[from_currency_code_string(COIN1_NAME).unwrap()])
         .unwrap()
         .iter()
         .map(|(_, bal_resource)| bal_resource.coin())
@@ -975,7 +975,7 @@ fn test_get_account() {
             .expect("account does not exist");
         let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
         let expected_resource_balances: Vec<_> = states[idx]
-            .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
+            .get_balance_resources(&[from_currency_code_string(COIN1_NAME).unwrap()])
             .unwrap()
             .iter()
             .map(|(_, bal_resource)| bal_resource.coin())

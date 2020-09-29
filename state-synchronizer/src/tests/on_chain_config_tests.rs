@@ -12,7 +12,7 @@ use executor_types::BlockExecutor;
 use futures::{future::FutureExt, stream::StreamExt};
 use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{lbr_type_tag, libra_root_address},
+    account_config::{coin1_tmp_tag, libra_root_address},
     on_chain_config::{OnChainConfig, VMPublishingOption},
     transaction::{Transaction, WriteSetPayload},
 };
@@ -144,7 +144,7 @@ fn test_on_chain_config_pub_sub() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tmp_tag(),
             validator_account,
             1_000_000,
             vec![],

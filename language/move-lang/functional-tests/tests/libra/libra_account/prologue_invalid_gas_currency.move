@@ -37,6 +37,7 @@ stdlib_script::peer_to_peer_with_metadata
 //! sender: alice
 //! gas-price: 1
 //! max-gas: 1000
+//! gas-currency: LBR
 script {
     fun main() {
     }

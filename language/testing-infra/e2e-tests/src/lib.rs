@@ -13,6 +13,7 @@ pub mod account;
 pub mod account_universe;
 pub mod common_transactions;
 pub mod compile;
+pub mod currencies;
 pub mod data_store;
 pub mod execution_strategies;
 pub mod executor;
