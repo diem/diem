@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::future::join_all;
 use libra_config::config::{NodeConfig, RoleType};
-use libra_logger::{info, log, Level, Schema};
+use libra_logger::{info, Level, Schema};
 use libra_mempool::MempoolClientSender;
 use libra_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use rand::{rngs::OsRng, RngCore};
@@ -64,7 +64,7 @@ macro_rules! log_response {
                 level = Level::Error
             }
         }
-        log!(
+        libra_logger::log!(
             level,
             RpcResponseLog {
                 trace_id: $trace_id,
