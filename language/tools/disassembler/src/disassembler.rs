@@ -310,8 +310,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             let body_iter: Vec<String> = locals
                 .into_iter()
                 .enumerate()
-                // + 1 because enumerate() starts at 0, but bytecode offsets start at 1
-                .map(|(local_idx, local)| format!("L{}:\t{}", local_idx + 1, local))
+                .map(|(local_idx, local)| format!("L{}:\t{}", local_idx, local))
                 .chain(bytecode.into_iter())
                 .collect();
             format!(" {{\n{}\n}}", body_iter.join("\n"))

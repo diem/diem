@@ -41,6 +41,9 @@ pub const MOVE_SRC: &str = "move_src";
 /// Default directory for build output
 pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_OUTPUT_DIR;
 
+/// Extension for resource and event files, which are in LCS format
+const LCS_EXTENSION: &str = "lcs";
+
 /// subdirectory of `MOVE_DATA`/<addr> where resources are stored
 const RESOURCES_DIR: &str = "resources";
 /// subdirectory of `MOVE_DATA`/<addr> where modules are stored
@@ -114,7 +117,7 @@ impl OnDiskStateView {
         let mut path = self.get_addr_path(&addr);
         path.push(RESOURCES_DIR);
         path.push(StructID(tag).to_string());
-        path
+        path.with_extension(LCS_EXTENSION)
     }
 
     // Events are stored under address/handle creation number
@@ -122,15 +125,14 @@ impl OnDiskStateView {
         let mut path = self.get_addr_path(&key.get_creator_address());
         path.push(EVENTS_DIR);
         path.push(key.get_creation_number().to_string());
-        path
+        path.with_extension(LCS_EXTENSION)
     }
 
     fn get_module_path(&self, module_id: &ModuleId) -> PathBuf {
         let mut path = self.get_addr_path(module_id.address());
         path.push(MODULES_DIR);
         path.push(module_id.name().to_string());
-        path.set_extension(MOVE_COMPILED_EXTENSION);
-        path
+        path.with_extension(MOVE_COMPILED_EXTENSION)
     }
 
     /// Read the resource bytes stored on-disk at `addr`/`tag`
@@ -182,7 +184,7 @@ impl OnDiskStateView {
         if resource_path.is_dir() {
             bail!("Bad resource path {:?}. Needed file, found directory")
         }
-        match resource_path.file_name() {
+        match resource_path.file_stem() {
             None => bail!(
                 "Bad resource path {:?}; last component must be a file",
                 resource_path

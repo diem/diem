@@ -15,7 +15,7 @@ Changed resource(s) under 1 address(es):
     Added type 00000000::Event::EventHandleGenerator: [U64(1), Address(00000000)]
     Added type 00000000::Events::Handle: [[U64(1), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]]]
 Committed changes.
-Command `view move_data/0x0000000000000000000000000000000a/events/0`:
+Command `view move_data/0x0000000000000000000000000000000a/events/0.lcs`:
 00000000::Events::AnEvent {
     i: 5
 }
@@ -27,7 +27,7 @@ Changed resource(s) under 1 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000a:
     Changed type 00000000::Events::Handle: [[U64(2), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]]]
 Committed changes.
-Command `view move_data/0x0000000000000000000000000000000a/events/0`:
+Command `view move_data/0x0000000000000000000000000000000a/events/0.lcs`:
 00000000::Events::AnEvent {
     i: 5
 }

@@ -485,22 +485,14 @@ fn explain_error(
             code_offset,
         } => {
             let status_explanation = match status_code {
-                RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., \
-                                            `move_to<T>(account)` when there is already a \
-                                            resource of type `T` under `account`)"
-                    .to_string(),
-                MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, \
-                                 `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there \
-                                 is no resource of type `T` at address `a`)"
-                    .to_string(),
-                ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or \
-                                     divide-by-zero)"
-                    .to_string(),
-                EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
-                CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
-                OUT_OF_GAS => "an out of gas error".to_string(),
-                _ => format!("a {} error", status_code.status_type()),
-            };
+                    RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`)".to_string(),
+                    MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`)".to_string(),
+                    ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow/underflow, div/mod by zero, or invalid shift)".to_string(),
+                    EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
+                    CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
+                    OUT_OF_GAS => "an out of gas error".to_string(),
+                    _ => format!("a {} error", status_code.status_type()),
+                };
             // TODO: map to source code location
             let location_explanation = match location {
                 AbortLocation::Module(id) => {
@@ -508,9 +500,6 @@ fn explain_error(
                 }
                 AbortLocation::Script => "script".to_string(),
             };
-            // TODO: code offset is 1-indexed, but disassembler instruction numbering starts at zero
-            // This is potentially confusing to someone trying to understnd where something failed
-            // by looking at a code offset + disassembled bytecode; we should fix it
             println!(
                 "Execution failed because of {} in {} at code offset {}",
                 status_explanation, location_explanation, code_offset
