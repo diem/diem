@@ -770,6 +770,7 @@ jobs:
       - run:
           name: pre-release docker images
           command: |
+            BRANCH=${CIRCLE_BRANCH}
             docker/build_push.sh -u -p -b ${BRANCH} -n client
             docker/build_push.sh -u -p -b ${BRANCH} -n init
             docker/build_push.sh -u -p -b ${BRANCH} -n faucet
@@ -808,6 +809,7 @@ jobs:
           name: push to novi ecr
           command: |
             #push to novi ecr with standard names
+            BRANCH=${CIRCLE_BRANCH}
             GIT_REV=$(git rev-parse --short=8 HEAD)
             aws ecr get-login-password --region ${AWS_REGION} | \
             docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
