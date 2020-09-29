@@ -83,6 +83,7 @@ impl NetworkBuilder {
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
         max_frame_size: usize,
+        enable_proxy_protocol: bool,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -99,6 +100,7 @@ impl NetworkBuilder {
             // TODO: Encode this value in NetworkConfig
             constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_frame_size,
+            enable_proxy_protocol,
         );
 
         NetworkBuilder {
@@ -141,6 +143,7 @@ impl NetworkBuilder {
             config.listen_address.clone(),
             authentication_mode,
             config.max_frame_size,
+            config.enable_proxy_protocol,
         );
 
         network_builder.add_connection_monitoring(

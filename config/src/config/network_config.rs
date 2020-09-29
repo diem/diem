@@ -59,6 +59,8 @@ pub struct NetworkConfig {
     // in case some peers don't have well defined addresses.
     pub seed_pubkeys: SeedPublicKeys,
     pub max_frame_size: usize,
+    // Enables proxy protocol on incoming connections to get original source addresses
+    pub enable_proxy_protocol: bool,
 }
 
 impl Default for NetworkConfig {
@@ -80,6 +82,7 @@ impl NetworkConfig {
             seed_pubkeys: HashMap::default(),
             seed_addrs: HashMap::default(),
             max_frame_size: MAX_FRAME_SIZE,
+            enable_proxy_protocol: false,
         };
         config.prepare_identity();
         config

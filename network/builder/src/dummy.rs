@@ -154,6 +154,7 @@ pub fn setup_network() -> DummyNetwork {
         listener_addr,
         authentication_mode,
         constants::MAX_FRAME_SIZE,
+        false, /* Disable proxy protocol */
     );
     network_builder.add_connectivity_manager(
         HashMap::new(),
@@ -191,6 +192,7 @@ pub fn setup_network() -> DummyNetwork {
         dialer_addr,
         authentication_mode,
         constants::MAX_FRAME_SIZE,
+        false, /* Disable proxy protocol */
     );
     network_builder.add_connectivity_manager(
         seed_addrs,

@@ -258,6 +258,7 @@ impl SynchronizerEnv {
                 addr.clone(),
                 authentication_mode,
                 constants::MAX_FRAME_SIZE,
+                false, /* Disable proxy protocol */
             );
             network_builder
                 .add_connectivity_manager(

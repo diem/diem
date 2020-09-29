@@ -1136,7 +1136,7 @@ where
                     "{} Connection from {} at {} successfully upgraded after {:.3} secs",
                     self.network_context,
                     connection.metadata.remote_peer_id.short_str(),
-                    addr,
+                    connection.metadata.addr,
                     elapsed_time,
                 );
 

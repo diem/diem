@@ -183,6 +183,7 @@ pub struct PeerManagerBuilder {
     listen_address: NetworkAddress,
     state: State,
     max_frame_size: usize,
+    enable_proxy_protocol: bool,
 }
 
 impl PeerManagerBuilder {
@@ -197,6 +198,7 @@ impl PeerManagerBuilder {
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
         max_frame_size: usize,
+        enable_proxy_protocol: bool,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
@@ -237,6 +239,7 @@ impl PeerManagerBuilder {
             listen_address,
             state: State::CREATED,
             max_frame_size,
+            enable_proxy_protocol,
         }
     }
 
@@ -290,6 +293,7 @@ impl PeerManagerBuilder {
                         HANDSHAKE_VERSION,
                         chain_id,
                         protos,
+                        self.enable_proxy_protocol,
                     ),
                     executor,
                 ))
@@ -305,6 +309,7 @@ impl PeerManagerBuilder {
                         HANDSHAKE_VERSION,
                         chain_id,
                         protos,
+                        self.enable_proxy_protocol,
                     ),
                     executor,
                 ))

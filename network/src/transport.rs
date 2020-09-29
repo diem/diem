@@ -5,7 +5,10 @@ use crate::{
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
-        wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
+        wire::{
+            handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
+            proxy_protocol,
+        },
     },
 };
 use futures::{
@@ -192,9 +195,26 @@ async fn upgrade_inbound<T: TSocket>(
     ctxt: Arc<UpgradeContext>,
     fut_socket: impl Future<Output = io::Result<T>>,
     addr: NetworkAddress,
+    proxy_protocol_enabled: bool,
 ) -> io::Result<Connection<NoiseStream<T>>> {
     let origin = ConnectionOrigin::Inbound;
-    let socket = fut_socket.await?;
+    let mut socket = fut_socket.await?;
+
+    // If we have proxy protocol enabled, process the event, otherwise skip it
+    // TODO: This would make more sense to build this in at instantiation so we don't need to put the if statement here
+    let addr = if proxy_protocol_enabled {
+        proxy_protocol::read_header(&addr, &mut socket)
+            .await
+            .map_err(|err| {
+                warn!(
+                    network_address = addr,
+                    "Failed to read proxy protocol event"
+                );
+                err
+            })?
+    } else {
+        addr
+    };
 
     // try authenticating via noise handshake
     let (mut socket, remote_peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
@@ -322,6 +342,7 @@ pub struct LibraNetTransport<TTransport> {
     base_transport: TTransport,
     ctxt: Arc<UpgradeContext>,
     identity_pubkey: x25519::PublicKey,
+    enable_proxy_protocol: bool,
 }
 
 impl<TTransport> LibraNetTransport<TTransport>
@@ -340,6 +361,7 @@ where
         handshake_version: u8,
         chain_id: ChainId,
         application_protocols: SupportedProtocols,
+        enable_proxy_protocol: bool,
     ) -> Self {
         // build supported protocols
         let mut supported_protocols = BTreeMap::new();
@@ -366,6 +388,7 @@ where
             ctxt: Arc::new(upgrade_context),
             base_transport,
             identity_pubkey,
+            enable_proxy_protocol,
         }
     }
 
@@ -508,11 +531,16 @@ where
 
         // need to move a ctxt into stream task
         let ctxt = self.ctxt.clone();
-
+        let enable_proxy_protocol = self.enable_proxy_protocol;
         // stream of inbound upgrade tasks
         let inbounds = listener.map_ok(move |(fut_socket, addr)| {
             // inbound upgrade task
-            let fut_upgrade = upgrade_inbound(ctxt.clone(), fut_socket, addr.clone());
+            let fut_upgrade = upgrade_inbound(
+                ctxt.clone(),
+                fut_socket,
+                addr.clone(),
+                enable_proxy_protocol,
+            );
             let fut_upgrade = timeout_io(TRANSPORT_TIMEOUT, fut_upgrade);
             (fut_upgrade, addr)
         });

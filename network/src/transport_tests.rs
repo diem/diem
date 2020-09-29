@@ -97,6 +97,7 @@ where
         HANDSHAKE_VERSION,
         chain_id,
         supported_protocols.clone(),
+        false, /* Disable proxy protocol */
     );
 
     let dialer_transport = LibraNetTransport::new(
@@ -107,6 +108,7 @@ where
         HANDSHAKE_VERSION,
         chain_id,
         supported_protocols.clone(),
+        false, /* Disable proxy protocol */
     );
 
     (
