@@ -378,7 +378,8 @@ fn create_test_cases() -> Vec<Test> {
                         resp.error.expect("error").message,
                         "Server error: Mempool submission error: \"Failed to update gas price to 0\"".to_string(),
                     );
-                    // wait to make sure we don't impact next the following tests
+                    // wait submitted transaction executed, so that the following tests won't have
+                    // problem when need to submit same account transaction.
                     env.wait_for_txn(&txn1);
                 });
             },
