@@ -4,7 +4,6 @@
 use serde_json::json;
 
 use libra_crypto::hash::CryptoHash;
-use libra_logger;
 use libra_types::{
     account_config::coin1_tag,
     transaction::{Transaction, TransactionPayload},
