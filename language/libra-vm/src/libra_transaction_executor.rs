@@ -40,7 +40,7 @@ use move_vm_types::{
 use rayon::prelude::*;
 use std::{
     collections::HashSet,
-    convert::{AsMut, AsRef, TryFrom},
+    convert::{AsMut, AsRef},
 };
 
 pub struct LibraVM(LibraVMImpl);
@@ -670,10 +670,7 @@ impl LibraVM {
         }
 
         // Record the histogram count for transactions per block.
-        match i64::try_from(count) {
-            Ok(val) => BLOCK_TRANSACTION_COUNT.set(val),
-            Err(_) => BLOCK_TRANSACTION_COUNT.set(std::i64::MAX),
-        }
+        BLOCK_TRANSACTION_COUNT.observe(count as f64);
 
         Ok(result)
     }
