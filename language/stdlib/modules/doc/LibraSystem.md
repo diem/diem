@@ -3,6 +3,8 @@
 
 # Module `0x1::LibraSystem`
 
+The <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code> module provides an interface for maintaining information
+about the set of validators used during consensus.
 
 
 -  [Struct <code><a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a></code>](#0x1_LibraSystem_ValidatorInfo)
@@ -35,6 +37,7 @@
 
 ## Struct `ValidatorInfo`
 
+ValidatorInfo contains information about a Validator Owner.
 
 
 <pre><code><b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>
@@ -51,19 +54,19 @@
 <code>addr: address</code>
 </dt>
 <dd>
-
+ The address (account) of the Validator Owner
 </dd>
 <dt>
 <code>consensus_voting_power: u64</code>
 </dt>
 <dd>
-
+ The voting power of the Validator Owner (currently always 1).
 </dd>
 <dt>
 <code>config: <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a></code>
 </dt>
 <dd>
-
+ Configuration information about the Validator.
 </dd>
 </dl>
 
@@ -74,6 +77,14 @@
 
 ## Resource `CapabilityHolder`
 
+Enables a scheme that restricts the LibraSystem config
+in LibraConfig from being modified by any other module.  Only
+code in this module can get a reference to the ModifyConfigCapability<LibraSystem>
+that is required by LibraConfig::set_with_capability_and_reconfigure to
+modify that the LibraSystem config. This is only needed in order to permit
+Validator Operators to modify the ValidatorInfo for the Validator Owner
+who has delegated management to them.  For all other LibraConfig configs,
+Libra root is the only signer who can modify them.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>
@@ -101,6 +112,8 @@
 
 ## Struct `LibraSystem`
 
+The LibraSystem struct stores the validator set and crypto scheme in
+LibraConfig.
 
 
 <pre><code><b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>
@@ -227,6 +240,10 @@ An out of bounds index for the validator set was encountered
 
 ## Function `initialize_validator_set`
 
+Publishes the LibraConfig for the LibraSystem struct, which contains the current
+validator set, and  publishes the Capability holder with the
+ModifyConfigCapability<LibraSystem> returned by the publish function, which allows
+code in this module to change the validator set.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">initialize_validator_set</a>(lr_account: &signer)
@@ -351,12 +368,14 @@ An out of bounds index for the validator set was encountered
     lr_account: &signer,
     validator_address: address
 ) <b>acquires</b> <a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     // A prospective validator must have a validator config <b>resource</b>
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraSystem.md#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">EINVALID_PROSPECTIVE_VALIDATOR</a>));
 
     <b>let</b> libra_system_config = <a href="LibraSystem.md#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
+
     // Ensure that this address is not already a validator
     <b>assert</b>(
         !<a href="LibraSystem.md#0x1_LibraSystem_is_validator_">is_validator_</a>(validator_address, &libra_system_config.validators),
@@ -469,7 +488,6 @@ a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorCon
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 <b>aborts_if</b> !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>ensures</b> !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 </code></pre>
 
 
@@ -483,7 +501,8 @@ a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorCon
 </code></pre>
 
 
-Removed validator should no longer be valid.
+Removed validator is no longer a validator.  Depends on no other entries for same address
+in validator_set
 
 
 <pre><code><b>ensures</b> !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
@@ -545,7 +564,7 @@ Removed validator should no longer be valid.
 Must abort if the signer does not have the ValidatorOperator role [B23].
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{validator_operator_account: validator_operator_account};
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{validator_operator_addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account)};
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
 <b>aborts_if</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">ValidatorConfig::spec_get_operator</a>(validator_address)
     != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_operator_account)
@@ -554,20 +573,15 @@ Must abort if the signer does not have the ValidatorOperator role [B23].
 <a name="0x1_LibraSystem_is_validator_info_updated$18"></a>
 <b>let</b> is_validator_info_updated =
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address) &&
-    (<b>exists</b> v in <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>():
-        v.addr == validator_address
-        && v.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_address));
+    (<b>exists</b> v_info in <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>():
+        v_info.addr == validator_address
+        && v_info.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_address));
 <b>include</b> is_validator_info_updated ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
-<b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_address);
 </code></pre>
 
 
-*Informally:* Does not change the length of the validator set, only
-changes ValidatorInfo for validator_address, and doesn't change
-any addresses.
-
-TODO: Look at called procedures to understand this better.  Also,
-look at transactions.
+Does not change the length of the validator set, only changes ValidatorInfo
+for validator_address, and doesn't change any addresses.
 
 
 <a name="0x1_LibraSystem_vs$19"></a>
@@ -599,6 +613,7 @@ It updates the correct entry in the correct way
 <pre><code><b>ensures</b> <b>forall</b> i in 0..len(vs): vs[i].config == <b>old</b>(vs[i].config) ||
             (<b>old</b>(vs)[i].addr == validator_address &&
             vs[i].config == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_address));
+<b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_address);
 </code></pre>
 
 
@@ -873,11 +888,11 @@ It updates the correct entry in the correct way
 <b>ensures</b> (<b>forall</b> i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
 <b>ensures</b>
     (<b>exists</b> i in 0..size: validators[i].addr == addr) ==&gt;
-        <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result) &&
-        {
-            <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
-            0 &lt;= at && at &lt; size && validators[at].addr == addr
-        };
+        <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result)
+        && {
+                <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+                0 &lt;= at && at &lt; size && validators[at].addr == addr
+            };
 </code></pre>
 
 
@@ -936,21 +951,65 @@ It updates the correct entry in the correct way
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_LibraSystem_new_validator_config$21"></a>
 <b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validators[i].addr);
-<b>requires</b> 0 &lt;= i && i &lt; len(validators);
-<b>requires</b> [deactivated] <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i].addr);
-<b>ensures</b>
+</code></pre>
+
+
+Prover is able to prove this because get_validator_index_ ensures it
+in calling context.
+
+
+<pre><code><b>requires</b> 0 &lt;= i && i &lt; len(validators);
+</code></pre>
+
+
+Every member of validators is valid.
+
+
+<pre><code><b>requires</b> [deactivated] <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i].addr);
+</code></pre>
+
+
+Somewhat simplified from the code because of properties guaranteed
+by the calling context.
+
+
+<pre><code><b>ensures</b>
     result ==
         (<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i].addr) &&
          new_validator_config != <b>old</b>(validators[i].config));
-<b>ensures</b>
+</code></pre>
+
+
+It only updates validators at index <code>i</code>, and updates the
+<code>config</code> field to <code>new_validator_config</code>.
+
+
+<pre><code><b>ensures</b>
     result ==&gt;
         validators == update_vector(
             <b>old</b>(validators),
             i,
             update_field(<b>old</b>(validators[i]), config, new_validator_config)
         );
-<b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
+</code></pre>
+
+
+Does not change validators if result is false
+
+
+<pre><code><b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
 <b>ensures</b> validators == update_vector(<b>old</b>(validators), i, validators[i]);
+</code></pre>
+
+
+Needed this to make "consensus voting power is always 1" invariant
+prove, for unclear reasons.
+
+
+<pre><code><b>requires</b> <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+   <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].consensus_voting_power == 1;
+<b>ensures</b> <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+   <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].consensus_voting_power == 1;
 </code></pre>
 
 
@@ -1061,12 +1120,37 @@ Only {add, remove} validator [B22] and update_config_and_reconfigure
 
 
 
+Every validator has a published ValidatorConfig whose config option is "some"
+(meaning of ValidatorConfig::is_valid).
+Unfortunately, this times out for unknown reasons (it doesn't seem to be hard),
+so it is deactivated.
+The Prover can prove it if the uniqueness invariant for the LibraSystem resource
+is commented out, along with aborts for update_config_and_reconfigure and everything
+else that breaks (e.g., there is an ensures in remove_validator that has to be
+commented out)
 
-<a name="0x1_LibraSystem_validators$22"></a>
+
+<pre><code><b>invariant</b> [deactivated, <b>global</b>] <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].addr);
+</code></pre>
 
 
-<pre><code><b>let</b> validators = <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>();
-<b>invariant</b> [deactivated, <b>global</b>] <b>forall</b> i1 in 0..len(validators): <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i1].addr);
+Every validator in the validator set has a validator role.
+Note: Verification of LibraSystem seems to be very sensitive, and will
+often time out because of very small changes.  Disabling this property
+(with [deactivate, global]) is a quick temporary fix.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+    <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].addr);
+</code></pre>
+
+
+Consensus_voting_power is always 1.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+    <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].consensus_voting_power == 1;
 </code></pre>
 
 

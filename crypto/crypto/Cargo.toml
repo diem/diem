@@ -35,7 +35,7 @@ thiserror = "1.0.20"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 vanilla-x25519-dalek = { version = "1.0.1", package = 'x25519-dalek', optional = true }
 x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat3", version = "1.0.1", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
-aes-gcm = "0.6.0"
+aes-gcm = "0.7.0"
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }

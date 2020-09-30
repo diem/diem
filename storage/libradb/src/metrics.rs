@@ -82,7 +82,7 @@ pub static LIBRA_STORAGE_API_LATENCY_SECONDS: Lazy<HistogramVec> = Lazy::new(|| 
         // metric description
         "Libra storage api latency in seconds",
         // metric labels (dimensions)
-        &["api_name"]
+        &["api_name", "result"]
     )
     .unwrap()
 });

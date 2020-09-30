@@ -42,8 +42,8 @@ spec fun create_recovery_address {
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
     include LibraAccount::ExtractKeyRotationCapabilityEnsures;
 
-    let addr = Signer::spec_address_of(account);
-    let rotation_cap = LibraAccount::spec_get_key_rotation_cap(addr);
+    let account_addr = Signer::spec_address_of(account);
+    let rotation_cap = LibraAccount::spec_get_key_rotation_cap(account_addr);
 
     include RecoveryAddress::PublishAbortsIf{
         recovery_account: account,
@@ -55,16 +55,19 @@ spec fun create_recovery_address {
     //     recovery_account: account,
     //     rotation_cap: old(rotation_cap) //! error: `old(..)` expression not allowed in this context
     // };
-
     // Instead, the postconditions in RecoveryAddress::PublishEnsures are expanded here.
-    ensures RecoveryAddress::spec_is_recovery_address(addr);
-    ensures len(RecoveryAddress::spec_get_rotation_caps(addr)) == 1;
-    ensures RecoveryAddress::spec_get_rotation_caps(addr)[0] == old(rotation_cap);
+    ensures RecoveryAddress::spec_is_recovery_address(account_addr);
+    ensures len(RecoveryAddress::spec_get_rotation_caps(account_addr)) == 1;
+    ensures RecoveryAddress::spec_get_rotation_caps(account_addr)[0] == old(rotation_cap);
+
+    // TODO: The following line is added to help Prover verifying the
+    // "aborts_with [check]" spec. This fact can be inferred from the successful
+    // termination of the prologue functions, but Prover cannot figure it out currently.
+    requires LibraAccount::exists_at(account_addr);
 
     aborts_with [check]
         Errors::INVALID_STATE,
         Errors::INVALID_ARGUMENT,
-        Errors::ALREADY_PUBLISHED,
-        Errors::NOT_PUBLISHED; // TODO: Prover cannot prove `account` has LibraAccount published.
+        Errors::ALREADY_PUBLISHED;
 }
 }

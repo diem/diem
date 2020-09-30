@@ -1,5 +1,6 @@
 script {
 use 0x1::ValidatorConfig;
+use 0x1::Errors;
 
 /// # Summary
 /// Updates a validator's configuration. This does not reconfigure the system and will not update
@@ -40,6 +41,7 @@ use 0x1::ValidatorConfig;
 
 fun register_validator_config(
     validator_operator_account: &signer,
+    // TODO Rename to validator_addr, since it is an address.
     validator_account: address,
     consensus_pubkey: vector<u8>,
     validator_network_addresses: vector<u8>,
@@ -53,4 +55,13 @@ fun register_validator_config(
         fullnode_network_addresses
     );
  }
+
+/// Access control rule is that only the validator operator for a validator may set
+/// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
+ spec fun register_validator_config {
+    aborts_with [check] Errors::INVALID_ARGUMENT, Errors::NOT_PUBLISHED;
+    include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
+    ensures ValidatorConfig::is_valid(validator_account);
+ }
+
 }

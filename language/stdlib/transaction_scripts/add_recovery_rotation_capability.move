@@ -65,7 +65,6 @@ spec fun add_recovery_rotation_capability {
     // include RecoveryAddress::AddRotationCapabilityEnsures{
     //     to_recover: old(rotation_cap) //! error: `old(..)` expression not allowed in this context
     // };
-
     // Instead, the postconditions in RecoveryAddress::AddRotationCapabilityEnsures are expanded here.
     ensures RecoveryAddress::spec_get_rotation_caps(recovery_address)[
         len(RecoveryAddress::spec_get_rotation_caps(recovery_address)) - 1] == old(rotation_cap);

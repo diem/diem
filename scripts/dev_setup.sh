@@ -20,7 +20,7 @@ HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
 DOTNET_VERSION=3.1
-BOOGIE_VERSION=2.7.30
+BOOGIE_VERSION=2.7.32
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -32,8 +32,7 @@ function usage {
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
   echo "-o install operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
-  echo "-y install Move prover tools: z3, dotnet, boogie"
-  echo "-z installs or updates Move prover tools only"
+  echo "-y installs or updates Move prover tools: z3, dotnet, boogie"
   echo "-v verbose mode"
   echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
   echo "This command must be called from the root folder of the Libra project."
@@ -346,7 +345,7 @@ function install_boogie {
   if [[ "$("$HOME"/.dotnet/dotnet tool list -g)" =~ .*boogie.*${BOOGIE_VERSION}.* ]]; then
     echo "Boogie $BOOGIE_VERSION already installed"
   else
-    "$HOME/.dotnet/dotnet" tool install --global Boogie --version "$BOOGIE_VERSION"
+    "$HOME/.dotnet/dotnet" tool update --global Boogie --version $BOOGIE_VERSION
   fi
 }
 

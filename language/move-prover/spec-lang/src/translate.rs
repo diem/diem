@@ -54,6 +54,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
+use move_lang::expansion::ast::PragmaProperty;
 
 // =================================================================================================
 /// # Translator
@@ -1669,13 +1670,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     signature, body, ..
                 } => self.def_ana_spec_fun(signature, body),
                 Let { name, def } => self.def_ana_let(context, loc, name, def),
-                Include { exp } => self.def_ana_schema_inclusion_outside_schema(
-                    loc,
-                    context,
-                    None,
-                    PropertyBag::default(),
-                    exp,
-                ),
+                Include { properties, exp } => {
+                    let properties = self.translate_properties(properties, &|_| None);
+                    self.def_ana_schema_inclusion_outside_schema(
+                        loc, context, None, properties, exp,
+                    )
+                }
                 Apply {
                     exp,
                     patterns,
@@ -2438,7 +2438,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         // First recursively visit all schema includes and ensure they are analyzed.
         for included_name in self
             .iter_schema_includes(&block.value.members)
-            .map(|(_, exp)| {
+            .map(|(_, _, exp)| {
                 let mut res = vec![];
                 extract_schema_access(exp, &mut res);
                 res
@@ -2537,12 +2537,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Process all schema includes. We need to do this before we type check expressions to have
         // all variables from includes in the environment.
-        for (_, included_exp) in self.iter_schema_includes(&block.value.members) {
+        for (_, included_props, included_exp) in self.iter_schema_includes(&block.value.members) {
+            let included_props = self.translate_properties(included_props, &|_| None);
             self.def_ana_schema_exp(
                 &type_params,
                 &mut all_vars,
                 &mut included_spec,
                 true,
+                &included_props,
                 included_exp,
             );
         }
@@ -2605,10 +2607,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn iter_schema_includes<'a>(
         &self,
         members: &'a [EA::SpecBlockMember],
-    ) -> impl Iterator<Item = (&'a MoveIrLoc, &'a EA::Exp)> {
+    ) -> impl Iterator<Item = (&'a MoveIrLoc, &'a Vec<PragmaProperty>, &'a EA::Exp)> {
         members.iter().filter_map(|m| {
-            if let EA::SpecBlockMember_::Include { exp } = &m.value {
-                Some((&m.loc, exp))
+            if let EA::SpecBlockMember_::Include { properties, exp } = &m.value {
+                Some((&m.loc, properties, exp))
             } else {
                 None
             }
@@ -2639,9 +2641,18 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
         spec: &mut Spec,
         allow_new_vars: bool,
+        properties: &PropertyBag,
         exp: &EA::Exp,
     ) {
-        self.def_ana_schema_exp_oper(context_type_params, vars, spec, allow_new_vars, None, exp)
+        self.def_ana_schema_exp_oper(
+            context_type_params,
+            vars,
+            spec,
+            allow_new_vars,
+            None,
+            properties,
+            exp,
+        )
     }
 
     /// Analyzes operations in schema expressions. This extends the path condition as needed
@@ -2653,6 +2664,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         spec: &mut Spec,
         allow_new_vars: bool,
         path_cond: Option<Exp>,
+        properties: &PropertyBag,
         exp: &EA::Exp,
     ) {
         let loc = self.parent.to_loc(&exp.loc);
@@ -2675,6 +2687,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     spec,
                     allow_new_vars,
                     path_cond,
+                    properties,
                     rhs,
                 );
             }
@@ -2691,6 +2704,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     spec,
                     allow_new_vars,
                     path_cond.clone(),
+                    properties,
                     lhs,
                 );
                 self.def_ana_schema_exp_oper(
@@ -2699,6 +2713,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     spec,
                     allow_new_vars,
                     path_cond,
+                    properties,
                     rhs,
                 );
             }
@@ -2714,6 +2729,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     spec,
                     allow_new_vars,
                     t_path_cond,
+                    properties,
                     t,
                 );
                 let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &loc);
@@ -2725,6 +2741,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     spec,
                     allow_new_vars,
                     e_path_cond,
+                    properties,
                     e,
                 );
             }
@@ -2734,6 +2751,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 spec,
                 allow_new_vars,
                 path_cond,
+                properties,
                 &loc,
                 maccess,
                 type_args_opt,
@@ -2745,6 +2763,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 spec,
                 allow_new_vars,
                 path_cond,
+                properties,
                 &loc,
                 maccess,
                 type_args_opt,
@@ -2764,6 +2783,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         spec: &mut Spec,
         allow_new_vars: bool,
         path_cond: Option<Exp>,
+        schema_properties: &PropertyBag,
         loc: &Loc,
         maccess: &EA::ModuleAccess,
         type_args_opt: &Option<Vec<EA::Type>>,
@@ -2924,10 +2944,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     );
                 }
             }
+            let mut effective_properties = schema_properties.clone();
+            effective_properties.extend(properties.clone());
             spec.conditions.push(Condition {
                 loc: loc.clone(),
                 kind: kind.clone(),
-                properties: properties.clone(),
+                properties: effective_properties,
                 exp,
             });
         }
@@ -3051,11 +3073,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             &mut vars,
             &mut spec,
             false,
+            &PropertyBag::default(),
             exp,
         );
 
         // Write the conditions to the context item.
-        // TODO: merge pragma properties as well?
         self.add_conditions_to_context(
             context,
             loc,

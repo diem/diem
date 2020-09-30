@@ -38,14 +38,50 @@ while getopts 'u:p:xh' OPTION; do
   esac
 done
 
+
+login_data() {
+  USERNAME=$1
+  PASSWORD=$2
+cat <<EOF
+{
+  "username": "$USERNAME",
+  "password": "$PASSWORD"
+}
+EOF
+}
+
+#logs in and fetches a token
+function get_token {
+  USERNAME="$1"
+  PASSWORD="$2"
+  LOGIN_DATA=$(login_data "$USERNAME" "$PASSWORD")
+  TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$LOGIN_DATA" "https://hub.docker.com/v2/users/login/" | jq -r .token)
+  echo "$TOKEN"
+}
+
+#Deletes an individual tag from a repo slug, requires a token from get_token()
+function del_tag {
+  REPO="$1"
+  TAG="$2"
+  TOKEN="$3"
+  curl "https://hub.docker.com/v2/repositories/${REPO}/tags/${TAG}/" \
+  -X DELETE \
+  -H "Authorization: JWT ${TOKEN}"
+  OUTPUT=$?
+  if [[ $OUTPUT -eq 0 ]]; then
+    echo Deleted "$REPO:$TAG"
+  else
+    echo Failed to delete "$REPO:$TAG"
+  fi
+}
+
+
 ######################################################################################################################
 # Takes a slug org/repo ( libra/client ) and deletes all tags with release-* over 90 days and all other
 # over 2 days (assumed to be test images).
 ######################################################################################################################
 function prune_repo {
     REPO=$1
-
-
     # Whoookay...
     # Follow closely on this one liner.
     # curl dockerhub to get a wad of json including the name/last updated date of each tag in the dockerhub repo.
@@ -73,29 +109,47 @@ function prune_repo {
     #yeah leapseconds, dont care
     NOW_DAYS=$(( NOW / 86400 ))
 
-    echo NOW "$NOW"
-    echo NOW_DAYS "$NOW_DAYS"
+    TO_DELETE=
+    PAGE=0
+    while [[ $(echo "$RELEASES" | wc -l) -gt 1 ]]; do
+      PAGE=$(( PAGE + 1))
+      while IFS= read -r line; do
+          TAG=$(echo "$line" | cut -d' ' -f1)
+          TIME=$(echo "$line" | cut -d' ' -f2)
+          DAYS_SINCE_0=$(( TIME / 86400));
+          AGE_DAYS=$(( NOW_DAYS - DAYS_SINCE_0 ));
 
-    echo "$RELEASES" | while IFS= read -r line ; do
-        TAG=$(echo "$line" | cut -d' ' -f1)
-        TIME=$(echo "$line" | cut -d' ' -f2)
-        DAYS_SINCE_0=$(( TIME / 86400));
-        AGE_DAYS=$(( NOW_DAYS - DAYS_SINCE_0 ));
+          if [[ $TAG == "release-"* ]] && [[ $AGE_DAYS -gt 90 ]]; then
+              echo "$REPO:$TAG is a release. It's age is $AGE_DAYS -- will delete"
+              TO_DELETE="${TO_DELETE}"'
+              '"${TAG}"
+          elif [[ $TAG != "release-"* ]] && [[ $AGE_DAYS -gt 7 ]]; then
+              echo "$REPO:$TAG not release. It's age is $AGE_DAYS -- will delete"
+              TO_DELETE="${TO_DELETE}"'
+              '"${TAG}"
+          else
+              echo "$REPO:$TAG is new, leaving alone."
+          fi
+      done <<< "$RELEASES"
+      echo PAGE="$PAGE"
+      RELEASES=$(curl -L -s "https://registry.hub.docker.com/v2/repositories/${REPO}/tags?page_size=100&page=${PAGE}" | \
+      jq '."results"[] | (.name + " " + (.last_updated | sub(".[0-9]+Z$"; "Z") | fromdate | tostring ))' | \
+      sed 's/"//g')
+  done
 
-        DELETE=false
-        if [[ $TAG == "release-"* ]] && [[ $AGE_DAYS -gt 90 ]]; then
-            echo "$REPO:$TAG is a release. It's age is $AGE_DAYS -- deleting"
-            DELETE=true
-        elif [[ $TAG != "release-"* ]] && [[ $AGE_DAYS -gt 14 ]]; then
-            echo "$REPO:$TAG not release. It's age is $AGE_DAYS -- deleting"
-            DELETE=true
-        else
-            echo "$REPO:$TAG is new, leaving alone."
-        fi
-        if [[ $DELETE == "true" ]] && [[ $dryrun == "false" ]]; then
-            curl -X DELETE -u "$user:$pass" "https://cloud.docker.com/v2/repositories/$REPO/tags/$TAG/"
-        fi
-    done
+  if [[ $dryrun == "false" ]]; then
+    TOKEN=$( get_token "$user" "$pass" )
+    while IFS= read -r TAG; do
+      TAG=${TAG// /}
+      if [[ "$TAG" != "" ]]; then
+        del_tag "$REPO" "$TAG" "$TOKEN"
+      fi
+    done <<< "$TO_DELETE"
+  else
+    echo Dry run, not deleting tags:
+    echo "$TO_DELETE"
+  fi
+
 }
 
 prune_repo "libra/client"

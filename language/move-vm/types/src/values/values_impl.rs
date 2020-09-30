@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::function::NativeResult;
-use libra_types::vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{
@@ -10,6 +9,7 @@ use move_core_types::{
         REFERENCE_SIZE, STRUCT_SIZE,
     },
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
+    vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
 use std::{
     cell::RefCell,

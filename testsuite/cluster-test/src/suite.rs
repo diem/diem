@@ -37,6 +37,11 @@ impl ExperimentSuite {
             experiments.push(b);
         }
         experiments.push(Box::new(
+            PerformanceBenchmarkParams::non_zero_gas_price(0, 1)
+                .enable_db_backup()
+                .build(cluster),
+        ));
+        experiments.push(Box::new(
             PerformanceBenchmarkParams::new_nodes_down(0)
                 .enable_db_backup()
                 .build(cluster),

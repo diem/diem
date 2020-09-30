@@ -6,10 +6,13 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use libra_types::{transaction::MAX_TRANSACTION_SIZE_IN_BYTES, vm_status::StatusCode};
 use mirai_annotations::*;
-use move_core_types::gas_schedule::{
-    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
+use move_core_types::{
+    gas_schedule::{
+        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
+        MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
+    vm_status::StatusCode,
 };
 use vm::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},

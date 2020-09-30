@@ -41,6 +41,7 @@ pub const TRANSACTION_SCRIPT_DOC_TEMPLATE: &str = "transaction_scripts/overview_
 pub const ERROR_DESC_DIR: &str = "error_descriptions";
 pub const ERROR_DESC_FILENAME: &str = "error_descriptions";
 
+pub const PACKED_TYPES_DIR: &str = "packed_types";
 pub const PACKED_TYPES_FILENAME: &str = "packed_types";
 pub const PACKED_TYPES_EXTENSION: &str = "txt";
 
@@ -271,9 +272,19 @@ fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_scr
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
+pub fn get_packed_types_path() -> PathBuf {
+    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
+    path.push(PACKED_TYPES_DIR);
+    path.push(PACKED_TYPES_FILENAME);
+    path.set_extension(PACKED_TYPES_EXTENSION);
+    path
+}
+
 pub fn build_packed_types_map() {
     let mut options = move_prover::cli::Options::default();
     let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
+    path.push(PACKED_TYPES_DIR);
+    fs::create_dir_all(&path).unwrap();
     path.push(PACKED_TYPES_FILENAME);
     path.set_extension(PACKED_TYPES_EXTENSION);
     options.output_path = path.to_str().unwrap().to_string();

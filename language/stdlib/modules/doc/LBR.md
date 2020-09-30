@@ -323,14 +323,16 @@ Returns true if <code>CoinType</code> is <code><a href="LBR.md#0x1_LBR_LBR">LBR:
 
 
 
-<pre><code>pragma verify = <b>false</b>, opaque = <b>true</b>;
+<pre><code>pragma opaque, verify = <b>false</b>;
+<b>include</b> <a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;;
 </code></pre>
 
 
-The following is correct because currency codes are unique.
+The following is correct because currency codes are unique; however, we
+can currently not prove it, therefore verify is false.
 
 
-<pre><code><b>ensures</b> result == <a href="LBR.md#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;();
+<pre><code><b>ensures</b> result == <a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;CoinType&gt;() && <a href="LBR.md#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;();
 </code></pre>
 
 
@@ -386,13 +388,6 @@ banker's rounding, but this adds considerable arithmetic complexity.
 <details>
 <summary>Specification</summary>
 
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-> TODO: disabled due to timeout.
 
 
 <pre><code>pragma opaque;

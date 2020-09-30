@@ -8,7 +8,10 @@ use proptest_derive::Arbitrary;
 #[cfg(any(test, feature = "fuzzing"))]
 use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt,
+};
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
 /// By design, the lower part of EventKey is the same as account address.
@@ -41,6 +44,11 @@ impl EventKey {
         arr_bytes.copy_from_slice(&self.0[EventKey::LENGTH - AccountAddress::LENGTH..]);
 
         AccountAddress::new(arr_bytes)
+    }
+
+    /// If this is the `ith` EventKey` created by `get_creator_address()`, return `i`
+    pub fn get_creation_number(&self) -> u64 {
+        u64::from_le_bytes(self.0[0..8].try_into().unwrap())
     }
 
     #[cfg(any(test, feature = "fuzzing"))]

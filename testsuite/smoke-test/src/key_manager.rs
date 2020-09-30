@@ -5,13 +5,8 @@ use crate::{smoke_test_environment::SmokeTestEnvironment, workspace_builder};
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
 use libra_global_constants::CONSENSUS_KEY;
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use std::{
-    convert::TryInto,
-    process::{Command, Stdio},
-    thread::sleep,
-    time::Duration,
-};
+use libra_secure_storage::{CryptoStorage, Storage};
+use std::{convert::TryInto, process::Command, thread::sleep, time::Duration};
 
 const KEY_MANAGER_BIN: &str = "libra-key-manager";
 
@@ -23,7 +18,6 @@ fn test_key_manager_consensus_rotation() {
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.
-    // TODO(joshlind): see if we can refactor TestEnvironment to clean this up.
     let node_config_path = env.validator_swarm.config.config_files.get(0).unwrap();
     let node_config = NodeConfig::load(&node_config_path).unwrap();
     let json_rpc_endpoint = format!("http://127.0.0.1:{}", node_config.rpc.address.port());
@@ -31,10 +25,10 @@ fn test_key_manager_consensus_rotation() {
     let mut key_manager_config = KeyManagerConfig::default();
     key_manager_config.json_rpc_endpoint = json_rpc_endpoint.clone();
     key_manager_config.rotation_period_secs = 10;
-    key_manager_config.sleep_period_secs = 10;
+    key_manager_config.sleep_period_secs = 1000; // Large sleep period to force a single rotation
 
     // Load validator's on disk storage and update key manager secure backend in config
-    let mut storage: Storage = if let Identity::FromStorage(storage_identity) =
+    let storage: Storage = if let Identity::FromStorage(storage_identity) =
         &node_config.validator_network.as_ref().unwrap().identity
     {
         let storage_backend = storage_identity.backend.clone();
@@ -56,23 +50,13 @@ fn test_key_manager_consensus_rotation() {
     assert_eq!(&current_consensus, validator_info.consensus_public_key());
 
     // Spawn the key manager and sleep until a rotation occurs.
-    // TODO(joshlind): support a dedicated key manager log (instead of just printing on failure).
     let mut command = Command::new(workspace_builder::get_bin(KEY_MANAGER_BIN));
     command
         .current_dir(workspace_builder::workspace_root())
-        .arg(key_manager_config_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .arg(key_manager_config_path);
 
-    let key_manager = command.spawn().unwrap();
+    let mut key_manager = command.spawn().unwrap();
     sleep(Duration::from_secs(20));
-
-    // Submit a reconfiguration so that the key rotation will be performed on-chain
-    // let libra = get_libra_interface(&node_config);
-    // let time_service = RealTimeService::new();
-    // let libra_root_key = env.libra_root_key.0;
-    // submit_new_reconfig(&libra, &time_service, &libra_root_key).unwrap();
-    // sleep(Duration::from_secs(2));
 
     // Verify the consensus key has been rotated in secure storage and on-chain.
     let rotated_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
@@ -80,13 +64,6 @@ fn test_key_manager_consensus_rotation() {
     assert_eq!(&rotated_consensus, validator_info.consensus_public_key());
     assert_ne!(current_consensus, rotated_consensus);
 
-    // Cause a failure (i.e., wipe storage) and verify the key manager exits with an error status.
-    storage.reset_and_clear().unwrap();
-    let output = key_manager.wait_with_output().unwrap();
-    if output.status.success() {
-        panic!(
-            "Key manager did not return an error as expected! Printing key manager output: {:?}",
-            String::from_utf8_lossy(&output.stdout)
-        );
-    }
+    // Kill the key manager process
+    key_manager.kill().unwrap();
 }

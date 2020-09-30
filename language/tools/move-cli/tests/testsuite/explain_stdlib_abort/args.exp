@@ -1,5 +1,5 @@
 Command `run script.move`:
-Compiling transaction script
+Compiling 1 source file(s)
 Execution aborted with code 1 in module 00000000000000000000000000000001::Vector. Abort code details:
 Reason:
   Name: EINDEX_OUT_OF_BOUNDS

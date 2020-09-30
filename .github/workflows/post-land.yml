@@ -1,0 +1,74 @@
+---
+name: Post-land Test
+
+on:
+  push:
+    branches:
+      - 'release**'
+
+jobs:
+  run-cluster-test-pre-release-suite:
+    name: Run the pre-release suite of Cluster Test
+    runs-on: self-hosted
+    # The pre-release suite run time varies 1~1.5 hr.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v1
+      - name: set_env
+        id: set_env
+        run: |
+          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "::set-env name=HEAD_GIT_REV::$HEAD_GIT_REV"
+          IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
+          echo $IMAGE_TAG
+          echo "::set-env name=IMAGE_TAG::$IMAGE_TAG"
+      - name: poll_images
+        # Poll until images are ready
+        env:
+          AWS_REGION: us-west-2
+          RETRIES: 1
+        run: |
+          set +e
+          retry=0
+          status=1
+          while [[ $status != 0 && $retry < $RETRIES ]]; do
+            status=0
+            for image in libra/validator libra/validator_tcb libra/init libra/cluster_test; do
+              aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
+              status=$((status + $?))
+            done
+            retry=$((retry + 1))
+            if [[ $status != 0 ]] ; then
+              echo "CI has not pushed all images to ECR."
+              echo "Wait $((1*$retry)) of $((1*$RETRIES)) minutes before retry."
+              sleep 1m
+            fi
+          done
+          exit $status
+      - name: Run Cluster Test
+        run: |
+          date
+          ./scripts/cti --tag $IMAGE_TAG --timeout-secs 7200 \
+            --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_CHANGELOG }} \
+            --suite pre_release
+      - name: Push alert
+        if: ${{ failure() }}
+        run: |
+          jq -n \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with ${{ steps.set_env.outputs.image_tag }}." \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+          curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_PUSH }}

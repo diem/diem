@@ -478,8 +478,8 @@ The sender can only rotate its own base url [B25].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
-    <b>ensures</b> <b>forall</b> addr:address <b>where</b> addr != sender:
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url);
+    <b>ensures</b> <b>forall</b> addr1:address <b>where</b> addr1 != sender:
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url);
 }
 </code></pre>
 
@@ -590,8 +590,8 @@ The sender only rotates its own compliance_public_key [B25].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
-    <b>ensures</b> <b>forall</b> addr:address <b>where</b> addr != sender:
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key);
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> addr1 != sender:
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key);
 }
 </code></pre>
 
@@ -968,9 +968,9 @@ message is not important for the verification problem, as long as the prover con
 messages which fail verification and which do not.
 
 
-<pre><code>pragma opaque = <b>true</b>, verify = <b>false</b>;
+<pre><code>pragma opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value);
+<b>ensures</b> [abstract] result == <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value);
 </code></pre>
 
 
@@ -1296,7 +1296,8 @@ The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 
 ## Module Specification
 
-Uninterpreted function for <code><a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_message">Self::dual_attestation_message</a></code>.
+Uninterpreted function for <code><a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_message">Self::dual_attestation_message</a></code>. The actual value does not matter for
+the verification problem.
 
 
 <a name="0x1_DualAttestation_spec_dual_attestation_message"></a>

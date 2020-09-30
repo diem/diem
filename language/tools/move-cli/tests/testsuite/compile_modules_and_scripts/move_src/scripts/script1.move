@@ -1,0 +1,4 @@
+script {
+    fun script1() {
+    }
+}

@@ -3,6 +3,10 @@
 
 /// This module provides various indexes used by Mempool
 use crate::core_mempool::transaction::{MempoolTransaction, TimelineState};
+use crate::{
+    counters,
+    logging::{LogEntry, LogSchema},
+};
 use libra_logger::prelude::*;
 use libra_types::{account_address::AccountAddress, transaction::GovernanceRole};
 use rand::seq::SliceRandom;
@@ -284,7 +288,12 @@ impl ParkingLotIndex {
                 if let Some((_account, seq_nums)) = self.data.get_mut(*index) {
                     seq_nums.insert(sequence_number)
                 } else {
-                    error!("[mempool] parking lot invariant violated: for account {}, account index exists but missing entry in data", sender);
+                    counters::CORE_MEMPOOL_INVARIANT_VIOLATION_COUNT.inc();
+                    error!(
+                        LogSchema::new(LogEntry::InvariantViolated),
+                        "Parking lot invariant violated: for account {}, account index exists but missing entry in data",
+                        sender
+                    );
                     return;
                 }
             }

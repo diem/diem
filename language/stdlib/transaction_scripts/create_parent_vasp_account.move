@@ -35,7 +35,7 @@ use 0x1::SlidingNonce;
 ///
 /// # Related Scripts
 /// * `Script::create_child_vasp_account`
-/// * `Script::add_currency`
+/// * `Script::add_currency_to_account`
 /// * `Script::rotate_authentication_key`
 /// * `Script::add_recovery_rotation_capability`
 /// * `Script::create_recovery_address`

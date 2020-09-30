@@ -286,7 +286,7 @@ module Libra {
         /// Must abort if the account does not have the BurnCapability [B12].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
 
-        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        include AbortsIfNoPreburn<CoinType>;
         include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
     spec schema BurnEnsures<CoinType> {
@@ -294,6 +294,10 @@ module Libra {
         preburn_address: address;
 
         include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+    }
+    spec schema AbortsIfNoPreburn<CoinType> {
+        preburn_address: address;
+        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
     }
 
     /// Cancels the current burn request in the `Preburn` resource held
@@ -492,7 +496,7 @@ module Libra {
         let account_addr = Signer::spec_address_of(account);
         let preburn = global<Preburn<CoinType>>(account_addr);
         /// Must abort if the account does have the Preburn [B13].
-        aborts_if !exists<Preburn<CoinType>>(account_addr) with Errors::NOT_PUBLISHED;
+        include AbortsIfNoPreburn<CoinType>{preburn_address: account_addr};
         include PreburnWithResourceAbortsIf<CoinType>{preburn: preburn};
     }
 
@@ -515,7 +519,7 @@ module Libra {
         )
     }
     spec fun burn_with_capability {
-        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        include AbortsIfNoPreburn<CoinType>;
         include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
         include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
@@ -1030,13 +1034,20 @@ module Libra {
         );
     }
     spec fun update_lbr_exchange_rate {
+        include UpdateLBRExchangeRateAbortsIf<FromCoinType>;
+        include UpdateLBRExchangeRateEnsures<FromCoinType>;
+    }
+    spec schema UpdateLBRExchangeRateAbortsIf<FromCoinType> {
+        tc_account: signer;
         /// Must abort if the account does not have the TreasuryCompliance Role [B14].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         include AbortsIfNoCurrency<FromCoinType>;
+    }
+    spec schema UpdateLBRExchangeRateEnsures<FromCoinType> {
+        lbr_exchange_rate: FixedPoint32;
         ensures spec_currency_info<FromCoinType>().to_lbr_exchange_rate == lbr_exchange_rate;
     }
-
 
     /// Returns the (rough) exchange rate between `CoinType` and `LBR`
     public fun lbr_exchange_rate<CoinType>(): FixedPoint32
@@ -1120,8 +1131,8 @@ module Libra {
 
         /// Checks whether the currency has a mint capability.  This is only relevant for
         /// SCS coins
-        define spec_has_mint_capability<CoinType>(addr1: address): bool {
-            exists<MintCapability<CoinType>>(addr1)
+        define spec_has_mint_capability<CoinType>(addr: address): bool {
+            exists<MintCapability<CoinType>>(addr)
         }
 
         /// Returns true if a BurnCapability for CoinType exists at addr.

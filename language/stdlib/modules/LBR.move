@@ -131,9 +131,11 @@ module LBR {
     }
 
     spec fun is_lbr {
-        pragma verify = false, opaque = true;
-        /// The following is correct because currency codes are unique.
-        ensures result == spec_is_lbr<CoinType>();
+        pragma opaque, verify = false;
+        include Libra::spec_is_currency<CoinType>() ==> Libra::AbortsIfNoCurrency<LBR>;
+        /// The following is correct because currency codes are unique; however, we
+        /// can currently not prove it, therefore verify is false.
+        ensures result == Libra::spec_is_currency<CoinType>() && spec_is_lbr<CoinType>();
     }
 
     /// Returns true if CoinType is LBR.
@@ -156,7 +158,6 @@ module LBR {
     }
 
     spec fun calculate_component_amounts_for_lbr {
-        pragma verify = false; /// > TODO: disabled due to timeout.
         pragma opaque;
         let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include CalculateComponentAmountsForLBRAbortsIf;

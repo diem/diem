@@ -56,11 +56,7 @@
 
     <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
 
-    // Register transaction fee <b>resource</b>
-    <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(
-        lr_account,
-        tc_account,
-    );
+    <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account);
 
     <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(
         lr_account,
@@ -94,18 +90,6 @@
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_set_time_has_started">LibraTimestamp::set_time_has_started</a>(lr_account);
 }
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

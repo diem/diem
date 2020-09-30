@@ -43,9 +43,21 @@ fun rotate_dual_attestation_info(account: &signer, new_url: vector<u8>, new_key:
     DualAttestation::rotate_compliance_public_key(account, new_key)
 }
 spec fun rotate_dual_attestation_info {
+    use 0x1::Errors;
+    use 0x1::LibraTimestamp;
+
     include DualAttestation::RotateBaseUrlAbortsIf;
     include DualAttestation::RotateBaseUrlEnsures;
     include DualAttestation::RotateCompliancePublicKeyAbortsIf;
     include DualAttestation::RotateCompliancePublicKeyEnsures;
+
+    // TODO: The following line is added to help Prover verifying the
+    // "aborts_with [check]" spec. This transaction can be executed only
+    // in the operation mode, but Prover cannot figure this out currently.
+    requires LibraTimestamp::is_operating();
+
+    aborts_with [check]
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_ARGUMENT;
 }
 }

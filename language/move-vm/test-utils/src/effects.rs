@@ -10,7 +10,7 @@ use move_core_types::{
 use std::collections::btree_map::{self, BTreeMap};
 
 /// A collection of changes to modules and resources under a Move account.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AccountChangeSet {
     pub modules: BTreeMap<Identifier, Option<Vec<u8>>>,
     pub resources: BTreeMap<StructTag, Option<Vec<u8>>>,
@@ -114,7 +114,7 @@ impl AccountChangeSet {
 }
 
 /// A collection of changes to a Move state.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ChangeSet {
     pub accounts: BTreeMap<AccountAddress, AccountChangeSet>,
 }

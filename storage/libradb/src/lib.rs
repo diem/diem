@@ -483,37 +483,31 @@ impl DbReader for LibraDB {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<EpochChangeProof> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_epoch_ending_ledger_infos"])
-            .start_timer();
-
-        let (ledger_info_with_sigs, more) =
-            Self::get_epoch_ending_ledger_infos(&self, start_epoch, end_epoch)?;
-        Ok(EpochChangeProof::new(ledger_info_with_sigs, more))
+        gauged_api("get_epoch_ending_ledger_infos", || {
+            let (ledger_info_with_sigs, more) =
+                Self::get_epoch_ending_ledger_infos(&self, start_epoch, end_epoch)?;
+            Ok(EpochChangeProof::new(ledger_info_with_sigs, more))
+        })
     }
 
     fn get_latest_account_state(
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_latest_account_state"])
-            .start_timer();
-
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let version = ledger_info_with_sigs.ledger_info().version();
-        let (blob, _proof) = self
-            .state_store
-            .get_account_state_with_proof_by_version(address, version)?;
-        Ok(blob)
+        gauged_api("get_latest_account_state", || {
+            let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+            let version = ledger_info_with_sigs.ledger_info().version();
+            let (blob, _proof) = self
+                .state_store
+                .get_account_state_with_proof_by_version(address, version)?;
+            Ok(blob)
+        })
     }
 
     fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_latest_ledger_info"])
-            .start_timer();
-
-        self.ledger_store.get_latest_ledger_info()
+        gauged_api("get_latest_ledger_info", || {
+            self.ledger_store.get_latest_ledger_info()
+        })
     }
 
     /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
@@ -525,14 +519,14 @@ impl DbReader for LibraDB {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_txn_by_account"])
-            .start_timer();
-
-        self.transaction_store
-            .lookup_transaction_by_account(address, seq_num, ledger_version)?
-            .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
-            .transpose()
+        gauged_api("get_txn_by_account", || {
+            self.transaction_store
+                .lookup_transaction_by_account(address, seq_num, ledger_version)?
+                .map(|version| {
+                    self.get_transaction_with_proof(version, ledger_version, fetch_events)
+                })
+                .transpose()
+        })
     }
 
     // ======================= State Synchronizer Internal APIs ===================================
@@ -546,48 +540,46 @@ impl DbReader for LibraDB {
         ledger_version: Version,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_transactions"])
-            .start_timer();
+        gauged_api("get_transactions", || {
+            error_if_too_many_requested(limit, MAX_LIMIT)?;
 
-        error_if_too_many_requested(limit, MAX_LIMIT)?;
+            if start_version > ledger_version || limit == 0 {
+                return Ok(TransactionListWithProof::new_empty());
+            }
 
-        if start_version > ledger_version || limit == 0 {
-            return Ok(TransactionListWithProof::new_empty());
-        }
+            let limit = std::cmp::min(limit, ledger_version - start_version + 1);
 
-        let limit = std::cmp::min(limit, ledger_version - start_version + 1);
+            let txns = (start_version..start_version + limit)
+                .map(|version| Ok(self.transaction_store.get_transaction(version)?))
+                .collect::<Result<Vec<_>>>()?;
+            let txn_infos = (start_version..start_version + limit)
+                .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
+                .collect::<Result<Vec<_>>>()?;
+            let events = if fetch_events {
+                Some(
+                    (start_version..start_version + limit)
+                        .map(|version| Ok(self.event_store.get_events_by_version(version)?))
+                        .collect::<Result<Vec<_>>>()?,
+                )
+            } else {
+                None
+            };
+            let proof = TransactionListProof::new(
+                self.ledger_store.get_transaction_range_proof(
+                    Some(start_version),
+                    limit,
+                    ledger_version,
+                )?,
+                txn_infos,
+            );
 
-        let txns = (start_version..start_version + limit)
-            .map(|version| Ok(self.transaction_store.get_transaction(version)?))
-            .collect::<Result<Vec<_>>>()?;
-        let txn_infos = (start_version..start_version + limit)
-            .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
-            .collect::<Result<Vec<_>>>()?;
-        let events = if fetch_events {
-            Some(
-                (start_version..start_version + limit)
-                    .map(|version| Ok(self.event_store.get_events_by_version(version)?))
-                    .collect::<Result<Vec<_>>>()?,
-            )
-        } else {
-            None
-        };
-        let proof = TransactionListProof::new(
-            self.ledger_store.get_transaction_range_proof(
+            Ok(TransactionListWithProof::new(
+                txns,
+                events,
                 Some(start_version),
-                limit,
-                ledger_version,
-            )?,
-            txn_infos,
-        );
-
-        Ok(TransactionListWithProof::new(
-            txns,
-            events,
-            Some(start_version),
-            proof,
-        ))
+                proof,
+            ))
+        })
     }
 
     fn get_events(
@@ -597,30 +589,26 @@ impl DbReader for LibraDB {
         order: Order,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_events"])
-            .start_timer();
-
-        let version = self
-            .ledger_store
-            .get_latest_ledger_info()?
-            .ledger_info()
-            .version();
-        let events = self
-            .get_events_by_event_key(event_key, start, order, limit, version)?
-            .into_iter()
-            .map(|e| (e.transaction_version, e.event))
-            .collect();
-        Ok(events)
+        gauged_api("get_events", || {
+            let version = self
+                .ledger_store
+                .get_latest_ledger_info()?
+                .ledger_info()
+                .version();
+            let events = self
+                .get_events_by_event_key(event_key, start, order, limit, version)?
+                .into_iter()
+                .map(|e| (e.transaction_version, e.event))
+                .collect();
+            Ok(events)
+        })
     }
 
     /// Gets ledger info at specified version and ensures it's an epoch ending.
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_epoch_ending_ledger_info"])
-            .start_timer();
-
-        self.ledger_store.get_epoch_ending_ledger_info(version)
+        gauged_api("get_epoch_ending_ledger_info", || {
+            self.ledger_store.get_epoch_ending_ledger_info(version)
+        })
     }
 
     fn get_state_proof_with_ledger_info(
@@ -628,30 +616,28 @@ impl DbReader for LibraDB {
         known_version: u64,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_state_proof_with_ledger_info"])
-            .start_timer();
+        gauged_api("get_state_proof_with_ledger_info", || {
+            let ledger_info = ledger_info_with_sigs.ledger_info();
+            ensure!(
+                known_version <= ledger_info.version(),
+                "Client known_version {} larger than ledger version {}.",
+                known_version,
+                ledger_info.version(),
+            );
+            let known_epoch = self.ledger_store.get_epoch(known_version)?;
+            let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
+                let (ledger_infos_with_sigs, more) = self
+                    .get_epoch_ending_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
+                EpochChangeProof::new(ledger_infos_with_sigs, more)
+            } else {
+                EpochChangeProof::new(vec![], /* more = */ false)
+            };
 
-        let ledger_info = ledger_info_with_sigs.ledger_info();
-        ensure!(
-            known_version <= ledger_info.version(),
-            "Client known_version {} larger than ledger version {}.",
-            known_version,
-            ledger_info.version(),
-        );
-        let known_epoch = self.ledger_store.get_epoch(known_version)?;
-        let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
-            let (ledger_infos_with_sigs, more) =
-                self.get_epoch_ending_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
-            EpochChangeProof::new(ledger_infos_with_sigs, more)
-        } else {
-            EpochChangeProof::new(vec![], /* more = */ false)
-        };
-
-        let ledger_consistency_proof = self
-            .ledger_store
-            .get_consistency_proof(known_version, ledger_info.version())?;
-        Ok((epoch_change_proof, ledger_consistency_proof))
+            let ledger_consistency_proof = self
+                .ledger_store
+                .get_consistency_proof(known_version, ledger_info.version())?;
+            Ok((epoch_change_proof, ledger_consistency_proof))
+        })
     }
 
     fn get_state_proof(
@@ -662,18 +648,16 @@ impl DbReader for LibraDB {
         EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_state_proof"])
-            .start_timer();
-
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let (epoch_change_proof, ledger_consistency_proof) =
-            self.get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs.clone())?;
-        Ok((
-            ledger_info_with_sigs,
-            epoch_change_proof,
-            ledger_consistency_proof,
-        ))
+        gauged_api("get_state_proof", || {
+            let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+            let (epoch_change_proof, ledger_consistency_proof) = self
+                .get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs.clone())?;
+            Ok((
+                ledger_info_with_sigs,
+                epoch_change_proof,
+                ledger_consistency_proof,
+            ))
+        })
     }
 
     fn get_account_state_with_proof(
@@ -682,45 +666,39 @@ impl DbReader for LibraDB {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_account_state_with_proof"])
-            .start_timer();
-
-        ensure!(
-            version <= ledger_version,
-            "The queried version {} should be equal to or older than ledger version {}.",
-            version,
-            ledger_version
-        );
-        {
-            let latest_version = self.get_latest_version()?;
+        gauged_api("get_account_state_with_proof", || {
             ensure!(
-                ledger_version <= latest_version,
-                "ledger_version specified {} is greater than committed version {}.",
-                ledger_version,
-                latest_version
+                version <= ledger_version,
+                "The queried version {} should be equal to or older than ledger version {}.",
+                version,
+                ledger_version
             );
-        }
+            {
+                let latest_version = self.get_latest_version()?;
+                ensure!(
+                    ledger_version <= latest_version,
+                    "ledger_version specified {} is greater than committed version {}.",
+                    ledger_version,
+                    latest_version
+                );
+            }
 
-        let txn_info_with_proof = self
-            .ledger_store
-            .get_transaction_info_with_proof(version, ledger_version)?;
-        let (account_state_blob, sparse_merkle_proof) = self
-            .state_store
-            .get_account_state_with_proof_by_version(address, version)?;
-        Ok(AccountStateWithProof::new(
-            version,
-            account_state_blob,
-            AccountStateProof::new(txn_info_with_proof, sparse_merkle_proof),
-        ))
+            let txn_info_with_proof = self
+                .ledger_store
+                .get_transaction_info_with_proof(version, ledger_version)?;
+            let (account_state_blob, sparse_merkle_proof) = self
+                .state_store
+                .get_account_state_with_proof_by_version(address, version)?;
+            Ok(AccountStateWithProof::new(
+                version,
+                account_state_blob,
+                AccountStateProof::new(txn_info_with_proof, sparse_merkle_proof),
+            ))
+        })
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_startup_info"])
-            .start_timer();
-
-        self.ledger_store.get_startup_info()
+        gauged_api("get_startup_info", || self.ledger_store.get_startup_info())
     }
 
     fn get_account_state_with_proof_by_version(
@@ -728,64 +706,60 @@ impl DbReader for LibraDB {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_account_state_with_proof_by_version"])
-            .start_timer();
-
-        self.state_store
-            .get_account_state_with_proof_by_version(address, version)
+        gauged_api("get_account_state_with_proof_by_version", || {
+            self.state_store
+                .get_account_state_with_proof_by_version(address, version)
+        })
     }
 
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_latest_state_root"])
-            .start_timer();
-
-        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
-        Ok((version, txn_info.state_root_hash()))
+        gauged_api("get_latest_state_root", || {
+            let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+            Ok((version, txn_info.state_root_hash()))
+        })
     }
 
     fn get_latest_tree_state(&self) -> Result<TreeState> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_latest_tree_state"])
-            .start_timer();
+        gauged_api("get_latest_tree_state", || {
+            let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
+                Some((version, txn_info)) => {
+                    self.ledger_store.get_tree_state(version + 1, txn_info)?
+                }
+                None => TreeState::new(
+                    0,
+                    vec![],
+                    self.state_store
+                        .get_root_hash_option(PRE_GENESIS_VERSION)?
+                        .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+                ),
+            };
 
-        let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
-            Some((version, txn_info)) => self.ledger_store.get_tree_state(version + 1, txn_info)?,
-            None => TreeState::new(
-                0,
-                vec![],
-                self.state_store
-                    .get_root_hash_option(PRE_GENESIS_VERSION)?
-                    .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
-            ),
-        };
+            info!(
+                num_transactions = tree_state.num_transactions,
+                state_root_hash = %tree_state.account_state_root_hash,
+                description = tree_state.describe(),
+                "Got latest TreeState."
+            );
 
-        info!(
-            num_transactions = tree_state.num_transactions,
-            state_root_hash = %tree_state.account_state_root_hash,
-            description = tree_state.describe(),
-            "Got latest TreeState."
-        );
-
-        Ok(tree_state)
+            Ok(tree_state)
+        })
     }
 
     fn get_block_timestamp(&self, version: u64) -> Result<u64> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["get_block_timestamp"])
-            .start_timer();
-
-        let ts = match self.transaction_store.get_block_metadata(version)? {
-            Some((_v, block_meta)) => block_meta.into_inner()?.1,
-            // genesis timestamp is 0
-            None => 0,
-        };
-        Ok(ts)
+        gauged_api("get_block_timestamp", || {
+            let ts = match self.transaction_store.get_block_metadata(version)? {
+                Some((_v, block_meta)) => block_meta.into_inner()?.1,
+                // genesis timestamp is 0
+                None => 0,
+            };
+            Ok(ts)
+        })
     }
 
     fn get_latest_transaction_info_option(&self) -> Result<Option<(Version, TransactionInfo)>> {
-        self.ledger_store.get_latest_transaction_info_option()
+        gauged_api("get_latest_transaction_info_option", || {
+            self.ledger_store.get_latest_transaction_info_option()
+        })
     }
 }
 
@@ -801,78 +775,77 @@ impl DbWriter for LibraDB {
         first_version: Version,
         ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
     ) -> Result<()> {
-        let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
-            .with_label_values(&["save_transactions"])
-            .start_timer();
-
-        let num_txns = txns_to_commit.len() as u64;
-        // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
-        // txns_to_commit should not be empty. Otherwise it is okay to commit empty blocks.
-        ensure!(
-            ledger_info_with_sigs.is_some() || num_txns > 0,
-            "txns_to_commit is empty while ledger_info_with_sigs is None.",
-        );
-
-        if let Some(x) = ledger_info_with_sigs {
-            let claimed_last_version = x.ledger_info().version();
+        gauged_api("save_transactions", || {
+            let num_txns = txns_to_commit.len() as u64;
+            // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
+            // txns_to_commit should not be empty. Otherwise it is okay to commit empty blocks.
             ensure!(
+                ledger_info_with_sigs.is_some() || num_txns > 0,
+                "txns_to_commit is empty while ledger_info_with_sigs is None.",
+            );
+
+            if let Some(x) = ledger_info_with_sigs {
+                let claimed_last_version = x.ledger_info().version();
+                ensure!(
                 claimed_last_version + 1 == first_version + num_txns,
                 "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
                 first_version,
                 num_txns,
                 claimed_last_version,
             );
-        }
+            }
 
-        // Gather db mutations to `batch`.
-        let mut cs = ChangeSet::new();
+            // Gather db mutations to `batch`.
+            let mut cs = ChangeSet::new();
 
-        let new_root_hash = self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
+            let new_root_hash =
+                self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
 
-        // If expected ledger info is provided, verify result root hash and save the ledger info.
-        if let Some(x) = ledger_info_with_sigs {
-            let expected_root_hash = x.ledger_info().transaction_accumulator_hash();
-            ensure!(
-                new_root_hash == expected_root_hash,
-                "Root hash calculated doesn't match expected. {:?} vs {:?}",
-                new_root_hash,
-                expected_root_hash,
-            );
+            // If expected ledger info is provided, verify result root hash and save the ledger info.
+            if let Some(x) = ledger_info_with_sigs {
+                let expected_root_hash = x.ledger_info().transaction_accumulator_hash();
+                ensure!(
+                    new_root_hash == expected_root_hash,
+                    "Root hash calculated doesn't match expected. {:?} vs {:?}",
+                    new_root_hash,
+                    expected_root_hash,
+                );
 
-            self.ledger_store.put_ledger_info(x, &mut cs)?;
-        }
+                self.ledger_store.put_ledger_info(x, &mut cs)?;
+            }
 
-        // Persist.
-        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
-        {
-            let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
-                .with_label_values(&["save_transactions_commit"])
-                .start_timer();
-            self.commit(sealed_cs)?;
-        }
+            // Persist.
+            let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
+            {
+                let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+                    .with_label_values(&["save_transactions_commit"])
+                    .start_timer();
+                self.commit(sealed_cs)?;
+            }
 
-        // Once everything is successfully persisted, update the latest in-memory ledger info.
-        if let Some(x) = ledger_info_with_sigs {
-            self.ledger_store.set_latest_ledger_info(x.clone());
+            // Once everything is successfully persisted, update the latest in-memory ledger info.
+            if let Some(x) = ledger_info_with_sigs {
+                self.ledger_store.set_latest_ledger_info(x.clone());
 
-            self.wake_pruner(x.ledger_info().version());
+                self.wake_pruner(x.ledger_info().version());
 
-            LIBRA_STORAGE_LEDGER_VERSION.set(x.ledger_info().version() as i64);
-            LIBRA_STORAGE_NEXT_BLOCK_EPOCH.set(x.ledger_info().next_block_epoch() as i64);
-        }
+                LIBRA_STORAGE_LEDGER_VERSION.set(x.ledger_info().version() as i64);
+                LIBRA_STORAGE_NEXT_BLOCK_EPOCH.set(x.ledger_info().next_block_epoch() as i64);
+            }
 
-        // Only increment counter if commit succeeds and there are at least one transaction written
-        // to the storage. That's also when we'd inform the pruner thread to work.
-        if num_txns > 0 {
-            let last_version = first_version + num_txns - 1;
-            LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
-            LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
-            counters
-                .expect("Counters should be bumped with transactions being saved.")
-                .bump_op_counters();
-        }
+            // Only increment counter if commit succeeds and there are at least one transaction written
+            // to the storage. That's also when we'd inform the pruner thread to work.
+            if num_txns > 0 {
+                let last_version = first_version + num_txns - 1;
+                LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
+                LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
+                counters
+                    .expect("Counters should be bumped with transactions being saved.")
+                    .bump_op_counters();
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -904,4 +877,30 @@ impl GetRestoreHandler for Arc<LibraDB> {
             Arc::clone(&self.state_store),
         )
     }
+}
+
+fn gauged_api<T, F>(api_name: &'static str, api_impl: F) -> Result<T>
+where
+    F: FnOnce() -> Result<T>,
+{
+    let timer = Instant::now();
+
+    let res = api_impl();
+
+    let res_type = match &res {
+        Ok(_) => "Ok",
+        Err(e) => {
+            warn!(
+                api_name = api_name,
+                error = ?e,
+                "LibraDB API returned error."
+            );
+            "Err"
+        }
+    };
+    LIBRA_STORAGE_API_LATENCY_SECONDS
+        .with_label_values(&[api_name, res_type])
+        .observe(timer.elapsed().as_secs_f64());
+
+    res
 }

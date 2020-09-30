@@ -64,10 +64,11 @@ module Authenticator {
     }
     spec fun ed25519_authentication_key {
         pragma opaque = true;
-        pragma verify = false;
         aborts_if false;
-        ensures result == spec_ed25519_authentication_key(public_key);
+        ensures [abstract] result == spec_ed25519_authentication_key(public_key);
     }
+    /// We use an uninterpreted function to represent the result of key construction. The actual value
+    /// does not matter for the verification of callers.
     spec define spec_ed25519_authentication_key(public_key: vector<u8>): vector<u8>;
 
     /// Compute a multied25519 account authentication key for the policy `k`
