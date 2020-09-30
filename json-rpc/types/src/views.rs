@@ -194,7 +194,7 @@ pub enum EventDataView {
     #[serde(rename = "createaccount")]
     CreateAccount {},
     #[serde(rename = "unknown")]
-    Unknown { module_name: String },
+    Unknown {},
 }
 
 impl TryFrom<ContractEvent> for EventDataView {
@@ -314,9 +314,7 @@ impl TryFrom<ContractEvent> for EventDataView {
                 write_set: BytesView::from(upgrade_event.write_set()),
             }
         } else {
-            EventDataView::Unknown {
-                module_name: format!("{}", event.type_tag()),
-            }
+            EventDataView::Unknown {}
         };
 
         Ok(data)
