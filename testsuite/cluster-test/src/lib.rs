@@ -12,6 +12,7 @@ pub mod genesis_helper;
 pub mod github;
 pub mod health;
 pub mod instance;
+pub mod load_test;
 pub mod prometheus;
 pub mod report;
 pub mod slack;
