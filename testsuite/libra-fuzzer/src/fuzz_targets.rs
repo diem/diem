@@ -32,6 +32,16 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(executor::ExecuteAndCommitChunk::default()),
         // JSON RPC Service
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetAccountRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetAccountTransactionRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetAccountTransactionsRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetTransactionsRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetEventsRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetMetadataRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetCurrenciesRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetStateProofRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetAccountStateWithProofRequest::default()),
+        Box::new(json_rpc_service::JsonRpcGetNetworkStatusRequest::default()),
         // Mempool
         Box::new(mempool::MempoolIncomingTransactions::default()),
         // Move VM

@@ -2830,6 +2830,7 @@ dependencies = [
  "rand 0.7.3",
  "rusty-fork",
  "safety-rules",
+ "serde_json",
  "sha-1 0.9.1",
  "state-synchronizer",
  "stats_alloc",

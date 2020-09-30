@@ -8,11 +8,41 @@ use libra_proptest_helpers::ValueGenerator;
 use std::sync::Arc;
 use warp::reply::Reply;
 
+#[macro_export]
+macro_rules! gen_request_params {
+    ($params: tt) => {
+        serde_json::to_vec(&serde_json::json!($params))
+            .expect("failed to convert JSON to byte array")
+    };
+}
+
 #[test]
 fn test_json_rpc_service_fuzzer() {
     let mut gen = ValueGenerator::new();
     let data = generate_corpus(&mut gen);
     fuzzer(&data);
+}
+
+#[test]
+fn test_method_fuzzer() {
+    let params = gen_request_params!([]);
+    method_fuzzer(&params, "get_metadata");
+}
+
+pub fn method_fuzzer(params_data: &[u8], method: &str) {
+    let params = match serde_json::from_slice::<serde_json::Value>(params_data) {
+        Err(_) => {
+            // should not throw error or panic on invalid fuzzer inputs
+            if cfg!(test) {
+                panic!();
+            }
+            return;
+        }
+        Ok(request) => request,
+    };
+    let request =
+        serde_json::json!({"jsonrpc": "2.0", "method": method, "params": params, "id": 1});
+    request_fuzzer(request)
 }
 
 /// generate_corpus produces an arbitrary transaction to submit to JSON RPC service
@@ -38,6 +68,10 @@ pub fn fuzzer(data: &[u8]) {
         }
         Ok(request) => request,
     };
+    request_fuzzer(json_request)
+}
+
+pub fn request_fuzzer(json_request: serde_json::Value) {
     // set up mock Shared Mempool
     let (mp_sender, mut mp_events) = channel(1);
 
@@ -106,24 +140,14 @@ fn assert_response(response: serde_json::Value) {
         "JSON RPC response with incorrect protocol: {:?}",
         response
     );
-    if response.get("error").is_some() && cfg!(test) {
-        panic!(
-            "Unexpected error payload in JSON RPC response: {}",
-            response
-        );
-    }
 
     // only proceed to check successful response for input from `generate_corpus`
     if !cfg!(test) {
         return;
     }
 
-    let result = response.get("result").unwrap_or_else(|| {
-        panic!(
-            "Received JSON RPC response with no result payload. Full response: {}",
-            response
-        )
-    });
+    assert!(response.get("result").is_some());
+    assert!(response.get("error").is_none());
     let response_id: u64 = serde_json::from_value(
         response
             .get("id")
@@ -132,9 +156,4 @@ fn assert_response(response: serde_json::Value) {
     )
     .unwrap_or_else(|_| panic!("Failed to deserialize ID from: {}", response));
     assert_eq!(response_id, 1, "mismatch ID in JSON RPC: {}", response);
-    assert!(
-        *result == serde_json::Value::Null,
-        "Received unexpected result payload from txn submission: {:?}",
-        response
-    );
 }
