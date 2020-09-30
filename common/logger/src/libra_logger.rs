@@ -11,6 +11,7 @@ use crate::{
     Event, Filter, Level, Metadata,
 };
 use chrono::{SecondsFormat, Utc};
+use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
@@ -33,6 +34,8 @@ pub struct LogEntry {
     metadata: Metadata,
     #[serde(skip_serializing_if = "Option::is_none")]
     thread_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hostname: Option<&'static str>,
     timestamp: String,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     data: BTreeMap<&'static str, serde_json::Value>,
@@ -68,6 +71,14 @@ impl LogEntry {
         let thread_name = thread_name.map(ToOwned::to_owned);
         let message = event.message().map(fmt::format);
 
+        static HOSTNAME: Lazy<Option<String>> = Lazy::new(|| {
+            hostname::get()
+                .ok()
+                .and_then(|name| name.into_string().ok())
+        });
+
+        let hostname = HOSTNAME.as_deref();
+
         let mut data = BTreeMap::new();
         for schema in event.keys_and_values() {
             schema.visit(&mut JsonVisitor(&mut data));
@@ -76,6 +87,7 @@ impl LogEntry {
         Self {
             metadata,
             thread_name,
+            hostname,
             timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
             data,
             message,
