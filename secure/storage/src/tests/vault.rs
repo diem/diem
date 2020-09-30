@@ -273,7 +273,7 @@ fn test_vault_crypto_policies() {
     exporter_store.rotate_key(CRYPTO_KEY).unwrap_err();
     exporter_store.sign(CRYPTO_KEY, &message).unwrap_err();
     // Verify a exporter with another namespace has no permission for the operations
-    let mut exporter_store_with_namespace = VaultStorage::new(
+    let exporter_store_with_namespace = VaultStorage::new(
         dev::test_host(),
         exporter_token,
         Some(VAULT_NAMESPACE_1.into()),
@@ -287,39 +287,11 @@ fn test_vault_crypto_policies() {
 
     // Verify noone policy
     let noone_token = storage.create_token(vec![&NOONE]).unwrap();
-    let mut noone_store = VaultStorage::new(
-        dev::test_host(),
-        noone_token.clone(),
-        None,
-        None,
-        None,
-        true,
-    );
+    let mut noone_store = VaultStorage::new(dev::test_host(), noone_token, None, None, None, true);
     noone_store.export_private_key(CRYPTO_KEY).unwrap_err();
     noone_store.get_public_key(CRYPTO_KEY).unwrap_err();
     noone_store.rotate_key(CRYPTO_KEY).unwrap_err();
     noone_store.sign(CRYPTO_KEY, &message).unwrap_err();
-    // Verify a noone with another namespace has no permission for the operations
-    let mut noone_store_with_namespace = VaultStorage::new(
-        dev::test_host(),
-        noone_token,
-        Some(VAULT_NAMESPACE_1.into()),
-        None,
-        None,
-        true,
-    );
-    noone_store_with_namespace
-        .export_private_key(CRYPTO_KEY)
-        .unwrap_err();
-    noone_store_with_namespace
-        .get_public_key(CRYPTO_KEY)
-        .unwrap_err();
-    noone_store_with_namespace
-        .rotate_key(CRYPTO_KEY)
-        .unwrap_err();
-    noone_store_with_namespace
-        .sign(CRYPTO_KEY, &message)
-        .unwrap_err();
 
     // Verify reader policy
     let reader_token = storage.create_token(vec![&READER]).unwrap();
@@ -339,7 +311,7 @@ fn test_vault_crypto_policies() {
     reader_store.rotate_key(CRYPTO_KEY).unwrap_err();
     reader_store.sign(CRYPTO_KEY, &message).unwrap_err();
     // Verify a reader with another namespace has no permission for the operations
-    let mut reader_store_with_namespace = VaultStorage::new(
+    let reader_store_with_namespace = VaultStorage::new(
         dev::test_host(),
         reader_token,
         Some(VAULT_NAMESPACE_1.into()),
@@ -369,7 +341,7 @@ fn test_vault_crypto_policies() {
     assert_ne!(rotater_store.rotate_key(CRYPTO_KEY).unwrap(), pubkey);
     rotater_store.sign(CRYPTO_KEY, &message).unwrap_err();
     // Verify a rotater with another namespace has no permission for the operations
-    let mut rotater_store_with_namespace = VaultStorage::new(
+    let rotater_store_with_namespace = VaultStorage::new(
         dev::test_host(),
         rotater_token,
         Some(VAULT_NAMESPACE_1.into()),
