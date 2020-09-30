@@ -60,6 +60,16 @@ pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
+/// Counter tracking core mempool insertions and their results
+pub static CORE_MEMPOOL_INSERT_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_core_mempool_insertion_count",
+        "Number of insertion attempts to core mempool",
+        &["result"]
+    )
+    .unwrap()
+});
+
 /// Counter tracking latency of txns reaching various stages in committing
 /// (e.g. time from txn entering core mempool to being pulled in consensus block)
 pub static CORE_MEMPOOL_TXN_COMMIT_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {

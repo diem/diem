@@ -12,7 +12,6 @@ use crate::{
     },
     counters,
     logging::{LogEntry, LogSchema, TxnsLog},
-    OP_COUNTERS,
 };
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -108,7 +107,7 @@ impl Mempool {
         &mut self,
         txn: SignedTransaction,
         gas_amount: u64,
-        rankin_score: u64,
+        ranking_score: u64,
         db_sequence_number: u64,
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
@@ -144,13 +143,15 @@ impl Mempool {
             txn,
             expiration_time,
             gas_amount,
-            rankin_score,
+            ranking_score,
             timeline_state,
             governance_role,
         );
 
         let status = self.transactions.insert(txn_info, sequence_number);
-        OP_COUNTERS.inc(&format!("insert.{:?}", status));
+        counters::CORE_MEMPOOL_INSERT_COUNT
+            .with_label_values(&[&status.code.to_string()])
+            .inc();
         status
     }
 

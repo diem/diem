@@ -73,8 +73,3 @@ mod core_mempool;
 mod counters;
 mod logging;
 mod shared_mempool;
-
-// module op counters
-use libra_metrics::OpMetrics;
-use once_cell::sync::Lazy;
-static OP_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("mempool"));
