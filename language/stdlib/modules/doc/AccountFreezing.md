@@ -3,6 +3,7 @@
 
 # Module `0x1::AccountFreezing`
 
+<code><a href="AccountFreezing.md#0x1_AccountFreezing">AccountFreezing</a></code> manages freezing of accounts.
 
 
 -  [Resource <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code>](#0x1_AccountFreezing_FreezingBit)
@@ -20,6 +21,10 @@
 -  [Function <code>unfreeze_account</code>](#0x1_AccountFreezing_unfreeze_account)
 -  [Function <code>account_is_frozen</code>](#0x1_AccountFreezing_account_is_frozen)
 -  [Function <code>assert_not_frozen</code>](#0x1_AccountFreezing_assert_not_frozen)
+-  [Module Specification](#@Module_Specification_0)
+    -  [Helper Functions](#@Helper_Functions_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Access Control](#@Access_Control_3)
 
 
 <a name="0x1_AccountFreezing_FreezingBit"></a>
@@ -506,6 +511,19 @@ Assert that an account is not frozen.
 
 
 
+</details>
+
+<a name="@Module_Specification_0"></a>
+
+## Module Specification
+
+
+
+<a name="@Helper_Functions_1"></a>
+
+### Helper Functions
+
+
 
 <a name="0x1_AccountFreezing_spec_account_is_frozen"></a>
 
@@ -520,12 +538,24 @@ Assert that an account is not frozen.
 </code></pre>
 
 
-FreezeEventsHolder always exists after genesis.
+
+<a name="@Initialization_2"></a>
+
+### Initialization
+
+
+<code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code> always exists after genesis.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
     <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
+
+
+
+<a name="@Access_Control_3"></a>
+
+### Access Control
 
 
 The account of LibraRoot is not freezable [G2].
@@ -546,29 +576,14 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
-The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B16].
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [B16].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
 </code></pre>
 
 
-
-
-<a name="0x1_AccountFreezing_FreezingBitRemainsSame"></a>
-
-The freezing bit stays constant.
-
-
-<pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> a: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a)):
-        <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen == <b>old</b>(<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen);
-}
-</code></pre>
-
-
-
-only (un)freeze functions can change the freezing bits of accounts [B16].
+Only (un)freeze functions can change the freezing bits of accounts [B16].
 
 
 <pre><code><b>apply</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;
@@ -576,4 +591,12 @@ only (un)freeze functions can change the freezing bits of accounts [B16].
 
 
 
-</details>
+
+<a name="0x1_AccountFreezing_FreezingBitRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> {
+    <b>ensures</b> <b>forall</b> a: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a)):
+        <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen == <b>old</b>(<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen);
+}
+</code></pre>
