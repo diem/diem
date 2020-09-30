@@ -111,21 +111,27 @@ impl AsRef<[u8]> for AccountAddress {
 
 impl fmt::Display for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        // Forward to the LowerHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#x}", self)
+        // Forward to the UpperHex impl with a "0x" prepended (the # flag).
+        write!(f, "{:#X}", self)
     }
 }
 
 impl fmt::Debug for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Forward to the LowerHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#x}", self)
+        // Forward to the UpperHex impl with a "0x" prepended (the # flag).
+        write!(f, "{:#X}", self)
     }
 }
 
 impl fmt::LowerHex for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0))
+    }
+}
+
+impl fmt::UpperHex for AccountAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode_upper(&self.0))
     }
 }
 

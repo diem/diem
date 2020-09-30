@@ -124,15 +124,18 @@ impl warp::reject::Reject for ServerInternalError {}
 mod tests {
     use crate::routes;
     use libra_faucet::mint;
-    use libra_types::transaction::TransactionPayload::Script;
+    use libra_types::{account_address::AccountAddress, transaction::TransactionPayload::Script};
     use std::{
         collections::HashMap,
+        convert::TryFrom,
         sync::{Arc, RwLock},
     };
     use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;
 
-    fn setup(accounts: Arc<RwLock<HashMap<String, serde_json::Value>>>) -> Arc<mint::Service> {
+    fn setup(
+        accounts: Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>>,
+    ) -> Arc<mint::Service> {
         let f = tempfile::NamedTempFile::new()
             .unwrap()
             .into_temp_path()
@@ -198,9 +201,9 @@ mod tests {
                 .await;
             assert_eq!(resp.body(), "1"); // 0+1
             let reader = accounts.read().unwrap();
-            let account = reader
-                .get("a74fd7c46952c497e75afb0a7932586d")
-                .expect("account should be created");
+            let addr =
+                AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
+            let account = reader.get(&addr).expect("account should be created");
             assert_eq!(account["balances"][0]["amount"], amount);
         }
     }
@@ -230,9 +233,8 @@ mod tests {
                 .expect("valid lcs vec");
         assert_eq!(txns.len(), 2);
         let reader = accounts.read().unwrap();
-        let account = reader
-            .get("a74fd7c46952c497e75afb0a7932586d")
-            .expect("account should be created");
+        let addr = AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
+        let account = reader.get(&addr).expect("account should be created");
         assert_eq!(account["balances"][0]["amount"], amount);
     }
 
@@ -284,7 +286,7 @@ mod tests {
     fn handle_request(
         req: serde_json::Value,
         chain_id: libra_types::chain_id::ChainId,
-        accounts: Arc<RwLock<HashMap<String, serde_json::Value>>>,
+        accounts: Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>>,
     ) -> serde_json::Value {
         if let serde_json::Value::Array(reqs) = req {
             return reqs
@@ -305,17 +307,14 @@ mod tests {
                             ..
                         }) => {
                             let mut writer = accounts.write().unwrap();
-                            let previous = writer.insert(
-                                address.to_string(),
-                                create_vasp_account(address.to_string().as_str(), 0),
-                            );
+                            let previous = writer
+                                .insert(address, create_vasp_account(&address.to_string(), 0));
                             assert!(previous.is_none(), "should not create account twice");
                         }
                         Some(ScriptCall::PeerToPeerWithMetadata { payee, amount, .. }) => {
                             let mut writer = accounts.write().unwrap();
-                            let account = writer
-                                .get_mut(&payee.to_string())
-                                .expect("account should be created");
+                            let account =
+                                writer.get_mut(&payee).expect("account should be created");
                             *account = create_vasp_account(payee.to_string().as_str(), amount);
                         }
                         _ => panic!("unexpected type of script"),
@@ -324,9 +323,12 @@ mod tests {
                 create_response(&req["id"], chain_id.id(), None)
             }
             Some("get_account") => {
-                let address: &str = req["params"][0].as_str().unwrap();
+                let address_string: String = req["params"][0].as_str().unwrap().to_owned();
                 let reader = accounts.read().unwrap();
-                create_response(&req["id"], chain_id.id(), reader.get(address))
+                let address_lookup = AccountAddress::try_from(address_string)
+                    .ok()
+                    .and_then(|address| reader.get(&address));
+                create_response(&req["id"], chain_id.id(), address_lookup)
             }
             _ => panic!("unexpected method"),
         }
@@ -347,21 +349,23 @@ mod tests {
         })
     }
 
-    fn genesis_accounts() -> Arc<RwLock<HashMap<String, serde_json::Value>>> {
-        let mut accounts: HashMap<String, serde_json::Value> = HashMap::new();
+    fn genesis_accounts() -> Arc<RwLock<HashMap<AccountAddress, serde_json::Value>>> {
+        let mut accounts: HashMap<AccountAddress, serde_json::Value> = HashMap::new();
+        let blessed = "0000000000000000000000000b1e55ed";
         accounts.insert(
-            "0000000000000000000000000b1e55ed".to_owned(),
+            AccountAddress::try_from(blessed.to_owned()).unwrap(),
             create_account(
-                "0000000000000000000000000b1e55ed",
+                blessed,
                 serde_json::json!([]),
                 serde_json::json!({
                     "type": "unknown"
                 }),
             ),
         );
+        let dd = "000000000000000000000000000000dd";
         accounts.insert(
-            "000000000000000000000000000000dd".to_owned(),
-            create_dd_account("000000000000000000000000000000dd"),
+            AccountAddress::try_from(dd.to_owned()).unwrap(),
+            create_dd_account(dd),
         );
         Arc::new(RwLock::new(accounts))
     }

@@ -72,19 +72,34 @@ impl AsRef<[u8]> for Address {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "0x{:#x}", self)
+        write!(f, "0x{:#X}", self)
     }
 }
 
 impl fmt::Debug for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{:#x}", self)
+        write!(f, "0x{:#X}", self)
     }
 }
 
 impl fmt::LowerHex for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let encoded = hex::encode(&self.0);
+        let dropped = encoded
+            .chars()
+            .skip_while(|c| c == &'0')
+            .collect::<String>();
+        if dropped.is_empty() {
+            write!(f, "0")
+        } else {
+            write!(f, "{}", dropped)
+        }
+    }
+}
+
+impl fmt::UpperHex for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let encoded = hex::encode_upper(&self.0);
         let dropped = encoded
             .chars()
             .skip_while(|c| c == &'0')

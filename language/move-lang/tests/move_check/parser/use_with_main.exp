@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/parser/use_with_main.move:4:5 ───
    │
  4 │ use 0xaBcD::Module as M;
-   │     ^^^^^^^^^^^^^^ Invalid 'use'. Unbound module: '0xabcd::Module'
+   │     ^^^^^^^^^^^^^^ Invalid 'use'. Unbound module: '0xABCD::Module'
    │
 
 error: 
