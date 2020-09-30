@@ -30,6 +30,7 @@ use parser::syntax::parse_file_string;
 use shared::Address;
 use std::{
     collections::{BTreeMap, HashMap},
+    fs,
     fs::File,
     io::{Read, Write},
     iter::Peekable,
@@ -145,6 +146,23 @@ pub fn move_compile_to_expansion_no_report(
 // Utils
 //**************************************************************************************************
 
+macro_rules! dir_path {
+    ($($dir:expr),+) => {{
+        let mut p = PathBuf::new();
+        $(p.push($dir);)+
+        p
+    }};
+}
+
+macro_rules! file_path {
+    ($dir:expr, $name:expr, $ext:expr) => {{
+        let mut p = PathBuf::from($dir);
+        p.push($name);
+        p.set_extension($ext);
+        p
+    }};
+}
+
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
 pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<CompiledUnit>) {
@@ -163,16 +181,22 @@ pub fn output_compiled_units(
 ) -> anyhow::Result<()> {
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
+    fn num_digits(n: usize) -> usize {
+        format!("{}", n).len()
+    }
+    fn format_idx(idx: usize, width: usize) -> String {
+        format!("{:0width$}", idx, width = width)
+    }
 
     macro_rules! emit_unit {
         ($path:ident, $unit:ident) => {{
             if emit_source_maps {
                 $path.set_extension(SOURCE_MAP_EXTENSION);
-                File::create($path.as_path())?.write_all(&$unit.serialize_source_map())?;
+                fs::write($path.as_path(), &$unit.serialize_source_map())?;
             }
 
             $path.set_extension(MOVE_COMPILED_EXTENSION);
-            File::create($path.as_path())?.write_all(&$unit.serialize())?
+            fs::write($path.as_path(), &$unit.serialize())?
         }};
     }
 
@@ -183,25 +207,24 @@ pub fn output_compiled_units(
 
     // modules
     if !modules.is_empty() {
-        std::fs::create_dir_all(format!("{}/{}", out_dir, MODULE_SUB_DIR))?;
+        std::fs::create_dir_all(dir_path!(out_dir, MODULE_SUB_DIR))?;
     }
+    let digit_width = num_digits(modules.len());
     for (idx, unit) in modules.into_iter().enumerate() {
-        let mut path = PathBuf::from(format!(
-            "{}/{}/{}_{}",
+        let mut path = dir_path!(
             out_dir,
             MODULE_SUB_DIR,
-            idx,
-            unit.name(),
-        ));
+            format!("{}_{}", format_idx(idx, digit_width), unit.name())
+        );
         emit_unit!(path, unit);
     }
 
     // scripts
     if !scripts.is_empty() {
-        std::fs::create_dir_all(format!("{}/{}", out_dir, SCRIPT_SUB_DIR))?;
+        std::fs::create_dir_all(dir_path!(out_dir, SCRIPT_SUB_DIR))?;
     }
     for unit in scripts {
-        let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, unit.name()));
+        let mut path = dir_path!(out_dir, SCRIPT_SUB_DIR, unit.name());
         emit_unit!(path, unit);
     }
 
@@ -245,20 +268,24 @@ pub fn generate_interface_files(
 
     let interface_files_dir =
         interface_files_dir_opt.unwrap_or_else(|| command_line::DEFAULT_OUTPUT_DIR.to_string());
-    let interface_sub_dir = format!("{}/{}/", interface_files_dir, MOVE_COMPILED_INTERFACES_DIR);
+    let interface_sub_dir = dir_path!(interface_files_dir, MOVE_COMPILED_INTERFACES_DIR);
     let all_addr_dir = if separate_by_hash {
         use std::{
             collections::hash_map::DefaultHasher,
             hash::{Hash, Hasher},
         };
+        const HASH_DELIM: &str = "%|%";
 
         let mut hasher = DefaultHasher::new();
+        mv_files.len().hash(&mut hasher);
+        HASH_DELIM.hash(&mut hasher);
         for mv_file in &mv_files {
-            std::fs::read(mv_file)?.hash(&mut hasher)
+            std::fs::read(mv_file)?.hash(&mut hasher);
+            HASH_DELIM.hash(&mut hasher);
         }
-        // TODO might want a better temp file setup here
-        let dir = format!("{}/{:020}", interface_sub_dir, hasher.finish());
 
+        let mut dir = interface_sub_dir;
+        dir.push(format!("{:020}", hasher.finish()));
         dir
     } else {
         interface_sub_dir
@@ -266,8 +293,8 @@ pub fn generate_interface_files(
 
     for mv_file in mv_files {
         let (id, interface_contents) = interface_generator::write_to_string(&mv_file)?;
-        let addr_dir = format!("{}/{:#x}", all_addr_dir, id.address());
-        let file_path = format!("{}/{}.{}", addr_dir, id.name(), MOVE_EXTENSION);
+        let addr_dir = dir_path!(all_addr_dir.clone(), format!("{}", id.address()));
+        let file_path = file_path!(addr_dir.clone(), format!("{}", id.name()), MOVE_EXTENSION);
         // it's possible some files exist but not others due to multithreaded environments
         if separate_by_hash && Path::new(&file_path).is_file() {
             continue;
@@ -286,7 +313,7 @@ pub fn generate_interface_files(
         std::fs::rename(tmp.path(), file_path)?;
     }
 
-    Ok(Some(all_addr_dir))
+    Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
 }
 
 fn has_compiled_module_magic_number(path: &str) -> bool {
