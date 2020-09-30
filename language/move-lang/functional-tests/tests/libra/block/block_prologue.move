@@ -18,6 +18,7 @@ fun main() {
     assert(LibraTimestamp::now_microseconds() == 1000000, 76);
 }
 }
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script{
@@ -27,6 +28,7 @@ fun main() {
     assert(LibraTimestamp::now_microseconds() != 2000000, 77);
 }
 }
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vivian
