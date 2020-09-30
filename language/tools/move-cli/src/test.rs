@@ -139,3 +139,19 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
         Ok(())
     }
 }
+
+pub fn run_all(args_path: &str, cli_binary: &str) -> anyhow::Result<()> {
+    let mut test_total = 0;
+    let mut test_passed = 0;
+    for entry in move_lang::find_filenames(&[args_path.to_owned()], |fpath| {
+        fpath.file_name().expect("unexpected file entry path") == "args.txt"
+    })? {
+        match run_one(Path::new(&entry), cli_binary) {
+            Ok(_) => test_passed += 1,
+            Err(ex) => eprintln!("Test {} failed with error: {}", entry, ex),
+        }
+        test_total += 1;
+    }
+    println!("{} / {} test(s) passed.", test_total, test_passed);
+    Ok(())
+}

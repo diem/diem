@@ -445,7 +445,7 @@ pub fn find_move_filenames(
 /// - For each directory in `paths`, it will return all files that satisfy the predicate
 /// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
 ///   of the file extension
-fn find_filenames<Predicate: FnMut(&Path) -> bool>(
+pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
     paths: &[String],
     mut is_file_desired: Predicate,
 ) -> anyhow::Result<Vec<String>> {

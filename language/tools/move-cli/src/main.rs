@@ -105,10 +105,9 @@ enum Command {
     /// Run expected value tests using the given batch file
     #[structopt(name = "test")]
     Test {
-        // TODO: generalize this to support running all the tests in a given directory
-        /// File containing batch of commands to run
-        #[structopt(name = "file")]
-        file: String,
+        /// a directory path in which all the tests will be executed
+        #[structopt(name = "path")]
+        path: String,
     },
     /// View Move resources, events files, and modules stored on disk
     #[structopt(name = "view")]
@@ -589,10 +588,7 @@ fn main() -> Result<()> {
             *gas_budget,
             *dry_run,
         ),
-        Command::Test { file } => test::run_one(
-            &Path::new(file),
-            &std::env::current_exe()?.to_string_lossy(),
-        ),
+        Command::Test { path } => test::run_all(path, &std::env::current_exe()?.to_string_lossy()),
         Command::View { file } => view(&move_args, file),
         Command::Clean {} => {
             // delete move_data

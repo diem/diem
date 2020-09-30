@@ -3,13 +3,33 @@
 
 use move_cli::test;
 
-use std::path::Path;
+use std::path::PathBuf;
 
-pub const CLI_BINARY: &str = "../../../target/debug/move-cli";
-pub const CLI_TESTSUITE_DIR: &str = "tests/testsuite";
+pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "debug", "move-cli"];
+pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
+pub const CLI_TESTSUITE_PATH: [&str; 2] = ["tests", "testsuite"];
 
-fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
-    Ok(test::run_one(args_path, CLI_BINARY)?)
+fn get_cli_binary_path() -> String {
+    let pb: PathBuf = CLI_BINARY_PATH.iter().collect();
+    pb.to_str().unwrap().to_owned()
 }
 
-datatest_stable::harness!(run_all, CLI_TESTSUITE_DIR, r"args.txt$");
+fn get_metatest_path() -> String {
+    let pb: PathBuf = CLI_METATEST_PATH.iter().collect();
+    pb.to_str().unwrap().to_owned()
+}
+
+fn get_testsuite_path() -> String {
+    let pb: PathBuf = CLI_TESTSUITE_PATH.iter().collect();
+    pb.to_str().unwrap().to_owned()
+}
+
+#[test]
+fn run_metatest() {
+    assert!(test::run_all(&get_metatest_path(), &get_cli_binary_path()).is_ok());
+}
+
+#[test]
+fn run_testsuite() {
+    assert!(test::run_all(&get_testsuite_path(), &get_cli_binary_path()).is_ok());
+}

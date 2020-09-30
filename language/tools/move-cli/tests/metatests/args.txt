@@ -1,0 +1,3 @@
+test dummy/test_1/args.txt
+test dummy/test_2
+test dummy
