@@ -25,6 +25,7 @@ impl Node {
             .create_as_dir()
             .expect("unable to create temporary config dir");
         let node_dir = temp_dir.path();
+        println!("config dir: {:?}", node_dir);
 
         let config_path = node_dir.join("node.yaml");
 
