@@ -367,3 +367,5 @@ Returns true if <code>addr</code> holds a <code><a href="SharedEd25519PublicKey.
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

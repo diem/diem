@@ -37,6 +37,8 @@ pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
 pub const STD_LIB_DOC_TEMPLATE: &str = "modules/overview_template.md";
 /// The documentation root template for scripts.
 pub const TRANSACTION_SCRIPT_DOC_TEMPLATE: &str = "transaction_scripts/overview_template.md";
+/// Path to the references template.
+pub const REFERENCES_DOC_TEMPLATE: &str = "modules/references_template.md";
 
 pub const ERROR_DESC_DIR: &str = "error_descriptions";
 pub const ERROR_DESC_FILENAME: &str = "error_descriptions";
@@ -194,6 +196,11 @@ pub fn build_stdlib_doc() {
                 .to_string_lossy()
                 .to_string(),
         ),
+        Some(
+            path_in_crate(REFERENCES_DOC_TEMPLATE)
+                .to_string_lossy()
+                .to_string(),
+        ),
         stdlib_files().as_slice(),
         "",
     )
@@ -205,6 +212,11 @@ pub fn build_transaction_script_doc(script_files: &[String]) {
         STD_LIB_DOC_DIR,
         Some(
             path_in_crate(TRANSACTION_SCRIPT_DOC_TEMPLATE)
+                .to_string_lossy()
+                .to_string(),
+        ),
+        Some(
+            path_in_crate(REFERENCES_DOC_TEMPLATE)
                 .to_string_lossy()
                 .to_string(),
         ),
@@ -235,6 +247,7 @@ fn build_doc(
     output_path: &str,
     doc_path: &str,
     template: Option<String>,
+    references_file: Option<String>,
     sources: &[String],
     dep_path: &str,
 ) {
@@ -249,6 +262,9 @@ fn build_doc(
     // command line and invocation here have same output.
     if template.is_some() {
         options.docgen.root_doc_template = template;
+    }
+    if references_file.is_some() {
+        options.docgen.references_file = references_file;
     }
     if !doc_path.is_empty() {
         options.docgen.doc_path = vec![doc_path.to_string()];

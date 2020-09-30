@@ -246,7 +246,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_InitializeAbortsIf">InitializeAbortsIf</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_has_config">spec_has_config</a>();
@@ -306,7 +306,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
 <b>ensures</b> result == <a href="LibraConfig.md#0x1_LibraConfig_get">get</a>&lt;Config&gt;();
 </code></pre>
@@ -364,7 +364,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetAbortsIf">SetAbortsIf</a>&lt;Config&gt;;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetEnsures">SetEnsures</a>&lt;Config&gt;;
 </code></pre>
@@ -449,7 +449,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
@@ -499,7 +499,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -559,7 +559,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigAbortsIf">PublishNewConfigAbortsIf</a>&lt;Config&gt;;
@@ -631,7 +631,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 </code></pre>
@@ -685,7 +685,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <a name="0x1_LibraConfig_config$18"></a>
 <b>let</b> config = <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
@@ -791,7 +791,7 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
 
 
 <pre><code><b>define</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>(): bool {
-<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() || <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == 0
+  <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() || <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == 0
 }
 </code></pre>
 
@@ -840,3 +840,5 @@ After genesis, no new configurations are added.
 <b>invariant</b> <b>update</b> [<b>global</b>]
     (<b>forall</b> config_type: type <b>where</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()): <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;());
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

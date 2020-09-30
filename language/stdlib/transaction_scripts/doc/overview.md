@@ -2779,7 +2779,7 @@ Successful execution of this script emits two events:
 
 
 
-<pre><code>pragma verify;
+<pre><code><b>pragma</b> verify;
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: payer};
 <a name="peer_to_peer_with_metadata_payer_addr$1"></a>
 <b>let</b> payer_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer);
@@ -3517,7 +3517,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 
-<pre><code>pragma verify;
+<pre><code><b>pragma</b> verify;
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
 <a name="preburn_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -4711,3 +4711,5 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [update_exchange_rate](overview.md#update_exchange_rate)
 -  [update_libra_version](overview.md#update_libra_version)
 -  [update_minting_ability](overview.md#update_minting_ability)
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

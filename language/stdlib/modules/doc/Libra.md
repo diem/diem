@@ -1080,7 +1080,7 @@ reference.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>ensures</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <a name="0x1_Libra_currency_info$60"></a>
@@ -1947,7 +1947,7 @@ value of the passed-in <code>coin</code>.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Libra.md#0x1_Libra_WithdrawAbortsIf">WithdrawAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> coin.value == <b>old</b>(coin.value) - amount;
 <b>ensures</b> result.value == amount;
@@ -2002,7 +2002,7 @@ zero. Does not abort.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result.value == <b>old</b>(coin.value);
 <b>ensures</b> coin.value == 0;
@@ -2043,7 +2043,7 @@ and returns a new coin whose value is equal to the sum of the two inputs.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> coin1.value + coin2.value &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>ensures</b> result.value == coin1.value + coin2.value;
 </code></pre>
@@ -2086,7 +2086,7 @@ The <code>check</code> coin is consumed in the process
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Libra.md#0x1_Libra_DepositAbortsIf">DepositAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> coin.value == <b>old</b>(coin.value) + check.value;
 </code></pre>
@@ -2141,7 +2141,7 @@ a <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></code> fo
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> coin.value &gt; 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
@@ -2392,7 +2392,7 @@ rate is needed.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Libra.md#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;FromCoinType&gt;;
 <b>ensures</b> result == <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;FromCoinType&gt;(from_value);
 </code></pre>
@@ -2615,7 +2615,7 @@ its <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> reso
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
 <b>ensures</b> result == <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().currency_code;
 </code></pre>
@@ -2804,7 +2804,7 @@ Asserts that <code>CoinType</code> is a registered currency.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -2859,7 +2859,7 @@ Returns the market cap of CoinType.
 
 
 <pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_market_cap">spec_market_cap</a>&lt;CoinType&gt;(): u128 {
-<b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
+   <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
 }
 </code></pre>
 
@@ -2870,7 +2870,7 @@ Returns the market cap of CoinType.
 
 
 <pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_scaling_factor">spec_scaling_factor</a>&lt;CoinType&gt;(): u64 {
-<b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).scaling_factor
+   <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).scaling_factor
 }
 </code></pre>
 
@@ -3299,3 +3299,5 @@ Only update_lbr_exchange_rate can change the exchange rate [H4].
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
     <b>except</b> <a href="Libra.md#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;CoinType&gt;;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

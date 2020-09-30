@@ -626,7 +626,7 @@ Helper function to grant a role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
 <a name="0x1_Roles_addr$44"></a>
 <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -948,7 +948,7 @@ invariant that the role of libra root and TC can only be at a specific address.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>;
 </code></pre>
@@ -995,7 +995,7 @@ TODO(wrwg): see discussion for <code>assert_libra_root</code>
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a>;
 </code></pre>
 
@@ -1038,7 +1038,7 @@ Assert that the account has the parent vasp role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">AbortsIfNotParentVasp</a>;
 </code></pre>
 
@@ -1081,7 +1081,7 @@ Assert that the account has the designated dealer role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">AbortsIfNotDesignatedDealer</a>;
 </code></pre>
 
@@ -1124,7 +1124,7 @@ Assert that the account has the validator role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">AbortsIfNotValidator</a>{validator_addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_account)};
 </code></pre>
 
@@ -1167,7 +1167,7 @@ Assert that the account has the validator operator role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">AbortsIfNotValidatorOperator</a>{validator_operator_addr: <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_operator_account)};
 </code></pre>
 
@@ -1211,7 +1211,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">AbortsIfNotParentVaspOrDesignatedDealer</a>;
 </code></pre>
 
@@ -1254,7 +1254,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrChildVasp">AbortsIfNotParentVaspOrChildVasp</a>;
 </code></pre>
 
@@ -1623,3 +1623,5 @@ ChildVASP have balances [D7].
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

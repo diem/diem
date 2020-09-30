@@ -530,7 +530,7 @@ NB! currently we do not require the the operator_account to be set
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr);
 </code></pre>
@@ -587,7 +587,7 @@ Aborts if there is no ValidatorConfig resource of if its config is empty
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>aborts_if</b> <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> result == <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr);
@@ -601,7 +601,7 @@ Returns the config published under addr.
 
 
 <pre><code><b>define</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">Config</a> {
-<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+   <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
 
@@ -642,7 +642,7 @@ Aborts if there is no ValidatorConfig resource
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>ensures</b> result == <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_human_name">spec_get_human_name</a>(addr);
 </code></pre>
@@ -685,7 +685,7 @@ empty, returns the input
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>ensures</b> result == <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(addr);
 </code></pre>
@@ -752,7 +752,7 @@ Never aborts
 
 
 
-<pre><code>pragma aborts_if_is_strict = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_strict = <b>true</b>;
 </code></pre>
 
 
@@ -809,3 +809,5 @@ previous one as a helper.
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr1):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr1);
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

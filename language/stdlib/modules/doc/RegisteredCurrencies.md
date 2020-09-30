@@ -214,3 +214,5 @@ Global invariant that currency config is always available after genesis.
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

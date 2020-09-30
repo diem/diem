@@ -208,7 +208,7 @@ Assert that the account is the libra root address.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>;
 </code></pre>
 
@@ -263,7 +263,7 @@ Assert that the signer has the treasury compliance address.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a>;
 </code></pre>
 
@@ -315,7 +315,7 @@ Assert that the signer has the VM reserved address.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">AbortsIfNotVM</a>;
 </code></pre>
 
@@ -367,7 +367,7 @@ Assert that the signer has the currency info address.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">AbortsIfNotCurrencyInfo</a>;
 </code></pre>
 
@@ -388,3 +388,5 @@ Specifies that a function aborts if the account has not the currency info addres
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

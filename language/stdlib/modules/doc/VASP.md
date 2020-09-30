@@ -368,7 +368,7 @@ Aborts otherwise
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr) && !<a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr);
 </code></pre>
@@ -428,7 +428,7 @@ Returns true if <code>addr</code> is a parent VASP.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr);
 </code></pre>
@@ -467,7 +467,7 @@ Returns true if <code>addr</code> is a child VASP.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr);
 </code></pre>
@@ -506,7 +506,7 @@ Returns true if <code>addr</code> is a VASP.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr);
 </code></pre>
@@ -557,7 +557,7 @@ Returns true if both addresses are VASPs and they have the same parent address.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1, addr2);
 </code></pre>
@@ -731,3 +731,5 @@ Returns the number of children under <code>parent</code>.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>forall</b> a: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(a)): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

@@ -81,3 +81,5 @@
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;();
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

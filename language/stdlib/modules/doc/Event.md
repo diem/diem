@@ -267,5 +267,7 @@ comments of this module and it has been verified.
 > standlone.
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

@@ -177,7 +177,7 @@ callers, the actual result of this function is not relevant, as long as the abst
 homomorphic.
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> [concrete] <a href="FixedPoint32.md#0x1_FixedPoint32_ConcreteMultiplyAbortsIf">ConcreteMultiplyAbortsIf</a>;
 <b>ensures</b> [concrete] result == <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_multiply_u64">spec_concrete_multiply_u64</a>(val, multiplier);
 <b>include</b> [abstract] <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">MultiplyAbortsIf</a>;
@@ -204,7 +204,7 @@ homomorphic.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_multiply_u64">spec_concrete_multiply_u64</a>(val: num, multiplier: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>): num {
-(val * multiplier.value) &gt;&gt; 32
+   (val * multiplier.value) &gt;&gt; 32
 }
 </code></pre>
 
@@ -233,18 +233,18 @@ homomorphic.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">spec_multiply_u64</a>(val: num, multiplier: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>): num {
-<b>if</b> (multiplier.value == 0)
-   // Zero value
-   0
-<b>else</b> <b>if</b> (multiplier.value == 1)
-   // 1.0
-   val
-<b>else</b> <b>if</b> (multiplier.value == 2)
-   // 0.5
-   val / 2
-<b>else</b>
-   // overflow
-   <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a> + 1
+   <b>if</b> (multiplier.value == 0)
+       // Zero value
+       0
+   <b>else</b> <b>if</b> (multiplier.value == 1)
+       // 1.0
+       val
+   <b>else</b> <b>if</b> (multiplier.value == 2)
+       // 0.5
+       val / 2
+   <b>else</b>
+       // overflow
+       <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a> + 1
 }
 </code></pre>
 
@@ -296,7 +296,7 @@ We specify the concrete semantics of the implementation but use
 an abstracted, simplified semantics for verification of callers.
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> [concrete] <a href="FixedPoint32.md#0x1_FixedPoint32_ConcreteDivideAbortsIf">ConcreteDivideAbortsIf</a>;
 <b>ensures</b> [concrete] result == <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_divide_u64">spec_concrete_divide_u64</a>(val, divisor);
 <b>include</b> [abstract] <a href="FixedPoint32.md#0x1_FixedPoint32_DivideAbortsIf">DivideAbortsIf</a>;
@@ -324,7 +324,7 @@ an abstracted, simplified semantics for verification of callers.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_divide_u64">spec_concrete_divide_u64</a>(val: num, divisor: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>): num {
-(val &lt;&lt; 32) / divisor.value
+   (val &lt;&lt; 32) / divisor.value
 }
 </code></pre>
 
@@ -354,14 +354,14 @@ an abstracted, simplified semantics for verification of callers.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_divide_u64">spec_divide_u64</a>(val: num, divisor: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>): num {
-<b>if</b> (divisor.value == 1)
-   // 1.0
-   val
-<b>else</b> <b>if</b> (divisor.value == 2)
-   // 0.5
-   val * 2
-<b>else</b>
-   <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a> + 1
+   <b>if</b> (divisor.value == 1)
+       // 1.0
+       val
+   <b>else</b> <b>if</b> (divisor.value == 2)
+       // 0.5
+       val * 2
+   <b>else</b>
+       <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a> + 1
 }
 </code></pre>
 
@@ -420,7 +420,7 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> [concrete] <a href="FixedPoint32.md#0x1_FixedPoint32_ConcreteCreateFromRationalAbortsIf">ConcreteCreateFromRationalAbortsIf</a>;
 <b>ensures</b> [concrete] result == <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_create_from_rational">spec_concrete_create_from_rational</a>(numerator, denominator);
 <b>include</b> [abstract] <a href="FixedPoint32.md#0x1_FixedPoint32_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a>;
@@ -455,7 +455,7 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_concrete_create_from_rational">spec_concrete_create_from_rational</a>(numerator: num, denominator: num): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> {
-<a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: (numerator &lt;&lt; 64) / (denominator &lt;&lt; 32)}
+   <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: (numerator &lt;&lt; 64) / (denominator &lt;&lt; 32)}
 }
 </code></pre>
 
@@ -486,12 +486,12 @@ succeeded.
 
 
 <pre><code><b>define</b> <a href="FixedPoint32.md#0x1_FixedPoint32_spec_create_from_rational">spec_create_from_rational</a>(numerator: num, denominator: num): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> {
-<b>if</b> (numerator == denominator)
-   // 1.0
-   <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: 1}
-<b>else</b>
-   // 0.5
-   <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: 2}
+   <b>if</b> (numerator == denominator)
+       // 1.0
+       <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: 1}
+   <b>else</b>
+       // 0.5
+       <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>{value: 2}
 }
 </code></pre>
 
@@ -529,7 +529,7 @@ Create a fixedpoint value from a raw value.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> [concrete] result.value == value;
 <b>ensures</b> [abstract] result.value == 2;
@@ -598,5 +598,7 @@ Returns true if the ratio is zero.
 
 
 
-<pre><code>pragma aborts_if_is_strict;
+<pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

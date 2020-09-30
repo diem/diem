@@ -318,7 +318,7 @@ Reverses the order of the elements in the vector <code>v</code> in place.
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -357,7 +357,7 @@ Moves all of the elements of the <code>other</code> vector into the <code>lhs</c
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -394,7 +394,7 @@ Return <code><b>true</b></code> if the vector <code>v</code> has no elements and
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -437,7 +437,7 @@ Return true if <code>e</code> is in the vector <code>v</code>.
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -481,7 +481,7 @@ Otherwise, returns <code>(<b>false</b>, 0)</code>.
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -526,7 +526,7 @@ Aborts if <code>i</code> is out of bounds.
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -567,7 +567,7 @@ Aborts if <code>i</code> is out of bounds.
 
 
 
-<pre><code>pragma intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
 
 
@@ -627,3 +627,5 @@ Auxiliary function to check if <code>v</code> is equal to the result of concaten
     v1 == v2[1..len(v2)]
 }
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

@@ -957,7 +957,7 @@ Depending on the <code>is_withdrawal</code> flag passed in we determine whether 
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, is_withdrawal);
 </code></pre>
@@ -1039,8 +1039,8 @@ credits the LBR reserve.
 
 
 
-<pre><code>pragma opaque;
-pragma verify_duration_estimate = 100;
+<pre><code><b>pragma</b> opaque;
+<b>pragma</b> verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(cap.account_address);
@@ -1176,7 +1176,7 @@ reserve address to signify that this was a special payment that credits
 > TODO: timeout
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 
@@ -1262,7 +1262,7 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
 <b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
@@ -1381,7 +1381,7 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(designated_dealer_address);
 <b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="LibraAccount.md#0x1_LibraAccount_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;Token&gt;;
@@ -1767,7 +1767,7 @@ resource under <code>dd</code>.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_LibraAccount_dd_addr$84"></a>
 <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
 <a name="0x1_LibraAccount_payer$85"></a>
@@ -1874,7 +1874,7 @@ Return a unique capability granting permission to withdraw from the sender's acc
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_LibraAccount_sender_addr$86"></a>
 <b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
@@ -1942,7 +1942,7 @@ Return the withdraw capability to the account it originally came from
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_LibraAccount_cap_addr$87"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
@@ -2001,7 +2001,7 @@ attestation protocol
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_LibraAccount_payer$88"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
@@ -3546,8 +3546,8 @@ Covered: L74 (Match 8)
 
 
 <pre><code><b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_prologue_guarantees">prologue_guarantees</a>(sender: signer) : bool {
-<b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
-<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() && <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr) && !<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(addr)
+   <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
+   <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() && <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr) && !<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(addr)
 }
 </code></pre>
 
@@ -4508,3 +4508,5 @@ only withdraw_from and its helper and clients can withdraw [H17].
     <b>except</b> withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr,
         preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

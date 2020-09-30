@@ -153,7 +153,7 @@ Aborts if there is no ValidatorOperatorConfig resource
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>ensures</b> result == <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(validator_operator_addr);
 </code></pre>
@@ -207,3 +207,5 @@ every validator address has a validator role.
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

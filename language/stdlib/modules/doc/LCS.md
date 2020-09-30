@@ -47,3 +47,5 @@ Return the binary representation of <code>v</code> in LCS (Libra Canonical Seria
 
 <pre><code><b>native</b> <b>define</b> <a href="LCS.md#0x1_LCS_serialize">serialize</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

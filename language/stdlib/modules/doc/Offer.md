@@ -335,3 +335,5 @@ Enforce that every function except <code><a href="Offer.md#0x1_Offer_redeem">Sel
 
 <pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

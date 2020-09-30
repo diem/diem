@@ -2022,7 +2022,7 @@ Verify all functions in this module.
 > about coin balance.
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code><b>pragma</b> verify = <b>true</b>;
 </code></pre>
 
 
@@ -2205,7 +2205,7 @@ Account for updating <code><a href="LibraTest.md#0x1_LibraTest_sum_of_coin_value
 
 
 
-<pre><code>pragma verify=<b>false</b>;
+<pre><code><b>pragma</b> verify=<b>false</b>;
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="LibraTest.md#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="_spec_address_of">Signer::spec_address_of</a>(account));
 </code></pre>
 
@@ -2268,7 +2268,7 @@ Account for updating <code><a href="LibraTest.md#0x1_LibraTest_sum_of_coin_value
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 <b>include</b> <a href="LibraTest.md#0x1_LibraTest_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
 <b>aborts_if</b> preburn.to_burn.value != 0;
 <b>include</b> <a href="LibraTest.md#0x1_LibraTest_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;;
@@ -2314,7 +2314,7 @@ Account for updating <code><a href="LibraTest.md#0x1_LibraTest_sum_of_coin_value
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="LibraTest.md#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="_spec_address_of">Signer::spec_address_of</a>(account));
 <b>include</b> <a href="LibraTest.md#0x1_LibraTest_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="LibraTest.md#0x1_LibraTest_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="LibraTest.md#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="_spec_address_of">Signer::spec_address_of</a>(account))};
@@ -2505,6 +2505,6 @@ Account for updating <code><a href="LibraTest.md#0x1_LibraTest_sum_of_coin_value
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 <b>ensures</b> <a href="LibraTest.md#0x1_LibraTest_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="_spec_address_of">Signer::spec_address_of</a>(tc_account));
 </code></pre>

@@ -245,7 +245,7 @@ Returns 0 if a nonce was recorded and non-0 otherwise
 It is currently assumed that this function raises no arithmetic overflow/underflow.
 
 
-<pre><code>pragma opaque, verify = <b>false</b>;
+<pre><code><b>pragma</b> opaque, verify = <b>false</b>;
 <b>ensures</b> result == <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce);
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
@@ -329,3 +329,5 @@ Specification version of <code><a href="SlidingNonce.md#0x1_SlidingNonce_try_rec
 
 <pre><code><b>define</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

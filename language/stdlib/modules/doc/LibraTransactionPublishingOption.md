@@ -281,7 +281,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 </code></pre>
 
 
@@ -329,7 +329,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 </code></pre>
 
 
@@ -378,7 +378,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
 </code></pre>
 
 
@@ -432,3 +432,5 @@ LibraTransactionPublishingOption config [H10]
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

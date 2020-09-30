@@ -338,7 +338,7 @@ code in this module to change the validator set.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
@@ -649,7 +649,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>ensures</b> result == <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;();
 </code></pre>
@@ -687,7 +687,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>ensures</b> result == <a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr);
 </code></pre>
@@ -699,7 +699,7 @@ It updates the correct entry in the correct way
 
 
 <pre><code><b>define</b> <a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr: address): bool {
-<b>exists</b> v in <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): v.addr == addr
+   <b>exists</b> v in <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): v.addr == addr
 }
 </code></pre>
 
@@ -739,7 +739,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>aborts_if</b> !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b>
@@ -780,7 +780,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>ensures</b> result == len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>());
 </code></pre>
@@ -819,7 +819,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>aborts_if</b> i &gt;= len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> result == <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i].addr;
@@ -881,7 +881,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_LibraSystem_size$20"></a>
 <b>let</b> size = len(validators);
@@ -947,7 +947,7 @@ It updates the correct entry in the correct way
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_LibraSystem_new_validator_config$21"></a>
 <b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validators[i].addr);
@@ -1045,7 +1045,7 @@ prove, for unclear reasons.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == (<b>exists</b> v in validators_vec_ref: v.addr == addr);
 </code></pre>
@@ -1156,3 +1156,5 @@ Consensus_voting_power is always 1.
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

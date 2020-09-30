@@ -300,3 +300,5 @@ Currently, no one can update LibraVMConfig [H10]
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

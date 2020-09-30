@@ -334,7 +334,7 @@ underlying fiat.
 
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 
@@ -442,6 +442,8 @@ tc_account retrieves BurnCapability [H2]. BurnCapability is not transferrable [J
 
 
 <pre><code><b>define</b> <a href="TransactionFee.md#0x1_TransactionFee_transaction_fee">transaction_fee</a>&lt;CoinType&gt;(): <a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt; {
-borrow_global&lt;<a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>())
+   borrow_global&lt;<a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>())
 }
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

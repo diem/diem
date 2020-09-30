@@ -323,7 +323,7 @@ Returns true if <code>CoinType</code> is <code><a href="LBR.md#0x1_LBR_LBR">LBR:
 
 
 
-<pre><code>pragma opaque, verify = <b>false</b>;
+<pre><code><b>pragma</b> opaque, verify = <b>false</b>;
 <b>include</b> <a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;;
 </code></pre>
 
@@ -343,7 +343,7 @@ Returns true if CoinType is LBR.
 
 
 <pre><code><b>define</b> <a href="LBR.md#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;(): bool {
-type&lt;CoinType&gt;() == type&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;()
+   type&lt;CoinType&gt;() == type&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;()
 }
 </code></pre>
 
@@ -390,7 +390,7 @@ banker's rounding, but this adds considerable arithmetic complexity.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_LBR_reserve$13"></a>
 <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LBR.md#0x1_LBR_CalculateComponentAmountsForLBRAbortsIf">CalculateComponentAmountsForLBRAbortsIf</a>;
@@ -469,7 +469,7 @@ enough of each coin is passed in, this will return the <code><a href="LBR.md#0x1
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="LBR.md#0x1_LBR_CreateAbortsIf">CreateAbortsIf</a>;
@@ -615,8 +615,8 @@ would be <code>6</code> and <code>3</code> for <code><a href="Coin1.md#0x1_Coin1
 
 
 <pre><code><b>define</b> <a href="LBR.md#0x1_LBR_spec_unpack_coin1">spec_unpack_coin1</a>(coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;): u64 {
-<b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>());
-<a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(coin.value, reserve.coin1.ratio)
+   <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>());
+   <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(coin.value, reserve.coin1.ratio)
 }
 </code></pre>
 
@@ -627,8 +627,8 @@ would be <code>6</code> and <code>3</code> for <code><a href="Coin1.md#0x1_Coin1
 
 
 <pre><code><b>define</b> <a href="LBR.md#0x1_LBR_spec_unpack_coin2">spec_unpack_coin2</a>(coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;): u64 {
-<b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>());
-<a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(coin.value, reserve.coin2.ratio)
+   <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>());
+   <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(coin.value, reserve.coin2.ratio)
 }
 </code></pre>
 
@@ -674,3 +674,5 @@ Global invariant that the Reserve resource exists after genesis.
    <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
 }
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

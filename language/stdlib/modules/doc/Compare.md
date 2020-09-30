@@ -164,3 +164,5 @@ Compare two <code>u64</code>'s
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

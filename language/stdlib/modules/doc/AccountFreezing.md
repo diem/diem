@@ -3,6 +3,7 @@
 
 # Module `0x1::AccountFreezing`
 
+Module which manages freezing of accounts.
 
 
 -  [Resource <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code>](#0x1_AccountFreezing_FreezingBit)
@@ -20,6 +21,10 @@
 -  [Function <code>unfreeze_account</code>](#0x1_AccountFreezing_unfreeze_account)
 -  [Function <code>account_is_frozen</code>](#0x1_AccountFreezing_account_is_frozen)
 -  [Function <code>assert_not_frozen</code>](#0x1_AccountFreezing_assert_not_frozen)
+-  [Module Specification](#@Module_Specification_0)
+    -  [Initialization](#@Initialization_1)
+    -  [Access Control](#@Access_Control_2)
+    -  [Helper Functions](#@Helper_Functions_3)
 
 
 <a name="0x1_AccountFreezing_FreezingBit"></a>
@@ -450,7 +455,7 @@ Returns if the account at <code>addr</code> is frozen.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-pragma opaque = <b>true</b>;
+<b>pragma</b> opaque = <b>true</b>;
 <b>ensures</b> result == <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr);
 </code></pre>
 
@@ -488,7 +493,7 @@ Assert that an account is not frozen.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="AccountFreezing.md#0x1_AccountFreezing_AbortsIfFrozen">AbortsIfFrozen</a>;
 </code></pre>
 
@@ -506,26 +511,31 @@ Assert that an account is not frozen.
 
 
 
+</details>
 
-<a name="0x1_AccountFreezing_spec_account_is_frozen"></a>
+<a name="@Module_Specification_0"></a>
 
-
-<pre><code><b>define</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
-    <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
-}
-<a name="0x1_AccountFreezing_spec_account_is_not_frozen"></a>
-<b>define</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(addr: address): bool {
-    <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && !<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
-}
-</code></pre>
+## Module Specification
 
 
-FreezeEventsHolder always exists after genesis.
+
+<a name="@Initialization_1"></a>
+
+### Initialization
+
+
+<code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code> always exists after genesis.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
     <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
+
+
+
+<a name="@Access_Control_2"></a>
+
+### Access Control
 
 
 The account of LibraRoot is not freezable [F1].
@@ -546,18 +556,23 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
-The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [H6].
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [H6].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
 </code></pre>
 
 
+Only (un)freeze functions can change the freezing bits of accounts [H6].
+
+
+<pre><code><b>apply</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;
+</code></pre>
+
+
 
 
 <a name="0x1_AccountFreezing_FreezingBitRemainsSame"></a>
-
-The freezing bit stays constant.
 
 
 <pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> {
@@ -568,12 +583,22 @@ The freezing bit stays constant.
 
 
 
-only (un)freeze functions can change the freezing bits of accounts [H6].
+<a name="@Helper_Functions_3"></a>
+
+### Helper Functions
 
 
-<pre><code><b>apply</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;
+
+<a name="0x1_AccountFreezing_spec_account_is_frozen"></a>
+
+
+<pre><code><b>define</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
+    <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
+}
+<a name="0x1_AccountFreezing_spec_account_is_not_frozen"></a>
+<b>define</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(addr: address): bool {
+    <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && !<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
+}
 </code></pre>
 
-
-
-</details>
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

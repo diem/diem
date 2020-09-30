@@ -4,17 +4,18 @@
 # Libra Move Framework
 
 
+This is the root document for the Libra framework module documentation. The Libra framework provides a set of Move
+modules which define the resources and functions available for the Libra blockchain. Each module is individually
+documented here, together with it's implementation and [formal specification](../../../move-prover/doc/user/spec-lang.md).
 
-This is the root document for the Libra framework documentation.
-
-
-
-> TODO: fill this out
+Move modules are not directly called by clients, but instead are used to implement *transaction scripts*.
+For documentation of transaction scripts which constitute the client API, see
+[../../transaction_scripts/doc/overview.md](../../transaction_scripts/doc/overview.md).
 
 
 <a name="@Index_1"></a>
 
-# Index
+## Index
 
 
 -  [0x1::AccountFreezing](AccountFreezing.md#0x1_AccountFreezing)
@@ -58,3 +59,5 @@ This is the root document for the Libra framework documentation.
 -  [0x1::ValidatorConfig](ValidatorConfig.md#0x1_ValidatorConfig)
 -  [0x1::ValidatorOperatorConfig](ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [0x1::Vector](Vector.md#0x1_Vector)
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

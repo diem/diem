@@ -124,3 +124,5 @@ Return the chain ID of this Libra instance
     <b>global</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).id
 }
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

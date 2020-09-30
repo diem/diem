@@ -77,6 +77,7 @@ const WEAK_KEYWORDS: &[&str] = &[
     "include",
     "mut",
     "old",
+    "pragma",
     "pack",
     "unpack",
     "update",
@@ -135,6 +136,9 @@ pub struct DocgenOptions {
     /// separate file is generated. References between the included and the standalone
     /// module/script content work transparently.
     pub root_doc_template: Option<String>,
+    /// An optional file containing reference definitions. The content of this file will
+    /// be added to each generated markdown doc.
+    pub references_file: Option<String>,
 }
 
 impl Default for DocgenOptions {
@@ -150,6 +154,7 @@ impl Default for DocgenOptions {
             output_directory: "doc".to_string(),
             doc_path: vec!["doc".to_string()],
             root_doc_template: None,
+            references_file: None,
         }
     }
 }
@@ -278,6 +283,24 @@ impl<'env> Docgen<'env> {
                     path.to_string_lossy().to_string(),
                     self.writer.extract_result(),
                 ));
+            }
+        }
+
+        // If there is a references_file, append it's content to each generated output.
+        if let Some(fname) = &self.options.references_file {
+            let mut content = String::new();
+            if File::open(fname)
+                .and_then(|mut file| file.read_to_string(&mut content))
+                .is_ok()
+            {
+                for (_, out) in self.output.iter_mut() {
+                    out.push_str(&content);
+                }
+            } else {
+                self.env.error(
+                    &self.env.unknown_loc(),
+                    &format!("cannot read references file `{}`", fname),
+                );
             }
         }
 
@@ -1508,7 +1531,11 @@ impl<'env> Docgen<'env> {
                 ))
                 .unwrap_or("");
             let newl_at = source_before.rfind('\n').unwrap_or(0);
-            let indent = source_before.len() - newl_at - 1;
+            let mut indent = source_before.len() - newl_at - 1;
+            if indent >= 4 && source_before.ends_with("spec ") {
+                // Special case for `spec define` and similar constructs.
+                indent -= 4;
+            }
             // Remove the indent from all lines.
             source
                 .lines()

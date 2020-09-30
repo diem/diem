@@ -353,7 +353,7 @@ and default tiers for each known currency at launch.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_DesignatedDealer_dd_addr$10"></a>
 <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -420,7 +420,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <a name="0x1_DesignatedDealer_dd_addr$11"></a>
 <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -501,7 +501,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt;;
 <a name="0x1_DesignatedDealer_tier_info$12"></a>
@@ -582,7 +582,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt;;
 <a name="0x1_DesignatedDealer_tier_info$14"></a>
@@ -653,7 +653,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;CoinType&gt;;
 <b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>ensures</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
@@ -737,7 +737,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
 </code></pre>
@@ -823,3 +823,5 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

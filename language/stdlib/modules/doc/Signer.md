@@ -60,7 +60,7 @@
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="Signer.md#0x1_Signer_spec_address_of">spec_address_of</a>(s);
 </code></pre>
@@ -79,3 +79,5 @@ Specification version of <code><a href="Signer.md#0x1_Signer_address_of">Self::a
 
 
 </details>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)

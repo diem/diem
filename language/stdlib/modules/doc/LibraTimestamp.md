@@ -245,7 +245,7 @@ Gets the current time in microseconds.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
 <b>ensures</b> result == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
@@ -257,7 +257,7 @@ Gets the current time in microseconds.
 
 
 <pre><code><b>define</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
-<b>global</b>&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
+   <b>global</b>&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
 }
 </code></pre>
 
@@ -295,7 +295,7 @@ Gets the current time in seconds.
 
 
 
-<pre><code>pragma opaque;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
 <b>ensures</b> result == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() /  <a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>;
 </code></pre>
@@ -307,7 +307,7 @@ Gets the current time in seconds.
 
 
 <pre><code><b>define</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_seconds">spec_now_seconds</a>(): u64 {
-<b>global</b>&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds / <a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
+   <b>global</b>&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds / <a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
 }
 </code></pre>
 
@@ -370,7 +370,7 @@ Helper function to assert genesis state.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
 </code></pre>
 
@@ -446,7 +446,7 @@ Helper function to assert operating (!genesis) state.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque = <b>true</b>;
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
 </code></pre>
 
@@ -475,7 +475,7 @@ All functions which do not have an <code><b>aborts_if</b></code> specification i
 to never abort.
 
 
-<pre><code>pragma aborts_if_is_strict;
+<pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>
 
 
@@ -486,3 +486,5 @@ After genesis, time progresses monotonically.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">is_operating</a>()) ==&gt; <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
+
+[]: # (File containing markdown style reference definitions to be included in each generated doc)
