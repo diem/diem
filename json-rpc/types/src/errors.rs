@@ -38,7 +38,6 @@ pub enum InvalidRequestCode {
     InvalidParams = -32602,
     // -32603 is internal error
     InvalidFormat = -32604,
-    ParseError = -32700,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

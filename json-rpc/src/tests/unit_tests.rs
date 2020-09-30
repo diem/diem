@@ -820,17 +820,21 @@ fn test_metrics() {
 
     let metrics = get_all_metrics();
     let expected_metrics = vec![
-        // requests count
-        "libra_client_service_requests_count{result=success,type=get_currencies}",
+        // rpc request count
+        "libra_client_service_rpc_requests_count{type=single}",
+        "libra_client_service_rpc_requests_count{type=batch}",
+        // rpc request latency
+        "libra_client_service_rpc_request_latency_seconds{type=single}",
+        "libra_client_service_rpc_request_latency_seconds{type=batch}",
+        // method request count
+        "libra_client_service_requests_count{method=get_currencies,result=success,type=single}",
         // method latency
         "libra_client_service_method_latency_seconds{method=get_currencies,type=single}",
         "libra_client_service_method_latency_seconds{method=get_currencies,type=batch}",
-        // request latency
-        "libra_client_service_request_latency_seconds{type=single}",
-        "libra_client_service_request_latency_seconds{type=batch}",
         // invalid params
-        "libra_client_service_invalid_requests_count{type=invalid_params}",
+        "libra_client_service_invalid_requests_count{errortype=invalid_params,method=get_currencies,type=single}",
     ];
+
     for name in expected_metrics {
         assert!(
             metrics.contains_key(name),

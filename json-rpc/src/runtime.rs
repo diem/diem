@@ -181,7 +181,8 @@ pub(crate) async fn rpc_endpoint(
         Value::Array(_) => LABEL_BATCH,
         _ => LABEL_SINGLE,
     };
-    let timer = counters::REQUEST_LATENCY
+    counters::RPC_REQUESTS.with_label_values(&[label]).inc();
+    let timer = counters::RPC_REQUEST_LATENCY
         .with_label_values(&[label])
         .start_timer();
     let ret = rpc_endpoint_without_metrics(data, service, registry).await;
@@ -232,7 +233,7 @@ async fn rpc_endpoint_without_metrics(
                     ledger_info.ledger_info().version(),
                     ledger_info.ledger_info().timestamp_usecs(),
                 );
-                set_response_error(&mut resp, err);
+                set_response_error(&mut resp, err, LABEL_BATCH, "unknown");
                 log_response!(trace_id, &resp, true);
 
                 warp::reply::json(&resp)
@@ -272,7 +273,12 @@ async fn rpc_request_handler(
             request = data;
         }
         _ => {
-            set_response_error(&mut response, JsonRpcError::invalid_format());
+            set_response_error(
+                &mut response,
+                JsonRpcError::invalid_format(),
+                request_type_label,
+                "unknown",
+            );
             return response;
         }
     }
@@ -283,14 +289,14 @@ async fn rpc_request_handler(
             response.id = Some(request_id);
         }
         Err(err) => {
-            set_response_error(&mut response, err);
+            set_response_error(&mut response, err, request_type_label, "unknown");
             return response;
         }
     };
 
     // verify protocol version
     if let Err(err) = verify_protocol(&request) {
-        set_response_error(&mut response, err);
+        set_response_error(&mut response, err, request_type_label, "unknown");
         return response;
     }
 
@@ -301,7 +307,12 @@ async fn rpc_request_handler(
             params = parameters.to_vec();
         }
         _ => {
-            set_response_error(&mut response, JsonRpcError::invalid_params(None));
+            set_response_error(
+                &mut response,
+                JsonRpcError::invalid_params(None),
+                request_type_label,
+                "unknown",
+            );
             return response;
         }
     }
@@ -322,7 +333,7 @@ async fn rpc_request_handler(
                     Ok(result) => {
                         response.result = Some(result);
                         counters::REQUESTS
-                            .with_label_values(&[name, LABEL_SUCCESS])
+                            .with_label_values(&[request_type_label, name, LABEL_SUCCESS])
                             .inc();
                     }
                     Err(err) => {
@@ -332,17 +343,29 @@ async fn rpc_request_handler(
                             err.downcast_ref::<JsonRpcError>()
                                 .cloned()
                                 .unwrap_or_else(|| JsonRpcError::internal_error(err.to_string())),
+                            request_type_label,
+                            &name,
                         );
                         counters::REQUESTS
-                            .with_label_values(&[name, LABEL_FAIL])
+                            .with_label_values(&[request_type_label, name, LABEL_FAIL])
                             .inc();
                     }
                 }
                 timer.stop_and_record();
             }
-            None => set_response_error(&mut response, JsonRpcError::method_not_found()),
+            None => set_response_error(
+                &mut response,
+                JsonRpcError::method_not_found(),
+                request_type_label,
+                "not_found",
+            ),
         },
-        _ => set_response_error(&mut response, JsonRpcError::method_not_found()),
+        _ => set_response_error(
+            &mut response,
+            JsonRpcError::method_not_found(),
+            request_type_label,
+            "not_found",
+        ),
     }
 
     response
@@ -350,20 +373,28 @@ async fn rpc_request_handler(
 
 // Sets the JSON RPC error value for a given response.
 // If a counter label is supplied, also increments the invalid request counter using the label,
-fn set_response_error(response: &mut JsonRpcResponse, error: JsonRpcError) {
+fn set_response_error(
+    response: &mut JsonRpcResponse,
+    error: JsonRpcError,
+    request_type: &str,
+    method: &str,
+) {
     let err_code = error.code;
     if is_internal_error(&error) {
-        counters::INTERNAL_ERRORS.inc();
+        counters::INTERNAL_ERRORS
+            .with_label_values(&[request_type, method, &err_code.to_string()])
+            .inc();
     } else {
         let label = match err_code {
             -32600 => "invalid_request",
             -32601 => "method_not_found",
             -32602 => "invalid_params",
             -32604 => "invalid_format",
-            -32700 => "parse_error",
             _ => "unexpected_code",
         };
-        counters::INVALID_REQUESTS.with_label_values(&[label]).inc();
+        counters::INVALID_REQUESTS
+            .with_label_values(&[request_type, method, label])
+            .inc();
     }
 
     response.error = Some(error);
