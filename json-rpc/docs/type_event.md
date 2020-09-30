@@ -144,6 +144,14 @@ Event emitted after minted, destination address received the minted coins.
 | amount              | [Amount](type_amount.md) | The amount minted                 |
 | destination_address | string                   | The address who received the mint |
 
+#### createaccount
+
+Event emitted when a new account is created
+
+| Name    | Type   | Description                    |
+|---------|--------|--------------------------------|
+| type    | string | Constant string "createaccount"|
+
 #### unknown
 
 Represents events currently unsupported by JSON-RPC API.

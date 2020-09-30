@@ -12,6 +12,11 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+
+## 2020-09-30 Add `CreateAccount` event
+
+- New event data type createaccount.
+
 ## [breaking] 2020-09-09
 
 - In `KeptVMStatus`, `VerificationError` and `DeserializationError` were merged into `MiscellaneousError`
