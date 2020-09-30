@@ -299,6 +299,27 @@ fn test_vault_crypto_policies() {
     noone_store.get_public_key(CRYPTO_KEY).unwrap_err();
     noone_store.rotate_key(CRYPTO_KEY).unwrap_err();
     noone_store.sign(CRYPTO_KEY, &message).unwrap_err();
+    // Verify a noone with another namespace has no permission for the operations
+    let mut noone_store_with_namespace = VaultStorage::new(
+        dev::test_host(),
+        noone_token,
+        Some(VAULT_NAMESPACE_1.into()),
+        None,
+        None,
+        true,
+    );
+    noone_store_with_namespace
+        .export_private_key(CRYPTO_KEY)
+        .unwrap_err();
+    noone_store_with_namespace
+        .get_public_key(CRYPTO_KEY)
+        .unwrap_err();
+    noone_store_with_namespace
+        .rotate_key(CRYPTO_KEY)
+        .unwrap_err();
+    noone_store_with_namespace
+        .sign(CRYPTO_KEY, &message)
+        .unwrap_err();
 
     // Verify reader policy
     let reader_token = storage.create_token(vec![&READER]).unwrap();
