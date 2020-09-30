@@ -66,8 +66,6 @@ module Roles {
         lr_account: &signer,
     ) {
         LibraTimestamp::assert_genesis();
-        // Checks actual Libra root because Libra root role is not set
-        // until next line of code.
         CoreAddresses::assert_libra_root(lr_account);
         // Grant the role to the libra root account
         grant_role(lr_account, LIBRA_ROOT_ROLE_ID);
@@ -75,7 +73,7 @@ module Roles {
     spec fun grant_libra_root_role {
         include LibraTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
-        include GrantRole{addr: Signer::address_of(lr_account), role_id: LIBRA_ROOT_ROLE_ID};
+        include GrantRole{account: lr_account, role_id: LIBRA_ROOT_ROLE_ID};
     }
 
     /// NB: currency-related privileges are defined in the `Libra` module.
@@ -95,7 +93,7 @@ module Roles {
         include LibraTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotTreasuryCompliance{account: treasury_compliance_account};
         include AbortsIfNotLibraRoot{account: lr_account};
-        include GrantRole{addr: Signer::address_of(treasury_compliance_account), role_id: TREASURY_COMPLIANCE_ROLE_ID};
+        include GrantRole{account: treasury_compliance_account, role_id: TREASURY_COMPLIANCE_ROLE_ID};
     }
 
     /// Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
@@ -114,7 +112,7 @@ module Roles {
     }
     spec fun new_designated_dealer_role {
         include AbortsIfNotTreasuryCompliance{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: DESIGNATED_DEALER_ROLE_ID};
+        include GrantRole{account: new_account, role_id: DESIGNATED_DEALER_ROLE_ID};
     }
 
     /// Publish a Validator `RoleId` under `new_account`.
@@ -128,7 +126,7 @@ module Roles {
     }
     spec fun new_validator_role {
         include AbortsIfNotLibraRoot{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: VALIDATOR_ROLE_ID};
+        include GrantRole{account: new_account, role_id: VALIDATOR_ROLE_ID};
     }
 
     /// Publish a ValidatorOperator `RoleId` under `new_account`.
@@ -142,7 +140,7 @@ module Roles {
     }
     spec fun new_validator_operator_role {
         include AbortsIfNotLibraRoot{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: VALIDATOR_OPERATOR_ROLE_ID};
+        include GrantRole{account: new_account, role_id: VALIDATOR_OPERATOR_ROLE_ID};
     }
 
     /// Publish a ParentVASP `RoleId` under `new_account`.
@@ -156,7 +154,7 @@ module Roles {
     }
     spec fun new_parent_vasp_role {
         include AbortsIfNotTreasuryCompliance{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: PARENT_VASP_ROLE_ID};
+        include GrantRole{account: new_account, role_id: PARENT_VASP_ROLE_ID};
     }
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
@@ -170,7 +168,7 @@ module Roles {
     }
     spec fun new_child_vasp_role {
         include AbortsIfNotParentVasp{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: CHILD_VASP_ROLE_ID};
+        include GrantRole{account: new_account, role_id: CHILD_VASP_ROLE_ID};
     }
 
     /// Helper function to grant a role.
@@ -180,17 +178,16 @@ module Roles {
     }
     spec fun grant_role {
         pragma opaque;
-        include GrantRole{addr: Signer::address_of(account)};
+        include GrantRole;
         let addr = Signer::spec_address_of(account);
         // Requires to satisfy global invariants.
         requires role_id == LIBRA_ROOT_ROLE_ID ==> addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
         requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
     }
-    // TODO (dd): "GrantRole" includes an aborts_if. It should probably be split into AbortsIf and Ensures
-    // schemas.
     spec schema GrantRole {
-        addr: address;
+        account: signer;
         role_id: num;
+        let addr = Signer::spec_address_of(account);
         aborts_if exists<RoleId>(addr) with Errors::ALREADY_PUBLISHED;
         ensures exists<RoleId>(addr);
         ensures global<RoleId>(addr).role_id == role_id;
@@ -331,7 +328,7 @@ module Roles {
     }
     spec fun assert_validator {
         pragma opaque;
-        include AbortsIfNotValidator{validator_addr: Signer::address_of(validator_account)};
+        include AbortsIfNotValidator;
     }
 
     /// Assert that the account has the validator operator role.
@@ -345,7 +342,7 @@ module Roles {
     }
     spec fun assert_validator_operator {
         pragma opaque;
-        include AbortsIfNotValidatorOperator{validator_operator_addr: Signer::spec_address_of(validator_operator_account)};
+        include AbortsIfNotValidatorOperator;
     }
 
     /// Assert that the account has either the parent vasp or designated dealer role.
@@ -484,13 +481,15 @@ module Roles {
     }
 
     spec schema AbortsIfNotValidator {
-        validator_addr: address;
+        validator_account: signer;
+        let validator_addr = Signer::spec_address_of(validator_account);
         aborts_if !exists<RoleId>(validator_addr) with Errors::NOT_PUBLISHED;
         aborts_if global<RoleId>(validator_addr).role_id != VALIDATOR_ROLE_ID with Errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotValidatorOperator {
-        validator_operator_addr: address;
+        validator_operator_account: signer;
+        let validator_operator_addr = Signer::spec_address_of(validator_operator_account);
         aborts_if !exists<RoleId>(validator_operator_addr) with Errors::NOT_PUBLISHED;
         aborts_if global<RoleId>(validator_operator_addr).role_id != VALIDATOR_OPERATOR_ROLE_ID
             with Errors::REQUIRES_ROLE;

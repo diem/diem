@@ -210,7 +210,31 @@ fn test_vault_key_value_policies() {
         Err(Error::PermissionDenied)
     );
     assert_eq!(
+        reader_with_namespace.get::<u64>(ROOT),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        reader_with_namespace.get::<u64>(PARTIAL),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        reader_with_namespace.get::<u64>(FULL),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
         reader_with_namespace.set(ANYONE, 5),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        reader_with_namespace.set(ROOT, 6),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        reader_with_namespace.set(PARTIAL, 7),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        reader_with_namespace.set(FULL, 8),
         Err(Error::PermissionDenied)
     );
 
@@ -228,7 +252,31 @@ fn test_vault_key_value_policies() {
         Err(Error::PermissionDenied)
     );
     assert_eq!(
+        writer_with_namespace.get::<u64>(ROOT),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        writer_with_namespace.get::<u64>(PARTIAL),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        writer_with_namespace.get::<u64>(FULL),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
         writer_with_namespace.set(ANYONE, 5),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        writer_with_namespace.set(ROOT, 6),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        writer_with_namespace.set(PARTIAL, 7),
+        Err(Error::PermissionDenied)
+    );
+    assert_eq!(
+        writer_with_namespace.set(FULL, 8),
         Err(Error::PermissionDenied)
     );
 }
@@ -284,6 +332,15 @@ fn test_vault_crypto_policies() {
     exporter_store_with_namespace
         .export_private_key(CRYPTO_KEY)
         .unwrap_err();
+    exporter_store_with_namespace
+        .get_public_key(CRYPTO_KEY)
+        .unwrap_err();
+    exporter_store_with_namespace
+        .rotate_key(CRYPTO_KEY)
+        .unwrap_err();
+    exporter_store_with_namespace
+        .sign(CRYPTO_KEY, &message)
+        .unwrap_err();
 
     // Verify noone policy
     let noone_token = storage.create_token(vec![&NOONE]).unwrap();
@@ -320,7 +377,16 @@ fn test_vault_crypto_policies() {
         true,
     );
     reader_store_with_namespace
+        .export_private_key(CRYPTO_KEY)
+        .unwrap_err();
+    reader_store_with_namespace
         .get_public_key(CRYPTO_KEY)
+        .unwrap_err();
+    reader_store_with_namespace
+        .rotate_key(CRYPTO_KEY)
+        .unwrap_err();
+    reader_store_with_namespace
+        .sign(CRYPTO_KEY, &message)
         .unwrap_err();
 
     // Verify rotater policy
@@ -350,7 +416,16 @@ fn test_vault_crypto_policies() {
         true,
     );
     rotater_store_with_namespace
+        .export_private_key(CRYPTO_KEY)
+        .unwrap_err();
+    rotater_store_with_namespace
         .get_public_key(CRYPTO_KEY)
+        .unwrap_err();
+    rotater_store_with_namespace
+        .rotate_key(CRYPTO_KEY)
+        .unwrap_err();
+    rotater_store_with_namespace
+        .sign(CRYPTO_KEY, &message)
         .unwrap_err();
 
     let new_pubkey = storage.get_public_key(CRYPTO_KEY).unwrap().public_key;
@@ -380,6 +455,15 @@ fn test_vault_crypto_policies() {
         None,
         true,
     );
+    signer_store_with_namespace
+        .export_private_key(CRYPTO_KEY)
+        .unwrap_err();
+    signer_store_with_namespace
+        .get_public_key(CRYPTO_KEY)
+        .unwrap_err();
+    signer_store_with_namespace
+        .rotate_key(CRYPTO_KEY)
+        .unwrap_err();
     signer_store_with_namespace
         .sign(CRYPTO_KEY, &message)
         .unwrap_err();
@@ -413,7 +497,7 @@ fn test_vault_tokens() {
     assert_eq!(writer.get::<u64>(PARTIAL).unwrap().value, 3);
     writer.set::<u64>(PARTIAL, 5).unwrap();
 
-    // Verify a writer without a namespace has no permission for the operations
+    // Verify a writer with another namespace has no permission for the operations
     let mut writer_without_namespace =
         VaultStorage::new(dev::test_host(), writer_token, None, None, None, true);
     assert_eq!(

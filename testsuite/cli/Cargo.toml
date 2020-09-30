@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.32"
-chrono = "0.4.18"
+chrono = "0.4.15"
 hex = "0.4.2"
 proptest = { version = "0.10.1", optional = true }
 rustyline = "6.3.0"
@@ -36,7 +36,7 @@ libra-network-address = { path = "../../network/network-address", version = "0.1
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-resource-viewer = { path = "../../language/tools/resource-viewer", version = "0.1.0" }
+resource-viewer = { path = "../../language/resource-viewer", version = "0.1.0" }
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 compiler = { path = "../../language/compiler",  version = "0.1.0" }

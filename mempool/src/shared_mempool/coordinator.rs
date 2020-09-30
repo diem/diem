@@ -6,7 +6,6 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
     counters,
-    logging::{LogEntry, LogEvent, LogSchema},
     network::{MempoolNetworkEvents, MempoolSyncMsg},
     shared_mempool::{
         tasks,
@@ -50,10 +49,6 @@ pub(crate) async fn coordinator<V>(
 ) where
     V: TransactionValidation,
 {
-    info!(LogSchema::event_log(
-        LogEntry::CoordinatorRuntime,
-        LogEvent::Start
-    ));
     let smp_events: Vec<_> = network_events
         .into_iter()
         .map(|(network_id, events)| events.map(move |e| (network_id.clone(), e)))
@@ -94,7 +89,6 @@ pub(crate) async fn coordinator<V>(
                 tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
-                info!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Received));
                 let _ = counters::TASK_SPAWN_LATENCY
                     .with_label_values(&[counters::RECONFIG_EVENT_LABEL])
                     .start_timer();
@@ -115,23 +109,16 @@ pub(crate) async fn coordinator<V>(
                                     .inc();
                                 let peer = PeerNetworkId(network_id, peer_id);
                                 let is_new_peer = peer_manager.add_peer(peer.clone(), origin);
-                                let is_upstream_peer = peer_manager.is_upstream_peer(&peer, Some(origin));
-                                debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer).is_upstream_peer(is_upstream_peer));
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                                if is_new_peer && is_upstream_peer {
+                                if is_new_peer && peer_manager.is_upstream_peer(&peer, None) {
                                     tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
                                 }
                             }
-                            Event::LostPeer(peer_id, origin) => {
+                            Event::LostPeer(peer_id, _origin) => {
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["lost_peer".to_string().deref()])
                                     .inc();
-                                let peer = PeerNetworkId(network_id, peer_id);
-                                debug!(LogSchema::new(LogEntry::LostPeer)
-                                    .peer(&peer)
-                                    .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
-                                );
-                                peer_manager.disable_peer(peer);
+                                peer_manager.disable_peer(PeerNetworkId(network_id, peer_id));
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::Message((peer_id, msg)) => {
@@ -176,6 +163,7 @@ pub(crate) async fn coordinator<V>(
                                     message = msg,
                                     peer_id = peer_id,
                                 );
+                                debug_assert!(false, "Unexpected network event rpc request");
                             }
                         }
                     },
@@ -190,29 +178,18 @@ pub(crate) async fn coordinator<V>(
             complete => break,
         }
     }
-    error!(LogSchema::event_log(
-        LogEntry::CoordinatorRuntime,
-        LogEvent::Terminated
-    ));
+    error!("[shared mempool] inbound_network_task terminated");
 }
 
 /// GC all expired transactions by SystemTTL
 pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
-    info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Start));
     let mut interval = interval(Duration::from_millis(gc_interval_ms));
     while let Some(_interval) = interval.next().await {
-        sample!(
-            SampleRate::Duration(Duration::from_secs(60)),
-            info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Live))
-        );
         mempool
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock")
             .gc();
     }
 
-    error!(LogSchema::event_log(
-        LogEntry::GCRuntime,
-        LogEvent::Terminated
-    ));
+    error!("SharedMempool gc_task terminated");
 }

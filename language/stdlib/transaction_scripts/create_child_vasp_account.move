@@ -49,7 +49,7 @@ use 0x1::LibraAccount;
 ///
 /// # Related Scripts
 /// * `Script::create_parent_vasp_account`
-/// * `Script::add_currency_to_account`
+/// * `Script::add_currency`
 /// * `Script::rotate_authentication_key`
 /// * `Script::add_recovery_rotation_capability`
 /// * `Script::create_recovery_address`
@@ -80,7 +80,14 @@ fun create_child_vasp_account<CoinType>(
 spec fun create_child_vasp_account {
     use 0x1::Signer;
     use 0x1::Errors;
-
+    aborts_with [check]
+        Errors::REQUIRES_ROLE,
+        Errors::ALREADY_PUBLISHED,
+        Errors::LIMIT_EXCEEDED,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_STATE,
+        Errors::INVALID_ARGUMENT,
+        Errors::LIMIT_EXCEEDED;
     let parent_addr = Signer::spec_address_of(parent_vasp);
     let parent_cap = LibraAccount::spec_get_withdraw_cap(parent_addr);
     include LibraAccount::CreateChildVASPAccountAbortsIf<CoinType>{
@@ -103,13 +110,5 @@ spec fun create_child_vasp_account {
     ensures LibraAccount::balance<CoinType>(child_address) == child_initial_balance;
     ensures LibraAccount::balance<CoinType>(parent_addr)
         == old(LibraAccount::balance<CoinType>(parent_addr)) - child_initial_balance;
-
-    aborts_with [check]
-        Errors::REQUIRES_ROLE,
-        Errors::ALREADY_PUBLISHED,
-        Errors::LIMIT_EXCEEDED,
-        Errors::NOT_PUBLISHED,
-        Errors::INVALID_STATE,
-        Errors::INVALID_ARGUMENT; // TODO: Undocumented error code. This script can abort with the error code due to `LibraAccount::make_account`.
 }
 }

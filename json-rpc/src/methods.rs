@@ -95,7 +95,6 @@ type RpcHandler =
 pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
 
 pub(crate) struct JsonRpcRequest {
-    pub trace_id: u64,
     pub params: Vec<Value>,
     pub ledger_info: LedgerInfoWithSignatures,
 }
@@ -121,7 +120,7 @@ impl JsonRpcRequest {
     }
 
     /// Return AccountAddress by try parse from params[index]
-    fn parse_account_address(&self, index: usize) -> Result<AccountAddress, JsonRpcError> {
+    fn parse_account_address(&self, index: usize) -> Result<AccountAddress> {
         self.try_parse_param(index, "account address")
     }
 
@@ -130,7 +129,7 @@ impl JsonRpcRequest {
     ///   2. call TryFrom<String> to create target T instance.
     /// The name argument is for creating helpful error messsage in case deserialization
     /// failed.
-    fn try_parse_param<T>(&self, index: usize, name: &str) -> Result<T, JsonRpcError>
+    fn try_parse_param<T>(&self, index: usize, name: &str) -> Result<T>
     where
         T: TryFrom<String>,
     {
@@ -141,7 +140,7 @@ impl JsonRpcRequest {
     /// Return native type of params[index] deserialized by from json value.
     /// The name argument is for creating helpful error messsage in case deserialization
     /// failed.
-    fn parse_param<T>(&self, index: usize, name: &str) -> Result<T, JsonRpcError>
+    fn parse_param<T>(&self, index: usize, name: &str) -> Result<T>
     where
         T: DeserializeOwned,
     {
@@ -151,39 +150,6 @@ impl JsonRpcRequest {
         )
     }
 
-    fn parse_version_param(&self, index: usize, name: &str) -> Result<u64, JsonRpcError> {
-        if self.get_param(index).is_null() {
-            return Ok(self.version());
-        }
-        let version: u64 = self.parse_param(index, name)?;
-        if version > self.version() {
-            return Err(JsonRpcError::invalid_param(
-                index,
-                name,
-                format!("<= known latest version {}", self.version()).as_str(),
-            ));
-        }
-        Ok(version)
-    }
-
-    fn parse_signed_transaction(
-        &self,
-        index: usize,
-        name: &str,
-    ) -> Result<SignedTransaction, JsonRpcError> {
-        Ok(self
-            ._parse_signed_transaction(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
-    }
-
-    fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey, JsonRpcError> {
-        Ok(self
-            ._parse_event_key(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
-    }
-
-    // the following methods should not be called directly as they return error causes internal error
-    // call related wrapper method for parsing param.
     fn _parse_event_key(&self, val: Value) -> Result<EventKey> {
         let raw: String = serde_json::from_value(val)?;
         Ok(EventKey::try_from(&hex::decode(raw)?[..])?)
@@ -192,6 +158,18 @@ impl JsonRpcRequest {
     fn _parse_signed_transaction(&self, val: Value) -> Result<SignedTransaction> {
         let raw: String = serde_json::from_value(val)?;
         Ok(lcs::from_bytes(&hex::decode(raw)?)?)
+    }
+
+    fn parse_signed_transaction(&self, index: usize, name: &str) -> Result<SignedTransaction> {
+        Ok(self
+            ._parse_signed_transaction(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))?)
+    }
+
+    fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey> {
+        Ok(self
+            ._parse_event_key(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))?)
     }
 }
 
@@ -267,19 +245,17 @@ async fn get_account(
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
     let chain_id = service.chain_id().id();
-    if !request.params.is_empty() {
-        let version = request.parse_version_param(0, "version")?;
-        Ok(BlockMetadata {
+    match serde_json::from_value::<u64>(request.get_param(0)) {
+        Ok(version) => Ok(BlockMetadata {
             version,
             timestamp: service.db.get_block_timestamp(version)?,
             chain_id,
-        })
-    } else {
-        Ok(BlockMetadata {
+        }),
+        _ => Ok(BlockMetadata {
             version: request.version(),
             timestamp: request.ledger_info.ledger_info().timestamp_usecs(),
             chain_id,
-        })
+        }),
     }
 }
 
@@ -293,10 +269,6 @@ async fn get_transactions(
     let include_events: bool = request.parse_param(2, "include_events")?;
 
     service.validate_page_size_limit(limit as usize)?;
-
-    if start_version > request.version() {
-        return Ok(vec![]);
-    }
 
     let txs =
         service
@@ -501,7 +473,7 @@ async fn get_state_proof(
     service: JsonRpcService,
     request: JsonRpcRequest,
 ) -> Result<StateProofView> {
-    let known_version: u64 = request.parse_version_param(0, "version")?;
+    let known_version: u64 = request.parse_param(0, "known version")?;
     let proofs = service
         .db
         .get_state_proof_with_ledger_info(known_version, request.ledger_info.clone())?;
@@ -518,8 +490,10 @@ async fn get_account_state_with_proof(
     let account_address = request.parse_account_address(0)?;
 
     // If versions are specified by the request parameters, use them, otherwise use the defaults
-    let version = request.parse_version_param(1, "version")?;
-    let ledger_version = request.parse_version_param(2, "ledger version for proof")?;
+    let version =
+        serde_json::from_value::<u64>(request.get_param(1)).unwrap_or_else(|_| request.version());
+    let ledger_version =
+        serde_json::from_value::<u64>(request.get_param(2)).unwrap_or_else(|_| request.version());
 
     let account_state_with_proof =
         service
@@ -587,9 +561,8 @@ fn invalid_param(index: usize, name: &str) -> JsonRpcError {
         "include_events" => "boolean",
         "account address" => "hex-encoded string",
         "event key" => "hex-encoded string",
+        "known version" => "unsigned int64",
         "data" => "hex-encoded string of LCS serialized Libra SignedTransaction type",
-        "version" => "unsigned int64",
-        "ledger version for proof" => "unsigned int64",
         _ => "unknown",
     };
     JsonRpcError::invalid_param(index, name, type_info)

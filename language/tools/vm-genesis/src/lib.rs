@@ -40,6 +40,7 @@ use move_vm_types::{
 };
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use std::collections::btree_map::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
 use vm::{file_format::SignatureToken, CompiledModule};
 
@@ -74,16 +75,19 @@ pub fn encode_genesis_transaction(
     vm_publishing_option: Option<VMPublishingOption>,
     chain_id: ChainId,
 ) -> Transaction {
-    Transaction::GenesisTransaction(WriteSetPayload::Direct(encode_genesis_change_set(
-        &libra_root_key,
-        &treasury_compliance_key,
-        operator_assignments,
-        operator_registrations,
-        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
-        vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
-        chain_id,
-    )))
+    Transaction::GenesisTransaction(WriteSetPayload::Direct(
+        encode_genesis_change_set(
+            &libra_root_key,
+            &treasury_compliance_key,
+            operator_assignments,
+            operator_registrations,
+            stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
+            vm_publishing_option
+                .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
+            chain_id,
+        )
+        .0,
+    ))
 }
 
 fn merge_txn_effects(
@@ -104,7 +108,7 @@ pub fn encode_genesis_change_set(
     stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
-) -> ChangeSet {
+) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>) {
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
@@ -152,11 +156,21 @@ pub fn encode_genesis_change_set(
 
     let effects = merge_txn_effects(effects_1, effects_2);
 
+    // REVIEW: Performance & caching.
+    let type_mapping = effects
+        .resources
+        .iter()
+        .flat_map(|(_addr, resources)| {
+            resources
+                .iter()
+                .map(|(struct_tag, _)| (struct_tag.access_vector(), struct_tag.clone()))
+        })
+        .collect();
     let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();
 
     assert!(!write_set.iter().any(|(_, op)| op.is_deletion()));
     verify_genesis_write_set(&events);
-    ChangeSet::new(write_set, events)
+    (ChangeSet::new(write_set, events), type_mapping)
 }
 
 /// Convert the transaction arguments into Move values.
@@ -544,17 +558,28 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
     .0
 }
 
+/// Generate an artificial genesis `ChangeSet` for testing
+pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
+    generate_test_genesis(
+        &stdlib_modules(StdLibOptions::Compiled),
+        VMPublishingOption::open(),
+        None,
+    )
+    .1
+}
+
 pub fn test_genesis_transaction() -> Transaction {
     let changeset = test_genesis_change_set_and_validators(None).0;
     Transaction::GenesisTransaction(WriteSetPayload::Direct(changeset))
 }
 
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
-    generate_test_genesis(
+    let genesis = generate_test_genesis(
         &stdlib_modules(StdLibOptions::Compiled),
         VMPublishingOption::locked(StdlibScript::allowlist()),
         count,
-    )
+    );
+    (genesis.0, genesis.2)
 }
 
 pub struct Validator {
@@ -616,7 +641,7 @@ pub fn generate_test_genesis(
     stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
     count: Option<usize>,
-) -> (ChangeSet, Vec<Validator>) {
+) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>, Vec<Validator>) {
     let validators = Validator::new_set(count);
 
     let genesis = encode_genesis_change_set(
@@ -634,5 +659,5 @@ pub fn generate_test_genesis(
         vm_publishing_option,
         ChainId::test(),
     );
-    (genesis, validators)
+    (genesis.0, genesis.1, validators)
 }

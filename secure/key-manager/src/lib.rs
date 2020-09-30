@@ -20,11 +20,6 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    counters::{
-        KEYS_STILL_FRESH, LIVENESS_ERROR_ENCOUNTERED, NO_ACTION, ROTATED_IN_STORAGE,
-        SUBMITTED_ROTATION_TRANSACTION, UNEXPECTED_ERROR_ENCOUNTERED, WAITING_ON_RECONFIGURATION,
-        WAITING_ON_TRANSACTION_EXECUTION,
-    },
     libra_interface::LibraInterface,
     logging::{LogEntry, LogEvent, LogSchema},
 };
@@ -155,14 +150,14 @@ where
                     error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .liveness_error(&error));
-                    counters::increment_metric_counter(LIVENESS_ERROR_ENCOUNTERED);
+                    counters::increment_state("check_keys", "liveness_error_encountered");
                 }
                 Err(e) => {
                     // Log the unexpected error and continue to execute.
                     error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .unexpected_error(&e));
-                    counters::increment_metric_counter(UNEXPECTED_ERROR_ENCOUNTERED);
+                    counters::increment_state("check_keys", "unexpected_error_encountered");
                 }
             };
 
@@ -229,7 +224,7 @@ where
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
         let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        counters::increment_metric_counter(SUBMITTED_ROTATION_TRANSACTION);
+        counters::increment_state("consensus_key", "submitted_rotation_transaction");
         self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
@@ -239,7 +234,7 @@ where
         info!(LogSchema::new(LogEntry::KeyRotatedInStorage)
             .event(LogEvent::Success)
             .consensus_key(&consensus_key));
-        counters::increment_metric_counter(ROTATED_IN_STORAGE);
+        counters::increment_state("consensus_key", "rotated_in_storage");
         self.submit_key_rotation_transaction(consensus_key)
     }
 
@@ -305,7 +300,7 @@ where
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
             warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
-            counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
+            counters::increment_state("check_keys", "waiting_on_reconfiguration");
             return Ok(Action::NoAction);
         }
 
@@ -317,7 +312,7 @@ where
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
                 warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
-                counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
+                counters::increment_state("check_keys", "waiting_on_transaction_execution");
                 Ok(Action::NoAction)
             };
         }
@@ -326,7 +321,7 @@ where
             Ok(Action::FullKeyRotation)
         } else {
             info!(LogSchema::new(LogEntry::KeyStillFresh));
-            counters::increment_metric_counter(KEYS_STILL_FRESH);
+            counters::increment_state("check_keys", "keys_still_fresh");
             Ok(Action::NoAction)
         }
     }
@@ -343,7 +338,7 @@ where
             }
             Action::NoAction => {
                 info!(LogSchema::new(LogEntry::NoAction));
-                counters::increment_metric_counter(NO_ACTION);
+                counters::increment_state("check_keys", "no_action");
                 Ok(())
             }
         }

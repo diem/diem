@@ -6,16 +6,14 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
-    logging::{LogEntry, LogEvent, LogSchema},
-    network::MempoolSyncMsg,
+    network::{MempoolNetworkSender, MempoolSyncMsg},
     shared_mempool::types::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
-        SubmissionStatusBundle,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
 };
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
@@ -24,6 +22,7 @@ use libra_types::{
     on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
+    PeerId,
 };
 use std::{
     cmp,
@@ -146,27 +145,24 @@ where
         .map(|(_id, txn)| txn)
         .collect::<Vec<_>>();
 
-    let network_sender = smp
+    let mut network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
     let request_id = create_request_id(timeline_id, new_timeline_id);
     let txns_ct = batch_txns.len();
-    if let Err(e) = network_sender.send_to(
-        peer.peer_id(),
+    if let Err(e) = send_mempool_sync_msg(
         MempoolSyncMsg::BroadcastTransactionsRequest {
             request_id: request_id.clone(),
             transactions: batch_txns,
         },
+        peer.peer_id(),
+        &mut network_sender,
     ) {
-        counters::NETWORK_SEND_FAIL
-            .with_label_values(&[counters::BROADCAST_TXNS])
-            .inc();
         error!(
-            LogSchema::event_log(LogEntry::BroadcastTransaction, LogEvent::NetworkSendFail)
-                .peer(&peer)
-                .error(&e.into())
+            "[shared mempool] error broadcasting transactions to peer {:?}: {}",
+            peer, e
         );
     } else {
         let broadcast_time = Instant::now();
@@ -195,6 +191,21 @@ where
     next_backoff
 }
 
+fn send_mempool_sync_msg(
+    msg: MempoolSyncMsg,
+    recipient: PeerId,
+    network_sender: &mut MempoolNetworkSender,
+) -> Result<()> {
+    // Since this is a direct-send, this will only error if the network
+    // module has unexpectedly crashed or shutdown.
+    network_sender.send_to(recipient, msg).map_err(|e| {
+        format_err!(
+            "[shared mempool] failed to direct-send mempool sync message: {}",
+            e
+        )
+    })
+}
+
 // =============================== //
 // tasks processing txn submission //
 // =============================== //
@@ -210,18 +221,22 @@ pub(crate) async fn process_client_transaction_submission<V>(
     let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
         .with_label_values(&["client"])
         .start_timer();
-    let statuses =
+    let mut statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(&statuses, None);
+    let status;
+    if statuses.is_empty() {
+        error!("[shared mempool] missing status for client transaction submission");
+        return;
+    } else {
+        status = statuses.remove(0);
+    }
 
-    if let Some(status) = statuses.get(0) {
-        if callback.send(Ok(status.1.clone())).is_err() {
-            error!(LogSchema::event_log(
-                LogEntry::JsonRpc,
-                LogEvent::CallbackFail
-            ));
-            counters::CLIENT_CALLBACK_FAIL.inc();
-        }
+    if let Err(e) = callback
+        .send(Ok(status))
+        .map_err(|_| format_err!("[shared mempool] timeout on callback send to AC endpoint"))
+    {
+        error!("[shared mempool] failed to send back transaction submission result to AC endpoint with error: {:?}", e);
     }
 }
 
@@ -240,37 +255,53 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .start_timer();
     // process transactions and log the result
     let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
-    log_txn_process_results(&results, Some(peer.clone()));
+    log_txn_process_results(&results, Some(peer.peer_id()));
+
+    // we assume that the results contains a vec of the same length of transactions
+    debug_assert_eq!(results.len(), transactions.len());
+
+    // security log all the failed transactions
+    let failed_transactions = results
+        .iter()
+        // create iterator of tuple (VM status, transaction)
+        .map(|(_, maybe_vm_status)| maybe_vm_status)
+        .zip(transactions.iter())
+        // VM status will be set if the transaction failed
+        .filter(|(maybe_vm_status, _)| maybe_vm_status.is_some());
+
+    for (maybe_vm_status, failed_transaction) in failed_transactions {
+        error!(
+            SecurityEvent::InvalidTransactionMempool,
+            failed_transaction = failed_transaction,
+            vm_status = maybe_vm_status,
+            from_peer = peer,
+        );
+    }
 
     // send back ACK
     let ack_response = gen_ack_response(request_id, results);
-    let network_sender = smp
+    let mut network_sender = smp
         .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
-    if let Err(e) = network_sender.send_to(peer.peer_id(), ack_response) {
-        counters::NETWORK_SEND_FAIL
-            .with_label_values(&[counters::ACK_TXNS])
-            .inc();
+    if let Err(e) = send_mempool_sync_msg(ack_response, peer.peer_id(), &mut network_sender) {
         error!(
-            LogSchema::event_log(LogEntry::BroadcastACK, LogEvent::NetworkSendFail)
-                .peer(&peer)
-                .error(&e.into())
+            "[shared mempool] failed to send ACK back to peer {:?}: {}",
+            peer, e
         );
     }
     notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
 }
 
-fn gen_ack_response(request_id: String, results: Vec<SubmissionStatusBundle>) -> MempoolSyncMsg {
+fn gen_ack_response(request_id: String, results: Vec<SubmissionStatus>) -> MempoolSyncMsg {
     let mut backoff = false;
     let retry_txns = results
         .into_iter()
         .enumerate()
         .filter_map(|(idx, result)| {
-            let submission_status = result.1;
-            backoff = backoff || submission_status.0.code == MempoolStatusCode::MempoolIsFull;
+            backoff = backoff || result.0.code == MempoolStatusCode::MempoolIsFull;
 
-            if is_txn_retryable(submission_status) {
+            if is_txn_retryable(result) {
                 Some(idx as u64)
             } else {
                 None
@@ -297,7 +328,7 @@ pub(crate) async fn process_incoming_transactions<V>(
     smp: &SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
-) -> Vec<SubmissionStatusBundle>
+) -> Vec<SubmissionStatus>
 where
     V: TransactionValidation,
 {
@@ -324,21 +355,15 @@ where
                     return Some((t, sequence_number));
                 } else {
                     statuses.push((
-                        t,
-                        (
-                            MempoolStatus::new(MempoolStatusCode::VmError),
-                            Some(DiscardedVMStatus::SEQUENCE_NUMBER_TOO_OLD),
-                        ),
+                        MempoolStatus::new(MempoolStatusCode::VmError),
+                        Some(DiscardedVMStatus::SEQUENCE_NUMBER_TOO_OLD),
                     ));
                 }
             } else {
                 // failed to get transaction
                 statuses.push((
-                    t,
-                    (
-                        MempoolStatus::new(MempoolStatusCode::VmError),
-                        Some(DiscardedVMStatus::RESOURCE_DOES_NOT_EXIST),
-                    ),
+                    MempoolStatus::new(MempoolStatusCode::VmError),
+                    Some(DiscardedVMStatus::RESOURCE_DOES_NOT_EXIST),
                 ));
             }
             None
@@ -373,22 +398,19 @@ where
                         let ranking_score = validation_result.score();
                         let governance_role = validation_result.governance_role();
                         let mempool_status = mempool.add_txn(
-                            transaction.clone(),
+                            transaction,
                             gas_amount,
                             ranking_score,
                             sequence_number,
                             timeline_state,
                             governance_role,
                         );
-                        statuses.push((transaction, (mempool_status, None)));
+                        statuses.push((mempool_status, None));
                     }
                     Some(validation_status) => {
                         statuses.push((
-                            transaction.clone(),
-                            (
-                                MempoolStatus::new(MempoolStatusCode::VmError),
-                                Some(validation_status),
-                            ),
+                            MempoolStatus::new(MempoolStatusCode::VmError),
+                            Some(validation_status),
                         ));
                     }
                 }
@@ -400,20 +422,14 @@ where
 }
 
 // TODO update counters to ID peers using PeerNetworkId
-fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<PeerNetworkId>) {
+fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>) {
     let sender = match sender {
         Some(peer) => peer.to_string(),
         None => "client".to_string(),
     };
-    for (txn, (mempool_status, maybe_vm_status)) in results.iter() {
-        if let Some(vm_status) = maybe_vm_status {
+    for (mempool_status, vm_status) in results.iter() {
+        if vm_status.is_some() {
             // log vm validation failure
-            error!(
-                SecurityEvent::InvalidTransactionMempool,
-                failed_transaction = txn,
-                vm_status = vm_status,
-                sender = sender,
-            );
             counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                 .with_label_values(&["validation_failed".to_string().deref(), &sender])
                 .inc();
@@ -442,25 +458,23 @@ pub(crate) async fn process_state_sync_request(
     req: CommitNotification,
 ) {
     let start_time = Instant::now();
-    debug!(
-        LogSchema::event_log(LogEntry::StateSyncCommit, LogEvent::Received).state_sync_msg(&req)
-    );
     counters::MEMPOOL_SERVICE_TXNS
         .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
         .observe(req.transactions.len() as f64);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
-    let result = if req
+    let result = if let Err(e) = req
         .callback
         .send(Ok(CommitResponse {
             msg: "".to_string(),
         }))
-        .is_err()
-    {
-        error!(LogSchema::event_log(
-            LogEntry::StateSyncCommit,
-            LogEvent::CallbackFail
-        ));
+        .map_err(|_| {
+            format_err!("[shared mempool] timeout on callback sending response to Mempool request")
+        }) {
+        error!(
+            "[shared mempool] failed to send back CommitResponse with error: {:?}",
+            e
+        );
         counters::REQUEST_FAIL_LABEL
     } else {
         counters::REQUEST_SUCCESS_LABEL
@@ -474,7 +488,6 @@ pub(crate) async fn process_state_sync_request(
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
     //start latency timer
     let start_time = Instant::now();
-    debug!(LogSchema::event_log(LogEntry::Consensus, LogEvent::Received).consensus_msg(&req));
 
     let (resp, callback, counter_label) = match req {
         ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
@@ -518,11 +531,13 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
         }
     };
     // send back to callback
-    let result = if callback.send(Ok(resp)).is_err() {
-        error!(LogSchema::event_log(
-            LogEntry::Consensus,
-            LogEvent::CallbackFail
-        ));
+    let result = if let Err(e) = callback.send(Ok(resp)).map_err(|_| {
+        format_err!("[shared mempool] timeout on callback sending response to Mempool request")
+    }) {
+        error!(
+            "[shared mempool] failed to send back mempool response with error: {:?}",
+            e
+        );
         counters::REQUEST_FAIL_LABEL
     } else {
         counters::REQUEST_SUCCESS_LABEL
@@ -563,20 +578,12 @@ pub(crate) async fn process_config_update<V>(
 ) where
     V: TransactionValidation,
 {
-    info!(
-        LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Process)
-            .reconfig_update(config_update.clone())
-    );
-
     // restart VM validator
-    if let Err(e) = validator
+    validator
         .write()
-        .expect("failed to acquire VM validator lock")
+        .unwrap()
         .restart(config_update)
-    {
-        counters::VM_RECONFIG_UPDATE_FAIL_COUNT.inc();
-        error!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::VMUpdateFail).error(&e));
-    }
+        .expect("failed to restart VM validator");
 }
 
 /// creates uniques request id for the batch in the format "{start_id}_{end_id}"

@@ -1,4 +1,0 @@
-script {
-    fun script1() {
-    }
-}

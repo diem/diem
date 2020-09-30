@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
+use libra_types::vm_status::StatusCode;
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use vm::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Kind, StructDefinitionIndex},

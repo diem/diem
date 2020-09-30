@@ -5,7 +5,7 @@
 
 use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
 use std::{
-    env, fmt, slice,
+    fmt, slice,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -40,7 +40,6 @@ use libra_types::{
     account_config::{libra_root_address, treasury_compliance_account_address},
     transaction::SignedTransaction,
 };
-use once_cell::sync::Lazy;
 use std::{
     cmp::{max, min},
     ops::Sub,
@@ -117,8 +116,6 @@ pub struct EmitJobRequest {
     pub thread_params: EmitThreadParams,
     pub gas_price: u64,
 }
-
-pub static REUSE_ACC: Lazy<bool> = Lazy::new(|| env::var("REUSE_ACC").is_ok());
 
 impl EmitJobRequest {
     pub fn for_instances(
@@ -458,7 +455,6 @@ impl TxEmitter {
         info!("Minting additional {} accounts", num_accounts);
 
         let num_seed_accounts = seed_accounts.len();
-        let seed_rngs = gen_rng_for_reusable_account(num_seed_accounts);
         // For each seed account, create a future and transfer libra from that seed account to new accounts
         let account_futures = seed_accounts
             .into_iter()
@@ -475,8 +471,7 @@ impl TxEmitter {
                     20,
                     client,
                     self.chain_id,
-                    self.premainnet || *REUSE_ACC,
-                    seed_rngs[i].clone(),
+                    self.premainnet,
                 )
             });
         let mut minted_accounts = try_join_all(account_futures)
@@ -877,24 +872,16 @@ fn gen_random_accounts(num_accounts: usize) -> Vec<AccountData> {
         .collect()
 }
 
-fn gen_rng_for_reusable_account(count: usize) -> Vec<StdRng> {
-    // use same seed for reuse account creation and reuse
-    let mut seed = [
+fn gen_rng_for_vasp() -> StdRng {
+    // use same seed for vasp creation and reuse
+    let seed = [
         0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0,
         0, 0,
     ];
-    let mut rngs = vec![];
-    for i in 0..count {
-        seed[31] = i as u8;
-        rngs.push(StdRng::from_seed(seed));
-    }
-    rngs
+    StdRng::from_seed(seed)
 }
 
-async fn gen_reusable_account(
-    client: &JsonRpcAsyncClient,
-    rng: &mut StdRng,
-) -> Result<AccountData> {
+async fn gen_vasp_account(client: &JsonRpcAsyncClient, rng: &mut StdRng) -> Result<AccountData> {
     let mint_key_pair = KeyPair::generate(rng);
     let address = libra_types::account_address::from_public_key(&mint_key_pair.public_key);
     let sequence_number = match query_sequence_numbers(&client, &[address]).await {
@@ -908,16 +895,15 @@ async fn gen_reusable_account(
     })
 }
 
-async fn gen_reusable_accounts(
+async fn gen_vasp_accounts(
     client: &JsonRpcAsyncClient,
     num_accounts: usize,
-    rng: StdRng,
+    rng: &mut StdRng,
 ) -> Result<Vec<AccountData>> {
     let mut vasp_accounts = vec![];
     let mut i = 0;
-    let mut seed = rng.clone();
     while i < num_accounts {
-        vasp_accounts.push(gen_reusable_account(client, &mut seed).await?);
+        vasp_accounts.push(gen_vasp_account(client, rng).await?);
         i += 1;
     }
     Ok(vasp_accounts)
@@ -1020,21 +1006,21 @@ async fn create_new_accounts(
     max_num_accounts_per_batch: u64,
     mut client: JsonRpcAsyncClient,
     chain_id: ChainId,
-    reuse_account: bool,
-    rng: StdRng,
+    premainnet: bool,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
+    let mut rng = gen_rng_for_vasp();
     while i < num_new_accounts {
-        let mut batch = if reuse_account {
-            info!("loading {} accounts if they exist", num_new_accounts);
-            gen_reusable_accounts(
+        let mut batch = if premainnet {
+            info!("loading {} child vasp accounts", num_new_accounts);
+            gen_vasp_accounts(
                 &client,
                 min(
                     max_num_accounts_per_batch as usize,
                     min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
                 ),
-                rng.clone(),
+                &mut rng,
             )
             .await?
         } else {

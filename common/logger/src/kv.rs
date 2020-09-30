@@ -31,9 +31,7 @@ impl<'v> fmt::Debug for Value<'v> {
         match &self {
             Value::Debug(d) => fmt::Debug::fmt(d, f),
             Value::Display(d) => fmt::Display::fmt(d, f),
-            Value::Serde(s) => {
-                fmt::Debug::fmt(&serde_json::to_value(s).map_err(|_| fmt::Error)?, f)
-            }
+            Value::Serde(s) => fmt::Debug::fmt(&serde_json::to_value(s).unwrap(), f),
         }
     }
 }

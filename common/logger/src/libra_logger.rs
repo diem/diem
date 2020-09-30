@@ -51,13 +51,7 @@ impl LogEntry {
                 let v = match value {
                     Value::Debug(d) => serde_json::Value::String(format!("{:?}", d)),
                     Value::Display(d) => serde_json::Value::String(d.to_string()),
-                    Value::Serde(s) => match serde_json::to_value(s) {
-                        Ok(value) => value,
-                        Err(e) => {
-                            eprintln!("error serializing structured log: {}", e);
-                            return;
-                        }
-                    },
+                    Value::Serde(s) => serde_json::to_value(s).unwrap(),
                 };
 
                 self.0.insert(key.as_str(), v);

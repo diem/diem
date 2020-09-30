@@ -148,8 +148,8 @@ module DualAttestation {
 
         ensures global<Credential>(sender).base_url == new_url;
         /// The sender can only rotate its own base url [B25].
-        ensures forall addr1:address where addr1 != sender:
-            global<Credential>(addr1).base_url == old(global<Credential>(addr1).base_url);
+        ensures forall addr:address where addr != sender:
+            global<Credential>(addr).base_url == old(global<Credential>(addr).base_url);
     }
     spec schema AbortsIfNoCredential {
         addr: address;
@@ -194,8 +194,8 @@ module DualAttestation {
         let sender = Signer::spec_address_of(account);
         ensures global<Credential>(sender).compliance_public_key == new_key;
         /// The sender only rotates its own compliance_public_key [B25].
-        ensures forall addr1: address where addr1 != sender:
-            global<Credential>(addr1).compliance_public_key == old(global<Credential>(addr1).compliance_public_key);
+        ensures forall addr:address where addr != sender:
+            global<Credential>(addr).compliance_public_key == old(global<Credential>(addr).compliance_public_key);
     }
 
     /// Return the human-readable name for the VASP account.
@@ -333,12 +333,11 @@ module DualAttestation {
         /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
         /// message is not important for the verification problem, as long as the prover considers both
         /// messages which fail verification and which do not.
-        pragma opaque;
+        pragma opaque = true, verify = false;
         aborts_if false;
-        ensures [abstract] result == spec_dual_attestation_message(payer, metadata, deposit_value);
+        ensures result == spec_dual_attestation_message(payer, metadata, deposit_value);
     }
-    /// Uninterpreted function for `Self::dual_attestation_message`. The actual value does not matter for
-    /// the verification problem.
+    /// Uninterpreted function for `Self::dual_attestation_message`.
     spec define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
 
     /// Helper function to check validity of a signature when dual attestion is required.

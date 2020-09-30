@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use errmapgen::ErrorMapping;
-
-use move_cli::*;
+use move_cli::{test, OnDiskStateView, MOVE_DATA, MOVE_SRC, MOVE_SRC_ADDRESS};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
@@ -28,7 +27,7 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(name = "Move", about = "CLI frontend for Move compiler and VM")]
 struct Move {
-    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
+    /// Directory storing Move resources and module bytecodes produced by script execution.
     #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA)]
     move_data: String,
     /// Directory storing Move source files that will be compiled and loaded into the VM before
@@ -52,9 +51,9 @@ enum Command {
         #[structopt(long = "commit", short = "c")]
         commit: bool,
     },
-    /// Compile/run a Move script that reads/writes resources stored on disk in `move_data`.
-    /// This command compiles each each module stored in `move_src` and loads it into the VM
-    /// before running the script.
+    /// Compile/run a Move script that reads/writes resources stored on disk in `move_data`. This
+    /// command compiles each each module stored in `move_src` and loads it into the VM before
+    /// running the script.
     #[structopt(name = "run")]
     Run {
         /// Path to script to compile and run.
@@ -82,7 +81,6 @@ enum Command {
         #[structopt(long = "commit", short = "c")]
         commit: bool,
     },
-
     /// Run expected value tests using the given batch file
     #[structopt(name = "test")]
     Test {
@@ -91,15 +89,15 @@ enum Command {
         #[structopt(name = "file")]
         file: String,
     },
-    /// View Move resources, events files, and modules stored on disk
+    /// View Move resources and modules stored on disk
     #[structopt(name = "view")]
     View {
-        /// Path to a resource, events file, or module stored on disk.
+        /// Path to a resource or module stored on disk.
         #[structopt(name = "file")]
         file: String,
     },
-    /// Delete all resources, events, and modules stored on disk under `move_data`.
-    /// Does *not* delete anything in `move_src`.
+    /// Delete all modules and resources stored on disk under `move_data`. Does *not* delete
+    /// anything in `move_src`.
     Clean {},
 }
 
@@ -119,18 +117,26 @@ fn compile(
 ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
     let move_data = maybe_create_dir(&args.move_data)?;
 
+    // TODO: prevent cyclic dep?
     let mut user_move_src_files = if Path::new(&args.move_src).exists() {
         move_lang::find_move_filenames(&[args.move_src.clone()], true)?
     } else {
         vec![]
     };
-    if let Some(f) = script_file.as_ref() {
-        user_move_src_files.push(f.to_string())
-    }
 
     let has_user_modules = !user_move_src_files.is_empty();
     if has_user_modules {
-        println!("Compiling {:?} source file(s)", user_move_src_files.len());
+        print!("Compiling {:?} module(s)", user_move_src_files.len());
+    }
+    if let Some(f) = script_file.as_ref() {
+        if has_user_modules {
+            println!(" and 1 transaction script")
+        } else {
+            println!("Compiling transaction script")
+        }
+        user_move_src_files.push(f.to_string())
+    } else if has_user_modules {
+        println!()
     }
 
     let deps = stdlib::stdlib_files();
@@ -149,16 +155,11 @@ fn compile(
     let mut script_opt = None;
     for c in compilation_units {
         match c {
-            CompiledUnit::Script { script, loc, .. } => {
-                match script_file {
-                    Some(f) => {
-                        if Path::new(f).canonicalize()? == Path::new(loc.file()).canonicalize()? {
-                            script_opt = Some(script)
-                        }
-                    }
-                    None => (),
+            CompiledUnit::Script { script, .. } => {
+                if script_opt.is_some() {
+                    bail!("Error: found script in move_lib")
                 }
-                // TODO: save script bytecodes on disk? where should we put them?
+                script_opt = Some(script)
             }
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
@@ -251,14 +252,16 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
     if !effects.events.is_empty() {
         println!("Emitted {:?} events:", effects.events.len());
         // TODO: better event printing
-        for (event_key, event_sequence_number, _event_type, _event_layout, event_data) in
+        for (event_handle, event_sequence_number, _event_type, _event_layout, event_data) in
             &effects.events
         {
             println!(
                 "Emitted {:?} as the {}th event to stream {:?}",
-                event_data, event_sequence_number, event_key
+                event_data, event_sequence_number, event_handle
             )
         }
+        // TODO: support saving events to disk
+        println!("Warning: saving events to disk is currently not supported. Discarding events.");
     }
     if !effects.resources.is_empty() {
         println!(
@@ -313,20 +316,7 @@ fn maybe_commit_effects(
                     }
                 }
             }
-
-            for (event_key, event_sequence_number, event_type, event_layout, event_data) in
-                effects.events
-            {
-                state.save_event(
-                    &event_key,
-                    event_sequence_number,
-                    event_type,
-                    &event_layout,
-                    event_data,
-                )?
-            }
         }
-
         // TODO: print modules to be saved?
         state.save_modules()?;
         println!("Committed changes.")
@@ -468,32 +458,22 @@ fn explain_error(
 
 /// Print a module or resource stored in `file`
 fn view(args: &Move, file: &str) -> Result<()> {
-    let move_data = maybe_create_dir(&args.move_data)?.canonicalize()?;
+    let move_data = maybe_create_dir(&args.move_data)?;
     let stdlib_modules = vec![]; // ok to use empty dir here since we're not compiling
-    let state = OnDiskStateView::create(move_data, &stdlib_modules)?;
-
-    let path = Path::new(&file);
-    if state.is_resource_path(path) {
-        match state.view_resource(path)? {
+    let state = OnDiskStateView::create(move_data.to_path_buf(), &stdlib_modules)?;
+    if file.contains("::") {
+        // TODO: less hacky way to detect this?
+        // viewing resource
+        match state.view_resource(Path::new(&file))? {
             Some(resource) => println!("{}", resource),
             None => println!("Resource not found."),
         }
-    } else if state.is_event_path(path) {
-        let events = state.view_events(path)?;
-        if events.is_empty() {
-            println!("Events not found.")
-        } else {
-            for event in events {
-                println!("{}", event)
-            }
-        }
-    } else if state.is_module_path(path) {
-        match state.view_module(path)? {
+    } else {
+        // viewing module
+        match state.view_module(Path::new(&file))? {
             Some(module) => println!("{}", module),
             None => println!("Module not found."),
         }
-    } else {
-        bail!("`move view <file>` must point to a valid file under move_data")
     }
     Ok(())
 }

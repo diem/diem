@@ -152,7 +152,6 @@ pub enum SpecBlockMember_ {
         def: Exp,
     },
     Include {
-        properties: Vec<PragmaProperty>,
         exp: Exp,
     },
     Apply {
@@ -522,7 +521,7 @@ impl AstDebug for SpecBlockMember_ {
                 w.write(&format!("let {} = ", name));
                 def.ast_debug(w);
             }
-            SpecBlockMember_::Include { properties: _, exp } => {
+            SpecBlockMember_::Include { exp } => {
                 w.write("include ");
                 exp.ast_debug(w);
             }

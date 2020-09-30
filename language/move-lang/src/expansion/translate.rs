@@ -864,19 +864,9 @@ fn spec_member(
             let def = exp_(context, pdef);
             EM::Let { name, def }
         }
-        PM::Include {
-            properties: pproperties,
-            exp: pexp,
-        } => {
-            let properties = pproperties
-                .into_iter()
-                .map(|p| pragma_property(context, p))
-                .collect();
-            EM::Include {
-                properties,
-                exp: exp_(context, pexp),
-            }
-        }
+        PM::Include { exp: pexp } => EM::Include {
+            exp: exp_(context, pexp),
+        },
         PM::Apply {
             exp: pexp,
             patterns,

@@ -54,7 +54,11 @@ module Genesis {
 
         AccountFreezing::initialize(lr_account);
 
-        TransactionFee::initialize(tc_account);
+        // Register transaction fee resource
+        TransactionFee::initialize(
+            lr_account,
+            tc_account,
+        );
 
         LibraSystem::initialize_validator_set(
             lr_account,
@@ -87,6 +91,9 @@ module Genesis {
         LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
         LibraTimestamp::set_time_has_started(lr_account);
+    }
+    spec fun initialize {
+        pragma verify = false; // TODO: times out
     }
 
 }
