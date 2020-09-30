@@ -13,6 +13,10 @@ run (in the Libra root directory):
 
 This command should work on MacOS and Linux flavors like Ubuntu or CentOS. (Windows is currently not supported).
 
+Notice that you have to include environment variable definitions in `~/.profile` into your shell. Depending on your
+setup, the  `~/.profile` may be already automatically loaded for each login shell, or it may not. If not, you may
+need to add `. ~/.profile` to your `~/.bash_profile` or other shell configuration manually.
+
 The `dev-setup.sh` command can be used to set up other parts of the Libra tool chain; use `-h` for more information.
 Specifically, if you have a fresh Libra enlistment and machine, you can use the following to install basic build
 tools like Rust together with prover tools:
