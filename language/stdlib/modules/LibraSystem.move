@@ -68,13 +68,12 @@ module LibraSystem {
     // Setup methods
     ///////////////////////////////////////////////////////////////////////////
 
-    // This can only be invoked by the ValidatorSet address to instantiate
-    // the resource under that address.
-    // It can only be called a single time. Currently, it is invoked in the genesis transaction.
+
     /// Publishes the LibraConfig for the LibraSystem struct, which contains the current
     /// validator set, and  publishes the Capability holder with the
     /// ModifyConfigCapability<LibraSystem> returned by the publish function, which allows
     /// code in this module to change the validator set.
+    /// Must be invoked by the Libra root a single time in Genesis.
     public fun initialize_validator_set(
         lr_account: &signer,
     ) {
@@ -99,7 +98,8 @@ module LibraSystem {
         include LibraTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         let lr_addr = Signer::spec_address_of(lr_account);
-        // TODO: Perhaps we can eliminate an aborts_if depending on order of calls.
+        // TODO: The next two aborts_if's are not independent. Perhaps they can be
+        // simplified.
         aborts_if LibraConfig::spec_is_published<LibraSystem>() with Errors::ALREADY_PUBLISHED;
         aborts_if exists<CapabilityHolder>(lr_addr) with Errors::ALREADY_PUBLISHED;
         ensures exists<CapabilityHolder>(lr_addr);
@@ -123,8 +123,11 @@ module LibraSystem {
     spec fun set_libra_system_config {
         pragma opaque;
         modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        // LibraConfig::reconfigure modifies Configuration.
+        modifies global<LibraConfig::Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include LibraTimestamp::AbortsIfNotOperating;
         include LibraConfig::ReconfigureAbortsIf;
+        // *** This is Wolfgang's anti-pattern?
         ensures global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).payload == value;
     }
 
@@ -136,25 +139,25 @@ module LibraSystem {
     // If successful, a NewEpochEvent is fired
     public fun add_validator(
         lr_account: &signer,
-        validator_address: address
+        validator_addr: address
     ) acquires CapabilityHolder {
 
         LibraTimestamp::assert_operating();
         Roles::assert_libra_root(lr_account);
         // A prospective validator must have a validator config resource
-        assert(ValidatorConfig::is_valid(validator_address), Errors::invalid_argument(EINVALID_PROSPECTIVE_VALIDATOR));
+        assert(ValidatorConfig::is_valid(validator_addr), Errors::invalid_argument(EINVALID_PROSPECTIVE_VALIDATOR));
 
         let libra_system_config = get_libra_system_config();
 
         // Ensure that this address is not already a validator
         assert(
-            !is_validator_(validator_address, &libra_system_config.validators),
+            !is_validator_(validator_addr, &libra_system_config.validators),
             Errors::invalid_argument(EALREADY_A_VALIDATOR)
         );
         // it is guaranteed that the config is non-empty
-        let config = ValidatorConfig::get_config(validator_address);
+        let config = ValidatorConfig::get_config(validator_addr);
         Vector::push_back(&mut libra_system_config.validators, ValidatorInfo {
-            addr: validator_address,
+            addr: validator_addr,
             config, // copy the config over to ValidatorSet
             consensus_voting_power: 1,
         });
@@ -163,25 +166,34 @@ module LibraSystem {
     }
     spec fun add_validator {
         modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include AddValidatorAbortsIf;
+        include AddValidatorEnsures;
+    }
+
+    spec schema AddValidatorAbortsIf {
+        lr_account: signer;
+        validator_addr: address;
         include LibraTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include LibraConfig::ReconfigureAbortsIf;
-        aborts_if !ValidatorConfig::is_valid(validator_address) with Errors::INVALID_ARGUMENT;
-        aborts_if spec_is_validator(validator_address) with Errors::INVALID_ARGUMENT;
+        aborts_if !ValidatorConfig::is_valid(validator_addr) with Errors::INVALID_ARGUMENT;
+        aborts_if spec_is_validator(validator_addr) with Errors::INVALID_ARGUMENT;
+    }
+
+    spec schema AddValidatorEnsures {
+        validator_addr: address;
         /// LIP-6 property: validator has validator role. The code does not check this explicitly,
         /// but it is implied by the assert ValidatorConfig::is_valid, since
         /// a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorConfig).
-        ensures Roles::spec_has_validator_role_addr(validator_address);
-        ensures ValidatorConfig::is_valid(validator_address);
-        ensures spec_is_validator(validator_address);
-    }
-    spec fun add_validator {
+        ensures Roles::spec_has_validator_role_addr(validator_addr);
+        ensures ValidatorConfig::is_valid(validator_addr);
+        ensures spec_is_validator(validator_addr);
         let vs = spec_get_validators();
         ensures Vector::eq_push_back(vs,
                                      old(vs),
                                      ValidatorInfo {
-                                         addr: validator_address,
-                                         config: ValidatorConfig::spec_get_config(validator_address),
+                                         addr: validator_addr,
+                                         config: ValidatorConfig::spec_get_config(validator_addr),
                                          consensus_voting_power: 1,
                                       }
                                    );
@@ -192,13 +204,13 @@ module LibraSystem {
     // If successful, a NewEpochEvent is fired
     public fun remove_validator(
         lr_account: &signer,
-        account_address: address
+        validator_addr: address
     ) acquires CapabilityHolder {
         LibraTimestamp::assert_operating();
         Roles::assert_libra_root(lr_account);
         let libra_system_config = get_libra_system_config();
         // Ensure that this address is an active validator
-        let to_remove_index_vec = get_validator_index_(&libra_system_config.validators, account_address);
+        let to_remove_index_vec = get_validator_index_(&libra_system_config.validators, validator_addr);
         assert(Option::is_some(&to_remove_index_vec), Errors::invalid_argument(ENOT_AN_ACTIVE_VALIDATOR));
         let to_remove_index = *Option::borrow(&to_remove_index_vec);
         // Remove corresponding ValidatorInfo from the validator set
@@ -208,16 +220,26 @@ module LibraSystem {
     }
     spec fun remove_validator {
         modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include RemoveValidatorAbortsIf;
+        include RemoveValidatorEnsures;
+    }
+
+    spec schema RemoveValidatorAbortsIf {
+        lr_account: signer;
+        validator_addr: address;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include LibraTimestamp::AbortsIfNotOperating;
         include LibraConfig::ReconfigureAbortsIf;
-        aborts_if !spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
+        aborts_if !spec_is_validator(validator_addr) with Errors::INVALID_ARGUMENT;
     }
-    spec fun remove_validator {
+
+    spec schema RemoveValidatorEnsures {
+        validator_addr: address;
         let vs = spec_get_validators();
-        ensures forall vi in vs where vi.addr != account_address: exists ovi in old(vs): vi == ovi;
+        ensures forall vi in vs where vi.addr != validator_addr: exists ovi in old(vs): vi == ovi;
         /// Removed validator is no longer a validator.  Depends on no other entries for same address
         /// in validator_set
-        ensures !spec_is_validator(account_address);
+        ensures !spec_is_validator(validator_addr);
     }
 
     // For a calling validator's operator copy the information from ValidatorConfig into the ValidatorSet.
@@ -225,16 +247,16 @@ module LibraSystem {
     // If the config in the ValidatorSet changes, a NewEpochEvent is fired.
     public fun update_config_and_reconfigure(
         validator_operator_account: &signer,
-        validator_address: address,
+        validator_addr: address,
     ) acquires CapabilityHolder {
         LibraTimestamp::assert_operating();
         Roles::assert_validator_operator(validator_operator_account);
         assert(
-            ValidatorConfig::get_operator(validator_address) == Signer::address_of(validator_operator_account),
+            ValidatorConfig::get_operator(validator_addr) == Signer::address_of(validator_operator_account),
             Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
         let libra_system_config = get_libra_system_config();
-        let to_update_index_vec = get_validator_index_(&libra_system_config.validators, validator_address);
+        let to_update_index_vec = get_validator_index_(&libra_system_config.validators, validator_addr);
         assert(Option::is_some(&to_update_index_vec), Errors::invalid_argument(ENOT_AN_ACTIVE_VALIDATOR));
         let to_update_index = *Option::borrow(&to_update_index_vec);
         let is_validator_info_updated = update_ith_validator_info_(&mut libra_system_config.validators, to_update_index);
@@ -243,42 +265,55 @@ module LibraSystem {
         }
     }
     spec fun update_config_and_reconfigure {
-        include LibraTimestamp::AbortsIfNotOperating;
-        /// Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
-        include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: Signer::address_of(validator_operator_account)};
-        include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
-        aborts_if ValidatorConfig::spec_get_operator(validator_address)
-            != Signer::spec_address_of(validator_operator_account)
-            with Errors::INVALID_ARGUMENT;
-        aborts_if !spec_is_validator(validator_address) with Errors::INVALID_ARGUMENT;
-        // TODO: Currently, next depends on data structure invariant that validator addresses
-        // in validator_set are unique.  If we could use the same v_info returned by get_validator_index_
-        // even when there are multiple entries for the same address, we could make the spec independent
-        // of that assumption. Simplifying the formula may also improve efficiency.
+        pragma opaque;
+        modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include UpdateConfigAndReconfigureAbortsIf;
+        include UpdateConfigAndReconfigureEnsures;
+        // The property below is not in UpdateConfigAndReconfigureEnsures because that is reused
+        // with a different condition in the transaction script set_validator_config_and_reconfigure.
+        // The validator set is not updated if: (1) validator_addr is not in the validator set, or
+        // (2) the validator info would not change. The code only does a reconfiguration if the
+        // validator set would change.  ReconfigureAbortsIf complains if the block time does not
+        // advance, but block time only advances if there is a reconfiguration.
         let is_validator_info_updated =
-            ValidatorConfig::is_valid(validator_address) &&
+            ValidatorConfig::is_valid(validator_addr) &&
             (exists v_info in spec_get_validators():
-                v_info.addr == validator_address
-                && v_info.config != ValidatorConfig::spec_get_config(validator_address));
+                v_info.addr == validator_addr
+                && v_info.config != ValidatorConfig::spec_get_config(validator_addr));
         include is_validator_info_updated ==> LibraConfig::ReconfigureAbortsIf;
     }
 
+    spec schema UpdateConfigAndReconfigureAbortsIf {
+        validator_addr: address;
+        validator_operator_account: signer;
+        let validator_operator_addr = Signer::address_of(validator_operator_account);
+        include LibraTimestamp::AbortsIfNotOperating;
+        /// Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
+        include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: validator_operator_addr};
+        include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_addr};
+        aborts_if ValidatorConfig::spec_get_operator(validator_addr) != validator_operator_addr
+            with Errors::INVALID_ARGUMENT;
+        aborts_if !spec_is_validator(validator_addr) with Errors::INVALID_ARGUMENT;
+    }
+
+
     /// Does not change the length of the validator set, only changes ValidatorInfo
-    /// for validator_address, and doesn't change any addresses.
-    spec fun update_config_and_reconfigure {
+    /// for validator_addr, and doesn't change any addresses.
+    spec schema UpdateConfigAndReconfigureEnsures {
+        validator_addr: address;
         let vs = spec_get_validators();
         ensures len(vs) == len(old(vs));
         /// No addresses change
         ensures forall i in 0..len(vs): vs[i].addr == old(vs)[i].addr;
         /// If the validator info address is not the one we're changing, the info does not change.
-        ensures forall i in 0..len(vs) where old(vs)[i].addr != validator_address:
+        ensures forall i in 0..len(vs) where old(vs)[i].addr != validator_addr:
                          vs[i] == old(vs)[i];
         /// It updates the correct entry in the correct way
         ensures forall i in 0..len(vs): vs[i].config == old(vs[i].config) ||
-                    (old(vs)[i].addr == validator_address &&
-                    vs[i].config == ValidatorConfig::get_config(validator_address));
+                    (old(vs)[i].addr == validator_addr &&
+                    vs[i].config == ValidatorConfig::get_config(validator_addr));
         // LIP-6 property
-        ensures Roles::spec_has_validator_role_addr(validator_address);
+        ensures Roles::spec_has_validator_role_addr(validator_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////

@@ -32,6 +32,7 @@ use 0x1::ValidatorOperatorConfig;
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `lr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `lr_account` is too far in the future.                                                                                                |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` lr_account` has been previously recorded.                                                                                            |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Libra Root account or Treasury Compliance account                                                                             |
 /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
 /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
 /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
@@ -58,4 +59,25 @@ fun set_validator_operator_with_nonce_admin(
     assert(ValidatorOperatorConfig::get_human_name(operator_account) == operator_name, 0);
     ValidatorConfig::set_operator(account, operator_account);
 }
+
+spec fun set_validator_operator_with_nonce_admin {
+    use 0x1::LibraAccount;
+    use 0x1::Signer;
+    use 0x1::Errors;
+
+    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
+    // next is due to abort in get_human_name
+    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: Signer::address_of(account)};
+    // TODO: use an error code from Errors.move instead of 0.
+    aborts_if ValidatorOperatorConfig::get_human_name(operator_account) != operator_name with 0;
+    include ValidatorConfig::SetOperatorAbortsIf{validator_account: account, operator_addr: operator_account};
+    include ValidatorConfig::SetOperatorEnsures{validator_account: account, operator_addr: operator_account};
+
+    aborts_with [check]
+        0, // Odd error code in assert on second statement in add_validator_and_reconfigure
+        Errors::INVALID_ARGUMENT,
+        Errors::NOT_PUBLISHED,
+        Errors::REQUIRES_ROLE;
+    }
 }

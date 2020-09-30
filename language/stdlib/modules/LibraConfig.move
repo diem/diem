@@ -133,6 +133,7 @@ module LibraConfig {
     }
     spec fun set_with_capability_and_reconfigure {
         pragma opaque;
+        modifies global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include AbortsIfNotPublished<Config>;
         include ReconfigureAbortsIf;
         modifies global<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
@@ -212,6 +213,7 @@ module LibraConfig {
     }
     spec fun reconfigure {
         pragma opaque;
+        modifies global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include ReconfigureAbortsIf;
     }
@@ -270,7 +272,8 @@ module LibraConfig {
         aborts_if LibraTimestamp::is_operating()
             && LibraTimestamp::spec_now_microseconds() > 0
             && config.epoch < MAX_U64
-            && current_time == config.last_reconfiguration_time with Errors::INVALID_STATE;
+            && current_time == config.last_reconfiguration_time
+                with Errors::INVALID_STATE;
     }
 
     // Emit a reconfiguration event. This function will be invoked by genesis directly to generate the very first

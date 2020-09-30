@@ -2677,6 +2677,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.                                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                | The <code>sliding_nonce</code> is too far in the future.                                                                                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>       | The <code>sliding_nonce</code> has been previously recorded.                                                                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                | The sending account is not the Libra Root account or Treasury Compliance account                                                          |
 | 0                          | 0                                             | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">LibraSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">LibraSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
@@ -2714,6 +2715,40 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
     <b>assert</b>(<a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
     <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_add_validator">LibraSystem::add_validator</a>(lr_account, validator_address);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
+<b>aborts_if</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) != validator_name <b>with</b> 0;
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_AddValidatorAbortsIf">LibraSystem::AddValidatorAbortsIf</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_AddValidatorEnsures">LibraSystem::AddValidatorEnsures</a>{validator_addr: validator_address};
+</code></pre>
+
+
+Reports INVALID_STATE because of is_operating() and !exists<LibraSystem::CapabilityHolder>.
+is_operating() is always true during transactions, and CapabilityHolder is published
+during initialization (Genesis).
+Reports REQUIRES_ROLE if lr_account is not Libra root, but that can't happen
+in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
+
+
+<pre><code><b>aborts_with</b> [check]
+    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
 
@@ -2886,6 +2921,7 @@ is not in the validator set.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                                   |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                               |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | The sending account is not the Libra Root account or Treasury Compliance account                |
 | 0                          | 0                                       | The provided <code>validator_name</code> does not match the already-recorded human name for the validator. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR">LibraSystem::ENOT_AN_ACTIVE_VALIDATOR</a></code> | The validator to be removed is not in the validator set.                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                              |
@@ -2920,9 +2956,44 @@ is not in the validator set.
     validator_address: address
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
+    // TODO: Use an error code from <a href="../../modules/doc/Errors.md#0x1_Errors">Errors</a>.<b>move</b>
     <b>assert</b>(<a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
     <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(lr_account, validator_address);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
+<b>aborts_if</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) != validator_name <b>with</b> 0;
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_RemoveValidatorAbortsIf">LibraSystem::RemoveValidatorAbortsIf</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_RemoveValidatorEnsures">LibraSystem::RemoveValidatorEnsures</a>{validator_addr: validator_address};
+</code></pre>
+
+
+Reports INVALID_STATE because of is_operating() and !exists<LibraSystem::CapabilityHolder>.
+is_operating() is always true during transactions, and CapabilityHolder is published
+during initialization (Genesis).
+Reports REQUIRES_ROLE if lr_account is not Libra root, but that can't happen
+in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
+
+
+<pre><code><b>aborts_with</b> [check]
+    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
 
@@ -2977,21 +3048,22 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | Error Category             | Error Reason                                   | Description                                                                                           |
 | ----------------           | --------------                                 | -------------                                                                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>           | <code>validator_address</code> does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it.   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">ValidatorConfig::EINVALID_TRANSACTION_SENDER</a></code> | <code>validator_operator_account</code> is not the registered operator for the validator at <code>validator_address</code>. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>     | </code>Roles::EVALIDATOR_OPERATOR<code>                   | </code>validator_operator_account<code> does not have a Validator Operator role.                                 |
+| </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_TRANSACTION_SENDER<code> | </code>validator_operator_account<code> is not the registered operator for the validator at </code>validator_address<code>. |
+| </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_CONSENSUS_KEY<code>      | </code>consensus_pubkey<code> is not a valid ed25519 <b>public</b> key.                                                 |
 
 
 <a name="@Related_Scripts_154"></a>
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
+* </code>Script::create_validator_account<code>
+* </code>Script::create_validator_operator_account<code>
+* </code>Script::add_validator_and_reconfigure<code>
+* </code>Script::remove_validator_and_reconfigure<code>
+* </code>Script::set_validator_operator<code>
+* </code>Script::set_validator_operator_with_nonce_admin<code>
+* </code>Script::register_validator_config`
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="overview.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
@@ -3019,6 +3091,51 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
     );
     <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_update_config_and_reconfigure">LibraSystem::update_config_and_reconfigure</a>(validator_operator_account, validator_account);
  }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: validator_operator_account};
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">LibraSystem::UpdateConfigAndReconfigureEnsures</a>{validator_addr: validator_account};
+<b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_account);
+<b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_account)
+    == <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
+                consensus_pubkey,
+                validator_network_addresses,
+                fullnode_network_addresses,
+};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a>{validator_addr: validator_account};
+<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureAbortsIf">LibraSystem::UpdateConfigAndReconfigureAbortsIf</a>{validator_addr: validator_account};
+<a name="set_validator_config_and_reconfigure_is_validator_info_updated$1"></a>
+<b>let</b> is_validator_info_updated =
+    (<b>exists</b> v_info in <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_spec_get_validators">LibraSystem::spec_get_validators</a>():
+        v_info.addr == validator_account
+        && v_info.config != <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
+                consensus_pubkey,
+                validator_network_addresses,
+                fullnode_network_addresses,
+           });
+<b>include</b> is_validator_info_updated ==&gt; <a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
+</code></pre>
+
+
+This reports a possible INVALID_STATE abort, which comes from an assert in LibraConfig::reconfigure_
+that config.last_reconfiguration_time is not in the future. This is a system error that a user
+for which there is no useful recovery except to resubmit the transaction.
+
+
+<pre><code><b>aborts_with</b> [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 </code></pre>
 
 
@@ -3116,6 +3233,35 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
+<b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">ValidatorConfig::SetOperatorEnsures</a>{validator_account: account, operator_addr: operator_account};
+</code></pre>
+
+
+Reports INVALID_STATE because of !exists<LibraSystem::CapabilityHolder>, but that can't happen
+because CapabilityHolder is published during initialization (Genesis).
+
+
+<pre><code><b>aborts_with</b> [check]
+    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+</code></pre>
+
+
+
+</details>
+
 ---
 
 
@@ -3169,6 +3315,7 @@ the system is initiated by this script.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                        | The <code>sliding_nonce</code> in <code>lr_account</code> is too old and it's impossible to determine if it's duplicated or not.                                                   |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                        | The <code>sliding_nonce</code> in <code>lr_account</code> is too far in the future.                                                                                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>               | The <code>sliding_nonce</code> in<code> lr_account</code> has been previously recorded.                                                                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | The sending account is not the Libra Root account or Treasury Compliance account                                                                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG</a></code> | The <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource is not published under <code>operator_account</code>.                                                   |
 | 0                          | 0                                                     | The <code>human_name</code> field of the <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource under <code>operator_account</code> does not match the provided <code>human_name</code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
@@ -3209,6 +3356,28 @@ the system is initiated by this script.
     <b>assert</b>(<a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) == operator_name, 0);
     <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(account, operator_account);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
+<b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">ValidatorConfig::SetOperatorEnsures</a>{validator_account: account, operator_addr: operator_account};
+<b>aborts_with</b> [check]
+    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
 

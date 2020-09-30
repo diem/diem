@@ -33,6 +33,7 @@ use 0x1::ValidatorConfig;
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                                                                             |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                                                                         |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | The sending account is not the Libra Root account or Treasury Compliance account                                                          |
 /// | 0                          | 0                                             | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
 /// | `Errors::INVALID_ARGUMENT` | `LibraSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
 /// | `Errors::INVALID_ARGUMENT` | `LibraSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
@@ -56,4 +57,32 @@ fun add_validator_and_reconfigure(
     assert(ValidatorConfig::get_human_name(validator_address) == validator_name, 0);
     LibraSystem::add_validator(lr_account, validator_address);
 }
+
+
+spec fun add_validator_and_reconfigure {
+    use 0x1::LibraAccount;
+    use 0x1::Errors;
+
+    include LibraAccount::TransactionChecks{sender: lr_account}; // properties checked by the prologue.
+    include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
+    // next is due to abort in get_human_name
+    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
+    // TODO: use an error code from Errors.move instead of 0.
+    aborts_if ValidatorConfig::get_human_name(validator_address) != validator_name with 0;
+    include LibraSystem::AddValidatorAbortsIf{validator_addr: validator_address};
+    include LibraSystem::AddValidatorEnsures{validator_addr: validator_address};
+
+    /// Reports INVALID_STATE because of is_operating() and !exists<LibraSystem::CapabilityHolder>.
+    /// is_operating() is always true during transactions, and CapabilityHolder is published
+    /// during initialization (Genesis).
+    /// Reports REQUIRES_ROLE if lr_account is not Libra root, but that can't happen
+    /// in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
+    aborts_with [check]
+        0, // Odd error code in assert on second statement in add_validator_and_reconfigure
+        Errors::INVALID_ARGUMENT,
+        Errors::NOT_PUBLISHED,
+        Errors::REQUIRES_ADDRESS,
+        Errors::INVALID_STATE,
+        Errors::REQUIRES_ROLE;
+    }
 }

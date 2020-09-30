@@ -450,6 +450,7 @@ An invalid block time was encountered.
 
 
 <pre><code><b>pragma</b> opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
@@ -632,6 +633,7 @@ An invalid block time was encountered.
 
 
 <pre><code><b>pragma</b> opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 </code></pre>
@@ -739,7 +741,8 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
     <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>()
         && <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; 0
         && config.epoch &lt; <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a>
-        && current_time == config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+        && current_time == config.last_reconfiguration_time
+            <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>
 

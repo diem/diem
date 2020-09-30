@@ -26,6 +26,7 @@ use 0x1::ValidatorConfig;
 /// | Error Category             | Error Reason                                   | Description                                                                                           |
 /// | ----------------           | --------------                                 | -------------                                                                                         |
 /// | `Errors::NOT_PUBLISHED`    | `ValidatorConfig::EVALIDATOR_CONFIG`           | `validator_address` does not have a `ValidatorConfig::ValidatorConfig` resource published under it.   |
+/// | `Errors::REQUIRES_ROLE     | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
 ///
@@ -54,4 +55,53 @@ fun set_validator_config_and_reconfigure(
     );
     LibraSystem::update_config_and_reconfigure(validator_operator_account, validator_account);
  }
+
+spec fun set_validator_config_and_reconfigure {
+    use 0x1::LibraAccount;
+    use 0x1::LibraConfig;
+    use 0x1::LibraSystem;
+    use 0x1::Errors;
+
+     // properties checked by the prologue.
+   include LibraAccount::TransactionChecks{sender: validator_operator_account};
+    // UpdateConfigAndReconfigureEnsures includes properties such as not changing info
+    // for validators in the validator_set other than that for validator_account, etc.
+    // These properties are important for access control. See notes in LibraSystem.
+    include LibraSystem::UpdateConfigAndReconfigureEnsures{validator_addr: validator_account};
+    ensures ValidatorConfig::is_valid(validator_account);
+    // The published ValidatorConfig has the correct data, according to the arguments to
+    // set_validator_config_and_reconfigure
+    ensures ValidatorConfig::spec_get_config(validator_account)
+        == ValidatorConfig::Config {
+                    consensus_pubkey,
+                    validator_network_addresses,
+                    fullnode_network_addresses,
+    };
+
+    include ValidatorConfig::SetConfigAbortsIf{validator_addr: validator_account};
+    include LibraSystem::UpdateConfigAndReconfigureAbortsIf{validator_addr: validator_account};
+
+    // Reconfiguration only happens if validator info changes for a validator in the validator set.
+    // v_info.config is the old config (if it exists) and the Config with args from set_config is
+    // the new config
+    let is_validator_info_updated =
+        (exists v_info in LibraSystem::spec_get_validators():
+            v_info.addr == validator_account
+            && v_info.config != ValidatorConfig::Config {
+                    consensus_pubkey,
+                    validator_network_addresses,
+                    fullnode_network_addresses,
+               });
+    include is_validator_info_updated ==> LibraConfig::ReconfigureAbortsIf;
+
+
+    /// This reports a possible INVALID_STATE abort, which comes from an assert in LibraConfig::reconfigure_
+    /// that config.last_reconfiguration_time is not in the future. This is a system error that a user
+    /// for which there is no useful recovery except to resubmit the transaction.
+    aborts_with [check]
+        Errors::NOT_PUBLISHED,
+        Errors::REQUIRES_ROLE,
+        Errors::INVALID_ARGUMENT,
+        Errors::INVALID_STATE;
+    }
 }

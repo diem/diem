@@ -92,33 +92,47 @@ module ValidatorConfig {
 
     /// Sets a new operator account, preserving the old config.
     /// Note: Access control.  No one but the owner of the account may change .operator_account
-    public fun set_operator(validator_account: &signer, operator_account: address) acquires ValidatorConfig {
+    public fun set_operator(validator_account: &signer, operator_addr: address) acquires ValidatorConfig {
         Roles::assert_validator(validator_account);
         // Check for validator role is not necessary since the role is checked when the config
         // resource is published.
         // TODO (dd): Probably need to prove an invariant about role.
         assert(
-            ValidatorOperatorConfig::has_validator_operator_config(operator_account),
+            ValidatorOperatorConfig::has_validator_operator_config(operator_addr),
             Errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
         );
         let sender = Signer::address_of(validator_account);
         assert(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_addr);
     }
     spec fun set_operator {
         /// Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
+        include SetOperatorAbortsIf;
+        include SetOperatorEnsures;
+    }
 
-        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account)
+    spec schema SetOperatorAbortsIf {
+        /// Must abort if the signer does not have the Validator role [B24].
+        validator_account: signer;
+        operator_addr: address;
+        let validator_addr = Signer::spec_address_of(validator_account);
+        include Roles::AbortsIfNotValidator{validator_addr: validator_addr};
+        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_addr)
             with Errors::INVALID_ARGUMENT;
-        include AbortsIfNoValidatorConfig{addr: sender};
-        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account) with Errors::NOT_PUBLISHED;
-        ensures spec_has_operator(sender);
-        ensures spec_get_operator(sender) == operator_account;
+        include AbortsIfNoValidatorConfig{addr: validator_addr};
+        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_addr) with Errors::NOT_PUBLISHED;
+    }
 
+    spec schema SetOperatorEnsures {
+        validator_account: signer;
+        operator_addr: address;
+        let validator_addr = Signer::spec_address_of(validator_account);
+        ensures spec_has_operator(validator_addr);
+        ensures spec_get_operator(validator_addr) == operator_addr;
         /// The signer can only change its own operator account [[H14]][PERMISSION].
-        ensures forall addr: address where addr != sender:
+        ensures forall addr: address where addr != validator_addr:
             global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
 
@@ -201,8 +215,18 @@ module ValidatorConfig {
     }
 
     spec fun set_config {
+        pragma opaque;
+        modifies global<ValidatorConfig>(validator_addr);
         include SetConfigAbortsIf;
         ensures is_valid(validator_addr);
+        ensures global<ValidatorConfig>(validator_addr)
+                == update_field(old(global<ValidatorConfig>(validator_addr)),
+                                config,
+                                Option::spec_some(Config {
+                                                 consensus_pubkey,
+                                                 validator_network_addresses,
+                                                 fullnode_network_addresses,
+                                             }));
     }
 
     spec schema SetConfigAbortsIf {
