@@ -3,9 +3,13 @@
 
 use crate::{
     counters,
+//<<<<<<< HEAD
     logging::{LogEntry, LogEvent, LogSchema},
     network::MempoolSyncMsg,
     shared_mempool::types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
+//=======
+//    logging::{LogEntry, LogSchema},
+//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 };
 use itertools::Itertools;
 use libra_config::{
@@ -13,7 +17,10 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_logger::prelude::*;
+//<<<<<<< HEAD
 use libra_types::transaction::SignedTransaction;
+//=======
+//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
@@ -24,6 +31,8 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 use vm_validator::vm_validator::TransactionValidation;
+
+const PRIMARY_NETWORK_PREFERENCE: i64 = 0;
 
 /// stores only peers that receive txns from this node
 pub(crate) type PeerInfo = HashMap<PeerNetworkId, PeerSyncState>;
@@ -80,7 +89,16 @@ impl BroadcastInfo {
 }
 
 impl PeerManager {
+//<<<<<<< HEAD
     pub fn new(mempool_config: MempoolConfig, upstream_config: UpstreamConfig) -> Self {
+//=======
+//    pub fn new(upstream_config: UpstreamConfig) -> Self {
+        // primary network is always chosen at initialization
+        counters::UPSTREAM_NETWORK.set(PRIMARY_NETWORK_PREFERENCE);
+        debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+            .network_level(PRIMARY_NETWORK_PREFERENCE as u64));
+//
+//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
         Self {
             mempool_config,
             upstream_config,
@@ -97,6 +115,9 @@ impl PeerManager {
             .expect("failed to acquire peer_info lock");
         let is_new_peer = !peer_info.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(origin)) {
+            counters::ACTIVE_UPSTREAM_PEERS_COUNT
+                .with_label_values(&[&peer.raw_network_id().to_string()])
+                .inc();
             if peer.raw_network_id() == NetworkId::Validator {
                 // For a validator network, resume broadcasting from previous state
                 // we can afford to not re-broadcast here since the transaction is already in a validator
@@ -134,6 +155,9 @@ impl PeerManager {
             .expect("failed to get peer info lock")
             .get_mut(&peer)
         {
+            counters::ACTIVE_UPSTREAM_PEERS_COUNT
+                .with_label_values(&[&peer.raw_network_id().to_string()])
+                .dec();
             state.is_alive = false;
         }
         self.update_failover();
@@ -288,14 +312,15 @@ impl PeerManager {
         state.broadcast_info.retry_batches.remove(&batch_id);
         notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
 
-        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
-            .with_label_values(&[&peer_id_str])
+        let network_id = &peer.raw_network_id().to_string();
+        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST_SIZE
+            .with_label_values(&[network_id, &peer_id_str])
             .observe(num_txns as f64);
         counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-            .with_label_values(&[&peer_id_str])
+            .with_label_values(&[network_id, &peer_id_str])
             .inc();
         counters::SHARED_MEMPOOL_BROADCAST_LATENCY
-            .with_label_values(&[&peer_id_str])
+            .with_label_values(&[network_id, &peer_id_str])
             .observe(start_time.elapsed().as_secs_f64());
     }
 
@@ -357,12 +382,33 @@ impl PeerManager {
                     }
                 }
             }
-
             *current_failover = failover_candidate.cloned().cloned();
         } else {
             // there is at least one peer alive in the primary upstream network, so don't pick
             // a failover peer
             *current_failover = None;
+        }
+
+        // log/update metric for the updated failover network
+        match failover.as_ref() {
+            Some(peer) => {
+                let failover_network = peer.raw_network_id();
+                if let Some(network_preference) = self
+                    .upstream_config
+                    .get_upstream_preference(failover_network.clone())
+                {
+                    debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+                        .upstream_network(&failover_network)
+                        .network_level(network_preference as u64));
+                    counters::UPSTREAM_NETWORK.set(network_preference as i64);
+                }
+            }
+            None => {
+                debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+                    .upstream_network(primary_upstream)
+                    .network_level(PRIMARY_NETWORK_PREFERENCE as u64));
+                counters::UPSTREAM_NETWORK.set(PRIMARY_NETWORK_PREFERENCE);
+            }
         }
     }
 
@@ -375,11 +421,13 @@ impl PeerManager {
         // timestamp of ACK received
         timestamp: SystemTime,
     ) {
+        let peer_id = &peer.peer_id().to_string();
+        let network_id = &peer.raw_network_id().to_string();
         let batch_id = if let Ok(id) = lcs::from_bytes::<BatchId>(&request_id_bytes) {
             id
         } else {
             counters::INVALID_ACK_RECEIVED_COUNT
-                .with_label_values(&[&peer.peer_id().to_string()])
+                .with_label_values(&[network_id, peer_id])
                 .inc();
             return;
         };
@@ -397,12 +445,12 @@ impl PeerManager {
                 .duration_since(sent_timestamp)
                 .expect("failed to calculate mempool broadcast RTT");
             counters::SHARED_MEMPOOL_BROADCAST_RTT
-                .with_label_values(&[&peer.peer_id().to_string()])
+                .with_label_values(&[network_id, peer_id])
                 .observe(rtt.as_secs_f64());
 
             // update ACK counter
             counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-                .with_label_values(&[&peer.peer_id().to_string()])
+                .with_label_values(&[network_id, peer_id])
                 .dec();
         } else {
             // log and return
@@ -410,9 +458,21 @@ impl PeerManager {
             return;
         }
 
+//<<<<<<< HEAD
         if retry {
             sync_state.broadcast_info.retry_batches.insert(batch_id);
         }
+//=======
+//            // track broadcast roundtrip latency
+//            if let Some(rtt) = timestamp.checked_duration_since(batch.timestamp) {
+//                counters::SHARED_MEMPOOL_BROADCAST_RTT
+//                    .with_label_values(&[
+//                        &peer.raw_network_id().to_string(),
+//                        &peer.peer_id().to_string(),
+//                    ])
+//                    .observe(rtt.as_secs_f64());
+//            }
+//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 
         // if backoff mode can only be turned off by executing a broadcast that was scheduled
         // as a backoff broadcast

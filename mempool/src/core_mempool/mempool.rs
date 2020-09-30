@@ -148,11 +148,7 @@ impl Mempool {
             governance_role,
         );
 
-        let status = self.transactions.insert(txn_info, sequence_number);
-        counters::CORE_MEMPOOL_INSERT_COUNT
-            .with_label_values(&[&status.code.to_string()])
-            .inc();
-        status
+        self.transactions.insert(txn_info, sequence_number)
     }
 
     /// Fetches next block of transactions for consensus

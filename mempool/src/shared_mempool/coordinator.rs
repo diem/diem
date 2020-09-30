@@ -73,7 +73,7 @@ pub(crate) async fn coordinator<V>(
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
-                let _ = counters::TASK_SPAWN_LATENCY
+                let _timer = counters::TASK_SPAWN_LATENCY
                 .with_label_values(&[counters::CLIENT_EVENT_LABEL])
                 .start_timer();
                 bounded_executor
@@ -88,14 +88,14 @@ pub(crate) async fn coordinator<V>(
                 tasks::process_consensus_request(&mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
-                let _ = counters::TASK_SPAWN_LATENCY
+                let _timer = counters::TASK_SPAWN_LATENCY
                     .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL])
                     .start_timer();
                 tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
                 info!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Received));
-                let _ = counters::TASK_SPAWN_LATENCY
+                let _timer = counters::TASK_SPAWN_LATENCY
                     .with_label_values(&[counters::RECONFIG_EVENT_LABEL])
                     .start_timer();
                 bounded_executor
@@ -138,18 +138,59 @@ pub(crate) async fn coordinator<V>(
                             .inc();
                         match msg {
                             MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
-                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
-                                    .inc_by(transactions.len() as i64);
+//                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+//                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
+//                                    .inc_by(transactions.len() as i64);
                                 let smp_clone = smp.clone();
                                 let peer = PeerNetworkId(network_id, peer_id);
+//<<<<<<< HEAD
                                 let timeline_state = match peer_manager
                                     .is_upstream_peer(&peer, None)
                                 {
                                     true => TimelineState::NonQualified,
                                     false => TimelineState::NotReady,
+//=======
+//                                debug!(LogSchema::new(LogEntry::LostPeer)
+//                                    .peer(&peer)
+//                                    .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
+//                                );
+//                                peer_manager.disable_peer(peer);
+//                                notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
+//                            }
+//                            Event::Message((peer_id, msg)) => {
+//                                counters::SHARED_MEMPOOL_EVENTS
+//                                    .with_label_values(&["message".to_string().deref()])
+//                                    .inc();
+//                                match msg {
+//                                    MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
+//                                        let smp_clone = smp.clone();
+//                                        let peer = PeerNetworkId(network_id, peer_id);
+//                                        let timeline_state = match peer_manager
+//                                            .is_upstream_peer(&peer, None)
+//                                        {
+//                                            true => TimelineState::NonQualified,
+//                                            false => TimelineState::NotReady,
+//                                        };
+//                                        let _timer = counters::TASK_SPAWN_LATENCY
+//                                            .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
+//                                            .start_timer();
+//                                        bounded_executor
+//                                            .spawn(tasks::process_transaction_broadcast(
+//                                                smp_clone,
+//                                                transactions,
+//                                                request_id,
+//                                                timeline_state,
+//                                                peer
+//                                            ))
+//                                            .await;
+//                                    }
+//                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
+//                                        let ack_timestamp = Instant::now();
+//                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff, ack_timestamp);
+//                                    }
+//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
                                 };
-                                let _ = counters::TASK_SPAWN_LATENCY
+                                let _timer = counters::TASK_SPAWN_LATENCY
                                     .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
                                     .start_timer();
                                 bounded_executor

@@ -3,7 +3,7 @@
 
 use crate::shared_mempool::types::{CommitNotification, ConsensusRequest};
 use anyhow::Error;
-use libra_config::config::PeerNetworkId;
+use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::Schema;
 use libra_types::{account_address::AccountAddress, on_chain_config::OnChainConfigPayload};
 use serde::Serialize;
@@ -74,6 +74,8 @@ pub struct LogSchema<'a> {
     consensus_msg: Option<&'a ConsensusRequest>,
     #[schema(display)]
     state_sync_msg: Option<&'a CommitNotification>,
+    network_level: Option<u64>,
+    upstream_network: Option<&'a NetworkId>,
 }
 
 impl<'a> LogSchema<'a> {
@@ -97,6 +99,8 @@ impl<'a> LogSchema<'a> {
             txns: None,
             consensus_msg: None,
             state_sync_msg: None,
+            network_level: None,
+            upstream_network: None,
         }
     }
 }
@@ -123,6 +127,8 @@ pub enum LogEntry {
     CleanCommittedTxn,
     CleanRejectedTxn,
     ProcessReadyTxns,
+    DBError,
+    UpstreamNetwork,
 }
 
 #[derive(Clone, Copy, Serialize)]
