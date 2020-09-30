@@ -24,7 +24,7 @@ transaction-builder-generator = { path = "../transaction-builder/generator", ver
 
 clap = "2.33.3"
 log = "0.4.11"
-rayon = "1.4.0"
+rayon = "1.4.1"
 sha2 = "0.9.1"
 
 [features]
