@@ -149,6 +149,7 @@ impl<L: LogContext> Interpreter<L> {
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
+                        current_frame.pc += 1; // advance past the Call instruction in the caller
                     } else {
                         return Ok(());
                     }
@@ -169,6 +170,7 @@ impl<L: LogContext> Interpreter<L> {
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, vec![])?;
+                        current_frame.pc += 1; // advance past the Call instruction in the caller
                         continue;
                     }
                     let frame = self
@@ -203,6 +205,7 @@ impl<L: LogContext> Interpreter<L> {
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
+                        current_frame.pc += 1; // advance past the Call instruction in the caller
                         continue;
                     }
                     let frame = self
@@ -715,7 +718,6 @@ impl Frame {
                     &resolver,
                     &interpreter
                 );
-                self.pc += 1;
 
                 match instruction {
                     Bytecode::Pop => {
@@ -1113,6 +1115,8 @@ impl Frame {
                         cost_strategy.charge_instr(Opcodes::NOP)?;
                     }
                 }
+                // invariant: advance to pc +1 is iff instruction at pc executed without aborting
+                self.pc += 1;
             }
             // ok we are out, it's a branch, check the pc for good luck
             // TODO: re-work the logic here. Tests should have a more

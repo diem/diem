@@ -1,0 +1,3 @@
+publish ../../../../../stdlib/modules
+publish move_src/modules
+run move_src/scripts/script.move --dry-run

@@ -1,0 +1,183 @@
+Command `publish ../../../../../stdlib/modules`:
+Command `publish move_src/modules`:
+Command `run move_src/scripts/script.move --dry-run`:
+Call Stack:
+    [0] main
+
+        Code:
+            [12] LdU64(1)
+            [13] CallGeneric(2)
+            [14] StLoc(0)
+          > [15] CallGeneric(3)
+            [16] StLoc(4)
+            [17] ImmBorrowLoc(4)
+            [18] CallGeneric(4)
+
+        Locals:
+            [0] false
+            [1] -
+            [2] -
+            [3] [true, false]
+            [4] -
+
+
+    [1] 00000000000000000000000000000002::N::foo<Bool, U64>
+
+        Code:
+            [2] MutBorrowLoc(0)
+            [3] StLoc(1)
+            [4] LdU64(4)
+          > [5] Call(0)
+            [6] StLoc(2)
+            [7] MoveLoc(1)
+            [8] Pop
+
+        Locals:
+            [0] 3
+            [1] 3
+            [2] -
+
+
+    [2] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 4
+            [1] -
+
+
+    [3] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 3
+            [1] -
+
+
+    [4] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 2
+            [1] -
+
+
+Operand Stack:
+    [0] 4
+    [1] 3
+    [2] 2
+
+[debug] 10
+Call Stack:
+    [0] main
+
+        Code:
+            [18] CallGeneric(4)
+            [19] MoveLoc(0)
+            [20] Pop
+          > [21] CallGeneric(5)
+            [22] Pop
+            [23] Ret
+
+        Locals:
+            [0] -
+            [1] -
+            [2] -
+            [3] [true, false]
+            [4] 10
+
+
+    [1] 00000000000000000000000000000002::N::foo<U8, Bool>
+
+        Code:
+            [2] MutBorrowLoc(0)
+            [3] StLoc(1)
+            [4] LdU64(4)
+          > [5] Call(0)
+            [6] StLoc(2)
+            [7] MoveLoc(1)
+            [8] Pop
+
+        Locals:
+            [0] 3
+            [1] 3
+            [2] -
+
+
+    [2] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 4
+            [1] -
+
+
+    [3] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 3
+            [1] -
+
+
+    [4] 00000000000000000000000000000002::M::sum
+
+        Code:
+            [10] CopyLoc(0)
+            [11] LdU64(1)
+            [12] Sub
+          > [13] Call(1)
+            [14] Add
+            [15] StLoc(1)
+            [16] MoveLoc(1)
+
+        Locals:
+            [0] 2
+            [1] -
+
+
+Operand Stack:
+    [0] 4
+    [1] 3
+    [2] 2
+

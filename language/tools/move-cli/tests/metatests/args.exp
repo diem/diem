@@ -2,5 +2,5 @@ Command `test dummy/test_1/args.txt`:
 1 / 1 test(s) passed.
 Command `test dummy/test_2`:
 1 / 1 test(s) passed.
-Command `test dummy `:
+Command `test dummy`:
 2 / 2 test(s) passed.
