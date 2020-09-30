@@ -29,7 +29,13 @@ use libra_types::{
 use network::counters;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::{cmp::min, collections::HashMap, convert::TryFrom, pin::Pin, sync::Arc};
+use std::{
+    cmp::min,
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    pin::Pin,
+    sync::Arc,
+};
 use storage_interface::{DbReader, Order};
 
 #[derive(Clone)]
@@ -324,8 +330,8 @@ async fn get_transactions(
                 .ok_or_else(|| format_err!("Missing events for version: {}", v))?
                 .iter()
                 .cloned()
-                .map(|x| (start_version + v as u64, x).into())
-                .collect()
+                .map(|x| (start_version + v as u64, x).try_into())
+                .collect::<Result<Vec<EventView>>>()?
         } else {
             vec![]
         };
@@ -369,8 +375,8 @@ async fn get_account_transaction(
             .events
             .unwrap_or_default()
             .into_iter()
-            .map(|x| ((tx_version, x).into()))
-            .collect();
+            .map(|x| (tx_version, x).try_into())
+            .collect::<Result<Vec<EventView>>>()?;
 
         Ok(Some(TransactionView {
             version: tx_version,
@@ -403,8 +409,8 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
     let events = events_with_proof
         .into_iter()
         .filter(|(version, _event)| version <= &req_version)
-        .map(|event| event.into())
-        .collect();
+        .map(|event| event.try_into())
+        .collect::<Result<Vec<EventView>>>()?;
     Ok(events)
 }
 
@@ -476,8 +482,8 @@ async fn get_account_transactions(
             tx.events
                 .unwrap_or_default()
                 .into_iter()
-                .map(|x| ((tx_version, x).into()))
-                .collect()
+                .map(|x| ((tx_version, x).try_into()))
+                .collect::<Result<Vec<EventView>>>()?
         } else {
             vec![]
         };

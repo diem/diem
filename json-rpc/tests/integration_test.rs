@@ -4,7 +4,12 @@
 use serde_json::json;
 
 use libra_crypto::hash::CryptoHash;
-use libra_types::transaction::{Transaction, TransactionPayload};
+use libra_types::{
+    account_config::coin1_tag,
+    transaction::{Transaction, TransactionPayload},
+};
+use transaction_builder_generated::stdlib;
+
 mod node;
 mod testing;
 
@@ -365,15 +370,256 @@ fn create_test_cases() -> Vec<Test> {
             name: "invalid transaction submitted: mempool validation error",
             run: |env: &mut testing::Env| {
                 env.allow_execution_failures(|env: &mut testing::Env| {
-                    let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 2000000);
-                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 2000000);
+                    let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 200);
+                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 200);
                     env.submit(&txn1);
                     let resp = env.submit(&txn2);
                     assert_eq!(
                         resp.error.expect("error").message,
                         "Server error: Mempool submission error: \"Failed to update gas price to 0\"".to_string(),
                     );
+                    // wait to make sure we don't impact next the following tests
+                    env.wait_for_txn(&txn1);
                 });
+            },
+        },
+        Test {
+            name: "preburn & burn events",
+            run: |env: &mut testing::Env| {
+                let script = stdlib::encode_preburn_script(coin1_tag(), 100);
+                let txn = env.create_txn(&env.dd, script);
+                let result = env.submit_and_wait(txn);
+                let version = result["version"].as_u64().unwrap();
+
+                assert_eq!(
+                    result["events"],
+                    json!([
+                        {
+                            "data": {
+                                "amount": {"amount": 100, "currency": "Coin1"},
+                                "metadata": "",
+                                "receiver": "000000000000000000000000000000dd",
+                                "sender": "000000000000000000000000000000dd",
+                                "type": "sentpayment"
+                            },
+                            "key": "0400000000000000000000000000000000000000000000dd",
+                            "sequence_number": 4,
+                            "transaction_version": version
+                        },
+                        {
+                            "data": {
+                                "amount": {"amount": 100, "currency": "Coin1"},
+                                "preburn_address": "000000000000000000000000000000dd",
+                                "type": "preburn"
+                            },
+                            "key": "07000000000000000000000000000000000000000a550c18",
+                            "sequence_number": 0,
+                            "transaction_version": version
+                        }
+                    ]),
+                    "{}",
+                    result["events"]
+                );
+
+                let burn_txn = env.create_txn(
+                    &env.tc,
+                    stdlib::encode_burn_script(coin1_tag(), 0, env.dd.address),
+                );
+                let result = env.submit_and_wait(burn_txn);
+                let version = result["version"].as_u64().unwrap();
+                assert_eq!(
+                    result["events"],
+                    json!([{
+                        "data":{
+                            "amount":{"amount":100,"currency":"Coin1"},
+                            "preburn_address":"000000000000000000000000000000dd",
+                            "type":"burn"
+                        },
+                        "key":"06000000000000000000000000000000000000000a550c18",
+                        "sequence_number":0,
+                        "transaction_version":version
+                    }]),
+                    "{}",
+                    result["events"]
+                );
+            },
+        },
+        Test {
+            name: "cancel burn event",
+            run: |env: &mut testing::Env| {
+                let script = stdlib::encode_preburn_script(coin1_tag(), 100);
+                let txn = env.create_txn(&env.dd, script);
+                env.submit_and_wait(txn);
+
+                let cancel_burn_txn = env.create_txn(
+                    &env.tc,
+                    stdlib::encode_cancel_burn_script(coin1_tag(), env.dd.address),
+                );
+                let result = env.submit_and_wait(cancel_burn_txn);
+                let version = result["version"].as_u64().unwrap();
+                assert_eq!(
+                    result["events"],
+                    json!([
+                        {
+                            "data":{
+                                "amount":{"amount":100,"currency":"Coin1"},
+                                "preburn_address":"000000000000000000000000000000dd",
+                                "type":"cancelburn"
+                            },
+                            "key":"08000000000000000000000000000000000000000a550c18",
+                            "sequence_number":0,
+                            "transaction_version":version
+                        },
+                        {
+                            "data":{
+                                "amount":{"amount":100,"currency":"Coin1"},
+                                "metadata":"",
+                                "receiver":"000000000000000000000000000000dd",
+                                "sender":"000000000000000000000000000000dd",
+                                "type":"receivedpayment"
+                            },
+                            "key":"0300000000000000000000000000000000000000000000dd",
+                            "sequence_number":3,
+                            "transaction_version":version
+                        }
+                    ]),
+                    "{}",
+                    result["events"]
+                );
+            },
+        },
+        Test {
+            name: "update exchange rate event",
+            run: |env: &mut testing::Env| {
+                let txn = env.create_txn(
+                    &env.tc,
+                    stdlib::encode_update_exchange_rate_script(coin1_tag(), 0, 1, 4),
+                );
+                let result = env.submit_and_wait(txn);
+                let version = result["version"].as_u64().unwrap();
+                assert_eq!(
+                    result["events"],
+                    json!([{
+                        "data":{
+                            "currency_code":"Coin1",
+                            "new_to_lbr_exchange_rate":0.25,
+                            "type":"to_lbr_exchange_rate_update"
+                        },
+                        "key":"09000000000000000000000000000000000000000a550c18",
+                        "sequence_number":0,
+                        "transaction_version":version
+                    }]),
+                    "{}",
+                    result["events"]
+                );
+            },
+        },
+        Test {
+            name: "mint & received mint events",
+            run: |env: &mut testing::Env| {
+                let txn = env.create_txn(
+                    &env.tc,
+                    stdlib::encode_tiered_mint_script(coin1_tag(), 0, env.dd.address, 1_000_000, 1),
+                );
+                let result = env.submit_and_wait(txn);
+                let version = result["version"].as_u64().unwrap();
+                assert_eq!(
+                    result["events"],
+                    json!([
+                        {
+                            "data":{
+                                "amount":{"amount":1000000,"currency":"Coin1"},
+                                "destination_address":"000000000000000000000000000000dd",
+                                "type":"receivedmint"
+                            },
+                            "key":"0000000000000000000000000000000000000000000000dd",
+                            "sequence_number":2,
+                            "transaction_version":version
+                        },
+                        {
+                            "data":{
+                                "amount":{"amount":1000000,"currency":"Coin1"},
+                                "type":"mint"
+                            },
+                            "key":"05000000000000000000000000000000000000000a550c18",
+                            "sequence_number":1,
+                            "transaction_version":version},
+                        {
+                            "data":{
+                                "amount":{"amount":1000000,"currency":"Coin1"},
+                                "metadata":"",
+                                "receiver":"000000000000000000000000000000dd",
+                                "sender":"00000000000000000000000000000000",
+                                "type":"receivedpayment"
+                            },
+                            "key":"0300000000000000000000000000000000000000000000dd",
+                            "sequence_number":4,
+                            "transaction_version":version
+
+                        }
+                    ]),
+                    "{}",
+                    result["events"]
+                );
+            },
+        },
+        Test {
+            name: "rotate compliance key rotation events",
+            run: |env: &mut testing::Env| {
+                let private_key = generate_key::generate_key();
+                let public_key: libra_crypto::ed25519::Ed25519PublicKey = (&private_key).into();
+                let txn = env.create_txn(
+                    &env.vasps[0],
+                    stdlib::encode_rotate_dual_attestation_info_script(
+                        b"http://hello.com".to_vec(),
+                        public_key.to_bytes().to_vec(),
+                    ),
+                );
+                let result = env.submit_and_wait(txn);
+                let version = result["version"].as_u64().unwrap();
+                let rotated_seconds = result["events"][0]["data"]["time_rotated_seconds"]
+                    .as_u64()
+                    .unwrap();
+                assert_eq!(
+                    result["events"],
+                    json!([
+                        {
+                            "data":{
+                                "new_base_url":"http://hello.com",
+                                "time_rotated_seconds": rotated_seconds,
+                                "type":"baseurlrotation"
+                            },
+                            "key": format!("0100000000000000{}", env.vasps[0].address.to_string()),
+                            "sequence_number":0,
+                            "transaction_version":version
+                        },
+                        {
+                            "data":{
+                                "new_compliance_public_key": hex::encode(public_key.to_bytes()),
+                                "time_rotated_seconds": rotated_seconds,
+                                "type":"compliancekeyrotation"
+                            },
+                            "key": format!("0000000000000000{}", env.vasps[0].address.to_string()),
+                            "sequence_number":0,
+                            "transaction_version":version
+                        }
+                    ]),
+                    "{}",
+                    result["events"]
+                );
+            },
+        },
+        Test {
+            name: "no unknown events so far",
+            run: |env: &mut testing::Env| {
+                let response = env.send("get_transactions", json!([0, 1000, true]));
+                let txns = response.result.unwrap();
+                for txn in txns.as_array().unwrap() {
+                    for event in txn["events"].as_array().unwrap() {
+                        let event_type = event["data"]["type"].as_str().unwrap();
+                        assert_ne!(event_type, "unknown", "{}", event);
+                    }
+                }
             },
         },
     ]

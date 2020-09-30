@@ -6,9 +6,9 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
         AccountResource, AccountRole, BalanceResource, BaseUrlRotationEvent, BurnEvent,
-        CancelBurnEvent, ComplianceKeyRotationEvent, CurrencyInfoResource, FreezingBit, MintEvent,
-        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
-        SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
+        CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent, CurrencyInfoResource,
+        FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent,
+        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -26,7 +26,10 @@ use move_core_types::{
     vm_status::AbortLocation,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryFrom};
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+};
 use transaction_builder::get_transaction_name;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -188,174 +191,148 @@ pub enum EventDataView {
         new_base_url: String,
         time_rotated_seconds: u64,
     },
+    #[serde(rename = "createaccount")]
+    CreateAccount {},
     #[serde(rename = "unknown")]
-    Unknown {},
+    Unknown { module_name: String },
 }
 
-impl From<(u64, ContractEvent)> for EventView {
-    /// Tries to convert the provided byte array into Event Key.
-    fn from((txn_version, event): (u64, ContractEvent)) -> EventView {
-        let event_data = if event.type_tag() == &TypeTag::Struct(ReceivedPaymentEvent::struct_tag())
-        {
-            if let Ok(received_event) = ReceivedPaymentEvent::try_from(&event) {
-                let amount_view = AmountView::new(
-                    received_event.amount(),
-                    received_event.currency_code().as_str(),
-                );
-                Ok(EventDataView::ReceivedPayment {
-                    amount: amount_view,
-                    sender: BytesView::from(received_event.sender().as_ref()),
-                    receiver: BytesView::from(&event.key().get_creator_address().to_vec()),
-                    metadata: BytesView::from(received_event.metadata()),
-                })
-            } else {
-                Err(format_err!("Unable to parse ReceivedPaymentEvent"))
+impl TryFrom<ContractEvent> for EventDataView {
+    type Error = Error;
+
+    fn try_from(event: ContractEvent) -> Result<Self> {
+        let data = if event.type_tag() == &TypeTag::Struct(ReceivedPaymentEvent::struct_tag()) {
+            let received_event = ReceivedPaymentEvent::try_from(&event)?;
+            let amount_view = AmountView::new(
+                received_event.amount(),
+                received_event.currency_code().as_str(),
+            );
+            EventDataView::ReceivedPayment {
+                amount: amount_view,
+                sender: BytesView::from(received_event.sender().as_ref()),
+                receiver: BytesView::from(&event.key().get_creator_address().to_vec()),
+                metadata: BytesView::from(received_event.metadata()),
             }
         } else if event.type_tag() == &TypeTag::Struct(SentPaymentEvent::struct_tag()) {
-            if let Ok(sent_event) = SentPaymentEvent::try_from(&event) {
-                let amount_view =
-                    AmountView::new(sent_event.amount(), sent_event.currency_code().as_str());
-                Ok(EventDataView::SentPayment {
-                    amount: amount_view,
-                    receiver: BytesView::from(sent_event.receiver().as_ref()),
-                    sender: BytesView::from(&event.key().get_creator_address().to_vec()),
-                    metadata: BytesView::from(sent_event.metadata()),
-                })
-            } else {
-                Err(format_err!("Unable to parse SentPaymentEvent"))
-            }
-        } else if event.type_tag() == &TypeTag::Struct(BurnEvent::struct_tag()) {
-            if let Ok(burn_event) = BurnEvent::try_from(&event) {
-                let amount_view =
-                    AmountView::new(burn_event.amount(), burn_event.currency_code().as_str());
-                let preburn_address = BytesView::from(burn_event.preburn_address().as_ref());
-                Ok(EventDataView::Burn {
-                    amount: amount_view,
-                    preburn_address,
-                })
-            } else {
-                Err(format_err!("Unable to parse BurnEvent"))
-            }
-        } else if event.type_tag() == &TypeTag::Struct(CancelBurnEvent::struct_tag()) {
-            if let Ok(cancel_burn_event) = CancelBurnEvent::try_from(&event) {
-                let amount_view = AmountView::new(
-                    cancel_burn_event.amount(),
-                    cancel_burn_event.currency_code().as_str(),
-                );
-                let preburn_address = BytesView::from(cancel_burn_event.preburn_address().as_ref());
-                Ok(EventDataView::CancelBurn {
-                    amount: amount_view,
-                    preburn_address,
-                })
-            } else {
-                Err(format_err!("Unable to parse CancelBurnEvent"))
-            }
-        } else if event.type_tag() == &TypeTag::Struct(ToLBRExchangeRateUpdateEvent::struct_tag()) {
-            if let Ok(update_event) = ToLBRExchangeRateUpdateEvent::try_from(&event) {
-                Ok(EventDataView::ToLBRExchangeRateUpdate {
-                    currency_code: update_event.currency_code().to_string(),
-                    new_to_lbr_exchange_rate: update_event.new_to_lbr_exchange_rate(),
-                })
-            } else {
-                Err(format_err!("Unable to parse ToLBRExchangeRateUpdate"))
-            }
-        } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
-            if let Ok(mint_event) = MintEvent::try_from(&event) {
-                let amount_view =
-                    AmountView::new(mint_event.amount(), mint_event.currency_code().as_str());
-                Ok(EventDataView::Mint {
-                    amount: amount_view,
-                })
-            } else {
-                Err(format_err!("Unable to parse MintEvent"))
-            }
-        } else if event.type_tag() == &TypeTag::Struct(ReceivedMintEvent::struct_tag()) {
-            if let Ok(received_mint_event) = ReceivedMintEvent::try_from(&event) {
-                let amount_view = AmountView::new(
-                    received_mint_event.amount(),
-                    received_mint_event.currency_code().as_str(),
-                );
-                let destination_address =
-                    BytesView::from(received_mint_event.destination_address().as_ref());
-                Ok(EventDataView::ReceivedMint {
-                    amount: amount_view,
-                    destination_address,
-                })
-            } else {
-                Err(format_err!("Unable to parse ReceivedMintEvent"))
+            let sent_event = SentPaymentEvent::try_from(&event)?;
+            let amount_view =
+                AmountView::new(sent_event.amount(), sent_event.currency_code().as_str());
+            EventDataView::SentPayment {
+                amount: amount_view,
+                receiver: BytesView::from(sent_event.receiver().as_ref()),
+                sender: BytesView::from(&event.key().get_creator_address().to_vec()),
+                metadata: BytesView::from(sent_event.metadata()),
             }
         } else if event.type_tag() == &TypeTag::Struct(PreburnEvent::struct_tag()) {
-            if let Ok(preburn_event) = PreburnEvent::try_from(&event) {
-                let amount_view = AmountView::new(
-                    preburn_event.amount(),
-                    preburn_event.currency_code().as_str(),
-                );
-                let preburn_address = BytesView::from(preburn_event.preburn_address().as_ref());
-                Ok(EventDataView::Preburn {
-                    amount: amount_view,
-                    preburn_address,
-                })
-            } else {
-                Err(format_err!("Unable to parse PreBurnEvent"))
+            let preburn_event = PreburnEvent::try_from(&event)?;
+            let amount_view = AmountView::new(
+                preburn_event.amount(),
+                preburn_event.currency_code().as_str(),
+            );
+            let preburn_address = BytesView::from(preburn_event.preburn_address().as_ref());
+            EventDataView::Preburn {
+                amount: amount_view,
+                preburn_address,
             }
-        } else if event.type_tag() == &TypeTag::Struct(NewBlockEvent::struct_tag()) {
-            if let Ok(new_block_event) = NewBlockEvent::try_from(&event) {
-                Ok(EventDataView::NewBlock {
-                    proposer: BytesView::from(new_block_event.proposer().as_ref()),
-                    round: new_block_event.round(),
-                    proposed_time: new_block_event.proposed_time(),
-                })
-            } else {
-                Err(format_err!("Unable to parse NewBlockEvent"))
+        } else if event.type_tag() == &TypeTag::Struct(BurnEvent::struct_tag()) {
+            let burn_event = BurnEvent::try_from(&event)?;
+            let amount_view =
+                AmountView::new(burn_event.amount(), burn_event.currency_code().as_str());
+            let preburn_address = BytesView::from(burn_event.preburn_address().as_ref());
+            EventDataView::Burn {
+                amount: amount_view,
+                preburn_address,
             }
-        } else if event.type_tag() == &TypeTag::Struct(NewEpochEvent::struct_tag()) {
-            if let Ok(new_epoch_event) = NewEpochEvent::try_from(&event) {
-                Ok(EventDataView::NewEpoch {
-                    epoch: new_epoch_event.epoch(),
-                })
-            } else {
-                Err(format_err!("Unable to parse NewEpochEvent"))
+        } else if event.type_tag() == &TypeTag::Struct(CancelBurnEvent::struct_tag()) {
+            let cancel_burn_event = CancelBurnEvent::try_from(&event)?;
+            let amount_view = AmountView::new(
+                cancel_burn_event.amount(),
+                cancel_burn_event.currency_code().as_str(),
+            );
+            let preburn_address = BytesView::from(cancel_burn_event.preburn_address().as_ref());
+            EventDataView::CancelBurn {
+                amount: amount_view,
+                preburn_address,
             }
-        } else if event.type_tag() == &TypeTag::Struct(UpgradeEvent::struct_tag()) {
-            if let Ok(upgrade_event) = UpgradeEvent::try_from(&event) {
-                Ok(EventDataView::Upgrade {
-                    write_set: BytesView::from(upgrade_event.write_set()),
-                })
-            } else {
-                Err(format_err!("Unable to parse UpgradeEvent"))
+        } else if event.type_tag() == &TypeTag::Struct(ToLBRExchangeRateUpdateEvent::struct_tag()) {
+            let update_event = ToLBRExchangeRateUpdateEvent::try_from(&event)?;
+            EventDataView::ToLBRExchangeRateUpdate {
+                currency_code: update_event.currency_code().to_string(),
+                new_to_lbr_exchange_rate: update_event.new_to_lbr_exchange_rate(),
+            }
+        } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
+            let mint_event = MintEvent::try_from(&event)?;
+            let amount_view =
+                AmountView::new(mint_event.amount(), mint_event.currency_code().as_str());
+            EventDataView::Mint {
+                amount: amount_view,
+            }
+        } else if event.type_tag() == &TypeTag::Struct(ReceivedMintEvent::struct_tag()) {
+            let received_mint_event = ReceivedMintEvent::try_from(&event)?;
+            let amount_view = AmountView::new(
+                received_mint_event.amount(),
+                received_mint_event.currency_code().as_str(),
+            );
+            let destination_address =
+                BytesView::from(received_mint_event.destination_address().as_ref());
+            EventDataView::ReceivedMint {
+                amount: amount_view,
+                destination_address,
             }
         } else if event.type_tag() == &TypeTag::Struct(ComplianceKeyRotationEvent::struct_tag()) {
-            if let Ok(rotation_event) = ComplianceKeyRotationEvent::try_from(&event) {
-                Ok(EventDataView::ComplianceKeyRotation {
-                    new_compliance_public_key: hex::encode(
-                        rotation_event.new_compliance_public_key(),
-                    ),
-                    time_rotated_seconds: rotation_event.time_rotated_seconds(),
-                })
-            } else {
-                Err(format_err!("Unable to parse ComplianceKeyRotationEvent"))
+            let rotation_event = ComplianceKeyRotationEvent::try_from(&event)?;
+            EventDataView::ComplianceKeyRotation {
+                new_compliance_public_key: hex::encode(rotation_event.new_compliance_public_key()),
+                time_rotated_seconds: rotation_event.time_rotated_seconds(),
             }
         } else if event.type_tag() == &TypeTag::Struct(BaseUrlRotationEvent::struct_tag()) {
-            if let Ok(rotation_event) = BaseUrlRotationEvent::try_from(&event) {
-                String::from_utf8(rotation_event.new_base_url().to_vec())
-                    .map(|new_base_url| EventDataView::BaseUrlRotation {
-                        new_base_url,
-                        time_rotated_seconds: rotation_event.time_rotated_seconds(),
-                    })
-                    .map_err(|_| format_err!("Unable to parse BaseUrlRotationEvent"))
-            } else {
-                Err(format_err!("Unable to parse BaseUrlRotationEvent"))
+            let rotation_event = BaseUrlRotationEvent::try_from(&event)?;
+            String::from_utf8(rotation_event.new_base_url().to_vec())
+                .map(|new_base_url| EventDataView::BaseUrlRotation {
+                    new_base_url,
+                    time_rotated_seconds: rotation_event.time_rotated_seconds(),
+                })
+                .map_err(|_| format_err!("Unable to parse BaseUrlRotationEvent"))?
+        } else if event.type_tag() == &TypeTag::Struct(NewBlockEvent::struct_tag()) {
+            let new_block_event = NewBlockEvent::try_from(&event)?;
+            EventDataView::NewBlock {
+                proposer: BytesView::from(new_block_event.proposer().as_ref()),
+                round: new_block_event.round(),
+                proposed_time: new_block_event.proposed_time(),
+            }
+        } else if event.type_tag() == &TypeTag::Struct(NewEpochEvent::struct_tag()) {
+            let new_epoch_event = NewEpochEvent::try_from(&event)?;
+            EventDataView::NewEpoch {
+                epoch: new_epoch_event.epoch(),
+            }
+        } else if event.type_tag() == &TypeTag::Struct(CreateAccountEvent::struct_tag()) {
+            EventDataView::CreateAccount {}
+        } else if event.type_tag() == &TypeTag::Struct(UpgradeEvent::struct_tag()) {
+            // TODO: missing test
+            let upgrade_event = UpgradeEvent::try_from(&event)?;
+            EventDataView::Upgrade {
+                write_set: BytesView::from(upgrade_event.write_set()),
             }
         } else {
-            Err(format_err!("Unknown events"))
+            EventDataView::Unknown {
+                module_name: format!("{}", event.type_tag()),
+            }
         };
 
-        EventView {
+        Ok(data)
+    }
+}
+
+impl TryFrom<(u64, ContractEvent)> for EventView {
+    type Error = Error;
+
+    fn try_from((txn_version, event): (u64, ContractEvent)) -> Result<Self> {
+        Ok(EventView {
             key: BytesView::from(event.key().as_bytes()),
             sequence_number: event.sequence_number(),
             transaction_version: txn_version,
-            data: event_data.unwrap_or(EventDataView::Unknown {}),
-        }
+            data: event.try_into()?,
+        })
     }
 }
 

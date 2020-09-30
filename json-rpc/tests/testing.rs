@@ -5,9 +5,9 @@ use anyhow::{format_err, Result};
 use libra_crypto::{hash::CryptoHash, traits::SigningKey};
 use libra_json_rpc_types::response::JsonRpcResponse;
 use libra_types::{
+    account_address::AccountAddress,
     account_config::{
-        testnet_dd_account_address, treasury_compliance_account_address,
-        type_tag_for_currency_code, LBR_NAME, LBR_STRUCT_NAME,
+        lbr_type_tag, testnet_dd_account_address, treasury_compliance_account_address, LBR_NAME,
     },
     chain_id::ChainId,
     transaction::SignedTransaction,
@@ -66,7 +66,7 @@ impl Env {
         let vasp = Account::gen();
         let script =
             transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
-                type_tag_for_currency_code(LBR_STRUCT_NAME.to_owned()),
+                lbr_type_tag(),
                 0, // sliding nonce
                 vasp.address,
                 vasp.auth_key().prefix().to_vec(),
@@ -81,7 +81,7 @@ impl Env {
     pub fn create_child_vasp(&mut self, parent_vasp_index: usize, amount: u64) {
         let child = Account::gen();
         let script = transaction_builder_generated::stdlib::encode_create_child_vasp_account_script(
-            type_tag_for_currency_code(LBR_STRUCT_NAME.to_owned()),
+            lbr_type_tag(),
             child.address,
             child.auth_key().prefix().to_vec(),
             false, /* add all currencies */
@@ -95,7 +95,7 @@ impl Env {
     pub fn transfer_coins_to_vasp(&mut self, index: usize, amount: u64) {
         let script =
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                type_tag_for_currency_code(LBR_STRUCT_NAME.to_owned()),
+                lbr_type_tag(),
                 self.vasps[index].address,
                 amount,
                 vec![],
@@ -126,7 +126,7 @@ impl Env {
         let receiver_address = self.vasps[rid].children[rcid].address;
         let script =
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                type_tag_for_currency_code(LBR_STRUCT_NAME.to_owned()),
+                lbr_type_tag(),
                 receiver_address,
                 amount,
                 // todo: add metadata
@@ -175,10 +175,9 @@ impl Env {
         ret
     }
 
-    pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> JsonRpcResponse {
-        let resp = self.submit(&txn);
-        self.wait_for_txn(&txn);
-        resp
+    pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> Value {
+        self.submit(&txn);
+        self.wait_for_txn(&txn)
     }
 
     pub fn submit(&self, txn: &SignedTransaction) -> JsonRpcResponse {
@@ -186,27 +185,36 @@ impl Env {
         self.send("submit", json!([txn_hex]))
     }
 
-    pub fn wait_for_txn(&self, txn: &SignedTransaction) {
+    pub fn get_account_transaction(
+        &self,
+        address: &AccountAddress,
+        seq_num: u64,
+        include_events: bool,
+    ) -> JsonRpcResponse {
+        self.send(
+            "get_account_transaction",
+            json!([hex::encode(address), seq_num, include_events]),
+        )
+    }
+
+    pub fn wait_for_txn(&self, txn: &SignedTransaction) -> Value {
         let txn_hash = libra_types::transaction::Transaction::UserTransaction(txn.clone())
             .hash()
             .to_hex();
-        for i in 0..60 {
-            let resp = self.send(
-                "get_account_transaction",
-                json!([hex::encode(txn.sender()), txn.sequence_number(), false]),
-            );
+        for _i in 0..60 {
+            let resp = self.get_account_transaction(&txn.sender(), txn.sequence_number(), true);
             if let Some(result) = resp.result {
                 if result.is_object() {
                     if !self.allow_execution_failures {
                         assert_eq!(result["vm_status"]["type"], "executed", "{:#}", result);
                     }
                     assert_eq!(result["hash"], txn_hash, "{:#}", result);
-                    break;
+                    return result;
                 }
             }
-            assert_ne!(i, 59, "transaction not executed?");
             ::std::thread::sleep(::std::time::Duration::from_millis(100));
         }
+        panic!("transaction not executed?");
     }
 
     pub fn send(&self, method: &'static str, params: Value) -> JsonRpcResponse {
