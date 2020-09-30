@@ -29,7 +29,7 @@ use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
 use shared::Address;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     fs::File,
     io::{Read, Write},
@@ -389,6 +389,7 @@ fn parse_program(
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
+    check_targets_deps_dont_intersect(&targets, &deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -420,6 +421,28 @@ fn parse_program(
         Err(errors)
     };
     Ok((files, res))
+}
+
+fn check_targets_deps_dont_intersect(
+    targets: &[&'static str],
+    deps: &[&'static str],
+) -> anyhow::Result<()> {
+    let target_set = targets.iter().collect::<BTreeSet<_>>();
+    let dep_set = deps.iter().collect::<BTreeSet<_>>();
+    let intersection = target_set.intersection(&dep_set).collect::<Vec<_>>();
+    if intersection.is_empty() {
+        return Ok(());
+    }
+
+    let all_files = intersection
+        .into_iter()
+        .map(|s| format!("    {}", s))
+        .collect::<Vec<_>>()
+        .join("\n");
+    Err(anyhow!(
+        "The following files were marked as both targets and dependencies:\n{}",
+        all_files
+    ))
 }
 
 /// - For each directory in `paths`, it will return all files with the `MOVE_EXTENSION` found
