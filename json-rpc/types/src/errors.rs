@@ -200,3 +200,84 @@ impl JsonRpcError {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::errors::{JsonRpcError, ServerCode};
+    use libra_types::{
+        mempool_status::{MempoolStatus, MempoolStatusCode},
+        vm_status::StatusCode,
+    };
+
+    #[test]
+    fn test_vm_status() {
+        assert_map_vm_code(
+            StatusCode::UNKNOWN_VALIDATION_STATUS,
+            ServerCode::VmValidationError,
+        );
+
+        let err = JsonRpcError::vm_status(StatusCode::UNKNOWN_VERIFICATION_ERROR);
+        assert_eq!(err.code, ServerCode::VmVerificationError as i16);
+        assert_map_vm_code(
+            StatusCode::UNKNOWN_VERIFICATION_ERROR,
+            ServerCode::VmVerificationError,
+        );
+
+        assert_map_vm_code(
+            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ServerCode::VmInvariantViolationError,
+        );
+
+        assert_map_vm_code(
+            StatusCode::UNKNOWN_BINARY_ERROR,
+            ServerCode::VmDeserializationError,
+        );
+        assert_map_vm_code(
+            StatusCode::UNKNOWN_RUNTIME_STATUS,
+            ServerCode::VmExecutionError,
+        );
+        assert_map_vm_code(StatusCode::UNKNOWN_STATUS, ServerCode::VmUnknownError);
+    }
+
+    fn assert_map_vm_code(from: StatusCode, to: ServerCode) {
+        let err = JsonRpcError::vm_status(from);
+        assert_eq!(err.code, to as i16);
+    }
+
+    #[test]
+    fn test_mempool_error() {
+        let err = JsonRpcError::mempool_error(MempoolStatus {
+            code: MempoolStatusCode::Accepted,
+            message: "error msg".to_string(),
+        });
+        assert!(err.is_err());
+
+        assert_map_code(
+            MempoolStatusCode::InvalidSeqNumber,
+            ServerCode::MempoolInvalidSeqNumber,
+        );
+        assert_map_code(MempoolStatusCode::MempoolIsFull, ServerCode::MempoolIsFull);
+        assert_map_code(
+            MempoolStatusCode::TooManyTransactions,
+            ServerCode::MempoolTooManyTransactions,
+        );
+        assert_map_code(
+            MempoolStatusCode::InvalidUpdate,
+            ServerCode::MempoolInvalidUpdate,
+        );
+        assert_map_code(MempoolStatusCode::VmError, ServerCode::MempoolVmError);
+        assert_map_code(
+            MempoolStatusCode::UnknownStatus,
+            ServerCode::MempoolUnknownError,
+        );
+    }
+
+    fn assert_map_code(from: MempoolStatusCode, to: ServerCode) {
+        let err = JsonRpcError::mempool_error(MempoolStatus {
+            code: from,
+            message: "error msg".to_string(),
+        })
+        .unwrap();
+        assert_eq!(err.code, to as i16);
+    }
+}

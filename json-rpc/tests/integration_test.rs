@@ -334,8 +334,7 @@ fn create_test_cases() -> Vec<Test> {
             run: |env: &mut testing::Env| {
                 env.allow_execution_failures(|env: &mut testing::Env| {
                     // transfer too many coins
-                    let txn = env.transfer_coins((0, 0), (1, 0), 200000000000000);
-                    env.wait_for_txn(&txn);
+                    env.transfer_coins((0, 0), (1, 0), 200000000000000);
                 });
 
                 let sender = &env.vasps[0].children[0];
@@ -360,6 +359,21 @@ fn create_test_cases() -> Vec<Test> {
                         "type": "move_abort"
                     })
                 );
+            },
+        },
+        Test {
+            name: "invalid transaction submitted: mempool validation error",
+            run: |env: &mut testing::Env| {
+                env.allow_execution_failures(|env: &mut testing::Env| {
+                    let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 2000000);
+                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 2000000);
+                    env.submit(&txn1);
+                    let resp = env.submit(&txn2);
+                    assert_eq!(
+                        resp.error.expect("error").message,
+                        "Server error: Mempool submission error: \"Failed to update gas price to 0\"".to_string(),
+                    );
+                });
             },
         },
     ]

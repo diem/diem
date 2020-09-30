@@ -111,6 +111,17 @@ impl Env {
         receiver: (usize, usize),
         amount: u64,
     ) -> SignedTransaction {
+        let txn = self.transfer_coins_txn(sender, receiver, amount);
+        self.submit_and_wait(txn.clone());
+        txn
+    }
+
+    pub fn transfer_coins_txn(
+        &mut self,
+        sender: (usize, usize),
+        receiver: (usize, usize),
+        amount: u64,
+    ) -> SignedTransaction {
         let (rid, rcid) = receiver;
         let receiver_address = self.vasps[rid].children[rcid].address;
         let script =
@@ -122,9 +133,7 @@ impl Env {
                 vec![],
                 vec![],
             );
-        let txn = self.create_txn(&self.vasps[sender.0].children[sender.1], script);
-        self.submit_and_wait(txn.clone());
-        txn
+        self.create_txn(&self.vasps[sender.0].children[sender.1], script)
     }
 
     pub fn get_account_sequence(&self, address: String) -> Result<u64> {
@@ -167,10 +176,14 @@ impl Env {
     }
 
     pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> JsonRpcResponse {
-        let txn_hex = hex::encode(lcs::to_bytes(&txn).expect("lcs txn failed"));
-        let resp = self.send("submit", json!([txn_hex]));
+        let resp = self.submit(&txn);
         self.wait_for_txn(&txn);
         resp
+    }
+
+    pub fn submit(&self, txn: &SignedTransaction) -> JsonRpcResponse {
+        let txn_hex = hex::encode(lcs::to_bytes(txn).expect("lcs txn failed"));
+        self.send("submit", json!([txn_hex]))
     }
 
     pub fn wait_for_txn(&self, txn: &SignedTransaction) {
@@ -207,7 +220,9 @@ impl Env {
         assert_eq!(resp.status(), 200);
 
         let json: serde_json::Value = resp.json().unwrap();
-        assert_eq!(json.get("error"), None);
+        if !self.allow_execution_failures {
+            assert_eq!(json.get("error"), None);
+        }
         serde_json::from_value(json).expect("should be valid JsonRpcResponse")
     }
 }

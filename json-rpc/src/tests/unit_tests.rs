@@ -230,6 +230,48 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "method not given",
+            json!({"jsonrpc": "2.0", "params": [], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32601, "data": null, "message": "Method not found",
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "params not given",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602, "data": null, "message": "Invalid params",
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "jsonrpc not given",
+            json!({"method": "get_metadata", "params": [], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32600, "data": null, "message": "Invalid Request",
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
             "invalid arguments: too many arguments",
             json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1}),
             json!({
@@ -723,6 +765,22 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "libra_chain_id": ChainId::test().id(),
                 "libra_ledger_timestampusec": timestamp,
                 "libra_ledger_version": version
+            }),
+        ),
+        (
+            "id not given",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": []}),
+            json!({
+                "id": null,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": {
+                    "chain_id": ChainId::test().id(),
+                    "timestamp": timestamp,
+                    "version": version
+                }
             }),
         ),
     ];
