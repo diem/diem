@@ -12,7 +12,7 @@ Libra Core implements a decentralized, programmable database which provides a fi
 ## Note to Developers
 * Libra Core is a prototype.
 * The APIs are constantly evolving and designed to demonstrate types of functionality. Expect substantial changes before the release.
-* We've launched a testnet that is a live demonstration of an early prototype of the Libra Blockchain software.
+* We've launched a testnet that is a live demonstration of an early prototype of the Libra Blockchain software.An amazing project.
 
 ## Contributing
 
