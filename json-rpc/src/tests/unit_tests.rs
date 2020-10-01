@@ -146,6 +146,24 @@ fn mock_db() -> MockLibraDB {
 }
 
 #[test]
+fn test_cors() {
+    let (_mock_db, _runtime, url, _) = create_db_and_runtime();
+
+    let origin = "test";
+
+    let client = reqwest::blocking::Client::new();
+    let request = client
+        .request(reqwest::Method::OPTIONS, &url)
+        .header("origin", origin)
+        .header("access-control-request-method", "POST");
+    let resp = request.send().unwrap();
+    assert_eq!(resp.status(), 200);
+
+    let cors_header = resp.headers().get("access-control-allow-origin").unwrap();
+    assert_eq!(cors_header, origin);
+}
+
+#[test]
 fn test_json_rpc_http_errors() {
     let (_mock_db, _runtime, url, _) = create_db_and_runtime();
 
@@ -1368,7 +1386,7 @@ fn create_db_and_runtime() -> (
 ) {
     let mock_db = mock_db();
 
-    let host = "0.0.0.0";
+    let host = "127.0.0.1";
     let port = utils::get_available_port();
     let address = format!("{}:{}", host, port);
     let (mp_sender, mp_events) = channel(1);
