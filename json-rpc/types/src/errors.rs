@@ -10,27 +10,25 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Custom JSON RPC server error codes
-/// Use ranges from -32000 to -32099 for internal error - see `https://www.jsonrpc.org/specification#error_object` for details
-/// Use ranges from -32800 to -32899 for client errors got from Vm errors
-/// Use ranges from -32900 to -32999 for client errors got from Mempool errors
+/// Ranges from -32000 to -32099 - see `https://www.jsonrpc.org/specification#error_object` for details
 pub enum ServerCode {
     DefaultServerError = -32000,
 
     // VM errors - see `vm_status.rs` for specs
-    VmInvariantViolationError = -32001,
-    VmExecutionError = -32002,
-    VmUnknownError = -32003,
-    VmValidationError = -32801,      // client error
-    VmVerificationError = -32802,    // client error
-    VmDeserializationError = -32803, // client error
+    VmValidationError = -32001,
+    VmVerificationError = -32002,
+    VmInvariantViolationError = -32003,
+    VmDeserializationError = -32004,
+    VmExecutionError = -32005,
+    VmUnknownError = -32006,
 
     // Mempool errors - see `MempoolStatusCode` for specs
-    MempoolIsFull = -32010,
-    MempoolTooManyTransactions = -32011,
-    MempoolVmError = -32012,
-    MempoolUnknownError = -32013,
-    MempoolInvalidSeqNumber = -32901, // client error
-    MempoolInvalidUpdate = -32902,    // client error
+    MempoolInvalidSeqNumber = -32007,
+    MempoolIsFull = -32008,
+    MempoolTooManyTransactions = -32009,
+    MempoolInvalidUpdate = -32010,
+    MempoolVmError = -32011,
+    MempoolUnknownError = -32012,
 }
 
 /// JSON RPC server error codes for invalid request
