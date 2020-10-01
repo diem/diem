@@ -18,7 +18,7 @@ use libra_types::{
         self,
         events::{CreateAccountEvent, NewEpochEvent},
     },
-    chain_id::ChainId,
+    chain_id::{ChainId, NamedChain},
     contract_event::ContractEvent,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -147,8 +147,12 @@ pub fn encode_genesis_change_set(
     );
     reconfigure(&mut session, &log_context);
 
-    // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
+    if [NamedChain::TESTNET, NamedChain::DEVNET, NamedChain::TESTING]
+        .iter()
+        .any(|test_chain_id| test_chain_id.id() == chain_id.id())
+    {
+        create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
+    }
 
     let effects_1 = session.finish().unwrap();
 
