@@ -18,9 +18,9 @@ To connect to the testnet through the CLI, a convenience script can be used to i
 ### Run a Local Libra Network and Spawn a CLI Client
 To start a local Libra network and spawn a CLI client that connects to this local network, run:
 ```bash
-cargo run -p libra-swarm -- -s
+./scripts/cli/start_cli_swarm.sh
 ```
-The `-s` option causes the CLI to be run after the local Libra network is launched.  Note that this may take a few minutes to build and then start.
+Note that this may take a few minutes to build and then start.
 
 ### Run a CLI Client to Connect to Any Libra Network
 To invoke the CLI client and configure it yourself, run:
