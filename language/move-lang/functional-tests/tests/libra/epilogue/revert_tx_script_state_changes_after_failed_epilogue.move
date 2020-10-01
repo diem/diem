@@ -12,18 +12,16 @@
 //! gas-price: 1
 //! gas-currency: Coin1
 //! args: 1000000
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-import 0x1.Vector;
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
 
-main(account: &signer, amount: u64) {
-    let with_cap: LibraAccount.WithdrawCapability;
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount), h"", h"");
-    LibraAccount.restore_withdraw_capability(move(with_cap));
-    return;
+fun main(account: &signer, amount: u64) {
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    LibraAccount::pay_from<Coin1>(&with_cap, {{carol}}, amount, x"", x"");
+    LibraAccount::restore_withdraw_capability(with_cap);
 }
-
+}
 // check: "Keep(ABORTED { code: 257288,"
 
 
@@ -35,18 +33,16 @@ main(account: &signer, amount: u64) {
 //! gas-price: 1
 //! gas-currency: Coin1
 //! args: 1000
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-import 0x1.Vector;
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
 
-main(account: &signer, amount: u64) {
-    let with_cap: LibraAccount.WithdrawCapability;
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount), h"", h"");
-    LibraAccount.restore_withdraw_capability(move(with_cap));
-    return;
+fun main(account: &signer, amount: u64) {
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    LibraAccount::pay_from<Coin1>(&with_cap, {{carol}}, amount, x"", x"");
+    LibraAccount::restore_withdraw_capability(with_cap);
 }
-
+}
 // check: "Keep(EXECUTED)"
 
 
@@ -55,13 +51,13 @@ main(account: &signer, amount: u64) {
 // 2) Alice's balance is exactly 1000 greater than Bob's, indicating they consumed the same amount of gas.
 
 //! new-transaction
-import 0x1.LibraAccount;
-import 0x1.Coin1;
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
 
-main() {
-    assert(LibraAccount.balance<Coin1.Coin1>({{carol}}) == 1000, 42);
-    assert(LibraAccount.balance<Coin1.Coin1>({{alice}}) == LibraAccount.balance<Coin1.Coin1>({{bob}}) + 1000, 43)
-    return;
+fun main() {
+    assert(LibraAccount::balance<Coin1>({{carol}}) == 1000, 42);
+    assert(LibraAccount::balance<Coin1>({{alice}}) == LibraAccount::balance<Coin1>({{bob}}) + 1000, 43)
 }
-
+}
 // check: "Keep(EXECUTED)"
