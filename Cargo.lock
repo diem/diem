@@ -6102,6 +6102,7 @@ dependencies = [
  "libra-vm",
  "libra-workspace-hack",
  "libradb",
+ "memsocket",
  "netcore",
  "network",
  "network-builder",

@@ -32,6 +32,7 @@ libra-network-address = { path = "../network/network-address", version = "0.1.0"
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }
 netcore = { path = "../network/netcore", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 network-builder = {path  = "../network/builder", version = "0.1.0"}
@@ -56,6 +57,7 @@ libra-network-address = { path = "../network/network-address", version = "0.1.0"
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
+memsocket = { path = "../network/memsocket", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0", features = ["testing"] }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
@@ -64,4 +66,4 @@ vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["vm-genesis", "proptest", "libra-network-address/fuzzing", "libra-config/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "libra-proptest-helpers"]
+fuzzing = ["vm-genesis", "proptest", "libra-network-address/fuzzing", "libra-config/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "libra-proptest-helpers", "memsocket/fuzzing"]
