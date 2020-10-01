@@ -26,6 +26,4 @@ updates:
     ignore:
       - dependency-name: "codespan*"
       - dependency-name: "libfuzzer-sys"
-      - dependency-name: "ureq"
-      - dependency-name: "rustls"
       - dependency-name: "bindgen"

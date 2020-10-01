@@ -6958,13 +6958,14 @@ dependencies = [
 
 [[package]]
 name = "ureq"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7fb6c9aba13a511bcbb7770864c0e9b8392acda0454a71104498a2bb112d701"
+checksum = "4bbc0597304482f1aa82e296abe382e868c934f0e45ebfe720735990a10e8f5d"
 dependencies = [
  "base64",
  "chunked_transfer",
  "lazy_static",
+ "log",
  "native-tls",
  "qstring",
  "serde",
