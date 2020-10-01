@@ -164,9 +164,9 @@ pub(crate) async fn coordinator<V>(
                                             ))
                                             .await;
                                     }
-                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
+                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry, backoff} => {
                                         let ack_timestamp = SystemTime::now();
-                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff, ack_timestamp);
+                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry, backoff, ack_timestamp);
                                     }
                                 };
                             }

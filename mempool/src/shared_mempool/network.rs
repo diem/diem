@@ -29,8 +29,9 @@ pub enum MempoolSyncMsg {
     BroadcastTransactionsResponse {
         /// unique id of received broadcast request
         request_id: Vec<u8>,
-        /// indices of transactions that failed that may succeed on resend
-        retry_txns: Vec<u64>,
+        /// retry signal from recipient if there are txns in corresponding broadcast
+        /// that were rejected from mempool but may succeed on resend
+        retry: bool,
         /// backpressure signal from recipient when it is overwhelmed (e.g. mempool is full)
         backoff: bool,
     },

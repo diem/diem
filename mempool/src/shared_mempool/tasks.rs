@@ -135,24 +135,24 @@ pub(crate) async fn process_transaction_broadcast<V>(
 
 fn gen_ack_response(request_id: Vec<u8>, results: Vec<SubmissionStatusBundle>) -> MempoolSyncMsg {
     let mut backoff = false;
-    let retry_txns = results
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, result)| {
-            let submission_status = result.1;
-            backoff = backoff || submission_status.0.code == MempoolStatusCode::MempoolIsFull;
+    let mut retry = false;
+    for r in results.into_iter() {
+        let submission_status = r.1;
+        if submission_status.0.code == MempoolStatusCode::MempoolIsFull {
+            backoff = true;
+        }
+        if is_txn_retryable(submission_status) {
+            retry = true;
+        }
 
-            if is_txn_retryable(submission_status) {
-                Some(idx as u64)
-            } else {
-                None
-            }
-        })
-        .collect();
+        if backoff && retry {
+            break;
+        }
+    }
 
     MempoolSyncMsg::BroadcastTransactionsResponse {
         request_id,
-        retry_txns,
+        retry,
         backoff,
     }
 }

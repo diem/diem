@@ -206,6 +206,7 @@ impl PeerManager {
                 .broadcast_info
                 .sent_batches
                 .iter()
+                .rev()
                 .find(|(_, time)| {
                     let deadline = time.add(Duration::from_millis(
                         self.mempool_config.shared_mempool_ack_timeout_ms,
@@ -213,7 +214,7 @@ impl PeerManager {
                     SystemTime::now().duration_since(deadline).is_ok()
                 })
                 .map(|(id, _)| id);
-            let retry = state.broadcast_info.retry_batches.iter().next();
+            let retry = state.broadcast_info.retry_batches.iter().rev().next();
 
             let (new_batch_id, new_transactions) = match std::cmp::max(expired, retry) {
                 Some(id) => {
@@ -357,7 +358,7 @@ impl PeerManager {
         &self,
         peer: PeerNetworkId,
         request_id_bytes: Vec<u8>,
-        retry_txns: Vec<u64>,
+        retry: bool,
         backoff: bool,
         // timestamp of ACK received
         timestamp: SystemTime,
@@ -397,7 +398,7 @@ impl PeerManager {
             return;
         }
 
-        if !retry_txns.is_empty() {
+        if retry {
             sync_state.broadcast_info.retry_batches.insert(batch_id);
         }
 
