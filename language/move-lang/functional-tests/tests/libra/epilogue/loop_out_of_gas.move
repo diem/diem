@@ -5,9 +5,10 @@
 //! gas-currency: Coin1
 //! max-gas: 700
 //! sender: default
-main() {
-    while(true) {}
-    return;
+script {
+fun main() {
+    loop {}
+}
 }
 // check: "EXECUTION_FAILURE { status_code: OUT_OF_GAS,"
 // check: "gas_used: 700,"
@@ -15,14 +16,14 @@ main() {
 
 //! new-transaction
 //! sender: default
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-import 0x1.Signer;
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Signer;
 
-main(account: &signer) {
-    let sender: address;
-    sender = Signer.address_of(move(account));
-    assert(LibraAccount.balance<Coin1.Coin1>(move(sender)) == 100000 - 700, 42);
-    return;
+fun main(account: &signer) {
+    let sender = Signer::address_of(account);
+    assert(LibraAccount::balance<Coin1>(sender) == 100000 - 700, 42);
+}
 }
 // check: "Keep(EXECUTED)"

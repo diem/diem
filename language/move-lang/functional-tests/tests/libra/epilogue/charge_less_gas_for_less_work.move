@@ -5,31 +5,31 @@
 //! sender: alice
 //! gas-price: 1
 //! gas-currency: Coin1
-main() {
-    return;
+script {
+fun main() {
+}
 }
 // check: "Keep(EXECUTED)"
-
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 1
 //! gas-currency: Coin1
-main() {
-    let x: u64;
-    x = 1;
-    while (copy(x) < 2000) { x = move(x) + 1; };
-    return;
+script {
+fun main() {
+    let x = 1;
+    while (x < 2000) x = x + 1;
+}
 }
 // check: "Keep(EXECUTED)"
 
-
 //! new-transaction
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-main() {
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+fun main() {
     // Alice did less work than bob so she should pay less gas.
-    assert(LibraAccount.balance<Coin1.Coin1>({{bob}}) < LibraAccount.balance<Coin1.Coin1>({{alice}}), 42);
-    return;
+    assert(LibraAccount::balance<Coin1>({{bob}}) < LibraAccount::balance<Coin1>({{alice}}), 42);
+}
 }
 // check: "Keep(EXECUTED)"
