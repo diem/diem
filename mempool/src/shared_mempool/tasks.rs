@@ -8,12 +8,9 @@ use crate::{
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
     network::MempoolSyncMsg,
-    shared_mempool::{
-        peer_manager::BatchId,
-        types::{
-            notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
-            SubmissionStatusBundle,
-        },
+    shared_mempool::types::{
+        notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
+        SubmissionStatusBundle,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -52,9 +49,11 @@ pub(crate) fn execute_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
-    let next_broadcast_backoff = broadcast_single_peer(peer.clone(), backoff, smp);
+    let peer_manager = &smp.peer_manager.clone();
+    peer_manager.execute_broadcast(peer.clone(), backoff, smp);
+    let schedule_backoff = peer_manager.is_backoff_mode(&peer);
 
-    let interval_ms = if next_broadcast_backoff {
+    let interval_ms = if schedule_backoff {
         smp.config.shared_mempool_backoff_interval_ms
     } else {
         smp.config.shared_mempool_tick_interval_ms
@@ -63,146 +62,9 @@ pub(crate) fn execute_broadcast<V>(
     scheduled_broadcasts.push(ScheduledBroadcast::new(
         Instant::now() + Duration::from_millis(interval_ms),
         peer,
-        next_broadcast_backoff,
+        schedule_backoff,
         executor,
     ))
-}
-
-/// broadcasts txns to `peer` if alive
-/// Returns whether the next broadcast scheduled for this peer should be in backpressure mode or not
-fn broadcast_single_peer<V>(peer: PeerNetworkId, backoff: bool, smp: &mut SharedMempool<V>) -> bool
-where
-    V: TransactionValidation,
-{
-    // start timer for tracking broadcast latency
-    let start_time = Instant::now();
-    let peer_manager = &smp.peer_manager;
-
-    let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
-        let state = peer_manager.get_peer_state(&peer);
-        let next_backoff = state.broadcast_info.backoff_mode;
-        if state.is_alive {
-            (
-                state.timeline_id,
-                state
-                    .broadcast_info
-                    .total_retry_txns
-                    .into_iter()
-                    .collect::<Vec<_>>(),
-                next_backoff,
-            )
-        } else {
-            return next_backoff;
-        }
-    } else {
-        return false;
-    };
-
-    // It is possible that a broadcast was scheduled as non-backoff before an ACK received after the
-    // broadcast scheduling turns on backoff mode
-    // If this is the case, ignore this schedule and wait till next broadcast scheduled as backoff
-    if !backoff && next_backoff {
-        return next_backoff;
-    }
-
-    // craft batch of txns to broadcast
-    let mut mempool = smp
-        .mempool
-        .lock()
-        .expect("[shared mempool] failed to acquire mempool lock");
-
-    // first populate batch with retriable txns, to prioritize resending them
-    let retry_txns = mempool.filter_read_timeline(retry_txns_id);
-    // pad the batch with new txns from fresh timeline read, if batch has space
-    let (new_txns, new_timeline_id) = if retry_txns.len() < smp.config.shared_mempool_batch_size {
-        mempool.read_timeline(
-            timeline_id,
-            smp.config.shared_mempool_batch_size - retry_txns.len(),
-        )
-    } else {
-        (vec![], timeline_id)
-    };
-
-    if new_txns.is_empty() && retry_txns.is_empty() {
-        return next_backoff;
-    }
-
-    // read first tx in timeline
-    let earliest_timeline_id = mempool
-        .read_timeline(0, 1)
-        .0
-        .get(0)
-        .expect("empty timeline")
-        .0;
-    // don't hold mempool lock during network send
-    drop(mempool);
-
-    // combine retry_txns and new_txns into batch
-    let mut all_txns = retry_txns
-        .into_iter()
-        .chain(new_txns.into_iter())
-        .collect::<Vec<_>>();
-    all_txns.truncate(smp.config.shared_mempool_batch_size);
-    let batch_timeline_ids = all_txns.iter().map(|(id, _txn)| *id).collect::<Vec<_>>();
-    let batch_txns = all_txns
-        .into_iter()
-        .map(|(_id, txn)| txn)
-        .collect::<Vec<_>>();
-
-    let network_sender = smp
-        .network_senders
-        .get_mut(&peer.network_id())
-        .expect("[shared mempool] missing network sender");
-
-    let batch_id = BatchId(timeline_id, new_timeline_id);
-    let request_id = if let Ok(bytes) = lcs::to_bytes(&batch_id) {
-        bytes
-    } else {
-        // TODO log this
-        return false;
-    };
-
-    let txns_ct = batch_txns.len();
-    if let Err(e) = network_sender.send_to(
-        peer.peer_id(),
-        MempoolSyncMsg::BroadcastTransactionsRequest {
-            request_id,
-            transactions: batch_txns,
-        },
-    ) {
-        counters::NETWORK_SEND_FAIL
-            .with_label_values(&[counters::BROADCAST_TXNS])
-            .inc();
-        error!(
-            LogSchema::event_log(LogEntry::BroadcastTransaction, LogEvent::NetworkSendFail)
-                .peer(&peer)
-                .error(&e.into())
-        );
-    } else {
-        let broadcast_time = Instant::now();
-        let peer_id = &peer.peer_id().to_string();
-        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
-            .with_label_values(&[peer_id])
-            .observe(txns_ct as f64);
-        counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-            .with_label_values(&[peer_id])
-            .inc();
-        peer_manager.update_peer_broadcast(
-            peer,
-            batch_id,
-            batch_timeline_ids,
-            new_timeline_id,
-            earliest_timeline_id,
-            broadcast_time,
-        );
-        notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
-        let broadcast_latency = start_time.elapsed();
-        counters::SHARED_MEMPOOL_BROADCAST_LATENCY
-            .with_label_values(&[peer_id])
-            .observe(broadcast_latency.as_secs_f64());
-    }
-
-    next_backoff
 }
 
 // =============================== //
