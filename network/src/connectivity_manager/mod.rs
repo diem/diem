@@ -9,12 +9,11 @@
 //! Consensus actor informs the ConnectivityManager of eligible nodes.
 //!
 //! Different discovery sources notify the ConnectivityManager of updates to
-//! peers' addresses. Currently, there are 3 discovery sources (ordered by
+//! peers' addresses. Currently, there are 2 discovery sources (ordered by
 //! decreasing dial priority, i.e., first is highest priority):
 //!
 //! 1. Onchain discovery protocol
-//! 2. Gossip discovery protocol
-//! 3. Seed peers from config
+//! 2. Seed peers from config
 //!
 //! In other words, if a we have some addresses discovered via onchain discovery
 //! and some seed addresses from our local config, we will try the onchain
@@ -106,7 +105,6 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, NumVariants, Serialize)]
 pub enum DiscoverySource {
     OnChain,
-    Gossip,
     Config,
 }
 
@@ -123,7 +121,6 @@ impl fmt::Display for DiscoverySource {
             "{}",
             match self {
                 DiscoverySource::OnChain => "OnChain",
-                DiscoverySource::Gossip => "Gossip",
                 DiscoverySource::Config => "Config",
             }
         )

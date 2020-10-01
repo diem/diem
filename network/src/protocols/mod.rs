@@ -8,7 +8,6 @@ pub mod direct_send;
 pub mod network;
 pub mod rpc;
 
-pub mod gossip_discovery;
 pub mod health_checker;
 pub mod identity;
 pub mod wire;

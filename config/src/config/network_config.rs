@@ -38,7 +38,9 @@ pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
     pub connectivity_check_interval_ms: u64,
-    // Enable this network to use either gossip discovery or onchain discovery.
+    // Choose a protocol to discover and dial out to other peers on this network.
+    // `DiscoveryMethod::None` disables discovery and dialing out (unless you have
+    // seed peers configured).
     pub discovery_method: DiscoveryMethod,
     pub identity: Identity,
     // TODO: Add support for multiple listen/advertised addresses in config.
@@ -213,35 +215,8 @@ impl NetworkConfig {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiscoveryMethod {
-    // default until we can deprecate
-    Gossip(GossipConfig),
     Onchain,
     None,
-}
-
-impl DiscoveryMethod {
-    pub fn gossip(advertised_address: NetworkAddress) -> Self {
-        DiscoveryMethod::Gossip(GossipConfig {
-            advertised_address,
-            discovery_interval_ms: 1000,
-        })
-    }
-
-    pub fn advertised_address(&self) -> NetworkAddress {
-        if let DiscoveryMethod::Gossip(config) = self {
-            config.advertised_address.clone()
-        } else {
-            panic!("Invalid discovery method");
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct GossipConfig {
-    // The address that this node advertises to other nodes for the discovery protocol.
-    pub advertised_address: NetworkAddress,
-    pub discovery_interval_ms: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

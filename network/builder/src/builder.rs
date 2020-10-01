@@ -11,7 +11,7 @@
 //! long as the latter is in its trusted peers set.
 use channel::{self, message_queues::QueueStyle};
 use libra_config::{
-    config::{DiscoveryMethod, GossipConfig, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    config::{DiscoveryMethod, NetworkConfig, RoleType},
     network_id::NetworkContext,
 };
 use libra_crypto::x25519;
@@ -29,7 +29,6 @@ use network::{
         conn_notifs_channel, ConnectionRequestSender,
     },
     protocols::{
-        gossip_discovery::{self, builder::GossipDiscoveryBuilder},
         health_checker::{self, builder::HealthCheckerBuilder},
         network::{NewNetworkEvents, NewNetworkSender},
     },
@@ -65,7 +64,6 @@ pub struct NetworkBuilder {
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
-    discovery_builder: Option<GossipDiscoveryBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
     peer_manager_builder: PeerManagerBuilder,
 
@@ -109,7 +107,6 @@ impl NetworkBuilder {
             network_context,
             configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
-            discovery_builder: None,
             health_checker_builder: None,
             peer_manager_builder,
             reconfig_subscriptions: vec![],
@@ -120,7 +117,6 @@ impl NetworkBuilder {
     pub fn create(chain_id: ChainId, role: RoleType, config: &NetworkConfig) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
-        let pubkey = libra_crypto::PrivateKey::public_key(&identity_key);
 
         let authentication_mode = if config.mutual_authentication {
             AuthenticationMode::Mutual(identity_key)
@@ -189,14 +185,6 @@ impl NetworkBuilder {
         }
 
         match &config.discovery_method {
-            DiscoveryMethod::Gossip(gossip_config) => {
-                network_builder.add_gossip_discovery(gossip_config.clone(), pubkey);
-                // HACK: gossip relies on on-chain discovery for the eligible peers update.
-                // TODO:  it should be safe to enable the configuraction_change_listener always.
-                if role == RoleType::Validator {
-                    network_builder.add_configuration_change_listener(config.encryptor());
-                }
-            }
             DiscoveryMethod::Onchain => {
                 network_builder.add_configuration_change_listener(config.encryptor());
             }
@@ -213,7 +201,6 @@ impl NetworkBuilder {
         self.executor = Some(executor);
         self.build_peer_manager()
             .build_configuration_change_listener()
-            .build_gossip_discovery()
             .build_connectivity_manager()
             .build_connection_monitoring()
     }
@@ -225,7 +212,6 @@ impl NetworkBuilder {
         self.start_peer_manager()
             .start_connectivity_manager()
             .start_connection_monitoring()
-            .start_gossip_discovery()
             .start_configuration_change_listener()
     }
 
@@ -367,74 +353,6 @@ impl NetworkBuilder {
         {
             configuration_change_listener
                 .start(self.executor.as_mut().expect("Executor must exist"));
-        }
-        self
-    }
-
-    /// Add the (gossip) [`Discovery`] protocol to the network.
-    ///
-    /// (gossip) [`Discovery`] discovers other eligible peers' network addresses
-    /// by exchanging the full set of known peer network addresses with connected
-    /// peers as a network protocol.
-    ///
-    /// This is for testing purposes only and should not be used in production networks.
-    // TODO:  remove the pub qualifier
-    pub fn add_gossip_discovery(
-        &mut self,
-        gossip_config: GossipConfig,
-        pubkey: x25519::PublicKey,
-    ) -> &mut Self {
-        let conn_mgr_reqs_tx = self
-            .conn_mgr_reqs_tx()
-            .expect("ConnectivityManager not enabled");
-        // Get handles for network events and sender.
-        let (discovery_network_tx, discovery_network_rx) =
-            self.add_protocol_handler(gossip_discovery::network_endpoint_config());
-
-        // TODO(philiphayes): the current setup for gossip discovery doesn't work
-        // when we don't have an `advertised_address` set, since it uses the
-        // `listen_address`, which might not be bound to a port yet. For example,
-        // if our `listen_address` is "/ip6/::1/tcp/0" and `advertised_address` is
-        // `None`, then this will set our `advertised_address` to something like
-        // "/ip6/::1/tcp/0/ln-noise-ik/<pubkey>/ln-handshake/0", which is wrong
-        // since the actual bound port will be something > 0.
-
-        // TODO:  move this logic into DiscoveryBuilder::create
-        let advertised_address = gossip_config
-            .advertised_address
-            .append_prod_protos(pubkey, HANDSHAKE_VERSION);
-
-        let addrs = vec![advertised_address];
-
-        self.discovery_builder = Some(GossipDiscoveryBuilder::create(
-            self.network_context(),
-            addrs,
-            gossip_config.discovery_interval_ms,
-            discovery_network_tx,
-            discovery_network_rx,
-            conn_mgr_reqs_tx,
-        ));
-        self
-    }
-
-    fn build_gossip_discovery(&mut self) -> &mut Self {
-        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
-            discovery_builder.build(self.executor.as_mut().expect("Executor must exist"));
-            debug!(
-                NetworkSchema::new(&self.network_context),
-                "{} Built Gossip Discovery", self.network_context
-            );
-        }
-        self
-    }
-
-    fn start_gossip_discovery(&mut self) -> &mut Self {
-        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
-            discovery_builder.start(self.executor.as_mut().expect("Executor must exist"));
-            debug!(
-                NetworkSchema::new(&self.network_context),
-                "{} Started gossip discovery", self.network_context
-            );
         }
         self
     }
