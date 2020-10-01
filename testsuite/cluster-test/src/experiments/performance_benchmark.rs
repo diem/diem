@@ -187,12 +187,15 @@ impl Experiment for PerformanceBenchmark {
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
         let start = chrono::Utc::now();
         let trace_tail = &context.trace_tail;
-        let trace_delay = buffer;
+        let trace_delay = buffer + self.duration / 2;
         let trace = self.trace;
         let capture_trace = async move {
             if trace {
                 tokio::time::delay_for(trace_delay).await;
-                Some(trace_tail.capture_trace(Duration::from_secs(5)).await)
+                info!("Starting capturing trace");
+                let trace = trace_tail.capture_trace(Duration::from_secs(5)).await;
+                info!("Captured {} events", trace.len());
+                Some(trace)
             } else {
                 None
             }
