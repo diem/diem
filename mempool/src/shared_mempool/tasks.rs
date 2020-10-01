@@ -8,9 +8,12 @@ use crate::{
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
     network::MempoolSyncMsg,
-    shared_mempool::types::{
-        notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
-        SubmissionStatusBundle,
+    shared_mempool::{
+        peer_manager::BatchId,
+        types::{
+            notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
+            SubmissionStatusBundle,
+        },
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -151,12 +154,19 @@ where
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
-    let request_id = create_request_id(timeline_id, new_timeline_id);
+    let batch_id = BatchId(timeline_id, new_timeline_id);
+    let request_id = if let Ok(bytes) = lcs::to_bytes(&batch_id) {
+        bytes
+    } else {
+        // TODO log this
+        return false;
+    };
+
     let txns_ct = batch_txns.len();
     if let Err(e) = network_sender.send_to(
         peer.peer_id(),
         MempoolSyncMsg::BroadcastTransactionsRequest {
-            request_id: request_id.clone(),
+            request_id,
             transactions: batch_txns,
         },
     ) {
@@ -179,7 +189,7 @@ where
             .inc();
         peer_manager.update_peer_broadcast(
             peer,
-            request_id,
+            batch_id,
             batch_timeline_ids,
             new_timeline_id,
             earliest_timeline_id,
@@ -229,7 +239,7 @@ pub(crate) async fn process_client_transaction_submission<V>(
 pub(crate) async fn process_transaction_broadcast<V>(
     mut smp: SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
-    request_id: String,
+    request_id: Vec<u8>,
     timeline_state: TimelineState,
     peer: PeerNetworkId,
 ) where
@@ -261,7 +271,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
     notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
 }
 
-fn gen_ack_response(request_id: String, results: Vec<SubmissionStatusBundle>) -> MempoolSyncMsg {
+fn gen_ack_response(request_id: Vec<u8>, results: Vec<SubmissionStatusBundle>) -> MempoolSyncMsg {
     let mut backoff = false;
     let retry_txns = results
         .into_iter()
@@ -577,11 +587,4 @@ pub(crate) async fn process_config_update<V>(
         counters::VM_RECONFIG_UPDATE_FAIL_COUNT.inc();
         error!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::VMUpdateFail).error(&e));
     }
-}
-
-/// creates uniques request id for the batch in the format "{start_id}_{end_id}"
-/// where start is an id in timeline index  that is lower than the first txn in a batch
-/// and end equals to timeline ID of last transaction in a batch
-fn create_request_id(start_timeline_id: u64, end_timeline_id: u64) -> String {
-    format!("{}_{}", start_timeline_id, end_timeline_id)
 }

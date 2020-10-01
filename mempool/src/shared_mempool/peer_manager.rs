@@ -9,6 +9,7 @@ use libra_config::{
 };
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     ops::{Deref, DerefMut},
@@ -36,11 +37,16 @@ pub(crate) struct PeerManager {
     // the number of failover peers is limited to 1 to avoid network competition in the failover networks
     failover_peer: Mutex<Option<PeerNetworkId>>,
 }
+/// Identifier for a broadcasted batch of txns
+/// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
+/// the core mempool timeline index that produced the txns in this batch
+#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct BatchId(pub u64, pub u64);
 
 #[derive(Clone)]
 pub struct BroadcastInfo {
     // broadcasts that have not been ACK'ed for yet
-    pub sent_batches: HashMap<String, BatchInfo>,
+    pub sent_batches: HashMap<BatchId, BatchInfo>,
     // timeline IDs of all txns that need to be retried and ACKed for
     pub total_retry_txns: BTreeSet<u64>,
     // whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals
@@ -195,7 +201,7 @@ impl PeerManager {
         &self,
         peer: PeerNetworkId,
         // ID of broadcast request
-        batch_id: String,
+        batch_id: BatchId,
         // timeline IDs of txns broadcasted
         batch: Vec<u64>,
         // the new timeline ID to read from for next broadcast
@@ -235,12 +241,21 @@ impl PeerManager {
     pub fn process_broadcast_ack(
         &self,
         peer: PeerNetworkId,
-        batch_id: String,
+        request_id_bytes: Vec<u8>,
         retry_txns: Vec<u64>,
         backoff: bool,
         // timestamp of ACK received
         timestamp: Instant,
     ) {
+        let batch_id = if let Ok(id) = lcs::from_bytes::<BatchId>(&request_id_bytes) {
+            id
+        } else {
+            counters::INVALID_ACK_RECEIVED_COUNT
+                .with_label_values(&[&peer.peer_id().to_string()])
+                .inc();
+            return;
+        };
+
         let mut peer_info = self
             .peer_info
             .lock()

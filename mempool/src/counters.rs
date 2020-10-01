@@ -242,3 +242,14 @@ pub static CLIENT_CALLBACK_FAIL: Lazy<IntCounter> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+/// Counter for how many ACKs were received with an invalid request_id that this node's mempool
+/// did not send
+pub static INVALID_ACK_RECEIVED_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_mempool_unrecognized_ack_received_count",
+        "Number of ACK messages received with an invalid request_id that this node's mempool did not send",
+        &["sender"]
+    )
+        .unwrap()
+});

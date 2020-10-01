@@ -21,14 +21,14 @@ pub enum MempoolSyncMsg {
     /// broadcast request issued by the sender
     BroadcastTransactionsRequest {
         /// unique id of sync request. Can be used by sender for rebroadcast analysis
-        request_id: String,
+        request_id: Vec<u8>,
         /// shared transactions in this batch
         transactions: Vec<SignedTransaction>,
     },
     /// broadcast ack issued by the receiver
     BroadcastTransactionsResponse {
         /// unique id of received broadcast request
-        request_id: String,
+        request_id: Vec<u8>,
         /// indices of transactions that failed that may succeed on resend
         retry_txns: Vec<u64>,
         /// backpressure signal from recipient when it is overwhelmed (e.g. mempool is full)
