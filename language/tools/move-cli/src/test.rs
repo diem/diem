@@ -68,16 +68,13 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
     let cli_binary_path = Path::new(cli_binary).canonicalize()?;
     let move_data = Path::new(exe_dir).join(MOVE_DATA);
     let build_output = Path::new(exe_dir).join(DEFAULT_BUILD_OUTPUT_DIR);
-    assert!(
-        !move_data.exists(),
-        "tests should never include a {:?} directory",
-        MOVE_DATA
-    );
-    assert!(
-        !build_output.exists(),
-        "tests should never include a {:?} directory",
-        DEFAULT_BUILD_OUTPUT_DIR
-    );
+    if move_data.exists() || build_output.exists() {
+        // need to clean before testing
+        Command::new(cli_binary_path.clone())
+            .current_dir(exe_dir)
+            .arg("clean")
+            .output()?;
+    }
     let mut output = "".to_string();
     for args_line in args_file {
         let args_line = args_line?;
