@@ -3538,6 +3538,7 @@ name = "libra-vm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fail",
  "libra-canonical-serialization",
  "libra-crypto",
  "libra-logger",
@@ -4061,6 +4062,7 @@ dependencies = [
  "anyhow",
  "bytecode-verifier",
  "compiler",
+ "fail",
  "hex",
  "libra-crypto",
  "libra-logger",

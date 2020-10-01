@@ -14,6 +14,7 @@ use crate::{
     transaction_metadata::TransactionMetadata,
     txn_effects_to_writeset_and_events, VMExecutor,
 };
+use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_trace::prelude::*;
@@ -158,6 +159,12 @@ impl LibraVM {
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        fail_point!("move_adapter::execute_script", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
         let mut session = self.0.new_session(remote_cache);
 
@@ -214,6 +221,12 @@ impl LibraVM {
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        fail_point!("move_adapter::execute_module", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
         let mut session = self.0.new_session(remote_cache);
 
@@ -421,6 +434,12 @@ impl LibraVM {
         block_metadata: BlockMetadata,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        fail_point!("move_adapter::process_block_prologue", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let mut txn_data = TransactionMetadata::default();
         txn_data.sender = account_config::reserved_vm_address();
 
@@ -470,6 +489,12 @@ impl LibraVM {
         txn: SignatureCheckedTransaction,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        fail_point!("move_adapter::process_writeset_transaction", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let txn_data = TransactionMetadata::new(&txn);
 
         let mut session = self.0.new_session(remote_cache);
@@ -733,6 +758,12 @@ impl VMExecutor for LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
+        fail_point!("move_adapter::execute_block", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
         Ok(output
             .into_iter()

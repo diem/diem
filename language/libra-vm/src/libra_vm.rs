@@ -12,6 +12,7 @@ use crate::{
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
+use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
@@ -293,6 +294,12 @@ impl LibraVMImpl {
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
+        fail_point!("move_adapter::run_success_epilogue", |_| {
+            Err(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))
+        });
+
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();

@@ -3,6 +3,9 @@
 //! Scratchpad for on chain values during the execution.
 
 use crate::{counters::CRITICAL_ERRORS, create_access_path, logging::AdapterLogSchema};
+#[allow(unused_imports)]
+use anyhow::format_err;
+use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_state_view::{StateView, StateViewId};
 use libra_types::{
@@ -68,6 +71,10 @@ impl<'a> StateViewCache<'a> {
 impl<'block> StateView for StateViewCache<'block> {
     // Get some data either through the cache or the `StateView` on a cache miss.
     fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+        fail_point!("move_adapter::data_cache::get", |_| Err(format_err!(
+            "Injected failure in data_cache::get"
+        )));
+
         match self.data_map.get(access_path) {
             Some(opt_data) => Ok(opt_data.clone()),
             None => match self.data_view.get(&access_path) {

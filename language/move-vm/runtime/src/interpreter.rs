@@ -7,6 +7,7 @@ use crate::{
     native_functions::FunctionContext,
     trace,
 };
+use fail::fail_point;
 use libra_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
@@ -718,6 +719,14 @@ impl Frame {
                     &resolver,
                     &interpreter
                 );
+
+                fail_point!("move_vm::interpreter_loop", |_| {
+                    Err(
+                        PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                            "Injected move_vm::interpreter verifier failure".to_owned(),
+                        ),
+                    )
+                });
 
                 match instruction {
                     Bytecode::Pop => {
