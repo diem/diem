@@ -493,6 +493,7 @@ impl TxEmitter {
             requested_accounts,
             self.accounts.len()
         );
+        info!("hhhhhhCreated account num = {}", self.accounts.len());
         let a = self.pick_mint_client(&req.instances);
         for acc in &self.accounts {
             let balance = retrieve_account_balance(&a, acc.address).await?;
@@ -571,6 +572,7 @@ struct SubmissionWorker {
 impl SubmissionWorker {
     #[allow(clippy::collapsible_if)]
     async fn run(mut self, gas_price: u64) -> Vec<AccountData> {
+        info!("hhhhh entered here");
         let wait = Duration::from_millis(self.params.wait_millis);
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests(gas_price);
