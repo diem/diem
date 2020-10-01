@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::error::{MempoolError, StateSyncError};
 use anyhow::Result;
 use consensus_types::{block::Block, common::Payload};
-use executor_types::{Error, StateComputeResult};
+use executor_types::{Error as ExecutionError, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 
@@ -13,11 +14,19 @@ pub trait TxnManager: Send + Sync {
     /// Brings new transactions to be applied.
     /// The `exclude_txns` list includes the transactions that are already pending in the
     /// branch of blocks consensus is trying to extend.
-    async fn pull_txns(&self, max_size: u64, exclude: Vec<&Payload>) -> Result<Payload>;
+    async fn pull_txns(
+        &self,
+        max_size: u64,
+        exclude: Vec<&Payload>,
+    ) -> Result<Payload, MempoolError>;
 
     /// Notifies TxnManager about the executed result of the block,
     /// which includes the specifics of what transactions succeeded and failed.
-    async fn notify(&self, block: &Block, compute_result: &StateComputeResult) -> Result<()>;
+    async fn notify(
+        &self,
+        block: &Block,
+        compute_result: &StateComputeResult,
+    ) -> Result<(), MempoolError>;
 
     /// Helper to trace transactions after block is generated
     fn trace_transactions(&self, _block: &Block) {}
@@ -37,18 +46,18 @@ pub trait StateComputer: Send + Sync {
         block: &Block,
         // The parent block root hash.
         parent_block_id: HashValue,
-    ) -> Result<StateComputeResult, Error>;
+    ) -> Result<StateComputeResult, ExecutionError>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     async fn commit(
         &self,
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
-    ) -> Result<()>;
+    ) -> Result<(), ExecutionError>;
 
     /// Best effort state synchronization to the given target LedgerInfo.
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
     /// can assume there were no modifications to the storage made.
-    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
+    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<(), StateSyncError>;
 }

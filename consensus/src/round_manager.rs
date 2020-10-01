@@ -4,6 +4,7 @@
 use crate::{
     block_storage::{BlockReader, BlockRetriever, BlockStore},
     counters,
+    error::VerifyError,
     liveness::{
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
@@ -49,7 +50,7 @@ pub enum UnverifiedEvent {
 }
 
 impl UnverifiedEvent {
-    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent> {
+    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent, VerifyError> {
         Ok(match self {
             UnverifiedEvent::ProposalMsg(p) => {
                 p.verify(validator)?;
@@ -143,7 +144,9 @@ impl RecoveryManager {
     }
 
     pub async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData> {
-        sync_info.verify(&self.epoch_state.verifier)?;
+        sync_info
+            .verify(&self.epoch_state.verifier)
+            .map_err(VerifyError::from)?;
         ensure!(
             sync_info.highest_round() > self.last_committed_round,
             "[RecoveryManager] Received sync info has lower round number than committed block"
@@ -346,7 +349,7 @@ impl RoundManager {
                         remote_peer = author,
                         error = ?e,
                     );
-                    e
+                    VerifyError::from(e)
                 })?;
             let result = self
                 .block_store

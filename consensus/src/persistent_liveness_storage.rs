@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
+use crate::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData, error::DbError};
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
@@ -289,8 +289,9 @@ impl PersistentLivenessStorage for StorageWriteProxy {
         for block in blocks.iter() {
             trace_code_block!("consensusdb::save_tree", {"block", block.id()}, trace_batch);
         }
-        self.db
-            .save_blocks_and_quorum_certificates(blocks, quorum_certs)
+        Ok(self
+            .db
+            .save_blocks_and_quorum_certificates(blocks, quorum_certs)?)
     }
 
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()> {
@@ -302,7 +303,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
     }
 
     fn save_vote(&self, vote: &Vote) -> Result<()> {
-        self.db.save_vote(lcs::to_bytes(vote)?)
+        Ok(self.db.save_vote(lcs::to_bytes(vote)?)?)
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
@@ -400,12 +401,16 @@ impl PersistentLivenessStorage for StorageWriteProxy {
     }
 
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
-        self.db
-            .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
+        Ok(self
+            .db
+            .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)?)
     }
 
     fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof> {
-        let (_, proofs, _) = self.libra_db.get_state_proof(version)?;
+        let (_, proofs, _) = self
+            .libra_db
+            .get_state_proof(version)
+            .map_err(DbError::from)?;
         Ok(proofs)
     }
 

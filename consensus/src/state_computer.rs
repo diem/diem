@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::StateComputer;
+use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::block::Block;
 use execution_correctness::ExecutionCorrectness;
-use executor_types::{Error, StateComputeResult};
+use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -44,9 +44,9 @@ impl StateComputer for ExecutionProxy {
         block: &Block,
         // The parent block id.
         parent_block_id: HashValue,
-    ) -> Result<StateComputeResult, Error> {
+    ) -> Result<StateComputeResult, ExecutionError> {
         fail_point!("consensus::compute", |_| {
-            Err(Error::InternalError {
+            Err(ExecutionError::InternalError {
                 error: "Injected error in compute".into(),
             })
         });
@@ -71,7 +71,7 @@ impl StateComputer for ExecutionProxy {
         &self,
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    ) -> Result<(), ExecutionError> {
         let (committed_txns, reconfig_events) = monitor!(
             "commit_block",
             self.execution_correctness_client
@@ -91,9 +91,9 @@ impl StateComputer for ExecutionProxy {
     }
 
     /// Synchronize to a commit that not present locally.
-    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
+    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         fail_point!("consensus::sync_to", |_| {
-            Err(anyhow::anyhow!("Injected error in sync_to"))
+            Err(anyhow::anyhow!("Injected error in sync_to").into())
         });
         // Here to start to do state synchronization where ChunkExecutor inside will
         // process chunks and commit to Storage. However, after block execution and
@@ -104,6 +104,7 @@ impl StateComputer for ExecutionProxy {
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
         self.execution_correctness_client.lock().unwrap().reset()?;
-        res
+        res?;
+        Ok(())
     }
 }

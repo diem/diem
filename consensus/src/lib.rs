@@ -16,6 +16,7 @@ mod block_storage;
 mod consensusdb;
 mod counters;
 mod epoch_manager;
+mod error;
 mod liveness;
 mod logging;
 mod metrics_safety_rules;

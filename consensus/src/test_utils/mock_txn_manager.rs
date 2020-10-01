@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{state_replication::TxnManager, txn_manager::MempoolProxy};
+use crate::{error::MempoolError, state_replication::TxnManager, txn_manager::MempoolProxy};
 use anyhow::Result;
 use consensus_types::{
     block::{block_test_utils::random_payload, Block},
@@ -51,11 +51,19 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
 #[async_trait::async_trait]
 impl TxnManager for MockTransactionManager {
     /// The returned future is fulfilled with the vector of SignedTransactions
-    async fn pull_txns(&self, max_size: u64, _exclude_txns: Vec<&Payload>) -> Result<Payload> {
+    async fn pull_txns(
+        &self,
+        max_size: u64,
+        _exclude_txns: Vec<&Payload>,
+    ) -> Result<Payload, MempoolError> {
         Ok(random_payload(max_size as usize))
     }
 
-    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    async fn notify(
+        &self,
+        block: &Block,
+        compute_results: &StateComputeResult,
+    ) -> Result<(), MempoolError> {
         if self.mempool_proxy.is_some() {
             let mock_compute_result = StateComputeResult::new(
                 compute_results.root_hash(),

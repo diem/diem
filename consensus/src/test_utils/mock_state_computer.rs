@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{state_replication::StateComputer, test_utils::mock_storage::MockStorage};
+use crate::{
+    error::StateSyncError, state_replication::StateComputer, test_utils::mock_storage::MockStorage,
+};
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
 use executor_types::{Error, StateComputeResult};
@@ -65,7 +67,7 @@ impl StateComputer for MockStateComputer {
         &self,
         block_ids: Vec<HashValue>,
         commit: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
 
@@ -90,7 +92,7 @@ impl StateComputer for MockStateComputer {
         Ok(())
     }
 
-    async fn sync_to(&self, commit: LedgerInfoWithSignatures) -> Result<()> {
+    async fn sync_to(&self, commit: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
@@ -131,11 +133,11 @@ impl StateComputer for EmptyStateComputer {
         &self,
         _block_ids: Vec<HashValue>,
         _commit: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         Ok(())
     }
 
-    async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<()> {
+    async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         Ok(())
     }
 }

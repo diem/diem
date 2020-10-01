@@ -5,12 +5,15 @@
 mod consensusdb_test;
 mod schema;
 
-use crate::consensusdb::schema::{
-    block::BlockSchema,
-    quorum_certificate::QCSchema,
-    single_entry::{SingleEntryKey, SingleEntrySchema},
+use crate::{
+    consensusdb::schema::{
+        block::BlockSchema,
+        quorum_certificate::QCSchema,
+        single_entry::{SingleEntryKey, SingleEntrySchema},
+    },
+    error::DbError,
 };
-use anyhow::{ensure, Result};
+use anyhow::Result;
 use consensus_types::{block::Block, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -76,16 +79,17 @@ impl ConsensusDB {
     pub fn save_highest_timeout_certificate(
         &self,
         highest_timeout_certificate: Vec<u8>,
-    ) -> Result<()> {
+    ) -> Result<(), DbError> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(
             &SingleEntryKey::HighestTimeoutCertificate,
             &highest_timeout_certificate,
         )?;
-        self.commit(batch)
+        self.commit(batch)?;
+        Ok(())
     }
 
-    pub fn save_vote(&self, last_vote: Vec<u8>) -> Result<()> {
+    pub fn save_vote(&self, last_vote: Vec<u8>) -> Result<(), DbError> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg, &last_vote)?;
         self.commit(batch)
@@ -95,11 +99,10 @@ impl ConsensusDB {
         &self,
         block_data: Vec<Block>,
         qc_data: Vec<QuorumCert>,
-    ) -> Result<()> {
-        ensure!(
-            !block_data.is_empty() || !qc_data.is_empty(),
-            "Consensus block and qc data is empty!"
-        );
+    ) -> Result<(), DbError> {
+        if block_data.is_empty() && qc_data.is_empty() {
+            return Err(anyhow::anyhow!("Consensus block and qc data is empty!").into());
+        }
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
@@ -112,8 +115,13 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn delete_blocks_and_quorum_certificates(&self, block_ids: Vec<HashValue>) -> Result<()> {
-        ensure!(!block_ids.is_empty(), "Consensus block ids is empty!");
+    pub fn delete_blocks_and_quorum_certificates(
+        &self,
+        block_ids: Vec<HashValue>,
+    ) -> Result<(), DbError> {
+        if block_ids.is_empty() {
+            return Err(anyhow::anyhow!("Consensus block ids is empty!").into());
+        }
         let mut batch = SchemaBatch::new();
         block_ids
             .iter()
@@ -127,46 +135,50 @@ impl ConsensusDB {
 
     /// Write the whole schema batch including all data necessary to mutate the ledger
     /// state of some transaction by leveraging rocksdb atomicity support.
-    fn commit(&self, batch: SchemaBatch) -> Result<()> {
-        self.db.write_schemas(batch)
+    fn commit(&self, batch: SchemaBatch) -> Result<(), DbError> {
+        self.db.write_schemas(batch)?;
+        Ok(())
     }
 
     /// Get latest timeout certificates (we only store the latest highest timeout certificates).
-    fn get_highest_timeout_certificate(&self) -> Result<Option<Vec<u8>>> {
-        self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)
+    fn get_highest_timeout_certificate(&self) -> Result<Option<Vec<u8>>, DbError> {
+        Ok(self
+            .db
+            .get::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)?)
     }
 
     /// Delete the timeout certificates
-    pub fn delete_highest_timeout_certificate(&self) -> Result<()> {
+    pub fn delete_highest_timeout_certificate(&self) -> Result<(), DbError> {
         let mut batch = SchemaBatch::new();
         batch.delete::<SingleEntrySchema>(&SingleEntryKey::HighestTimeoutCertificate)?;
         self.commit(batch)
     }
 
     /// Get serialized latest vote (if available)
-    fn get_last_vote(&self) -> Result<Option<Vec<u8>>> {
-        self.db
-            .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)
+    fn get_last_vote(&self) -> Result<Option<Vec<u8>>, DbError> {
+        Ok(self
+            .db
+            .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)?)
     }
 
-    pub fn delete_last_vote_msg(&self) -> Result<()> {
+    pub fn delete_last_vote_msg(&self) -> Result<(), DbError> {
         let mut batch = SchemaBatch::new();
         batch.delete::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)?;
-        self.commit(batch)
+        self.commit(batch)?;
+        Ok(())
     }
 
     /// Get all consensus blocks.
-    fn get_blocks(&self) -> Result<HashMap<HashValue, Block>> {
+    fn get_blocks(&self) -> Result<HashMap<HashValue, Block>, DbError> {
         let mut iter = self.db.iter::<BlockSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, Block>>>()
+        Ok(iter.collect::<Result<HashMap<HashValue, Block>>>()?)
     }
 
     /// Get all consensus QCs.
-    fn get_quorum_certificates(&self) -> Result<HashMap<HashValue, QuorumCert>> {
+    fn get_quorum_certificates(&self) -> Result<HashMap<HashValue, QuorumCert>, DbError> {
         let mut iter = self.db.iter::<QCSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
+        Ok(iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()?)
     }
 }

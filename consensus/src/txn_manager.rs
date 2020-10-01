@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::state_replication::TxnManager;
+use crate::{error::MempoolError, state_replication::TxnManager};
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
 use executor_types::StateComputeResult;
@@ -33,9 +33,13 @@ impl MempoolProxy {
 
 #[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
-    async fn pull_txns(&self, max_size: u64, exclude_payloads: Vec<&Payload>) -> Result<Payload> {
+    async fn pull_txns(
+        &self,
+        max_size: u64,
+        exclude_payloads: Vec<&Payload>,
+    ) -> Result<Payload, MempoolError> {
         fail_point!("consensus::pull_txns", |_| {
-            Err(anyhow::anyhow!("Injected error in pull_txns"))
+            Err(anyhow::anyhow!("Injected error in pull_txns").into())
         });
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
@@ -49,26 +53,33 @@ impl TxnManager for MempoolProxy {
         let (callback, callback_rcv) = oneshot::channel();
         let req = ConsensusRequest::GetBlockRequest(max_size, exclude_txns, callback);
         // send to shared mempool
-        self.consensus_to_mempool_sender.clone().try_send(req)?;
+        self.consensus_to_mempool_sender
+            .clone()
+            .try_send(req)
+            .map_err(anyhow::Error::from)?;
         // wait for response
         match monitor!(
             "pull_txn",
             timeout(Duration::from_secs(1), callback_rcv).await
         ) {
-            Err(_) => Err(format_err!(
-                "[consensus] did not receive GetBlockResponse on time"
-            )),
-            Ok(resp) => match resp?? {
+            Err(_) => {
+                Err(format_err!("[consensus] did not receive GetBlockResponse on time").into())
+            }
+            Ok(resp) => match resp.map_err(anyhow::Error::from)?? {
                 ConsensusResponse::GetBlockResponse(txns) => Ok(txns),
-                _ => Err(format_err!(
-                    "[consensus] did not receive expected GetBlockResponse"
-                )),
+                _ => {
+                    Err(format_err!("[consensus] did not receive expected GetBlockResponse").into())
+                }
             },
         }
     }
 
     // Consensus notifies mempool of executed transactions
-    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    async fn notify(
+        &self,
+        block: &Block,
+        compute_results: &StateComputeResult,
+    ) -> Result<(), MempoolError> {
         let mut rejected_txns = vec![];
         let txns = match block.payload() {
             Some(txns) => txns,
@@ -95,13 +106,16 @@ impl TxnManager for MempoolProxy {
         let req = ConsensusRequest::RejectNotification(rejected_txns, callback);
 
         // send to shared mempool
-        self.consensus_to_mempool_sender.clone().try_send(req)?;
+        self.consensus_to_mempool_sender
+            .clone()
+            .try_send(req)
+            .map_err(anyhow::Error::from)?;
 
         if let Err(e) = monitor!(
             "notify_mempool",
             timeout(Duration::from_secs(1), callback_rcv).await
         ) {
-            Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
+            Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e).into())
         } else {
             Ok(())
         }
