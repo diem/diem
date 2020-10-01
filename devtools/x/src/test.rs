@@ -8,9 +8,12 @@ use crate::{
     utils::project_root,
     Result,
 };
+use anyhow::Error;
 use log::info;
 use std::{
     ffi::OsString,
+    fs::create_dir_all,
+    path::PathBuf,
     process::{Command, Stdio},
 };
 use structopt::StructOpt;
@@ -36,8 +39,12 @@ pub struct Args {
     /// Number of parallel jobs, defaults to # of CPUs
     jobs: Option<u16>,
     #[structopt(long, parse(from_os_str))]
-    /// Directory to output HTML coverage report to (using grcov)
-    html_cov_dir: Option<OsString>,
+    /// Directory to output HTML coverage report (using grcov)
+    html_cov_dir: Option<PathBuf>,
+    #[structopt(long, parse(from_os_str))]
+    /// Directory to output lcov coverage html (using grcov -> lcov.info -> html using genhtml).
+    /// Only useful if you want the lcov.info file produced in the path.  Requires that lcov be installed and on PATH.
+    html_lcov_dir: Option<PathBuf>,
     #[structopt(name = "TESTNAME", parse(from_os_str))]
     testname: Option<OsString>,
     #[structopt(name = "ARGS", parse(from_os_str), last = true)]
@@ -48,7 +55,9 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     args.args.extend(args.testname.clone());
     let config = xctx.config();
 
-    let env_vars: &[(&str, &str)] = if args.html_cov_dir.is_some() {
+    let generate_coverage = args.html_cov_dir.is_some() || args.html_lcov_dir.is_some();
+
+    let env_vars: &[(&str, &str)] = if generate_coverage {
         info!("Running \"cargo clean\" before collecting coverage");
         let mut clean_cmd = Command::new("cargo");
         clean_cmd.arg("clean");
@@ -92,49 +101,136 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         env: &env_vars,
     };
 
-    if args.unit {
+    let cmd_result = if args.unit {
         cmd.run_with_exclusions(
             config.system_tests().iter().map(|(p, _)| p),
             &CargoArgs::default(),
-        )?;
+        )
     } else if !args.package.is_empty() {
-        cmd.run_on_packages(args.package.iter(), &CargoArgs::default())?;
+        cmd.run_on_packages(args.package.iter(), &CargoArgs::default())
     } else if utils::project_is_root(&xctx)? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
-        cmd.run_on_all_packages(&CargoArgs::default())?;
+        cmd.run_on_all_packages(&CargoArgs::default())
     } else {
-        cmd.run_on_local_package(&CargoArgs::default())?;
+        cmd.run_on_local_package(&CargoArgs::default())
+    };
+
+    if !args.no_fail_fast && cmd_result.is_err() {
+        return cmd_result;
     }
 
-    if args.html_cov_dir.is_some() {
-        let debug_dir = project_root().join("target/debug/");
-        let mut grcov_html = Command::new("grcov");
-        grcov_html
-            //output file from coverage: gcda files
-            .arg(debug_dir.as_os_str())
-            //source code location
-            .arg("-s")
-            .arg(project_root().as_os_str())
-            //html output
-            .arg("-t")
-            .arg("html")
-            .arg("--llvm")
-            .arg("--branch")
-            .arg("--ignore")
-            .arg("/*")
-            .arg("--ignore")
-            .arg("x/*")
-            .arg("--ignore")
-            .arg("testsuite/*")
-            .arg("--ignore-not-existing")
-            .arg("-o")
-            .arg(args.html_cov_dir.unwrap());
-        info!("Build grcov Html Coverage Report");
-        info!("{:?}", grcov_html);
-        grcov_html.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        grcov_html.output()?;
+    if let Some(html_cov_dir) = &args.html_cov_dir {
+        create_dir_all(&html_cov_dir)?;
+        let html_cov_path = &html_cov_dir.canonicalize()?;
+        info!("created {}", &html_cov_path.to_string_lossy());
+        exec_grcov(&html_cov_path)?;
     }
+    if let Some(html_lcov_dir) = &args.html_lcov_dir {
+        create_dir_all(&html_lcov_dir)?;
+        let html_lcov_path = &html_lcov_dir.canonicalize()?;
+        info!("created {}", &html_lcov_path.to_string_lossy());
+        exec_lcov(&html_lcov_path)?;
+        exec_lcov_genhtml(&html_lcov_path)?;
+    }
+    cmd_result
+}
 
-    Ok(())
+fn exec_lcov_genhtml(html_lcov_path: &PathBuf) -> Result<()> {
+    let mut genhtml = Command::new("genhtml");
+    let mut lcov_file_path = PathBuf::new();
+    lcov_file_path.push(html_lcov_path);
+    lcov_file_path.push("lcov.info");
+    genhtml
+        .current_dir(project_root())
+        .arg("-o")
+        .arg(html_lcov_path)
+        .arg("--show-details")
+        .arg("--highlight")
+        .arg("--ignore-errors")
+        .arg("source")
+        .arg("--legend")
+        //TODO: Paths seem to be a thing
+        .arg(lcov_file_path);
+    info!("Build grcov lcov.info file");
+    info!("{:?}", genhtml);
+    genhtml.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+
+    if let Some(err) = genhtml.output().err() {
+        Err(Error::new(err).context("Failed to generate html output from lcov.info"))
+    } else {
+        Ok(())
+    }
+}
+
+fn exec_lcov(html_lcov_path: &PathBuf) -> Result<()> {
+    let debug_dir = project_root().join("target/debug/");
+    let mut lcov_file_path = PathBuf::new();
+    lcov_file_path.push(html_lcov_path);
+    lcov_file_path.push("lcov.info");
+    let mut lcov_file = Command::new("grcov");
+    lcov_file
+        .current_dir(project_root())
+        //output file from coverage: gcda files
+        .arg(debug_dir.as_os_str())
+        //source code location
+        .arg("-s")
+        .arg(project_root().as_os_str())
+        //html output
+        .arg("-t")
+        .arg("lcov")
+        .arg("--llvm")
+        .arg("--branch")
+        .arg("--ignore")
+        .arg("/*")
+        .arg("--ignore")
+        .arg("x/*")
+        .arg("--ignore")
+        .arg("testsuite/*")
+        .arg("--ignore-not-existing")
+        .arg("-o")
+        //TODO: Paths seem to be a thing
+        .arg(lcov_file_path);
+    info!("Converting lcov.info file to html");
+    info!("{:?}", lcov_file);
+    lcov_file.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    if let Some(err) = lcov_file.output().err() {
+        Err(Error::new(err).context("Failed to generate lcov.info with grcov"))
+    } else {
+        Ok(())
+    }
+}
+
+fn exec_grcov(html_cov_path: &PathBuf) -> Result<()> {
+    let debug_dir = project_root().join("target/debug/");
+    let mut grcov_html = Command::new("grcov");
+    grcov_html
+        .current_dir(project_root())
+        //output file from coverage: gcda files
+        .arg(debug_dir.as_os_str())
+        //source code location
+        .arg("-s")
+        .arg(project_root().as_os_str())
+        //html output
+        .arg("-t")
+        .arg("html")
+        .arg("--llvm")
+        .arg("--branch")
+        .arg("--ignore")
+        .arg("/*")
+        .arg("--ignore")
+        .arg("x/*")
+        .arg("--ignore")
+        .arg("testsuite/*")
+        .arg("--ignore-not-existing")
+        .arg("-o")
+        .arg(html_cov_path);
+    info!("Build grcov Html Coverage Report");
+    info!("{:?}", grcov_html);
+    grcov_html.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    if let Some(err) = grcov_html.output().err() {
+        Err(Error::new(err).context("Failed to generate html output with grcov"))
+    } else {
+        Ok(())
+    }
 }

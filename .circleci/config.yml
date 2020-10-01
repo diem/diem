@@ -826,9 +826,9 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - restore_cache:
-          name: restore daily latch cache file.
-          key: code-coverage-daily
+      #- restore_cache:
+      #    name: restore daily latch cache file.
+      #    key: code-coverage-daily
       - run:
           name: Halt job if already built code coverage today.
           command: |
@@ -857,11 +857,12 @@ jobs:
       - run:
           name: Run code coverage
           command: |
-            scripts/coverage_report.sh . ${CODECOV_OUTPUT} --batch --failed_crate_file ${MESSAGE_PAYLOAD_FILE}
+            set -x
+            $CARGO $CARGO_FLAGS xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 10 || true
           no_output_timeout: 20m
       - run:
           name: Upload result to codecov.io
-          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info -F unittest;
+          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
       - run:
           name: Push Coverage Reports to S3
           command: |
@@ -902,7 +903,7 @@ workflows:
           filters:
             branches:
               only:
-                - /^test-[\d|.]+$/
+                #- /^test-[\d|.]+$/
                 - master
 
   ######################################################################################################################
@@ -916,7 +917,7 @@ workflows:
           filters:
             branches:
               only:
-                - /^test-[\d|.]+$/
+                #- /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
       - docker-update-base-images:
