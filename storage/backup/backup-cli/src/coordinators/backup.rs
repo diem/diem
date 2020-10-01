@@ -28,10 +28,6 @@ use tokio::{
 pub struct BackupCoordinatorOpt {
     #[structopt(flatten)]
     pub metadata_cache_opt: MetadataCacheOpt,
-    // Assuming epoch doesn't bump frequently, we default to backing epoch ending info up as soon
-    // as possible.
-    #[structopt(long, default_value = "1")]
-    pub epoch_ending_batch_size: usize,
     // We replay transactions on top of a state snapshot at about 2000 tps, having a state snapshot
     // every 2000 * 3600 * 2 = 14.4 Mil versions will guarantee that to achieve any state in
     // history, it won't take us more than two hours in transaction replaying. Defaulting to 10 Mil
@@ -48,10 +44,8 @@ pub struct BackupCoordinatorOpt {
 impl BackupCoordinatorOpt {
     fn validate(&self) -> Result<()> {
         ensure!(
-            self.epoch_ending_batch_size > 0
-                && self.state_snapshot_interval > 0
-                && self.transaction_batch_size > 0,
-            "Backup interval and batch sizes must be greater than 0"
+            self.state_snapshot_interval > 0 && self.transaction_batch_size > 0,
+            "Backup interval and batch size must be greater than 0."
         );
         Ok(())
     }
@@ -62,7 +56,6 @@ pub struct BackupCoordinator {
     storage: Arc<dyn BackupStorage>,
     global_opt: GlobalBackupOpt,
     metadata_cache_opt: MetadataCacheOpt,
-    epoch_ending_batch_size: usize,
     state_snapshot_interval: usize,
     transaction_batch_size: usize,
 }
@@ -80,7 +73,6 @@ impl BackupCoordinator {
             storage,
             global_opt,
             metadata_cache_opt: opt.metadata_cache_opt,
-            epoch_ending_batch_size: opt.epoch_ending_batch_size,
             state_snapshot_interval: opt.state_snapshot_interval,
             transaction_batch_size: opt.transaction_batch_size,
         }
@@ -171,10 +163,7 @@ impl BackupCoordinator {
         db_state: DbState,
         downstream_db_state_broadcaster: &watch::Sender<DbState>,
     ) -> Result<Option<u64>> {
-        let (first, last) = get_batch_range(
-            last_epoch_ending_epoch_in_backup,
-            self.epoch_ending_batch_size,
-        );
+        let (first, last) = get_batch_range(last_epoch_ending_epoch_in_backup, 1);
 
         let next_state = if db_state.epoch <= last {
             // "<=" because `db_state.epoch` hasn't ended yet, wait for the next db_state update
