@@ -2,8 +2,8 @@
 
 //! gas-price: 1
 //! max-gas: 5001
-main() {
-    return;
+script {
+fun main() {
 }
-
+}
 // check: INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
