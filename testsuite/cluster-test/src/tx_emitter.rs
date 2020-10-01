@@ -454,10 +454,10 @@ impl TxEmitter {
         )
         .await
         .map_err(|e| format_err!("Failed to mint seed_accounts: {}", e))?;
-        info!("Completed minting seed accounts");
+        let num_seed_accounts = seed_accounts.len();
+        info!("Completed minting {} seed accounts", num_seed_accounts);
         info!("Minting additional {} accounts", num_accounts);
 
-        let num_seed_accounts = seed_accounts.len();
         let seed_rngs = gen_rng_for_reusable_account(num_seed_accounts);
         // For each seed account, create a future and transfer libra from that seed account to new accounts
         let account_futures = seed_accounts
@@ -1025,6 +1025,7 @@ async fn create_new_accounts(
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
+    info!("hhhhhh create {} new acounts", num_new_accounts);
     while i < num_new_accounts {
         let mut batch = if reuse_account {
             info!("loading {} accounts if they exist", num_new_accounts);
