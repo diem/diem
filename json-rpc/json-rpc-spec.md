@@ -16,7 +16,7 @@ List of released stable methods (unless specifically mentioned, all parameters a
 * [get_currencies](docs/method_get_currencies.md)() -> List<[CurrencyInfo](docs/type_currency_info.md)>
 
 
-> For implementing a client, please checkout our [Client Implementation Guide](docs/client_implementation_guide.md)
+> To implement a client, please checkout our [Client Implementation Guide](docs/client_implementation_guide.md).
 
 ## Official Client SDKs
 
@@ -27,17 +27,17 @@ List of released stable methods (unless specifically mentioned, all parameters a
 
 JSON-RPC is a stateless, light-weight remote procedure call (RPC) protocol. Refer to the [JSON-RPC Specification](https://www.jsonrpc.org/specification) for further details.
 
-### Libra Extensions
+### Libra extensions
 
-JSON-RPC response object is extended with the following fields:
+The JSON-RPC response object is extended with the following fields:
 
-| field                      | type           | meaning                                      |
+| Field                      | Type           | Meaning                                      |
 |----------------------------|----------------|----------------------------------------------|
 | libra_chain_id             | unsigned int8  | network chain id, e.g. testnet chain id is 2 |
-| libra_ledger_version       | unsigned int64 | server side latest ledger version number     |
-| libra_ledger_timestampusec | unsigned int64 | server side latest ledger timestamp microseconds |
+| libra_ledger_version       | unsigned int64 | server-side latest ledger version number     |
+| libra_ledger_timestampusec | unsigned int64 | server-side latest ledger timestamp microseconds |
 
-You can use these information to verify liveness / status of nodes in the network: if the timestamp or version is old (from the past), it means that the request hit a full node that is not up-to-date.
+You can use this information to verify liveness / status of nodes in the network: if the timestamp or version is old (from the past), it means that the request hit a full node that is not up-to-date.
 
 
 #### Example:
@@ -60,15 +60,15 @@ You can use these information to verify liveness / status of nodes in the networ
 
 ### Batched requests
 
-The JSON-RPC protocol allows requests to be batched. An arbitrary number of requests (max 20 by default) can be combined into a single batch and submitted to the server. These requests will be processed together under a single request context.
+The JSON-RPC protocol allows requests to be batched. An arbitrary number of requests (maximum 20 by default) can be combined into a single batch and submitted to the server. These requests will be processed together under a single request context.
 
 
 ### Errors
 
-If errors occur during a request, they are returned in an error object, as defined in: [https://www.jsonrpc.org/specification#error_object](https://www.jsonrpc.org/specification#error_object)
-For any invalid request or parameters request, standard Error code and message with human readable information will be returned.
+If errors occur during a request, they are returned in an error object, as defined in: [https://www.jsonrpc.org/specification#error_object](https://www.jsonrpc.org/specification#error_object).
+For any invalid request or parameters request, a standard error code and message with human readable information will be returned.
 
-| code   | meaning                                 |
+| Code   | Meaning                                 |
 |--------|-----------------------------------------|
 | -32600 | standard invalid request error          |
 | -32601 | method not found or not specified       |
