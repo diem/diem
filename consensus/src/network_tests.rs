@@ -483,11 +483,14 @@ impl DropConfigRound {
 mod tests {
     use super::*;
     use crate::network::NetworkTask;
+    use bytes::Bytes;
     use consensus_types::block_retrieval::{
         BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
     };
+    use futures::{channel::oneshot, future};
     use libra_crypto::HashValue;
     use libra_types::validator_verifier::random_validator_verifier;
+    use network::protocols::direct_send::Message;
 
     #[test]
     fn test_split_network_round() {
@@ -716,5 +719,67 @@ mod tests {
                 .unwrap();
             assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
         });
+    }
+
+    #[test]
+    fn test_bad_message() {
+        let (mut peer_mgr_notifs_tx, peer_mgr_notifs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (connection_notifs_tx, connection_notifs_rx) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let consensus_network_events =
+            ConsensusNetworkEvents::new(peer_mgr_notifs_rx, connection_notifs_rx);
+        let (self_sender, self_receiver) = channel::new_test(8);
+
+        let (network_task, mut network_receivers) =
+            NetworkTask::new(consensus_network_events, self_receiver);
+
+        let peer_id = PeerId::random();
+        let protocol_id = ProtocolId::ConsensusDirectSend;
+        let bad_msg = PeerManagerNotification::RecvMessage(
+            peer_id,
+            Message {
+                protocol_id,
+                mdata: Bytes::from_static(b"\xde\xad\xbe\xef"),
+            },
+        );
+
+        peer_mgr_notifs_tx
+            .push((peer_id, protocol_id), bad_msg)
+            .unwrap();
+
+        let liveness_check_msg = ConsensusMsg::BlockRetrievalRequest(Box::new(
+            BlockRetrievalRequest::new(HashValue::random(), 1),
+        ));
+
+        let protocol_id = ProtocolId::ConsensusRpc;
+        let (res_tx, _res_rx) = oneshot::channel();
+        let liveness_check_msg = PeerManagerNotification::RecvRpc(
+            peer_id,
+            InboundRpcRequest {
+                protocol_id,
+                data: Bytes::from(lcs::to_bytes(&liveness_check_msg).unwrap()),
+                res_tx,
+            },
+        );
+
+        peer_mgr_notifs_tx
+            .push((peer_id, protocol_id), liveness_check_msg)
+            .unwrap();
+
+        let f_check = async move {
+            assert!(network_receivers.block_retrieval.next().await.is_some());
+
+            drop(peer_mgr_notifs_tx);
+            drop(connection_notifs_tx);
+            drop(self_sender);
+
+            assert!(network_receivers.block_retrieval.next().await.is_none());
+            assert!(network_receivers.consensus_messages.next().await.is_none());
+        };
+        let f_network_task = network_task.start();
+
+        let mut runtime = consensus_runtime();
+        timed_block_on(&mut runtime, future::join(f_network_task, f_check));
     }
 }

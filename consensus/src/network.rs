@@ -236,9 +236,9 @@ impl NetworkTask {
     }
 
     pub async fn start(mut self) {
-        while let Some(Ok(message)) = self.all_events.next().await {
+        while let Some(message) = self.all_events.next().await {
             match message {
-                Event::Message((peer_id, msg)) => {
+                Ok(Event::Message((peer_id, msg))) => {
                     if let Err(e) = self
                         .consensus_messages_tx
                         .push((peer_id, discriminant(&msg)), (peer_id, msg))
@@ -249,7 +249,7 @@ impl NetworkTask {
                         );
                     }
                 }
-                Event::RpcRequest((peer_id, msg, callback)) => match msg {
+                Ok(Event::RpcRequest((peer_id, msg, callback))) => match msg {
                     ConsensusMsg::BlockRetrievalRequest(request) => {
                         debug!(
                             remote_peer = peer_id,
@@ -278,11 +278,17 @@ impl NetworkTask {
                         continue;
                     }
                 },
-                Event::NewPeer(peer_id, _origin) => {
+                Ok(Event::NewPeer(peer_id, _origin)) => {
                     debug!(remote_peer = peer_id, "Peer connected");
                 }
-                Event::LostPeer(peer_id, _origin) => {
+                Ok(Event::LostPeer(peer_id, _origin)) => {
                     debug!(remote_peer = peer_id, "Peer disconnected");
+                }
+                Err(e) => {
+                    error!(
+                        SecurityEvent::ConsensusInvalidNetworkEvent,
+                        error = ?e,
+                    );
                 }
             }
         }
