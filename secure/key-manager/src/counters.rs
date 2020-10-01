@@ -21,7 +21,6 @@ const CONSENSUS_KEY: &str = "consensus_key";
 /// Metric counter states.
 pub const KEYS_STILL_FRESH: &[&str] = &[CHECK_KEYS, "keys_still_fresh"];
 pub const LIVENESS_ERROR_ENCOUNTERED: &[&str] = &[CHECK_KEYS, "liveness_error_encountered"];
-pub const NO_ACTION: &[&str] = &[CHECK_KEYS, "no_action"];
 pub const ROTATED_IN_STORAGE: &[&str] = &[CONSENSUS_KEY, "rotated_in_storage"];
 pub const SUBMITTED_ROTATION_TRANSACTION: &[&str] =
     &[CONSENSUS_KEY, "submitted_rotation_transaction"];
@@ -35,7 +34,6 @@ pub fn initialize_all_metric_counters() {
     let metric_counter_states = &[
         KEYS_STILL_FRESH,
         LIVENESS_ERROR_ENCOUNTERED,
-        NO_ACTION,
         ROTATED_IN_STORAGE,
         SUBMITTED_ROTATION_TRANSACTION,
         WAITING_ON_RECONFIGURATION,

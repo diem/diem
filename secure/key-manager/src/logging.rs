@@ -38,13 +38,13 @@ impl<'a> LogSchema<'a> {
 #[serde(rename_all = "snake_case")]
 pub enum LogEntry {
     CheckKeyStatus,
-    Initialized,
     FullKeyRotation,
+    Initialized,
     KeyRotatedInStorage,
     KeyStillFresh,
-    TransactionSubmission,
-    NoAction,
     Sleep,
+    TransactionResubmission,
+    TransactionSubmitted,
     WaitForReconfiguration,
     WaitForTransactionExecution,
 }

@@ -21,7 +21,7 @@
 
 use crate::{
     counters::{
-        KEYS_STILL_FRESH, LIVENESS_ERROR_ENCOUNTERED, NO_ACTION, ROTATED_IN_STORAGE,
+        KEYS_STILL_FRESH, LIVENESS_ERROR_ENCOUNTERED, ROTATED_IN_STORAGE,
         SUBMITTED_ROTATION_TRANSACTION, UNEXPECTED_ERROR_ENCOUNTERED, WAITING_ON_RECONFIGURATION,
         WAITING_ON_TRANSACTION_EXECUTION,
     },
@@ -179,7 +179,6 @@ where
             .event(LogEvent::Pending)
             .sleep_duration(self.sleep_period_secs));
         self.time_service.sleep(self.sleep_period_secs);
-
         info!(LogSchema::new(LogEntry::Sleep).event(LogEvent::Success));
     }
 
@@ -233,17 +232,18 @@ where
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
         let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        counters::increment_metric_counter(SUBMITTED_ROTATION_TRANSACTION);
         self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
+        info!(LogSchema::new(LogEntry::KeyRotatedInStorage).event(LogEvent::Pending));
         let consensus_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         info!(LogSchema::new(LogEntry::KeyRotatedInStorage)
             .event(LogEvent::Success)
             .consensus_key(&consensus_key));
         counters::increment_metric_counter(ROTATED_IN_STORAGE);
+
         self.submit_key_rotation_transaction(consensus_key)
     }
 
@@ -251,6 +251,8 @@ where
         &mut self,
         consensus_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
+        info!(LogSchema::new(LogEntry::TransactionSubmitted).event(LogEvent::Pending));
+
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = self.time_service.now() + self.txn_expiration_secs;
@@ -276,7 +278,9 @@ where
 
         self.libra
             .submit_transaction(Transaction::UserTransaction(signed_txn))?;
-        info!(LogSchema::new(LogEntry::TransactionSubmission).event(LogEvent::Success));
+
+        info!(LogSchema::new(LogEntry::TransactionSubmitted).event(LogEvent::Success));
+        counters::increment_metric_counter(SUBMITTED_ROTATION_TRANSACTION);
 
         Ok(consensus_key)
     }
@@ -309,11 +313,7 @@ where
         // Compare the validator config to the validator set
         match self.compare_info_to_config() {
             Ok(()) => { /* Expected */ }
-            Err(Error::ConfigInfoKeyMismatch(..)) => {
-                warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
-                counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
-                return Ok(Action::WaitForReconfiguration);
-            }
+            Err(Error::ConfigInfoKeyMismatch(..)) => return Ok(Action::WaitForReconfiguration),
             Err(e) => return Err(e),
         }
 
@@ -326,8 +326,6 @@ where
                 return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
                     Ok(Action::SubmitKeyRotationTransaction)
                 } else {
-                    warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
-                    counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
                     Ok(Action::WaitForTransactionExecution)
                 };
             }
@@ -337,8 +335,6 @@ where
         if last_rotation + self.rotation_period_secs <= self.time_service.now() {
             Ok(Action::FullKeyRotation)
         } else {
-            info!(LogSchema::new(LogEntry::KeyStillFresh));
-            counters::increment_metric_counter(KEYS_STILL_FRESH);
             Ok(Action::NoAction)
         }
     }
@@ -347,18 +343,29 @@ where
         match action {
             Action::FullKeyRotation => {
                 info!(LogSchema::new(LogEntry::FullKeyRotation).event(LogEvent::Pending));
-                self.rotate_consensus_key().map(|_| ())
+                self.rotate_consensus_key().map(|_| ())?;
+                info!(LogSchema::new(LogEntry::FullKeyRotation).event(LogEvent::Success));
             }
             Action::SubmitKeyRotationTransaction => {
-                info!(LogSchema::new(LogEntry::TransactionSubmission).event(LogEvent::Pending));
-                self.resubmit_consensus_key_transaction()
+                info!(LogSchema::new(LogEntry::TransactionResubmission).event(LogEvent::Pending));
+                self.resubmit_consensus_key_transaction()?;
+                info!(LogSchema::new(LogEntry::TransactionResubmission).event(LogEvent::Success));
             }
-            _ => {
-                info!(LogSchema::new(LogEntry::NoAction));
-                counters::increment_metric_counter(NO_ACTION);
-                Ok(())
+            Action::NoAction => {
+                info!(LogSchema::new(LogEntry::KeyStillFresh));
+                counters::increment_metric_counter(KEYS_STILL_FRESH);
             }
-        }
+            Action::WaitForReconfiguration => {
+                warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
+                counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
+            }
+            Action::WaitForTransactionExecution => {
+                warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
+                counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
+            }
+        };
+
+        Ok(())
     }
 
     fn get_account_from_storage(&self, account_name: &str) -> Result<AccountAddress, Error> {
