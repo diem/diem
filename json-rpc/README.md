@@ -1,6 +1,21 @@
 # JSON-RPC
 
-JSON-RPC service provides APIs for client applications to connect to Libra blockchain.
+JSON-RPC service provides APIs for client applications to query the Libra blockchain.
+
+There are two types of clients, and thus two types of APIs:
+
+* verifying clients. These clients verify the cryptographic proofs accompanying responses from the server.
+* non-verifying clients. Such clients completely trust the full node they query. If the server decides to lie about the data contained in a response, the client wouldn't know it. This mode is used when a client runs their own full node.
+
+## Usage and versioning
+
+Refer to the [specification](https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md).
+
+## Security Concerns
+
+It currently is exposed to 0.0.0.0 by default, so be aware of that.
+
+It also uses liberal CORS policies, so its API must not use any secrets (e.g. tokens, credentials, etc.)
 
 ## Test
 
