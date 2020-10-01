@@ -289,7 +289,7 @@ Note: Access control.  No one but the owner of the account may change .operator_
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [B24].
+Must abort if the signer does not have the Validator role [H14].
 
 
 <a name="0x1_ValidatorConfig_sender$15"></a>
@@ -306,7 +306,7 @@ Must abort if the signer does not have the Validator role [B24].
 </code></pre>
 
 
-The signer can only change its own operator account [B24].
+The signer can only change its own operator account [H14].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr: address <b>where</b> addr != sender:
@@ -393,7 +393,7 @@ The old config is preserved.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [B24].
+Must abort if the signer does not have the Validator role [H14].
 
 
 <a name="0x1_ValidatorConfig_sender$16"></a>
@@ -407,7 +407,7 @@ Must abort if the signer does not have the Validator role [B24].
 </code></pre>
 
 
-The signer can only change its own operator account [B24].
+The signer can only change its own operator account [H14].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr: address <b>where</b> addr != sender:
@@ -774,7 +774,7 @@ change the operator_account field of ValidatorConfig, and this shows that they d
 
 
 
-set_operator, remove_operator can change the operator account [B24].
+set_operator, remove_operator can change the operator account [H14].
 
 
 <pre><code><b>apply</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_OperatorRemainsSame">OperatorRemainsSame</a> <b>to</b> * <b>except</b> set_operator, remove_operator;

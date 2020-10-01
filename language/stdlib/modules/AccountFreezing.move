@@ -169,17 +169,17 @@ module AccountFreezing {
         invariant [global] LibraTimestamp::is_operating() ==>
             exists<FreezeEventsHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        /// The account of LibraRoot is not freezable [G2].
+        /// The account of LibraRoot is not freezable [F1].
         /// After genesis, FreezingBit of LibraRoot is always false.
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        /// The account of TreasuryCompliance is not freezable [G3].
+        /// The account of TreasuryCompliance is not freezable [F2].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
-        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B16].
+        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [H6].
         apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
 
         // TODO: Need to decide the freezability of the roles such as Validator, ValidatorOperator, DesginatedDealer.
@@ -192,7 +192,7 @@ module AccountFreezing {
     }
 
     spec module {
-        /// only (un)freeze functions can change the freezing bits of accounts [B16].
+        /// only (un)freeze functions can change the freezing bits of accounts [H6].
         apply FreezingBitRemainsSame to * except freeze_account, unfreeze_account;
     }
 

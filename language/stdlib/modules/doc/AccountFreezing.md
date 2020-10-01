@@ -528,7 +528,7 @@ FreezeEventsHolder always exists after genesis.
 </code></pre>
 
 
-The account of LibraRoot is not freezable [G2].
+The account of LibraRoot is not freezable [F1].
 After genesis, FreezingBit of LibraRoot is always false.
 
 
@@ -537,7 +537,7 @@ After genesis, FreezingBit of LibraRoot is always false.
 </code></pre>
 
 
-The account of TreasuryCompliance is not freezable [G3].
+The account of TreasuryCompliance is not freezable [F2].
 After genesis, FreezingBit of TreasuryCompliance is always false.
 
 
@@ -546,7 +546,7 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
-The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B16].
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [H6].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
@@ -568,7 +568,7 @@ The freezing bit stays constant.
 
 
 
-only (un)freeze functions can change the freezing bits of accounts [B16].
+only (un)freeze functions can change the freezing bits of accounts [H6].
 
 
 <pre><code><b>apply</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;

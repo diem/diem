@@ -517,50 +517,50 @@ module Roles {
     /// TODO(wrwg): link to requirements
 
     spec module {
-        /// The LibraRoot role is only granted in genesis [B2]. A new `RoleId` with `LIBRA_ROOT_ROLE_ID` is only
+        /// The LibraRoot role is only granted in genesis [A1]. A new `RoleId` with `LIBRA_ROOT_ROLE_ID` is only
         /// published through `grant_libra_root_role` which aborts if it is not invoked in genesis.
         apply ThisRoleIsNotNewlyPublished{this: LIBRA_ROOT_ROLE_ID} to * except grant_libra_root_role, grant_role;
         apply LibraTimestamp::AbortsIfNotGenesis to grant_libra_root_role;
 
-        /// TreasuryCompliance role is only granted in genesis [B3]. A new `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` is only
+        /// TreasuryCompliance role is only granted in genesis [A2]. A new `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` is only
         /// published through `grant_treasury_compliance_role` which aborts if it is not invoked in genesis.
         apply ThisRoleIsNotNewlyPublished{this: TREASURY_COMPLIANCE_ROLE_ID} to * except grant_treasury_compliance_role, grant_role;
         apply LibraTimestamp::AbortsIfNotGenesis to grant_treasury_compliance_role;
 
-        /// Validator roles are only granted by LibraRoot [B4]. A new `RoleId` with `VALIDATOR_ROLE_ID` is only
+        /// Validator roles are only granted by LibraRoot [A3]. A new `RoleId` with `VALIDATOR_ROLE_ID` is only
         /// published through `new_validator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: VALIDATOR_ROLE_ID} to * except new_validator_role, grant_role;
         apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_role;
 
-        /// ValidatorOperator roles are only granted by LibraRoot [B5]. A new `RoleId` with `VALIDATOR_OPERATOR_ROLE_ID` is only
+        /// ValidatorOperator roles are only granted by LibraRoot [A4]. A new `RoleId` with `VALIDATOR_OPERATOR_ROLE_ID` is only
         /// published through `new_validator_operator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: VALIDATOR_OPERATOR_ROLE_ID} to * except new_validator_operator_role, grant_role;
         apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_operator_role;
 
-        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6]. A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()`
+        /// DesignatedDealer roles are only granted by TreasuryCompliance [A5]. A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()`
         /// is only published through `new_designated_dealer_role` which aborts if `creating_account` does not have the
         /// TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: DESIGNATED_DEALER_ROLE_ID} to * except new_designated_dealer_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_designated_dealer_role;
 
-        /// ParentVASP roles are only granted by LibraRoot [B7]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
+        /// ParentVASP roles are only granted by LibraRoot [A6]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
         /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: PARENT_VASP_ROLE_ID} to * except new_parent_vasp_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_parent_vasp_role;
 
-        /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoleId` with `CHILD_VASP_ROLE_ID` is only
+        /// ChildVASP roles are only granted by ParentVASP [A7]. A new `RoleId` with `CHILD_VASP_ROLE_ID` is only
         /// published through `new_child_vasp_role` which aborts if `creating_account` does not have the ParentVASP role.
         apply ThisRoleIsNotNewlyPublished{this: CHILD_VASP_ROLE_ID} to * except new_child_vasp_role, grant_role;
         apply AbortsIfNotParentVasp{account: creating_account} to new_child_vasp_role;
 
-        /// The LibraRoot role is globally unique [C2], and is published at LIBRA_ROOT_ADDRESS [D2].
+        /// The LibraRoot role is globally unique [B1], and is published at LIBRA_ROOT_ADDRESS [C1].
         /// In other words, a `RoleId` with `LIBRA_ROOT_ROLE_ID` uniquely exists at `LIBRA_ROOT_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_libra_root_role_addr(addr):
           addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
         invariant [global, isolated]
             LibraTimestamp::is_operating() ==> spec_has_libra_root_role_addr(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        /// The TreasuryCompliance role is globally unique [C3], and is published at TREASURY_COMPLIANCE_ADDRESS [D3].
+        /// The TreasuryCompliance role is globally unique [B2], and is published at TREASURY_COMPLIANCE_ADDRESS [C2].
         /// In other words, a `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` uniquely exists at `TREASURY_COMPLIANCE_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
           addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -568,31 +568,31 @@ module Roles {
             LibraTimestamp::is_operating() ==>
                 spec_has_treasury_compliance_role_addr(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
-        /// LibraRoot cannot have balances [E2].
+        /// LibraRoot cannot have balances [D1].
         invariant [global, isolated] forall addr: address where spec_has_libra_root_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
-        /// TreasuryCompliance cannot have balances [E3].
+        /// TreasuryCompliance cannot have balances [D2].
         invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
-        /// Validator cannot have balances [E4].
+        /// Validator cannot have balances [D3].
         invariant [global, isolated] forall addr: address where spec_has_validator_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
-        /// ValidatorOperator cannot have balances [E5].
+        /// ValidatorOperator cannot have balances [D4].
         invariant [global, isolated] forall addr: address where spec_has_validator_operator_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
-        /// DesignatedDealer have balances [E6].
+        /// DesignatedDealer have balances [D5].
         invariant [global, isolated] forall addr: address where spec_has_designated_dealer_role_addr(addr):
             spec_can_hold_balance_addr(addr);
 
-        /// ParentVASP have balances [E7].
+        /// ParentVASP have balances [D6].
         invariant [global, isolated] forall addr: address where spec_has_parent_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
 
-        /// ChildVASP have balances [E8].
+        /// ChildVASP have balances [D7].
         invariant [global, isolated] forall addr: address where spec_has_child_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
     }

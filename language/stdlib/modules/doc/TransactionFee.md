@@ -338,7 +338,7 @@ underlying fiat.
 </code></pre>
 
 
-Must abort if the account does not have the TreasuryCompliance role [B12].
+Must abort if the account does not have the TreasuryCompliance role [H2].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -402,7 +402,7 @@ Specification of the case where burn type is not LBR.
 </code></pre>
 
 
-Must abort if the account does not have BurnCapability [B12].
+Must abort if the account does not have BurnCapability [H2].
 
 
 <pre><code><b>schema</b> <a href="TransactionFee.md#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
@@ -414,7 +414,7 @@ Must abort if the account does not have BurnCapability [B12].
 </code></pre>
 
 
-tc_account retrieves BurnCapability [B12]. BurnCapability is not transferrable [D12].
+tc_account retrieves BurnCapability [H2]. BurnCapability is not transferrable [J2].
 
 
 <pre><code><b>schema</b> <a href="TransactionFee.md#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {

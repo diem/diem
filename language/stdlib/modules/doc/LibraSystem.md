@@ -561,7 +561,7 @@ in validator_set
 </code></pre>
 
 
-Must abort if the signer does not have the ValidatorOperator role [B23].
+Must abort if the signer does not have the ValidatorOperator role [H13].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{validator_operator_addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account)};
@@ -1078,7 +1078,7 @@ CapabilityHolder at Libra root.
 </code></pre>
 
 
-The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
+The permission "{Add, Remove} Validator" is granted to LibraRoot [H12].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
@@ -1109,8 +1109,8 @@ set_libra_system_config is a private function, so it does not have to preserve t
 
 
 
-Only {add, remove} validator [B22] and update_config_and_reconfigure
-[B23] may change the set of validators in the configuration.
+Only {add, remove} validator [H12] and update_config_and_reconfigure
+[H13] may change the set of validators in the configuration.
 
 
 <pre><code><b>apply</b> <a href="LibraSystem.md#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> <b>to</b> *, *&lt;T&gt;

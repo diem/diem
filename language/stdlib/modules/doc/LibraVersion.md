@@ -85,7 +85,7 @@ Tried to set an invalid major version for the VM. Major versions must be strictl
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [B19].
+Must abort if the signer does not have the LibraRoot role [H9].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -140,7 +140,7 @@ Must abort if the signer does not have the LibraRoot role [B19].
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [B19].
+Must abort if the signer does not have the LibraRoot role [H9].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -159,7 +159,7 @@ After genesis, version is published.
 </code></pre>
 
 
-The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B19].
+The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [H9].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="LibraVersion.md#0x1_LibraVersion">LibraVersion</a>&gt;&gt;(addr):
@@ -167,7 +167,7 @@ The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B19].
 </code></pre>
 
 
-Only "set" can modify the LibraVersion config [B19]
+Only "set" can modify the LibraVersion config [H9]
 
 
 <a name="0x1_LibraVersion_LibraVersionRemainsSame"></a>

@@ -244,7 +244,7 @@ module LibraSystem {
     }
     spec fun update_config_and_reconfigure {
         include LibraTimestamp::AbortsIfNotOperating;
-        /// Must abort if the signer does not have the ValidatorOperator role [B23].
+        /// Must abort if the signer does not have the ValidatorOperator role [H13].
         include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: Signer::address_of(validator_operator_account)};
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
         aborts_if ValidatorConfig::spec_get_operator(validator_address)
@@ -493,7 +493,7 @@ module LibraSystem {
     }
 
 
-    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
+    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [H12].
     spec module {
        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
     }
@@ -514,8 +514,8 @@ module LibraSystem {
         ensures spec_get_validators() == old(spec_get_validators());
     }
     spec module {
-        /// Only {add, remove} validator [B22] and update_config_and_reconfigure
-        /// [B23] may change the set of validators in the configuration.
+        /// Only {add, remove} validator [H12] and update_config_and_reconfigure
+        /// [H13] may change the set of validators in the configuration.
         apply ValidatorSetConfigRemainsSame to *, *<T>
            except add_validator, remove_validator, update_config_and_reconfigure,
                initialize_validator_set, set_libra_system_config;

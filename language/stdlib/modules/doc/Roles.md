@@ -1478,7 +1478,7 @@ included in individual function specifications, listing them here again gives ad
 assurance that that all requirements are covered.
 TODO(wrwg): link to requirements
 
-The LibraRoot role is only granted in genesis [B2]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a></code> is only
+The LibraRoot role is only granted in genesis [A1]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a></code> is only
 published through <code>grant_libra_root_role</code> which aborts if it is not invoked in genesis.
 
 
@@ -1487,7 +1487,7 @@ published through <code>grant_libra_root_role</code> which aborts if it is not i
 </code></pre>
 
 
-TreasuryCompliance role is only granted in genesis [B3]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a></code> is only
+TreasuryCompliance role is only granted in genesis [A2]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a></code> is only
 published through <code>grant_treasury_compliance_role</code> which aborts if it is not invoked in genesis.
 
 
@@ -1496,7 +1496,7 @@ published through <code>grant_treasury_compliance_role</code> which aborts if it
 </code></pre>
 
 
-Validator roles are only granted by LibraRoot [B4]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a></code> is only
+Validator roles are only granted by LibraRoot [A3]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a></code> is only
 published through <code>new_validator_role</code> which aborts if <code>creating_account</code> does not have the LibraRoot role.
 
 
@@ -1505,7 +1505,7 @@ published through <code>new_validator_role</code> which aborts if <code>creating
 </code></pre>
 
 
-ValidatorOperator roles are only granted by LibraRoot [B5]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a></code> is only
+ValidatorOperator roles are only granted by LibraRoot [A4]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a></code> is only
 published through <code>new_validator_operator_role</code> which aborts if <code>creating_account</code> does not have the LibraRoot role.
 
 
@@ -1514,7 +1514,7 @@ published through <code>new_validator_operator_role</code> which aborts if <code
 </code></pre>
 
 
-DesignatedDealer roles are only granted by TreasuryCompliance [B6]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>()</code>
+DesignatedDealer roles are only granted by TreasuryCompliance [A5]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>()</code>
 is only published through <code>new_designated_dealer_role</code> which aborts if <code>creating_account</code> does not have the
 TreasuryCompliance role.
 
@@ -1524,7 +1524,7 @@ TreasuryCompliance role.
 </code></pre>
 
 
-ParentVASP roles are only granted by LibraRoot [B7]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>()</code> is only
+ParentVASP roles are only granted by LibraRoot [A6]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>()</code> is only
 published through <code>new_parent_vasp_role</code> which aborts if <code>creating_account</code> does not have the TreasuryCompliance role.
 
 
@@ -1533,7 +1533,7 @@ published through <code>new_parent_vasp_role</code> which aborts if <code>creati
 </code></pre>
 
 
-ChildVASP roles are only granted by ParentVASP [B8]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a></code> is only
+ChildVASP roles are only granted by ParentVASP [A7]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a></code> is only
 published through <code>new_child_vasp_role</code> which aborts if <code>creating_account</code> does not have the ParentVASP role.
 
 
@@ -1542,7 +1542,7 @@ published through <code>new_child_vasp_role</code> which aborts if <code>creatin
 </code></pre>
 
 
-The LibraRoot role is globally unique [C2], and is published at LIBRA_ROOT_ADDRESS [D2].
+The LibraRoot role is globally unique [B1], and is published at LIBRA_ROOT_ADDRESS [C1].
 In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a></code> uniquely exists at <code>LIBRA_ROOT_ADDRESS</code>.
 
 
@@ -1553,7 +1553,7 @@ In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> wi
 </code></pre>
 
 
-The TreasuryCompliance role is globally unique [C3], and is published at TREASURY_COMPLIANCE_ADDRESS [D3].
+The TreasuryCompliance role is globally unique [B2], and is published at TREASURY_COMPLIANCE_ADDRESS [C2].
 In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a></code> uniquely exists at <code>TREASURY_COMPLIANCE_ADDRESS</code>.
 
 
@@ -1565,7 +1565,7 @@ In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> wi
 </code></pre>
 
 
-LibraRoot cannot have balances [E2].
+LibraRoot cannot have balances [D1].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
@@ -1573,7 +1573,7 @@ LibraRoot cannot have balances [E2].
 </code></pre>
 
 
-TreasuryCompliance cannot have balances [E3].
+TreasuryCompliance cannot have balances [D2].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
@@ -1581,7 +1581,7 @@ TreasuryCompliance cannot have balances [E3].
 </code></pre>
 
 
-Validator cannot have balances [E4].
+Validator cannot have balances [D3].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">spec_has_validator_role_addr</a>(addr):
@@ -1589,7 +1589,7 @@ Validator cannot have balances [E4].
 </code></pre>
 
 
-ValidatorOperator cannot have balances [E5].
+ValidatorOperator cannot have balances [D4].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">spec_has_validator_operator_role_addr</a>(addr):
@@ -1597,7 +1597,7 @@ ValidatorOperator cannot have balances [E5].
 </code></pre>
 
 
-DesignatedDealer have balances [E6].
+DesignatedDealer have balances [D5].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr):
@@ -1605,7 +1605,7 @@ DesignatedDealer have balances [E6].
 </code></pre>
 
 
-ParentVASP have balances [E7].
+ParentVASP have balances [D6].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr):
@@ -1613,7 +1613,7 @@ ParentVASP have balances [E7].
 </code></pre>
 
 
-ChildVASP have balances [E8].
+ChildVASP have balances [D7].
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr):

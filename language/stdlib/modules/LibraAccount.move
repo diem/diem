@@ -671,7 +671,7 @@ module LibraAccount {
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
     spec fun withdraw_from {
-        /// Can only withdraw from the balances of cap.account_address [B27].
+        /// Can only withdraw from the balances of cap.account_address [H17].
         ensures forall addr1: address where old(exists<Balance<Token>>(addr1)) && addr1 != cap.account_address:
             global<Balance<Token>>(addr1).coin.value == old(global<Balance<Token>>(addr1).coin.value);
         // TODO(jkpark): this spec block is incomplete.
@@ -881,7 +881,7 @@ module LibraAccount {
         include RotateAuthenticationKeyAbortsIf;
         include RotateAuthenticationKeyEnsures{addr: cap.account_address};
 
-        /// Can only rotate the authentication_key of cap.account_address [B26].
+        /// Can only rotate the authentication_key of cap.account_address [H16].
         ensures forall addr1: address where addr1 != cap.account_address && old(exists_at(addr1)):
             global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
     }
@@ -1342,7 +1342,7 @@ module LibraAccount {
         /// `Currency` must be valid
         include Libra::AbortsIfNoCurrency<Token>;
         /// `account` must be allowed to hold balances. This function must abort if the predicate
-        /// `can_hold_balance` for `account` returns false [E2][E3][E4][E5][E6][E7][E8].
+        /// `can_hold_balance` for `account` returns false [D1][D2][D3][D4][D5][D6][D7].
         aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT;
         /// `account` cannot have an existing balance in `Currency`
         aborts_if exists<Balance<Token>>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
@@ -1573,7 +1573,7 @@ module LibraAccount {
         let transaction_sender = Signer::spec_address_of(sender);
         /// Covered: L146 (Match 0)
         aborts_if transaction_sender != CoreAddresses::LIBRA_ROOT_ADDRESS() with Errors::INVALID_ARGUMENT;
-        /// Must abort if the signer does not have the LibraRoot role [B18].
+        /// Must abort if the signer does not have the LibraRoot role [H8].
         /// Covered: L146 (Match 0)
         aborts_if !Roles::spec_has_libra_root_role_addr(transaction_sender) with Errors::INVALID_ARGUMENT;
         include AbortsIfPrologueCommon<LBR::LBR>{
@@ -1937,18 +1937,18 @@ module LibraAccount {
                 (!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1));
     }
     spec module {
-        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [H16].
         /// When an account is created, its KeyRotationCapability is granted to the account.
         apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
 
-        /// Only `make_account` creates KeyRotationCap [B26][C26]. `create_*_account` only calls
+        /// Only `make_account` creates KeyRotationCap [H16][I16]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
         apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account,
               restore_key_rotation_capability, initialize;
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
-        /// or the key rotation capability for addr itself [B26].
+        /// or the key rotation capability for addr itself [H16].
         invariant [global] forall addr1: address where exists_at(addr1):
             delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
@@ -1965,18 +1965,18 @@ module LibraAccount {
                 (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability));
     }
     spec module {
-        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
+        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [H17].
         /// When an account is created, its WithdrawCapability is granted to the account.
         apply EnsuresWithdrawalCap{account: new_account} to make_account;
 
-        /// Only `make_account` creates WithdrawCap [B27][C27]. `create_*_account` only calls
+        /// Only `make_account` creates WithdrawCap [H17][I17]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
         apply PreserveWithdrawCapAbsence to * except make_account, create_*_account,
                 restore_withdraw_capability, initialize;
 
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
-        /// or the withdraw capability for addr itself [B27].
+        /// or the withdraw capability for addr itself [H17].
         invariant [global] forall addr1: address where exists_at(addr1):
             delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
     }
@@ -2006,7 +2006,7 @@ module LibraAccount {
 
     }
 
-    /// only rotate_authentication_key can rotate authentication_key [B26].
+    /// only rotate_authentication_key can rotate authentication_key [H16].
     spec schema AuthenticationKeyRemainsSame {
         ensures forall addr1: address where old(exists_at(addr1)):
             global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
@@ -2022,7 +2022,7 @@ module LibraAccount {
             Roles::spec_can_hold_balance_addr(addr1);
     }
 
-    /// only withdraw_from and its helper and clients can withdraw [B27].
+    /// only withdraw_from and its helper and clients can withdraw [H17].
     spec schema BalanceNotDecrease<Token> {
         ensures forall addr1: address where old(exists<Balance<Token>>(addr1)):
             global<Balance<Token>>(addr1).coin.value >= old(global<Balance<Token>>(addr1).coin.value);

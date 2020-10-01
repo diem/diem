@@ -26,7 +26,7 @@ module LibraVersion {
         );
     }
     spec fun initialize {
-        /// Must abort if the signer does not have the LibraRoot role [B19].
+        /// Must abort if the signer does not have the LibraRoot role [H9].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraTimestamp::AbortsIfNotGenesis;
@@ -52,7 +52,7 @@ module LibraVersion {
         );
     }
     spec fun set {
-        /// Must abort if the signer does not have the LibraRoot role [B19].
+        /// Must abort if the signer does not have the LibraRoot role [H9].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraTimestamp::AbortsIfNotOperating;
@@ -65,12 +65,12 @@ module LibraVersion {
         /// After genesis, version is published.
         invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<LibraVersion>();
 
-        /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B19].
+        /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [H9].
         invariant [global, isolated] forall addr: address where exists<LibraConfig<LibraVersion>>(addr):
             addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
     }
 
-    /// Only "set" can modify the LibraVersion config [B19]
+    /// Only "set" can modify the LibraVersion config [H9]
     spec schema LibraVersionRemainsSame {
         ensures old(LibraConfig::spec_is_published<LibraVersion>()) ==>
             global<LibraConfig<LibraVersion>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) ==

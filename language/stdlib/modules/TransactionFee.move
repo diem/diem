@@ -152,7 +152,7 @@ module TransactionFee {
     spec fun burn_fees {
         // Oddly, this times out in "cargo test" but works when the file is verified individually.
         pragma verify = false;
-        /// Must abort if the account does not have the TreasuryCompliance role [B12].
+        /// Must abort if the account does not have the TreasuryCompliance role [H2].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         include LibraTimestamp::AbortsIfNotOperating;
@@ -182,13 +182,13 @@ module TransactionFee {
     /// Specification of the case where burn type is not LBR.
     spec schema BurnFeesNotLBR<CoinType> {
         tc_account: signer;
-        /// Must abort if the account does not have BurnCapability [B12].
+        /// Must abort if the account does not have BurnCapability [H2].
         include Libra::AbortsIfNoBurnCapability<CoinType>{account: tc_account};
 
         let fees = transaction_fee<CoinType>();
         include Libra::BurnNowAbortsIf<CoinType>{coin: fees.balance, preburn: fees.preburn};
 
-        /// tc_account retrieves BurnCapability [B12]. BurnCapability is not transferrable [D12].
+        /// tc_account retrieves BurnCapability [H2]. BurnCapability is not transferrable [J2].
         ensures exists<Libra::BurnCapability<CoinType>>(Signer::spec_address_of(tc_account));
     }
 }

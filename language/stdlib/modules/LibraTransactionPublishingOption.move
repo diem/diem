@@ -44,7 +44,7 @@ module LibraTransactionPublishingOption {
         );
     }
     spec fun initialize {
-        /// Must abort if the signer does not have the LibraRoot role [B20].
+        /// Must abort if the signer does not have the LibraRoot role [H10].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraTimestamp::AbortsIfNotGenesis;
@@ -101,7 +101,7 @@ module LibraTransactionPublishingOption {
     }
     spec fun add_to_script_allow_list {
         pragma aborts_if_is_partial = true;
-        /// Must abort if the signer does not have the LibraRoot role [B20].
+        /// Must abort if the signer does not have the LibraRoot role [H10].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
@@ -118,7 +118,7 @@ module LibraTransactionPublishingOption {
     }
     spec fun set_open_script {
         pragma aborts_if_is_partial = true;
-        /// Must abort if the signer does not have the LibraRoot role [B20].
+        /// Must abort if the signer does not have the LibraRoot role [H10].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
@@ -136,7 +136,7 @@ module LibraTransactionPublishingOption {
     }
     spec fun set_open_module {
         pragma aborts_if_is_partial = true;
-        /// Must abort if the signer does not have the LibraRoot role [B20].
+        /// Must abort if the signer does not have the LibraRoot role [H10].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
@@ -144,7 +144,7 @@ module LibraTransactionPublishingOption {
     }
 
     /// Only add_to_script_allow_list, set_open_script, and set_open_module can modify the
-    /// LibraTransactionPublishingOption config [B20]
+    /// LibraTransactionPublishingOption config [H10]
     spec schema LibraVersionRemainsSame {
         ensures old(LibraConfig::spec_is_published<LibraTransactionPublishingOption>()) ==>
             global<LibraConfig<LibraTransactionPublishingOption>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) ==
