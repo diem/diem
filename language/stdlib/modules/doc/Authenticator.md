@@ -316,5 +316,5 @@ does not matter for the verification of callers.
 
 <pre><code><b>define</b> <a href="Authenticator.md#0x1_Authenticator_spec_ed25519_authentication_key">spec_ed25519_authentication_key</a>(public_key: vector&lt;u8&gt;): vector&lt;u8&gt;;
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

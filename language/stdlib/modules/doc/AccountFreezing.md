@@ -538,7 +538,7 @@ Assert that an account is not frozen.
 ### Access Control
 
 
-The account of LibraRoot is not freezable [F1].
+The account of LibraRoot is not freezable [[F1]][ROLE].
 After genesis, FreezingBit of LibraRoot is always false.
 
 
@@ -547,7 +547,7 @@ After genesis, FreezingBit of LibraRoot is always false.
 </code></pre>
 
 
-The account of TreasuryCompliance is not freezable [F2].
+The account of TreasuryCompliance is not freezable [[F2]][ROLE].
 After genesis, FreezingBit of TreasuryCompliance is always false.
 
 
@@ -556,14 +556,14 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
-The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [H6].
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H6]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
 </code></pre>
 
 
-Only (un)freeze functions can change the freezing bits of accounts [H6].
+Only (un)freeze functions can change the freezing bits of accounts [[H6]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;
@@ -600,5 +600,5 @@ Only (un)freeze functions can change the freezing bits of accounts [H6].
     <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && !<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
 }
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

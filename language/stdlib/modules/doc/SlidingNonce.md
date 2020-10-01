@@ -329,5 +329,5 @@ Specification version of <code><a href="SlidingNonce.md#0x1_SlidingNonce_try_rec
 
 <pre><code><b>define</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

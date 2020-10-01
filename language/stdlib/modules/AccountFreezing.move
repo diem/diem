@@ -173,20 +173,20 @@ module AccountFreezing {
 
     /// # Access Control
     spec module {
-        /// The account of LibraRoot is not freezable [F1].
+        /// The account of LibraRoot is not freezable [[F1]][ROLE].
         /// After genesis, FreezingBit of LibraRoot is always false.
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        /// The account of TreasuryCompliance is not freezable [F2].
+        /// The account of TreasuryCompliance is not freezable [[F2]][ROLE].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
-        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [H6].
+        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H6]][PERMISSION].
         apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
 
-        /// Only (un)freeze functions can change the freezing bits of accounts [H6].
+        /// Only (un)freeze functions can change the freezing bits of accounts [[H6]][PERMISSION].
         apply FreezingBitRemainsSame to * except freeze_account, unfreeze_account;
     }
 

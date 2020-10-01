@@ -289,7 +289,7 @@ Note: Access control.  No one but the owner of the account may change .operator_
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [H14].
+Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
 
 
 <a name="0x1_ValidatorConfig_sender$15"></a>
@@ -306,7 +306,7 @@ Must abort if the signer does not have the Validator role [H14].
 </code></pre>
 
 
-The signer can only change its own operator account [H14].
+The signer can only change its own operator account [[H14]][PERMISSION].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr: address <b>where</b> addr != sender:
@@ -393,7 +393,7 @@ The old config is preserved.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [H14].
+Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
 
 
 <a name="0x1_ValidatorConfig_sender$16"></a>
@@ -407,7 +407,7 @@ Must abort if the signer does not have the Validator role [H14].
 </code></pre>
 
 
-The signer can only change its own operator account [H14].
+The signer can only change its own operator account [[H14]][PERMISSION].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr: address <b>where</b> addr != sender:
@@ -774,7 +774,7 @@ change the operator_account field of ValidatorConfig, and this shows that they d
 
 
 
-set_operator, remove_operator can change the operator account [H14].
+set_operator, remove_operator can change the operator account [[H14]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_OperatorRemainsSame">OperatorRemainsSame</a> <b>to</b> * <b>except</b> set_operator, remove_operator;
@@ -809,5 +809,5 @@ previous one as a helper.
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr1):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr1);
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

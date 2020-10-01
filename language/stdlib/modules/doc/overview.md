@@ -59,5 +59,5 @@ For documentation of transaction scripts which constitute the client API, see
 -  [0x1::ValidatorConfig](ValidatorConfig.md#0x1_ValidatorConfig)
 -  [0x1::ValidatorOperatorConfig](ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [0x1::Vector](Vector.md#0x1_Vector)
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

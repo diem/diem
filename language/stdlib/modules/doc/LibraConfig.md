@@ -840,5 +840,5 @@ After genesis, no new configurations are added.
 <b>invariant</b> <b>update</b> [<b>global</b>]
     (<b>forall</b> config_type: type <b>where</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()): <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;());
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

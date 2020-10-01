@@ -532,5 +532,5 @@ Returns true if <code>recovery_address</code> holds the
     <b>forall</b> recovery_addr: address <b>where</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr):
         <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_addr);
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

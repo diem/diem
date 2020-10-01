@@ -169,8 +169,10 @@ module AccountLimits {
         lr_account: signer;
         to_limit: signer;
         limit_address: address;
+        /// Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
+        include Roles::AbortsIfNotParentVaspOrChildVasp{account: to_limit};
+
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
-        include Roles::AbortsIfNotParentVaspOrChildVasp{account: to_limit}; // Only ParentVASP and ChildVASP can have the account limits [E1][E2][E3][E4][E5][E6][E7].
         aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
         aborts_if exists<Window<CoinType>>(Signer::spec_address_of(to_limit)) with Errors::ALREADY_PUBLISHED;
     }

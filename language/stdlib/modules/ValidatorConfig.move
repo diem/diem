@@ -106,7 +106,7 @@ module ValidatorConfig {
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
     spec fun set_operator {
-        /// Must abort if the signer does not have the Validator role [H14].
+        /// Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
 
@@ -117,7 +117,7 @@ module ValidatorConfig {
         ensures spec_has_operator(sender);
         ensures spec_get_operator(sender) == operator_account;
 
-        /// The signer can only change its own operator account [H14].
+        /// The signer can only change its own operator account [[H14]][PERMISSION].
         ensures forall addr: address where addr != sender:
             global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
@@ -155,14 +155,14 @@ module ValidatorConfig {
     }
 
     spec fun remove_operator {
-        /// Must abort if the signer does not have the Validator role [H14].
+        /// Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
         include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(validator_account));
         ensures spec_get_operator(sender) == sender;
 
-        /// The signer can only change its own operator account [H14].
+        /// The signer can only change its own operator account [[H14]][PERMISSION].
         ensures forall addr: address where addr != sender:
             global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
@@ -317,7 +317,7 @@ module ValidatorConfig {
             global<ValidatorConfig>(addr1).operator_account == old(global<ValidatorConfig>(addr1).operator_account);
     }
     spec module {
-        ///  set_operator, remove_operator can change the operator account [H14].
+        ///  set_operator, remove_operator can change the operator account [[H14]][PERMISSION].
         apply OperatorRemainsSame to * except set_operator, remove_operator;
     }
 

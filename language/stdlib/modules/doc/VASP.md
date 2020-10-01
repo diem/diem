@@ -731,5 +731,5 @@ Returns the number of children under <code>parent</code>.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>forall</b> a: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(a)): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

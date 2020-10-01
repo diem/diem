@@ -496,8 +496,16 @@ their root/parent account.
     lr_account: signer;
     to_limit: signer;
     limit_address: address;
-    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+}
+</code></pre>
+
+
+Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
+
+
+<pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishWindowAbortsIf">PublishWindowAbortsIf</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrChildVasp">Roles::AbortsIfNotParentVaspOrChildVasp</a>{account: to_limit};
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
@@ -1258,5 +1266,5 @@ Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinitio
    <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr).limit_address);
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

@@ -486,5 +486,5 @@ After genesis, time progresses monotonically.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">is_operating</a>()) ==&gt; <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

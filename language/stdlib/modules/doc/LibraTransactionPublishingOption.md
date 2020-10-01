@@ -130,7 +130,7 @@ The script hash already exists in the allowlist
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [H10].
+Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -285,7 +285,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [H10].
+Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -333,7 +333,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [H10].
+Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -382,7 +382,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [H10].
+Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -391,7 +391,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 
 
 Only add_to_script_allow_list, set_open_script, and set_open_module can modify the
-LibraTransactionPublishingOption config [H10]
+LibraTransactionPublishingOption config [[H10]][PERMISSION]
 
 
 <a name="0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame"></a>
@@ -432,5 +432,5 @@ LibraTransactionPublishingOption config [H10]
 
 
 </details>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

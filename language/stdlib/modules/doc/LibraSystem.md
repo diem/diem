@@ -561,7 +561,7 @@ in validator_set
 </code></pre>
 
 
-Must abort if the signer does not have the ValidatorOperator role [H13].
+Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{validator_operator_addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account)};
@@ -1078,7 +1078,7 @@ CapabilityHolder at Libra root.
 </code></pre>
 
 
-The permission "{Add, Remove} Validator" is granted to LibraRoot [H12].
+The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
@@ -1109,8 +1109,8 @@ set_libra_system_config is a private function, so it does not have to preserve t
 
 
 
-Only {add, remove} validator [H12] and update_config_and_reconfigure
-[H13] may change the set of validators in the configuration.
+Only {add, remove} validator [[H12]][PERMISSION] and update_config_and_reconfigure
+[[H13]][PERMISSION] may change the set of validators in the configuration.
 
 
 <pre><code><b>apply</b> <a href="LibraSystem.md#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> <b>to</b> *, *&lt;T&gt;
@@ -1156,5 +1156,5 @@ Consensus_voting_power is always 1.
 
 
 </details>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

@@ -627,5 +627,5 @@ Auxiliary function to check if <code>v</code> is equal to the result of concaten
     v1 == v2[1..len(v2)]
 }
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

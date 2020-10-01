@@ -1684,7 +1684,7 @@ Withdraw <code>amount</code> <code><a href="Libra.md#0x1_Libra">Libra</a>&lt;Tok
 <summary>Specification</summary>
 
 
-Can only withdraw from the balances of cap.account_address [H17].
+Can only withdraw from the balances of cap.account_address [[H17]][PERMISSION].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1)) && addr1 != cap.account_address:
@@ -2108,7 +2108,7 @@ Rotate the authentication key for the account under cap.account_address
 </code></pre>
 
 
-Can only rotate the authentication_key of cap.account_address [H16].
+Can only rotate the authentication_key of cap.account_address [[H16]][PERMISSION].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr1: address <b>where</b> addr1 != cap.account_address && <b>old</b>(<a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1)):
@@ -3046,7 +3046,7 @@ Add a balance of <code>Token</code> type to the sending account
 
 
 <code>account</code> must be allowed to hold balances. This function must abort if the predicate
-<code>can_hold_balance</code> for <code>account</code> returns false [D1][D2][D3][D4][D5][D6][D7].
+<code>can_hold_balance</code> for <code>account</code> returns false [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt; {
@@ -3650,7 +3650,7 @@ Covered: L146 (Match 0)
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [H8].
+Must abort if the signer does not have the LibraRoot role [[H8]][PERMISSION].
 Covered: L146 (Match 0)
 
 
@@ -4331,7 +4331,7 @@ The absence of KeyRotationCap is preserved.
 
 
 
-the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [H16].
+the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H16]][PERMISSION].
 When an account is created, its KeyRotationCapability is granted to the account.
 
 
@@ -4339,7 +4339,7 @@ When an account is created, its KeyRotationCapability is granted to the account.
 </code></pre>
 
 
-Only <code>make_account</code> creates KeyRotationCap [H16][I16]. <code>create_*_account</code> only calls
+Only <code>make_account</code> creates KeyRotationCap [[H16]][PERMISSION][[I16]][PERMISSION]. <code>create_*_account</code> only calls
 <code>make_account</code>, and does not pack KeyRotationCap by itself.
 <code>restore_key_rotation_capability</code> restores KeyRotationCap, and does not create new one.
 
@@ -4350,7 +4350,7 @@ Only <code>make_account</code> creates KeyRotationCap [H16][I16]. <code>create_*
 
 
 Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
-or the key rotation capability for addr itself [H16].
+or the key rotation capability for addr itself [[H16]][PERMISSION].
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
@@ -4388,7 +4388,7 @@ The absence of WithdrawCap is preserved.
 
 
 
-the permission "WithdrawalCapability(addr)" is granted to the account at addr [H17].
+the permission "WithdrawalCapability(addr)" is granted to the account at addr [[H17]][PERMISSION].
 When an account is created, its WithdrawCapability is granted to the account.
 
 
@@ -4396,7 +4396,7 @@ When an account is created, its WithdrawCapability is granted to the account.
 </code></pre>
 
 
-Only <code>make_account</code> creates WithdrawCap [H17][I17]. <code>create_*_account</code> only calls
+Only <code>make_account</code> creates WithdrawCap [[H17]][PERMISSION][[I17]][PERMISSION]. <code>create_*_account</code> only calls
 <code>make_account</code>, and does not pack KeyRotationCap by itself.
 <code>restore_withdraw_capability</code> restores WithdrawCap, and does not create new one.
 
@@ -4407,7 +4407,7 @@ Only <code>make_account</code> creates WithdrawCap [H17][I17]. <code>create_*_ac
 
 
 Every account holds either no withdraw capability (because withdraw cap has been delegated)
-or the withdraw capability for addr itself [H17].
+or the withdraw capability for addr itself [[H17]][PERMISSION].
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
@@ -4461,7 +4461,7 @@ Every address that has a published account has a published FreezingBit
 </code></pre>
 
 
-only rotate_authentication_key can rotate authentication_key [H16].
+only rotate_authentication_key can rotate authentication_key [[H16]][PERMISSION].
 
 
 <a name="0x1_LibraAccount_AuthenticationKeyRemainsSame"></a>
@@ -4489,7 +4489,7 @@ ref: Only reasonable accounts have currencies.
 </code></pre>
 
 
-only withdraw_from and its helper and clients can withdraw [H17].
+only withdraw_from and its helper and clients can withdraw [[H17]][PERMISSION].
 
 
 <a name="0x1_LibraAccount_BalanceNotDecrease"></a>
@@ -4508,5 +4508,5 @@ only withdraw_from and its helper and clients can withdraw [H17].
     <b>except</b> withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr,
         preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

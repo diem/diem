@@ -194,7 +194,7 @@
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
 
-    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [H10].
+    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [[H10]][PERMISSION].
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
     <b>let</b> gas_constants = <a href="LibraVMConfig.md#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
@@ -252,7 +252,7 @@
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [H10].
+Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -269,7 +269,7 @@ Must abort if the signer does not have the LibraRoot role [H10].
 </code></pre>
 
 
-Currently, no one can update LibraVMConfig [H10]
+Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
 
 
 <a name="0x1_LibraVMConfig_LibraVMConfigRemainsSame"></a>
@@ -300,5 +300,5 @@ Currently, no one can update LibraVMConfig [H10]
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
 </code></pre>
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

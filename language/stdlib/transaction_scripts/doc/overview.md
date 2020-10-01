@@ -4711,5 +4711,5 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [update_exchange_rate](overview.md#update_exchange_rate)
 -  [update_libra_version](overview.md#update_libra_version)
 -  [update_minting_ability](overview.md#update_minting_ability)
-
-[]: # (File containing markdown style reference definitions to be included in each generated doc)
+[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
+[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
