@@ -3,7 +3,7 @@
 
 use crate::{
     counters,
-    errors::JsonRpcError,
+    errors::{is_internal_error, JsonRpcError},
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
     response::JsonRpcResponse,
 };
@@ -60,7 +60,7 @@ macro_rules! log_response {
     ($trace_id: expr, $resp: expr, $is_batch: expr) => {
         let mut level = Level::Debug;
         if let Some(ref error) = $resp.error {
-            if is_internal_error(error) {
+            if is_internal_error(&error.code) {
                 level = Level::Error
             }
         }
@@ -380,7 +380,7 @@ fn set_response_error(
     method: &str,
 ) {
     let err_code = error.code;
-    if is_internal_error(&error) {
+    if is_internal_error(&error.code) {
         counters::INTERNAL_ERRORS
             .with_label_values(&[request_type, method, &err_code.to_string()])
             .inc();
@@ -398,10 +398,6 @@ fn set_response_error(
     }
 
     response.error = Some(error);
-}
-
-fn is_internal_error(e: &JsonRpcError) -> bool {
-    e.code <= -32000 && e.code >= -32099
 }
 
 fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError> {

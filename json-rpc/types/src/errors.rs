@@ -9,6 +9,26 @@ use libra_types::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// list of server internal errors
+pub static INTERNAL_ERRORS: &[i16; 7] = &[
+    ServerCode::DefaultServerError as i16,
+    ServerCode::VmInvariantViolationError as i16,
+    ServerCode::VmExecutionError as i16,
+    ServerCode::VmUnknownError as i16,
+    ServerCode::MempoolIsFull as i16,
+    ServerCode::MempoolTooManyTransactions as i16,
+    ServerCode::MempoolUnknownError as i16,
+];
+
+pub fn is_internal_error(err_code: &i16) -> bool {
+    for code in INTERNAL_ERRORS {
+        if code == err_code {
+            return true;
+        }
+    }
+    return false;
+}
+
 /// Custom JSON RPC server error codes
 /// Ranges from -32000 to -32099 - see `https://www.jsonrpc.org/specification#error_object` for details
 pub enum ServerCode {
@@ -202,7 +222,7 @@ impl JsonRpcError {
 
 #[cfg(test)]
 mod tests {
-    use crate::errors::{JsonRpcError, ServerCode};
+    use crate::errors::{is_internal_error, JsonRpcError, ServerCode, INTERNAL_ERRORS};
     use libra_types::{
         mempool_status::{MempoolStatus, MempoolStatusCode},
         vm_status::StatusCode,
@@ -269,6 +289,17 @@ mod tests {
             MempoolStatusCode::UnknownStatus,
             ServerCode::MempoolUnknownError,
         );
+    }
+
+    #[test]
+    fn test_is_internal_error() {
+        for code in INTERNAL_ERRORS {
+            assert!(is_internal_error(code));
+        }
+        assert!(!is_internal_error(
+            &(ServerCode::MempoolInvalidUpdate as i16)
+        ));
+        assert!(!is_internal_error(&(ServerCode::VmValidationError as i16)));
     }
 
     fn assert_map_code(from: MempoolStatusCode, to: ServerCode) {
