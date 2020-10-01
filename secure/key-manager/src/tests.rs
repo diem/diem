@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface};
+use crate::{
+    libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface,
+    GAS_UNIT_PRICE, MAX_GAS_AMOUNT,
+};
 use anyhow::Result;
 use executor::Executor;
 use executor_types::BlockExecutor;
@@ -20,13 +23,14 @@ use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
+    account_config::LBR_NAME,
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
-    transaction::Transaction,
+    transaction::{RawTransaction, Transaction},
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
 };
@@ -644,4 +648,233 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
         node.key_manager.evaluate_status().unwrap()
     );
     assert_ne!(0, node.libra.last_reconfiguration().unwrap());
+}
+
+#[test]
+// This tests the key manager's ability to detect liveness errors on the blockchain.
+fn test_liveness_error() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_liveness_error(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_liveness_error(node);
+}
+
+fn verify_liveness_error<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Verify no action is required by the key manager
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+
+    // Verify a single execution iteration will detect a liveness error because
+    // the libra timestamp on-chain hasn't been updated since it was last checked.
+    match node.key_manager.execute_once() {
+        Err(Error::LivenessError(last_timestamp, current_timestamp)) => {
+            assert_eq!(last_timestamp, current_timestamp)
+        }
+        result => panic!("Expected a liveness error, but got: {:?}", result),
+    }
+}
+
+#[test]
+// This tests the key manager's ability to detect missing accounts in storage.
+fn test_missing_account_error() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_missing_account_error(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_missing_account_error(node);
+}
+
+fn verify_missing_account_error<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Reset storage to wipe all account addresses
+    node.update_libra_timestamp();
+    node.key_manager.storage.reset_and_clear().unwrap();
+
+    // Verify a single execution iteration will detect the missing account address
+    match node.key_manager.execute_once() {
+        Err(Error::MissingAccountAddress(..)) => { /* Expected */ }
+        result => panic!(
+            "Expected a missing account address error, but got: {:?}",
+            result
+        ),
+    }
+}
+
+#[test]
+// This tests the key manager's ability to detect mismatches between the validator
+// config and the validator set.
+fn test_validator_config_info_mismatch() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_validator_config_info_mismatch(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_validator_config_info_mismatch(node);
+}
+
+fn verify_validator_config_info_mismatch<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Verify no action is required by the key manager
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+
+    // Build a transaction updating the validator config consensus key on chain
+    let mut rng = StdRng::from_seed([44u8; 32]);
+    let new_consensus_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+    let script = transaction_builder_generated::stdlib::encode_register_validator_config_script(
+        node.get_account_from_storage(OWNER_ACCOUNT),
+        new_consensus_key.to_bytes().to_vec(),
+        Vec::new(),
+        Vec::new(),
+    );
+    let txn = RawTransaction::new_script(
+        node.get_account_from_storage(OPERATOR_ACCOUNT),
+        0,
+        script,
+        MAX_GAS_AMOUNT,
+        GAS_UNIT_PRICE,
+        LBR_NAME.to_owned(),
+        node.time.now() + TXN_EXPIRATION_SECS,
+        libra_types::chain_id::ChainId::test(),
+    );
+
+    // Sign and execute the validator config update transaction
+    let operator_privkey = node.get_key_from_storage(OPERATOR_KEY);
+    let txn = txn
+        .sign(&operator_privkey, operator_privkey.public_key())
+        .unwrap();
+    let txn = Transaction::UserTransaction(txn.into_inner());
+    node.execute_and_commit(vec![txn]);
+
+    // Verify the key manager will detect a key mismatch between the validator
+    // config and the validator set
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::WaitForReconfiguration,
+        node.key_manager.evaluate_status().unwrap()
+    );
+}
+
+#[test]
+// This tests the key manager's ability to detect mismatches between storage and
+// the blockchain.
+fn test_storage_blockchain_mismatch() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_storage_blockchain_mismatch(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_storage_blockchain_mismatch(node);
+}
+
+fn verify_storage_blockchain_mismatch<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Verify no action is required by the key manager
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+
+    // Perform key rotation locally in storage but don't execute it on-chain.
+    let _ = node.key_manager.rotate_consensus_key().unwrap();
+
+    // Verify the key manager will detect a key mismatch between storage and the
+    // blockchain and thus wait for transaction execution
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::WaitForTransactionExecution,
+        node.key_manager.evaluate_status().unwrap()
+    );
+}
+
+#[test]
+// This tests the key manager's ability to detect generic storage errors.
+fn test_storage_error() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_storage_error(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_storage_error(node);
+}
+
+fn verify_storage_error<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Update the consensus key to an invalid value to force a storage error
+    node.update_libra_timestamp();
+    node.key_manager
+        .storage
+        .set(CONSENSUS_KEY, "invalid value")
+        .unwrap();
+
+    // Verify a single execution iteration will detect the storage error
+    match node.key_manager.execute_once() {
+        Err(Error::StorageError(_)) => { /* Expected */ }
+        result => panic!("Expected a storage error, but got: {:?}", result),
+    }
+}
+
+#[test]
+// This tests the key manager's ability to handle missing data errors.
+fn test_missing_data_error() {
+    // Test the mock libra interface implementation
+    let node = setup_node_using_test_mocks();
+    verify_missing_data(node);
+
+    // Test the json libra interface implementation
+    let (node, _runtime) = setup_node_using_json_rpc();
+    verify_missing_data(node);
+}
+
+fn verify_missing_data<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Update the owner account to an account that will not have any state on chain
+    node.update_libra_timestamp();
+    node.key_manager
+        .storage
+        .set(OWNER_ACCOUNT, "00000000000000000000000000000001")
+        .unwrap();
+
+    // Verify a single execution iteration will detect the missing data error
+    match node.key_manager.execute_once() {
+        Err(Error::DataDoesNotExist(_)) => { /* Expected */ }
+        result => panic!(
+            "Expected a data does not exist error, but got: {:?}",
+            result
+        ),
+    }
 }
