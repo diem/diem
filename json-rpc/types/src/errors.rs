@@ -26,7 +26,7 @@ pub fn is_internal_error(err_code: &i16) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 
 /// Custom JSON RPC server error codes
