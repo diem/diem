@@ -10,6 +10,8 @@
 -  [Function <code>publish</code>](#0x1_ValidatorOperatorConfig_publish)
 -  [Function <code>get_human_name</code>](#0x1_ValidatorOperatorConfig_get_human_name)
 -  [Function <code>has_validator_operator_config</code>](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
+-  [Module Specification](#@Module_Specification_0)
+    -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_1)
 
 
 <a name="0x1_ValidatorOperatorConfig_ValidatorOperatorConfig"></a>
@@ -195,17 +197,24 @@ Aborts if there is no ValidatorOperatorConfig resource
 </code></pre>
 
 
-If address has a ValidatorOperatorConfig, it has a validator operator role.
-This invariant is useful in LibraSystem so we don't have to check whether
-every validator address has a validator role.
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1:address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr1):
-    <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr1);
-</code></pre>
-
-
 
 </details>
+
+<a name="@Module_Specification_0"></a>
+
+## Module Specification
+
+
+
+<a name="@Consistency_Between_Resources_and_Roles_1"></a>
+
+### Consistency Between Resources and Roles
+
+If an address has a ValidatorOperatorConfig resource, it has a validator operator role.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr):
+    <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr);
+</code></pre>
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

@@ -66,12 +66,14 @@ module ValidatorOperatorConfig {
         ensures result == has_validator_operator_config(validator_operator_addr);
     }
 
-    /// If address has a ValidatorOperatorConfig, it has a validator operator role.
-    /// This invariant is useful in LibraSystem so we don't have to check whether
-    /// every validator address has a validator role.
+    spec module {} // switch documentation context back to module level
+
+    /// # Consistency Between Resources and Roles
+
+    /// If an address has a ValidatorOperatorConfig resource, it has a validator operator role.
     spec module {
-        invariant [global] forall addr1:address where has_validator_operator_config(addr1):
-            Roles::spec_has_validator_operator_role_addr(addr1);
+        invariant [global] forall addr: address where has_validator_operator_config(addr):
+            Roles::spec_has_validator_operator_role_addr(addr);
     }
 
 }

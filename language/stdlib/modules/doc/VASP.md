@@ -22,12 +22,9 @@
 -  [Function <code>is_same_vasp</code>](#0x1_VASP_is_same_vasp)
 -  [Function <code>num_children</code>](#0x1_VASP_num_children)
 -  [Module Specification](#@Module_Specification_0)
-    -  [Module specifications](#@Module_specifications_1)
-        -  [Existence of Parents](#@Existence_of_Parents_2)
-        -  [Mutation](#@Mutation_3)
-        -  [Number of children is consistent](#@Number_of_children_is_consistent_4)
-        -  [Number of children does not change](#@Number_of_children_does_not_change_5)
-        -  [Parent does not change](#@Parent_does_not_change_6)
+    -  [Existence of Parents](#@Existence_of_Parents_1)
+    -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_2)
+    -  [Immutability of Parent Address](#@Immutability_of_Parent_Address_3)
 
 
 <a name="0x1_VASP_ParentVASP"></a>
@@ -203,7 +200,7 @@ or if there is already a VASP (child or parent) at this account.
 <pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_PublishParentVASPEnsures">PublishParentVASPEnsures</a> {
     vasp_addr: address;
     <b>ensures</b> <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
-    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(vasp_addr) == 0;
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(vasp_addr) == 0;
 }
 </code></pre>
 
@@ -232,11 +229,6 @@ Aborts if <code>parent</code> is not a ParentVASP
     parent: &signer,
     child: &signer,
 ) <b>acquires</b> <a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a> {
-    // DD: The spreadsheet does not have a "privilege" for creating
-    // child VASPs. All logic in the code is based on the parent <a href="VASP.md#0x1_VASP">VASP</a> role.
-    // DD: Since it checks for a <a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a> property, anyway, checking
-    // for role might be a bit redundant (would need <b>invariant</b> that only
-    // Parent Role has <a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>)
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(parent);
     <b>let</b> child_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(child);
     <b>assert</b>(!<a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(child_vasp_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="VASP.md#0x1_VASP_EPARENT_OR_CHILD_VASP">EPARENT_OR_CHILD_VASP</a>));
@@ -281,7 +273,7 @@ Aborts if <code>parent</code> is not a ParentVASP
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
     <b>aborts_if</b> <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(child_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
     <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(parent_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-    <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) + 1 &gt; <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent_addr) + 1 &gt; <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -294,7 +286,7 @@ Aborts if <code>parent</code> is not a ParentVASP
 <pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_PublishChildVASPEnsures">PublishChildVASPEnsures</a> {
     parent_addr: address;
     child_addr: address;
-    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr)) + 1;
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent_addr) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent_addr)) + 1;
     <b>ensures</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(child_addr);
     <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr) == parent_addr;
 }
@@ -368,7 +360,7 @@ Aborts otherwise
 
 
 
-<pre><code><b>pragma</b> opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr) && !<a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> result == <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr);
 </code></pre>
@@ -563,7 +555,6 @@ Returns true if both addresses are VASPs and they have the same parent address.
 </code></pre>
 
 
-
 Spec version of <code><a href="VASP.md#0x1_VASP_is_same_vasp">Self::is_same_vasp</a></code>.
 
 
@@ -571,7 +562,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_is_same_vasp">Self::is_same_vasp
 
 
 <pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1: address, addr2: address): bool {
-    <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr1) && <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr2) && <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr1) == <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr2)
+   <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr1) && <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(addr2) && <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr1) == <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr2)
 }
 </code></pre>
 
@@ -616,12 +607,15 @@ Aborts if <code>addr</code> is not a ParentVASP or ChildVASP account
 </code></pre>
 
 
-This abort is supposed to not happen because of the parent existence invariant. However, for now
-we have deactivated this invariant, so prevent this is leaking to callers with an assumed aborts
-condition.
+Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children</a></code>.
 
 
-<pre><code><b>aborts_if</b> [<b>assume</b>] !<b>exists</b>&lt;<a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr)) <b>with</b> EXECUTION_FAILURE;
+<a name="0x1_VASP_spec_num_children"></a>
+
+
+<pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent: address): u64 {
+   <b>global</b>&lt;<a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).num_children
+}
 </code></pre>
 
 
@@ -634,28 +628,45 @@ condition.
 
 
 
-<a name="@Module_specifications_1"></a>
+<a name="@Existence_of_Parents_1"></a>
 
-### Module specifications
-
-
-<a name="@Existence_of_Parents_2"></a>
-
-#### Existence of Parents
+### Existence of Parents
 
 
 
-<a name="@Mutation_3"></a>
+<pre><code><b>invariant</b> [<b>global</b>]
+    <b>forall</b> child_addr: address <b>where</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(child_addr):
+        <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(<b>global</b>&lt;<a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(child_addr).parent_vasp_addr);
+</code></pre>
 
-#### Mutation
 
-Only a parent VASP calling publish_child_vast_credential can create
-child VASP.
+
+<a name="@Creation_of_Child_VASPs_2"></a>
+
+### Creation of Child VASPs
+
+
+Only a parent VASP calling <code>Self::publish_child_vast_credential</code> can create
+child VASPs.
+
+
+<pre><code><b>apply</b> <a href="VASP.md#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b> publish_child_vasp_credential;
+</code></pre>
+
+
+The number of children of a parent VASP can only changed by adding
+a child through <code>Self::publish_child_vast_credential</code>.
+
+
+<pre><code><b>apply</b> <a href="VASP.md#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> <b>to</b> * <b>except</b> publish_child_vasp_credential;
+</code></pre>
+
+
 
 
 <a name="0x1_VASP_ChildVASPsDontChange"></a>
 
-**Informally:** A child is at an address iff it was there in the
+A ChildVASP resource is at an address if and only if it was there in the
 previous state.
 
 
@@ -666,29 +677,6 @@ previous state.
 
 
 
-TODO(wrwg): this should be replaced by a modifies clause
-
-
-<pre><code><b>apply</b> <a href="VASP.md#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b>
-    publish_child_vasp_credential;
-</code></pre>
-
-
-
-<a name="@Number_of_children_is_consistent_4"></a>
-
-#### Number of children is consistent
-
-> PROVER TODO(emmazzz): implement the features that allows users
-> to reason about number of resources with certain property,
-> such as "number of ChildVASPs whose parent address is 0xDD".
-> See issue #4665.
-
-<a name="@Number_of_children_does_not_change_5"></a>
-
-#### Number of children does not change
-
-
 
 <a name="0x1_VASP_NumChildrenRemainsSame"></a>
 
@@ -696,36 +684,18 @@ TODO(wrwg): this should be replaced by a modifies clause
 <pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> {
     <b>ensures</b> <b>forall</b> parent: address
         <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(parent)):
-            <b>old</b>(<a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent)) == <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent);
+            <a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_num_children">spec_num_children</a>(parent));
 }
 </code></pre>
 
 
 
-TODO(wrwg): this should be replaced by a modifies clause
+<a name="@Immutability_of_Parent_Address_3"></a>
+
+### Immutability of Parent Address
 
 
-<pre><code><b>apply</b> <a href="VASP.md#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> <b>to</b> * <b>except</b> publish_child_vasp_credential;
-</code></pre>
-
-
-Returns the number of children under <code>parent</code>.
-
-
-<a name="0x1_VASP_spec_get_num_children"></a>
-
-
-<pre><code><b>define</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent: address): u64 {
-    <b>global</b>&lt;<a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).num_children
-}
-</code></pre>
-
-
-
-<a name="@Parent_does_not_change_6"></a>
-
-#### Parent does not change
-
+The parent address stored at ChildVASP resource never changes.
 
 
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
