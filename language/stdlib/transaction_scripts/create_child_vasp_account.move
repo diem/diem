@@ -82,6 +82,7 @@ fun create_child_vasp_account<CoinType>(
 spec fun create_child_vasp_account {
     use 0x1::Signer;
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: parent_vasp}; // properties checked by the prologue.
     let parent_addr = Signer::spec_address_of(parent_vasp);
@@ -114,5 +115,9 @@ spec fun create_child_vasp_account {
         Errors::NOT_PUBLISHED,
         Errors::INVALID_STATE,
         Errors::INVALID_ARGUMENT;
+
+    /// Access Control
+    /// Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
+    include Roles::AbortsIfNotParentVasp{account: parent_vasp};
 }
 }

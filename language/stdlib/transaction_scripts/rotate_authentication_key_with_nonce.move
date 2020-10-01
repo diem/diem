@@ -58,5 +58,10 @@ spec fun rotate_authentication_key_with_nonce {
         Errors::INVALID_ARGUMENT,
         Errors::INVALID_STATE,
         Errors::NOT_PUBLISHED; // TOOD: Undocumented error code. Added due to the possible absence of SlidingNonce in SlidingNonce::try_record_nonce.
+
+    /// Access Control
+    /// The account can rotate its own authentication key unless
+    /// it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+    include LibraAccount::AbortsIfDelegatedKeyRotationCapability;
 }
 }

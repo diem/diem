@@ -45,6 +45,7 @@ fun rotate_dual_attestation_info(account: &signer, new_url: vector<u8>, new_key:
 spec fun rotate_dual_attestation_info {
     use 0x1::Errors;
     use 0x1::LibraAccount;
+    use 0x1::Signer;
 
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include DualAttestation::RotateBaseUrlAbortsIf;
@@ -55,5 +56,10 @@ spec fun rotate_dual_attestation_info {
     aborts_with [check]
         Errors::NOT_PUBLISHED,
         Errors::INVALID_ARGUMENT;
+
+    /// Access Control
+    /// Only the account having Credential can rotate the info.
+    /// Credential is granted to either a Parent VASP or a designated dealer [[H15]][PERMISSION].
+    include DualAttestation::AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
 }
 }

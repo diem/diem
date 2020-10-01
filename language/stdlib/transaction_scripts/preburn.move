@@ -52,7 +52,7 @@ fun preburn<Token>(account: &signer, amount: u64) {
 spec fun preburn {
     use 0x1::Errors;
     use 0x1::Signer;
-    pragma verify;
+    use 0x1::Libra;
 
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
@@ -65,5 +65,9 @@ spec fun preburn {
         Errors::NOT_PUBLISHED,
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED;
+
+    /// Access Control
+    /// Only the account with a preburn area can preburn [[H3]][PERMISSION].
+    include Libra::AbortsIfNoPreburn<Token>{preburn_address: account_addr};
 }
 }

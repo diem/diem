@@ -115,7 +115,10 @@ module DualAttestation {
         /// The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H15]][PERMISSION].
         include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
         include Roles::AbortsIfNotTreasuryCompliance{account: creator};
-        aborts_if exists<Credential>(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+        aborts_if spec_has_credential(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+    }
+    spec define spec_has_credential(addr: address): bool {
+        exists<Credential>(addr)
     }
 
     /// Rotate the base URL for `account` to `new_url`
@@ -142,6 +145,10 @@ module DualAttestation {
 
         include LibraTimestamp::AbortsIfNotOperating;
     }
+    spec schema AbortsIfNoCredential {
+        addr: address;
+        aborts_if !spec_has_credential(addr) with Errors::NOT_PUBLISHED;
+    }
     spec schema RotateBaseUrlEnsures {
         account: signer;
         new_url: vector<u8>;
@@ -151,10 +158,6 @@ module DualAttestation {
         /// The sender can only rotate its own base url [[H15]][PERMISSION].
         ensures forall addr1:address where addr1 != sender:
             global<Credential>(addr1).base_url == old(global<Credential>(addr1).base_url);
-    }
-    spec schema AbortsIfNoCredential {
-        addr: address;
-        aborts_if !exists<Credential>(addr) with Errors::NOT_PUBLISHED;
     }
 
     /// Rotate the compliance public key for `account` to `new_key`.
@@ -376,7 +379,7 @@ module DualAttestation {
         metadata_signature: vector<u8>;
         metadata: vector<u8>;
         deposit_value: u64;
-        aborts_if !exists<Credential>(spec_credential_address(payee)) with Errors::NOT_PUBLISHED;
+        include AbortsIfNoCredential{addr: spec_credential_address(payee)};
         aborts_if Vector::is_empty(spec_compliance_public_key(spec_credential_address(payee))) with Errors::INVALID_STATE;
         aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value)
             with Errors::INVALID_ARGUMENT;
@@ -518,14 +521,14 @@ module DualAttestation {
     spec schema PreserveCredentialExistence {
         /// The existence of Preburn is preserved.
         ensures forall addr1: address:
-            old(exists<Credential>(addr1)) ==>
-                exists<Credential>(addr1);
+            old(spec_has_credential(addr1)) ==>
+                spec_has_credential(addr1);
     }
     spec schema PreserveCredentialAbsence {
         /// The absence of Preburn is preserved.
         ensures forall addr1: address:
-            old(!exists<Credential>(addr1)) ==>
-                !exists<Credential>(addr1);
+            old(!spec_has_credential(addr1)) ==>
+                !spec_has_credential(addr1);
     }
     spec module {
         /// The permission "RotateDualAttestationInfo(addr)" is not transferred [[J15]][PERMISSION].
@@ -536,7 +539,7 @@ module DualAttestation {
         apply PreserveCredentialAbsence to * except publish_credential;
         apply Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created} to publish_credential;
         invariant [global] forall addr1: address:
-            exists<Credential>(addr1) ==>
+            spec_has_credential(addr1) ==>
                 (Roles::spec_has_parent_VASP_role_addr(addr1) ||
                 Roles::spec_has_designated_dealer_role_addr(addr1));
     }
@@ -554,7 +557,7 @@ module DualAttestation {
     /// Only rotate_compliance_public_key can rotate the compliance public key [[H15]][PERMISSION].
     spec schema CompliancePublicKeyRemainsSame {
         /// The compliance public key stays constant.
-        ensures forall addr1: address where old(exists<Credential>(addr1)):
+        ensures forall addr1: address where old(spec_has_credential(addr1)):
             global<Credential>(addr1).compliance_public_key == old(global<Credential>(addr1).compliance_public_key);
     }
     spec module {
@@ -564,7 +567,7 @@ module DualAttestation {
     /// Only rotate_base_url can rotate the base url [[H15]][PERMISSION].
     spec schema BaseURLRemainsSame {
         /// The base url stays constant.
-        ensures forall addr1: address where old(exists<Credential>(addr1)):
+        ensures forall addr1: address where old(spec_has_credential(addr1)):
             global<Credential>(addr1).base_url == old(global<Credential>(addr1).base_url);
     }
     spec module {

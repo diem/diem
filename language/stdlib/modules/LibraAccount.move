@@ -794,7 +794,11 @@ module LibraAccount {
         account: signer;
         let account_addr = Signer::spec_address_of(account);
         aborts_if !exists_at(account_addr) with Errors::NOT_PUBLISHED;
-        aborts_if delegated_key_rotation_capability(account_addr) with Errors::INVALID_STATE;
+        include AbortsIfDelegatedKeyRotationCapability;
+    }
+    spec schema AbortsIfDelegatedKeyRotationCapability {
+        account: signer;
+        aborts_if delegated_key_rotation_capability(Signer::spec_address_of(account)) with Errors::INVALID_STATE;
     }
     spec schema ExtractKeyRotationCapabilityEnsures {
         account: signer;

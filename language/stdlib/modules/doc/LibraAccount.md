@@ -1949,7 +1949,19 @@ Return a unique capability granting permission to rotate the sender's authentica
     <a name="0x1_LibraAccount_account_addr$64"></a>
     <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(account_addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+    <b>include</b> <a href="LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">AbortsIfDelegatedKeyRotationCapability</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability"></a>
+
+
+<pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">AbortsIfDelegatedKeyRotationCapability</a> {
+    account: signer;
+    <b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>
 

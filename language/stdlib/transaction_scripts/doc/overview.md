@@ -917,6 +917,14 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 </code></pre>
 
 
+Access Control
+Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent_vasp};
+</code></pre>
+
+
 
 </details>
 
@@ -1551,6 +1559,15 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 </code></pre>
 
 
+Access Control
+The account must be allowed to hold balances. Only Designated Dealers, Parent VASPs,
+and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
+
+
+<pre><code><b>aborts_if</b> !<a href="../../modules/doc/Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
 
 </details>
 
@@ -1990,6 +2007,15 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 </code></pre>
 
 
+Access Control
+The account can rotate its own authentication key unless
+it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
+</code></pre>
+
+
 
 </details>
 
@@ -2105,6 +2131,15 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+</code></pre>
+
+
+Access Control
+The account can rotate its own authentication key unless
+it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
 </code></pre>
 
 
@@ -2226,6 +2261,15 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 </code></pre>
 
 
+Access Control
+The account can rotate its own authentication key unless
+it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
+</code></pre>
+
+
 
 </details>
 
@@ -2330,6 +2374,21 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
+Access Control
+The delegatee at the recovery address has to hold the key rotation capability for
+the address to recover. The address of the transaction signer has to be either
+the delegatee's address or the address to recover [[H16]][PERMISSION][[J16]][PERMISSION].
+
+
+<a name="rotate_authentication_key_with_recovery_address_account_addr$1"></a>
+
+
+<pre><code><b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>aborts_if</b> !<a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">RecoveryAddress::spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> !(account_addr == recovery_address || account_addr == to_recover) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -2443,6 +2502,15 @@ off-chain communication, and the blockchain time at which the url was updated em
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
+Access Control
+Only the account having Credential can rotate the info.
+Credential is granted to either a Parent VASP or a designated dealer [[H15]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">DualAttestation::AbortsIfNoCredential</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};
 </code></pre>
 
 
@@ -3635,8 +3703,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 
-<pre><code><b>pragma</b> verify;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
 <a name="preburn_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <a name="preburn_cap$2"></a>
@@ -3648,6 +3715,14 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+</code></pre>
+
+
+Access Control
+Only the account with a preburn area can preburn [[H3]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoPreburn">Libra::AbortsIfNoPreburn</a>&lt;Token&gt;{preburn_address: account_addr};
 </code></pre>
 
 
@@ -3778,6 +3853,14 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+</code></pre>
+
+
+Access Control
+Only the account with the burn capability can burn [[H2]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
 </code></pre>
 
 
@@ -4164,6 +4247,14 @@ resource published under the <code>designated_dealer_address</code>.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+Access Control
+Only the Treasury Compliance account can mint [[H1]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 </code></pre>
 
 

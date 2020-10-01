@@ -72,6 +72,7 @@ fun tiered_mint<CoinType>(
 
 spec fun tiered_mint {
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
@@ -86,5 +87,9 @@ spec fun tiered_mint {
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED,
         Errors::REQUIRES_ROLE;
+
+    /// Access Control
+    /// Only the Treasury Compliance account can mint [[H1]][PERMISSION].
+    include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }
 }

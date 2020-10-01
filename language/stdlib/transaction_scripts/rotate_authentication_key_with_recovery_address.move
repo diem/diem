@@ -45,6 +45,7 @@ fun rotate_authentication_key_with_recovery_address(
 spec fun rotate_authentication_key_with_recovery_address {
     use 0x1::Errors;
     use 0x1::LibraAccount;
+    use 0x1::Signer;
 
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
@@ -53,5 +54,13 @@ spec fun rotate_authentication_key_with_recovery_address {
     aborts_with [check]
         Errors::NOT_PUBLISHED,
         Errors::INVALID_ARGUMENT;
+
+    /// Access Control
+    /// The delegatee at the recovery address has to hold the key rotation capability for
+    /// the address to recover. The address of the transaction signer has to be either
+    /// the delegatee's address or the address to recover [[H16]][PERMISSION][[J16]][PERMISSION].
+    let account_addr = Signer::spec_address_of(account);
+    aborts_if !RecoveryAddress::spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
+    aborts_if !(account_addr == recovery_address || account_addr == to_recover) with Errors::INVALID_ARGUMENT;
 }
 }

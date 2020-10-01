@@ -132,10 +132,10 @@ module RecoveryAddress {
         new_key: vector<u8>;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
         aborts_if !exists<LibraAccount::LibraAccount>(to_recover) with Errors::NOT_PUBLISHED;
-        aborts_if len(new_key) != 32;
-        aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover);
+        aborts_if len(new_key) != 32 with Errors::INVALID_ARGUMENT;
+        aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
         aborts_if !(Signer::spec_address_of(account) == recovery_address
-                    || Signer::spec_address_of(account) == to_recover);
+                    || Signer::spec_address_of(account) == to_recover) with Errors::INVALID_ARGUMENT;
     }
     spec schema RotateAuthenticationKeyEnsures {
         to_recover: address;

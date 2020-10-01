@@ -380,7 +380,18 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP and Designat
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: creator};
-<b>aborts_if</b> <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>aborts_if</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_DualAttestation_spec_has_credential"></a>
+
+
+<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr: address): bool {
+   <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)
+}
 </code></pre>
 
 
@@ -436,7 +447,7 @@ Rotate the base URL for <code>account</code> to <code>new_url</code>
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">RotateBaseUrlAbortsIf</a> {
     account: signer;
-    <a name="0x1_DualAttestation_sender$23"></a>
+    <a name="0x1_DualAttestation_sender$24"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -454,13 +465,25 @@ Must abort if the account does not have the resource Credential [[H15]][PERMISSI
 
 
 
+<a name="0x1_DualAttestation_AbortsIfNoCredential"></a>
+
+
+<pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a> {
+    addr: address;
+    <b>aborts_if</b> !<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+}
+</code></pre>
+
+
+
+
 <a name="0x1_DualAttestation_RotateBaseUrlEnsures"></a>
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
     account: signer;
     new_url: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$24"></a>
+    <a name="0x1_DualAttestation_sender$25"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).base_url == new_url;
 }
@@ -473,18 +496,6 @@ The sender can only rotate its own base url [[H15]][PERMISSION].
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
     <b>ensures</b> <b>forall</b> addr1:address <b>where</b> addr1 != sender:
         <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url);
-}
-</code></pre>
-
-
-
-
-<a name="0x1_DualAttestation_AbortsIfNoCredential"></a>
-
-
-<pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a> {
-    addr: address;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -547,7 +558,7 @@ Rotate the compliance public key for <code>account</code> to <code>new_key</code
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">RotateCompliancePublicKeyAbortsIf</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$25"></a>
+    <a name="0x1_DualAttestation_sender$26"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -572,7 +583,7 @@ Must abort if the account does not have the resource Credential [[H15]][PERMISSI
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$26"></a>
+    <a name="0x1_DualAttestation_sender$27"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).compliance_public_key == new_key;
 }
@@ -1049,7 +1060,7 @@ Helper function to check validity of a signature when dual attestion is required
     metadata_signature: vector&lt;u8&gt;;
     metadata: vector&lt;u8&gt;;
     deposit_value: u64;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: <a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)};
     <b>aborts_if</b> <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee))) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> !<a href="DualAttestation.md#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value)
         <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
@@ -1201,7 +1212,7 @@ Travel rule limit set during genesis
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>aborts_if</b> <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<a name="0x1_DualAttestation_initial_limit$27"></a>
+<a name="0x1_DualAttestation_initial_limit$28"></a>
 <b>let</b> initial_limit = <a href="DualAttestation.md#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT">INITIAL_DUAL_ATTESTATION_LIMIT</a> * <a href="Libra.md#0x1_Libra_spec_scaling_factor">Libra::spec_scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;();
 <b>aborts_if</b> initial_limit &gt; <a href="DualAttestation.md#0x1_DualAttestation_MAX_U64">MAX_U64</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;;
@@ -1357,8 +1368,8 @@ The existence of Preburn is preserved.
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialExistence">PreserveCredentialExistence</a> {
     <b>ensures</b> <b>forall</b> addr1: address:
-        <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)) ==&gt;
-            <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1);
+        <b>old</b>(<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1)) ==&gt;
+            <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1);
 }
 </code></pre>
 
@@ -1372,8 +1383,8 @@ The absence of Preburn is preserved.
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialAbsence">PreserveCredentialAbsence</a> {
     <b>ensures</b> <b>forall</b> addr1: address:
-        <b>old</b>(!<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)) ==&gt;
-            !<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1);
+        <b>old</b>(!<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1)) ==&gt;
+            !<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1);
 }
 </code></pre>
 
@@ -1393,7 +1404,7 @@ The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP o
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialAbsence">PreserveCredentialAbsence</a> <b>to</b> * <b>except</b> publish_credential;
 <b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created} <b>to</b> publish_credential;
 <b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address:
-    <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1) ==&gt;
+    <a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1) ==&gt;
         (<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(addr1) ||
         <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr1));
 </code></pre>
@@ -1429,7 +1440,7 @@ The compliance public key stays constant.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_CompliancePublicKeyRemainsSame">CompliancePublicKeyRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)):
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1)):
         <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key);
 }
 </code></pre>
@@ -1450,7 +1461,7 @@ The base url stays constant.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_BaseURLRemainsSame">BaseURLRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)):
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<a href="DualAttestation.md#0x1_DualAttestation_spec_has_credential">spec_has_credential</a>(addr1)):
         <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url);
 }
 </code></pre>

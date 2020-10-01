@@ -72,5 +72,9 @@ spec fun burn {
         Errors::NOT_PUBLISHED,
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED; // TODO: Undocumented error code. Can be caused by Libra.move:544.
+
+    /// Access Control
+    /// Only the account with the burn capability can burn [[H2]][PERMISSION].
+    include Libra::AbortsIfNoBurnCapability<Token>{account: account};
 }
 }
