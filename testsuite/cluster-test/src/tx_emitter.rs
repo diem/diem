@@ -493,6 +493,19 @@ impl TxEmitter {
             requested_accounts,
             self.accounts.len()
         );
+        let a = self.pick_mint_client(&req.instances);
+        for acc in &self.accounts {
+            let balance = retrieve_account_balance(&a, acc.address).await?;
+            for b in balance {
+                if b.currency.eq(COIN1_NAME) {
+                    info!(
+                        "hhhhhhcurrent account has {} coins",
+                        b.amount
+                    );
+                    break;
+                }
+            }
+        }
         info!("Mint is done");
         Ok(())
     }
