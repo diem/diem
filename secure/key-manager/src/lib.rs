@@ -306,25 +306,33 @@ where
     pub fn evaluate_status(&mut self) -> Result<Action, Error> {
         self.ensure_timestamp_progress()?;
 
-        // If this is inconsistent, then we are waiting on a reconfiguration...
-        if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
-            warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
-            counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
-            return Ok(Action::WaitForReconfiguration);
+        // Compare the validator config to the validator set
+        match self.compare_info_to_config() {
+            Ok(()) => { /* Expected */ }
+            Err(Error::ConfigInfoKeyMismatch(..)) => {
+                warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
+                counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
+                return Ok(Action::WaitForReconfiguration);
+            }
+            Err(e) => return Err(e),
         }
 
         let last_rotation = self.last_rotation()?;
 
-        // If this is inconsistent, then the transaction either failed or was never submitted.
-        if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
-            return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
-                Ok(Action::SubmitKeyRotationTransaction)
-            } else {
-                warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
-                counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
-                Ok(Action::WaitForTransactionExecution)
-            };
-        }
+        // Compare the validator config to secure storage
+        match self.compare_storage_to_config() {
+            Ok(()) => { /* Expected */ }
+            Err(Error::ConfigStorageKeyMismatch(..)) => {
+                return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
+                    Ok(Action::SubmitKeyRotationTransaction)
+                } else {
+                    warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
+                    counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
+                    Ok(Action::WaitForTransactionExecution)
+                };
+            }
+            Err(e) => return Err(e),
+        };
 
         if last_rotation + self.rotation_period_secs <= self.time_service.now() {
             Ok(Action::FullKeyRotation)
