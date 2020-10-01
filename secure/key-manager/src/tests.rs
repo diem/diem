@@ -611,10 +611,10 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     node.update_libra_timestamp();
     node.key_manager.execute_once().unwrap();
 
-    // Verify nothing to be done after rotation
+    // Verify nothing to be done after rotation except wait for transaction execution
     node.update_libra_timestamp();
     assert_eq!(
-        Action::NoAction,
+        Action::WaitForTransactionExecution,
         node.key_manager.evaluate_status().unwrap()
     );
 

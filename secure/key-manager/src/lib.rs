@@ -54,12 +54,16 @@ const MAX_GAS_AMOUNT: u64 = 400_000;
 /// Defines actions that KeyManager should perform after a check of all associated state.
 #[derive(Debug, PartialEq)]
 pub enum Action {
-    /// The system is in a healthy state and there is no need to perform a rotation
+    /// There is no need to perform a rotation (keys are still fresh).
     NoAction,
-    /// The system is in a healthy state but sufficient time has passed for another key rotation
+    /// Sufficient time has passed for another key rotation (keys are stale).
     FullKeyRotation,
-    /// Storage and the blockchain are inconsistent, submit a new rotation
+    /// Storage and the blockchain are inconsistent, submit a new rotation transaction.
     SubmitKeyRotationTransaction,
+    /// The validator config and the validator set are inconsistent, wait for reconfiguration.
+    WaitForReconfiguration,
+    /// Storage and the blockchain are inconsistent, wait for rotation transaction execution.
+    WaitForTransactionExecution,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -306,7 +310,7 @@ where
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
             warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
             counters::increment_metric_counter(WAITING_ON_RECONFIGURATION);
-            return Ok(Action::NoAction);
+            return Ok(Action::WaitForReconfiguration);
         }
 
         let last_rotation = self.last_rotation()?;
@@ -318,7 +322,7 @@ where
             } else {
                 warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
                 counters::increment_metric_counter(WAITING_ON_TRANSACTION_EXECUTION);
-                Ok(Action::NoAction)
+                Ok(Action::WaitForTransactionExecution)
             };
         }
 
@@ -341,7 +345,7 @@ where
                 info!(LogSchema::new(LogEntry::TransactionSubmission).event(LogEvent::Pending));
                 self.resubmit_consensus_key_transaction()
             }
-            Action::NoAction => {
+            _ => {
                 info!(LogSchema::new(LogEntry::NoAction));
                 counters::increment_metric_counter(NO_ACTION);
                 Ok(())
