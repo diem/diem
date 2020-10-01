@@ -206,7 +206,7 @@ impl EpochHistory {
         ensure!(!self.epoch_endings.is_empty(), "Empty epoch history.",);
         ensure!(
             epoch <= self.epoch_endings.len() as u64,
-            "History until epoch {} can't varify epoch {}",
+            "History until epoch {} can't verify epoch {}",
             self.epoch_endings.len(),
             epoch,
         );

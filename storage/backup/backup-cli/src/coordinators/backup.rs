@@ -96,31 +96,40 @@ impl BackupCoordinator {
             .get_db_state()
             .await?
             .ok_or_else(|| anyhow!("DB not bootstrapped."))?;
-        let (tx, rx) = watch::channel(db_state);
+
+        // On new DbState retrieved:
+        // `watch_db_state` informs `backup_epoch_endings` via channel 1,
+        // and the the latter informs the other backup type workers via channel 2, after epoch
+        // ending is properly backed up, if necessary. This way, the epoch ending LedgerInfo needed
+        // for proof verification is always available in the same backup storage.
+        let (tx1, rx1) = watch::channel(db_state);
+        let (tx2, rx2) = watch::channel(db_state);
 
         // Schedule work streams.
         let watch_db_state = interval(Duration::from_secs(1))
-            .then(|_| self.try_refresh_db_state(&tx))
+            .then(|_| self.try_refresh_db_state(&tx1))
             .boxed_local();
 
         let backup_epoch_endings = self
             .backup_work_stream(
                 backup_state.latest_epoch_ending_epoch,
-                &rx,
-                Self::backup_epoch_endings,
+                &rx1,
+                |slf, last_epoch, db_state| {
+                    Self::backup_epoch_endings(slf, last_epoch, db_state, &tx2)
+                },
             )
             .boxed_local();
         let backup_state_snapshots = self
             .backup_work_stream(
                 backup_state.latest_state_snapshot_version,
-                &rx,
+                &rx2,
                 Self::backup_state_snapshot,
             )
             .boxed_local();
         let backup_transactions = self
             .backup_work_stream(
                 backup_state.latest_transaction_version,
-                &rx,
+                &rx2,
                 Self::backup_transactions,
             )
             .boxed_local();
@@ -160,31 +169,36 @@ impl BackupCoordinator {
         &self,
         last_epoch_ending_epoch_in_backup: Option<u64>,
         db_state: DbState,
+        downstream_db_state_broadcaster: &watch::Sender<DbState>,
     ) -> Result<Option<u64>> {
         let (first, last) = get_batch_range(
             last_epoch_ending_epoch_in_backup,
             self.epoch_ending_batch_size,
         );
 
-        // <= because `db_state.epoch` hasn't ended yet
-        if db_state.epoch <= last {
-            // wait for the next db_state update
-            return Ok(last_epoch_ending_epoch_in_backup);
-        }
+        let next_state = if db_state.epoch <= last {
+            // "<=" because `db_state.epoch` hasn't ended yet, wait for the next db_state update
+            last_epoch_ending_epoch_in_backup
+        } else {
+            EpochEndingBackupController::new(
+                EpochEndingBackupOpt {
+                    start_epoch: first,
+                    end_epoch: last + 1,
+                },
+                self.global_opt.clone(),
+                Arc::clone(&self.client),
+                Arc::clone(&self.storage),
+            )
+            .run()
+            .await?;
+            Some(last)
+        };
 
-        EpochEndingBackupController::new(
-            EpochEndingBackupOpt {
-                start_epoch: first,
-                end_epoch: last + 1,
-            },
-            self.global_opt.clone(),
-            Arc::clone(&self.client),
-            Arc::clone(&self.storage),
-        )
-        .run()
-        .await?;
-
-        Ok(Some(last))
+        downstream_db_state_broadcaster
+            .broadcast(db_state)
+            .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
+            .unwrap();
+        Ok(next_state)
     }
 
     async fn backup_state_snapshot(
@@ -255,7 +269,7 @@ impl BackupCoordinator {
     ) -> impl StreamExt<Item = ()> + 'a
     where
         S: Copy + Debug + 'a,
-        W: Worker<'a, S, Fut> + Copy + 'static,
+        W: Worker<'a, S, Fut> + Copy + 'a,
         Fut: Future<Output = Result<S>> + 'a,
     {
         stream::unfold(
