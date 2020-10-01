@@ -374,21 +374,24 @@ where
 
     fn sample_connected_peers(&self) {
         // Sample final state at most once a minute, ensuring consistent ordering
-        sample!(
-            SampleRate::Duration(Duration::from_secs(60)),
+        sample!(SampleRate::Duration(Duration::from_secs(60)), {
+            let peers: Vec<_> = self
+                .active_peers
+                .values()
+                .map(|(connection, _)| {
+                    (
+                        connection.remote_peer_id,
+                        connection.addr.clone(),
+                        connection.origin,
+                    )
+                })
+                .collect();
             info!(
                 NetworkSchema::new(&self.network_context),
-                peers = (&self.active_peers)
-                    .iter()
-                    .map(|(_, (conn_metadata, _))| (
-                        conn_metadata.remote_peer_id,
-                        conn_metadata.origin
-                    ))
-                    .collect::<Vec<(PeerId, ConnectionOrigin)>>()
-                    .sort_by(|(a_addr, _), (b_addr, _)| a_addr.cmp(b_addr)),
+                peers = ?peers,
                 "Current connected peers"
             )
-        );
+        });
     }
 
     /// Get the [`NetworkAddress`] we're listening for incoming connections on
