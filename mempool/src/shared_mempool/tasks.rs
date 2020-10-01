@@ -158,9 +158,7 @@ fn gen_ack_response(request_id: Vec<u8>, results: Vec<SubmissionStatusBundle>) -
 }
 
 fn is_txn_retryable(result: SubmissionStatus) -> bool {
-    let mempool_status = result.0.code;
-    mempool_status == MempoolStatusCode::TooManyTransactions
-        || mempool_status == MempoolStatusCode::MempoolIsFull
+    result.0.code == MempoolStatusCode::MempoolIsFull
 }
 
 /// submits a list of SignedTransaction to the local mempool

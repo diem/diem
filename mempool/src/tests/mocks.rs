@@ -147,7 +147,6 @@ impl MockSharedMempool {
         pool.read_timeline(timeline_id, count)
             .0
             .into_iter()
-            .map(|(_, txn)| txn)
             .collect()
     }
 }

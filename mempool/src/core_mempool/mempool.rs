@@ -260,17 +260,13 @@ impl Mempool {
         &mut self,
         timeline_id: u64,
         count: usize,
-    ) -> (Vec<(u64, SignedTransaction)>, u64) {
+    ) -> (Vec<SignedTransaction>, u64) {
         self.transactions.read_timeline(timeline_id, count)
     }
 
-    /// Read transactions as (timeline_id, transaction) with timeline IDs in `timeline_ids`
-    /// Note for some requested timeline IDs, the corresponding transaction may not be in the timeline
-    pub(crate) fn filter_read_timeline(
-        &mut self,
-        timeline_ids: Vec<u64>,
-    ) -> Vec<(u64, SignedTransaction)> {
-        self.transactions.filter_read_timeline(timeline_ids)
+    /// Read transactions from timeline from `start_id` (exclusive) to `end_id` (inclusive)
+    pub(crate) fn timeline_range(&mut self, start_id: u64, end_id: u64) -> Vec<SignedTransaction> {
+        self.transactions.timeline_range(start_id, end_id)
     }
 
     #[cfg(test)]

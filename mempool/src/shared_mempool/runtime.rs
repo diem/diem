@@ -50,7 +50,7 @@ pub(crate) fn start_shared_mempool<V>(
     V: TransactionValidation + 'static,
 {
     let upstream_config = config.upstream.clone();
-    let peer_manager = Arc::new(PeerManager::new(upstream_config));
+    let peer_manager = Arc::new(PeerManager::new(config.mempool.clone(), upstream_config));
 
     let mut all_network_events = vec![];
     let mut network_senders = HashMap::new();

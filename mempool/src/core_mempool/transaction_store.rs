@@ -348,18 +348,16 @@ impl TransactionStore {
         &mut self,
         timeline_id: u64,
         count: usize,
-    ) -> (Vec<(u64, SignedTransaction)>, u64) {
+    ) -> (Vec<SignedTransaction>, u64) {
         let mut batch = vec![];
         let mut last_timeline_id = timeline_id;
-        for (id, (address, sequence_number)) in
-            self.timeline_index.read_timeline(timeline_id, count)
-        {
+        for (address, sequence_number) in self.timeline_index.read_timeline(timeline_id, count) {
             if let Some(txn) = self
                 .transactions
                 .get_mut(&address)
                 .and_then(|txns| txns.get(&sequence_number))
             {
-                batch.push((id, txn.txn.clone()));
+                batch.push(txn.txn.clone());
                 if let TimelineState::Ready(timeline_id) = txn.timeline_state {
                     last_timeline_id = timeline_id;
                 }
@@ -368,27 +366,15 @@ impl TransactionStore {
         (batch, last_timeline_id)
     }
 
-    /// Returns transactions with timeline ID in `timeline_ids`
-    /// as list of (timeline_id, transaction)
-    pub(crate) fn filter_read_timeline(
-        &mut self,
-        timeline_ids: Vec<u64>,
-    ) -> Vec<(u64, SignedTransaction)> {
-        timeline_ids
-            .into_iter()
-            .filter_map(|timeline_id| {
-                if let Some((address, sequence_number)) =
-                    self.timeline_index.get_timeline_entry(timeline_id)
-                {
-                    if let Some(txn) = self
-                        .transactions
-                        .get_mut(&address)
-                        .and_then(|txns| txns.get(&sequence_number))
-                    {
-                        return Some((timeline_id, txn.txn.clone()));
-                    }
-                }
-                None
+    pub(crate) fn timeline_range(&mut self, start_id: u64, end_id: u64) -> Vec<SignedTransaction> {
+        self.timeline_index
+            .timeline_range(start_id, end_id)
+            .iter()
+            .filter_map(|(account, sequence_number)| {
+                self.transactions
+                    .get(account)
+                    .and_then(|txns| txns.get(sequence_number))
+                    .map(|txn| txn.txn.clone())
             })
             .collect()
     }

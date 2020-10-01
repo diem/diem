@@ -30,7 +30,7 @@ use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTran
 use std::{
     ops::Deref,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::{Duration, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
@@ -165,7 +165,7 @@ pub(crate) async fn coordinator<V>(
                                             .await;
                                     }
                                     MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
-                                        let ack_timestamp = Instant::now();
+                                        let ack_timestamp = SystemTime::now();
                                         peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff, ack_timestamp);
                                     }
                                 };

@@ -9,18 +9,19 @@ use crate::{
 };
 use itertools::Itertools;
 use libra_config::{
-    config::{PeerNetworkId, UpstreamConfig},
+    config::{MempoolConfig, PeerNetworkId, UpstreamConfig},
     network_id::NetworkId,
 };
 use libra_logger::prelude::*;
+use libra_types::transaction::SignedTransaction;
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    ops::{Deref, DerefMut},
+    collections::{BTreeMap, BTreeSet, HashMap},
+    ops::{Add, Deref, DerefMut},
     sync::Mutex,
-    time::Instant,
+    time::{Duration, Instant, SystemTime},
 };
 use vm_validator::vm_validator::TransactionValidation;
 
@@ -39,6 +40,7 @@ pub(crate) struct PeerSyncState {
 
 pub(crate) struct PeerManager {
     upstream_config: UpstreamConfig,
+    mempool_config: MempoolConfig,
     peer_info: Mutex<PeerInfo>,
     // the upstream peer to failover to if all peers in the primary upstream network are dead
     // the number of failover peers is limited to 1 to avoid network competition in the failover networks
@@ -47,40 +49,40 @@ pub(crate) struct PeerManager {
 /// Identifier for a broadcasted batch of txns
 /// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
 /// the core mempool timeline index that produced the txns in this batch
-#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub struct BatchId(pub u64, pub u64);
 
+impl Ord for BatchId {
+    fn cmp(&self, other: &BatchId) -> std::cmp::Ordering {
+        (other.0, other.1).cmp(&(self.0, self.1))
+    }
+}
+
+/// Txn broadcast-related info for a given remote peer
 #[derive(Clone)]
 pub struct BroadcastInfo {
-    // broadcasts that have not been ACK'ed for yet
-    pub sent_batches: HashMap<BatchId, BatchInfo>,
-    // timeline IDs of all txns that need to be retried and ACKed for
-    pub total_retry_txns: BTreeSet<u64>,
-    // whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals
+    // sent broadcasts that have not yet received an ACK
+    pub sent_batches: BTreeMap<BatchId, SystemTime>,
+    // broadcasts that have received a retry ACK and are pending a resend
+    pub retry_batches: BTreeSet<BatchId>,
+    // whether braodcasting to this peer is in backoff mode, e.g. broadcasting at longer intervals
     pub backoff_mode: bool,
 }
 
 impl BroadcastInfo {
     fn new() -> Self {
         Self {
-            sent_batches: HashMap::new(),
-            total_retry_txns: BTreeSet::new(),
+            sent_batches: BTreeMap::new(),
+            retry_batches: BTreeSet::new(),
             backoff_mode: false,
         }
     }
 }
 
-#[derive(Clone)]
-pub struct BatchInfo {
-    /// Timeline IDs of broadcasted txns
-    pub timeline_ids: Vec<u64>,
-    /// timestamp of broadcast
-    pub timestamp: Instant,
-}
-
 impl PeerManager {
-    pub fn new(upstream_config: UpstreamConfig) -> Self {
+    pub fn new(mempool_config: MempoolConfig, upstream_config: UpstreamConfig) -> Self {
         Self {
+            mempool_config,
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
             failover_peer: Mutex::new(None),
@@ -157,99 +159,99 @@ impl PeerManager {
     {
         // start timer for tracking broadcast latency
         let start_time = Instant::now();
-        let peer_manager = &smp.peer_manager;
 
-        let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
-            let state = peer_manager.get_peer_state(&peer);
-            let next_backoff = state.broadcast_info.backoff_mode;
-            if state.is_alive {
-                (
-                    state.timeline_id,
-                    state
-                        .broadcast_info
-                        .total_retry_txns
-                        .into_iter()
-                        .collect::<Vec<_>>(),
-                    next_backoff,
-                )
-            } else {
-                return;
-            }
-        } else {
-            return;
-        };
-
-        // It is possible that a broadcast was scheduled as non-backoff before an ACK received after the
-        // broadcast scheduling turns on backoff mode
-        // If this is the case, ignore this schedule and wait till next broadcast scheduled as backoff
-        if !scheduled_backoff && next_backoff {
-            return;
-        }
-
-        // craft batch of txns to broadcast
-        let mut mempool = smp
-            .mempool
+        let mut peer_info = self
+            .peer_info
             .lock()
-            .expect("[shared mempool] failed to acquire mempool lock");
+            .expect("failed to acquire peer info lock");
+        let state = peer_info
+            .get_mut(&peer)
+            .expect("missing peer info for peer");
 
-        // first populate batch with retriable txns, to prioritize resending them
-        let retry_txns = mempool.filter_read_timeline(retry_txns_id);
-        // pad the batch with new txns from fresh timeline read, if batch has space
-        let (new_txns, new_timeline_id) = if retry_txns.len() < smp.config.shared_mempool_batch_size
-        {
-            mempool.read_timeline(
-                timeline_id,
-                smp.config.shared_mempool_batch_size - retry_txns.len(),
-            )
-        } else {
-            (vec![], timeline_id)
-        };
-
-        if new_txns.is_empty() && retry_txns.is_empty() {
+        // only broadcast to peer that is both alive and picked
+        if !state.is_alive || !self.is_picked_peer(&peer) {
             return;
         }
 
-        // read first tx in timeline
-        let earliest_timeline_id = mempool
-            .read_timeline(0, 1)
-            .0
-            .get(0)
-            .expect("empty timeline")
-            .0;
-        // don't hold mempool lock during network send
-        drop(mempool);
+        // If backoff mode is on for this peer, only execute broadcasts that were scheduled as a backoff broadcast
+        // This is to ensure the backoff mode is actually honored (there is a chance a broadcast was scheduled
+        // in non-backoff mode before backoff mode was turned on - ignore such scheduled broadcasts)
+        if state.broadcast_info.backoff_mode && !scheduled_backoff {
+            return;
+        }
 
-        // combine retry_txns and new_txns into batch
-        let mut all_txns = retry_txns
-            .into_iter()
-            .chain(new_txns.into_iter())
-            .collect::<Vec<_>>();
-        all_txns.truncate(smp.config.shared_mempool_batch_size);
-        let batch_timeline_ids = all_txns.iter().map(|(id, _txn)| *id).collect::<Vec<_>>();
-        let batch_txns = all_txns
-            .into_iter()
-            .map(|(_id, txn)| txn)
-            .collect::<Vec<_>>();
+        let batch_id: BatchId;
+        let transactions: Vec<SignedTransaction>;
+        {
+            let mut mempool = smp
+                .mempool
+                .lock()
+                .expect("failed to acquire core mempool lock");
 
-        let network_sender = smp
+            // Sync peer's pending broadcasts with latest mempool state
+            // A pending broadcast might become empty if the corresponding txns were committed through
+            // another peer, so don't track broadcasts for committed txns
+            state.broadcast_info.sent_batches = state
+                .broadcast_info
+                .sent_batches
+                .clone()
+                .into_iter()
+                .filter(|(id, _batch)| !mempool.timeline_range(id.0, id.1).is_empty())
+                .collect::<BTreeMap<BatchId, SystemTime>>();
+
+            // check for batch to rebroadcast:
+            // 1. batch that did not receive ACK in configured window of time
+            // 2. batch that an earlier ACK marked as retriable
+            let expired = state
+                .broadcast_info
+                .sent_batches
+                .iter()
+                .find(|(_, time)| {
+                    let deadline = time.add(Duration::from_millis(
+                        self.mempool_config.shared_mempool_ack_timeout_ms,
+                    ));
+                    SystemTime::now().duration_since(deadline).is_ok()
+                })
+                .map(|(id, _)| id);
+            let retry = state.broadcast_info.retry_batches.iter().next();
+
+            let (new_batch_id, new_transactions) = match std::cmp::max(expired, retry) {
+                Some(id) => {
+                    let txns = mempool.timeline_range(id.0, id.1);
+                    (*id, txns)
+                }
+                None => {
+                    // fresh broadcast
+                    let (txns, new_timeline_id) = mempool.read_timeline(
+                        state.timeline_id,
+                        self.mempool_config.shared_mempool_batch_size,
+                    );
+                    (BatchId(state.timeline_id, new_timeline_id), txns)
+                }
+            };
+
+            batch_id = new_batch_id;
+            transactions = new_transactions;
+        }
+
+        if transactions.is_empty() {
+            return;
+        }
+
+        // execute actual network send
+        let mut network_sender = smp
             .network_senders
             .get_mut(&peer.network_id())
-            .expect("[shared mempool] missing network sender");
+            .expect("[shared mempool] missing network sender")
+            .clone();
 
-        let batch_id = BatchId(timeline_id, new_timeline_id);
-        let request_id = if let Ok(bytes) = lcs::to_bytes(&batch_id) {
-            bytes
-        } else {
-            // TODO log this
-            return;
-        };
-
-        let txns_ct = batch_txns.len();
+        let num_txns = transactions.len();
+        let peer_id_str = peer.peer_id().to_string();
         if let Err(e) = network_sender.send_to(
             peer.peer_id(),
             MempoolSyncMsg::BroadcastTransactionsRequest {
-                request_id,
-                transactions: batch_txns,
+                request_id: lcs::to_bytes(&batch_id).expect("failed LCS serialization of batch ID"),
+                transactions,
             },
         ) {
             counters::NETWORK_SEND_FAIL
@@ -260,29 +262,28 @@ impl PeerManager {
                     .peer(&peer)
                     .error(&e.into())
             );
-        } else {
-            let broadcast_time = Instant::now();
-            let peer_id = &peer.peer_id().to_string();
-            counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
-                .with_label_values(&[peer_id])
-                .observe(txns_ct as f64);
-            counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-                .with_label_values(&[peer_id])
-                .inc();
-            peer_manager.update_peer_broadcast(
-                peer,
-                batch_id,
-                batch_timeline_ids,
-                new_timeline_id,
-                earliest_timeline_id,
-                broadcast_time,
-            );
-            notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
-            let broadcast_latency = start_time.elapsed();
-            counters::SHARED_MEMPOOL_BROADCAST_LATENCY
-                .with_label_values(&[peer_id])
-                .observe(broadcast_latency.as_secs_f64());
+            return;
         }
+        // update peer sync state with info from above broadcast
+        state.timeline_id = std::cmp::max(state.timeline_id, batch_id.1);
+        // turn off backoff mode after every broadcast
+        state.broadcast_info.backoff_mode = false;
+        state
+            .broadcast_info
+            .sent_batches
+            .insert(batch_id, SystemTime::now());
+        state.broadcast_info.retry_batches.remove(&batch_id);
+        notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
+
+        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
+            .with_label_values(&[&peer_id_str])
+            .observe(num_txns as f64);
+        counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
+            .with_label_values(&[&peer_id_str])
+            .inc();
+        counters::SHARED_MEMPOOL_BROADCAST_LATENCY
+            .with_label_values(&[&peer_id_str])
+            .observe(start_time.elapsed().as_secs_f64());
     }
 
     // updates the peer chosen to failover to if all peers in the primary upstream network are down
@@ -352,47 +353,6 @@ impl PeerManager {
         }
     }
 
-    pub fn update_peer_broadcast(
-        &self,
-        peer: PeerNetworkId,
-        // ID of broadcast request
-        batch_id: BatchId,
-        // timeline IDs of txns broadcasted
-        batch: Vec<u64>,
-        // the new timeline ID to read from for next broadcast
-        timeline_id: u64,
-        // timeline ID of first txn in timeline, used to remove potentially expired retry_txns
-        earliest_timeline_id: u64,
-        // timestamp of broadcast
-        timestamp: Instant,
-    ) {
-        let mut peer_info = self
-            .peer_info
-            .lock()
-            .expect("failed to acquire peer_info lock");
-
-        let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
-        sync_state.broadcast_info.sent_batches.insert(
-            batch_id,
-            BatchInfo {
-                timeline_ids: batch,
-                timestamp,
-            },
-        );
-        sync_state.timeline_id = std::cmp::max(sync_state.timeline_id, timeline_id);
-
-        // clean up expired retriable txns
-        let gc_retry_txns = sync_state
-            .broadcast_info
-            .total_retry_txns
-            .iter()
-            .filter(|x| *x >= &earliest_timeline_id)
-            .cloned()
-            .collect::<BTreeSet<_>>();
-
-        sync_state.broadcast_info.total_retry_txns = gc_retry_txns;
-    }
-
     pub fn process_broadcast_ack(
         &self,
         peer: PeerNetworkId,
@@ -400,7 +360,7 @@ impl PeerManager {
         retry_txns: Vec<u64>,
         backoff: bool,
         // timestamp of ACK received
-        timestamp: Instant,
+        timestamp: SystemTime,
     ) {
         let batch_id = if let Ok(id) = lcs::from_bytes::<BatchId>(&request_id_bytes) {
             id
@@ -418,41 +378,35 @@ impl PeerManager {
 
         let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
 
-        if let Some(batch) = sync_state.broadcast_info.sent_batches.remove(&batch_id) {
+        if let Some(sent_timestamp) = sync_state.broadcast_info.sent_batches.remove(&batch_id) {
+            // track broadcast roundtrip latency
+            let rtt = timestamp
+                .duration_since(sent_timestamp)
+                .expect("failed to calculate mempool broadcast RTT");
+            counters::SHARED_MEMPOOL_BROADCAST_RTT
+                .with_label_values(&[&peer.peer_id().to_string()])
+                .observe(rtt.as_secs_f64());
+
             // update ACK counter
             counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
                 .with_label_values(&[&peer.peer_id().to_string()])
                 .dec();
-
-            // track broadcast roundtrip latency
-            if let Some(rtt) = timestamp.checked_duration_since(batch.timestamp) {
-                counters::SHARED_MEMPOOL_BROADCAST_RTT
-                    .with_label_values(&[&peer.peer_id().to_string()])
-                    .observe(rtt.as_secs_f64());
-            }
-
-            // convert retry_txns from index within a batch to actual timeline ID of txn
-            let retry_timeline_ids = retry_txns
-                .iter()
-                .filter_map(|batch_index| batch.timeline_ids.get(*batch_index as usize).cloned())
-                .collect::<HashSet<_>>();
-            for timeline_id in batch.timeline_ids.into_iter() {
-                if retry_timeline_ids.contains(&timeline_id) {
-                    // add this retriable txn's timeline ID to peer info's retry_txns
-                    sync_state
-                        .broadcast_info
-                        .total_retry_txns
-                        .insert(timeline_id);
-                } else {
-                    // this txn was successfully ACK'ed for - aggressively remove from retry_txns
-                    sync_state
-                        .broadcast_info
-                        .total_retry_txns
-                        .remove(&timeline_id);
-                }
-            }
+        } else {
+            // log and return
+            // sample log
+            return;
         }
-        sync_state.broadcast_info.backoff_mode = backoff;
+
+        if !retry_txns.is_empty() {
+            sync_state.broadcast_info.retry_batches.insert(batch_id);
+        }
+
+        // if backoff mode can only be turned off by executing a broadcast that was scheduled
+        // as a backoff broadcast
+        // This ensures backpressure request from remote peer is honored at least once
+        if backoff {
+            sync_state.broadcast_info.backoff_mode = true;
+        }
     }
 
     // if the origin is provided, checks whether this peer is an upstream peer based on configured preferences and
@@ -483,15 +437,6 @@ impl PeerManager {
 
     fn is_public_downstream(network_id: NetworkId, origin: ConnectionOrigin) -> bool {
         network_id == NetworkId::Public && origin == ConnectionOrigin::Inbound
-    }
-
-    pub fn get_peer_state(&self, peer: &PeerNetworkId) -> PeerSyncState {
-        self.peer_info
-            .lock()
-            .expect("failed to acquire peer info lock")
-            .get(peer)
-            .expect("missing peer sync state")
-            .clone()
     }
 
     // checks whether a peer is a chosen broadcast recipient:
