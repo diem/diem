@@ -5,22 +5,22 @@
 
 
 
--  [Struct <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>](#0x1_FixedPoint32_FixedPoint32)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a></code>](#0x1_FixedPoint32_MAX_U64)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_EDENOMINATOR">EDENOMINATOR</a></code>](#0x1_FixedPoint32_EDENOMINATOR)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION">EDIVISION</a></code>](#0x1_FixedPoint32_EDIVISION)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_EMULTIPLICATION">EMULTIPLICATION</a></code>](#0x1_FixedPoint32_EMULTIPLICATION)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a></code>](#0x1_FixedPoint32_EDIVISION_BY_ZERO)
--  [Const <code><a href="FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a></code>](#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE)
--  [Function <code>multiply_u64</code>](#0x1_FixedPoint32_multiply_u64)
+-  [Struct `FixedPoint32`](#0x1_FixedPoint32_FixedPoint32)
+-  [Const `MAX_U64`](#0x1_FixedPoint32_MAX_U64)
+-  [Const `EDENOMINATOR`](#0x1_FixedPoint32_EDENOMINATOR)
+-  [Const `EDIVISION`](#0x1_FixedPoint32_EDIVISION)
+-  [Const `EMULTIPLICATION`](#0x1_FixedPoint32_EMULTIPLICATION)
+-  [Const `EDIVISION_BY_ZERO`](#0x1_FixedPoint32_EDIVISION_BY_ZERO)
+-  [Const `ERATIO_OUT_OF_RANGE`](#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE)
+-  [Function `multiply_u64`](#0x1_FixedPoint32_multiply_u64)
     -  [Abstract Semantics](#@Abstract_Semantics_0)
--  [Function <code>divide_u64</code>](#0x1_FixedPoint32_divide_u64)
+-  [Function `divide_u64`](#0x1_FixedPoint32_divide_u64)
     -  [Abstract Semantics](#@Abstract_Semantics_1)
--  [Function <code>create_from_rational</code>](#0x1_FixedPoint32_create_from_rational)
+-  [Function `create_from_rational`](#0x1_FixedPoint32_create_from_rational)
     -  [Abstract Semantics](#@Abstract_Semantics_2)
--  [Function <code>create_from_raw_value</code>](#0x1_FixedPoint32_create_from_raw_value)
--  [Function <code>get_raw_value</code>](#0x1_FixedPoint32_get_raw_value)
--  [Function <code>is_zero</code>](#0x1_FixedPoint32_is_zero)
+-  [Function `create_from_raw_value`](#0x1_FixedPoint32_create_from_raw_value)
+-  [Function `get_raw_value`](#0x1_FixedPoint32_get_raw_value)
+-  [Function `is_zero`](#0x1_FixedPoint32_is_zero)
 -  [Module Specification](#@Module_Specification_3)
 
 
@@ -600,5 +600,8 @@ Returns true if the ratio is zero.
 
 <pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

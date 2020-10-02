@@ -5,12 +5,12 @@
 
 
 
--  [Resource <code><a href="Offer.md#0x1_Offer">Offer</a></code>](#0x1_Offer_Offer)
--  [Const <code><a href="Offer.md#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT">EOFFER_DNE_FOR_ACCOUNT</a></code>](#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT)
--  [Function <code>create</code>](#0x1_Offer_create)
--  [Function <code>redeem</code>](#0x1_Offer_redeem)
--  [Function <code>exists_at</code>](#0x1_Offer_exists_at)
--  [Function <code>address_of</code>](#0x1_Offer_address_of)
+-  [Resource `Offer`](#0x1_Offer_Offer)
+-  [Const `EOFFER_DNE_FOR_ACCOUNT`](#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT)
+-  [Function `create`](#0x1_Offer_create)
+-  [Function `redeem`](#0x1_Offer_redeem)
+-  [Function `exists_at`](#0x1_Offer_exists_at)
+-  [Function `address_of`](#0x1_Offer_address_of)
 -  [Module Specification](#@Module_Specification_0)
     -  [Module specification](#@Module_specification_1)
         -  [Creation of Offers](#@Creation_of_Offers_2)
@@ -335,5 +335,8 @@ Enforce that every function except <code><a href="Offer.md#0x1_Offer_redeem">Sel
 
 <pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

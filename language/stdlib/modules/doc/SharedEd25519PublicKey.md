@@ -8,14 +8,14 @@ this resource, but the account's authentication key will be updated in lockstep.
 that the two keys always stay in sync.
 
 
--  [Resource <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code>](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
--  [Const <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">EMALFORMED_PUBLIC_KEY</a></code>](#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY)
--  [Const <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_ESHARED_KEY">ESHARED_KEY</a></code>](#0x1_SharedEd25519PublicKey_ESHARED_KEY)
--  [Function <code>publish</code>](#0x1_SharedEd25519PublicKey_publish)
--  [Function <code>rotate_key_</code>](#0x1_SharedEd25519PublicKey_rotate_key_)
--  [Function <code>rotate_key</code>](#0x1_SharedEd25519PublicKey_rotate_key)
--  [Function <code>key</code>](#0x1_SharedEd25519PublicKey_key)
--  [Function <code>exists_at</code>](#0x1_SharedEd25519PublicKey_exists_at)
+-  [Resource `SharedEd25519PublicKey`](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
+-  [Const `EMALFORMED_PUBLIC_KEY`](#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY)
+-  [Const `ESHARED_KEY`](#0x1_SharedEd25519PublicKey_ESHARED_KEY)
+-  [Function `publish`](#0x1_SharedEd25519PublicKey_publish)
+-  [Function `rotate_key_`](#0x1_SharedEd25519PublicKey_rotate_key_)
+-  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_rotate_key)
+-  [Function `key`](#0x1_SharedEd25519PublicKey_key)
+-  [Function `exists_at`](#0x1_SharedEd25519PublicKey_exists_at)
 
 
 <a name="0x1_SharedEd25519PublicKey_SharedEd25519PublicKey"></a>
@@ -367,5 +367,8 @@ Returns true if <code>addr</code> holds a <code><a href="SharedEd25519PublicKey.
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

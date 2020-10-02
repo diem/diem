@@ -5,18 +5,17 @@
 
 
 
--  [Resource <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>](#0x1_SlidingNonce_SlidingNonce)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a></code>](#0x1_SlidingNonce_ESLIDING_NONCE)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a></code>](#0x1_SlidingNonce_ENONCE_TOO_OLD)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a></code>](#0x1_SlidingNonce_ENONCE_TOO_NEW)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a></code>](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a></code>](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
--  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a></code>](#0x1_SlidingNonce_NONCE_MASK_SIZE)
--  [Function <code>record_nonce_or_abort</code>](#0x1_SlidingNonce_record_nonce_or_abort)
--  [Function <code>try_record_nonce</code>](#0x1_SlidingNonce_try_record_nonce)
--  [Function <code>publish</code>](#0x1_SlidingNonce_publish)
--  [Function <code>publish_nonce_resource</code>](#0x1_SlidingNonce_publish_nonce_resource)
--  [Module Specification](#@Module_Specification_0)
+-  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Const `ESLIDING_NONCE`](#0x1_SlidingNonce_ESLIDING_NONCE)
+-  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
+-  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
+-  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
+-  [Const `ENONCE_ALREADY_PUBLISHED`](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
+-  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
+-  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
+-  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
+-  [Function `publish`](#0x1_SlidingNonce_publish)
+-  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
 
 
 <a name="0x1_SlidingNonce_SlidingNonce"></a>
@@ -251,6 +250,16 @@ It is currently assumed that this function raises no arithmetic overflow/underfl
 </code></pre>
 
 
+Specification version of <code><a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
+
+
+<a name="0x1_SlidingNonce_spec_try_record_nonce"></a>
+
+
+<pre><code><b>define</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
+</code></pre>
+
+
 
 </details>
 
@@ -317,17 +326,7 @@ Only the libra root account can create this resource for different accounts
 
 </details>
 
-<a name="@Module_Specification_0"></a>
 
-## Module Specification
-
-Specification version of <code><a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
-
-
-<a name="0x1_SlidingNonce_spec_try_record_nonce"></a>
-
-
-<pre><code><b>define</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
-</code></pre>
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

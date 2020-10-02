@@ -3,31 +3,32 @@
 
 # Module `0x1::DesignatedDealer`
 
+Module providing functionality for designated dealers.
 
 
--  [Resource <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a></code>](#0x1_DesignatedDealer_Dealer)
--  [Resource <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a></code>](#0x1_DesignatedDealer_TierInfo)
--  [Struct <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a></code>](#0x1_DesignatedDealer_ReceivedMintEvent)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">EDEALER</a></code>](#0x1_DesignatedDealer_EDEALER)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_ADDITION">EINVALID_TIER_ADDITION</a></code>](#0x1_DesignatedDealer_EINVALID_TIER_ADDITION)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_START">EINVALID_TIER_START</a></code>](#0x1_DesignatedDealer_EINVALID_TIER_START)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_INDEX">EINVALID_TIER_INDEX</a></code>](#0x1_DesignatedDealer_EINVALID_TIER_INDEX)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT">EINVALID_MINT_AMOUNT</a></code>](#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER">EINVALID_AMOUNT_FOR_TIER</a></code>](#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_ONE_DAY">ONE_DAY</a></code>](#0x1_DesignatedDealer_ONE_DAY)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_MAX_NUM_TIERS">MAX_NUM_TIERS</a></code>](#0x1_DesignatedDealer_MAX_NUM_TIERS)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_0_DEFAULT">TIER_0_DEFAULT</a></code>](#0x1_DesignatedDealer_TIER_0_DEFAULT)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_1_DEFAULT">TIER_1_DEFAULT</a></code>](#0x1_DesignatedDealer_TIER_1_DEFAULT)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_2_DEFAULT">TIER_2_DEFAULT</a></code>](#0x1_DesignatedDealer_TIER_2_DEFAULT)
--  [Const <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_3_DEFAULT">TIER_3_DEFAULT</a></code>](#0x1_DesignatedDealer_TIER_3_DEFAULT)
--  [Function <code>publish_designated_dealer_credential</code>](#0x1_DesignatedDealer_publish_designated_dealer_credential)
--  [Function <code>add_currency</code>](#0x1_DesignatedDealer_add_currency)
--  [Function <code>add_tier</code>](#0x1_DesignatedDealer_add_tier)
--  [Function <code>update_tier</code>](#0x1_DesignatedDealer_update_tier)
--  [Function <code>tiered_mint</code>](#0x1_DesignatedDealer_tiered_mint)
--  [Function <code>exists_at</code>](#0x1_DesignatedDealer_exists_at)
--  [Function <code>validate_and_record_mint</code>](#0x1_DesignatedDealer_validate_and_record_mint)
--  [Function <code>reset_window</code>](#0x1_DesignatedDealer_reset_window)
+-  [Resource `Dealer`](#0x1_DesignatedDealer_Dealer)
+-  [Resource `TierInfo`](#0x1_DesignatedDealer_TierInfo)
+-  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
+-  [Const `EDEALER`](#0x1_DesignatedDealer_EDEALER)
+-  [Const `EINVALID_TIER_ADDITION`](#0x1_DesignatedDealer_EINVALID_TIER_ADDITION)
+-  [Const `EINVALID_TIER_START`](#0x1_DesignatedDealer_EINVALID_TIER_START)
+-  [Const `EINVALID_TIER_INDEX`](#0x1_DesignatedDealer_EINVALID_TIER_INDEX)
+-  [Const `EINVALID_MINT_AMOUNT`](#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT)
+-  [Const `EINVALID_AMOUNT_FOR_TIER`](#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER)
+-  [Const `ONE_DAY`](#0x1_DesignatedDealer_ONE_DAY)
+-  [Const `MAX_NUM_TIERS`](#0x1_DesignatedDealer_MAX_NUM_TIERS)
+-  [Const `TIER_0_DEFAULT`](#0x1_DesignatedDealer_TIER_0_DEFAULT)
+-  [Const `TIER_1_DEFAULT`](#0x1_DesignatedDealer_TIER_1_DEFAULT)
+-  [Const `TIER_2_DEFAULT`](#0x1_DesignatedDealer_TIER_2_DEFAULT)
+-  [Const `TIER_3_DEFAULT`](#0x1_DesignatedDealer_TIER_3_DEFAULT)
+-  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
+-  [Function `add_currency`](#0x1_DesignatedDealer_add_currency)
+-  [Function `add_tier`](#0x1_DesignatedDealer_add_tier)
+-  [Function `update_tier`](#0x1_DesignatedDealer_update_tier)
+-  [Function `tiered_mint`](#0x1_DesignatedDealer_tiered_mint)
+-  [Function `exists_at`](#0x1_DesignatedDealer_exists_at)
+-  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_validate_and_record_mint)
+-  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 
 
 <a name="0x1_DesignatedDealer_Dealer"></a>
@@ -105,21 +106,17 @@ tier a mint to a DD needs to be in.
 <summary>Specification</summary>
 
 
+The number of tiers is limited.
+
 
 <pre><code><b>invariant</b> len(tiers) &lt;= <a href="DesignatedDealer.md#0x1_DesignatedDealer_MAX_NUM_TIERS">MAX_NUM_TIERS</a>;
-<b>invariant</b> <b>forall</b> i in 0..len(tiers), j in 0..len(tiers) <b>where</b> i &lt; j: tiers[i] &lt; tiers[j];
 </code></pre>
 
 
+Tiers are ordered.
 
 
-<a name="0x1_DesignatedDealer_AbortsIfNoTierInfo"></a>
-
-
-<pre><code><b>schema</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt; {
-    dd_addr: address;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-}
+<pre><code><b>invariant</b> <b>forall</b> i in 0..len(tiers), j in 0..len(tiers) <b>where</b> i &lt; j: tiers[i] &lt; tiers[j];
 </code></pre>
 
 
@@ -520,6 +517,18 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
+
+<a name="0x1_DesignatedDealer_AbortsIfNoTierInfo"></a>
+
+
+<pre><code><b>schema</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt; {
+    dd_addr: address;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+}
+</code></pre>
+
+
+
 </details>
 
 <a name="0x1_DesignatedDealer_update_tier"></a>
@@ -821,5 +830,30 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 
 
 </details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<a name="0x1_DesignatedDealer_current_time$18"></a>
+<b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
+<b>ensures</b>
+    <b>if</b> (current_time &gt; <a href="DesignatedDealer.md#0x1_DesignatedDealer_ONE_DAY">ONE_DAY</a> && current_time - <a href="DesignatedDealer.md#0x1_DesignatedDealer_ONE_DAY">ONE_DAY</a> &gt; <b>old</b>(tier_info).window_start)
+        tier_info == update_field(update_field(<b>old</b>(tier_info),
+            window_start, current_time),
+            window_inflow, 0)
+    <b>else</b>
+        tier_info == <b>old</b>(tier_info);
+</code></pre>
+
+
+
+</details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

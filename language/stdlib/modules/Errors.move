@@ -8,7 +8,7 @@ address 0x1 {
 ///     declared in this module and are globally unique across the Libra framework. There is a limited
 ///     fixed set of predefined categories, and the framework is guaranteed to use those consistently.
 ///
-///  2. The *error reason* which is encoded in the remaining 54 bits of the code. The reason is a unique
+///  2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 ///     number relative to the module which raised the error and can be used to obtain more information about
 ///     the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
 ///     framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/

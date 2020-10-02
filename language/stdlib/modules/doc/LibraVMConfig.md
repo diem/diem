@@ -5,10 +5,10 @@
 
 
 
--  [Struct <code><a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a></code>](#0x1_LibraVMConfig_LibraVMConfig)
--  [Struct <code><a href="LibraVMConfig.md#0x1_LibraVMConfig_GasSchedule">GasSchedule</a></code>](#0x1_LibraVMConfig_GasSchedule)
--  [Struct <code><a href="LibraVMConfig.md#0x1_LibraVMConfig_GasConstants">GasConstants</a></code>](#0x1_LibraVMConfig_GasConstants)
--  [Function <code>initialize</code>](#0x1_LibraVMConfig_initialize)
+-  [Struct `LibraVMConfig`](#0x1_LibraVMConfig_LibraVMConfig)
+-  [Struct `GasSchedule`](#0x1_LibraVMConfig_GasSchedule)
+-  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
+-  [Function `initialize`](#0x1_LibraVMConfig_initialize)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -300,5 +300,8 @@ Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

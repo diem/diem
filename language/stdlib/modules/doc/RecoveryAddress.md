@@ -5,16 +5,16 @@
 
 
 
--  [Resource <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code>](#0x1_RecoveryAddress_RecoveryAddress)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ENOT_A_VASP">ENOT_A_VASP</a></code>](#0x1_RecoveryAddress_ENOT_A_VASP)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">EKEY_ROTATION_DEPENDENCY_CYCLE</a></code>](#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">ECANNOT_ROTATE_KEY</a></code>](#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">EINVALID_KEY_ROTATION_DELEGATION</a></code>](#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">EACCOUNT_NOT_RECOVERABLE</a></code>](#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE)
--  [Const <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a></code>](#0x1_RecoveryAddress_ERECOVERY_ADDRESS)
--  [Function <code>publish</code>](#0x1_RecoveryAddress_publish)
--  [Function <code>rotate_authentication_key</code>](#0x1_RecoveryAddress_rotate_authentication_key)
--  [Function <code>add_rotation_capability</code>](#0x1_RecoveryAddress_add_rotation_capability)
+-  [Resource `RecoveryAddress`](#0x1_RecoveryAddress_RecoveryAddress)
+-  [Const `ENOT_A_VASP`](#0x1_RecoveryAddress_ENOT_A_VASP)
+-  [Const `EKEY_ROTATION_DEPENDENCY_CYCLE`](#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE)
+-  [Const `ECANNOT_ROTATE_KEY`](#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY)
+-  [Const `EINVALID_KEY_ROTATION_DELEGATION`](#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION)
+-  [Const `EACCOUNT_NOT_RECOVERABLE`](#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE)
+-  [Const `ERECOVERY_ADDRESS`](#0x1_RecoveryAddress_ERECOVERY_ADDRESS)
+-  [Function `publish`](#0x1_RecoveryAddress_publish)
+-  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
+-  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
 -  [Module Specification](#@Module_Specification_0)
     -  [Module specifications](#@Module_specifications_1)
         -  [RecoveryAddress has its own KeyRotationCapability](#@RecoveryAddress_has_its_own_KeyRotationCapability_2)
@@ -532,5 +532,8 @@ Returns true if <code>recovery_address</code> holds the
     <b>forall</b> recovery_addr: address <b>where</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr):
         <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_addr);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

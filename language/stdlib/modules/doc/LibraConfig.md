@@ -5,24 +5,24 @@
 
 
 
--  [Resource <code><a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a></code>](#0x1_LibraConfig_LibraConfig)
--  [Struct <code><a href="LibraConfig.md#0x1_LibraConfig_NewEpochEvent">NewEpochEvent</a></code>](#0x1_LibraConfig_NewEpochEvent)
--  [Resource <code><a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a></code>](#0x1_LibraConfig_Configuration)
--  [Resource <code><a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a></code>](#0x1_LibraConfig_ModifyConfigCapability)
--  [Const <code><a href="LibraConfig.md#0x1_LibraConfig_ECONFIGURATION">ECONFIGURATION</a></code>](#0x1_LibraConfig_ECONFIGURATION)
--  [Const <code><a href="LibraConfig.md#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a></code>](#0x1_LibraConfig_ELIBRA_CONFIG)
--  [Const <code><a href="LibraConfig.md#0x1_LibraConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a></code>](#0x1_LibraConfig_EMODIFY_CAPABILITY)
--  [Const <code><a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a></code>](#0x1_LibraConfig_EINVALID_BLOCK_TIME)
--  [Const <code><a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a></code>](#0x1_LibraConfig_MAX_U64)
--  [Function <code>initialize</code>](#0x1_LibraConfig_initialize)
--  [Function <code>get</code>](#0x1_LibraConfig_get)
--  [Function <code>set</code>](#0x1_LibraConfig_set)
--  [Function <code>set_with_capability_and_reconfigure</code>](#0x1_LibraConfig_set_with_capability_and_reconfigure)
--  [Function <code>publish_new_config_and_get_capability</code>](#0x1_LibraConfig_publish_new_config_and_get_capability)
--  [Function <code>publish_new_config</code>](#0x1_LibraConfig_publish_new_config)
--  [Function <code>reconfigure</code>](#0x1_LibraConfig_reconfigure)
--  [Function <code>reconfigure_</code>](#0x1_LibraConfig_reconfigure_)
--  [Function <code>emit_genesis_reconfiguration_event</code>](#0x1_LibraConfig_emit_genesis_reconfiguration_event)
+-  [Resource `LibraConfig`](#0x1_LibraConfig_LibraConfig)
+-  [Struct `NewEpochEvent`](#0x1_LibraConfig_NewEpochEvent)
+-  [Resource `Configuration`](#0x1_LibraConfig_Configuration)
+-  [Resource `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
+-  [Const `ECONFIGURATION`](#0x1_LibraConfig_ECONFIGURATION)
+-  [Const `ELIBRA_CONFIG`](#0x1_LibraConfig_ELIBRA_CONFIG)
+-  [Const `EMODIFY_CAPABILITY`](#0x1_LibraConfig_EMODIFY_CAPABILITY)
+-  [Const `EINVALID_BLOCK_TIME`](#0x1_LibraConfig_EINVALID_BLOCK_TIME)
+-  [Const `MAX_U64`](#0x1_LibraConfig_MAX_U64)
+-  [Function `initialize`](#0x1_LibraConfig_initialize)
+-  [Function `get`](#0x1_LibraConfig_get)
+-  [Function `set`](#0x1_LibraConfig_set)
+-  [Function `set_with_capability_and_reconfigure`](#0x1_LibraConfig_set_with_capability_and_reconfigure)
+-  [Function `publish_new_config_and_get_capability`](#0x1_LibraConfig_publish_new_config_and_get_capability)
+-  [Function `publish_new_config`](#0x1_LibraConfig_publish_new_config)
+-  [Function `reconfigure`](#0x1_LibraConfig_reconfigure)
+-  [Function `reconfigure_`](#0x1_LibraConfig_reconfigure_)
+-  [Function `emit_genesis_reconfiguration_event`](#0x1_LibraConfig_emit_genesis_reconfiguration_event)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -843,5 +843,8 @@ After genesis, no new configurations are added.
 <b>invariant</b> <b>update</b> [<b>global</b>]
     (<b>forall</b> config_type: type <b>where</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;()): <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;config_type&gt;());
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

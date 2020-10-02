@@ -10,14 +10,14 @@ of <code><a href="Event.md#0x1_Event_EventHandle">EventHandle</a></code>s it gen
 events emitted to a handle and emit events to the event store.
 
 
--  [Resource <code><a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a></code>](#0x1_Event_EventHandleGenerator)
--  [Resource <code><a href="Event.md#0x1_Event_EventHandle">EventHandle</a></code>](#0x1_Event_EventHandle)
--  [Function <code>publish_generator</code>](#0x1_Event_publish_generator)
--  [Function <code>fresh_guid</code>](#0x1_Event_fresh_guid)
--  [Function <code>new_event_handle</code>](#0x1_Event_new_event_handle)
--  [Function <code>emit_event</code>](#0x1_Event_emit_event)
--  [Function <code>write_to_event_store</code>](#0x1_Event_write_to_event_store)
--  [Function <code>destroy_handle</code>](#0x1_Event_destroy_handle)
+-  [Resource `EventHandleGenerator`](#0x1_Event_EventHandleGenerator)
+-  [Resource `EventHandle`](#0x1_Event_EventHandle)
+-  [Function `publish_generator`](#0x1_Event_publish_generator)
+-  [Function `fresh_guid`](#0x1_Event_fresh_guid)
+-  [Function `new_event_handle`](#0x1_Event_new_event_handle)
+-  [Function `emit_event`](#0x1_Event_emit_event)
+-  [Function `write_to_event_store`](#0x1_Event_write_to_event_store)
+-  [Function `destroy_handle`](#0x1_Event_destroy_handle)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -269,5 +269,8 @@ comments of this module and it has been verified.
 
 <pre><code><b>pragma</b> intrinsic = <b>true</b>;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

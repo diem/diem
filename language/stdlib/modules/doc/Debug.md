@@ -3,10 +3,11 @@
 
 # Module `0x1::Debug`
 
+Module providing debug functionality.
 
 
--  [Function <code>print</code>](#0x1_Debug_print)
--  [Function <code>print_stack_trace</code>](#0x1_Debug_print_stack_trace)
+-  [Function `print`](#0x1_Debug_print)
+-  [Function `print_stack_trace`](#0x1_Debug_print_stack_trace)
 
 
 <a name="0x1_Debug_print"></a>
@@ -52,5 +53,8 @@
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

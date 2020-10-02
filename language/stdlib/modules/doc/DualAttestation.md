@@ -3,39 +3,43 @@
 
 # Module `0x1::DualAttestation`
 
+Module managing dual attestation.
 
 
--  [Resource <code><a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a></code>](#0x1_DualAttestation_Credential)
--  [Resource <code><a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a></code>](#0x1_DualAttestation_Limit)
--  [Struct <code><a href="DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">ComplianceKeyRotationEvent</a></code>](#0x1_DualAttestation_ComplianceKeyRotationEvent)
--  [Struct <code><a href="DualAttestation.md#0x1_DualAttestation_BaseUrlRotationEvent">BaseUrlRotationEvent</a></code>](#0x1_DualAttestation_BaseUrlRotationEvent)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_MAX_U64">MAX_U64</a></code>](#0x1_DualAttestation_MAX_U64)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_ECREDENTIAL">ECREDENTIAL</a></code>](#0x1_DualAttestation_ECREDENTIAL)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_ELIMIT">ELIMIT</a></code>](#0x1_DualAttestation_ELIMIT)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">EINVALID_PUBLIC_KEY</a></code>](#0x1_DualAttestation_EINVALID_PUBLIC_KEY)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE">EMALFORMED_METADATA_SIGNATURE</a></code>](#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE">EINVALID_METADATA_SIGNATURE</a></code>](#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">EPAYEE_COMPLIANCE_KEY_NOT_SET</a></code>](#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT">INITIAL_DUAL_ATTESTATION_LIMIT</a></code>](#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DOMAIN_SEPARATOR</a></code>](#0x1_DualAttestation_DOMAIN_SEPARATOR)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_ONE_YEAR">ONE_YEAR</a></code>](#0x1_DualAttestation_ONE_YEAR)
--  [Const <code><a href="DualAttestation.md#0x1_DualAttestation_U64_MAX">U64_MAX</a></code>](#0x1_DualAttestation_U64_MAX)
--  [Function <code>publish_credential</code>](#0x1_DualAttestation_publish_credential)
--  [Function <code>rotate_base_url</code>](#0x1_DualAttestation_rotate_base_url)
--  [Function <code>rotate_compliance_public_key</code>](#0x1_DualAttestation_rotate_compliance_public_key)
--  [Function <code>human_name</code>](#0x1_DualAttestation_human_name)
--  [Function <code>base_url</code>](#0x1_DualAttestation_base_url)
--  [Function <code>compliance_public_key</code>](#0x1_DualAttestation_compliance_public_key)
--  [Function <code>expiration_date</code>](#0x1_DualAttestation_expiration_date)
--  [Function <code>credential_address</code>](#0x1_DualAttestation_credential_address)
--  [Function <code>dual_attestation_required</code>](#0x1_DualAttestation_dual_attestation_required)
--  [Function <code>dual_attestation_message</code>](#0x1_DualAttestation_dual_attestation_message)
--  [Function <code>assert_signature_is_valid</code>](#0x1_DualAttestation_assert_signature_is_valid)
--  [Function <code>assert_payment_ok</code>](#0x1_DualAttestation_assert_payment_ok)
--  [Function <code>initialize</code>](#0x1_DualAttestation_initialize)
--  [Function <code>get_cur_microlibra_limit</code>](#0x1_DualAttestation_get_cur_microlibra_limit)
--  [Function <code>set_microlibra_limit</code>](#0x1_DualAttestation_set_microlibra_limit)
+-  [Resource `Credential`](#0x1_DualAttestation_Credential)
+-  [Resource `Limit`](#0x1_DualAttestation_Limit)
+-  [Struct `ComplianceKeyRotationEvent`](#0x1_DualAttestation_ComplianceKeyRotationEvent)
+-  [Struct `BaseUrlRotationEvent`](#0x1_DualAttestation_BaseUrlRotationEvent)
+-  [Const `MAX_U64`](#0x1_DualAttestation_MAX_U64)
+-  [Const `ECREDENTIAL`](#0x1_DualAttestation_ECREDENTIAL)
+-  [Const `ELIMIT`](#0x1_DualAttestation_ELIMIT)
+-  [Const `EINVALID_PUBLIC_KEY`](#0x1_DualAttestation_EINVALID_PUBLIC_KEY)
+-  [Const `EMALFORMED_METADATA_SIGNATURE`](#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE)
+-  [Const `EINVALID_METADATA_SIGNATURE`](#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE)
+-  [Const `EPAYEE_COMPLIANCE_KEY_NOT_SET`](#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET)
+-  [Const `INITIAL_DUAL_ATTESTATION_LIMIT`](#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT)
+-  [Const `DOMAIN_SEPARATOR`](#0x1_DualAttestation_DOMAIN_SEPARATOR)
+-  [Const `ONE_YEAR`](#0x1_DualAttestation_ONE_YEAR)
+-  [Const `U64_MAX`](#0x1_DualAttestation_U64_MAX)
+-  [Function `publish_credential`](#0x1_DualAttestation_publish_credential)
+-  [Function `rotate_base_url`](#0x1_DualAttestation_rotate_base_url)
+-  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_rotate_compliance_public_key)
+-  [Function `human_name`](#0x1_DualAttestation_human_name)
+-  [Function `base_url`](#0x1_DualAttestation_base_url)
+-  [Function `compliance_public_key`](#0x1_DualAttestation_compliance_public_key)
+-  [Function `expiration_date`](#0x1_DualAttestation_expiration_date)
+-  [Function `credential_address`](#0x1_DualAttestation_credential_address)
+-  [Function `dual_attestation_required`](#0x1_DualAttestation_dual_attestation_required)
+-  [Function `dual_attestation_message`](#0x1_DualAttestation_dual_attestation_message)
+-  [Function `assert_signature_is_valid`](#0x1_DualAttestation_assert_signature_is_valid)
+-  [Function `assert_payment_ok`](#0x1_DualAttestation_assert_payment_ok)
+-  [Function `initialize`](#0x1_DualAttestation_initialize)
+-  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_get_cur_microlibra_limit)
+-  [Function `set_microlibra_limit`](#0x1_DualAttestation_set_microlibra_limit)
 -  [Module Specification](#@Module_Specification_0)
+    -  [Initialization](#@Initialization_1)
+    -  [Helper Functions](#@Helper_Functions_2)
+    -  [Access Control](#@Access_Control_3)
 
 
 <a name="0x1_DualAttestation_Credential"></a>
@@ -900,8 +904,8 @@ Helper which returns true if dual attestion is required for a deposit.
 
 
 <pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer: address, payee: address): bool {
-    <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee)
-        && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
+   <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee)
+       && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
 }
 </code></pre>
 
@@ -913,12 +917,12 @@ Helper functions which simulates <code><a href="DualAttestation.md#0x1_DualAttes
 
 
 <pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(
-    payer: address, payee: address, deposit_value: u64
+   payer: address, payee: address, deposit_value: u64
 ): bool {
-    <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
-            &gt;= <a href="DualAttestation.md#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>() &&
-    payer != payee &&
-    <a href="DualAttestation.md#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer, payee)
+   <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
+               &gt;= <a href="DualAttestation.md#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>() &&
+   payer != payee &&
+   <a href="DualAttestation.md#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer, payee)
 }
 </code></pre>
 
@@ -971,6 +975,17 @@ messages which fail verification and which do not.
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> [abstract] result == <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value);
+</code></pre>
+
+
+Uninterpreted function for <code><a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_message">Self::dual_attestation_message</a></code>. The actual value does not matter for
+the verification of callers.
+
+
+<a name="0x1_DualAttestation_spec_dual_attestation_message"></a>
+
+
+<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
 </code></pre>
 
 
@@ -1296,17 +1311,11 @@ The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 
 ## Module Specification
 
-Uninterpreted function for <code><a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_message">Self::dual_attestation_message</a></code>. The actual value does not matter for
-the verification problem.
 
 
-<a name="0x1_DualAttestation_spec_dual_attestation_message"></a>
+<a name="@Initialization_1"></a>
 
-
-<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
-</code></pre>
-
-
+### Initialization
 
 The Limit resource should be published after genesis
 
@@ -1314,6 +1323,11 @@ The Limit resource should be published after genesis
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="DualAttestation.md#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 </code></pre>
 
+
+
+<a name="@Helper_Functions_2"></a>
+
+### Helper Functions
 
 
 Helper function to determine whether the Limit is published.
@@ -1339,6 +1353,11 @@ Mirrors <code><a href="DualAttestation.md#0x1_DualAttestation_get_cur_microlibra
 }
 </code></pre>
 
+
+
+<a name="@Access_Control_3"></a>
+
+### Access Control
 
 
 
@@ -1452,5 +1471,8 @@ The base url stays constant.
 
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_BaseURLRemainsSame">BaseURLRemainsSame</a> <b>to</b> * <b>except</b> rotate_base_url;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

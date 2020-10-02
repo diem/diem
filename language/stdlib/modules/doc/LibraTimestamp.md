@@ -13,19 +13,19 @@ It interacts with the other modules in the following ways:
 * AccountLimits: to limit the time of account limits
 
 
--  [Resource <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a></code>](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
--  [Const <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a></code>](#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR)
--  [Const <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_ENOT_GENESIS">ENOT_GENESIS</a></code>](#0x1_LibraTimestamp_ENOT_GENESIS)
--  [Const <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_ENOT_OPERATING">ENOT_OPERATING</a></code>](#0x1_LibraTimestamp_ENOT_OPERATING)
--  [Const <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a></code>](#0x1_LibraTimestamp_ETIMESTAMP)
--  [Function <code>set_time_has_started</code>](#0x1_LibraTimestamp_set_time_has_started)
--  [Function <code>update_global_time</code>](#0x1_LibraTimestamp_update_global_time)
--  [Function <code>now_microseconds</code>](#0x1_LibraTimestamp_now_microseconds)
--  [Function <code>now_seconds</code>](#0x1_LibraTimestamp_now_seconds)
--  [Function <code>is_genesis</code>](#0x1_LibraTimestamp_is_genesis)
--  [Function <code>assert_genesis</code>](#0x1_LibraTimestamp_assert_genesis)
--  [Function <code>is_operating</code>](#0x1_LibraTimestamp_is_operating)
--  [Function <code>assert_operating</code>](#0x1_LibraTimestamp_assert_operating)
+-  [Resource `CurrentTimeMicroseconds`](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
+-  [Const `MICRO_CONVERSION_FACTOR`](#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR)
+-  [Const `ENOT_GENESIS`](#0x1_LibraTimestamp_ENOT_GENESIS)
+-  [Const `ENOT_OPERATING`](#0x1_LibraTimestamp_ENOT_OPERATING)
+-  [Const `ETIMESTAMP`](#0x1_LibraTimestamp_ETIMESTAMP)
+-  [Function `set_time_has_started`](#0x1_LibraTimestamp_set_time_has_started)
+-  [Function `update_global_time`](#0x1_LibraTimestamp_update_global_time)
+-  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
+-  [Function `now_seconds`](#0x1_LibraTimestamp_now_seconds)
+-  [Function `is_genesis`](#0x1_LibraTimestamp_is_genesis)
+-  [Function `assert_genesis`](#0x1_LibraTimestamp_assert_genesis)
+-  [Function `is_operating`](#0x1_LibraTimestamp_is_operating)
+-  [Function `assert_operating`](#0x1_LibraTimestamp_assert_operating)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -486,5 +486,8 @@ After genesis, time progresses monotonically.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">is_operating</a>()) ==&gt; <b>old</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

@@ -1,4 +1,5 @@
 address 0x1 {
+/// A container for storing a chain id.
 module ChainId {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
@@ -26,13 +27,22 @@ module ChainId {
         borrow_global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
     }
 
+    // =================================================================
+    // Module Specification
+
+    spec module {} // Switch to module documentation context
+
+    /// # Initialization
+
+    /// When Libra is operating, the chain id is always available.
     spec module {
         invariant [global] LibraTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
-    spec module {
-        define spec_get_chain_id(): u8 {
-            global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
-        }
+
+    /// # Helper Functions
+
+    spec define spec_get_chain_id(): u8 {
+        global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
     }
 }
 }

@@ -3,20 +3,25 @@
 
 # Module `0x1::CoreAddresses`
 
+Module providing well-known addresses and related logic.
+
+> Note: this module currently defines zero-argument functions like <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">Self::LIBRA_ROOT_ADDRESS</a>()</code> using capitalization
+> in the name, as usually reserved for constants. Eventually, those functions are planned to become actually
+> global constants, once the Move language supports this feature.
 
 
--  [Const <code><a href="CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">ELIBRA_ROOT</a></code>](#0x1_CoreAddresses_ELIBRA_ROOT)
--  [Const <code><a href="CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">ETREASURY_COMPLIANCE</a></code>](#0x1_CoreAddresses_ETREASURY_COMPLIANCE)
--  [Const <code><a href="CoreAddresses.md#0x1_CoreAddresses_EVM">EVM</a></code>](#0x1_CoreAddresses_EVM)
--  [Const <code><a href="CoreAddresses.md#0x1_CoreAddresses_ECURRENCY_INFO">ECURRENCY_INFO</a></code>](#0x1_CoreAddresses_ECURRENCY_INFO)
--  [Function <code>LIBRA_ROOT_ADDRESS</code>](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
--  [Function <code>CURRENCY_INFO_ADDRESS</code>](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
--  [Function <code>TREASURY_COMPLIANCE_ADDRESS</code>](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
--  [Function <code>VM_RESERVED_ADDRESS</code>](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
--  [Function <code>assert_libra_root</code>](#0x1_CoreAddresses_assert_libra_root)
--  [Function <code>assert_treasury_compliance</code>](#0x1_CoreAddresses_assert_treasury_compliance)
--  [Function <code>assert_vm</code>](#0x1_CoreAddresses_assert_vm)
--  [Function <code>assert_currency_info</code>](#0x1_CoreAddresses_assert_currency_info)
+-  [Const `ELIBRA_ROOT`](#0x1_CoreAddresses_ELIBRA_ROOT)
+-  [Const `ETREASURY_COMPLIANCE`](#0x1_CoreAddresses_ETREASURY_COMPLIANCE)
+-  [Const `EVM`](#0x1_CoreAddresses_EVM)
+-  [Const `ECURRENCY_INFO`](#0x1_CoreAddresses_ECURRENCY_INFO)
+-  [Function `LIBRA_ROOT_ADDRESS`](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
+-  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
+-  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
+-  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
+-  [Function `assert_libra_root`](#0x1_CoreAddresses_assert_libra_root)
+-  [Function `assert_treasury_compliance`](#0x1_CoreAddresses_assert_treasury_compliance)
+-  [Function `assert_vm`](#0x1_CoreAddresses_assert_vm)
+-  [Function `assert_currency_info`](#0x1_CoreAddresses_assert_currency_info)
 
 
 <a name="0x1_CoreAddresses_ELIBRA_ROOT"></a>
@@ -388,5 +393,8 @@ Specifies that a function aborts if the account has not the currency info addres
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

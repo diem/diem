@@ -5,7 +5,7 @@
 
 
 
--  [Function <code>initialize</code>](#0x1_Genesis_initialize)
+-  [Function `initialize`](#0x1_Genesis_initialize)
 
 
 <a name="0x1_Genesis_initialize"></a>
@@ -94,5 +94,8 @@
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

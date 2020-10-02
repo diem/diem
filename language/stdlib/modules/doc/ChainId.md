@@ -3,13 +3,16 @@
 
 # Module `0x1::ChainId`
 
+A container for storing a chain id.
 
 
--  [Resource <code><a href="ChainId.md#0x1_ChainId">ChainId</a></code>](#0x1_ChainId_ChainId)
--  [Const <code><a href="ChainId.md#0x1_ChainId_ECHAIN_ID">ECHAIN_ID</a></code>](#0x1_ChainId_ECHAIN_ID)
--  [Function <code>initialize</code>](#0x1_ChainId_initialize)
--  [Function <code>get</code>](#0x1_ChainId_get)
+-  [Resource `ChainId`](#0x1_ChainId_ChainId)
+-  [Const `ECHAIN_ID`](#0x1_ChainId_ECHAIN_ID)
+-  [Function `initialize`](#0x1_ChainId_initialize)
+-  [Function `get`](#0x1_ChainId_get)
 -  [Module Specification](#@Module_Specification_0)
+    -  [Initialization](#@Initialization_1)
+    -  [Helper Functions](#@Helper_Functions_2)
 
 
 <a name="0x1_ChainId_ChainId"></a>
@@ -111,9 +114,21 @@ Return the chain ID of this Libra instance
 
 
 
+<a name="@Initialization_1"></a>
+
+### Initialization
+
+When Libra is operating, the chain id is always available.
+
+
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <b>exists</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
 
+
+
+<a name="@Helper_Functions_2"></a>
+
+### Helper Functions
 
 
 
@@ -121,8 +136,11 @@ Return the chain ID of this Libra instance
 
 
 <pre><code><b>define</b> <a href="ChainId.md#0x1_ChainId_spec_get_chain_id">spec_get_chain_id</a>(): u8 {
-    <b>global</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).id
+   <b>global</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).id
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

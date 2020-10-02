@@ -5,22 +5,22 @@
 
 
 
--  [Resource <code><a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a></code>](#0x1_VASP_ParentVASP)
--  [Resource <code><a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a></code>](#0x1_VASP_ChildVASP)
--  [Const <code><a href="VASP.md#0x1_VASP_EPARENT_OR_CHILD_VASP">EPARENT_OR_CHILD_VASP</a></code>](#0x1_VASP_EPARENT_OR_CHILD_VASP)
--  [Const <code><a href="VASP.md#0x1_VASP_ETOO_MANY_CHILDREN">ETOO_MANY_CHILDREN</a></code>](#0x1_VASP_ETOO_MANY_CHILDREN)
--  [Const <code><a href="VASP.md#0x1_VASP_ENOT_A_VASP">ENOT_A_VASP</a></code>](#0x1_VASP_ENOT_A_VASP)
--  [Const <code><a href="VASP.md#0x1_VASP_ENOT_A_PARENT_VASP">ENOT_A_PARENT_VASP</a></code>](#0x1_VASP_ENOT_A_PARENT_VASP)
--  [Const <code><a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a></code>](#0x1_VASP_MAX_CHILD_ACCOUNTS)
--  [Function <code>publish_parent_vasp_credential</code>](#0x1_VASP_publish_parent_vasp_credential)
--  [Function <code>publish_child_vasp_credential</code>](#0x1_VASP_publish_child_vasp_credential)
--  [Function <code>has_account_limits</code>](#0x1_VASP_has_account_limits)
--  [Function <code>parent_address</code>](#0x1_VASP_parent_address)
--  [Function <code>is_parent</code>](#0x1_VASP_is_parent)
--  [Function <code>is_child</code>](#0x1_VASP_is_child)
--  [Function <code>is_vasp</code>](#0x1_VASP_is_vasp)
--  [Function <code>is_same_vasp</code>](#0x1_VASP_is_same_vasp)
--  [Function <code>num_children</code>](#0x1_VASP_num_children)
+-  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
+-  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
+-  [Const `EPARENT_OR_CHILD_VASP`](#0x1_VASP_EPARENT_OR_CHILD_VASP)
+-  [Const `ETOO_MANY_CHILDREN`](#0x1_VASP_ETOO_MANY_CHILDREN)
+-  [Const `ENOT_A_VASP`](#0x1_VASP_ENOT_A_VASP)
+-  [Const `ENOT_A_PARENT_VASP`](#0x1_VASP_ENOT_A_PARENT_VASP)
+-  [Const `MAX_CHILD_ACCOUNTS`](#0x1_VASP_MAX_CHILD_ACCOUNTS)
+-  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
+-  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
+-  [Function `has_account_limits`](#0x1_VASP_has_account_limits)
+-  [Function `parent_address`](#0x1_VASP_parent_address)
+-  [Function `is_parent`](#0x1_VASP_is_parent)
+-  [Function `is_child`](#0x1_VASP_is_child)
+-  [Function `is_vasp`](#0x1_VASP_is_vasp)
+-  [Function `is_same_vasp`](#0x1_VASP_is_same_vasp)
+-  [Function `num_children`](#0x1_VASP_num_children)
 -  [Module Specification](#@Module_Specification_0)
     -  [Existence of Parents](#@Existence_of_Parents_1)
     -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_2)
@@ -701,5 +701,8 @@ The parent address stored at ChildVASP resource never changes.
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     <b>forall</b> a: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(a)): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

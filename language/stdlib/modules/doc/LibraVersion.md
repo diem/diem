@@ -5,10 +5,10 @@
 
 
 
--  [Struct <code><a href="LibraVersion.md#0x1_LibraVersion">LibraVersion</a></code>](#0x1_LibraVersion_LibraVersion)
--  [Const <code><a href="LibraVersion.md#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a></code>](#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER)
--  [Function <code>initialize</code>](#0x1_LibraVersion_initialize)
--  [Function <code>set</code>](#0x1_LibraVersion_set)
+-  [Struct `LibraVersion`](#0x1_LibraVersion_LibraVersion)
+-  [Const `EINVALID_MAJOR_VERSION_NUMBER`](#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER)
+-  [Function `initialize`](#0x1_LibraVersion_initialize)
+-  [Function `set`](#0x1_LibraVersion_set)
 
 
 <a name="0x1_LibraVersion_LibraVersion"></a>
@@ -189,5 +189,8 @@ Only "set" can modify the LibraVersion config [[H9]][PERMISSION]
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

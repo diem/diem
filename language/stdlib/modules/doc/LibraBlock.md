@@ -5,14 +5,14 @@
 
 
 
--  [Resource <code><a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a></code>](#0x1_LibraBlock_BlockMetadata)
--  [Struct <code><a href="LibraBlock.md#0x1_LibraBlock_NewBlockEvent">NewBlockEvent</a></code>](#0x1_LibraBlock_NewBlockEvent)
--  [Const <code><a href="LibraBlock.md#0x1_LibraBlock_EBLOCK_METADATA">EBLOCK_METADATA</a></code>](#0x1_LibraBlock_EBLOCK_METADATA)
--  [Const <code><a href="LibraBlock.md#0x1_LibraBlock_EVM_OR_VALIDATOR">EVM_OR_VALIDATOR</a></code>](#0x1_LibraBlock_EVM_OR_VALIDATOR)
--  [Function <code>initialize_block_metadata</code>](#0x1_LibraBlock_initialize_block_metadata)
--  [Function <code>is_initialized</code>](#0x1_LibraBlock_is_initialized)
--  [Function <code>block_prologue</code>](#0x1_LibraBlock_block_prologue)
--  [Function <code>get_current_block_height</code>](#0x1_LibraBlock_get_current_block_height)
+-  [Resource `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
+-  [Struct `NewBlockEvent`](#0x1_LibraBlock_NewBlockEvent)
+-  [Const `EBLOCK_METADATA`](#0x1_LibraBlock_EBLOCK_METADATA)
+-  [Const `EVM_OR_VALIDATOR`](#0x1_LibraBlock_EVM_OR_VALIDATOR)
+-  [Function `initialize_block_metadata`](#0x1_LibraBlock_initialize_block_metadata)
+-  [Function `is_initialized`](#0x1_LibraBlock_is_initialized)
+-  [Function `block_prologue`](#0x1_LibraBlock_block_prologue)
+-  [Function `get_current_block_height`](#0x1_LibraBlock_get_current_block_height)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -306,5 +306,8 @@ Get the current block height
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraBlock.md#0x1_LibraBlock_is_initialized">is_initialized</a>();
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

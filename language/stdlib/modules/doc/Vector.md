@@ -6,23 +6,23 @@
 A variable-sized container that can hold both unrestricted types and resources.
 
 
--  [Const <code><a href="Vector.md#0x1_Vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a></code>](#0x1_Vector_EINDEX_OUT_OF_BOUNDS)
--  [Function <code>empty</code>](#0x1_Vector_empty)
--  [Function <code>length</code>](#0x1_Vector_length)
--  [Function <code>borrow</code>](#0x1_Vector_borrow)
--  [Function <code>push_back</code>](#0x1_Vector_push_back)
--  [Function <code>borrow_mut</code>](#0x1_Vector_borrow_mut)
--  [Function <code>pop_back</code>](#0x1_Vector_pop_back)
--  [Function <code>destroy_empty</code>](#0x1_Vector_destroy_empty)
--  [Function <code>swap</code>](#0x1_Vector_swap)
--  [Function <code>singleton</code>](#0x1_Vector_singleton)
--  [Function <code>reverse</code>](#0x1_Vector_reverse)
--  [Function <code>append</code>](#0x1_Vector_append)
--  [Function <code>is_empty</code>](#0x1_Vector_is_empty)
--  [Function <code>contains</code>](#0x1_Vector_contains)
--  [Function <code>index_of</code>](#0x1_Vector_index_of)
--  [Function <code>remove</code>](#0x1_Vector_remove)
--  [Function <code>swap_remove</code>](#0x1_Vector_swap_remove)
+-  [Const `EINDEX_OUT_OF_BOUNDS`](#0x1_Vector_EINDEX_OUT_OF_BOUNDS)
+-  [Function `empty`](#0x1_Vector_empty)
+-  [Function `length`](#0x1_Vector_length)
+-  [Function `borrow`](#0x1_Vector_borrow)
+-  [Function `push_back`](#0x1_Vector_push_back)
+-  [Function `borrow_mut`](#0x1_Vector_borrow_mut)
+-  [Function `pop_back`](#0x1_Vector_pop_back)
+-  [Function `destroy_empty`](#0x1_Vector_destroy_empty)
+-  [Function `swap`](#0x1_Vector_swap)
+-  [Function `singleton`](#0x1_Vector_singleton)
+-  [Function `reverse`](#0x1_Vector_reverse)
+-  [Function `append`](#0x1_Vector_append)
+-  [Function `is_empty`](#0x1_Vector_is_empty)
+-  [Function `contains`](#0x1_Vector_contains)
+-  [Function `index_of`](#0x1_Vector_index_of)
+-  [Function `remove`](#0x1_Vector_remove)
+-  [Function `swap_remove`](#0x1_Vector_swap_remove)
 -  [Module Specification](#@Module_Specification_0)
     -  [Module specifications](#@Module_specifications_1)
 
@@ -627,5 +627,8 @@ Auxiliary function to check if <code>v</code> is equal to the result of concaten
     v1 == v2[1..len(v2)]
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

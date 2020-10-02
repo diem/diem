@@ -6,21 +6,21 @@
 Module which manages freezing of accounts.
 
 
--  [Resource <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code>](#0x1_AccountFreezing_FreezingBit)
--  [Resource <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code>](#0x1_AccountFreezing_FreezeEventsHolder)
--  [Struct <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">FreezeAccountEvent</a></code>](#0x1_AccountFreezing_FreezeAccountEvent)
--  [Struct <code><a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEvent">UnfreezeAccountEvent</a></code>](#0x1_AccountFreezing_UnfreezeAccountEvent)
--  [Const <code><a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER">EFREEZE_EVENTS_HOLDER</a></code>](#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER)
--  [Const <code><a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZING_BIT">EFREEZING_BIT</a></code>](#0x1_AccountFreezing_EFREEZING_BIT)
--  [Const <code><a href="AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT">ECANNOT_FREEZE_LIBRA_ROOT</a></code>](#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT)
--  [Const <code><a href="AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_TC">ECANNOT_FREEZE_TC</a></code>](#0x1_AccountFreezing_ECANNOT_FREEZE_TC)
--  [Const <code><a href="AccountFreezing.md#0x1_AccountFreezing_EACCOUNT_FROZEN">EACCOUNT_FROZEN</a></code>](#0x1_AccountFreezing_EACCOUNT_FROZEN)
--  [Function <code>initialize</code>](#0x1_AccountFreezing_initialize)
--  [Function <code>create</code>](#0x1_AccountFreezing_create)
--  [Function <code>freeze_account</code>](#0x1_AccountFreezing_freeze_account)
--  [Function <code>unfreeze_account</code>](#0x1_AccountFreezing_unfreeze_account)
--  [Function <code>account_is_frozen</code>](#0x1_AccountFreezing_account_is_frozen)
--  [Function <code>assert_not_frozen</code>](#0x1_AccountFreezing_assert_not_frozen)
+-  [Resource `FreezingBit`](#0x1_AccountFreezing_FreezingBit)
+-  [Resource `FreezeEventsHolder`](#0x1_AccountFreezing_FreezeEventsHolder)
+-  [Struct `FreezeAccountEvent`](#0x1_AccountFreezing_FreezeAccountEvent)
+-  [Struct `UnfreezeAccountEvent`](#0x1_AccountFreezing_UnfreezeAccountEvent)
+-  [Const `EFREEZE_EVENTS_HOLDER`](#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER)
+-  [Const `EFREEZING_BIT`](#0x1_AccountFreezing_EFREEZING_BIT)
+-  [Const `ECANNOT_FREEZE_LIBRA_ROOT`](#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT)
+-  [Const `ECANNOT_FREEZE_TC`](#0x1_AccountFreezing_ECANNOT_FREEZE_TC)
+-  [Const `EACCOUNT_FROZEN`](#0x1_AccountFreezing_EACCOUNT_FROZEN)
+-  [Function `initialize`](#0x1_AccountFreezing_initialize)
+-  [Function `create`](#0x1_AccountFreezing_create)
+-  [Function `freeze_account`](#0x1_AccountFreezing_freeze_account)
+-  [Function `unfreeze_account`](#0x1_AccountFreezing_unfreeze_account)
+-  [Function `account_is_frozen`](#0x1_AccountFreezing_account_is_frozen)
+-  [Function `assert_not_frozen`](#0x1_AccountFreezing_assert_not_frozen)
 -  [Module Specification](#@Module_Specification_0)
     -  [Initialization](#@Initialization_1)
     -  [Access Control](#@Access_Control_2)
@@ -600,5 +600,8 @@ Only (un)freeze functions can change the freezing bits of accounts [[H6]][PERMIS
     <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && !<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

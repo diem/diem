@@ -7,28 +7,28 @@ Module which manages account limits, like the amount of currency which can flow 
 a given time period.
 
 
--  [Resource <code><a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a></code>](#0x1_AccountLimits_AccountLimitMutationCapability)
--  [Resource <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code>](#0x1_AccountLimits_LimitsDefinition)
--  [Resource <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code>](#0x1_AccountLimits_Window)
--  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a></code>](#0x1_AccountLimits_ELIMITS_DEFINITION)
--  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a></code>](#0x1_AccountLimits_EWINDOW)
--  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_ONE_DAY">ONE_DAY</a></code>](#0x1_AccountLimits_ONE_DAY)
--  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a></code>](#0x1_AccountLimits_MAX_U64)
--  [Function <code>grant_mutation_capability</code>](#0x1_AccountLimits_grant_mutation_capability)
--  [Function <code>update_deposit_limits</code>](#0x1_AccountLimits_update_deposit_limits)
--  [Function <code>update_withdrawal_limits</code>](#0x1_AccountLimits_update_withdrawal_limits)
--  [Function <code>publish_window</code>](#0x1_AccountLimits_publish_window)
--  [Function <code>publish_unrestricted_limits</code>](#0x1_AccountLimits_publish_unrestricted_limits)
--  [Function <code>update_limits_definition</code>](#0x1_AccountLimits_update_limits_definition)
--  [Function <code>update_window_info</code>](#0x1_AccountLimits_update_window_info)
--  [Function <code>reset_window</code>](#0x1_AccountLimits_reset_window)
--  [Function <code>can_receive</code>](#0x1_AccountLimits_can_receive)
--  [Function <code>can_withdraw</code>](#0x1_AccountLimits_can_withdraw)
--  [Function <code>is_unrestricted</code>](#0x1_AccountLimits_is_unrestricted)
--  [Function <code>limits_definition_address</code>](#0x1_AccountLimits_limits_definition_address)
--  [Function <code>has_limits_published</code>](#0x1_AccountLimits_has_limits_published)
--  [Function <code>has_window_published</code>](#0x1_AccountLimits_has_window_published)
--  [Function <code>current_time</code>](#0x1_AccountLimits_current_time)
+-  [Resource `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
+-  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
+-  [Resource `Window`](#0x1_AccountLimits_Window)
+-  [Const `ELIMITS_DEFINITION`](#0x1_AccountLimits_ELIMITS_DEFINITION)
+-  [Const `EWINDOW`](#0x1_AccountLimits_EWINDOW)
+-  [Const `ONE_DAY`](#0x1_AccountLimits_ONE_DAY)
+-  [Const `MAX_U64`](#0x1_AccountLimits_MAX_U64)
+-  [Function `grant_mutation_capability`](#0x1_AccountLimits_grant_mutation_capability)
+-  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
+-  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
+-  [Function `publish_window`](#0x1_AccountLimits_publish_window)
+-  [Function `publish_unrestricted_limits`](#0x1_AccountLimits_publish_unrestricted_limits)
+-  [Function `update_limits_definition`](#0x1_AccountLimits_update_limits_definition)
+-  [Function `update_window_info`](#0x1_AccountLimits_update_window_info)
+-  [Function `reset_window`](#0x1_AccountLimits_reset_window)
+-  [Function `can_receive`](#0x1_AccountLimits_can_receive)
+-  [Function `can_withdraw`](#0x1_AccountLimits_can_withdraw)
+-  [Function `is_unrestricted`](#0x1_AccountLimits_is_unrestricted)
+-  [Function `limits_definition_address`](#0x1_AccountLimits_limits_definition_address)
+-  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
+-  [Function `has_window_published`](#0x1_AccountLimits_has_window_published)
+-  [Function `current_time`](#0x1_AccountLimits_current_time)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -1266,5 +1266,8 @@ Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinitio
    <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr).limit_address);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

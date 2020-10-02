@@ -9,7 +9,7 @@ published on-chain. See https://github.com/libra/libra/tree/master/common/lcs fo
 details on LCS.
 
 
--  [Function <code>to_bytes</code>](#0x1_LCS_to_bytes)
+-  [Function `to_bytes`](#0x1_LCS_to_bytes)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -47,5 +47,8 @@ Return the binary representation of <code>v</code> in LCS (Libra Canonical Seria
 
 <pre><code><b>native</b> <b>define</b> <a href="LCS.md#0x1_LCS_serialize">serialize</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

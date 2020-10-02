@@ -5,24 +5,24 @@
 
 
 
--  [Struct <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">Config</a></code>](#0x1_ValidatorConfig_Config)
--  [Resource <code><a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code>](#0x1_ValidatorConfig_ValidatorConfig)
--  [Const <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">EVALIDATOR_CONFIG</a></code>](#0x1_ValidatorConfig_EVALIDATOR_CONFIG)
--  [Const <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a></code>](#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER)
--  [Const <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">EINVALID_CONSENSUS_KEY</a></code>](#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY)
--  [Const <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR">ENOT_A_VALIDATOR_OPERATOR</a></code>](#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR)
--  [Function <code>publish</code>](#0x1_ValidatorConfig_publish)
--  [Function <code>exists_config</code>](#0x1_ValidatorConfig_exists_config)
--  [Function <code>set_operator</code>](#0x1_ValidatorConfig_set_operator)
--  [Function <code>remove_operator</code>](#0x1_ValidatorConfig_remove_operator)
--  [Function <code>set_config</code>](#0x1_ValidatorConfig_set_config)
--  [Function <code>is_valid</code>](#0x1_ValidatorConfig_is_valid)
+-  [Struct `Config`](#0x1_ValidatorConfig_Config)
+-  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
+-  [Const `EVALIDATOR_CONFIG`](#0x1_ValidatorConfig_EVALIDATOR_CONFIG)
+-  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER)
+-  [Const `EINVALID_CONSENSUS_KEY`](#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY)
+-  [Const `ENOT_A_VALIDATOR_OPERATOR`](#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR)
+-  [Function `publish`](#0x1_ValidatorConfig_publish)
+-  [Function `exists_config`](#0x1_ValidatorConfig_exists_config)
+-  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
+-  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
+-  [Function `set_config`](#0x1_ValidatorConfig_set_config)
+-  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
     -  [Validator stays valid once it becomes valid](#@Validator_stays_valid_once_it_becomes_valid_0)
--  [Function <code>get_config</code>](#0x1_ValidatorConfig_get_config)
--  [Function <code>get_human_name</code>](#0x1_ValidatorConfig_get_human_name)
--  [Function <code>get_operator</code>](#0x1_ValidatorConfig_get_operator)
--  [Function <code>get_consensus_pubkey</code>](#0x1_ValidatorConfig_get_consensus_pubkey)
--  [Function <code>get_validator_network_addresses</code>](#0x1_ValidatorConfig_get_validator_network_addresses)
+-  [Function `get_config`](#0x1_ValidatorConfig_get_config)
+-  [Function `get_human_name`](#0x1_ValidatorConfig_get_human_name)
+-  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
+-  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
+-  [Function `get_validator_network_addresses`](#0x1_ValidatorConfig_get_validator_network_addresses)
 -  [Module Specification](#@Module_Specification_1)
 
 
@@ -854,5 +854,8 @@ previous one as a helper.
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address <b>where</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr1):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr1);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

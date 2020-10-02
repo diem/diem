@@ -11,34 +11,34 @@ A <code>u64</code> error code is constructed from two values:
 declared in this module and are globally unique across the Libra framework. There is a limited
 fixed set of predefined categories, and the framework is guaranteed to use those consistently.
 
-2. The *error reason* which is encoded in the remaining 54 bits of the code. The reason is a unique
+2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 number relative to the module which raised the error and can be used to obtain more information about
 the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
 framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/
 associated module.
 
 
--  [Const <code><a href="Errors.md#0x1_Errors_INVALID_STATE">INVALID_STATE</a></code>](#0x1_Errors_INVALID_STATE)
--  [Const <code><a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a></code>](#0x1_Errors_REQUIRES_ADDRESS)
--  [Const <code><a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a></code>](#0x1_Errors_REQUIRES_ROLE)
--  [Const <code><a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a></code>](#0x1_Errors_REQUIRES_CAPABILITY)
--  [Const <code><a href="Errors.md#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a></code>](#0x1_Errors_NOT_PUBLISHED)
--  [Const <code><a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">ALREADY_PUBLISHED</a></code>](#0x1_Errors_ALREADY_PUBLISHED)
--  [Const <code><a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">INVALID_ARGUMENT</a></code>](#0x1_Errors_INVALID_ARGUMENT)
--  [Const <code><a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">LIMIT_EXCEEDED</a></code>](#0x1_Errors_LIMIT_EXCEEDED)
--  [Const <code><a href="Errors.md#0x1_Errors_INTERNAL">INTERNAL</a></code>](#0x1_Errors_INTERNAL)
--  [Const <code><a href="Errors.md#0x1_Errors_CUSTOM">CUSTOM</a></code>](#0x1_Errors_CUSTOM)
--  [Function <code>make</code>](#0x1_Errors_make)
--  [Function <code>invalid_state</code>](#0x1_Errors_invalid_state)
--  [Function <code>requires_address</code>](#0x1_Errors_requires_address)
--  [Function <code>requires_role</code>](#0x1_Errors_requires_role)
--  [Function <code>requires_capability</code>](#0x1_Errors_requires_capability)
--  [Function <code>not_published</code>](#0x1_Errors_not_published)
--  [Function <code>already_published</code>](#0x1_Errors_already_published)
--  [Function <code>invalid_argument</code>](#0x1_Errors_invalid_argument)
--  [Function <code>limit_exceeded</code>](#0x1_Errors_limit_exceeded)
--  [Function <code>internal</code>](#0x1_Errors_internal)
--  [Function <code>custom</code>](#0x1_Errors_custom)
+-  [Const `INVALID_STATE`](#0x1_Errors_INVALID_STATE)
+-  [Const `REQUIRES_ADDRESS`](#0x1_Errors_REQUIRES_ADDRESS)
+-  [Const `REQUIRES_ROLE`](#0x1_Errors_REQUIRES_ROLE)
+-  [Const `REQUIRES_CAPABILITY`](#0x1_Errors_REQUIRES_CAPABILITY)
+-  [Const `NOT_PUBLISHED`](#0x1_Errors_NOT_PUBLISHED)
+-  [Const `ALREADY_PUBLISHED`](#0x1_Errors_ALREADY_PUBLISHED)
+-  [Const `INVALID_ARGUMENT`](#0x1_Errors_INVALID_ARGUMENT)
+-  [Const `LIMIT_EXCEEDED`](#0x1_Errors_LIMIT_EXCEEDED)
+-  [Const `INTERNAL`](#0x1_Errors_INTERNAL)
+-  [Const `CUSTOM`](#0x1_Errors_CUSTOM)
+-  [Function `make`](#0x1_Errors_make)
+-  [Function `invalid_state`](#0x1_Errors_invalid_state)
+-  [Function `requires_address`](#0x1_Errors_requires_address)
+-  [Function `requires_role`](#0x1_Errors_requires_role)
+-  [Function `requires_capability`](#0x1_Errors_requires_capability)
+-  [Function `not_published`](#0x1_Errors_not_published)
+-  [Function `already_published`](#0x1_Errors_already_published)
+-  [Function `invalid_argument`](#0x1_Errors_invalid_argument)
+-  [Function `limit_exceeded`](#0x1_Errors_limit_exceeded)
+-  [Function `internal`](#0x1_Errors_internal)
+-  [Function `custom`](#0x1_Errors_custom)
 
 
 <a name="0x1_Errors_INVALID_STATE"></a>
@@ -565,5 +565,8 @@ A function to create an error from from a category and a reason.
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

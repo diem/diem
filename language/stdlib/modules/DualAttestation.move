@@ -1,5 +1,6 @@
 address 0x1 {
 
+/// Module managing dual attestation.
 module DualAttestation {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
@@ -301,20 +302,18 @@ module DualAttestation {
         include Libra::ApproxLbrForValueAbortsIf<Token>{from_value: deposit_value};
         aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
     }
-    spec module {
-        define spec_is_inter_vasp(payer: address, payee: address): bool {
-            VASP::is_vasp(payer) && VASP::is_vasp(payee)
-                && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
-        }
-        /// Helper functions which simulates `Self::dual_attestation_required`.
-        define spec_dual_attestation_required<Token>(
-            payer: address, payee: address, deposit_value: u64
-        ): bool {
-            Libra::spec_approx_lbr_for_value<Token>(deposit_value)
+    spec define spec_is_inter_vasp(payer: address, payee: address): bool {
+        VASP::is_vasp(payer) && VASP::is_vasp(payee)
+            && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
+    }
+    /// Helper functions which simulates `Self::dual_attestation_required`.
+    spec define spec_dual_attestation_required<Token>(
+        payer: address, payee: address, deposit_value: u64
+    ): bool {
+        Libra::spec_approx_lbr_for_value<Token>(deposit_value)
                     >= spec_get_cur_microlibra_limit() &&
-            payer != payee &&
-            spec_is_inter_vasp(payer, payee)
-        }
+        payer != payee &&
+        spec_is_inter_vasp(payer, payee)
     }
 
     /// Helper to construct a message for dual attestation.
@@ -338,7 +337,7 @@ module DualAttestation {
         ensures [abstract] result == spec_dual_attestation_message(payer, metadata, deposit_value);
     }
     /// Uninterpreted function for `Self::dual_attestation_message`. The actual value does not matter for
-    /// the verification problem.
+    /// the verification of callers.
     spec define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
 
     /// Helper function to check validity of a signature when dual attestion is required.
@@ -494,11 +493,14 @@ module DualAttestation {
     // **************************** SPECIFICATION ********************************
     spec module {} // switch documentation context back to module level
 
+    /// # Initialization
+
     /// The Limit resource should be published after genesis
     spec module {
         invariant [global] LibraTimestamp::is_operating() ==> spec_is_published();
     }
 
+    /// # Helper Functions
     spec module {
         /// Helper function to determine whether the Limit is published.
         define spec_is_published(): bool {
@@ -510,6 +512,8 @@ module DualAttestation {
             global<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit
         }
     }
+
+    /// # Access Control
 
     spec schema PreserveCredentialExistence {
         /// The existence of Preburn is preserved.

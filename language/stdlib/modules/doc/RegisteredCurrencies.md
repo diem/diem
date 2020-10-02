@@ -6,10 +6,10 @@
 Module managing the registered currencies in the Libra framework.
 
 
--  [Struct <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code>](#0x1_RegisteredCurrencies_RegisteredCurrencies)
--  [Const <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN">ECURRENCY_CODE_ALREADY_TAKEN</a></code>](#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN)
--  [Function <code>initialize</code>](#0x1_RegisteredCurrencies_initialize)
--  [Function <code>add_currency_code</code>](#0x1_RegisteredCurrencies_add_currency_code)
+-  [Struct `RegisteredCurrencies`](#0x1_RegisteredCurrencies_RegisteredCurrencies)
+-  [Const `ECURRENCY_CODE_ALREADY_TAKEN`](#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN)
+-  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
+-  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
 
 
 <a name="0x1_RegisteredCurrencies_RegisteredCurrencies"></a>
@@ -214,5 +214,8 @@ Global invariant that currency config is always available after genesis.
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

@@ -6,12 +6,12 @@
 Utilities for comparing Move values based on their representation in LCS.
 
 
--  [Const <code><a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code>](#0x1_Compare_EQUAL)
--  [Const <code><a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code>](#0x1_Compare_LESS_THAN)
--  [Const <code><a href="Compare.md#0x1_Compare_GREATER_THAN">GREATER_THAN</a></code>](#0x1_Compare_GREATER_THAN)
--  [Function <code>cmp_lcs_bytes</code>](#0x1_Compare_cmp_lcs_bytes)
--  [Function <code>cmp_u8</code>](#0x1_Compare_cmp_u8)
--  [Function <code>cmp_u64</code>](#0x1_Compare_cmp_u64)
+-  [Const `EQUAL`](#0x1_Compare_EQUAL)
+-  [Const `LESS_THAN`](#0x1_Compare_LESS_THAN)
+-  [Const `GREATER_THAN`](#0x1_Compare_GREATER_THAN)
+-  [Function `cmp_lcs_bytes`](#0x1_Compare_cmp_lcs_bytes)
+-  [Function `cmp_u8`](#0x1_Compare_cmp_u8)
+-  [Function `cmp_u64`](#0x1_Compare_cmp_u64)
 
 
 <a name="0x1_Compare_EQUAL"></a>
@@ -57,25 +57,29 @@ Returns either <code><a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> (0u
 
 This function is designed to compare LCS (Libra Canonical Serialization)-encoded values
 (i.e., vectors produced by <code><a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a></code>). A typical client will call
-<code><a href="Compare.md#0x1_Compare_cmp_lcs_bytes">Compare::cmp_lcs_bytes</a>(<a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&t1), <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&t2)). The comparison provides the
+<code><a href="Compare.md#0x1_Compare_cmp_lcs_bytes">Compare::cmp_lcs_bytes</a>(<a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&t1), <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&t2))</code>. The comparison provides the
 following guarantees w.r.t the original values t1 and t2:
-- </code>cmp_lcs_bytes(lcs(t1), lcs(t2)) == LESS_THAN<code> iff </code>cmp_lcs_bytes(t2, t1) == GREATER_THAN<code>
-- </code>Compare::cmp<T>(t1, t2) == EQUAL<code> iff </code>t1 == t2<code> and (similarly)
-</code>Compare::cmp<T>(t1, t2) != EQUAL<code> iff </code>t1 != t2<code>, <b>where</b> </code>==<code> and </code>!=<code> denote the Move
+- <code><a href="Compare.md#0x1_Compare_cmp_lcs_bytes">cmp_lcs_bytes</a>(lcs(t1), lcs(t2)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> iff <code><a href="Compare.md#0x1_Compare_cmp_lcs_bytes">cmp_lcs_bytes</a>(t2, t1) == <a href="Compare.md#0x1_Compare_GREATER_THAN">GREATER_THAN</a></code>
+- <code>Compare::cmp&lt;T&gt;(t1, t2) == <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 == t2</code> and (similarly)
+<code>Compare::cmp&lt;T&gt;(t1, t2) != <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 != t2</code>, where <code>==</code> and <code>!=</code> denote the Move
 bytecode operations for polymorphic equality.
-- for all primitive types </code>T<code> <b>with</b> </code><<code> and </code>><code> comparison operators exposed in Move bytecode
-(</code>u8<code>, </code>u64<code>, </code>u128<code>), we have
-</code>compare_lcs_bytes(lcs(t1), lcs(t2)) == LESS_THAN<code> iff </code>t1 < t2<code> and (similarly)
-</code>compare_lcs_bytes(lcs(t1), lcs(t2)) == LESS_THAN<code> iff </code>t1 > t2<code>.
+- for all primitive types <code>T</code> with <code>&lt;</code> and <code>&gt;</code> comparison operators exposed in Move bytecode
+(<code>u8</code>, <code>u64</code>, <code>u128</code>), we have
+<code>compare_lcs_bytes(lcs(t1), lcs(t2)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> iff <code>t1 &lt; t2</code> and (similarly)
+<code>compare_lcs_bytes(lcs(t1), lcs(t2)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> iff <code>t1 &gt; t2</code>.
 
-For all other types, the order is whatever the <a href="LCS.md#0x1_LCS">LCS</a> encoding of the type and the comparison
-strategy above gives you. One case <b>where</b> the order might be surprising is the </code>address<code>
+For all other types, the order is whatever the LCS encoding of the type and the comparison
+strategy above gives you. One case where the order might be surprising is the <code>address</code>
 type.
-<a href="CoreAddresses.md#0x1_CoreAddresses">CoreAddresses</a> are 16 byte hex values that <a href="LCS.md#0x1_LCS">LCS</a> encodes <b>with</b> the identity function. The right
-<b>to</b> left, byte-by-byte comparison means that (for example)
-</code>compare_lcs_bytes(lcs(0x01), lcs(0x10)) == LESS_THAN<code> (<b>as</b> you'd expect), but
-</code>compare_lcs_bytes(lcs(0x100), lcs(0x001)) == LESS_THAN` (as you probably wouldn't expect).
+CoreAddresses are 16 byte hex values that LCS encodes with the identity function. The right
+to left, byte-by-byte comparison means that (for example)
+<code>compare_lcs_bytes(lcs(0x01), lcs(0x10)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> (as you'd expect), but
+<code>compare_lcs_bytes(lcs(0x100), lcs(0x001)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> (as you probably wouldn't expect).
 Keep this in mind when using this function to compare addresses.
+
+> TODO: there is currently no specification for this function, which causes no problem because it is not yet
+> used in the Libra framework. However, should this functionality be needed in specification, a customized
+> native abstraction is needed in the prover framework.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Compare.md#0x1_Compare_cmp_lcs_bytes">cmp_lcs_bytes</a>(v1: &vector&lt;u8&gt;, v2: &vector&lt;u8&gt;): u8
@@ -164,5 +168,8 @@ Compare two <code>u64</code>'s
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

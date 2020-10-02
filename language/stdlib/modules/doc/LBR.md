@@ -9,12 +9,12 @@ Once the component makeup of the LBR has been chosen the
 <code><a href="LBR.md#0x1_LBR_Reserve">Reserve</a></code> will be updated to hold the backing coins in the correct ratios.
 
 
--  [Resource <code><a href="LBR.md#0x1_LBR">LBR</a></code>](#0x1_LBR_LBR)
--  [Resource <code><a href="LBR.md#0x1_LBR_Reserve">Reserve</a></code>](#0x1_LBR_Reserve)
--  [Const <code><a href="LBR.md#0x1_LBR_ERESERVE">ERESERVE</a></code>](#0x1_LBR_ERESERVE)
--  [Function <code>initialize</code>](#0x1_LBR_initialize)
--  [Function <code>is_lbr</code>](#0x1_LBR_is_lbr)
--  [Function <code>reserve_address</code>](#0x1_LBR_reserve_address)
+-  [Resource `LBR`](#0x1_LBR_LBR)
+-  [Resource `Reserve`](#0x1_LBR_Reserve)
+-  [Const `ERESERVE`](#0x1_LBR_ERESERVE)
+-  [Function `initialize`](#0x1_LBR_initialize)
+-  [Function `is_lbr`](#0x1_LBR_is_lbr)
+-  [Function `reserve_address`](#0x1_LBR_reserve_address)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -254,5 +254,8 @@ Global invariant that the Reserve resource exists after genesis.
    <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

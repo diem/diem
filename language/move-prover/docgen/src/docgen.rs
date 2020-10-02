@@ -293,8 +293,13 @@ impl<'env> Docgen<'env> {
                 .and_then(|mut file| file.read_to_string(&mut content))
                 .is_ok()
             {
-                for (_, out) in self.output.iter_mut() {
-                    out.push_str(&content);
+                let trimmed_content = content.trim();
+                if !trimmed_content.is_empty() {
+                    for (_, out) in self.output.iter_mut() {
+                        out.push_str("\n\n");
+                        out.push_str(trimmed_content);
+                        out.push_str("\n");
+                    }
                 }
             } else {
                 self.env.error(
@@ -697,7 +702,7 @@ impl<'env> Docgen<'env> {
         for (id, _) in sorted_infos {
             let module_env = self.env.get_module(*id);
             self.item_text(&format!(
-                "[{}]({})",
+                "[`{}`]({})",
                 module_env.get_name().display_full(module_env.symbol_pool()),
                 self.ref_for_module(&module_env)
             ))
@@ -968,9 +973,12 @@ impl<'env> Docgen<'env> {
         for block in module_env.get_spec_block_infos() {
             let may_merge_with_current = match &block.target {
                 SpecBlockTarget::Schema(..) => true,
-                SpecBlockTarget::Module if !self.is_single_liner(&block.loc) => {
+                SpecBlockTarget::Module
+                    if !block.member_locs.is_empty() || !self.is_single_liner(&block.loc) =>
+                {
                     // This is a bit of a hack: if spec module is on a single line,
-                    // we consider it as a marker to switch doc context back to module level.
+                    // we consider it as a marker to switch doc context back to module level,
+                    // otherwise (the case in this branch), we merge it with the predecessor.
                     true
                 }
                 _ => false,
@@ -1461,7 +1469,7 @@ impl<'env> Docgen<'env> {
 
     /// Emit an item.
     fn item_text(&self, text: &str) {
-        emitln!(self.writer, "-  {}", self.decorate_text(text));
+        emitln!(self.writer, "-  {}", text);
     }
 
     /// Begin a definition list.

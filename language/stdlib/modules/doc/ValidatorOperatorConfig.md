@@ -5,11 +5,11 @@
 
 
 
--  [Resource <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></code>](#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig)
--  [Const <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">EVALIDATOR_OPERATOR_CONFIG</a></code>](#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG)
--  [Function <code>publish</code>](#0x1_ValidatorOperatorConfig_publish)
--  [Function <code>get_human_name</code>](#0x1_ValidatorOperatorConfig_get_human_name)
--  [Function <code>has_validator_operator_config</code>](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
+-  [Resource `ValidatorOperatorConfig`](#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig)
+-  [Const `EVALIDATOR_OPERATOR_CONFIG`](#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG)
+-  [Function `publish`](#0x1_ValidatorOperatorConfig_publish)
+-  [Function `get_human_name`](#0x1_ValidatorOperatorConfig_get_human_name)
+-  [Function `has_validator_operator_config`](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
 -  [Module Specification](#@Module_Specification_0)
     -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_1)
 
@@ -216,5 +216,8 @@ If an address has a ValidatorOperatorConfig resource, it has a validator operato
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr):
     <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr);
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

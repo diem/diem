@@ -5,8 +5,8 @@
 
 
 
--  [Function <code>sha2_256</code>](#0x1_Hash_sha2_256)
--  [Function <code>sha3_256</code>](#0x1_Hash_sha3_256)
+-  [Function `sha2_256`](#0x1_Hash_sha2_256)
+-  [Function `sha3_256`](#0x1_Hash_sha3_256)
 
 
 <a name="0x1_Hash_sha2_256"></a>
@@ -52,5 +52,8 @@
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

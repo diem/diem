@@ -7,29 +7,29 @@ The <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code> module
 about the set of validators used during consensus.
 
 
--  [Struct <code><a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a></code>](#0x1_LibraSystem_ValidatorInfo)
--  [Resource <code><a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a></code>](#0x1_LibraSystem_CapabilityHolder)
--  [Struct <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code>](#0x1_LibraSystem_LibraSystem)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_ECAPABILITY_HOLDER">ECAPABILITY_HOLDER</a></code>](#0x1_LibraSystem_ECAPABILITY_HOLDER)
+-  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
+-  [Resource `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
+-  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
+-  [Const `ECAPABILITY_HOLDER`](#0x1_LibraSystem_ECAPABILITY_HOLDER)
     -  [Error codes](#@Error_codes_0)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">EINVALID_PROSPECTIVE_VALIDATOR</a></code>](#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">EALREADY_A_VALIDATOR</a></code>](#0x1_LibraSystem_EALREADY_A_VALIDATOR)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR">ENOT_AN_ACTIVE_VALIDATOR</a></code>](#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a></code>](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
--  [Const <code><a href="LibraSystem.md#0x1_LibraSystem_EVALIDATOR_INDEX">EVALIDATOR_INDEX</a></code>](#0x1_LibraSystem_EVALIDATOR_INDEX)
--  [Function <code>initialize_validator_set</code>](#0x1_LibraSystem_initialize_validator_set)
--  [Function <code>set_libra_system_config</code>](#0x1_LibraSystem_set_libra_system_config)
--  [Function <code>add_validator</code>](#0x1_LibraSystem_add_validator)
--  [Function <code>remove_validator</code>](#0x1_LibraSystem_remove_validator)
--  [Function <code>update_config_and_reconfigure</code>](#0x1_LibraSystem_update_config_and_reconfigure)
--  [Function <code>get_libra_system_config</code>](#0x1_LibraSystem_get_libra_system_config)
--  [Function <code>is_validator</code>](#0x1_LibraSystem_is_validator)
--  [Function <code>get_validator_config</code>](#0x1_LibraSystem_get_validator_config)
--  [Function <code>validator_set_size</code>](#0x1_LibraSystem_validator_set_size)
--  [Function <code>get_ith_validator_address</code>](#0x1_LibraSystem_get_ith_validator_address)
--  [Function <code>get_validator_index_</code>](#0x1_LibraSystem_get_validator_index_)
--  [Function <code>update_ith_validator_info_</code>](#0x1_LibraSystem_update_ith_validator_info_)
--  [Function <code>is_validator_</code>](#0x1_LibraSystem_is_validator_)
+-  [Const `EINVALID_PROSPECTIVE_VALIDATOR`](#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR)
+-  [Const `EALREADY_A_VALIDATOR`](#0x1_LibraSystem_EALREADY_A_VALIDATOR)
+-  [Const `ENOT_AN_ACTIVE_VALIDATOR`](#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR)
+-  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
+-  [Const `EVALIDATOR_INDEX`](#0x1_LibraSystem_EVALIDATOR_INDEX)
+-  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
+-  [Function `set_libra_system_config`](#0x1_LibraSystem_set_libra_system_config)
+-  [Function `add_validator`](#0x1_LibraSystem_add_validator)
+-  [Function `remove_validator`](#0x1_LibraSystem_remove_validator)
+-  [Function `update_config_and_reconfigure`](#0x1_LibraSystem_update_config_and_reconfigure)
+-  [Function `get_libra_system_config`](#0x1_LibraSystem_get_libra_system_config)
+-  [Function `is_validator`](#0x1_LibraSystem_is_validator)
+-  [Function `get_validator_config`](#0x1_LibraSystem_get_validator_config)
+-  [Function `validator_set_size`](#0x1_LibraSystem_validator_set_size)
+-  [Function `get_ith_validator_address`](#0x1_LibraSystem_get_ith_validator_address)
+-  [Function `get_validator_index_`](#0x1_LibraSystem_get_validator_index_)
+-  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
+-  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
     -  [Module specifications](#@Module_specifications_1)
 
 
@@ -1228,5 +1228,8 @@ Consensus_voting_power is always 1.
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

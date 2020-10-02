@@ -7,24 +7,24 @@
 This module defines the Option type and its methods to represent and handle an optional value.
 
 
--  [Struct <code><a href="Option.md#0x1_Option">Option</a></code>](#0x1_Option_Option)
--  [Const <code><a href="Option.md#0x1_Option_EOPTION_IS_SET">EOPTION_IS_SET</a></code>](#0x1_Option_EOPTION_IS_SET)
--  [Const <code><a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a></code>](#0x1_Option_EOPTION_NOT_SET)
--  [Function <code>none</code>](#0x1_Option_none)
--  [Function <code>some</code>](#0x1_Option_some)
--  [Function <code>is_none</code>](#0x1_Option_is_none)
--  [Function <code>is_some</code>](#0x1_Option_is_some)
--  [Function <code>contains</code>](#0x1_Option_contains)
--  [Function <code>borrow</code>](#0x1_Option_borrow)
--  [Function <code>borrow_with_default</code>](#0x1_Option_borrow_with_default)
--  [Function <code>get_with_default</code>](#0x1_Option_get_with_default)
--  [Function <code>fill</code>](#0x1_Option_fill)
--  [Function <code>extract</code>](#0x1_Option_extract)
--  [Function <code>borrow_mut</code>](#0x1_Option_borrow_mut)
--  [Function <code>swap</code>](#0x1_Option_swap)
--  [Function <code>destroy_with_default</code>](#0x1_Option_destroy_with_default)
--  [Function <code>destroy_some</code>](#0x1_Option_destroy_some)
--  [Function <code>destroy_none</code>](#0x1_Option_destroy_none)
+-  [Struct `Option`](#0x1_Option_Option)
+-  [Const `EOPTION_IS_SET`](#0x1_Option_EOPTION_IS_SET)
+-  [Const `EOPTION_NOT_SET`](#0x1_Option_EOPTION_NOT_SET)
+-  [Function `none`](#0x1_Option_none)
+-  [Function `some`](#0x1_Option_some)
+-  [Function `is_none`](#0x1_Option_is_none)
+-  [Function `is_some`](#0x1_Option_is_some)
+-  [Function `contains`](#0x1_Option_contains)
+-  [Function `borrow`](#0x1_Option_borrow)
+-  [Function `borrow_with_default`](#0x1_Option_borrow_with_default)
+-  [Function `get_with_default`](#0x1_Option_get_with_default)
+-  [Function `fill`](#0x1_Option_fill)
+-  [Function `extract`](#0x1_Option_extract)
+-  [Function `borrow_mut`](#0x1_Option_borrow_mut)
+-  [Function `swap`](#0x1_Option_swap)
+-  [Function `destroy_with_default`](#0x1_Option_destroy_with_default)
+-  [Function `destroy_some`](#0x1_Option_destroy_some)
+-  [Function `destroy_none`](#0x1_Option_destroy_none)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -801,5 +801,8 @@ Aborts if <code>t</code> holds a value
 
 <pre><code><b>pragma</b> aborts_if_is_strict;
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

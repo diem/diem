@@ -1,4 +1,10 @@
 address 0x1 {
+
+/// Module providing well-known addresses and related logic.
+///
+/// > Note: this module currently defines zero-argument functions like `Self::LIBRA_ROOT_ADDRESS()` using capitalization
+/// > in the name, as usually reserved for constants. Eventually, those functions are planned to become actually
+/// > global constants, once the Move language supports this feature.
 module CoreAddresses {
     use 0x1::Errors;
     use 0x1::Signer;

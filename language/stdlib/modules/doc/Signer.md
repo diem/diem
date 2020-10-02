@@ -5,8 +5,8 @@
 
 
 
--  [Function <code>borrow_address</code>](#0x1_Signer_borrow_address)
--  [Function <code>address_of</code>](#0x1_Signer_address_of)
+-  [Function `borrow_address`](#0x1_Signer_borrow_address)
+-  [Function `address_of`](#0x1_Signer_address_of)
 
 
 <a name="0x1_Signer_borrow_address"></a>
@@ -79,5 +79,8 @@ Specification version of <code><a href="Signer.md#0x1_Signer_address_of">Self::a
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

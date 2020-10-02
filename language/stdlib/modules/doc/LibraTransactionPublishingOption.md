@@ -5,16 +5,16 @@
 
 
 
--  [Struct <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a></code>](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
--  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a></code>](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
--  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a></code>](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
--  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code>](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
--  [Function <code>initialize</code>](#0x1_LibraTransactionPublishingOption_initialize)
--  [Function <code>is_script_allowed</code>](#0x1_LibraTransactionPublishingOption_is_script_allowed)
--  [Function <code>is_module_allowed</code>](#0x1_LibraTransactionPublishingOption_is_module_allowed)
--  [Function <code>add_to_script_allow_list</code>](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
--  [Function <code>set_open_script</code>](#0x1_LibraTransactionPublishingOption_set_open_script)
--  [Function <code>set_open_module</code>](#0x1_LibraTransactionPublishingOption_set_open_module)
+-  [Struct `LibraTransactionPublishingOption`](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
+-  [Const `SCRIPT_HASH_LENGTH`](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
+-  [Const `EINVALID_SCRIPT_HASH`](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
+-  [Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
+-  [Function `initialize`](#0x1_LibraTransactionPublishingOption_initialize)
+-  [Function `is_script_allowed`](#0x1_LibraTransactionPublishingOption_is_script_allowed)
+-  [Function `is_module_allowed`](#0x1_LibraTransactionPublishingOption_is_module_allowed)
+-  [Function `add_to_script_allow_list`](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
+-  [Function `set_open_script`](#0x1_LibraTransactionPublishingOption_set_open_script)
+-  [Function `set_open_module`](#0x1_LibraTransactionPublishingOption_set_open_module)
 
 
 <a name="0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption"></a>
@@ -432,5 +432,8 @@ LibraTransactionPublishingOption config [[H10]][PERMISSION]
 
 
 </details>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

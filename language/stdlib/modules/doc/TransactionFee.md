@@ -5,14 +5,14 @@
 
 
 
--  [Resource <code><a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a></code>](#0x1_TransactionFee_TransactionFee)
--  [Const <code><a href="TransactionFee.md#0x1_TransactionFee_ETRANSACTION_FEE">ETRANSACTION_FEE</a></code>](#0x1_TransactionFee_ETRANSACTION_FEE)
--  [Function <code>initialize</code>](#0x1_TransactionFee_initialize)
--  [Function <code>is_coin_initialized</code>](#0x1_TransactionFee_is_coin_initialized)
--  [Function <code>is_initialized</code>](#0x1_TransactionFee_is_initialized)
--  [Function <code>add_txn_fee_currency</code>](#0x1_TransactionFee_add_txn_fee_currency)
--  [Function <code>pay_fee</code>](#0x1_TransactionFee_pay_fee)
--  [Function <code>burn_fees</code>](#0x1_TransactionFee_burn_fees)
+-  [Resource `TransactionFee`](#0x1_TransactionFee_TransactionFee)
+-  [Const `ETRANSACTION_FEE`](#0x1_TransactionFee_ETRANSACTION_FEE)
+-  [Function `initialize`](#0x1_TransactionFee_initialize)
+-  [Function `is_coin_initialized`](#0x1_TransactionFee_is_coin_initialized)
+-  [Function `is_initialized`](#0x1_TransactionFee_is_initialized)
+-  [Function `add_txn_fee_currency`](#0x1_TransactionFee_add_txn_fee_currency)
+-  [Function `pay_fee`](#0x1_TransactionFee_pay_fee)
+-  [Function `burn_fees`](#0x1_TransactionFee_burn_fees)
 -  [Module Specification](#@Module_Specification_0)
 
 
@@ -409,5 +409,8 @@ tc_account retrieves BurnCapability [[H2]][PERMISSION]. BurnCapability is not tr
    borrow_global&lt;<a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>())
 }
 </code></pre>
+
+
+[//]: # ("File containing references which can be used from documentation")
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions

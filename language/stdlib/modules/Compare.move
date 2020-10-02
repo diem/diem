@@ -17,7 +17,7 @@ module Compare {
     ///
     /// This function is designed to compare LCS (Libra Canonical Serialization)-encoded values
     /// (i.e., vectors produced by `LCS::to_bytes`). A typical client will call
-    /// `Compare::cmp_lcs_bytes(LCS::to_bytes(&t1), LCS::to_bytes(&t2)). The comparison provides the
+    /// `Compare::cmp_lcs_bytes(LCS::to_bytes(&t1), LCS::to_bytes(&t2))`. The comparison provides the
     /// following guarantees w.r.t the original values t1 and t2:
     /// - `cmp_lcs_bytes(lcs(t1), lcs(t2)) == LESS_THAN` iff `cmp_lcs_bytes(t2, t1) == GREATER_THAN`
     /// - `Compare::cmp<T>(t1, t2) == EQUAL` iff `t1 == t2` and (similarly)
@@ -36,6 +36,10 @@ module Compare {
     /// `compare_lcs_bytes(lcs(0x01), lcs(0x10)) == LESS_THAN` (as you'd expect), but
     /// `compare_lcs_bytes(lcs(0x100), lcs(0x001)) == LESS_THAN` (as you probably wouldn't expect).
     /// Keep this in mind when using this function to compare addresses.
+    ///
+    /// > TODO: there is currently no specification for this function, which causes no problem because it is not yet
+    /// > used in the Libra framework. However, should this functionality be needed in specification, a customized
+    /// > native abstraction is needed in the prover framework.
     public fun cmp_lcs_bytes(v1: &vector<u8>, v2: &vector<u8>): u8 {
         let i1 = Vector::length(v1);
         let i2 = Vector::length(v2);
