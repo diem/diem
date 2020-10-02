@@ -495,7 +495,10 @@ impl TxEmitter {
         );
         info!("hhhhhhCreated account num = {}", self.accounts.len());
         let a = self.pick_mint_client(&req.instances);
+        let mut index = 0;
         for acc in &self.accounts {
+            info!("hhhhhhcurrent account num = {}", index);
+            index += 1;
             let balance = retrieve_account_balance(&a, acc.address).await?;
             for b in balance {
                 if b.currency.eq(COIN1_NAME) {
