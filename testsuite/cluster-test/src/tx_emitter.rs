@@ -457,6 +457,22 @@ impl TxEmitter {
         let num_seed_accounts = seed_accounts.len();
         info!("Completed minting {} seed accounts", num_seed_accounts);
         info!("Minting additional {} accounts", num_accounts);
+        let a = self.pick_mint_client(&req.instances);
+        let mut index = 0;
+        for acc in &seed_accounts {
+            info!("hhhhhhcurrent account num = {}", index);
+            index += 1;
+            let balance = retrieve_account_balance(&a, acc.address).await?;
+            for b in balance {
+                if b.currency.eq(COIN1_NAME) {
+                    info!(
+                        "hhhhhhcurrent account has {} coins",
+                        b.amount
+                    );
+                    break;
+                }
+            }
+        }
 
         let seed_rngs = gen_rng_for_reusable_account(num_seed_accounts);
         // For each seed account, create a future and transfer libra from that seed account to new accounts
@@ -493,23 +509,6 @@ impl TxEmitter {
             requested_accounts,
             self.accounts.len()
         );
-        info!("hhhhhhCreated account num = {}", self.accounts.len());
-        let a = self.pick_mint_client(&req.instances);
-        let mut index = 0;
-        for acc in &self.accounts {
-            info!("hhhhhhcurrent account num = {}", index);
-            index += 1;
-            let balance = retrieve_account_balance(&a, acc.address).await?;
-            for b in balance {
-                if b.currency.eq(COIN1_NAME) {
-                    info!(
-                        "hhhhhhcurrent account has {} coins",
-                        b.amount
-                    );
-                    break;
-                }
-            }
-        }
         info!("Mint is done");
         Ok(())
     }
