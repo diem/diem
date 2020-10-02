@@ -1072,8 +1072,8 @@ async fn create_new_accounts(
             chain_id,
         );
         execute_and_wait_transactions(&mut client, &mut source_account, requests).await?;
+        info!("hhhhhh current have {}, created {}, couter {} ", i, batch.len(), counter);
         i += batch.len();
-
         for acc in &batch {
             let balance = retrieve_account_balance(&client, acc.address).await?;
             for b in balance {
@@ -1087,6 +1087,7 @@ async fn create_new_accounts(
             }
             counter += 1;
         }
+        info!("hhhhhhh after has i {}, counter {}", i, counter);
         accounts.append(&mut batch);
     }
     Ok(accounts)
