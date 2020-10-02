@@ -22,6 +22,10 @@ use ureq::Response;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
+/// The max number of key versions held in vault at any one time.
+/// Keys are trimmed in FIFO order.
+const MAX_NUM_KEY_VERSIONS: u32 = 4;
+
 /// Request timeout for vault operations
 const TIMEOUT: u64 = 10_000;
 
@@ -194,12 +198,7 @@ impl Client {
         let mut request = self.upgrade_request(request);
         let resp = request.call();
 
-        if resp.ok() {
-            // Explicitly clear buffer so the stream can be re-used.
-            Ok(())
-        } else {
-            Err(resp.into())
-        }
+        process_generic_response(resp)
     }
 
     /// List all stored secrets
@@ -314,6 +313,76 @@ impl Client {
             .agent
             .post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name));
         let resp = self.upgrade_request(request).call();
+
+        process_generic_response(resp)
+    }
+
+    /// Trims the number of key versions held in vault storage. This prevents stale
+    /// keys from sitting around for too long and becoming susceptible to key
+    /// gathering attacks.
+    ///
+    /// Once the key versions have been trimmed, this method returns the most
+    /// recent (i.e., highest versioned) public key for the given cryptographic
+    /// key name.
+    pub fn trim_key_versions(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        // Read all keys and versions
+        let all_pub_keys = self.read_ed25519_key(name)?;
+
+        // Find the maximum and minimum versions
+        let max_version = all_pub_keys
+            .iter()
+            .map(|resp| resp.version)
+            .max()
+            .ok_or_else(|| Error::NotFound("transit/".into(), name.into()))?;
+        let min_version = all_pub_keys
+            .iter()
+            .map(|resp| resp.version)
+            .min()
+            .ok_or_else(|| Error::NotFound("transit/".into(), name.into()))?;
+
+        // Trim keys if too many versions exist
+        if (max_version - min_version) >= MAX_NUM_KEY_VERSIONS {
+            let min_available_version = max_version - MAX_NUM_KEY_VERSIONS + 1;
+            self.set_minimum_encrypt_decrypt_version(name, min_available_version)?;
+            self.set_minimum_available_version(name, min_available_version)?;
+        };
+
+        let newest_pub_key = all_pub_keys
+            .iter()
+            .find(|pub_key| pub_key.version == max_version)
+            .ok_or_else(|| Error::NotFound("transit/".into(), name.into()))?;
+        Ok(newest_pub_key.value.clone())
+    }
+
+    /// Trims the key versions according to the minimum available version specified.
+    /// This operation deletes any older keys and cannot be undone.
+    fn set_minimum_available_version(
+        &self,
+        name: &str,
+        min_available_version: u32,
+    ) -> Result<(), Error> {
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/keys/{}/trim", self.host, name));
+        let resp = self
+            .upgrade_request(request)
+            .send_json(json!({ "min_available_version": min_available_version }));
+
+        process_generic_response(resp)
+    }
+
+    /// Sets the minimum encryption and decryption versions for a named cryptographic key.
+    fn set_minimum_encrypt_decrypt_version(
+        &self,
+        name: &str,
+        min_version: u32,
+    ) -> Result<(), Error> {
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/keys/{}/config", self.host, name));
+        let resp = self.upgrade_request(request).send_json(
+            json!({ "min_encryption_version": min_version, "min_decryption_version": min_version }),
+        );
 
         process_generic_response(resp)
     }
@@ -515,12 +584,12 @@ pub fn process_transit_export_response(
         let export_key: ExportKeyResponse = serde_json::from_str(&resp.into_string()?)?;
         let composite_key = if let Some(version) = version {
             let key = export_key.data.keys.iter().find(|(k, _v)| **k == version);
-            let (_, key) = key.ok_or_else(|| Error::NotFound("transit".into(), name.into()))?;
+            let (_, key) = key.ok_or_else(|| Error::NotFound("transit/".into(), name.into()))?;
             key
         } else if let Some(key) = export_key.data.keys.values().last() {
             key
         } else {
-            return Err(Error::NotFound("transit".into(), name.into()));
+            return Err(Error::NotFound("transit/".into(), name.into()));
         };
 
         let composite_key = base64::decode(composite_key)?;

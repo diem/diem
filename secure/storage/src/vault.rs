@@ -350,7 +350,7 @@ impl CryptoStorage for VaultStorage {
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         let ns_name = self.crypto_name(name);
         self.client().rotate_key(&ns_name)?;
-        self.get_public_key(name).map(|v| v.public_key)
+        Ok(self.client().trim_key_versions(&ns_name)?)
     }
 
     fn sign<T: CryptoHash + Serialize>(
