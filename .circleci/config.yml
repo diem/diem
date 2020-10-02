@@ -826,9 +826,9 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      #- restore_cache:
-      #    name: restore daily latch cache file.
-      #    key: code-coverage-daily
+      - restore_cache:
+          name: restore daily latch cache file.
+          key: code-coverage-daily
       - run:
           name: Halt job if already built code coverage today.
           command: |
@@ -903,7 +903,7 @@ workflows:
           filters:
             branches:
               only:
-                #- /^test-[\d|.]+$/
+                - /^test-[\d|.]+$/
                 - master
 
   ######################################################################################################################
@@ -917,7 +917,7 @@ workflows:
           filters:
             branches:
               only:
-                #- /^test-[\d|.]+$/
+                - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
       - docker-update-base-images:
