@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::compiler::compile_units;
+use crate::compiler::{as_module, as_script, compile_units};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
@@ -9,25 +9,9 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag},
     vm_status::StatusType,
 };
-use move_lang::compiled_unit::CompiledUnit;
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{convert_txn_effects_to_move_changeset_and_events, InMemoryStorage};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
-use vm::file_format::{CompiledModule, CompiledScript};
-
-fn as_module(unit: CompiledUnit) -> CompiledModule {
-    match unit {
-        CompiledUnit::Module { module, .. } => module,
-        CompiledUnit::Script { .. } => panic!("expected module got script"),
-    }
-}
-
-fn as_script(unit: CompiledUnit) -> CompiledScript {
-    match unit {
-        CompiledUnit::Module { .. } => panic!("expected script got module"),
-        CompiledUnit::Script { script, .. } => script,
-    }
-}
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -163,7 +147,7 @@ fn test_malformed_resource() {
                 &log_context,
             )
             .unwrap_err();
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }
 
@@ -234,7 +218,7 @@ fn test_malformed_module() {
                 &log_context,
             )
             .unwrap_err();
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }
 
@@ -306,7 +290,7 @@ fn test_unverifiable_module() {
             )
             .unwrap_err();
 
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }
 
@@ -384,7 +368,7 @@ fn test_missing_module_dependency() {
             )
             .unwrap_err();
 
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }
 
@@ -468,7 +452,7 @@ fn test_malformed_module_denpency() {
             )
             .unwrap_err();
 
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }
 
@@ -554,6 +538,6 @@ fn test_unverifiable_module_dependency() {
             )
             .unwrap_err();
 
-        assert!(err.status_type() == StatusType::InvariantViolation);
+        assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
 }

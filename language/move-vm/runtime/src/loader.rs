@@ -570,7 +570,9 @@ impl Loader {
             .lock()
             .unwrap()
             .resolve_function_by_name(function_name, module_id)
-            .map_err(|err| err.finish(Location::Undefined))?;
+            .map_err(|err| {
+                expect_no_verification_errors(err.finish(Location::Undefined), log_context)
+            })?;
         let func = self.module_cache.lock().unwrap().function_at(idx);
 
         // verify type arguments

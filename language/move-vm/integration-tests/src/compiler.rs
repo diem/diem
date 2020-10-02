@@ -6,7 +6,7 @@ use move_core_types::account_address::AccountAddress;
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use std::{fs::File, io::Write, path::Path};
 use tempfile::tempdir;
-use vm::file_format::CompiledModule;
+use vm::file_format::{CompiledModule, CompiledScript};
 
 pub fn compile_units(addr: AccountAddress, s: &str) -> Result<Vec<CompiledUnit>> {
     let dir = tempdir()?;
@@ -52,4 +52,18 @@ pub fn compile_modules_in_file(addr: AccountAddress, path: &Path) -> Result<Vec<
 #[allow(dead_code)]
 pub fn compile_modules(addr: AccountAddress, s: &str) -> Result<Vec<CompiledModule>> {
     expect_modules(compile_units(addr, s)?).collect()
+}
+
+pub fn as_module(unit: CompiledUnit) -> CompiledModule {
+    match unit {
+        CompiledUnit::Module { module, .. } => module,
+        CompiledUnit::Script { .. } => panic!("expected module got script"),
+    }
+}
+
+pub fn as_script(unit: CompiledUnit) -> CompiledScript {
+    match unit {
+        CompiledUnit::Module { .. } => panic!("expected script got module"),
+        CompiledUnit::Script { script, .. } => script,
+    }
 }
