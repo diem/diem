@@ -15,7 +15,7 @@ use libra_types::transaction::Version;
 use rand::random;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     process::Command,
     string::ToString,
     sync::{
@@ -32,6 +32,7 @@ fn test_db_restore() {
     // pre-build tools
     workspace_builder::get_bin("db-backup");
     workspace_builder::get_bin("db-restore");
+    workspace_builder::get_bin("db-backup-verify");
 
     // set up: two accounts, a lot of money
     client1.create_next_account(false).unwrap();
@@ -98,26 +99,53 @@ fn test_db_restore() {
     ));
 }
 
+fn db_backup_verify(backup_path: &Path) {
+    let now = Instant::now();
+    let bin_path = workspace_builder::get_bin("db-backup-verify");
+    let metadata_cache_path = TempPath::new();
+
+    metadata_cache_path.create_as_dir().unwrap();
+
+    let output = Command::new(bin_path.as_path())
+        .current_dir(workspace_root())
+        .args(&[
+            "--metadata-cache-dir",
+            metadata_cache_path.path().to_str().unwrap(),
+            "local-fs",
+            "--dir",
+            backup_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    if !output.status.success() {
+        panic!("db-backup-verify failed, output: {:?}", output);
+    }
+    println!("Backup verified in {} seconds.", now.elapsed().as_secs());
+}
+
 fn wait_for_backups(
     target_epoch: u64,
     target_version: u64,
     now: Instant,
-    bin_path: PathBuf,
-    metadata_cache_path2: &TempPath,
-    backup_path: &TempPath,
+    bin_path: &Path,
+    metadata_cache_path: &Path,
+    backup_path: &Path,
 ) -> Result<()> {
     for _ in 0..60 {
-        let output = Command::new(bin_path.as_path())
+        // the verify should always succeed.
+        db_backup_verify(backup_path);
+
+        let output = Command::new(bin_path)
             .current_dir(workspace_root())
             .args(&[
                 "one-shot",
                 "query",
                 "backup-storage-state",
                 "--metadata-cache-dir",
-                metadata_cache_path2.path().to_str().unwrap(),
+                metadata_cache_path.to_str().unwrap(),
                 "local-fs",
                 "--dir",
-                backup_path.path().to_str().unwrap(),
+                backup_path.to_str().unwrap(),
             ])
             .output()?
             .stdout;
@@ -175,9 +203,9 @@ fn db_backup(backup_service_port: u16, target_epoch: u64, target_version: Versio
         target_epoch,
         target_version,
         now,
-        bin_path,
-        &metadata_cache_path2,
-        &backup_path,
+        bin_path.as_path(),
+        metadata_cache_path2.path(),
+        backup_path.path(),
     );
     backup_coordinator.kill().unwrap();
     wait_res.unwrap();
