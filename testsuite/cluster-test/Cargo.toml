@@ -63,7 +63,7 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 
 futures = "0.3.5"
 tokio = { version = "0.2.22", features = ["full"] }
-async-trait = "0.1.40"
+async-trait = "0.1.41"
 
 kube = { version = "0.42.0" }
 
