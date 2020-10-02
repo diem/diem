@@ -444,6 +444,7 @@ where
     F: FnOnce() -> Result<R, Error>,
     L: for<'a> Fn(SafetyLogSchema<'a>) -> SafetyLogSchema<'a>,
 {
+    let _timer = counters::start_timer("internal", log_entry.as_str());
     debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)));
     counters::increment_query(log_entry.as_str(), "request");
     callback()

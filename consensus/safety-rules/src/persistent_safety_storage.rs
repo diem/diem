@@ -92,6 +92,7 @@ impl PersistentSafetyStorage {
     }
 
     pub fn author(&self) -> Result<Author, Error> {
+        let _timer = counters::start_timer("get", OWNER_ACCOUNT);
         Ok(self.internal_store.get(OWNER_ACCOUNT).map(|v| v.value)?)
     }
 
@@ -99,12 +100,14 @@ impl PersistentSafetyStorage {
         &self,
         version: Ed25519PublicKey,
     ) -> Result<Ed25519PrivateKey, Error> {
+        let _timer = counters::start_timer("get", CONSENSUS_KEY);
         Ok(self
             .internal_store
             .export_private_key_for_version(CONSENSUS_KEY, version)?)
     }
 
     pub fn execution_public_key(&self) -> Result<Ed25519PublicKey, Error> {
+        let _timer = counters::start_timer("get", EXECUTION_KEY);
         Ok(self
             .internal_store
             .get_public_key(EXECUTION_KEY)
@@ -113,12 +116,14 @@ impl PersistentSafetyStorage {
 
     pub fn safety_data(&mut self) -> Result<SafetyData, Error> {
         if !self.enable_cached_safety_data {
+            let _timer = counters::start_timer("get", SAFETY_DATA);
             return self.internal_store.get(SAFETY_DATA).map(|v| v.value)?;
         }
 
         if let Some(cached_safety_data) = self.cached_safety_data.clone() {
             Ok(cached_safety_data)
         } else {
+            let _timer = counters::start_timer("get", SAFETY_DATA);
             let safety_data: SafetyData = self.internal_store.get(SAFETY_DATA).map(|v| v.value)?;
             self.cached_safety_data = Some(safety_data.clone());
             Ok(safety_data)
@@ -126,6 +131,7 @@ impl PersistentSafetyStorage {
     }
 
     pub fn set_safety_data(&mut self, data: SafetyData) -> Result<(), Error> {
+        let _timer = counters::start_timer("set", SAFETY_DATA);
         counters::set_state("epoch", data.epoch as i64);
         counters::set_state("last_voted_round", data.last_voted_round as i64);
         counters::set_state("preferred_round", data.preferred_round as i64);
@@ -143,10 +149,12 @@ impl PersistentSafetyStorage {
     }
 
     pub fn waypoint(&self) -> Result<Waypoint, Error> {
+        let _timer = counters::start_timer("get", WAYPOINT);
         Ok(self.internal_store.get(WAYPOINT).map(|v| v.value)?)
     }
 
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<(), Error> {
+        let _timer = counters::start_timer("set", WAYPOINT);
         self.internal_store.set(WAYPOINT, waypoint)?;
         info!(
             logging::SafetyLogSchema::new(LogEntry::Waypoint, LogEvent::Update).waypoint(*waypoint)
