@@ -503,9 +503,6 @@ impl TxEmitter {
             .collect();
 
         self.accounts.append(&mut minted_accounts);
-        for i in &self.accounts {
-            info!("hhhhhh all accounts = {:?}", i.address);
-        }
         assert!(
             self.accounts.len() >= num_accounts,
             "Something wrong in mint_account, wanted to mint {}, only have {}",
@@ -1074,6 +1071,19 @@ async fn create_new_accounts(
         );
         execute_and_wait_transactions(&mut client, &mut source_account, requests).await?;
         i += batch.len();
+
+        for i in &batch {
+            let balance = retrieve_account_balance(&client, i.address).await?;
+            for b in balance {
+                if b.currency.eq(COIN1_NAME) {
+                    info!(
+                        "hhhhhh1111current account has {} coins",
+                        b.amount
+                    );
+                    break;
+                }
+            }
+        }
         accounts.append(&mut batch);
     }
     Ok(accounts)
