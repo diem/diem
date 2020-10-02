@@ -503,7 +503,9 @@ impl TxEmitter {
             .collect();
 
         self.accounts.append(&mut minted_accounts);
-        info!("hhhhhh all accounts = {:?}", self.accounts);
+        for i in &self.accounts {
+            info!("hhhhhh all accounts = {:?}", i.address);
+        }
         assert!(
             self.accounts.len() >= num_accounts,
             "Something wrong in mint_account, wanted to mint {}, only have {}",
