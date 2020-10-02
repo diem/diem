@@ -40,6 +40,8 @@ use 0x1::LibraAccount;
 /// | `Errors::NOT_PUBLISHED`       | `Libra::ECURRENCY_INFO`                          | The specified `Token` is not a registered currency on-chain.                                          |
 /// | `Errors::INVALID_ARGUMENT`    | `LibraAccount::ECOIN_DEPOSIT_IS_ZERO`            | The value held in the preburn resource was zero.                                                      |
 /// | `Errors::INVALID_ARGUMENT`    | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | The account at `preburn_address` doesn't have a balance resource for `Token`.                         |
+/// | `Errors::LIMIT_EXCEEDED`      | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`          | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.      |
+/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.     |
 ///
 /// # Related Scripts
 /// * `Script::burn_txn_fees`
@@ -76,7 +78,7 @@ spec fun cancel_burn {
         Errors::REQUIRES_CAPABILITY,
         Errors::NOT_PUBLISHED,
         Errors::INVALID_ARGUMENT,
-        Errors::LIMIT_EXCEEDED, // TODO: Undocumented error code. Possibly raised in LibraAccount::deposit, Libra::deposit, and AccountLimits::can_receive.
-        Errors::INVALID_STATE; // TODO: Undocumented error code. Possibly raised in DualAttestation::assert_signature_is_valid.
+        Errors::LIMIT_EXCEEDED,
+        Errors::INVALID_STATE;
 }
 }

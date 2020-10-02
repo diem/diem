@@ -31,10 +31,12 @@ use 0x1::SlidingNonce;
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                            | Description                                                                                |
 /// | ----------------            | --------------                          | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`     | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `tc_account`.                             |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
 /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
+/// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
 /// | `Errors::NOT_PUBLISHED`     | `Libra::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `addr` address is already taken.                                                       |
 ///
@@ -75,8 +77,6 @@ spec fun create_designated_dealer {
         Errors::REQUIRES_ADDRESS,
         Errors::NOT_PUBLISHED,
         Errors::ALREADY_PUBLISHED,
-        Errors::REQUIRES_ROLE; // TODO: undocumented abort code
-                               // from Roles::AbortsIfNotTreasuryCompliance, occurs together with REQUIRES_ADDRESS
-
+        Errors::REQUIRES_ROLE;
 }
 }
