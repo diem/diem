@@ -196,7 +196,7 @@ impl StubbedNode {
             ),
         ));
         let network_runtime = Builder::new()
-            .thread_name("stubbed-node-network-")
+            .thread_name("stubbed-node-network")
             .threaded_scheduler()
             .enable_all()
             .build()

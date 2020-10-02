@@ -49,7 +49,7 @@ impl MockSharedMempool {
     /// and the channel through which shared mempool receives client events
     pub fn new(state_sync: Option<mpsc::Receiver<CommitNotification>>) -> Self {
         let runtime = Builder::new()
-            .thread_name("mock-shared-mem-")
+            .thread_name("mock-shared-mem")
             .threaded_scheduler()
             .enable_all()
             .build()

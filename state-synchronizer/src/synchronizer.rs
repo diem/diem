@@ -57,7 +57,7 @@ impl StateSynchronizer {
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let runtime = Builder::new()
-            .thread_name("state-sync-")
+            .thread_name("state-sync")
             .threaded_scheduler()
             .enable_all()
             .build()

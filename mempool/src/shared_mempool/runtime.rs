@@ -98,7 +98,7 @@ pub fn bootstrap(
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = Builder::new()
-        .thread_name("shared-mem-")
+        .thread_name("shared-mem")
         .threaded_scheduler()
         .enable_all()
         .build()

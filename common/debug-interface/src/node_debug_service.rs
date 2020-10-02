@@ -16,7 +16,7 @@ pub struct NodeDebugService {
 impl NodeDebugService {
     pub fn new(address: SocketAddr, logger: Option<Arc<Logger>>) -> Self {
         let runtime = Builder::new()
-            .thread_name("nodedebug-")
+            .thread_name("nodedebug")
             .threaded_scheduler()
             .enable_all()
             .build()

@@ -346,9 +346,14 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
     // Build the configured networks.
     for network_builder in &mut network_builders {
-        debug!("Creating runtime for {}", network_builder.network_context());
+        let network_context = network_builder.network_context();
+        debug!("Creating runtime for {}", network_context);
         let runtime = Builder::new()
-            .thread_name("network-")
+            .thread_name(format!(
+                "network-{}-{}",
+                network_context.role(),
+                network_context.network_id()
+            ))
             .threaded_scheduler()
             .enable_all()
             .build()

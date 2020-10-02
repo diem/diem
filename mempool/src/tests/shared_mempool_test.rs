@@ -94,7 +94,7 @@ fn init_single_shared_mempool(
         libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let runtime = Builder::new()
-        .thread_name("shared-mem-")
+        .thread_name("shared-mem")
         .threaded_scheduler()
         .enable_all()
         .build()
@@ -164,7 +164,7 @@ fn init_smp_multiple_networks(
         libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let runtime = Builder::new()
-        .thread_name("shared-mem-")
+        .thread_name("shared-mem")
         .threaded_scheduler()
         .enable_all()
         .build()

@@ -13,7 +13,7 @@ pub fn start_backup_service(address: SocketAddr, db: Arc<LibraDB>) -> Runtime {
     let routes = get_routes(backup_handler);
 
     let runtime = Builder::new()
-        .thread_name("backup-")
+        .thread_name("backup")
         .threaded_scheduler()
         .enable_all()
         .build()

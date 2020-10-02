@@ -34,7 +34,7 @@ pub fn start_consensus(
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = runtime::Builder::new()
-        .thread_name("consensus-")
+        .thread_name("consensus")
         .threaded_scheduler()
         .enable_all()
         .build()
