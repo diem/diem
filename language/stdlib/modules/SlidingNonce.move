@@ -82,7 +82,6 @@ module SlidingNonce {
     }
 
     spec fun try_record_nonce {
-        /// > TODO: turn verify on when we are ready to specify this function.
         /// It is currently assumed that this function raises no arithmetic overflow/underflow.
         pragma opaque, verify = false;
         ensures result == spec_try_record_nonce(account, seq_nonce);

@@ -235,7 +235,6 @@ Returns 0 if a nonce was recorded and non-0 otherwise
 <summary>Specification</summary>
 
 
-> TODO: turn verify on when we are ready to specify this function.
 It is currently assumed that this function raises no arithmetic overflow/underflow.
 
 

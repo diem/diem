@@ -291,7 +291,7 @@ module LibraSystem {
         /// Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
         include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: validator_operator_addr};
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_addr};
-        aborts_if ValidatorConfig::spec_get_operator(validator_addr) != validator_operator_addr
+        aborts_if ValidatorConfig::get_operator(validator_addr) != validator_operator_addr
             with Errors::INVALID_ARGUMENT;
         aborts_if !spec_is_validator(validator_addr) with Errors::INVALID_ARGUMENT;
     }
