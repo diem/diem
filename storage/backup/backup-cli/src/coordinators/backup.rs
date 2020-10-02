@@ -289,13 +289,15 @@ where
 }
 
 fn get_batch_range(last_in_backup: Option<u64>, batch_size: usize) -> (u64, u64) {
-    // say, 5 is already in backup, and we target batches of size 10, we will return (6, 9) in this
-    // case, so 6, 7, 8, 9 will be in this batch, and next time the backup worker will pass in 9,
-    // and we will return (10, 19)
-    let start = last_in_backup.map_or(0, |n| n + 1);
-    let next_batch_start = (start / batch_size as u64 + 1) * batch_size as u64;
-
-    (start, next_batch_start - 1)
+    // say, 7 is already in backup, and we target batches of size 10, we will return (8, 10) in this
+    // case, so 8, 9, 10 will be in this batch, and next time the backup worker will pass in 10,
+    // and we will return (11, 20). The transaction 0 will be in it's own batch.
+    last_in_backup.map_or((0, 0), |n| {
+        let first = n + 1;
+        let batch = n / batch_size as u64 + 1;
+        let last = batch * batch_size as u64;
+        (first, last)
+    })
 }
 
 fn get_next_snapshot(last_in_backup: Option<u64>, db_state: DbState, interval: usize) -> u64 {
@@ -321,10 +323,11 @@ mod tests {
 
     #[test]
     fn test_get_batch_range() {
-        assert_eq!(get_batch_range(None, 100), (0, 99));
-        assert_eq!(get_batch_range(Some(99), 50), (100, 149));
-        assert_eq!(get_batch_range(Some(149), 100), (150, 199));
-        assert_eq!(get_batch_range(Some(199), 100), (200, 299));
+        assert_eq!(get_batch_range(None, 100), (0, 0));
+        assert_eq!(get_batch_range(Some(0), 100), (1, 100));
+        assert_eq!(get_batch_range(Some(100), 50), (101, 150));
+        assert_eq!(get_batch_range(Some(150), 100), (151, 200));
+        assert_eq!(get_batch_range(Some(200), 100), (201, 300));
     }
 
     #[test]
