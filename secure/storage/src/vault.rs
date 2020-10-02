@@ -20,6 +20,9 @@ use std::{
     },
 };
 
+#[cfg(any(test, feature = "testing"))]
+use libra_vault_client::ReadResponse;
+
 const LIBRA_DEFAULT: &str = "libra_default";
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
@@ -125,6 +128,14 @@ impl VaultStorage {
     #[cfg(any(test, feature = "testing"))]
     pub fn revoke_token_self(&self) -> Result<(), Error> {
         Ok(self.client.revoke_token_self()?)
+    }
+
+    #[cfg(any(test, feature = "testing"))]
+    pub fn get_all_key_versions(
+        &self,
+        name: &str,
+    ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
+        Ok(self.client().read_ed25519_key(name)?)
     }
 
     /// Creates a token but uses the namespace for policies
