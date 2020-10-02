@@ -457,7 +457,7 @@ impl TxEmitter {
         let num_seed_accounts = seed_accounts.len();
         info!("Completed minting {} seed accounts", num_seed_accounts);
         info!("Minting additional {} accounts", num_accounts);
-        let a = self.pick_mint_client(&req.instances);
+        /*let a = self.pick_mint_client(&req.instances);
         let mut index = 0;
         for acc in &seed_accounts {
             info!("hhhhhhcurrent account num = {}", index);
@@ -472,7 +472,7 @@ impl TxEmitter {
                     break;
                 }
             }
-        }
+        }*/
 
         let seed_rngs = gen_rng_for_reusable_account(num_seed_accounts);
         // For each seed account, create a future and transfer libra from that seed account to new accounts
@@ -503,6 +503,7 @@ impl TxEmitter {
             .collect();
 
         self.accounts.append(&mut minted_accounts);
+        info!("hhhhhh all accounts = {:?}", self.accounts);
         assert!(
             self.accounts.len() >= num_accounts,
             "Something wrong in mint_account, wanted to mint {}, only have {}",
