@@ -493,6 +493,7 @@ impl TxEmitter {
                     self.chain_id,
                     self.premainnet || *REUSE_ACC,
                     seed_rngs[i].clone(),
+                    i * 10000,
                 )
             });
         let mut minted_accounts = try_join_all(account_futures)
@@ -1041,6 +1042,7 @@ async fn create_new_accounts(
     chain_id: ChainId,
     reuse_account: bool,
     rng: StdRng,
+    mut counter: usize,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
@@ -1078,11 +1080,12 @@ async fn create_new_accounts(
                 if b.currency.eq(COIN1_NAME) {
                     info!(
                         "hhhhhh1111current account has {} coins, index = {}",
-                        b.amount, i
+                        b.amount, counter
                     );
                     break;
                 }
             }
+            counter += 1;
         }
         accounts.append(&mut batch);
     }
