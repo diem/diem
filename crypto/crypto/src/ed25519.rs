@@ -448,7 +448,10 @@ impl Signature for Ed25519Signature {
     /// Batch signature verification as described in the original EdDSA article
     /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
     /// signatures on the same message and it checks for malleability.
-    #[cfg(all(feature = "batch", not(any(feature = "vanilla", feature = "vanilla-u32"))))] // see https://github.com/dalek-cryptography/ed25519-dalek/issues/126
+    #[cfg(all(
+        feature = "batch",
+        not(any(feature = "vanilla", feature = "vanilla-u32"))
+    ))] // see https://github.com/dalek-cryptography/ed25519-dalek/issues/126
     fn batch_verify<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
