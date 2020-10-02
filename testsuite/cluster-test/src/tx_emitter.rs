@@ -1072,13 +1072,13 @@ async fn create_new_accounts(
         execute_and_wait_transactions(&mut client, &mut source_account, requests).await?;
         i += batch.len();
 
-        for i in &batch {
-            let balance = retrieve_account_balance(&client, i.address).await?;
+        for acc in &batch {
+            let balance = retrieve_account_balance(&client, acc.address).await?;
             for b in balance {
                 if b.currency.eq(COIN1_NAME) {
                     info!(
-                        "hhhhhh1111current account has {} coins",
-                        b.amount
+                        "hhhhhh1111current account has {} coins, index = {}",
+                        b.amount, i
                     );
                     break;
                 }
