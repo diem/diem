@@ -43,6 +43,7 @@ COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
 COPY --from=builder /libra/target/release/db-bootstrapper /usr/local/bin
 COPY --from=builder /libra/target/release/db-backup /usr/local/bin
+COPY --from=builder /libra/target/release/db-backup-verify /usr/local/bin
 COPY --from=builder /libra/target/release/db-restore /usr/local/bin
 
 ARG BUILD_DATE
