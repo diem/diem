@@ -41,4 +41,4 @@ jobs:
         cd developers.libra.org
         ./scripts/build_docs.sh -b -r
         cd website
-        GIT_USER=libra-doc-bot USE_SSH=false yarn run publish-gh-pages
+        GIT_USER=libra-doc-bot USE_SSH=false CUSTOM_COMMIT_MESSAGE="[skip ci] Deploy website" yarn run publish-gh-pages
