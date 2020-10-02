@@ -500,7 +500,6 @@ impl TxEmitter {
             info!("hhhhhhcurrent account num = {}", index);
             index += 1;
             let balance = retrieve_account_balance(&a, acc.address).await?;
-            info!("hhhhhh22222");
             for b in balance {
                 if b.currency.eq(COIN1_NAME) {
                     info!(
@@ -743,10 +742,12 @@ async fn retrieve_account_balance(
     client: &JsonRpcAsyncClient,
     address: AccountAddress,
 ) -> Result<Vec<AmountView>> {
+    info!("hhhhhh22222");
     let resp = client
         .get_accounts(&[address])
         .await
         .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
+    info!("hhhhhh3333 {:?}", resp);
     Ok(resp[0]
         .clone()
         .ok_or_else(|| format_err!("account does not exist"))?
