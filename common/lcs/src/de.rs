@@ -137,6 +137,7 @@ impl<'de> Deserializer<'de> {
         Ok(u128::from_le_bytes(le_bytes))
     }
 
+    #[allow(clippy::integer_arithmetic)]
     fn parse_u32_from_uleb128(&mut self) -> Result<u32> {
         let mut value: u64 = 0;
         for shift in (0..32).step_by(7) {
@@ -513,21 +514,24 @@ impl<'de, 'a> de::MapAccess<'de> for MapDeserializer<'a, 'de> {
     where
         K: DeserializeSeed<'de>,
     {
-        if self.remaining == 0 {
-            Ok(None)
-        } else {
-            let previous_input_slice = &self.de.input[..];
-            let key_value = seed.deserialize(&mut *self.de)?;
-            let key_len = previous_input_slice.len() - self.de.input.len();
-            let key_bytes = &previous_input_slice[..key_len];
-            if let Some(previous_key_bytes) = self.previous_key_bytes {
-                if previous_key_bytes >= key_bytes {
-                    return Err(Error::NonCanonicalMap);
+        match self.remaining.checked_sub(1) {
+            None => Ok(None),
+            Some(remaining) => {
+                let previous_input_slice = &self.de.input[..];
+                let key_value = seed.deserialize(&mut *self.de)?;
+                let key_len = previous_input_slice
+                    .len()
+                    .saturating_sub(self.de.input.len());
+                let key_bytes = &previous_input_slice[..key_len];
+                if let Some(previous_key_bytes) = self.previous_key_bytes {
+                    if previous_key_bytes >= key_bytes {
+                        return Err(Error::NonCanonicalMap);
+                    }
                 }
+                self.remaining = remaining;
+                self.previous_key_bytes = Some(key_bytes);
+                Ok(Some(key_value))
             }
-            self.remaining -= 1;
-            self.previous_key_bytes = Some(key_bytes);
-            Ok(Some(key_value))
         }
     }
 

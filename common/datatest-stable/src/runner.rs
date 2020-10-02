@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::integer_arithmetic)]
+
 use crate::{utils, Result};
 use std::{
     io::{self, Write},
