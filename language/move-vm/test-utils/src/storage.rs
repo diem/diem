@@ -41,12 +41,12 @@ impl RemoteCache for BlankStorage {
 // A storage adapter created by stacking a change set on top of an existing storage backend.
 /// The new storage can be used for additional computations without modifying the base.
 #[derive(Debug, Clone)]
-pub struct DeltaStorage<'a, S> {
+pub struct DeltaStorage<'a, 'b, S> {
     base: &'a S,
-    delta: ChangeSet,
+    delta: &'b ChangeSet,
 }
 
-impl<'a, S: RemoteCache> RemoteCache for DeltaStorage<'a, S> {
+impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         if let Some(account_storage) = self.delta.accounts.get(module_id.address()) {
             if let Some(blob_opt) = account_storage.modules.get(module_id.name()) {
@@ -72,8 +72,8 @@ impl<'a, S: RemoteCache> RemoteCache for DeltaStorage<'a, S> {
     }
 }
 
-impl<'a, S: RemoteCache> DeltaStorage<'a, S> {
-    pub fn new(base: &'a S, delta: ChangeSet) -> Self {
+impl<'a, 'b, S: RemoteCache> DeltaStorage<'a, 'b, S> {
+    pub fn new(base: &'a S, delta: &'b ChangeSet) -> Self {
         Self { base, delta }
     }
 }

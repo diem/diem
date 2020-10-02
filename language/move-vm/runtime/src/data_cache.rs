@@ -180,8 +180,8 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
             };
             let ty_layout = self.loader.type_to_type_layout(ty)?;
 
-            let gv = match self.remote.get_resource(&addr, &ty_tag)? {
-                Some(blob) => {
+            let gv = match self.remote.get_resource(&addr, &ty_tag) {
+                Ok(Some(blob)) => {
                     let ty_kind_info = self.loader.type_to_kind_info(ty)?;
                     let val = match Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout) {
                         Some(val) => val,
@@ -197,7 +197,19 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
 
                     GlobalValue::cached(val)?
                 }
-                None => GlobalValue::none(),
+                Ok(None) => GlobalValue::none(),
+                Err(err) => {
+                    let msg = format!("Unexpected storage error: {:?}", err);
+                    // REVIEW: better way to get info out of a PartialVMError?
+                    let (_old_status, _old_sub_status, _old_message, indices, offsets) =
+                        err.all_data();
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(msg)
+                            .at_indices(indices)
+                            .at_code_offsets(offsets),
+                    );
+                }
             };
 
             account_cache.data_map.insert(ty.clone(), (ty_layout, gv));
@@ -216,11 +228,23 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                 return Ok(blob.clone());
             }
         }
-        match self.remote.get_module(module_id)? {
-            Some(bytes) => Ok(bytes),
-            None => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
+        match self.remote.get_module(module_id) {
+            Ok(Some(bytes)) => Ok(bytes),
+            Ok(None) => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
                 .with_message(format!("Cannot find {:?} in data cache", module_id))
                 .finish(Location::Undefined)),
+            Err(err) => {
+                let msg = format!("Unexpected storage error: {:?}", err);
+                let (_old_status, _old_sub_status, _old_message, location, indices, offsets) =
+                    err.all_data();
+                Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(msg)
+                        .at_indices(indices)
+                        .at_code_offsets(offsets)
+                        .finish(location),
+                )
+            }
         }
     }
 
