@@ -247,9 +247,9 @@ impl EpochHistoryRestoreController {
     pub async fn run(self) -> Result<EpochHistory> {
         let name = self.name();
         info!(
-            "{} started. Trying epoch endings for epoch 0 till {} (inclusive)",
+            "{} started. Trying epoch endings starting from epoch 0, {} in total.",
             name,
-            self.manifest_handles.len() - 1,
+            self.manifest_handles.len(),
         );
         let res = self
             .run_impl()
@@ -266,6 +266,12 @@ impl EpochHistoryRestoreController {
     }
 
     async fn run_impl(self) -> Result<EpochHistory> {
+        if self.manifest_handles.is_empty() {
+            return Ok(EpochHistory {
+                epoch_endings: Vec::new(),
+            });
+        }
+
         let mut next_epoch = 0u64;
         let mut previous_li = None;
         let mut epoch_endings = Vec::new();
@@ -305,11 +311,6 @@ impl EpochHistoryRestoreController {
             previous_li = Some(lis.last().expect("Verified not empty.").clone());
             epoch_endings.extend(lis);
         }
-        ensure!(
-            !epoch_endings.is_empty(),
-            "No epochs restored from {} manifests",
-            self.manifest_handles.len(),
-        );
 
         Ok(EpochHistory { epoch_endings })
     }
