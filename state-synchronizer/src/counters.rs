@@ -35,7 +35,6 @@ pub const RECONFIG_SUCCESS_LABEL: &str = "success";
 pub const RECONFIG_FAIL_LABEL: &str = "fail";
 
 // network error type labels
-pub const GENERAL_NETWORK_ERROR_LABEL: &str = "general";
 pub const UNEXPECTED_MESSAGE_LABEL: &str = "unexpected_msg";
 
 pub const SUCCESS_LABEL: &str = "success";

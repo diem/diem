@@ -15,7 +15,7 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
+use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt};
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
 use libra_types::{
@@ -56,7 +56,7 @@ pub struct NetworkSender {
     // Self sender and self receivers provide a shortcut for sending the messages to itself.
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<Event<ConsensusMsg>>,
     validators: ValidatorVerifier,
 }
 
@@ -64,7 +64,7 @@ impl NetworkSender {
     pub fn new(
         author: Author,
         network_sender: ConsensusNetworkSender,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<Event<ConsensusMsg>>,
         validators: ValidatorVerifier,
     ) -> Self {
         NetworkSender {
@@ -120,7 +120,7 @@ impl NetworkSender {
     pub async fn broadcast(&mut self, msg: ConsensusMsg) {
         // Directly send the message to ourself without going through network.
         let self_msg = Event::Message((self.author, msg.clone()));
-        if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
+        if let Err(err) = self.self_sender.send(self_msg).await {
             error!("Error broadcasting to self: {:?}", err);
         }
 
@@ -153,7 +153,7 @@ impl NetworkSender {
         for peer in recipients {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
-                if let Err(err) = self_sender.send(Ok(self_msg)).await {
+                if let Err(err) = self_sender.send(self_msg).await {
                     error!(error = ?err, "Error delivering a self vote");
                 }
                 continue;
@@ -186,7 +186,7 @@ impl NetworkSender {
     pub async fn notify_epoch_change(&mut self, proof: EpochChangeProof) {
         let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
-        if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
+        if let Err(e) = self.self_sender.send(self_msg).await {
             warn!(
                 error = "Failed to notify to self an epoch change",
                 "{:?}", e
@@ -201,14 +201,14 @@ pub struct NetworkTask {
         (AccountAddress, ConsensusMsg),
     >,
     block_retrieval_tx: libra_channel::Sender<AccountAddress, IncomingBlockRetrievalRequest>,
-    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    all_events: Box<dyn Stream<Item = Event<ConsensusMsg>> + Send + Unpin>,
 }
 
 impl NetworkTask {
     /// Establishes the initial connections with the peers and returns the receivers.
     pub fn new(
         network_events: ConsensusNetworkEvents,
-        self_receiver: channel::Receiver<anyhow::Result<Event<ConsensusMsg>>>,
+        self_receiver: channel::Receiver<Event<ConsensusMsg>>,
     ) -> (NetworkTask, NetworkReceivers) {
         let (consensus_messages_tx, consensus_messages) = libra_channel::new(
             QueueStyle::LIFO,
@@ -220,7 +220,6 @@ impl NetworkTask {
             NonZeroUsize::new(1).unwrap(),
             Some(&counters::BLOCK_RETRIEVAL_CHANNEL_MSGS),
         );
-        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
         let all_events = Box::new(select(network_events, self_receiver));
         (
             NetworkTask {
@@ -238,7 +237,7 @@ impl NetworkTask {
     pub async fn start(mut self) {
         while let Some(message) = self.all_events.next().await {
             match message {
-                Ok(Event::Message((peer_id, msg))) => {
+                Event::Message((peer_id, msg)) => {
                     if let Err(e) = self
                         .consensus_messages_tx
                         .push((peer_id, discriminant(&msg)), (peer_id, msg))
@@ -249,7 +248,7 @@ impl NetworkTask {
                         );
                     }
                 }
-                Ok(Event::RpcRequest((peer_id, msg, callback))) => match msg {
+                Event::RpcRequest((peer_id, msg, callback)) => match msg {
                     ConsensusMsg::BlockRetrievalRequest(request) => {
                         debug!(
                             remote_peer = peer_id,
@@ -278,17 +277,11 @@ impl NetworkTask {
                         continue;
                     }
                 },
-                Ok(Event::NewPeer(peer_id, _origin)) => {
+                Event::NewPeer(peer_id, _origin) => {
                     debug!(remote_peer = peer_id, "Peer connected");
                 }
-                Ok(Event::LostPeer(peer_id, _origin)) => {
+                Event::LostPeer(peer_id, _origin) => {
                     debug!(remote_peer = peer_id, "Peer disconnected");
-                }
-                Err(e) => {
-                    error!(
-                        SecurityEvent::ConsensusInvalidNetworkEvent,
-                        error = ?e,
-                    );
                 }
             }
         }

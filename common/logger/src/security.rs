@@ -38,9 +38,6 @@ pub enum SecurityEvent {
     /// Consensus received an equivocating vote
     ConsensusEquivocatingVote,
 
-    /// Consensus received an invalid network event
-    ConsensusInvalidNetworkEvent,
-
     /// Consensus received an invalid proposal
     InvalidConsensusProposal,
 
@@ -76,6 +73,9 @@ pub enum SecurityEvent {
 
     /// Network couldn't negotiate
     InvalidNetworkHandshakeMsg,
+
+    /// Network received an invalid message from a remote peer
+    InvalidNetworkEvent,
 }
 
 impl Schema for SecurityEvent {

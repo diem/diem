@@ -107,85 +107,75 @@ pub(crate) async fn coordinator<V>(
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
-                    Ok(network_event) => {
-                        match network_event {
-                            Event::NewPeer(peer_id, origin) => {
-                                counters::SHARED_MEMPOOL_EVENTS
-                                    .with_label_values(&["new_peer".to_string().deref()])
-                                    .inc();
+                    Event::NewPeer(peer_id, origin) => {
+                        counters::SHARED_MEMPOOL_EVENTS
+                            .with_label_values(&["new_peer".to_string().deref()])
+                            .inc();
+                        let peer = PeerNetworkId(network_id, peer_id);
+                        let is_new_peer = peer_manager.add_peer(peer.clone(), origin);
+                        let is_upstream_peer = peer_manager.is_upstream_peer(&peer, Some(origin));
+                        debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer).is_upstream_peer(is_upstream_peer));
+                        notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
+                        if is_new_peer && is_upstream_peer {
+                            tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
+                        }
+                    }
+                    Event::LostPeer(peer_id, origin) => {
+                        counters::SHARED_MEMPOOL_EVENTS
+                            .with_label_values(&["lost_peer".to_string().deref()])
+                            .inc();
+                        let peer = PeerNetworkId(network_id, peer_id);
+                        debug!(LogSchema::new(LogEntry::LostPeer)
+                            .peer(&peer)
+                            .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
+                        );
+                        peer_manager.disable_peer(peer);
+                        notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
+                    }
+                    Event::Message((peer_id, msg)) => {
+                        counters::SHARED_MEMPOOL_EVENTS
+                            .with_label_values(&["message".to_string().deref()])
+                            .inc();
+                        match msg {
+                            MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
+                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
+                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
+                                    .inc_by(transactions.len() as i64);
+                                let smp_clone = smp.clone();
                                 let peer = PeerNetworkId(network_id, peer_id);
-                                let is_new_peer = peer_manager.add_peer(peer.clone(), origin);
-                                let is_upstream_peer = peer_manager.is_upstream_peer(&peer, Some(origin));
-                                debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer).is_upstream_peer(is_upstream_peer));
-                                notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                                if is_new_peer && is_upstream_peer {
-                                    tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
-                                }
-                            }
-                            Event::LostPeer(peer_id, origin) => {
-                                counters::SHARED_MEMPOOL_EVENTS
-                                    .with_label_values(&["lost_peer".to_string().deref()])
-                                    .inc();
-                                let peer = PeerNetworkId(network_id, peer_id);
-                                debug!(LogSchema::new(LogEntry::LostPeer)
-                                    .peer(&peer)
-                                    .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
-                                );
-                                peer_manager.disable_peer(peer);
-                                notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                            }
-                            Event::Message((peer_id, msg)) => {
-                                counters::SHARED_MEMPOOL_EVENTS
-                                    .with_label_values(&["message".to_string().deref()])
-                                    .inc();
-                                match msg {
-                                    MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
-                                        counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                                            .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
-                                            .inc_by(transactions.len() as i64);
-                                        let smp_clone = smp.clone();
-                                        let peer = PeerNetworkId(network_id, peer_id);
-                                        let timeline_state = match peer_manager
-                                            .is_upstream_peer(&peer, None)
-                                        {
-                                            true => TimelineState::NonQualified,
-                                            false => TimelineState::NotReady,
-                                        };
-                                        let _ = counters::TASK_SPAWN_LATENCY
-                                            .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
-                                            .start_timer();
-                                        bounded_executor
-                                            .spawn(tasks::process_transaction_broadcast(
-                                                smp_clone,
-                                                transactions,
-                                                request_id,
-                                                timeline_state,
-                                                peer
-                                            ))
-                                            .await;
-                                    }
-                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry, backoff} => {
-                                        let ack_timestamp = SystemTime::now();
-                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry, backoff, ack_timestamp);
-                                    }
+                                let timeline_state = match peer_manager
+                                    .is_upstream_peer(&peer, None)
+                                {
+                                    true => TimelineState::NonQualified,
+                                    false => TimelineState::NotReady,
                                 };
+                                let _ = counters::TASK_SPAWN_LATENCY
+                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
+                                    .start_timer();
+                                bounded_executor
+                                    .spawn(tasks::process_transaction_broadcast(
+                                        smp_clone,
+                                        transactions,
+                                        request_id,
+                                        timeline_state,
+                                        peer
+                                    ))
+                                    .await;
                             }
-                            Event::RpcRequest((peer_id, msg, res_tx)) => {
-                                error!(
-                                    SecurityEvent::InvalidNetworkEventMempool,
-                                    message = msg,
-                                    peer_id = peer_id,
-                                );
+                            MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry, backoff} => {
+                                let ack_timestamp = SystemTime::now();
+                                peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry, backoff, ack_timestamp);
                             }
                         }
-                    },
-                    Err(e) => {
+                    }
+                    Event::RpcRequest((peer_id, msg, res_tx)) => {
                         error!(
                             SecurityEvent::InvalidNetworkEventMempool,
-                            error = e.to_string()
+                            message = msg,
+                            peer_id = peer_id,
                         );
                     }
-                };
+                }
             },
             complete => break,
         }

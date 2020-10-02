@@ -72,7 +72,7 @@ pub struct EpochManager {
     author: Author,
     config: ConsensusConfig,
     time_service: Arc<dyn TimeService>,
-    self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+    self_sender: channel::Sender<Event<ConsensusMsg>>,
     network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
     txn_manager: Arc<dyn TxnManager>,
@@ -87,7 +87,7 @@ impl EpochManager {
     pub fn new(
         node_config: &NodeConfig,
         time_service: Arc<dyn TimeService>,
-        self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
+        self_sender: channel::Sender<Event<ConsensusMsg>>,
         network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
         txn_manager: Arc<dyn TxnManager>,

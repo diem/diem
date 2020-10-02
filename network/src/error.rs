@@ -9,10 +9,8 @@ use thiserror::Error;
 
 /// Errors propagated from the network module.
 #[derive(Debug, Error)]
-#[error("{inner}")]
-pub struct NetworkError {
-    inner: anyhow::Error,
-}
+#[error(transparent)]
+pub struct NetworkError(anyhow::Error);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Error)]
 pub enum NetworkErrorKind {
@@ -55,15 +53,13 @@ pub enum NetworkErrorKind {
 
 impl From<NetworkErrorKind> for NetworkError {
     fn from(kind: NetworkErrorKind) -> NetworkError {
-        NetworkError {
-            inner: anyhow::Error::new(kind),
-        }
+        NetworkError(anyhow::Error::new(kind))
     }
 }
 
 impl From<anyhow::Error> for NetworkError {
-    fn from(inner: anyhow::Error) -> NetworkError {
-        NetworkError { inner }
+    fn from(err: anyhow::Error) -> NetworkError {
+        NetworkError(err)
     }
 }
 

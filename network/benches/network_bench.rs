@@ -84,7 +84,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
 
     // The listener side keeps receiving RPC requests and sending responses back
     let f_listener = async move {
-        while let Some(Ok(event)) = listener_events.next().await {
+        while let Some(event) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
                     .send(Ok(res.clone()))

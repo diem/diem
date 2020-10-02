@@ -39,7 +39,7 @@ use futures::{
     channel::{mpsc, oneshot},
     executor::block_on,
     stream::select,
-    Stream, StreamExt, TryStreamExt,
+    Stream, StreamExt,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, Uniform};
 use libra_secure_storage::Storage;
@@ -66,7 +66,7 @@ pub struct NodeSetup {
     signer: ValidatorSigner,
     proposer_author: Author,
     safety_rules_manager: SafetyRulesManager,
-    all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
+    all_events: Box<dyn Stream<Item = Event<ConsensusMsg>> + Send + Unpin>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     _state_sync_receiver: mpsc::UnboundedReceiver<Payload>,
     id: usize,
@@ -151,7 +151,6 @@ impl NodeSetup {
             ConnectionRequestSender::new(connection_reqs_tx),
         );
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
-        let network_events = network_events.map_err(Into::<anyhow::Error>::into);
         let author = signer.author();
 
         let twin_id = TwinId { id, author };
@@ -240,7 +239,7 @@ impl NodeSetup {
     }
 
     pub async fn next_proposal(&mut self) -> ProposalMsg {
-        match self.all_events.next().await.unwrap().unwrap() {
+        match self.all_events.next().await.unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::ProposalMsg(p) => *p,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
@@ -250,7 +249,7 @@ impl NodeSetup {
     }
 
     pub async fn next_vote(&mut self) -> VoteMsg {
-        match self.all_events.next().await.unwrap().unwrap() {
+        match self.all_events.next().await.unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::VoteMsg(v) => *v,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
@@ -260,7 +259,7 @@ impl NodeSetup {
     }
 
     pub async fn next_sync_info(&mut self) -> SyncInfo {
-        match self.all_events.next().await.unwrap().unwrap() {
+        match self.all_events.next().await.unwrap() {
             Event::Message((_, msg)) => match msg {
                 ConsensusMsg::SyncInfo(s) => *s,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
@@ -270,7 +269,7 @@ impl NodeSetup {
     }
 
     pub async fn next_message(&mut self) -> ConsensusMsg {
-        match self.all_events.next().await.unwrap().unwrap() {
+        match self.all_events.next().await.unwrap() {
             Event::Message((_, msg)) => msg,
             _ => panic!("Unexpected Network Event"),
         }

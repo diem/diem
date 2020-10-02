@@ -247,7 +247,7 @@ async fn mempool_load_test(
     mut sender: MempoolNetworkSender,
     mut events: MempoolNetworkEvents,
 ) -> Result<MempoolResult> {
-    let new_peer_event = events.select_next_some().await?;
+    let new_peer_event = events.select_next_some().await;
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
     } else {
@@ -280,7 +280,7 @@ async fn state_sync_load_test(
     mut sender: StateSynchronizerSender,
     mut events: StateSynchronizerEvents,
 ) -> Result<StateSyncResult> {
-    let new_peer_event = events.select_next_some().await?;
+    let new_peer_event = events.select_next_some().await;
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
     } else {
@@ -308,7 +308,7 @@ async fn state_sync_load_test(
         sender.send_to(vfn, msg)?;
 
         // await response from remote peer
-        let response = events.select_next_some().await?;
+        let response = events.select_next_some().await;
         if let Event::Message((_remote_peer, payload)) = response {
             if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
                 chunk_response,

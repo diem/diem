@@ -192,13 +192,13 @@ where
             futures::select! {
                 event = self.network_rx.select_next_some() => {
                     match event {
-                        Ok(Event::NewPeer(peer_id, _origin)) => {
+                        Event::NewPeer(peer_id, _origin) => {
                             self.connected.insert(peer_id, (self.round, 0));
                         },
-                        Ok(Event::LostPeer(peer_id, _origin)) => {
+                        Event::LostPeer(peer_id, _origin) => {
                             self.connected.remove(&peer_id);
                         },
-                        Ok(Event::RpcRequest((peer_id, msg, res_tx))) => {
+                        Event::RpcRequest((peer_id, msg, res_tx)) => {
                             match msg {
                             HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
                             _ => {
@@ -214,7 +214,7 @@ where
                             },
                             };
                         }
-                        Ok(Event::Message(msg)) => {
+                        Event::Message(msg) => {
                             error!(
                                 SecurityEvent::InvalidNetworkEventHC,
                                 NetworkSchema::new(&self.network_context),
@@ -224,18 +224,6 @@ where
                             );
                             debug_assert!(false, "Unexpected network event");
                         },
-                        Err(err) => {
-                            warn!(
-                                SecurityEvent::InvalidNetworkEventHC,
-                                NetworkSchema::new(&self.network_context),
-                                error = ?err,
-                                "{} Unexpected network error: {}",
-                                self.network_context,
-                                err
-                            );
-
-                            debug_assert!(false, "Unexpected network error");
-                        }
                     }
                 }
                 _ = self.ticker.select_next_some() => {

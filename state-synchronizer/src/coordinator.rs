@@ -283,34 +283,24 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         }
                     };
                 },
-                (network_id, network_event) = network_events.select_next_some() => {
-                    match network_event {
-                        Ok(event) => {
-                            match event {
-                                Event::NewPeer(peer_id, origin) => {
-                                    let peer = PeerNetworkId(network_id, peer_id);
-                                    self.request_manager.enable_peer(peer, origin);
-                                    self.check_progress();
-                                }
-                                Event::LostPeer(peer_id, origin) => {
-                                    let peer = PeerNetworkId(network_id, peer_id);
-                                    self.request_manager.disable_peer(&peer, origin);
-                                }
-                                Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
-                                unexpected_event => {
-                                    counters::NETWORK_ERROR_COUNT
-                                        .with_label_values(&[counters::UNEXPECTED_MESSAGE_LABEL])
-                                        .inc();
-                                    warn!(LogSchema::new(LogEntry::NetworkError),
-                                    "received unexpected network event: {:?}", unexpected_event);
-                                },
-                            }
-                        },
-                        Err(err) => {
+                (network_id, event) = network_events.select_next_some() => {
+                    match event {
+                        Event::NewPeer(peer_id, origin) => {
+                            let peer = PeerNetworkId(network_id, peer_id);
+                            self.request_manager.enable_peer(peer, origin);
+                            self.check_progress();
+                        }
+                        Event::LostPeer(peer_id, origin) => {
+                            let peer = PeerNetworkId(network_id, peer_id);
+                            self.request_manager.disable_peer(&peer, origin);
+                        }
+                        Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
+                        unexpected_event => {
                             counters::NETWORK_ERROR_COUNT
-                                .with_label_values(&[counters::GENERAL_NETWORK_ERROR_LABEL])
+                                .with_label_values(&[counters::UNEXPECTED_MESSAGE_LABEL])
                                 .inc();
-                            error!(LogSchema::new(LogEntry::NetworkError).error(&err.into()));
+                            warn!(LogSchema::new(LogEntry::NetworkError),
+                            "received unexpected network event: {:?}", unexpected_event);
                         },
                     }
                 },
