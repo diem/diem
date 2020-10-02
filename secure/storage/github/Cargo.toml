@@ -19,4 +19,4 @@ libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-base64 = "0.12.3"
+base64 = "0.13.0"

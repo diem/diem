@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-base64 = "0.12.3"
+base64 = "0.13.0"
 chrono = "0.4.19"
 enum_dispatch = "0.3.3"
 rand = "0.7.3"

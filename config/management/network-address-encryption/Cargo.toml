@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-base64 = "0.12.3"
+base64 = "0.13.0"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
 thiserror = "1.0.20"
 
