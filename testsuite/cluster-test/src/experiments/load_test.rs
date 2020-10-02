@@ -309,7 +309,7 @@ async fn state_sync_load_test(
 
         // await response from remote peer
         let response = events.select_next_some().await;
-        if let Event::Message((_remote_peer, payload)) = response {
+        if let Event::Message(_remote_peer, payload) = response {
             if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
                 chunk_response,
             ) = payload

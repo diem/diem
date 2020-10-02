@@ -43,11 +43,11 @@ impl<T: DeserializeOwned + Serialize> Message for T {}
 #[derive(Debug)]
 pub enum Event<TMessage> {
     /// New inbound direct-send message from peer.
-    Message((PeerId, TMessage)),
+    Message(PeerId, TMessage),
     /// New inbound rpc request. The request is fulfilled by sending the
     /// serialized response `Bytes` over the `oneshot::Sender`, where the network
     /// layer will handle sending the response over-the-wire.
-    RpcRequest((PeerId, TMessage, oneshot::Sender<Result<Bytes, RpcError>>)),
+    RpcRequest(PeerId, TMessage, oneshot::Sender<Result<Bytes, RpcError>>),
     /// Peer which we have a newly established connection with.
     NewPeer(PeerId, ConnectionOrigin),
     /// Peer with which we've lost our connection.
@@ -59,11 +59,9 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
     fn eq(&self, other: &Event<TMessage>) -> bool {
         use Event::*;
         match (self, other) {
-            (Message((pid1, msg1)), Message((pid2, msg2))) => pid1 == pid2 && msg1 == msg2,
+            (Message(pid1, msg1), Message(pid2, msg2)) => pid1 == pid2 && msg1 == msg2,
             // ignore oneshot::Sender in comparison
-            (RpcRequest((pid1, msg1, _)), RpcRequest((pid2, msg2, _))) => {
-                pid1 == pid2 && msg1 == msg2
-            }
+            (RpcRequest(pid1, msg1, _), RpcRequest(pid2, msg2, _)) => pid1 == pid2 && msg1 == msg2,
             (NewPeer(pid1, origin1), NewPeer(pid2, origin2)) => pid1 == pid2 && origin1 == origin2,
             (LostPeer(pid1, origin1), LostPeer(pid2, origin2)) => {
                 pid1 == pid2 && origin1 == origin2
@@ -143,7 +141,7 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
     let maybe_event = match notif {
         PeerManagerNotification::RecvRpc(peer_id, rpc_req) => {
             match lcs::from_bytes(&rpc_req.data) {
-                Ok(req_msg) => Some(Event::RpcRequest((peer_id, req_msg, rpc_req.res_tx))),
+                Ok(req_msg) => Some(Event::RpcRequest(peer_id, req_msg, rpc_req.res_tx)),
                 Err(err) => {
                     let data = &rpc_req.data;
                     warn!(
@@ -158,7 +156,7 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
             }
         }
         PeerManagerNotification::RecvMessage(peer_id, msg) => match lcs::from_bytes(&msg.mdata) {
-            Ok(msg) => Some(Event::Message((peer_id, msg))),
+            Ok(msg) => Some(Event::Message(peer_id, msg)),
             Err(err) => {
                 let data = &msg.mdata;
                 warn!(

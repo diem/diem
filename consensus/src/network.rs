@@ -119,7 +119,7 @@ impl NetworkSender {
     /// as well as there is no indication about the network failures.
     pub async fn broadcast(&mut self, msg: ConsensusMsg) {
         // Directly send the message to ourself without going through network.
-        let self_msg = Event::Message((self.author, msg.clone()));
+        let self_msg = Event::Message(self.author, msg.clone());
         if let Err(err) = self.self_sender.send(self_msg).await {
             error!("Error broadcasting to self: {:?}", err);
         }
@@ -152,7 +152,7 @@ impl NetworkSender {
         let msg = ConsensusMsg::VoteMsg(Box::new(vote_msg));
         for peer in recipients {
             if self.author == peer {
-                let self_msg = Event::Message((self.author, msg.clone()));
+                let self_msg = Event::Message(self.author, msg.clone());
                 if let Err(err) = self_sender.send(self_msg).await {
                     error!(error = ?err, "Error delivering a self vote");
                 }
@@ -185,7 +185,7 @@ impl NetworkSender {
 
     pub async fn notify_epoch_change(&mut self, proof: EpochChangeProof) {
         let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
-        let self_msg = Event::Message((self.author, msg));
+        let self_msg = Event::Message(self.author, msg);
         if let Err(e) = self.self_sender.send(self_msg).await {
             warn!(
                 error = "Failed to notify to self an epoch change",
@@ -237,7 +237,7 @@ impl NetworkTask {
     pub async fn start(mut self) {
         while let Some(message) = self.all_events.next().await {
             match message {
-                Event::Message((peer_id, msg)) => {
+                Event::Message(peer_id, msg) => {
                     if let Err(e) = self
                         .consensus_messages_tx
                         .push((peer_id, discriminant(&msg)), (peer_id, msg))
@@ -248,7 +248,7 @@ impl NetworkTask {
                         );
                     }
                 }
-                Event::RpcRequest((peer_id, msg, callback)) => match msg {
+                Event::RpcRequest(peer_id, msg, callback) => match msg {
                     ConsensusMsg::BlockRetrievalRequest(request) => {
                         debug!(
                             remote_peer = peer_id,

@@ -240,7 +240,7 @@ impl NodeSetup {
 
     pub async fn next_proposal(&mut self) -> ProposalMsg {
         match self.all_events.next().await.unwrap() {
-            Event::Message((_, msg)) => match msg {
+            Event::Message(_, msg) => match msg {
                 ConsensusMsg::ProposalMsg(p) => *p,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
@@ -250,7 +250,7 @@ impl NodeSetup {
 
     pub async fn next_vote(&mut self) -> VoteMsg {
         match self.all_events.next().await.unwrap() {
-            Event::Message((_, msg)) => match msg {
+            Event::Message(_, msg) => match msg {
                 ConsensusMsg::VoteMsg(v) => *v,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
@@ -260,7 +260,7 @@ impl NodeSetup {
 
     pub async fn next_sync_info(&mut self) -> SyncInfo {
         match self.all_events.next().await.unwrap() {
-            Event::Message((_, msg)) => match msg {
+            Event::Message(_, msg) => match msg {
                 ConsensusMsg::SyncInfo(s) => *s,
                 msg => panic!("Unexpected Consensus Message: {:?}", msg),
             },
@@ -270,7 +270,7 @@ impl NodeSetup {
 
     pub async fn next_message(&mut self) -> ConsensusMsg {
         match self.all_events.next().await.unwrap() {
-            Event::Message((_, msg)) => msg,
+            Event::Message(_, msg) => msg,
             _ => panic!("Unexpected Network Event"),
         }
     }

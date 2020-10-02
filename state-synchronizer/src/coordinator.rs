@@ -294,7 +294,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             let peer = PeerNetworkId(network_id, peer_id);
                             self.request_manager.disable_peer(&peer, origin);
                         }
-                        Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
+                        Event::Message(peer_id, message) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
                         unexpected_event => {
                             counters::NETWORK_ERROR_COUNT
                                 .with_label_values(&[counters::UNEXPECTED_MESSAGE_LABEL])

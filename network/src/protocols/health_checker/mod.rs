@@ -198,7 +198,7 @@ where
                         Event::LostPeer(peer_id, _origin) => {
                             self.connected.remove(&peer_id);
                         },
-                        Event::RpcRequest((peer_id, msg, res_tx)) => {
+                        Event::RpcRequest(peer_id, msg, res_tx) => {
                             match msg {
                             HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
                             _ => {
@@ -214,13 +214,15 @@ where
                             },
                             };
                         }
-                        Event::Message(msg) => {
+                        Event::Message(peer_id, msg) => {
                             error!(
                                 SecurityEvent::InvalidNetworkEventHC,
-                                NetworkSchema::new(&self.network_context),
-                                "{} Unexpected network event: {:?}",
+                                NetworkSchema::new(&self.network_context)
+                                    .remote_peer(&peer_id),
+                                "{} Unexpected direct send from {} msg {:?}",
                                 self.network_context,
-                                msg
+                                peer_id,
+                                msg,
                             );
                             debug_assert!(false, "Unexpected network event");
                         },

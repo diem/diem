@@ -32,7 +32,7 @@ fn test_direct_send() {
             .send_to(listener_peer_id, msg_clone.clone())
             .unwrap();
         match listener_events.next().await.unwrap() {
-            Event::Message((peer_id, msg)) => {
+            Event::Message(peer_id, msg) => {
                 assert_eq!(peer_id, dialer_peer_id);
                 assert_eq!(msg, msg_clone);
             }
@@ -46,7 +46,7 @@ fn test_direct_send() {
             .send_to(dialer_peer_id, msg.clone())
             .unwrap();
         match dialer_events.next().await.unwrap() {
-            Event::Message((peer_id, incoming_msg)) => {
+            Event::Message(peer_id, incoming_msg) => {
                 assert_eq!(peer_id, listener_peer_id);
                 assert_eq!(incoming_msg, msg);
             }
@@ -76,7 +76,7 @@ fn test_rpc() {
         dialer_sender.send_rpc(listener_peer_id, msg_clone.clone(), Duration::from_secs(10));
     let f_respond = async move {
         match listener_events.next().await.unwrap() {
-            Event::RpcRequest((peer_id, msg, rs)) => {
+            Event::RpcRequest(peer_id, msg, rs) => {
                 assert_eq!(peer_id, dialer_peer_id);
                 assert_eq!(msg, msg_clone);
                 rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();
@@ -94,7 +94,7 @@ fn test_rpc() {
         listener_sender.send_rpc(dialer_peer_id, msg_clone.clone(), Duration::from_secs(10));
     let f_respond = async move {
         match dialer_events.next().await.unwrap() {
-            Event::RpcRequest((peer_id, msg, rs)) => {
+            Event::RpcRequest(peer_id, msg, rs) => {
                 assert_eq!(peer_id, listener_peer_id);
                 assert_eq!(msg, msg_clone);
                 rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();

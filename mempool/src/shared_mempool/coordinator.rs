@@ -132,7 +132,7 @@ pub(crate) async fn coordinator<V>(
                         peer_manager.disable_peer(peer);
                         notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                     }
-                    Event::Message((peer_id, msg)) => {
+                    Event::Message(peer_id, msg) => {
                         counters::SHARED_MEMPOOL_EVENTS
                             .with_label_values(&["message".to_string().deref()])
                             .inc();
@@ -168,7 +168,7 @@ pub(crate) async fn coordinator<V>(
                             }
                         }
                     }
-                    Event::RpcRequest((peer_id, msg, res_tx)) => {
+                    Event::RpcRequest(peer_id, msg, res_tx) => {
                         error!(
                             SecurityEvent::InvalidNetworkEventMempool,
                             message = msg,

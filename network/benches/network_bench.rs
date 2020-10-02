@@ -86,7 +86,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     let f_listener = async move {
         while let Some(event) = listener_events.next().await {
             match event {
-                Event::RpcRequest((_, _, res_tx)) => res_tx
+                Event::RpcRequest(_, _, res_tx) => res_tx
                     .send(Ok(res.clone()))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
