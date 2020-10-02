@@ -23,6 +23,7 @@ allowed = [
 ]
 warn = [
     "clippy::wildcard_dependencies",
+    "clippy::integer_arithmetic",
 ]
 
 # This follows the same syntax as CargoOptionsSummary in guppy.
