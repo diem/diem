@@ -60,7 +60,7 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
     if header[0..12] != PPV2_SIGNATURE {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Invalid proxy protocol signature",
+            "ProxyProtocol: Invalid signature",
         ));
     }
 
@@ -71,7 +71,7 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
         _ => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "Unsupported command or protocol version",
+                "ProxyProtocol: Unsupported command or protocol version",
             ));
         }
     };
@@ -96,7 +96,7 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
             if address_size < IPV4_SIZE {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "Address size doesn't match type",
+                    "ProxyProtocol: Header size doesn't match expected address type",
                 ));
             }
 
@@ -111,7 +111,7 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
             if address_size < IPV6_SIZE {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "Address size doesn't match type",
+                    "ProxyProtocol: Header size doesn't match expected address type",
                 ));
             }
 
@@ -125,7 +125,7 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
         _ => {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "Unsupported Address Family or Protocol",
+                "ProxyProtocol: Unsupported Address Family or Protocol",
             ));
         }
     };

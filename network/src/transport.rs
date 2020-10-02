@@ -203,9 +203,11 @@ async fn upgrade_inbound<T: TSocket>(
         proxy_protocol::read_header(&addr, &mut socket)
             .await
             .map_err(|err| {
-                warn!(
+                debug!(
                     network_address = addr,
-                    "Failed to read proxy protocol event"
+                    error = %err,
+                    "ProxyProtocol: Failed to read header: {}",
+                    err
                 );
                 err
             })?
