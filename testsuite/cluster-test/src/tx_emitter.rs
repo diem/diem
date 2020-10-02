@@ -500,6 +500,7 @@ impl TxEmitter {
             info!("hhhhhhcurrent account num = {}", index);
             index += 1;
             let balance = retrieve_account_balance(&a, acc.address).await?;
+            info!("hhhhhh22222");
             for b in balance {
                 if b.currency.eq(COIN1_NAME) {
                     info!(
