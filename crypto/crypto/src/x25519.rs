@@ -29,9 +29,9 @@
 //! # }
 //! ```
 //!
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_curve25519_dalek as curve25519_dalek;
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate::{
@@ -53,9 +53,9 @@ use proptest_derive::Arbitrary;
 // This makes it easier to uniformalize build dalek-x25519 in libra-core.
 //
 
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 pub use vanilla_x25519_dalek as x25519_dalek;
-#[cfg(not(feature = "vanilla"))]
+#[cfg(not(any(feature = "vanilla-u64", feature = "vanilla-u32")))]
 pub use x25519_dalek;
 
 //

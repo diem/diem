@@ -39,5 +39,5 @@ serde_json = "1.0.58"
 [features]
 default = ["fiat"]
 fiat = ["libra-crypto/fiat"]
-vanilla = ["libra-crypto/vanilla"]
+vanilla = ["libra-crypto/vanilla-u64"]
 fuzzing = ["proptest", "proptest-derive"]

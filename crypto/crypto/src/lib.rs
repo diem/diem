@@ -43,16 +43,28 @@ pub use serde_name as _serde_name;
 // projects from the dalek suite of libraries.  This PR offers this opportunity
 // by putting a set of features (fiat / vanilla) in control of the choice of
 // dependency.
-#[cfg(not(any(feature = "fiat", feature = "vanilla",)))]
+#[cfg(not(any(feature = "fiat", feature = "vanilla-u64", feature = "vanilla-u32")))]
 compile_error!(
     "no dalek arithmetic backend cargo feature enabled! \
-     please enable one of: fiat, vanilla"
+     please enable one of: fiat, vanilla-u64, vanilla-u32"
 );
 
-#[cfg(all(feature = "fiat", feature = "vanilla"))]
+#[cfg(all(feature = "fiat", feature = "vanilla-u64"))]
 compile_error!(
     "at most one dalek arithmetic backend cargo feature should be enabled! \
-     please enable one of: fiat, vanilla"
+     please enable exactly one of: fiat, vanilla-u64, vanilla-u32"
+);
+
+#[cfg(all(feature = "fiat", feature = "vanilla-u32"))]
+compile_error!(
+    "at most one dalek arithmetic backend cargo feature should be enabled! \
+     please enable exactly one of: fiat, vanilla-u64, vanilla-u32"
+);
+
+#[cfg(all(feature = "vanilla-u64", feature = "vanilla-u32"))]
+compile_error!(
+    "at most one dalek arithmetic backend cargo feature should be enabled! \
+     please enable exactly one of: fiat, vanilla-u64, vanilla-u32"
 );
 
 // MIRAI's tag analysis makes use of the incomplete const_generics feature, so the module

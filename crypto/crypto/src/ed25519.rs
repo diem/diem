@@ -29,9 +29,9 @@
 //! ```
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_curve25519_dalek as curve25519_dalek;
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate::{
@@ -448,7 +448,7 @@ impl Signature for Ed25519Signature {
     /// Batch signature verification as described in the original EdDSA article
     /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
     /// signatures on the same message and it checks for malleability.
-    #[cfg(all(feature = "batch", not(feature = "vanilla")))] // see https://github.com/dalek-cryptography/ed25519-dalek/issues/126
+    #[cfg(feature = "batch")]
     fn batch_verify<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,

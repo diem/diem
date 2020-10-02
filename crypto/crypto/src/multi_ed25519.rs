@@ -5,7 +5,7 @@
 //! over the ed25519 twisted Edwards curve as defined in [RFC8032](https://tools.ietf.org/html/rfc8032).
 //!
 //! Signature verification also checks and rejects non-canonical signatures.
-#[cfg(feature = "vanilla")]
+#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate::{

@@ -12,10 +12,10 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.32"
 bytes = "0.5.6"
-vanilla-curve25519-dalek = { version = "3", package = 'curve25519-dalek', optional = true }
+vanilla-curve25519-dalek = { version = "3", package = 'curve25519-dalek', default-features = false, features = ["std"], optional = true }
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat3", version = "3", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }
 digest = "0.9.0"
-vanilla-ed25519-dalek = { version = "1.0.0", package = 'ed25519-dalek', optional = true }
+vanilla-ed25519-dalek = { version = "1.0.0", package = 'ed25519-dalek', default-features = false, features = ["std"], optional = true }
 ed25519-dalek = { git = "https://github.com/novifinancial/ed25519-dalek.git", branch = "fiat4", version = "1.0.0", default-features = false, features = ["std", "fiat_u64_backend", "serde"], optional = true }
 hex = "0.4.2"
 hkdf = "0.9.0"
@@ -33,7 +33,7 @@ short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 static_assertions = "1.1.0"
 thiserror = "1.0.20"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
-vanilla-x25519-dalek = { version = "1.0.1", package = 'x25519-dalek', optional = true }
+vanilla-x25519-dalek = { version = "1.0.1", package = 'x25519-dalek', default-features = false, features = ["std"], optional = true }
 x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat3", version = "1.0.1", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
 aes-gcm = "0.7.0"
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
@@ -58,7 +58,8 @@ assert-private-keys-not-cloneable = []
 cloneable-private-keys = []
 fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]
 fiat = ["curve25519-dalek", "ed25519-dalek", "x25519-dalek"]
-vanilla = ["vanilla-curve25519-dalek", "vanilla-ed25519-dalek", "vanilla-x25519-dalek"]
+vanilla-u64 = ["vanilla-curve25519-dalek/u64_backend", "vanilla-ed25519-dalek/u64_backend", "vanilla-x25519-dalek/u64_backend"]
+vanilla-u32 = ["vanilla-curve25519-dalek/u32_backend", "vanilla-ed25519-dalek/u32_backend", "vanilla-x25519-dalek/u32_backend"]
 
 [[bench]]
 name = "noise"
