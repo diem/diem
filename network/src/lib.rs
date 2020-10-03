@@ -20,9 +20,6 @@ pub mod counters;
 mod peer;
 pub mod transport;
 
-#[cfg(test)]
-mod transport_tests;
-
 #[cfg(feature = "fuzzing")]
 pub mod fuzzing;
 #[cfg(not(any(feature = "testing", feature = "fuzzing")))]

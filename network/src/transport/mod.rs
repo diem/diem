@@ -37,6 +37,9 @@ use std::{
 };
 use tokio::time::timeout;
 
+#[cfg(test)]
+mod test;
+
 /// A timeout for the connection to open and complete all of the upgrade steps.
 pub const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);
 
