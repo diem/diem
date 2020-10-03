@@ -197,6 +197,8 @@ impl SharedMempoolNetwork {
         validator_nodes_count: u32,
         broadcast_batch_size: usize,
         mempool_size: Option<usize>,
+        max_broadcasts_per_peer: Option<usize>,
+        max_ack_timeout: bool,
     ) -> (Self, Vec<PeerId>) {
         let mut smp = Self::default();
         let mut peers = vec![];
@@ -207,10 +209,11 @@ impl SharedMempoolNetwork {
             let peer_id = config.validator_network.as_ref().unwrap().peer_id();
             config.mempool.shared_mempool_batch_size = broadcast_batch_size;
             // set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this)
-            config.mempool.shared_mempool_ack_timeout_ms = 0;
-            if let Some(capacity) = mempool_size {
-                config.mempool.capacity = capacity;
-            }
+            config.mempool.shared_mempool_ack_timeout_ms =
+                if max_ack_timeout { u64::MAX } else { 0 };
+            config.mempool.capacity = mempool_size.unwrap_or(config.mempool.capacity);
+            config.mempool.max_broadcasts_per_peer =
+                max_broadcasts_per_peer.unwrap_or(config.mempool.max_broadcasts_per_peer);
 
             init_single_shared_mempool(&mut smp, peer_id, NetworkId::Validator, config);
 
@@ -348,6 +351,7 @@ impl SharedMempoolNetwork {
         num_messages: usize,
         check_txns_in_mempool: bool, // check whether all txns in this broadcast are accepted into recipient's mempool
         execute_send: bool, // if true, actually delivers msg to remote peer; else, drop the message (useful for testing unreliable msg delivery)
+        drop_ack: bool,     // if true, drop ack from remote peer to this peer
     ) -> (Vec<SignedTransaction>, PeerId) {
         // await broadcast notification
         for _ in 0..num_messages {
@@ -387,7 +391,9 @@ impl SharedMempoolNetwork {
                 }
 
                 // deliver ACK for this request
-                self.deliver_response(&peer_id);
+                if !drop_ack {
+                    self.deliver_response(&peer_id);
+                }
                 (transactions, peer_id)
             } else {
                 panic!("did not receive expected BroadcastTransactionsRequest");
@@ -436,7 +442,8 @@ impl SharedMempoolNetwork {
 
 #[test]
 fn test_basic_flow() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -452,14 +459,15 @@ fn test_basic_flow() {
 
     for seq in 0..3 {
         // A attempts to send message
-        let transactions = smp.deliver_message(&peer_a, 1, true, true).0;
+        let transactions = smp.deliver_message(&peer_a, 1, true, true, false).0;
         assert_eq!(transactions.get(0).unwrap().sequence_number(), seq);
     }
 }
 
 #[test]
 fn test_metric_cache_ignore_shared_txns() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     let txns = vec![
@@ -482,7 +490,7 @@ fn test_metric_cache_ignore_shared_txns() {
 
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
-        let (_transaction, rx_peer) = smp.deliver_message(&peer_a, 1, true, true);
+        let (_transaction, rx_peer) = smp.deliver_message(&peer_a, 1, true, true, false);
         // Check if txns's creation timestamp exist in peer_b's metrics_cache.
         assert_eq!(smp.exist_in_metrics_cache(&rx_peer, txn), false);
     }
@@ -490,7 +498,8 @@ fn test_metric_cache_ignore_shared_txns() {
 
 #[test]
 fn test_interruption_in_sync() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(3, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(3, 1, None, None, false);
     let (peer_a, peer_b, peer_c) = (
         peers.get(0).unwrap(),
         peers.get(1).unwrap(),
@@ -502,25 +511,31 @@ fn test_interruption_in_sync() {
     smp.send_new_peer_event(peer_a, peer_b, true);
 
     // make sure first txn delivered to first peer
-    assert_eq!(*peer_b, smp.deliver_message(&peer_a, 1, true, true).1);
+    assert_eq!(
+        *peer_b,
+        smp.deliver_message(&peer_a, 1, true, true, false).1
+    );
 
     // A discovers second peer
     smp.send_new_peer_event(peer_a, peer_c, true);
 
     // make sure first txn delivered to second peer
-    assert_eq!(*peer_c, smp.deliver_message(&peer_a, 1, true, true).1);
+    assert_eq!(
+        *peer_c,
+        smp.deliver_message(&peer_a, 1, true, true, false).1
+    );
 
     // A loses connection to B
     smp.send_lost_peer_event(peer_a, peer_b);
 
     // only C receives following transactions
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true, false);
     assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 2, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true, false);
     assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 
@@ -528,14 +543,15 @@ fn test_interruption_in_sync() {
     smp.send_new_peer_event(&peer_a, peer_b, true);
 
     // B should receive transaction 2
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1, true, true, false);
     assert_eq!(peer_id, *peer_b);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 }
 
 #[test]
 fn test_ready_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(
         &peer_a,
@@ -543,20 +559,21 @@ fn test_ready_transactions() {
     );
     // first message delivery
     smp.send_new_peer_event(peer_a, peer_b, true);
-    smp.deliver_message(&peer_a, 1, true, true);
+    smp.deliver_message(&peer_a, 1, true, true, false);
 
     // add txn1 to Mempool
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
     // txn1 unlocked txn2. Now all transactions can go through in correct order
-    let txn = &smp.deliver_message(&peer_a, 1, true, true).0;
+    let txn = &smp.deliver_message(&peer_a, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
-    let txn = &smp.deliver_message(&peer_a, 1, true, true).0;
+    let txn = &smp.deliver_message(&peer_a, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
 #[test]
 fn test_broadcast_self_transactions() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 1)]);
 
@@ -565,13 +582,13 @@ fn test_broadcast_self_transactions() {
     smp.send_new_peer_event(peer_b, peer_a, true);
 
     // A sends txn to B
-    smp.deliver_message(&peer_a, 1, true, true);
+    smp.deliver_message(&peer_a, 1, true, true, false);
 
     // add new txn to B
     smp.add_txns(&peer_b, vec![TestTransaction::new(1, 0, 1)]);
 
     // verify that A will receive only second transaction from B
-    let (txn, _) = smp.deliver_message(&peer_b, 1, true, true);
+    let (txn, _) = smp.deliver_message(&peer_b, 1, true, true, false);
     assert_eq!(
         txn.get(0).unwrap().sender(),
         TestTransaction::get_address(1)
@@ -580,7 +597,8 @@ fn test_broadcast_self_transactions() {
 
 #[test]
 fn test_broadcast_dependencies() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     // Peer A has transactions with sequence numbers 0 and 2
     smp.add_txns(
@@ -595,18 +613,19 @@ fn test_broadcast_dependencies() {
     smp.send_new_peer_event(peer_b, peer_a, false);
 
     // B receives 0
-    smp.deliver_message(&peer_a, 1, true, true);
+    smp.deliver_message(&peer_a, 1, true, true, false);
     // now B can broadcast 1
-    let txn = smp.deliver_message(&peer_b, 1, true, true).0;
+    let txn = smp.deliver_message(&peer_b, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
     // now A can broadcast 2
-    let txn = smp.deliver_message(&peer_a, 1, true, true).0;
+    let txn = smp.deliver_message(&peer_a, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
 }
 
 #[test]
 fn test_broadcast_updated_transaction() {
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
 
     // Peer A has a transaction with sequence number 0 and gas price 1
@@ -617,7 +636,7 @@ fn test_broadcast_updated_transaction() {
     smp.send_new_peer_event(peer_b, peer_a, true);
 
     // B receives 0
-    let txn = smp.deliver_message(&peer_a, 1, true, true).0;
+    let txn = smp.deliver_message(&peer_a, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
     assert_eq!(txn.get(0).unwrap().gas_unit_price(), 1);
 
@@ -625,7 +644,7 @@ fn test_broadcast_updated_transaction() {
     smp.add_txns(&peer_a, vec![TestTransaction::new(0, 0, 5)]);
 
     // trigger send from A to B and check B has updated gas price for sequence 0
-    let txn = smp.deliver_message(&peer_a, 1, true, true).0;
+    let txn = smp.deliver_message(&peer_a, 1, true, true, false).0;
     assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
     assert_eq!(txn.get(0).unwrap().gas_unit_price(), 5);
 }
@@ -780,7 +799,7 @@ fn test_vfn_multi_network() {
     // vfn should broadcast to failover upstream vfn in public network
     assert_eq!(
         vfn_1_public_network_id,
-        smp.deliver_message(&vfn_0_public_network_id, 1, false, true)
+        smp.deliver_message(&vfn_0_public_network_id, 1, false, true, false)
             .1
     );
 
@@ -839,7 +858,7 @@ fn test_fn_failover() {
     smp.add_txns(&fn_0, vec![TestTransaction::new(1, 0, 1)]);
 
     // make sure it delivers txn to primary peer
-    let recipient_peer = smp.deliver_message(&fn_0, 1, true, true).1;
+    let recipient_peer = smp.deliver_message(&fn_0, 1, true, true, false).1;
     assert_eq!(recipient_peer, v_0);
     // check that no messages have been sent to fallback upstream peers
     smp.assert_no_message_sent(&fn_0_fallback_network_id);
@@ -854,7 +873,7 @@ fn test_fn_failover() {
     let mut actual_fallback_recipients = vec![];
     for _ in 0..fallback_peers.len() {
         let (txn, fallback_recipient) =
-            smp.deliver_message(&fn_0_fallback_network_id, 1, true, true);
+            smp.deliver_message(&fn_0_fallback_network_id, 1, true, true, false);
         assert!(fallback_peers.contains(&fallback_recipient));
         assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
         // check that no messages have been sent to primary upstream peer
@@ -874,7 +893,7 @@ fn test_fn_failover() {
         let mut actual_fallback_recipients = vec![];
         for _ in 0..fallback_peers.len() {
             let (txn, fallback_recipient) =
-                smp.deliver_message(&fn_0_fallback_network_id, 1, true, true);
+                smp.deliver_message(&fn_0_fallback_network_id, 1, true, true, false);
             assert!(fallback_peers.contains(&fallback_recipient));
             assert!(!actual_fallback_recipients.contains(&fallback_recipient));
             actual_fallback_recipients.push(fallback_recipient);
@@ -894,7 +913,7 @@ fn test_fn_failover() {
     for _ in 0..2 {
         let mut actual_fallback_recipients = vec![];
         let (txn, fallback_recipient) =
-            smp.deliver_message(&fn_0_fallback_network_id, 1, true, true);
+            smp.deliver_message(&fn_0_fallback_network_id, 1, true, true, false);
         assert_ne!(fn_1, fallback_recipient);
         assert!(fallback_peers.contains(&fallback_recipient));
         assert!(!actual_fallback_recipients.contains(&fallback_recipient));
@@ -925,7 +944,7 @@ fn test_fn_failover() {
     // check that we don't broadcast to failovers, only v
 
     for expected_seq_num in 0..=3 {
-        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true, true);
+        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true, true, false);
         assert_eq!(recipient, v_0);
         assert_eq!(txn.get(0).unwrap().sequence_number(), expected_seq_num);
         // check that no messages have been sent to fallback peers
@@ -938,7 +957,7 @@ fn test_fn_failover() {
     }
 
     for expected_seq_num in 4..=6 {
-        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true, true);
+        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true, true, false);
         assert_eq!(recipient, v_0);
         assert_eq!(txn.get(0).unwrap().sequence_number(), expected_seq_num);
         // check that no messages have been sent to fallback peers
@@ -958,7 +977,7 @@ fn test_rebroadcast_mempool_is_full() {
     // FN discovers new peer V
     smp.send_new_peer_event(&full_node, &val, true);
 
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, true, true);
+    let (txns, _recipient) = smp.deliver_message(&full_node, 1, true, true, false);
     let seq_nums = txns
         .iter()
         .map(|txn| txn.sequence_number())
@@ -970,7 +989,7 @@ fn test_rebroadcast_mempool_is_full() {
     let expected_broadcast = vec![3, 4, 5];
 
     for _ in 0..2 {
-        let (txns, _recipient) = smp.deliver_message(&full_node, 1, false, true);
+        let (txns, _recipient) = smp.deliver_message(&full_node, 1, false, true, false);
         let seq_nums = txns
             .iter()
             .map(|txn| txn.sequence_number())
@@ -983,10 +1002,10 @@ fn test_rebroadcast_mempool_is_full() {
     smp.commit_txns(&val, all_txns[..1].to_vec());
 
     // send retry batch again, this time should be processed
-    smp.deliver_message(&full_node, 1, true, true);
+    smp.deliver_message(&full_node, 1, true, true, false);
 
     // retry batch sent above should be processed successfully, and FN should move on to broadcasting later txns
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, false, true);
+    let (txns, _recipient) = smp.deliver_message(&full_node, 1, false, true, false);
     let seq_nums = txns
         .iter()
         .map(|txn| txn.sequence_number())
@@ -997,7 +1016,8 @@ fn test_rebroadcast_mempool_is_full() {
 #[test]
 fn test_rebroadcast_missing_ack() {
     // create 2 validators A and B
-    let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(2, 1, None);
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, None, false);
     let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
     let pool_txns = vec![
         TestTransaction::new(1, 0, 1),
@@ -1006,13 +1026,13 @@ fn test_rebroadcast_missing_ack() {
     ];
     smp.add_txns(&peer_a, pool_txns.clone());
 
-    // A broadcasts to B
+    // A and B discover each other
     smp.send_new_peer_event(peer_a, peer_b, true);
     smp.send_new_peer_event(peer_b, peer_a, false);
 
     // test that for txn broadcasts that don't receive an ACK, A rebroadcasts the unACK'ed batch of txns
     for _ in 0..3 {
-        let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false);
+        let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false, false);
         let seq_nums = txns
             .iter()
             .map(|txn| txn.sequence_number())
@@ -1021,7 +1041,7 @@ fn test_rebroadcast_missing_ack() {
     }
 
     // getting out of rebroadcasting mode scenario 1: B sends back ACK eventually
-    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, true);
+    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, true, false);
     let seq_nums = txns
         .iter()
         .map(|txn| txn.sequence_number())
@@ -1029,7 +1049,7 @@ fn test_rebroadcast_missing_ack() {
     assert_eq!(seq_nums, vec![0]);
 
     for _ in 0..3 {
-        let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false);
+        let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false, false);
         let seq_nums = txns
             .iter()
             .map(|txn| txn.sequence_number())
@@ -1040,10 +1060,65 @@ fn test_rebroadcast_missing_ack() {
     // getting out of rebroadcasting mode scenario 2: txns in unACK'ed batch gets committed
     smp.commit_txns(&peer_a, vec![pool_txns[1].clone()]);
 
-    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false);
+    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false, false);
     let seq_nums = txns
         .iter()
         .map(|txn| txn.sequence_number())
         .collect::<Vec<_>>();
     assert_eq!(seq_nums, vec![2]);
+}
+
+#[test]
+fn test_max_broadcast_limit() {
+    // create 2 validators A and B
+    let (mut smp, peers) =
+        SharedMempoolNetwork::bootstrap_validator_network(2, 1, None, Some(3), true);
+    let (peer_a, peer_b) = (peers.get(0).unwrap(), peers.get(1).unwrap());
+    let mut pool_txns = vec![];
+    for seq_num in 0..6 {
+        pool_txns.push(TestTransaction::new(1, seq_num, 1));
+    }
+    smp.add_txns(&peer_a, pool_txns);
+
+    // A and B discover each other
+    smp.send_new_peer_event(peer_a, peer_b, true);
+    smp.send_new_peer_event(peer_b, peer_a, false);
+
+    // test that for mempool broadcasts txns up till max broadcast, even if they are not ACK'ed
+    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, true, true);
+    let seq_nums = txns
+        .iter()
+        .map(|txn| txn.sequence_number())
+        .collect::<Vec<_>>();
+    assert_eq!(seq_nums, vec![0]);
+    for expected_seq_num in 1..3 {
+        let (txns, _recipient) = smp.deliver_message(&peer_a, 1, true, false, false);
+        let seq_nums = txns
+            .iter()
+            .map(|txn| txn.sequence_number())
+            .collect::<Vec<_>>();
+        assert_eq!(seq_nums, vec![expected_seq_num]);
+    }
+
+    // check that mempool doesn't broadcast more than max_broadcasts_per_peer, even
+    // if there are more txns in mempool
+    for _ in 0..10 {
+        smp.assert_no_message_sent(&peer_a);
+    }
+
+    // deliver ACK from B to A
+    // this should unblock A to send more broadcasts
+    smp.deliver_response(&peer_b);
+    let (txns, _recipient) = smp.deliver_message(&peer_a, 1, false, true, true);
+    let seq_nums = txns
+        .iter()
+        .map(|txn| txn.sequence_number())
+        .collect::<Vec<_>>();
+    assert_eq!(seq_nums, vec![3]);
+
+    // check that mempool doesn't broadcast more than max_broadcasts_per_peer, even
+    // if there are more txns in mempool
+    for _ in 0..10 {
+        smp.assert_no_message_sent(&peer_a);
+    }
 }

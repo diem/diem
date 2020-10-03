@@ -202,18 +202,30 @@ impl PeerManager {
             // check for batch to rebroadcast:
             // 1. batch that did not receive ACK in configured window of time
             // 2. batch that an earlier ACK marked as retriable
-            let expired = state
-                .broadcast_info
-                .sent_batches
-                .iter()
-                .rev()
-                .find(|(_, time)| {
-                    let deadline = time.add(Duration::from_millis(
-                        self.mempool_config.shared_mempool_ack_timeout_ms,
-                    ));
-                    SystemTime::now().duration_since(deadline).is_ok()
-                })
-                .map(|(id, _)| id);
+            let mut pending_broadcasts = 0;
+            let mut expired = None;
+
+            // find earliest batch in timeline index that expired
+            // Note that state.broadcast_info.sent_batches is ordered in decreasing order in the timeline index
+            for (batch, sent_time) in state.broadcast_info.sent_batches.iter() {
+                let deadline = sent_time.add(Duration::from_millis(
+                    self.mempool_config.shared_mempool_ack_timeout_ms,
+                ));
+                if SystemTime::now().duration_since(deadline).is_ok() {
+                    expired = Some(batch);
+                } else {
+                    pending_broadcasts += 1;
+                }
+
+                // The maximum number of broadcasts sent to a single peer that are pending a response ACK at any point
+                // If the number of un-ACK'ed un-expired broadcasts reaches this threshold, we do not broadcast anymore
+                // and wait until an ACK is received or a sent broadcast expires
+                // This helps rate-limit egress network bandwidth and not overload a remote peer or this
+                // node's Libra network sender
+                if pending_broadcasts >= self.mempool_config.max_broadcasts_per_peer {
+                    return;
+                }
+            }
             let retry = state.broadcast_info.retry_batches.iter().rev().next();
 
             let (new_batch_id, new_transactions) = match std::cmp::max(expired, retry) {

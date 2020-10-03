@@ -42,6 +42,7 @@ use tokio::runtime::{Builder, Runtime};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
+const MEMPOOL_NETWORK_CHANNEL_BUFFER_SIZE: usize = 1_024;
 
 pub struct LibraHandle {
     _rpc: Runtime,
@@ -311,11 +312,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         ));
 
         // Create the endpoints to connect the Network to mempool.
-        let (mempool_sender, mempool_events) =
-            network_builder.add_protocol_handler(libra_mempool::network::network_endpoint_config(
-                // TODO:  Make this configuration option more clear.
-                node_config.mempool.max_broadcasts_per_peer,
-            ));
+        let (mempool_sender, mempool_events) = network_builder.add_protocol_handler(
+            libra_mempool::network::network_endpoint_config(MEMPOOL_NETWORK_CHANNEL_BUFFER_SIZE),
+        );
         mempool_network_handles.push((
             NodeNetworkId::new(network_id, idx),
             mempool_sender,
