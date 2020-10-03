@@ -73,14 +73,21 @@ pub(crate) async fn coordinator<V>(
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
+                // this timer measures how long it took for the bounded executor to *schedule* the
+                // task
                 let _timer = counters::TASK_SPAWN_LATENCY
-                .with_label_values(&[counters::CLIENT_EVENT_LABEL])
-                .start_timer();
+                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
+                    .start_timer();
+                // this timer measures how long it took for the task to go from scheduled to started
+                let task_start_timer = counters::TASK_SPAWN_LATENCY
+                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
+                    .start_timer();
                 bounded_executor
                 .spawn(tasks::process_client_transaction_submission(
                     smp.clone(),
                     msg,
                     callback,
+                    task_start_timer,
                 ))
                 .await;
             },
@@ -89,14 +96,14 @@ pub(crate) async fn coordinator<V>(
             }
             msg = state_sync_requests.select_next_some() => {
                 let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL])
+                    .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL])
                     .start_timer();
                 tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
                 info!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Received));
                 let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::RECONFIG_EVENT_LABEL])
+                    .with_label_values(&[counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL])
                     .start_timer();
                 bounded_executor
                     .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
@@ -138,60 +145,23 @@ pub(crate) async fn coordinator<V>(
                             .inc();
                         match msg {
                             MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
-//                                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-//                                    .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
-//                                    .inc_by(transactions.len() as i64);
                                 let smp_clone = smp.clone();
                                 let peer = PeerNetworkId(network_id, peer_id);
-//<<<<<<< HEAD
                                 let timeline_state = match peer_manager
                                     .is_upstream_peer(&peer, None)
                                 {
                                     true => TimelineState::NonQualified,
                                     false => TimelineState::NotReady,
-//=======
-//                                debug!(LogSchema::new(LogEntry::LostPeer)
-//                                    .peer(&peer)
-//                                    .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
-//                                );
-//                                peer_manager.disable_peer(peer);
-//                                notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-//                            }
-//                            Event::Message((peer_id, msg)) => {
-//                                counters::SHARED_MEMPOOL_EVENTS
-//                                    .with_label_values(&["message".to_string().deref()])
-//                                    .inc();
-//                                match msg {
-//                                    MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
-//                                        let smp_clone = smp.clone();
-//                                        let peer = PeerNetworkId(network_id, peer_id);
-//                                        let timeline_state = match peer_manager
-//                                            .is_upstream_peer(&peer, None)
-//                                        {
-//                                            true => TimelineState::NonQualified,
-//                                            false => TimelineState::NotReady,
-//                                        };
-//                                        let _timer = counters::TASK_SPAWN_LATENCY
-//                                            .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
-//                                            .start_timer();
-//                                        bounded_executor
-//                                            .spawn(tasks::process_transaction_broadcast(
-//                                                smp_clone,
-//                                                transactions,
-//                                                request_id,
-//                                                timeline_state,
-//                                                peer
-//                                            ))
-//                                            .await;
-//                                    }
-//                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
-//                                        let ack_timestamp = Instant::now();
-//                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff, ack_timestamp);
-//                                    }
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
                                 };
+                                // this timer measures how long it took for the bounded executor to
+                                // *schedule* the task
                                 let _timer = counters::TASK_SPAWN_LATENCY
-                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
+                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::SPAWN_LABEL])
+                                    .start_timer();
+                                // this timer measures how long it took for the task to go from scheduled
+                                // to started
+                                let task_start_timer = counters::TASK_SPAWN_LATENCY
+                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::START_LABEL])
                                     .start_timer();
                                 bounded_executor
                                     .spawn(tasks::process_transaction_broadcast(
@@ -199,7 +169,8 @@ pub(crate) async fn coordinator<V>(
                                         transactions,
                                         request_id,
                                         timeline_state,
-                                        peer
+                                        peer,
+                                        task_start_timer
                                     ))
                                     .await;
                             }
@@ -210,10 +181,15 @@ pub(crate) async fn coordinator<V>(
                         }
                     }
                     Event::RpcRequest(peer_id, msg, res_tx) => {
-                        error!(
-                            SecurityEvent::InvalidNetworkEventMempool,
-                            message = msg,
-                            peer_id = peer_id,
+                        counters::UNEXPECTED_NETWORK_MSG_COUNT
+                            .with_label_values(&[&network_id.network_id().to_string(), &peer_id.to_string()])
+                            .inc();
+                        sample!(
+                            SampleRate::Duration(Duration::from_secs(60)),
+                            warn!(
+                                LogSchema::new(LogEntry::UnexpectedNetworkMsg)
+                                    .peer(&PeerNetworkId(network_id, peer_id))
+                            )
                         );
                     }
                 }

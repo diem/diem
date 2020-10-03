@@ -40,15 +40,32 @@ pub const REQUEST_SUCCESS_LABEL: &str = "success";
 pub const FETCH_SEQ_NUM_LABEL: &str = "storage_fetch";
 pub const VM_VALIDATION_LABEL: &str = "vm_validation";
 
+// Txn process result labels
+pub const CLIENT_LABEL: &str = "client";
+pub const SUCCESS_LABEL: &str = "success";
+
 // Bounded executor task labels
 pub const CLIENT_EVENT_LABEL: &str = "client_event";
 pub const STATE_SYNC_EVENT_LABEL: &str = "state_sync";
 pub const RECONFIG_EVENT_LABEL: &str = "reconfig";
 pub const PEER_BROADCAST_EVENT_LABEL: &str = "peer_broadcast";
 
+// task spawn stage labels
+pub const SPAWN_LABEL: &str = "spawn";
+pub const START_LABEL: &str = "start";
+
 // Mempool network msg failure type labels:
 pub const BROADCAST_TXNS: &str = "broadcast_txns";
 pub const ACK_TXNS: &str = "ack_txns";
+
+// Broadcast/ACK type labels
+pub const EXPIRED_BROADCAST_LABEL: &str = "expired";
+pub const RETRY_BROADCAST_LABEL: &str = "retry";
+pub const BACKPRESSURE_BROADCAST_LABEL: &str = "backpressure";
+
+// ACK direction labels
+pub const RECEIVED_LABEL: &str = "received";
+pub const SENT_LABEL: &str = "sent";
 
 /// Counter tracking size of various indices in core mempool
 pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -56,6 +73,15 @@ pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
         "libra_core_mempool_index_size",
         "Size of a core mempool index",
         &["index"]
+    )
+    .unwrap()
+});
+
+/// Counter tracking number of txns removed from core mempool
+pub static CORE_MEMPOOL_REMOVED_TXNS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_core_mempool_removed_txns_count",
+        "Number of txns removed from core mempool"
     )
     .unwrap()
 });
@@ -206,11 +232,29 @@ pub static SHARED_MEMPOOL_TRANSACTION_BROADCAST_SIZE: Lazy<HistogramVec> = Lazy:
     .unwrap()
 });
 
+pub static SHARED_MEMPOOL_BROADCAST_TYPE_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_shared_mempool_rebroadcast_count",
+        "Number of various types of broadcasts executed by shared mempool",
+        &["network", "recipient", "type"]
+    )
+    .unwrap()
+});
+
+pub static SHARED_MEMPOOL_ACK_TYPE_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_shared_mempool_ack_count",
+        "Number of various types of ACKs sent/received by shared mempool",
+        &["network", "recipient", "direction", "type"]
+    )
+    .unwrap()
+});
+
 pub static TASK_SPAWN_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_mempool_bounded_executor_spawn_latency",
         "Time it takes for mempool's coordinator to spawn async tasks",
-        &["task"]
+        &["task", "stage"]
     )
     .unwrap()
 });
@@ -241,6 +285,15 @@ pub static NETWORK_SEND_FAIL: Lazy<IntCounterVec> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static UNEXPECTED_NETWORK_MSG_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_mempool_unexpected_network_count",
+        "Number of unexpected network msgs received",
+        &["network", "peer"]
+    )
+    .unwrap()
+});
+
 /// Counter for failed callback response to JSON RPC
 pub static CLIENT_CALLBACK_FAIL: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
@@ -250,7 +303,6 @@ pub static CLIENT_CALLBACK_FAIL: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
-//<<<<<<< HEAD
 /// Counter for how many ACKs were received with an invalid request_id that this node's mempool
 /// did not send
 pub static INVALID_ACK_RECEIVED_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
@@ -260,8 +312,8 @@ pub static INVALID_ACK_RECEIVED_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
         &["sender"]
     )
         .unwrap()
-    });
-//=======
+});
+
 /// Counter for number of times a DB read resulted in error
 pub static DB_ERROR: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
@@ -292,5 +344,4 @@ pub static ACTIVE_UPSTREAM_PEERS_COUNT: Lazy<IntGaugeVec> = Lazy::new(|| {
         &["network"]
     )
     .unwrap()
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 });

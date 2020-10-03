@@ -334,6 +334,7 @@ impl TransactionStore {
 
     /// removes transaction from all indexes
     fn index_remove(&mut self, txn: &MempoolTransaction) {
+        counters::CORE_MEMPOOL_REMOVED_TXNS.inc();
         self.system_ttl_index.remove(&txn);
         self.expiration_time_index.remove(&txn);
         self.priority_index.remove(&txn);

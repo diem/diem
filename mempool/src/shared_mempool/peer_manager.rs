@@ -3,13 +3,12 @@
 
 use crate::{
     counters,
-//<<<<<<< HEAD
     logging::{LogEntry, LogEvent, LogSchema},
     network::MempoolSyncMsg,
-    shared_mempool::types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
-//=======
-//    logging::{LogEntry, LogSchema},
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
+    shared_mempool::{
+        tasks,
+        types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
+    },
 };
 use itertools::Itertools;
 use libra_config::{
@@ -17,10 +16,7 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_logger::prelude::*;
-//<<<<<<< HEAD
 use libra_types::transaction::SignedTransaction;
-//=======
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
@@ -89,16 +85,11 @@ impl BroadcastInfo {
 }
 
 impl PeerManager {
-//<<<<<<< HEAD
     pub fn new(mempool_config: MempoolConfig, upstream_config: UpstreamConfig) -> Self {
-//=======
-//    pub fn new(upstream_config: UpstreamConfig) -> Self {
         // primary network is always chosen at initialization
         counters::UPSTREAM_NETWORK.set(PRIMARY_NETWORK_PREFERENCE);
-        debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+        info!(LogSchema::new(LogEntry::UpstreamNetwork)
             .network_level(PRIMARY_NETWORK_PREFERENCE as u64));
-//
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
         Self {
             mempool_config,
             upstream_config,
@@ -206,6 +197,7 @@ impl PeerManager {
 
         let batch_id: BatchId;
         let transactions: Vec<SignedTransaction>;
+        let mut metric_label = None;
         {
             let mut mempool = smp
                 .mempool
@@ -254,6 +246,12 @@ impl PeerManager {
 
             let (new_batch_id, new_transactions) = match std::cmp::max(expired, retry) {
                 Some(id) => {
+                    metric_label = if Some(id) == expired {
+                        Some(counters::EXPIRED_BROADCAST_LABEL)
+                    } else {
+                        Some(counters::RETRY_BROADCAST_LABEL)
+                    };
+
                     let txns = mempool.timeline_range(id.0, id.1);
                     (*id, txns)
                 }
@@ -312,6 +310,12 @@ impl PeerManager {
         state.broadcast_info.retry_batches.remove(&batch_id);
         notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
 
+        trace!(
+            LogSchema::event_log(LogEntry::BroadcastTransaction, LogEvent::Success)
+                .peer(&peer)
+                .batch_id(&batch_id)
+                .backpressure(scheduled_backoff)
+        );
         let network_id = &peer.raw_network_id().to_string();
         counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST_SIZE
             .with_label_values(&[network_id, &peer_id_str])
@@ -322,6 +326,20 @@ impl PeerManager {
         counters::SHARED_MEMPOOL_BROADCAST_LATENCY
             .with_label_values(&[network_id, &peer_id_str])
             .observe(start_time.elapsed().as_secs_f64());
+        if let Some(label) = metric_label {
+            counters::SHARED_MEMPOOL_BROADCAST_TYPE_COUNT
+                .with_label_values(&[network_id, &peer_id_str, label])
+                .inc();
+        }
+        if scheduled_backoff {
+            counters::SHARED_MEMPOOL_BROADCAST_TYPE_COUNT
+                .with_label_values(&[
+                    network_id,
+                    &peer_id_str,
+                    counters::BACKPRESSURE_BROADCAST_LABEL,
+                ])
+                .inc();
+        }
     }
 
     // updates the peer chosen to failover to if all peers in the primary upstream network are down
@@ -397,14 +415,14 @@ impl PeerManager {
                     .upstream_config
                     .get_upstream_preference(failover_network.clone())
                 {
-                    debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+                    info!(LogSchema::new(LogEntry::UpstreamNetwork)
                         .upstream_network(&failover_network)
                         .network_level(network_preference as u64));
                     counters::UPSTREAM_NETWORK.set(network_preference as i64);
                 }
             }
             None => {
-                debug!(LogSchema::new(LogEntry::UpstreamNetwork)
+                info!(LogSchema::new(LogEntry::UpstreamNetwork)
                     .upstream_network(primary_upstream)
                     .network_level(PRIMARY_NETWORK_PREFERENCE as u64));
                 counters::UPSTREAM_NETWORK.set(PRIMARY_NETWORK_PREFERENCE);
@@ -454,25 +472,27 @@ impl PeerManager {
                 .dec();
         } else {
             // log and return
-            // sample log
+            trace!(
+                LogSchema::new(LogEntry::ReceiveACK)
+                    .peer(&peer)
+                    .batch_id(&batch_id),
+                "batch ID does not exist or expired"
+            );
             return;
         }
 
-//<<<<<<< HEAD
+        trace!(
+            LogSchema::new(LogEntry::ReceiveACK)
+                .peer(&peer)
+                .batch_id(&batch_id)
+                .backpressure(backoff),
+            retry = retry,
+        );
+        tasks::update_ack_counter(&peer, counters::RECEIVED_LABEL, retry, backoff);
+
         if retry {
             sync_state.broadcast_info.retry_batches.insert(batch_id);
         }
-//=======
-//            // track broadcast roundtrip latency
-//            if let Some(rtt) = timestamp.checked_duration_since(batch.timestamp) {
-//                counters::SHARED_MEMPOOL_BROADCAST_RTT
-//                    .with_label_values(&[
-//                        &peer.raw_network_id().to_string(),
-//                        &peer.peer_id().to_string(),
-//                    ])
-//                    .observe(rtt.as_secs_f64());
-//            }
-//>>>>>>> e5f23fc28... [mempool] more/updated logging/counters
 
         // if backoff mode can only be turned off by executing a broadcast that was scheduled
         // as a backoff broadcast

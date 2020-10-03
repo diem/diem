@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared_mempool::types::{CommitNotification, ConsensusRequest};
+use crate::shared_mempool::{
+    peer_manager::BatchId,
+    types::{CommitNotification, ConsensusRequest},
+};
 use anyhow::Error;
 use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::Schema;
@@ -76,6 +79,9 @@ pub struct LogSchema<'a> {
     state_sync_msg: Option<&'a CommitNotification>,
     network_level: Option<u64>,
     upstream_network: Option<&'a NetworkId>,
+    #[schema(debug)]
+    batch_id: Option<&'a BatchId>,
+    backpressure: Option<bool>,
 }
 
 impl<'a> LogSchema<'a> {
@@ -101,6 +107,8 @@ impl<'a> LogSchema<'a> {
             state_sync_msg: None,
             network_level: None,
             upstream_network: None,
+            batch_id: None,
+            backpressure: None,
         }
     }
 }
@@ -119,6 +127,7 @@ pub enum LogEntry {
     StateSyncCommit,
     BroadcastTransaction,
     BroadcastACK,
+    ReceiveACK,
     InvariantViolated,
     AddTxn,
     RemoveTxn,
@@ -129,6 +138,7 @@ pub enum LogEntry {
     ProcessReadyTxns,
     DBError,
     UpstreamNetwork,
+    UnexpectedNetworkMsg,
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -150,4 +160,6 @@ pub enum LogEvent {
     // garbage-collect txns events
     SystemTTLExpiration,
     ClientExpiration,
+
+    Success,
 }

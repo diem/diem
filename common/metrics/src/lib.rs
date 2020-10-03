@@ -61,8 +61,8 @@ mod unit_tests;
 // Re-export counter types from prometheus crate
 pub use libra_metrics_core::{
     register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
-    register_int_gauge, register_int_gauge_vec, Histogram, HistogramVec, IntCounter, IntCounterVec,
-    IntGauge, IntGaugeVec,
+    register_int_gauge, register_int_gauge_vec, Histogram, HistogramTimer, HistogramVec,
+    IntCounter, IntCounterVec, IntGauge, IntGaugeVec,
 };
 
 use anyhow::Result;
