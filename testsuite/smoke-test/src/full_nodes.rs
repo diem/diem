@@ -159,8 +159,8 @@ fn test_full_node_basic_flow() {
 
 #[test]
 fn test_vfn_failover() {
-    // launch environment of 4 validator nodes and 2 full nodes
-    let mut env = SmokeTestEnvironment::new(4);
+    // launch environment of 6 validator nodes and 2 full nodes
+    let mut env = SmokeTestEnvironment::new(6);
     env.setup_vfn_swarm();
     env.setup_public_fn_swarm(1);
     env.validator_swarm.launch();
