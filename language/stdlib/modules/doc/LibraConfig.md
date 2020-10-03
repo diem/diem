@@ -710,6 +710,23 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 
     <b>let</b> config_ref = borrow_global_mut&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
+
+    // Do not do anything <b>if</b> a reconfiguration event is already emitted within this transaction.
+    //
+    // This is OK because:
+    // - The time changes in every non-empty block
+    // - A block automatically ends after a transaction that emits a reconfiguration event, which is guaranteed by
+    //   LibraVM <b>spec</b> that all transactions comming after a reconfiguration transaction will be returned <b>as</b> Retry
+    //   status.
+    // - Each transaction must emit at most one reconfiguration event
+    //
+    // Thus, this check <b>ensures</b> that a transaction that does multiple "reconfiguration required" actions emits only
+    // one reconfiguration event.
+    //
+    <b>if</b> (current_time == config_ref.last_reconfiguration_time) {
+        <b>return</b>
+    };
+
     <b>assert</b>(current_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>));
     config_ref.last_reconfiguration_time = current_time;
     config_ref.epoch = config_ref.epoch + 1;
@@ -740,13 +757,16 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 <b>let</b> now = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
 <a name="0x1_LibraConfig_epoch$20"></a>
 <b>let</b> epoch = config.epoch;
-<b>include</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> && <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
-<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() ==&gt; config == <b>old</b>(config);
-<b>ensures</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() ==&gt; config ==
-    update_field(
-    update_field(<b>old</b>(config),
-        epoch, <b>old</b>(config.epoch) + 1),
-        last_reconfiguration_time, now);
+<b>include</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now)
+    ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> && <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
+<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (<b>old</b>(config).last_reconfiguration_time == now)
+    ==&gt; config == <b>old</b>(config);
+<b>ensures</b> !(<a href="LibraConfig.md#0x1_LibraConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now))
+    ==&gt; config ==
+        update_field(
+        update_field(<b>old</b>(config),
+            epoch, <b>old</b>(config.epoch) + 1),
+            last_reconfiguration_time, now);
 </code></pre>
 
 
@@ -765,8 +785,9 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
     <b>let</b> config = <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <a name="0x1_LibraConfig_current_time$17"></a>
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
-    <b>aborts_if</b> [concrete] current_time &lt;= config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
-    <b>aborts_if</b> [concrete] config.epoch == <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a> <b>with</b> EXECUTION_FAILURE;
+    <b>aborts_if</b> [concrete] current_time &lt; config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+    <b>aborts_if</b> [concrete] config.epoch == <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a>
+        && current_time != config.last_reconfiguration_time <b>with</b> EXECUTION_FAILURE;
 }
 </code></pre>
 
@@ -787,7 +808,7 @@ This schema is to be used by callers of <code>reconfigure</code>
     <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>()
         && <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; 0
         && config.epoch &lt; <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a>
-        && current_time == config.last_reconfiguration_time
+        && current_time &lt; config.last_reconfiguration_time
             <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>

@@ -250,6 +250,23 @@ module LibraConfig {
 
         let config_ref = borrow_global_mut<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let current_time = LibraTimestamp::now_microseconds();
+
+        // Do not do anything if a reconfiguration event is already emitted within this transaction.
+        //
+        // This is OK because:
+        // - The time changes in every non-empty block
+        // - A block automatically ends after a transaction that emits a reconfiguration event, which is guaranteed by
+        //   LibraVM spec that all transactions comming after a reconfiguration transaction will be returned as Retry
+        //   status.
+        // - Each transaction must emit at most one reconfiguration event
+        //
+        // Thus, this check ensures that a transaction that does multiple "reconfiguration required" actions emits only
+        // one reconfiguration event.
+        //
+        if (current_time == config_ref.last_reconfiguration_time) {
+            return
+        };
+
         assert(current_time > config_ref.last_reconfiguration_time, Errors::invalid_state(EINVALID_BLOCK_TIME));
         config_ref.last_reconfiguration_time = current_time;
         config_ref.epoch = config_ref.epoch + 1;
@@ -272,14 +289,18 @@ module LibraConfig {
         let now = LibraTimestamp::spec_now_microseconds();
         let epoch = config.epoch;
 
-        include !spec_reconfigure_omitted() ==> InternalReconfigureAbortsIf && ReconfigureAbortsIf;
+        include !spec_reconfigure_omitted() || (config.last_reconfiguration_time == now)
+            ==> InternalReconfigureAbortsIf && ReconfigureAbortsIf;
 
-        ensures spec_reconfigure_omitted() ==> config == old(config);
-        ensures !spec_reconfigure_omitted() ==> config ==
-            update_field(
-            update_field(old(config),
-                epoch, old(config.epoch) + 1),
-                last_reconfiguration_time, now);
+        ensures spec_reconfigure_omitted() || (old(config).last_reconfiguration_time == now)
+            ==> config == old(config);
+
+        ensures !(spec_reconfigure_omitted() || (config.last_reconfiguration_time == now))
+            ==> config ==
+                update_field(
+                update_field(old(config),
+                    epoch, old(config.epoch) + 1),
+                    last_reconfiguration_time, now);
     }
     /// The following schema describes aborts conditions which we do not want to be propagated to the verification
     /// of callers, and which are therefore marked as `concrete` to be only verified against the implementation.
@@ -287,8 +308,9 @@ module LibraConfig {
     spec schema InternalReconfigureAbortsIf {
         let config = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let current_time = LibraTimestamp::spec_now_microseconds();
-        aborts_if [concrete] current_time <= config.last_reconfiguration_time with Errors::INVALID_STATE;
-        aborts_if [concrete] config.epoch == MAX_U64 with EXECUTION_FAILURE;
+        aborts_if [concrete] current_time < config.last_reconfiguration_time with Errors::INVALID_STATE;
+        aborts_if [concrete] config.epoch == MAX_U64
+            && current_time != config.last_reconfiguration_time with EXECUTION_FAILURE;
     }
     /// This schema is to be used by callers of `reconfigure`
     spec schema ReconfigureAbortsIf {
@@ -297,7 +319,7 @@ module LibraConfig {
         aborts_if LibraTimestamp::is_operating()
             && LibraTimestamp::spec_now_microseconds() > 0
             && config.epoch < MAX_U64
-            && current_time == config.last_reconfiguration_time
+            && current_time < config.last_reconfiguration_time
                 with Errors::INVALID_STATE;
     }
 
