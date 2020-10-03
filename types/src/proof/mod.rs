@@ -38,6 +38,8 @@ pub use self::definition::{
 #[cfg(any(test, feature = "fuzzing"))]
 pub use self::definition::{TestAccumulatorProof, TestAccumulatorRangeProof};
 
+use unroll::unroll_for_loops;
+
 /// Verifies that a given `transaction_info` exists in the ledger using provided proof.
 fn verify_transaction_info(
     ledger_info: &LedgerInfo,
@@ -81,11 +83,36 @@ impl<H: CryptoHasher> MerkleTreeInternalNode<H> {
 impl<H: CryptoHasher> CryptoHash for MerkleTreeInternalNode<H> {
     type Hasher = H;
 
+    #[allow(clippy::all)]
+    #[unroll_for_loops]
     fn hash(&self) -> HashValue {
+        // Mimicing more accounts in a tree by
+        // repeating the hashing 3x to pretend that the tree is 3x higher.
+        let mut state = Self::Hasher::default();
+        state.update(self.left_child.as_ref());
+        state.update(self.right_child.as_ref());
+        state.finish();
+
+        let mut state = Self::Hasher::default();
+        state.update(self.left_child.as_ref());
+        state.update(self.right_child.as_ref());
+        state.finish();
+
         let mut state = Self::Hasher::default();
         state.update(self.left_child.as_ref());
         state.update(self.right_child.as_ref());
         state.finish()
+        /*
+        // switching off expensive hashing of internal merkle nodes
+        let mut result = [0u8; HashValue::LENGTH];
+
+        // for (i, <item>) in result.iter_mut().enumerate() {
+        for i in 0..HashValue::LENGTH {
+            // for (i, item) in result.iter_mut().enumerate() {
+            result[i] = self.left_child[i] ^ self.right_child[i];
+        }
+        HashValue::new(result)
+         */
     }
 }
 

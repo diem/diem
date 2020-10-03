@@ -88,6 +88,7 @@ impl ExperimentSuite {
         experiments.push(Box::new(
             PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
         ));
+        /*
         experiments.push(Box::new(
             PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
         ));
@@ -97,6 +98,7 @@ impl ExperimentSuite {
         experiments.push(Box::new(
             PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
         ));
+         */
         Self { experiments }
     }
 

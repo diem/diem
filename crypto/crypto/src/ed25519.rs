@@ -44,6 +44,7 @@ use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDispl
 use mirai_annotations::*;
 use serde::Serialize;
 use std::{cmp::Ordering, fmt};
+// use std::{thread, time};
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -418,6 +419,7 @@ impl Signature for Ed25519Signature {
         message: &T,
         public_key: &Ed25519PublicKey,
     ) -> Result<()> {
+        // Ok(())
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
@@ -430,6 +432,10 @@ impl Signature for Ed25519Signature {
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
     fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Ed25519PublicKey) -> Result<()> {
+        // Ok(())
+        // let one_second = time::Duration::from_millis(1000);
+        // thread::sleep(one_second);
+
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         Ed25519Signature::check_malleability(&self.to_bytes())?;
@@ -453,6 +459,10 @@ impl Signature for Ed25519Signature {
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
     ) -> Result<()> {
+        // Ok(())
+        // let one_second = time::Duration::from_millis(1000);
+        // thread::sleep(one_second);
+
         for (_, sig) in keys_and_signatures.iter() {
             Ed25519Signature::check_malleability(&sig.to_bytes())?
         }

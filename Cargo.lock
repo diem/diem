@@ -3495,6 +3495,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tiny-keccak",
+ "unroll",
 ]
 
 [[package]]
@@ -6962,6 +6963,16 @@ checksum = "8326b2c654932e3e4f9196e69d08fdf7cfd718e1dc6f66b347e6024a0c961402"
 dependencies = [
  "generic-array 0.14.4",
  "subtle",
+]
+
+[[package]]
+name = "unroll"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ad948c1cb799b1a70f836077721a92a35ac177d4daddf4c20a633786d4cf618"
+dependencies = [
+ "quote 1.0.7",
+ "syn 1.0.42",
 ]
 
 [[package]]
