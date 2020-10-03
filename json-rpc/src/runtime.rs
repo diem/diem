@@ -9,7 +9,7 @@ use crate::{
 };
 use futures::future::join_all;
 use libra_config::config::{NodeConfig, RoleType};
-use libra_logger::{info, Level, Schema};
+use libra_logger::{debug, Level, Schema};
 use libra_mempool::MempoolClientSender;
 use libra_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use rand::{rngs::OsRng, RngCore};
@@ -58,7 +58,7 @@ struct RpcResponseLog<'a> {
 #[macro_export]
 macro_rules! log_response {
     ($trace_id: expr, $resp: expr, $is_batch: expr) => {
-        let mut level = Level::Debug;
+        let mut level = Level::Trace;
         if let Some(ref error) = $resp.error {
             if is_internal_error(&error.code) {
                 level = Level::Error
@@ -114,7 +114,7 @@ pub fn bootstrap(
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint)
         .with(warp::log::custom(|info| {
-            info!(HttpRequestLog {
+            debug!(HttpRequestLog {
                 remote_addr: info.remote_addr(),
                 method: info.method().to_string(),
                 path: info.path().to_string(),
@@ -203,7 +203,7 @@ async fn rpc_endpoint_without_metrics(
 
     let mut rng = OsRng;
     let trace_id = rng.next_u64();
-    info!(RpcRequestLog {
+    debug!(RpcRequestLog {
         trace_id,
         request: data.clone(),
     });
