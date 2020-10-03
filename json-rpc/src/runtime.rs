@@ -18,6 +18,7 @@ use std::{net::SocketAddr, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
+    http::header,
     reject::{self, Reject},
     Filter,
 };
@@ -39,6 +40,7 @@ struct HttpRequestLog<'a> {
     user_agent: Option<&'a str>,
     #[schema(debug)]
     elapsed: std::time::Duration,
+    forwarded: Option<&'a str>,
 }
 
 #[derive(Schema)]
@@ -122,6 +124,10 @@ pub fn bootstrap(
                 referer: info.referer(),
                 user_agent: info.user_agent(),
                 elapsed: info.elapsed(),
+                forwarded: info
+                    .request_headers()
+                    .get(header::FORWARDED)
+                    .and_then(|v| v.to_str().ok())
             })
         }))
         .with(warp::cors().allow_any_origin().allow_methods(vec!["POST"]));
