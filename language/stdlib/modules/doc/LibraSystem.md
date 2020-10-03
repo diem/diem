@@ -10,13 +10,8 @@ about the set of validators used during consensus.
 -  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
 -  [Resource `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
 -  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
--  [Const `ECAPABILITY_HOLDER`](#0x1_LibraSystem_ECAPABILITY_HOLDER)
-    -  [Error codes](#@Error_codes_0)
--  [Const `EINVALID_PROSPECTIVE_VALIDATOR`](#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR)
--  [Const `EALREADY_A_VALIDATOR`](#0x1_LibraSystem_EALREADY_A_VALIDATOR)
--  [Const `ENOT_AN_ACTIVE_VALIDATOR`](#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR)
--  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
--  [Const `EVALIDATOR_INDEX`](#0x1_LibraSystem_EVALIDATOR_INDEX)
+-  [Constants](#@Constants_0)
+    -  [Error codes](#@Error_codes_1)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
 -  [Function `set_libra_system_config`](#0x1_LibraSystem_set_libra_system_config)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
@@ -30,7 +25,20 @@ about the set of validators used during consensus.
 -  [Function `get_validator_index_`](#0x1_LibraSystem_get_validator_index_)
 -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
-    -  [Module specifications](#@Module_specifications_1)
+    -  [Module specifications](#@Module_specifications_2)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Option.md#0x1_Option">0x1::Option</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraSystem_ValidatorInfo"></a>
@@ -159,12 +167,35 @@ Members of <code>validators</code> vector (the validator set) have unique addres
 
 </details>
 
+<a name="@Constants_0"></a>
+
+## Constants
+
+
+<a name="0x1_LibraSystem_EINVALID_TRANSACTION_SENDER"></a>
+
+The validator operator is not the operator for the specified validator
+
+
+<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_EALREADY_A_VALIDATOR"></a>
+
+Tried to add an existing validator to the validator set
+
+
+<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">EALREADY_A_VALIDATOR</a>: u64 = 2;
+</code></pre>
+
+
+
 <a name="0x1_LibraSystem_ECAPABILITY_HOLDER"></a>
 
-## Const `ECAPABILITY_HOLDER`
 
-
-<a name="@Error_codes_0"></a>
+<a name="@Error_codes_1"></a>
 
 ### Error codes
 
@@ -178,8 +209,6 @@ The <code><a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHo
 
 <a name="0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR"></a>
 
-## Const `EINVALID_PROSPECTIVE_VALIDATOR`
-
 Tried to add a validator with an invalid state to the validator set
 
 
@@ -188,21 +217,7 @@ Tried to add a validator with an invalid state to the validator set
 
 
 
-<a name="0x1_LibraSystem_EALREADY_A_VALIDATOR"></a>
-
-## Const `EALREADY_A_VALIDATOR`
-
-Tried to add an existing validator to the validator set
-
-
-<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">EALREADY_A_VALIDATOR</a>: u64 = 2;
-</code></pre>
-
-
-
 <a name="0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR"></a>
-
-## Const `ENOT_AN_ACTIVE_VALIDATOR`
 
 An operation was attempted on a non-active validator
 
@@ -212,21 +227,7 @@ An operation was attempted on a non-active validator
 
 
 
-<a name="0x1_LibraSystem_EINVALID_TRANSACTION_SENDER"></a>
-
-## Const `EINVALID_TRANSACTION_SENDER`
-
-The validator operator is not the operator for the specified validator
-
-
-<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a>: u64 = 4;
-</code></pre>
-
-
-
 <a name="0x1_LibraSystem_EVALIDATOR_INDEX"></a>
-
-## Const `EVALIDATOR_INDEX`
 
 An out of bounds index for the validator set was encountered
 
@@ -1124,7 +1125,7 @@ prove, for unclear reasons.
 
 
 
-<a name="@Module_specifications_1"></a>
+<a name="@Module_specifications_2"></a>
 
 ### Module specifications
 

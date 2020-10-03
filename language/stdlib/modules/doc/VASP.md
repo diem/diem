@@ -7,11 +7,7 @@
 
 -  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
--  [Const `EPARENT_OR_CHILD_VASP`](#0x1_VASP_EPARENT_OR_CHILD_VASP)
--  [Const `ETOO_MANY_CHILDREN`](#0x1_VASP_ETOO_MANY_CHILDREN)
--  [Const `ENOT_A_VASP`](#0x1_VASP_ENOT_A_VASP)
--  [Const `ENOT_A_PARENT_VASP`](#0x1_VASP_ENOT_A_PARENT_VASP)
--  [Const `MAX_CHILD_ACCOUNTS`](#0x1_VASP_MAX_CHILD_ACCOUNTS)
+-  [Constants](#@Constants_0)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
 -  [Function `has_account_limits`](#0x1_VASP_has_account_limits)
@@ -21,10 +17,19 @@
 -  [Function `is_vasp`](#0x1_VASP_is_vasp)
 -  [Function `is_same_vasp`](#0x1_VASP_is_same_vasp)
 -  [Function `num_children`](#0x1_VASP_num_children)
--  [Module Specification](#@Module_Specification_0)
-    -  [Existence of Parents](#@Existence_of_Parents_1)
-    -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_2)
-    -  [Immutability of Parent Address](#@Immutability_of_Parent_Address_3)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Existence of Parents](#@Existence_of_Parents_2)
+    -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_3)
+    -  [Immutability of Parent Address](#@Immutability_of_Parent_Address_4)
+
+
+<pre><code><b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_VASP_ParentVASP"></a>
@@ -85,9 +90,32 @@ A resource that represents a child account of the parent VASP account at <code>p
 
 </details>
 
-<a name="0x1_VASP_EPARENT_OR_CHILD_VASP"></a>
+<a name="@Constants_0"></a>
 
-## Const `EPARENT_OR_CHILD_VASP`
+## Constants
+
+
+<a name="0x1_VASP_ENOT_A_PARENT_VASP"></a>
+
+The creating account must be a Parent VASP account
+
+
+<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_ENOT_A_PARENT_VASP">ENOT_A_PARENT_VASP</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_VASP_ENOT_A_VASP"></a>
+
+The account must be a Parent or Child VASP account
+
+
+<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_ENOT_A_VASP">ENOT_A_VASP</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_VASP_EPARENT_OR_CHILD_VASP"></a>
 
 The <code><a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a></code> or <code><a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a></code> resources are not in the required state
 
@@ -99,8 +127,6 @@ The <code><a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a></code> or <code><
 
 <a name="0x1_VASP_ETOO_MANY_CHILDREN"></a>
 
-## Const `ETOO_MANY_CHILDREN`
-
 The creation of a new Child VASP account would exceed the number of children permitted for a VASP
 
 
@@ -109,33 +135,7 @@ The creation of a new Child VASP account would exceed the number of children per
 
 
 
-<a name="0x1_VASP_ENOT_A_VASP"></a>
-
-## Const `ENOT_A_VASP`
-
-The account must be a Parent or Child VASP account
-
-
-<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_ENOT_A_VASP">ENOT_A_VASP</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_VASP_ENOT_A_PARENT_VASP"></a>
-
-## Const `ENOT_A_PARENT_VASP`
-
-The creating account must be a Parent VASP account
-
-
-<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_ENOT_A_PARENT_VASP">ENOT_A_PARENT_VASP</a>: u64 = 3;
-</code></pre>
-
-
-
 <a name="0x1_VASP_MAX_CHILD_ACCOUNTS"></a>
-
-## Const `MAX_CHILD_ACCOUNTS`
 
 Maximum number of child accounts that can be created by a single ParentVASP
 
@@ -622,13 +622,13 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Existence_of_Parents_1"></a>
+<a name="@Existence_of_Parents_2"></a>
 
 ### Existence of Parents
 
@@ -641,7 +641,7 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 
 
-<a name="@Creation_of_Child_VASPs_2"></a>
+<a name="@Creation_of_Child_VASPs_3"></a>
 
 ### Creation of Child VASPs
 
@@ -690,7 +690,7 @@ previous state.
 
 
 
-<a name="@Immutability_of_Parent_Address_3"></a>
+<a name="@Immutability_of_Parent_Address_4"></a>
 
 ### Immutability of Parent Address
 

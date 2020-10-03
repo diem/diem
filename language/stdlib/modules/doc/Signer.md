@@ -9,6 +9,10 @@
 -  [Function `address_of`](#0x1_Signer_address_of)
 
 
+<pre><code></code></pre>
+
+
+
 <a name="0x1_Signer_borrow_address"></a>
 
 ## Function `borrow_address`

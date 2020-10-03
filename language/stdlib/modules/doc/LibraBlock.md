@@ -7,13 +7,21 @@
 
 -  [Resource `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
 -  [Struct `NewBlockEvent`](#0x1_LibraBlock_NewBlockEvent)
--  [Const `EBLOCK_METADATA`](#0x1_LibraBlock_EBLOCK_METADATA)
--  [Const `EVM_OR_VALIDATOR`](#0x1_LibraBlock_EVM_OR_VALIDATOR)
+-  [Constants](#@Constants_0)
 -  [Function `initialize_block_metadata`](#0x1_LibraBlock_initialize_block_metadata)
 -  [Function `is_initialized`](#0x1_LibraBlock_is_initialized)
 -  [Function `block_prologue`](#0x1_LibraBlock_block_prologue)
 -  [Function `get_current_block_height`](#0x1_LibraBlock_get_current_block_height)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraBlock_BlockMetadata"></a>
@@ -94,9 +102,12 @@
 
 </details>
 
-<a name="0x1_LibraBlock_EBLOCK_METADATA"></a>
+<a name="@Constants_0"></a>
 
-## Const `EBLOCK_METADATA`
+## Constants
+
+
+<a name="0x1_LibraBlock_EBLOCK_METADATA"></a>
 
 The <code><a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a></code> resource is in an invalid state
 
@@ -107,8 +118,6 @@ The <code><a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>
 
 
 <a name="0x1_LibraBlock_EVM_OR_VALIDATOR"></a>
-
-## Const `EVM_OR_VALIDATOR`
 
 An invalid signer was provided. Expected the signer to be the VM or a Validator.
 
@@ -298,7 +307,7 @@ Get the current block height
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

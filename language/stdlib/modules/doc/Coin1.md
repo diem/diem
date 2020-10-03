@@ -10,6 +10,14 @@
 -  [Module Specification](#@Module_Specification_0)
 
 
+<pre><code><b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
+<b>use</b> <a href="FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+</code></pre>
+
+
+
 <a name="0x1_Coin1_Coin1"></a>
 
 ## Struct `Coin1`

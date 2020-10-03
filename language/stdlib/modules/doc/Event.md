@@ -21,6 +21,13 @@ events emitted to a handle and emit events to the event store.
 -  [Module Specification](#@Module_Specification_0)
 
 
+<pre><code><b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
+
+
 <a name="0x1_Event_EventHandleGenerator"></a>
 
 ## Resource `EventHandleGenerator`

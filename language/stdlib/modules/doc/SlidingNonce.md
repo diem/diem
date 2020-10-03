@@ -6,16 +6,18 @@
 
 
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
--  [Const `ESLIDING_NONCE`](#0x1_SlidingNonce_ESLIDING_NONCE)
--  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
--  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
--  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
--  [Const `ENONCE_ALREADY_PUBLISHED`](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
--  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
+-  [Constants](#@Constants_0)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_SlidingNonce_SlidingNonce"></a>
@@ -57,57 +59,12 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 </details>
 
-<a name="0x1_SlidingNonce_ESLIDING_NONCE"></a>
+<a name="@Constants_0"></a>
 
-## Const `ESLIDING_NONCE`
-
-The <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
-
-
-<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>: u64 = 0;
-</code></pre>
-
-
-
-<a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
-
-## Const `ENONCE_TOO_OLD`
-
-The nonce is too old and impossible to ensure whether it's duplicated or not
-
-
-<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_SlidingNonce_ENONCE_TOO_NEW"></a>
-
-## Const `ENONCE_TOO_NEW`
-
-The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
-
-
-<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_SlidingNonce_ENONCE_ALREADY_RECORDED"></a>
-
-## Const `ENONCE_ALREADY_RECORDED`
-
-The nonce was already recorded previously
-
-
-<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED"></a>
-
-## Const `ENONCE_ALREADY_PUBLISHED`
 
 The sliding nonce resource was already published
 
@@ -117,9 +74,47 @@ The sliding nonce resource was already published
 
 
 
-<a name="0x1_SlidingNonce_NONCE_MASK_SIZE"></a>
+<a name="0x1_SlidingNonce_ENONCE_ALREADY_RECORDED"></a>
 
-## Const `NONCE_MASK_SIZE`
+The nonce was already recorded previously
+
+
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENONCE_TOO_NEW"></a>
+
+The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
+
+
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
+
+The nonce is too old and impossible to ensure whether it's duplicated or not
+
+
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ESLIDING_NONCE"></a>
+
+The <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
+
+
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_NONCE_MASK_SIZE"></a>
 
 Size of SlidingNonce::nonce_mask in bits.
 

@@ -9,6 +9,10 @@
 -  [Function `sha3_256`](#0x1_Hash_sha3_256)
 
 
+<pre><code></code></pre>
+
+
+
 <a name="0x1_Hash_sha2_256"></a>
 
 ## Function `sha2_256`

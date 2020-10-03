@@ -8,17 +8,20 @@ and MultiEd25519 (K-of-N multisig).
 
 
 -  [Struct `MultiEd25519PublicKey`](#0x1_Authenticator_MultiEd25519PublicKey)
--  [Const `SINGLE_ED25519_SCHEME_ID`](#0x1_Authenticator_SINGLE_ED25519_SCHEME_ID)
--  [Const `MULTI_ED25519_SCHEME_ID`](#0x1_Authenticator_MULTI_ED25519_SCHEME_ID)
--  [Const `MAX_MULTI_ED25519_KEYS`](#0x1_Authenticator_MAX_MULTI_ED25519_KEYS)
--  [Const `EZERO_THRESHOLD`](#0x1_Authenticator_EZERO_THRESHOLD)
--  [Const `ENOT_ENOUGH_KEYS_FOR_THRESHOLD`](#0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
--  [Const `ENUM_KEYS_ABOVE_MAX_THRESHOLD`](#0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD)
+-  [Constants](#@Constants_0)
 -  [Function `create_multi_ed25519`](#0x1_Authenticator_create_multi_ed25519)
 -  [Function `ed25519_authentication_key`](#0x1_Authenticator_ed25519_authentication_key)
 -  [Function `multi_ed25519_authentication_key`](#0x1_Authenticator_multi_ed25519_authentication_key)
 -  [Function `public_keys`](#0x1_Authenticator_public_keys)
 -  [Function `threshold`](#0x1_Authenticator_threshold)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Hash.md#0x1_Hash">0x1::Hash</a>;
+<b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_Authenticator_MultiEd25519PublicKey"></a>
@@ -55,57 +58,12 @@ A multi-ed25519 public key
 
 </details>
 
-<a name="0x1_Authenticator_SINGLE_ED25519_SCHEME_ID"></a>
+<a name="@Constants_0"></a>
 
-## Const `SINGLE_ED25519_SCHEME_ID`
-
-Scheme byte ID for ed25519
-
-
-<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_SINGLE_ED25519_SCHEME_ID">SINGLE_ED25519_SCHEME_ID</a>: u8 = 0;
-</code></pre>
-
-
-
-<a name="0x1_Authenticator_MULTI_ED25519_SCHEME_ID"></a>
-
-## Const `MULTI_ED25519_SCHEME_ID`
-
-Scheme byte ID for multi-ed25519
-
-
-<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_MULTI_ED25519_SCHEME_ID">MULTI_ED25519_SCHEME_ID</a>: u8 = 1;
-</code></pre>
-
-
-
-<a name="0x1_Authenticator_MAX_MULTI_ED25519_KEYS"></a>
-
-## Const `MAX_MULTI_ED25519_KEYS`
-
-Maximum number of keys allowed in a MultiEd25519 public/private key
-
-
-<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_MAX_MULTI_ED25519_KEYS">MAX_MULTI_ED25519_KEYS</a>: u64 = 32;
-</code></pre>
-
-
-
-<a name="0x1_Authenticator_EZERO_THRESHOLD"></a>
-
-## Const `EZERO_THRESHOLD`
-
-Threshold provided was 0 which can't be used to create a <code>MultiEd25519</code> key
-
-
-<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_EZERO_THRESHOLD">EZERO_THRESHOLD</a>: u64 = 0;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD"></a>
-
-## Const `ENOT_ENOUGH_KEYS_FOR_THRESHOLD`
 
 Not enough keys were provided for the specified threshold when creating an <code>MultiEd25519</code> key
 
@@ -117,12 +75,50 @@ Not enough keys were provided for the specified threshold when creating an <code
 
 <a name="0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD"></a>
 
-## Const `ENUM_KEYS_ABOVE_MAX_THRESHOLD`
-
 Too many keys were provided for the specified threshold when creating an <code>MultiEd25519</code> key
 
 
 <pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD">ENUM_KEYS_ABOVE_MAX_THRESHOLD</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_EZERO_THRESHOLD"></a>
+
+Threshold provided was 0 which can't be used to create a <code>MultiEd25519</code> key
+
+
+<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_EZERO_THRESHOLD">EZERO_THRESHOLD</a>: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_MAX_MULTI_ED25519_KEYS"></a>
+
+Maximum number of keys allowed in a MultiEd25519 public/private key
+
+
+<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_MAX_MULTI_ED25519_KEYS">MAX_MULTI_ED25519_KEYS</a>: u64 = 32;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_MULTI_ED25519_SCHEME_ID"></a>
+
+Scheme byte ID for multi-ed25519
+
+
+<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_MULTI_ED25519_SCHEME_ID">MULTI_ED25519_SCHEME_ID</a>: u8 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_SINGLE_ED25519_SCHEME_ID"></a>
+
+Scheme byte ID for ed25519
+
+
+<pre><code><b>const</b> <a href="Authenticator.md#0x1_Authenticator_SINGLE_ED25519_SCHEME_ID">SINGLE_ED25519_SCHEME_ID</a>: u8 = 0;
 </code></pre>
 
 

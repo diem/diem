@@ -7,12 +7,20 @@ A container for storing a chain id.
 
 
 -  [Resource `ChainId`](#0x1_ChainId_ChainId)
--  [Const `ECHAIN_ID`](#0x1_ChainId_ECHAIN_ID)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_ChainId_initialize)
 -  [Function `get`](#0x1_ChainId_get)
--  [Module Specification](#@Module_Specification_0)
-    -  [Initialization](#@Initialization_1)
-    -  [Helper Functions](#@Helper_Functions_2)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Helper Functions](#@Helper_Functions_3)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_ChainId_ChainId"></a>
@@ -42,9 +50,12 @@ A container for storing a chain id.
 
 </details>
 
-<a name="0x1_ChainId_ECHAIN_ID"></a>
+<a name="@Constants_0"></a>
 
-## Const `ECHAIN_ID`
+## Constants
+
+
+<a name="0x1_ChainId_ECHAIN_ID"></a>
 
 The <code><a href="ChainId.md#0x1_ChainId">ChainId</a></code> resource was not in the required state
 
@@ -108,13 +119,13 @@ Return the chain ID of this Libra instance
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Initialization_1"></a>
+<a name="@Initialization_2"></a>
 
 ### Initialization
 
@@ -126,7 +137,7 @@ When Libra is operating, the chain id is always available.
 
 
 
-<a name="@Helper_Functions_2"></a>
+<a name="@Helper_Functions_3"></a>
 
 ### Helper Functions
 

@@ -14,10 +14,7 @@ It interacts with the other modules in the following ways:
 
 
 -  [Resource `CurrentTimeMicroseconds`](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
--  [Const `MICRO_CONVERSION_FACTOR`](#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR)
--  [Const `ENOT_GENESIS`](#0x1_LibraTimestamp_ENOT_GENESIS)
--  [Const `ENOT_OPERATING`](#0x1_LibraTimestamp_ENOT_OPERATING)
--  [Const `ETIMESTAMP`](#0x1_LibraTimestamp_ETIMESTAMP)
+-  [Constants](#@Constants_0)
 -  [Function `set_time_has_started`](#0x1_LibraTimestamp_set_time_has_started)
 -  [Function `update_global_time`](#0x1_LibraTimestamp_update_global_time)
 -  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
@@ -26,7 +23,13 @@ It interacts with the other modules in the following ways:
 -  [Function `assert_genesis`](#0x1_LibraTimestamp_assert_genesis)
 -  [Function `is_operating`](#0x1_LibraTimestamp_is_operating)
 -  [Function `assert_operating`](#0x1_LibraTimestamp_assert_operating)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraTimestamp_CurrentTimeMicroseconds"></a>
@@ -57,21 +60,12 @@ A singleton resource holding the current Unix time in microseconds
 
 </details>
 
-<a name="0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR"></a>
+<a name="@Constants_0"></a>
 
-## Const `MICRO_CONVERSION_FACTOR`
-
-Conversion factor between seconds and microseconds
-
-
-<pre><code><b>const</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>: u64 = 1000000;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_LibraTimestamp_ENOT_GENESIS"></a>
-
-## Const `ENOT_GENESIS`
 
 The blockchain is not in the genesis state anymore
 
@@ -83,8 +77,6 @@ The blockchain is not in the genesis state anymore
 
 <a name="0x1_LibraTimestamp_ENOT_OPERATING"></a>
 
-## Const `ENOT_OPERATING`
-
 The blockchain is not in an operating state yet
 
 
@@ -95,12 +87,20 @@ The blockchain is not in an operating state yet
 
 <a name="0x1_LibraTimestamp_ETIMESTAMP"></a>
 
-## Const `ETIMESTAMP`
-
 An invalid timestamp was provided
 
 
 <pre><code><b>const</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR"></a>
+
+Conversion factor between seconds and microseconds
+
+
+<pre><code><b>const</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>: u64 = 1000000;
 </code></pre>
 
 
@@ -466,7 +466,7 @@ Helper schema to specify that a function aborts if not operating.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

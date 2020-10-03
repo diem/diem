@@ -6,9 +6,17 @@
 
 
 -  [Struct `LibraVersion`](#0x1_LibraVersion_LibraVersion)
--  [Const `EINVALID_MAJOR_VERSION_NUMBER`](#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LibraVersion_initialize)
 -  [Function `set`](#0x1_LibraVersion_set)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraVersion_LibraVersion"></a>
@@ -38,9 +46,12 @@
 
 </details>
 
-<a name="0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER"></a>
+<a name="@Constants_0"></a>
 
-## Const `EINVALID_MAJOR_VERSION_NUMBER`
+## Constants
+
+
+<a name="0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER"></a>
 
 Tried to set an invalid major version for the VM. Major versions must be strictly increasing
 

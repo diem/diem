@@ -11,11 +11,21 @@ Once the component makeup of the LBR has been chosen the
 
 -  [Resource `LBR`](#0x1_LBR_LBR)
 -  [Resource `Reserve`](#0x1_LBR_Reserve)
--  [Const `ERESERVE`](#0x1_LBR_ERESERVE)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LBR_initialize)
 -  [Function `is_lbr`](#0x1_LBR_is_lbr)
 -  [Function `reserve_address`](#0x1_LBR_reserve_address)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
+<b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+</code></pre>
+
 
 
 <a name="0x1_LBR_LBR"></a>
@@ -94,9 +104,12 @@ Currently this holds no coins since LBR is not able to be minted/created.
 
 </details>
 
-<a name="0x1_LBR_ERESERVE"></a>
+<a name="@Constants_0"></a>
 
-## Const `ERESERVE`
+## Constants
+
+
+<a name="0x1_LBR_ERESERVE"></a>
 
 The <code><a href="LBR.md#0x1_LBR_Reserve">Reserve</a></code> resource is in an invalid state
 
@@ -241,7 +254,7 @@ Return the account address where the globally unique LBR::Reserve resource is st
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

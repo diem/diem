@@ -585,6 +585,29 @@ impl<'env> Docgen<'env> {
             None
         };
 
+        // Generate usage information.
+        // We currently only include modules used in bytecode -- including specs
+        // creates a large usage list because of schema inclusion quickly pulling in
+        // many modules.
+        self.begin_code();
+        let used_modules = module_env
+            .get_used_modules(/*include_specs*/ false)
+            .iter()
+            .filter(|id| **id != module_env.get_id())
+            .map(|id| {
+                module_env
+                    .env
+                    .get_module(*id)
+                    .get_name()
+                    .display_full(module_env.symbol_pool())
+                    .to_string()
+            })
+            .sorted();
+        for used_module in used_modules {
+            self.code_text(&format!("use {};", used_module));
+        }
+        self.end_code();
+
         let spec_block_map = self.organize_spec_blocks(module_env);
 
         if !module_env.get_structs().count() > 0 {
@@ -596,11 +619,9 @@ impl<'env> Docgen<'env> {
             }
         }
 
-        for c in module_env
-            .get_named_constants()
-            .sorted_by(|a, b| Ord::cmp(&a.get_loc(), &b.get_loc()))
-        {
-            self.gen_named_constant(&c);
+        if module_env.get_named_constant_count() > 0 {
+            // Introduce a Constant section
+            self.gen_named_constants();
         }
 
         let funs = module_env
@@ -710,16 +731,16 @@ impl<'env> Docgen<'env> {
         self.end_items();
     }
 
-    /// Generates documentation for a named constant
-    fn gen_named_constant(&self, const_env: &NamedConstantEnv<'_>) {
-        let name = const_env.get_name();
-        self.section_header(
-            &self.named_constant_title(const_env),
-            &self.label_for_module_item(&const_env.module_env, name),
-        );
+    /// Generates documentation for all named constants.
+    fn gen_named_constants(&self) {
+        self.section_header("Constants", &self.label_for_section("Constants"));
         self.increment_section_nest();
-        self.doc_text(const_env.get_doc());
-        self.code_block(&self.named_constant_display(const_env));
+        for const_env in self.current_module.as_ref().unwrap().get_named_constants() {
+            self.label(&self.label_for_module_item(&const_env.module_env, const_env.get_name()));
+            self.doc_text(const_env.get_doc());
+            self.code_block(&self.named_constant_display(&const_env));
+        }
+
         self.decrement_section_nest();
     }
 
@@ -751,11 +772,6 @@ impl<'env> Docgen<'env> {
             );
         }
         self.decrement_section_nest();
-    }
-
-    /// Returns "Const `N`"
-    fn named_constant_title(&self, const_env: &NamedConstantEnv<'_>) -> String {
-        format!("Const `{}`", self.name_string(const_env.get_name()))
     }
 
     /// Returns "Struct `N`" or "Resource `N`".

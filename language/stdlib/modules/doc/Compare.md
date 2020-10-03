@@ -6,17 +6,23 @@
 Utilities for comparing Move values based on their representation in LCS.
 
 
--  [Const `EQUAL`](#0x1_Compare_EQUAL)
--  [Const `LESS_THAN`](#0x1_Compare_LESS_THAN)
--  [Const `GREATER_THAN`](#0x1_Compare_GREATER_THAN)
+-  [Constants](#@Constants_0)
 -  [Function `cmp_lcs_bytes`](#0x1_Compare_cmp_lcs_bytes)
 -  [Function `cmp_u8`](#0x1_Compare_cmp_u8)
 -  [Function `cmp_u64`](#0x1_Compare_cmp_u64)
 
 
-<a name="0x1_Compare_EQUAL"></a>
+<pre><code><b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
 
-## Const `EQUAL`
+
+
+<a name="@Constants_0"></a>
+
+## Constants
+
+
+<a name="0x1_Compare_EQUAL"></a>
 
 
 
@@ -25,24 +31,20 @@ Utilities for comparing Move values based on their representation in LCS.
 
 
 
-<a name="0x1_Compare_LESS_THAN"></a>
-
-## Const `LESS_THAN`
-
-
-
-<pre><code><b>const</b> <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a>: u8 = 1;
-</code></pre>
-
-
-
 <a name="0x1_Compare_GREATER_THAN"></a>
-
-## Const `GREATER_THAN`
 
 
 
 <pre><code><b>const</b> <a href="Compare.md#0x1_Compare_GREATER_THAN">GREATER_THAN</a>: u8 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Compare_LESS_THAN"></a>
+
+
+
+<pre><code><b>const</b> <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a>: u8 = 1;
 </code></pre>
 
 

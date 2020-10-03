@@ -18,37 +18,7 @@ before and after every transaction.
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
 -  [Struct `UpgradeEvent`](#0x1_LibraAccount_UpgradeEvent)
 -  [Struct `CreateAccountEvent`](#0x1_LibraAccount_CreateAccountEvent)
--  [Const `MAX_U64`](#0x1_LibraAccount_MAX_U64)
--  [Const `EACCOUNT`](#0x1_LibraAccount_EACCOUNT)
--  [Const `ESEQUENCE_NUMBER`](#0x1_LibraAccount_ESEQUENCE_NUMBER)
--  [Const `ECOIN_DEPOSIT_IS_ZERO`](#0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO)
--  [Const `EDEPOSIT_EXCEEDS_LIMITS`](#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS)
--  [Const `EROLE_CANT_STORE_BALANCE`](#0x1_LibraAccount_EROLE_CANT_STORE_BALANCE)
--  [Const `EINSUFFICIENT_BALANCE`](#0x1_LibraAccount_EINSUFFICIENT_BALANCE)
--  [Const `EWITHDRAWAL_EXCEEDS_LIMITS`](#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS)
--  [Const `EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`](#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED)
--  [Const `EMALFORMED_AUTHENTICATION_KEY`](#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY)
--  [Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`](#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
--  [Const `ECANNOT_CREATE_AT_VM_RESERVED`](#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED)
--  [Const `EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED`](#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED)
--  [Const `EADD_EXISTING_CURRENCY`](#0x1_LibraAccount_EADD_EXISTING_CURRENCY)
--  [Const `EPAYEE_DOES_NOT_EXIST`](#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST)
--  [Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`](#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
--  [Const `EPAYER_DOESNT_HOLD_CURRENCY`](#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY)
--  [Const `EGAS`](#0x1_LibraAccount_EGAS)
--  [Const `EACCOUNT_OPERATIONS_CAPABILITY`](#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY)
--  [Const `EWRITESET_MANAGER`](#0x1_LibraAccount_EWRITESET_MANAGER)
--  [Const `PROLOGUE_EACCOUNT_FROZEN`](#0x1_LibraAccount_PROLOGUE_EACCOUNT_FROZEN)
--  [Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY)
--  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
--  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
--  [Const `PROLOGUE_EACCOUNT_DNE`](#0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE)
--  [Const `PROLOGUE_ECANT_PAY_GAS_DEPOSIT`](#0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
--  [Const `PROLOGUE_ETRANSACTION_EXPIRED`](#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED)
--  [Const `PROLOGUE_EBAD_CHAIN_ID`](#0x1_LibraAccount_PROLOGUE_EBAD_CHAIN_ID)
--  [Const `PROLOGUE_ESCRIPT_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED)
--  [Const `PROLOGUE_EMODULE_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_EMODULE_NOT_ALLOWED)
--  [Const `PROLOGUE_INVALID_WRITESET_SENDER`](#0x1_LibraAccount_PROLOGUE_INVALID_WRITESET_SENDER)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `has_published_account_limits`](#0x1_LibraAccount_has_published_account_limits)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
@@ -93,7 +63,36 @@ before and after every transaction.
 -  [Function `writeset_epilogue`](#0x1_LibraAccount_writeset_epilogue)
 -  [Function `create_validator_account`](#0x1_LibraAccount_create_validator_account)
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
+<b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
+<b>use</b> <a href="ChainId.md#0x1_ChainId">0x1::ChainId</a>;
+<b>use</b> <a href="Coin1.md#0x1_Coin1">0x1::Coin1</a>;
+<b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer">0x1::DesignatedDealer</a>;
+<b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="Hash.md#0x1_Hash">0x1::Hash</a>;
+<b>use</b> <a href="LBR.md#0x1_LBR">0x1::LBR</a>;
+<b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">0x1::LibraTransactionPublishingOption</a>;
+<b>use</b> <a href="Option.md#0x1_Option">0x1::Option</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
+<b>use</b> <a href="VASP.md#0x1_VASP">0x1::VASP</a>;
+<b>use</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+<b>use</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">0x1::ValidatorOperatorConfig</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraAccount_LibraAccount"></a>
@@ -477,9 +476,12 @@ Message for creation of a new account
 
 </details>
 
-<a name="0x1_LibraAccount_MAX_U64"></a>
+<a name="@Constants_0"></a>
 
-## Const `MAX_U64`
+## Constants
+
+
+<a name="0x1_LibraAccount_MAX_U64"></a>
 
 
 
@@ -490,8 +492,6 @@ Message for creation of a new account
 
 <a name="0x1_LibraAccount_EACCOUNT"></a>
 
-## Const `EACCOUNT`
-
 The <code><a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a></code> resource is not in the required state
 
 
@@ -500,21 +500,37 @@ The <code><a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a></code> res
 
 
 
-<a name="0x1_LibraAccount_ESEQUENCE_NUMBER"></a>
+<a name="0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY"></a>
 
-## Const `ESEQUENCE_NUMBER`
-
-The account's sequence number has exceeded the maximum representable value
+The <code><a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a></code> was not in the required state
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_ESEQUENCE_NUMBER">ESEQUENCE_NUMBER</a>: u64 = 1;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY">EACCOUNT_OPERATIONS_CAPABILITY</a>: u64 = 22;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EADD_EXISTING_CURRENCY"></a>
+
+Tried to add a balance in a currency that this account already has
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EADD_EXISTING_CURRENCY">EADD_EXISTING_CURRENCY</a>: u64 = 15;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED"></a>
+
+An account cannot be created at the reserved VM address of 0x0
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED">ECANNOT_CREATE_AT_VM_RESERVED</a>: u64 = 10;
 </code></pre>
 
 
 
 <a name="0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO"></a>
-
-## Const `ECOIN_DEPOSIT_IS_ZERO`
 
 Tried to deposit a coin whose value was zero
 
@@ -526,8 +542,6 @@ Tried to deposit a coin whose value was zero
 
 <a name="0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS"></a>
 
-## Const `EDEPOSIT_EXCEEDS_LIMITS`
-
 Tried to deposit funds that would have surpassed the account's limits
 
 
@@ -536,21 +550,17 @@ Tried to deposit funds that would have surpassed the account's limits
 
 
 
-<a name="0x1_LibraAccount_EROLE_CANT_STORE_BALANCE"></a>
+<a name="0x1_LibraAccount_EGAS"></a>
 
-## Const `EROLE_CANT_STORE_BALANCE`
-
-Tried to create a balance for an account whose role does not allow holding balances
+An invalid amount of gas units was provided for execution of the transaction
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EROLE_CANT_STORE_BALANCE">EROLE_CANT_STORE_BALANCE</a>: u64 = 4;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EGAS">EGAS</a>: u64 = 20;
 </code></pre>
 
 
 
 <a name="0x1_LibraAccount_EINSUFFICIENT_BALANCE"></a>
-
-## Const `EINSUFFICIENT_BALANCE`
 
 The account does not hold a large enough balance in the specified currency
 
@@ -560,45 +570,7 @@ The account does not hold a large enough balance in the specified currency
 
 
 
-<a name="0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS"></a>
-
-## Const `EWITHDRAWAL_EXCEEDS_LIMITS`
-
-The withdrawal of funds would have exceeded the the account's limits
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS">EWITHDRAWAL_EXCEEDS_LIMITS</a>: u64 = 6;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED"></a>
-
-## Const `EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
-
-The <code><a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account has already been extracted
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED">EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</a>: u64 = 7;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY"></a>
-
-## Const `EMALFORMED_AUTHENTICATION_KEY`
-
-The provided authentication had an invalid length
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">EMALFORMED_AUTHENTICATION_KEY</a>: u64 = 8;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED"></a>
-
-## Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`
 
 The <code><a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a></code> for this account has already been extracted
 
@@ -608,57 +580,17 @@ The <code><a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">KeyRo
 
 
 
-<a name="0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED"></a>
+<a name="0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY"></a>
 
-## Const `ECANNOT_CREATE_AT_VM_RESERVED`
-
-An account cannot be created at the reserved VM address of 0x0
+The provided authentication had an invalid length
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED">ECANNOT_CREATE_AT_VM_RESERVED</a>: u64 = 10;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED"></a>
-
-## Const `EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED`
-
-The <code><a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account is not extracted
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED">EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED</a>: u64 = 11;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_EADD_EXISTING_CURRENCY"></a>
-
-## Const `EADD_EXISTING_CURRENCY`
-
-Tried to add a balance in a currency that this account already has
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EADD_EXISTING_CURRENCY">EADD_EXISTING_CURRENCY</a>: u64 = 15;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST"></a>
-
-## Const `EPAYEE_DOES_NOT_EXIST`
-
-Attempted to send funds to an account that does not exist
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST">EPAYEE_DOES_NOT_EXIST</a>: u64 = 17;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">EMALFORMED_AUTHENTICATION_KEY</a>: u64 = 8;
 </code></pre>
 
 
 
 <a name="0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE"></a>
-
-## Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`
 
 Attempted to send funds in a currency that the receiving account does not hold.
 e.g., <code><a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;</code> to an account that exists, but does not have a <code><a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;</code> resource
@@ -669,9 +601,17 @@ e.g., <code><a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="LBR.md#0x1_LBR">L
 
 
 
-<a name="0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY"></a>
+<a name="0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST"></a>
 
-## Const `EPAYER_DOESNT_HOLD_CURRENCY`
+Attempted to send funds to an account that does not exist
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST">EPAYEE_DOES_NOT_EXIST</a>: u64 = 17;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY"></a>
 
 Tried to withdraw funds in a currency that the account does hold
 
@@ -681,33 +621,57 @@ Tried to withdraw funds in a currency that the account does hold
 
 
 
-<a name="0x1_LibraAccount_EGAS"></a>
+<a name="0x1_LibraAccount_EROLE_CANT_STORE_BALANCE"></a>
 
-## Const `EGAS`
-
-An invalid amount of gas units was provided for execution of the transaction
+Tried to create a balance for an account whose role does not allow holding balances
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EGAS">EGAS</a>: u64 = 20;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EROLE_CANT_STORE_BALANCE">EROLE_CANT_STORE_BALANCE</a>: u64 = 4;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY"></a>
+<a name="0x1_LibraAccount_ESEQUENCE_NUMBER"></a>
 
-## Const `EACCOUNT_OPERATIONS_CAPABILITY`
-
-The <code><a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a></code> was not in the required state
+The account's sequence number has exceeded the maximum representable value
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY">EACCOUNT_OPERATIONS_CAPABILITY</a>: u64 = 22;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_ESEQUENCE_NUMBER">ESEQUENCE_NUMBER</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED"></a>
+
+The <code><a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account has already been extracted
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED">EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</a>: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED"></a>
+
+The <code><a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account is not extracted
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED">EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED</a>: u64 = 11;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS"></a>
+
+The withdrawal of funds would have exceeded the the account's limits
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS">EWITHDRAWAL_EXCEEDS_LIMITS</a>: u64 = 6;
 </code></pre>
 
 
 
 <a name="0x1_LibraAccount_EWRITESET_MANAGER"></a>
-
-## Const `EWRITESET_MANAGER`
 
 The <code><a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a></code> was not in the required state
 
@@ -717,9 +681,16 @@ The <code><a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraW
 
 
 
-<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_FROZEN"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE"></a>
 
-## Const `PROLOGUE_EACCOUNT_FROZEN`
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE">PROLOGUE_EACCOUNT_DNE</a>: u64 = 1004;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_FROZEN"></a>
 
 Prologue errors. These are separated out from the other errors in this
 module since they are mapped separately to major VM statuses, and are
@@ -734,75 +705,7 @@ const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
 
 
 
-<a name="0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY"></a>
-
-## Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY">PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY</a>: u64 = 1001;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD"></a>
-
-## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>: u64 = 1002;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW"></a>
-
-## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>: u64 = 1003;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE"></a>
-
-## Const `PROLOGUE_EACCOUNT_DNE`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE">PROLOGUE_EACCOUNT_DNE</a>: u64 = 1004;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT"></a>
-
-## Const `PROLOGUE_ECANT_PAY_GAS_DEPOSIT`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT">PROLOGUE_ECANT_PAY_GAS_DEPOSIT</a>: u64 = 1005;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED"></a>
-
-## Const `PROLOGUE_ETRANSACTION_EXPIRED`
-
-
-
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED">PROLOGUE_ETRANSACTION_EXPIRED</a>: u64 = 1006;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_PROLOGUE_EBAD_CHAIN_ID"></a>
-
-## Const `PROLOGUE_EBAD_CHAIN_ID`
 
 
 
@@ -811,20 +714,25 @@ const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
 
 
 
-<a name="0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED"></a>
-
-## Const `PROLOGUE_ESCRIPT_NOT_ALLOWED`
+<a name="0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT"></a>
 
 
 
-<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED">PROLOGUE_ESCRIPT_NOT_ALLOWED</a>: u64 = 1008;
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT">PROLOGUE_ECANT_PAY_GAS_DEPOSIT</a>: u64 = 1005;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY">PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY</a>: u64 = 1001;
 </code></pre>
 
 
 
 <a name="0x1_LibraAccount_PROLOGUE_EMODULE_NOT_ALLOWED"></a>
-
-## Const `PROLOGUE_EMODULE_NOT_ALLOWED`
 
 
 
@@ -833,9 +741,43 @@ const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
 
 
 
-<a name="0x1_LibraAccount_PROLOGUE_INVALID_WRITESET_SENDER"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED"></a>
 
-## Const `PROLOGUE_INVALID_WRITESET_SENDER`
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED">PROLOGUE_ESCRIPT_NOT_ALLOWED</a>: u64 = 1008;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>: u64 = 1003;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>: u64 = 1002;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED">PROLOGUE_ETRANSACTION_EXPIRED</a>: u64 = 1006;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_PROLOGUE_INVALID_WRITESET_SENDER"></a>
 
 
 
@@ -3978,7 +3920,7 @@ Epilogue for WriteSet trasnaction
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

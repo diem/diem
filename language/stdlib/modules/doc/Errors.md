@@ -18,16 +18,7 @@ framework evolves. TODO(wrwg): determine what kind of stability guarantees we gi
 associated module.
 
 
--  [Const `INVALID_STATE`](#0x1_Errors_INVALID_STATE)
--  [Const `REQUIRES_ADDRESS`](#0x1_Errors_REQUIRES_ADDRESS)
--  [Const `REQUIRES_ROLE`](#0x1_Errors_REQUIRES_ROLE)
--  [Const `REQUIRES_CAPABILITY`](#0x1_Errors_REQUIRES_CAPABILITY)
--  [Const `NOT_PUBLISHED`](#0x1_Errors_NOT_PUBLISHED)
--  [Const `ALREADY_PUBLISHED`](#0x1_Errors_ALREADY_PUBLISHED)
--  [Const `INVALID_ARGUMENT`](#0x1_Errors_INVALID_ARGUMENT)
--  [Const `LIMIT_EXCEEDED`](#0x1_Errors_LIMIT_EXCEEDED)
--  [Const `INTERNAL`](#0x1_Errors_INTERNAL)
--  [Const `CUSTOM`](#0x1_Errors_CUSTOM)
+-  [Constants](#@Constants_0)
 -  [Function `make`](#0x1_Errors_make)
 -  [Function `invalid_state`](#0x1_Errors_invalid_state)
 -  [Function `requires_address`](#0x1_Errors_requires_address)
@@ -41,72 +32,16 @@ associated module.
 -  [Function `custom`](#0x1_Errors_custom)
 
 
-<a name="0x1_Errors_INVALID_STATE"></a>
-
-## Const `INVALID_STATE`
-
-The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
-in genesis.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">INVALID_STATE</a>: u8 = 1;
-</code></pre>
+<pre><code></code></pre>
 
 
 
-<a name="0x1_Errors_REQUIRES_ADDRESS"></a>
+<a name="@Constants_0"></a>
 
-## Const `REQUIRES_ADDRESS`
-
-The signer of a transaction does not have the expected address for this operation. Example: a call to a function
-which publishes a resource under a particular address.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>: u8 = 2;
-</code></pre>
-
-
-
-<a name="0x1_Errors_REQUIRES_ROLE"></a>
-
-## Const `REQUIRES_ROLE`
-
-The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
-which requires the signer to have the role of treasury compliance.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>: u8 = 3;
-</code></pre>
-
-
-
-<a name="0x1_Errors_REQUIRES_CAPABILITY"></a>
-
-## Const `REQUIRES_CAPABILITY`
-
-The signer of a transaction does not have a required capability.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
-</code></pre>
-
-
-
-<a name="0x1_Errors_NOT_PUBLISHED"></a>
-
-## Const `NOT_PUBLISHED`
-
-A resource is required but not published. Example: access to non-existing AccountLimits resource.
-
-
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>: u8 = 5;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_Errors_ALREADY_PUBLISHED"></a>
-
-## Const `ALREADY_PUBLISHED`
 
 Attempting to publish a resource that is already published. Example: calling an initialization function
 twice.
@@ -117,9 +52,27 @@ twice.
 
 
 
-<a name="0x1_Errors_INVALID_ARGUMENT"></a>
+<a name="0x1_Errors_CUSTOM"></a>
 
-## Const `INVALID_ARGUMENT`
+A custom error category for extension points.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_CUSTOM">CUSTOM</a>: u8 = 255;
+</code></pre>
+
+
+
+<a name="0x1_Errors_INTERNAL"></a>
+
+An internal error (bug) has occurred.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_INTERNAL">INTERNAL</a>: u8 = 10;
+</code></pre>
+
+
+
+<a name="0x1_Errors_INVALID_ARGUMENT"></a>
 
 An argument provided to an operation is invalid. Example: a signing key has the wrong format.
 
@@ -129,9 +82,18 @@ An argument provided to an operation is invalid. Example: a signing key has the 
 
 
 
-<a name="0x1_Errors_LIMIT_EXCEEDED"></a>
+<a name="0x1_Errors_INVALID_STATE"></a>
 
-## Const `LIMIT_EXCEEDED`
+The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
+in genesis.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">INVALID_STATE</a>: u8 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Errors_LIMIT_EXCEEDED"></a>
 
 A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money after account limits window
 is exhausted.
@@ -142,26 +104,44 @@ is exhausted.
 
 
 
-<a name="0x1_Errors_INTERNAL"></a>
+<a name="0x1_Errors_NOT_PUBLISHED"></a>
 
-## Const `INTERNAL`
-
-An internal error (bug) has occurred.
+A resource is required but not published. Example: access to non-existing AccountLimits resource.
 
 
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_INTERNAL">INTERNAL</a>: u8 = 10;
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>: u8 = 5;
 </code></pre>
 
 
 
-<a name="0x1_Errors_CUSTOM"></a>
+<a name="0x1_Errors_REQUIRES_ADDRESS"></a>
 
-## Const `CUSTOM`
+The signer of a transaction does not have the expected address for this operation. Example: a call to a function
+which publishes a resource under a particular address.
 
-A custom error category for extension points.
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>: u8 = 2;
+</code></pre>
 
 
-<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_CUSTOM">CUSTOM</a>: u8 = 255;
+
+<a name="0x1_Errors_REQUIRES_CAPABILITY"></a>
+
+The signer of a transaction does not have a required capability.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Errors_REQUIRES_ROLE"></a>
+
+The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
+which requires the signer to have the role of treasury compliance.
+
+
+<pre><code><b>const</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>: u8 = 3;
 </code></pre>
 
 

@@ -10,10 +10,7 @@ Module providing well-known addresses and related logic.
 > global constants, once the Move language supports this feature.
 
 
--  [Const `ELIBRA_ROOT`](#0x1_CoreAddresses_ELIBRA_ROOT)
--  [Const `ETREASURY_COMPLIANCE`](#0x1_CoreAddresses_ETREASURY_COMPLIANCE)
--  [Const `EVM`](#0x1_CoreAddresses_EVM)
--  [Const `ECURRENCY_INFO`](#0x1_CoreAddresses_ECURRENCY_INFO)
+-  [Constants](#@Constants_0)
 -  [Function `LIBRA_ROOT_ADDRESS`](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
@@ -24,9 +21,28 @@ Module providing well-known addresses and related logic.
 -  [Function `assert_currency_info`](#0x1_CoreAddresses_assert_currency_info)
 
 
-<a name="0x1_CoreAddresses_ELIBRA_ROOT"></a>
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
 
-## Const `ELIBRA_ROOT`
+
+
+<a name="@Constants_0"></a>
+
+## Constants
+
+
+<a name="0x1_CoreAddresses_ECURRENCY_INFO"></a>
+
+The operation can only be performed by the account where currencies are registered
+
+
+<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_ECURRENCY_INFO">ECURRENCY_INFO</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_ELIBRA_ROOT"></a>
 
 The operation can only be performed by the account at 0xA550C18 (Libra Root)
 
@@ -38,8 +54,6 @@ The operation can only be performed by the account at 0xA550C18 (Libra Root)
 
 <a name="0x1_CoreAddresses_ETREASURY_COMPLIANCE"></a>
 
-## Const `ETREASURY_COMPLIANCE`
-
 The operation can only be performed by the account at 0xB1E55ED (Treasury & Compliance)
 
 
@@ -50,24 +64,10 @@ The operation can only be performed by the account at 0xB1E55ED (Treasury & Comp
 
 <a name="0x1_CoreAddresses_EVM"></a>
 
-## Const `EVM`
-
 The operation can only be performed by the VM
 
 
 <pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_EVM">EVM</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_CoreAddresses_ECURRENCY_INFO"></a>
-
-## Const `ECURRENCY_INFO`
-
-The operation can only be performed by the account where currencies are registered
-
-
-<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_ECURRENCY_INFO">ECURRENCY_INFO</a>: u64 = 4;
 </code></pre>
 
 

@@ -28,6 +28,10 @@ The script <code><a href="root_template_script3.md#yet_another">yet_another</a><
 ### Script `some`
 
 
+
+<pre><code></code></pre>
+
+
 This script does really nothing but just aborts.
 
 
@@ -72,6 +76,10 @@ This script does really nothing but just aborts.
 <a name="other"></a>
 
 ### Script `other`
+
+
+
+<pre><code></code></pre>
 
 
 This script does also abort.

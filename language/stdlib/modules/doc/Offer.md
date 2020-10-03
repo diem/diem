@@ -6,15 +6,21 @@
 
 
 -  [Resource `Offer`](#0x1_Offer_Offer)
--  [Const `EOFFER_DNE_FOR_ACCOUNT`](#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT)
+-  [Constants](#@Constants_0)
 -  [Function `create`](#0x1_Offer_create)
 -  [Function `redeem`](#0x1_Offer_redeem)
 -  [Function `exists_at`](#0x1_Offer_exists_at)
 -  [Function `address_of`](#0x1_Offer_address_of)
--  [Module Specification](#@Module_Specification_0)
-    -  [Module specification](#@Module_specification_1)
-        -  [Creation of Offers](#@Creation_of_Offers_2)
-        -  [Removal of Offers](#@Removal_of_Offers_3)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Module specification](#@Module_specification_2)
+        -  [Creation of Offers](#@Creation_of_Offers_3)
+        -  [Removal of Offers](#@Removal_of_Offers_4)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_Offer_Offer"></a>
@@ -50,9 +56,12 @@
 
 </details>
 
-<a name="0x1_Offer_EOFFER_DNE_FOR_ACCOUNT"></a>
+<a name="@Constants_0"></a>
 
-## Const `EOFFER_DNE_FOR_ACCOUNT`
+## Constants
+
+
+<a name="0x1_Offer_EOFFER_DNE_FOR_ACCOUNT"></a>
 
 An offer of the specified type for the account does not exist
 
@@ -228,13 +237,13 @@ under the <code>offer_address</code>.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Module_specification_1"></a>
+<a name="@Module_specification_2"></a>
 
 ### Module specification
 
@@ -278,7 +287,7 @@ Mirrors the Move function exists_at<Offered>, above.
 
 
 
-<a name="@Creation_of_Offers_2"></a>
+<a name="@Creation_of_Offers_3"></a>
 
 #### Creation of Offers
 
@@ -309,7 +318,7 @@ Apply OnlyCreateCanCreateOffer
 
 
 
-<a name="@Removal_of_Offers_3"></a>
+<a name="@Removal_of_Offers_4"></a>
 
 #### Removal of Offers
 

@@ -288,6 +288,26 @@ impl Type {
         }
     }
 
+    /// Compute used modules in this type, adding them to the passed set.
+    pub fn module_usage(&self, usage: &mut BTreeSet<ModuleId>) {
+        use Type::*;
+        match self {
+            Tuple(ts) => ts.iter().for_each(|t| t.module_usage(usage)),
+            Fun(ts, r) => {
+                ts.iter().for_each(|t| t.module_usage(usage));
+                r.module_usage(usage);
+            }
+            Struct(mid, _, ts) => {
+                usage.insert(*mid);
+                ts.iter().for_each(|t| t.module_usage(usage));
+            }
+            Vector(et) => et.module_usage(usage),
+            Reference(_, bt) => bt.module_usage(usage),
+            TypeDomain(bt) => bt.module_usage(usage),
+            _ => {}
+        }
+    }
+
     /// Attempt to convert this type into a language_storage::TypeTag
     pub fn into_type_tag(self, env: &GlobalEnv) -> Option<TypeTag> {
         use Type::*;

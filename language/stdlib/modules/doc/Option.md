@@ -8,8 +8,7 @@ This module defines the Option type and its methods to represent and handle an o
 
 
 -  [Struct `Option`](#0x1_Option_Option)
--  [Const `EOPTION_IS_SET`](#0x1_Option_EOPTION_IS_SET)
--  [Const `EOPTION_NOT_SET`](#0x1_Option_EOPTION_NOT_SET)
+-  [Constants](#@Constants_0)
 -  [Function `none`](#0x1_Option_none)
 -  [Function `some`](#0x1_Option_some)
 -  [Function `is_none`](#0x1_Option_is_none)
@@ -25,7 +24,13 @@ This module defines the Option type and its methods to represent and handle an o
 -  [Function `destroy_with_default`](#0x1_Option_destroy_with_default)
 -  [Function `destroy_some`](#0x1_Option_destroy_some)
 -  [Function `destroy_none`](#0x1_Option_destroy_none)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_Option_Option"></a>
@@ -72,9 +77,12 @@ because it's 0 for "none" or 1 for "some".
 
 </details>
 
-<a name="0x1_Option_EOPTION_IS_SET"></a>
+<a name="@Constants_0"></a>
 
-## Const `EOPTION_IS_SET`
+## Constants
+
+
+<a name="0x1_Option_EOPTION_IS_SET"></a>
 
 The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
 
@@ -85,8 +93,6 @@ The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid stat
 
 
 <a name="0x1_Option_EOPTION_NOT_SET"></a>
-
-## Const `EOPTION_NOT_SET`
 
 The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
 
@@ -793,7 +799,7 @@ Aborts if <code>t</code> holds a value
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

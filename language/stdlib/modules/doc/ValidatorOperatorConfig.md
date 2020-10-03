@@ -6,12 +6,20 @@
 
 
 -  [Resource `ValidatorOperatorConfig`](#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig)
--  [Const `EVALIDATOR_OPERATOR_CONFIG`](#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG)
+-  [Constants](#@Constants_0)
 -  [Function `publish`](#0x1_ValidatorOperatorConfig_publish)
 -  [Function `get_human_name`](#0x1_ValidatorOperatorConfig_get_human_name)
 -  [Function `has_validator_operator_config`](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
--  [Module Specification](#@Module_Specification_0)
-    -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_1)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_2)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_ValidatorOperatorConfig_ValidatorOperatorConfig"></a>
@@ -41,9 +49,12 @@
 
 </details>
 
-<a name="0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG"></a>
+<a name="@Constants_0"></a>
 
-## Const `EVALIDATOR_OPERATOR_CONFIG`
+## Constants
+
+
+<a name="0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG"></a>
 
 The <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></code> was not in the required state
 
@@ -200,13 +211,13 @@ Aborts if there is no ValidatorOperatorConfig resource
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Consistency_Between_Resources_and_Roles_1"></a>
+<a name="@Consistency_Between_Resources_and_Roles_2"></a>
 
 ### Consistency Between Resources and Roles
 

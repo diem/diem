@@ -9,11 +9,7 @@
 -  [Struct `NewEpochEvent`](#0x1_LibraConfig_NewEpochEvent)
 -  [Resource `Configuration`](#0x1_LibraConfig_Configuration)
 -  [Resource `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
--  [Const `ECONFIGURATION`](#0x1_LibraConfig_ECONFIGURATION)
--  [Const `ELIBRA_CONFIG`](#0x1_LibraConfig_ELIBRA_CONFIG)
--  [Const `EMODIFY_CAPABILITY`](#0x1_LibraConfig_EMODIFY_CAPABILITY)
--  [Const `EINVALID_BLOCK_TIME`](#0x1_LibraConfig_EINVALID_BLOCK_TIME)
--  [Const `MAX_U64`](#0x1_LibraConfig_MAX_U64)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LibraConfig_initialize)
 -  [Function `get`](#0x1_LibraConfig_get)
 -  [Function `set`](#0x1_LibraConfig_set)
@@ -23,7 +19,17 @@
 -  [Function `reconfigure`](#0x1_LibraConfig_reconfigure)
 -  [Function `reconfigure_`](#0x1_LibraConfig_reconfigure_)
 -  [Function `emit_genesis_reconfiguration_event`](#0x1_LibraConfig_emit_genesis_reconfiguration_event)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraConfig_LibraConfig"></a>
@@ -146,9 +152,21 @@
 
 </details>
 
-<a name="0x1_LibraConfig_ECONFIGURATION"></a>
+<a name="@Constants_0"></a>
 
-## Const `ECONFIGURATION`
+## Constants
+
+
+<a name="0x1_LibraConfig_MAX_U64"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_LibraConfig_ECONFIGURATION"></a>
 
 The <code><a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a></code> resource is in an invalid state
 
@@ -158,9 +176,17 @@ The <code><a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</
 
 
 
-<a name="0x1_LibraConfig_ELIBRA_CONFIG"></a>
+<a name="0x1_LibraConfig_EINVALID_BLOCK_TIME"></a>
 
-## Const `ELIBRA_CONFIG`
+An invalid block time was encountered.
+
+
+<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraConfig_ELIBRA_CONFIG"></a>
 
 A <code><a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a></code> resource is in an invalid state
 
@@ -172,35 +198,10 @@ A <code><a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a></code> resource
 
 <a name="0x1_LibraConfig_EMODIFY_CAPABILITY"></a>
 
-## Const `EMODIFY_CAPABILITY`
-
 A <code><a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a></code> is in a different state than was expected
 
 
 <pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_LibraConfig_EINVALID_BLOCK_TIME"></a>
-
-## Const `EINVALID_BLOCK_TIME`
-
-An invalid block time was encountered.
-
-
-<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>: u64 = 4;
-</code></pre>
-
-
-
-<a name="0x1_LibraConfig_MAX_U64"></a>
-
-## Const `MAX_U64`
-
-
-
-<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
 </code></pre>
 
 
@@ -784,7 +785,7 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

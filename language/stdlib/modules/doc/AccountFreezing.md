@@ -10,21 +10,27 @@ Module which manages freezing of accounts.
 -  [Resource `FreezeEventsHolder`](#0x1_AccountFreezing_FreezeEventsHolder)
 -  [Struct `FreezeAccountEvent`](#0x1_AccountFreezing_FreezeAccountEvent)
 -  [Struct `UnfreezeAccountEvent`](#0x1_AccountFreezing_UnfreezeAccountEvent)
--  [Const `EFREEZE_EVENTS_HOLDER`](#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER)
--  [Const `EFREEZING_BIT`](#0x1_AccountFreezing_EFREEZING_BIT)
--  [Const `ECANNOT_FREEZE_LIBRA_ROOT`](#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT)
--  [Const `ECANNOT_FREEZE_TC`](#0x1_AccountFreezing_ECANNOT_FREEZE_TC)
--  [Const `EACCOUNT_FROZEN`](#0x1_AccountFreezing_EACCOUNT_FROZEN)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_AccountFreezing_initialize)
 -  [Function `create`](#0x1_AccountFreezing_create)
 -  [Function `freeze_account`](#0x1_AccountFreezing_freeze_account)
 -  [Function `unfreeze_account`](#0x1_AccountFreezing_unfreeze_account)
 -  [Function `account_is_frozen`](#0x1_AccountFreezing_account_is_frozen)
 -  [Function `assert_not_frozen`](#0x1_AccountFreezing_assert_not_frozen)
--  [Module Specification](#@Module_Specification_0)
-    -  [Initialization](#@Initialization_1)
-    -  [Access Control](#@Access_Control_2)
-    -  [Helper Functions](#@Helper_Functions_3)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Access Control](#@Access_Control_3)
+    -  [Helper Functions](#@Helper_Functions_4)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_AccountFreezing_FreezingBit"></a>
@@ -155,33 +161,22 @@ Message for unfreeze account events
 
 </details>
 
-<a name="0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER"></a>
+<a name="@Constants_0"></a>
 
-## Const `EFREEZE_EVENTS_HOLDER`
-
-A property expected of the <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code> resource didn't hold
+## Constants
 
 
-<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER">EFREEZE_EVENTS_HOLDER</a>: u64 = 1;
-</code></pre>
+<a name="0x1_AccountFreezing_EACCOUNT_FROZEN"></a>
+
+The account is frozen
 
 
-
-<a name="0x1_AccountFreezing_EFREEZING_BIT"></a>
-
-## Const `EFREEZING_BIT`
-
-The <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code> resource is in an invalid state
-
-
-<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZING_BIT">EFREEZING_BIT</a>: u64 = 2;
+<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EACCOUNT_FROZEN">EACCOUNT_FROZEN</a>: u64 = 5;
 </code></pre>
 
 
 
 <a name="0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT"></a>
-
-## Const `ECANNOT_FREEZE_LIBRA_ROOT`
 
 An attempt to freeze the Libra Root account was attempted
 
@@ -193,8 +188,6 @@ An attempt to freeze the Libra Root account was attempted
 
 <a name="0x1_AccountFreezing_ECANNOT_FREEZE_TC"></a>
 
-## Const `ECANNOT_FREEZE_TC`
-
 An attempt to freeze the Treasury & Compliance account was attempted
 
 
@@ -203,14 +196,22 @@ An attempt to freeze the Treasury & Compliance account was attempted
 
 
 
-<a name="0x1_AccountFreezing_EACCOUNT_FROZEN"></a>
+<a name="0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER"></a>
 
-## Const `EACCOUNT_FROZEN`
-
-The account is frozen
+A property expected of the <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code> resource didn't hold
 
 
-<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EACCOUNT_FROZEN">EACCOUNT_FROZEN</a>: u64 = 5;
+<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER">EFREEZE_EVENTS_HOLDER</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_EFREEZING_BIT"></a>
+
+The <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code> resource is in an invalid state
+
+
+<pre><code><b>const</b> <a href="AccountFreezing.md#0x1_AccountFreezing_EFREEZING_BIT">EFREEZING_BIT</a>: u64 = 2;
 </code></pre>
 
 
@@ -513,13 +514,13 @@ Assert that an account is not frozen.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Initialization_1"></a>
+<a name="@Initialization_2"></a>
 
 ### Initialization
 
@@ -533,7 +534,7 @@ Assert that an account is not frozen.
 
 
 
-<a name="@Access_Control_2"></a>
+<a name="@Access_Control_3"></a>
 
 ### Access Control
 
@@ -583,7 +584,7 @@ Only (un)freeze functions can change the freezing bits of accounts [[H6]][PERMIS
 
 
 
-<a name="@Helper_Functions_3"></a>
+<a name="@Helper_Functions_4"></a>
 
 ### Helper Functions
 

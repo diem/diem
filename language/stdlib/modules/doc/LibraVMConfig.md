@@ -12,6 +12,13 @@
 -  [Module Specification](#@Module_Specification_0)
 
 
+<pre><code><b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+</code></pre>
+
+
+
 <a name="0x1_LibraVMConfig_LibraVMConfig"></a>
 
 ## Struct `LibraVMConfig`

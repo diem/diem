@@ -37,8 +37,8 @@ use vm::{
 
 use crate::{
     ast::{
-        ConditionKind, GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl,
-        SpecVarDecl, Value,
+        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo,
+        SpecFunDecl, SpecVarDecl, Value,
     },
     symbol::{Symbol, SymbolPool},
     translate::SpecBlockContext,
@@ -1290,7 +1290,8 @@ impl<'env> ModuleEnv<'env> {
         self.env.source_files.name(file_id)
     }
 
-    /// Return the set of ModuleId's that this module depends on (including itself)
+    /// Return the set of language storage ModuleId's that this module's bytecode depends on
+    /// (including itself).
     pub fn get_dependencies(&self) -> Vec<language_storage::ModuleId> {
         let compiled_module = &self.data.module;
         compiled_module
@@ -1298,6 +1299,52 @@ impl<'env> ModuleEnv<'env> {
             .iter()
             .map(|h| compiled_module.module_id_for_handle(h))
             .collect()
+    }
+
+    /// Returns the set of modules this one uses (including itself).
+    pub fn get_used_modules(&self, include_specs: bool) -> BTreeSet<ModuleId> {
+        // Determine modules used in bytecode from the compiled module.
+        let mut usage: BTreeSet<ModuleId> = self
+            .get_dependencies()
+            .into_iter()
+            .map(|storage_id| self.env.to_module_name(&storage_id))
+            .filter_map(|name| self.env.find_module(&name))
+            .map(|env| env.get_id())
+            .filter(|id| *id != self.get_id())
+            .collect();
+        if include_specs {
+            // Add any usage in specs.
+            // We currently do traverse the entire module for this every time this is called.
+            // We may want to cache the result if this function is more frequently called
+            // (currently it is only needed by docgen)
+            let add_usage_of_exp = |usage: &mut BTreeSet<ModuleId>, exp: &Exp| {
+                exp.module_usage(usage);
+                for node_id in exp.node_ids() {
+                    self.get_node_type(node_id).module_usage(usage);
+                    for ty in self.get_node_instantiation(node_id) {
+                        ty.module_usage(usage);
+                    }
+                }
+            };
+            let add_usage_of_spec = |usage: &mut BTreeSet<ModuleId>, spec: &Spec| {
+                for cond in &spec.conditions {
+                    add_usage_of_exp(usage, &cond.exp);
+                }
+            };
+            add_usage_of_spec(&mut usage, self.get_spec());
+            for struct_env in self.get_structs() {
+                add_usage_of_spec(&mut usage, struct_env.get_spec())
+            }
+            for func_env in self.get_functions() {
+                add_usage_of_spec(&mut usage, func_env.get_spec())
+            }
+            for (_, decl) in self.get_spec_funs() {
+                if let Some(def) = &decl.body {
+                    add_usage_of_exp(&mut usage, def);
+                }
+            }
+        }
+        usage
     }
 
     /// Returns documentation associated with this module.

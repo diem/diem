@@ -10,17 +10,7 @@ Module managing dual attestation.
 -  [Resource `Limit`](#0x1_DualAttestation_Limit)
 -  [Struct `ComplianceKeyRotationEvent`](#0x1_DualAttestation_ComplianceKeyRotationEvent)
 -  [Struct `BaseUrlRotationEvent`](#0x1_DualAttestation_BaseUrlRotationEvent)
--  [Const `MAX_U64`](#0x1_DualAttestation_MAX_U64)
--  [Const `ECREDENTIAL`](#0x1_DualAttestation_ECREDENTIAL)
--  [Const `ELIMIT`](#0x1_DualAttestation_ELIMIT)
--  [Const `EINVALID_PUBLIC_KEY`](#0x1_DualAttestation_EINVALID_PUBLIC_KEY)
--  [Const `EMALFORMED_METADATA_SIGNATURE`](#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE)
--  [Const `EINVALID_METADATA_SIGNATURE`](#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE)
--  [Const `EPAYEE_COMPLIANCE_KEY_NOT_SET`](#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET)
--  [Const `INITIAL_DUAL_ATTESTATION_LIMIT`](#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT)
--  [Const `DOMAIN_SEPARATOR`](#0x1_DualAttestation_DOMAIN_SEPARATOR)
--  [Const `ONE_YEAR`](#0x1_DualAttestation_ONE_YEAR)
--  [Const `U64_MAX`](#0x1_DualAttestation_U64_MAX)
+-  [Constants](#@Constants_0)
 -  [Function `publish_credential`](#0x1_DualAttestation_publish_credential)
 -  [Function `rotate_base_url`](#0x1_DualAttestation_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_rotate_compliance_public_key)
@@ -36,10 +26,26 @@ Module managing dual attestation.
 -  [Function `initialize`](#0x1_DualAttestation_initialize)
 -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_get_cur_microlibra_limit)
 -  [Function `set_microlibra_limit`](#0x1_DualAttestation_set_microlibra_limit)
--  [Module Specification](#@Module_Specification_0)
-    -  [Initialization](#@Initialization_1)
-    -  [Helper Functions](#@Helper_Functions_2)
-    -  [Access Control](#@Access_Control_3)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Helper Functions](#@Helper_Functions_3)
+    -  [Access Control](#@Access_Control_4)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="LBR.md#0x1_LBR">0x1::LBR</a>;
+<b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signature.md#0x1_Signature">0x1::Signature</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="VASP.md#0x1_VASP">0x1::VASP</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_DualAttestation_Credential"></a>
@@ -206,9 +212,12 @@ The message sent whenever the base url for a <code><a href="DualAttestation.md#0
 
 </details>
 
-<a name="0x1_DualAttestation_MAX_U64"></a>
+<a name="@Constants_0"></a>
 
-## Const `MAX_U64`
+## Constants
+
+
+<a name="0x1_DualAttestation_MAX_U64"></a>
 
 
 
@@ -217,9 +226,17 @@ The message sent whenever the base url for a <code><a href="DualAttestation.md#0
 
 
 
-<a name="0x1_DualAttestation_ECREDENTIAL"></a>
+<a name="0x1_DualAttestation_DOMAIN_SEPARATOR"></a>
 
-## Const `ECREDENTIAL`
+Suffix of every signed dual attestation message
+
+
+<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DOMAIN_SEPARATOR</a>: vector&lt;u8&gt; = [64, 64, 36, 36, 76, 73, 66, 82, 65, 95, 65, 84, 84, 69, 83, 84, 36, 36, 64, 64];
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_ECREDENTIAL"></a>
 
 A credential is not or already published.
 
@@ -229,45 +246,7 @@ A credential is not or already published.
 
 
 
-<a name="0x1_DualAttestation_ELIMIT"></a>
-
-## Const `ELIMIT`
-
-A limit is not or already published.
-
-
-<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_ELIMIT">ELIMIT</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_DualAttestation_EINVALID_PUBLIC_KEY"></a>
-
-## Const `EINVALID_PUBLIC_KEY`
-
-Cannot parse this as an ed25519 public key
-
-
-<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">EINVALID_PUBLIC_KEY</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE"></a>
-
-## Const `EMALFORMED_METADATA_SIGNATURE`
-
-Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
-
-
-<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE">EMALFORMED_METADATA_SIGNATURE</a>: u64 = 3;
-</code></pre>
-
-
-
 <a name="0x1_DualAttestation_EINVALID_METADATA_SIGNATURE"></a>
-
-## Const `EINVALID_METADATA_SIGNATURE`
 
 Signature does not match message and public key
 
@@ -277,9 +256,37 @@ Signature does not match message and public key
 
 
 
-<a name="0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET"></a>
+<a name="0x1_DualAttestation_EINVALID_PUBLIC_KEY"></a>
 
-## Const `EPAYEE_COMPLIANCE_KEY_NOT_SET`
+Cannot parse this as an ed25519 public key
+
+
+<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">EINVALID_PUBLIC_KEY</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_ELIMIT"></a>
+
+A limit is not or already published.
+
+
+<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_ELIMIT">ELIMIT</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE"></a>
+
+Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
+
+
+<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE">EMALFORMED_METADATA_SIGNATURE</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET"></a>
 
 The recipient of a dual attestation payment needs to set a compliance public key
 
@@ -291,8 +298,6 @@ The recipient of a dual attestation payment needs to set a compliance public key
 
 <a name="0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT"></a>
 
-## Const `INITIAL_DUAL_ATTESTATION_LIMIT`
-
 Value of the dual attestation limit at genesis
 
 
@@ -301,21 +306,7 @@ Value of the dual attestation limit at genesis
 
 
 
-<a name="0x1_DualAttestation_DOMAIN_SEPARATOR"></a>
-
-## Const `DOMAIN_SEPARATOR`
-
-Suffix of every signed dual attestation message
-
-
-<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DOMAIN_SEPARATOR</a>: vector&lt;u8&gt; = [64, 64, 36, 36, 76, 73, 66, 82, 65, 95, 65, 84, 84, 69, 83, 84, 36, 36, 64, 64];
-</code></pre>
-
-
-
 <a name="0x1_DualAttestation_ONE_YEAR"></a>
-
-## Const `ONE_YEAR`
 
 A year in microseconds
 
@@ -326,8 +317,6 @@ A year in microseconds
 
 
 <a name="0x1_DualAttestation_U64_MAX"></a>
-
-## Const `U64_MAX`
 
 
 
@@ -1307,13 +1296,13 @@ The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Initialization_1"></a>
+<a name="@Initialization_2"></a>
 
 ### Initialization
 
@@ -1325,7 +1314,7 @@ The Limit resource should be published after genesis
 
 
 
-<a name="@Helper_Functions_2"></a>
+<a name="@Helper_Functions_3"></a>
 
 ### Helper Functions
 
@@ -1355,7 +1344,7 @@ Mirrors <code><a href="DualAttestation.md#0x1_DualAttestation_get_cur_microlibra
 
 
 
-<a name="@Access_Control_3"></a>
+<a name="@Access_Control_4"></a>
 
 ### Access Control
 

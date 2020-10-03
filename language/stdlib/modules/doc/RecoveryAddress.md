@@ -6,21 +6,25 @@
 
 
 -  [Resource `RecoveryAddress`](#0x1_RecoveryAddress_RecoveryAddress)
--  [Const `ENOT_A_VASP`](#0x1_RecoveryAddress_ENOT_A_VASP)
--  [Const `EKEY_ROTATION_DEPENDENCY_CYCLE`](#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE)
--  [Const `ECANNOT_ROTATE_KEY`](#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY)
--  [Const `EINVALID_KEY_ROTATION_DELEGATION`](#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION)
--  [Const `EACCOUNT_NOT_RECOVERABLE`](#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE)
--  [Const `ERECOVERY_ADDRESS`](#0x1_RecoveryAddress_ERECOVERY_ADDRESS)
+-  [Constants](#@Constants_0)
 -  [Function `publish`](#0x1_RecoveryAddress_publish)
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
--  [Module Specification](#@Module_Specification_0)
-    -  [Module specifications](#@Module_specifications_1)
-        -  [RecoveryAddress has its own KeyRotationCapability](#@RecoveryAddress_has_its_own_KeyRotationCapability_2)
-        -  [RecoveryAddress resource stays](#@RecoveryAddress_resource_stays_3)
-        -  [RecoveryAddress remains same](#@RecoveryAddress_remains_same_4)
-        -  [Only VASPs can be RecoveryAddress](#@Only_VASPs_can_be_RecoveryAddress_5)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Module specifications](#@Module_specifications_2)
+        -  [RecoveryAddress has its own KeyRotationCapability](#@RecoveryAddress_has_its_own_KeyRotationCapability_3)
+        -  [RecoveryAddress resource stays](#@RecoveryAddress_resource_stays_4)
+        -  [RecoveryAddress remains same](#@RecoveryAddress_remains_same_5)
+        -  [Only VASPs can be RecoveryAddress](#@Only_VASPs_can_be_RecoveryAddress_6)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="VASP.md#0x1_VASP">0x1::VASP</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_RecoveryAddress_RecoveryAddress"></a>
@@ -58,9 +62,12 @@ recover one of accounts in <code>rotation_caps</code> arises.
 
 </details>
 
-<a name="0x1_RecoveryAddress_ENOT_A_VASP"></a>
+<a name="@Constants_0"></a>
 
-## Const `ENOT_A_VASP`
+## Constants
+
+
+<a name="0x1_RecoveryAddress_ENOT_A_VASP"></a>
 
 Only VASPs can create a recovery address
 
@@ -70,21 +77,17 @@ Only VASPs can create a recovery address
 
 
 
-<a name="0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE"></a>
+<a name="0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE"></a>
 
-## Const `EKEY_ROTATION_DEPENDENCY_CYCLE`
-
-A cycle would have been created would be created
+The account address couldn't be found in the account recovery resource
 
 
-<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">EKEY_ROTATION_DEPENDENCY_CYCLE</a>: u64 = 1;
+<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">EACCOUNT_NOT_RECOVERABLE</a>: u64 = 4;
 </code></pre>
 
 
 
 <a name="0x1_RecoveryAddress_ECANNOT_ROTATE_KEY"></a>
-
-## Const `ECANNOT_ROTATE_KEY`
 
 The signer doesn't have the appropriate privileges to rotate the account's key
 
@@ -96,8 +99,6 @@ The signer doesn't have the appropriate privileges to rotate the account's key
 
 <a name="0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION"></a>
 
-## Const `EINVALID_KEY_ROTATION_DELEGATION`
-
 Only accounts belonging to the same VASP can delegate their key rotation capability
 
 
@@ -106,21 +107,17 @@ Only accounts belonging to the same VASP can delegate their key rotation capabil
 
 
 
-<a name="0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE"></a>
+<a name="0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE"></a>
 
-## Const `EACCOUNT_NOT_RECOVERABLE`
-
-The account address couldn't be found in the account recovery resource
+A cycle would have been created would be created
 
 
-<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">EACCOUNT_NOT_RECOVERABLE</a>: u64 = 4;
+<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">EKEY_ROTATION_DEPENDENCY_CYCLE</a>: u64 = 1;
 </code></pre>
 
 
 
 <a name="0x1_RecoveryAddress_ERECOVERY_ADDRESS"></a>
-
-## Const `ERECOVERY_ADDRESS`
 
 A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource was in an unexpected state
 
@@ -420,13 +417,13 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
 
-<a name="@Module_specifications_1"></a>
+<a name="@Module_specifications_2"></a>
 
 ### Module specifications
 
@@ -480,7 +477,7 @@ Returns true if <code>recovery_address</code> holds the
 
 
 
-<a name="@RecoveryAddress_has_its_own_KeyRotationCapability_2"></a>
+<a name="@RecoveryAddress_has_its_own_KeyRotationCapability_3"></a>
 
 #### RecoveryAddress has its own KeyRotationCapability
 
@@ -494,7 +491,7 @@ Returns true if <code>recovery_address</code> holds the
 
 
 
-<a name="@RecoveryAddress_resource_stays_3"></a>
+<a name="@RecoveryAddress_resource_stays_4"></a>
 
 #### RecoveryAddress resource stays
 
@@ -507,7 +504,7 @@ Returns true if <code>recovery_address</code> holds the
 
 
 
-<a name="@RecoveryAddress_remains_same_4"></a>
+<a name="@RecoveryAddress_remains_same_5"></a>
 
 #### RecoveryAddress remains same
 
@@ -522,7 +519,7 @@ Returns true if <code>recovery_address</code> holds the
 
 
 
-<a name="@Only_VASPs_can_be_RecoveryAddress_5"></a>
+<a name="@Only_VASPs_can_be_RecoveryAddress_6"></a>
 
 #### Only VASPs can be RecoveryAddress
 

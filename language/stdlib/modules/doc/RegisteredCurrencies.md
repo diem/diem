@@ -7,9 +7,18 @@ Module managing the registered currencies in the Libra framework.
 
 
 -  [Struct `RegisteredCurrencies`](#0x1_RegisteredCurrencies_RegisteredCurrencies)
--  [Const `ECURRENCY_CODE_ALREADY_TAKEN`](#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
 -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_RegisteredCurrencies_RegisteredCurrencies"></a>
@@ -42,9 +51,12 @@ currency names.
 
 </details>
 
-<a name="0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN"></a>
+<a name="@Constants_0"></a>
 
-## Const `ECURRENCY_CODE_ALREADY_TAKEN`
+## Constants
+
+
+<a name="0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN"></a>
 
 Attempted to add a currency code that is already in use
 

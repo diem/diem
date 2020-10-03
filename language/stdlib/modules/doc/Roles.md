@@ -16,22 +16,7 @@ checks. Each role comes with a default privilege.
 
 
 -  [Resource `RoleId`](#0x1_Roles_RoleId)
--  [Const `EROLE_ID`](#0x1_Roles_EROLE_ID)
--  [Const `ELIBRA_ROOT`](#0x1_Roles_ELIBRA_ROOT)
--  [Const `ETREASURY_COMPLIANCE`](#0x1_Roles_ETREASURY_COMPLIANCE)
--  [Const `EPARENT_VASP`](#0x1_Roles_EPARENT_VASP)
--  [Const `EPARENT_VASP_OR_CHILD_VASP`](#0x1_Roles_EPARENT_VASP_OR_CHILD_VASP)
--  [Const `EPARENT_VASP_OR_DESIGNATED_DEALER`](#0x1_Roles_EPARENT_VASP_OR_DESIGNATED_DEALER)
--  [Const `EDESIGNATED_DEALER`](#0x1_Roles_EDESIGNATED_DEALER)
--  [Const `EVALIDATOR`](#0x1_Roles_EVALIDATOR)
--  [Const `EVALIDATOR_OPERATOR`](#0x1_Roles_EVALIDATOR_OPERATOR)
--  [Const `LIBRA_ROOT_ROLE_ID`](#0x1_Roles_LIBRA_ROOT_ROLE_ID)
--  [Const `TREASURY_COMPLIANCE_ROLE_ID`](#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID)
--  [Const `DESIGNATED_DEALER_ROLE_ID`](#0x1_Roles_DESIGNATED_DEALER_ROLE_ID)
--  [Const `VALIDATOR_ROLE_ID`](#0x1_Roles_VALIDATOR_ROLE_ID)
--  [Const `VALIDATOR_OPERATOR_ROLE_ID`](#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID)
--  [Const `PARENT_VASP_ROLE_ID`](#0x1_Roles_PARENT_VASP_ROLE_ID)
--  [Const `CHILD_VASP_ROLE_ID`](#0x1_Roles_CHILD_VASP_ROLE_ID)
+-  [Constants](#@Constants_0)
 -  [Function `grant_libra_root_role`](#0x1_Roles_grant_libra_root_role)
 -  [Function `grant_treasury_compliance_role`](#0x1_Roles_grant_treasury_compliance_role)
 -  [Function `new_designated_dealer_role`](#0x1_Roles_new_designated_dealer_role)
@@ -58,9 +43,17 @@ checks. Each role comes with a default privilege.
 -  [Function `assert_validator_operator`](#0x1_Roles_assert_validator_operator)
 -  [Function `assert_parent_vasp_or_designated_dealer`](#0x1_Roles_assert_parent_vasp_or_designated_dealer)
 -  [Function `assert_parent_vasp_or_child_vasp`](#0x1_Roles_assert_parent_vasp_or_child_vasp)
-        -  [Helper Functions and Schemas](#@Helper_Functions_and_Schemas_0)
-        -  [Persistence of Roles](#@Persistence_of_Roles_1)
-        -  [Conditions from Requirements](#@Conditions_from_Requirements_2)
+        -  [Helper Functions and Schemas](#@Helper_Functions_and_Schemas_1)
+        -  [Persistence of Roles](#@Persistence_of_Roles_2)
+        -  [Conditions from Requirements](#@Conditions_from_Requirements_3)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_Roles_RoleId"></a>
@@ -92,21 +85,12 @@ to an account as a top-level resource, and is otherwise immovable.
 
 </details>
 
-<a name="0x1_Roles_EROLE_ID"></a>
+<a name="@Constants_0"></a>
 
-## Const `EROLE_ID`
-
-A <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> resource was in an unexpected state
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_EROLE_ID">EROLE_ID</a>: u64 = 0;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_Roles_ELIBRA_ROOT"></a>
-
-## Const `ELIBRA_ROOT`
 
 The signer didn't have the required Libra Root role
 
@@ -118,8 +102,6 @@ The signer didn't have the required Libra Root role
 
 <a name="0x1_Roles_ETREASURY_COMPLIANCE"></a>
 
-## Const `ETREASURY_COMPLIANCE`
-
 The signer didn't have the required Treasury & Compliance role
 
 
@@ -128,9 +110,35 @@ The signer didn't have the required Treasury & Compliance role
 
 
 
-<a name="0x1_Roles_EPARENT_VASP"></a>
+<a name="0x1_Roles_CHILD_VASP_ROLE_ID"></a>
 
-## Const `EPARENT_VASP`
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Roles_DESIGNATED_DEALER_ROLE_ID"></a>
+
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EDESIGNATED_DEALER"></a>
+
+The signer didn't have the required Designated Dealer role
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_EDESIGNATED_DEALER">EDESIGNATED_DEALER</a>: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EPARENT_VASP"></a>
 
 The signer didn't have the required Parent VASP role
 
@@ -142,8 +150,6 @@ The signer didn't have the required Parent VASP role
 
 <a name="0x1_Roles_EPARENT_VASP_OR_CHILD_VASP"></a>
 
-## Const `EPARENT_VASP_OR_CHILD_VASP`
-
 The signer didn't have the required ParentVASP or ChildVASP role
 
 
@@ -154,8 +160,6 @@ The signer didn't have the required ParentVASP or ChildVASP role
 
 <a name="0x1_Roles_EPARENT_VASP_OR_DESIGNATED_DEALER"></a>
 
-## Const `EPARENT_VASP_OR_DESIGNATED_DEALER`
-
 The signer didn't have the required Parent VASP or Designated Dealer role
 
 
@@ -164,21 +168,17 @@ The signer didn't have the required Parent VASP or Designated Dealer role
 
 
 
-<a name="0x1_Roles_EDESIGNATED_DEALER"></a>
+<a name="0x1_Roles_EROLE_ID"></a>
 
-## Const `EDESIGNATED_DEALER`
-
-The signer didn't have the required Designated Dealer role
+A <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> resource was in an unexpected state
 
 
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_EDESIGNATED_DEALER">EDESIGNATED_DEALER</a>: u64 = 6;
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_EROLE_ID">EROLE_ID</a>: u64 = 0;
 </code></pre>
 
 
 
 <a name="0x1_Roles_EVALIDATOR"></a>
-
-## Const `EVALIDATOR`
 
 The signer didn't have the required Validator role
 
@@ -190,8 +190,6 @@ The signer didn't have the required Validator role
 
 <a name="0x1_Roles_EVALIDATOR_OPERATOR"></a>
 
-## Const `EVALIDATOR_OPERATOR`
-
 The signer didn't have the required Validator Operator role
 
 
@@ -202,8 +200,6 @@ The signer didn't have the required Validator Operator role
 
 <a name="0x1_Roles_LIBRA_ROOT_ROLE_ID"></a>
 
-## Const `LIBRA_ROOT_ROLE_ID`
-
 
 
 <pre><code><b>const</b> <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>: u64 = 0;
@@ -211,53 +207,7 @@ The signer didn't have the required Validator Operator role
 
 
 
-<a name="0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID"></a>
-
-## Const `TREASURY_COMPLIANCE_ROLE_ID`
-
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_Roles_DESIGNATED_DEALER_ROLE_ID"></a>
-
-## Const `DESIGNATED_DEALER_ROLE_ID`
-
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_Roles_VALIDATOR_ROLE_ID"></a>
-
-## Const `VALIDATOR_ROLE_ID`
-
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>: u64 = 3;
-</code></pre>
-
-
-
-<a name="0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID"></a>
-
-## Const `VALIDATOR_OPERATOR_ROLE_ID`
-
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>: u64 = 4;
-</code></pre>
-
-
-
 <a name="0x1_Roles_PARENT_VASP_ROLE_ID"></a>
-
-## Const `PARENT_VASP_ROLE_ID`
 
 
 
@@ -266,13 +216,29 @@ The signer didn't have the required Validator Operator role
 
 
 
-<a name="0x1_Roles_CHILD_VASP_ROLE_ID"></a>
-
-## Const `CHILD_VASP_ROLE_ID`
+<a name="0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID"></a>
 
 
 
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>: u64 = 6;
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID"></a>
+
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Roles_VALIDATOR_ROLE_ID"></a>
+
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>: u64 = 3;
 </code></pre>
 
 
@@ -1260,7 +1226,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 
-<a name="@Helper_Functions_and_Schemas_0"></a>
+<a name="@Helper_Functions_and_Schemas_1"></a>
 
 #### Helper Functions and Schemas
 
@@ -1453,7 +1419,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 
-<a name="@Persistence_of_Roles_1"></a>
+<a name="@Persistence_of_Roles_2"></a>
 
 #### Persistence of Roles
 
@@ -1468,7 +1434,7 @@ will remain an account with role <code>R</code> for all time.
 
 
 
-<a name="@Conditions_from_Requirements_2"></a>
+<a name="@Conditions_from_Requirements_3"></a>
 
 #### Conditions from Requirements
 

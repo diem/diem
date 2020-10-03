@@ -20,17 +20,7 @@ minting and burning of coins.
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_LibraTest_ToLBRExchangeRateUpdateEvent)
 -  [Resource `CurrencyInfo`](#0x1_LibraTest_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_LibraTest_Preburn)
--  [Const `ENOT_GENESIS`](#0x1_LibraTest_ENOT_GENESIS)
--  [Const `EINVALID_SINGLETON_ADDRESS`](#0x1_LibraTest_EINVALID_SINGLETON_ADDRESS)
--  [Const `ENOT_TREASURY_COMPLIANCE`](#0x1_LibraTest_ENOT_TREASURY_COMPLIANCE)
--  [Const `EMINTING_NOT_ALLOWED`](#0x1_LibraTest_EMINTING_NOT_ALLOWED)
--  [Const `EIS_SYNTHETIC_CURRENCY`](#0x1_LibraTest_EIS_SYNTHETIC_CURRENCY)
--  [Const `EAMOUNT_EXCEEDS_COIN_VALUE`](#0x1_LibraTest_EAMOUNT_EXCEEDS_COIN_VALUE)
--  [Const `EDESTRUCTION_OF_NONZERO_COIN`](#0x1_LibraTest_EDESTRUCTION_OF_NONZERO_COIN)
--  [Const `ENOT_A_REGISTERED_CURRENCY`](#0x1_LibraTest_ENOT_A_REGISTERED_CURRENCY)
--  [Const `ENOT_AN_SCS_CURRENCY`](#0x1_LibraTest_ENOT_AN_SCS_CURRENCY)
--  [Const `EDOES_NOT_HAVE_LIBRA_ROOT_ROLE`](#0x1_LibraTest_EDOES_NOT_HAVE_LIBRA_ROOT_ROLE)
--  [Const `EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE`](#0x1_LibraTest_EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LibraTest_initialize)
 -  [Function `publish_burn_capability`](#0x1_LibraTest_publish_burn_capability)
 -  [Function `mint`](#0x1_LibraTest_mint)
@@ -70,10 +60,21 @@ minting and burning of coins.
 -  [Function `update_minting_ability`](#0x1_LibraTest_update_minting_ability)
 -  [Function `assert_is_currency`](#0x1_LibraTest_assert_is_currency)
 -  [Function `assert_is_SCS_currency`](#0x1_LibraTest_assert_is_SCS_currency)
--  [Module Specification](#@Module_Specification_0)
-    -  [Module Specification](#@Module_Specification_1)
-        -  [Minting](#@Minting_2)
-        -  [Conservation of currency](#@Conservation_of_currency_3)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Module Specification](#@Module_Specification_2)
+        -  [Minting](#@Minting_3)
+        -  [Conservation of currency](#@Conservation_of_currency_4)
+
+
+<pre><code><b>use</b> <a href="">0x1::CoreAddresses</a>;
+<b>use</b> <a href="">0x1::Event</a>;
+<b>use</b> <a href="">0x1::FixedPoint32</a>;
+<b>use</b> <a href="">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="">0x1::RegisteredCurrencies</a>;
+<b>use</b> <a href="">0x1::Roles</a>;
+<b>use</b> <a href="">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraTest_RegisterNewCurrency"></a>
@@ -578,9 +579,12 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 </details>
 
-<a name="0x1_LibraTest_ENOT_GENESIS"></a>
+<a name="@Constants_0"></a>
 
-## Const `ENOT_GENESIS`
+## Constants
+
+
+<a name="0x1_LibraTest_ENOT_GENESIS"></a>
 
 
 
@@ -589,53 +593,7 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 
 
-<a name="0x1_LibraTest_EINVALID_SINGLETON_ADDRESS"></a>
-
-## Const `EINVALID_SINGLETON_ADDRESS`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EINVALID_SINGLETON_ADDRESS">EINVALID_SINGLETON_ADDRESS</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_LibraTest_ENOT_TREASURY_COMPLIANCE"></a>
-
-## Const `ENOT_TREASURY_COMPLIANCE`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_TREASURY_COMPLIANCE">ENOT_TREASURY_COMPLIANCE</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_LibraTest_EMINTING_NOT_ALLOWED"></a>
-
-## Const `EMINTING_NOT_ALLOWED`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EMINTING_NOT_ALLOWED">EMINTING_NOT_ALLOWED</a>: u64 = 3;
-</code></pre>
-
-
-
-<a name="0x1_LibraTest_EIS_SYNTHETIC_CURRENCY"></a>
-
-## Const `EIS_SYNTHETIC_CURRENCY`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EIS_SYNTHETIC_CURRENCY">EIS_SYNTHETIC_CURRENCY</a>: u64 = 4;
-</code></pre>
-
-
-
 <a name="0x1_LibraTest_EAMOUNT_EXCEEDS_COIN_VALUE"></a>
-
-## Const `EAMOUNT_EXCEEDS_COIN_VALUE`
 
 
 
@@ -646,8 +604,6 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 <a name="0x1_LibraTest_EDESTRUCTION_OF_NONZERO_COIN"></a>
 
-## Const `EDESTRUCTION_OF_NONZERO_COIN`
-
 
 
 <pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EDESTRUCTION_OF_NONZERO_COIN">EDESTRUCTION_OF_NONZERO_COIN</a>: u64 = 6;
@@ -655,31 +611,7 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 
 
-<a name="0x1_LibraTest_ENOT_A_REGISTERED_CURRENCY"></a>
-
-## Const `ENOT_A_REGISTERED_CURRENCY`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_A_REGISTERED_CURRENCY">ENOT_A_REGISTERED_CURRENCY</a>: u64 = 7;
-</code></pre>
-
-
-
-<a name="0x1_LibraTest_ENOT_AN_SCS_CURRENCY"></a>
-
-## Const `ENOT_AN_SCS_CURRENCY`
-
-
-
-<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_AN_SCS_CURRENCY">ENOT_AN_SCS_CURRENCY</a>: u64 = 8;
-</code></pre>
-
-
-
 <a name="0x1_LibraTest_EDOES_NOT_HAVE_LIBRA_ROOT_ROLE"></a>
-
-## Const `EDOES_NOT_HAVE_LIBRA_ROOT_ROLE`
 
 
 
@@ -690,11 +622,63 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 <a name="0x1_LibraTest_EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE"></a>
 
-## Const `EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE`
-
 
 
 <pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE">EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE</a>: u64 = 10;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_EINVALID_SINGLETON_ADDRESS"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EINVALID_SINGLETON_ADDRESS">EINVALID_SINGLETON_ADDRESS</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_EIS_SYNTHETIC_CURRENCY"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EIS_SYNTHETIC_CURRENCY">EIS_SYNTHETIC_CURRENCY</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_EMINTING_NOT_ALLOWED"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_EMINTING_NOT_ALLOWED">EMINTING_NOT_ALLOWED</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_ENOT_AN_SCS_CURRENCY"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_AN_SCS_CURRENCY">ENOT_AN_SCS_CURRENCY</a>: u64 = 8;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_ENOT_A_REGISTERED_CURRENCY"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_A_REGISTERED_CURRENCY">ENOT_A_REGISTERED_CURRENCY</a>: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_LibraTest_ENOT_TREASURY_COMPLIANCE"></a>
+
+
+
+<pre><code><b>const</b> <a href="LibraTest.md#0x1_LibraTest_ENOT_TREASURY_COMPLIANCE">ENOT_TREASURY_COMPLIANCE</a>: u64 = 2;
 </code></pre>
 
 
@@ -2283,14 +2267,14 @@ Asserts that <code>CoinType</code> is a registered currency.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 **************** MODULE SPECIFICATION ****************
 
 
-<a name="@Module_Specification_1"></a>
+<a name="@Module_Specification_2"></a>
 
 ### Module Specification
 
@@ -2362,7 +2346,7 @@ SCS coins
 
 
 
-<a name="@Minting_2"></a>
+<a name="@Minting_3"></a>
 
 #### Minting
 
@@ -2409,7 +2393,7 @@ there are no published Mint Capabilities. (This is the state after register_SCS_
 
 
 
-<a name="@Conservation_of_currency_3"></a>
+<a name="@Conservation_of_currency_4"></a>
 
 #### Conservation of currency
 

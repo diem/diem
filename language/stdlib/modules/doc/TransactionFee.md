@@ -6,14 +6,25 @@
 
 
 -  [Resource `TransactionFee`](#0x1_TransactionFee_TransactionFee)
--  [Const `ETRANSACTION_FEE`](#0x1_TransactionFee_ETRANSACTION_FEE)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_TransactionFee_initialize)
 -  [Function `is_coin_initialized`](#0x1_TransactionFee_is_coin_initialized)
 -  [Function `is_initialized`](#0x1_TransactionFee_is_initialized)
 -  [Function `add_txn_fee_currency`](#0x1_TransactionFee_add_txn_fee_currency)
 -  [Function `pay_fee`](#0x1_TransactionFee_pay_fee)
 -  [Function `burn_fees`](#0x1_TransactionFee_burn_fees)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="Coin1.md#0x1_Coin1">0x1::Coin1</a>;
+<b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LBR.md#0x1_LBR">0x1::LBR</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+</code></pre>
+
 
 
 <a name="0x1_TransactionFee_TransactionFee"></a>
@@ -51,9 +62,12 @@ fiat <code>CoinType</code> that can be collected as a transaction fee.
 
 </details>
 
-<a name="0x1_TransactionFee_ETRANSACTION_FEE"></a>
+<a name="@Constants_0"></a>
 
-## Const `ETRANSACTION_FEE`
+## Constants
+
+
+<a name="0x1_TransactionFee_ETRANSACTION_FEE"></a>
 
 A <code><a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a></code> resource is not in the required state
 
@@ -390,7 +404,7 @@ tc_account retrieves BurnCapability [[H2]][PERMISSION]. BurnCapability is not tr
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

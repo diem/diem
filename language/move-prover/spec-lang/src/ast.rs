@@ -323,6 +323,25 @@ impl Exp {
         visitor(self);
     }
 
+    /// Returns the set of module ids used by this expression.
+    pub fn module_usage(&self, usage: &mut BTreeSet<ModuleId>) {
+        self.visit(&mut |e| match e {
+            Exp::Call(_, oper, _) => {
+                use Operation::*;
+                match oper {
+                    Function(mid, ..) | Pack(mid, ..) | Select(mid, ..) | UpdateField(mid, ..) => {
+                        usage.insert(*mid);
+                    }
+                    _ => {}
+                }
+            }
+            Exp::SpecVar(_, mid, ..) => {
+                usage.insert(*mid);
+            }
+            _ => {}
+        });
+    }
+
     /// Optionally extracts condition and abort code from the special `Operation::CondWithAbortCode`.
     pub fn extract_cond_and_aborts_code(&self) -> (&Exp, Option<&Exp>) {
         match self {

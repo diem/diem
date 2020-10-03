@@ -19,20 +19,7 @@ minting and burning of coins.
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
 -  [Resource `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_Libra_Preburn)
--  [Const `MAX_SCALING_FACTOR`](#0x1_Libra_MAX_SCALING_FACTOR)
--  [Const `MAX_U64`](#0x1_Libra_MAX_U64)
--  [Const `MAX_U128`](#0x1_Libra_MAX_U128)
--  [Const `EBURN_CAPABILITY`](#0x1_Libra_EBURN_CAPABILITY)
--  [Const `ECURRENCY_INFO`](#0x1_Libra_ECURRENCY_INFO)
--  [Const `EPREBURN`](#0x1_Libra_EPREBURN)
--  [Const `EPREBURN_OCCUPIED`](#0x1_Libra_EPREBURN_OCCUPIED)
--  [Const `EPREBURN_EMPTY`](#0x1_Libra_EPREBURN_EMPTY)
--  [Const `EMINTING_NOT_ALLOWED`](#0x1_Libra_EMINTING_NOT_ALLOWED)
--  [Const `EIS_SYNTHETIC_CURRENCY`](#0x1_Libra_EIS_SYNTHETIC_CURRENCY)
--  [Const `ECOIN`](#0x1_Libra_ECOIN)
--  [Const `EDESTRUCTION_OF_NONZERO_COIN`](#0x1_Libra_EDESTRUCTION_OF_NONZERO_COIN)
--  [Const `EMINT_CAPABILITY`](#0x1_Libra_EMINT_CAPABILITY)
--  [Const `EAMOUNT_EXCEEDS_COIN_VALUE`](#0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_Libra_initialize)
 -  [Function `publish_burn_capability`](#0x1_Libra_publish_burn_capability)
 -  [Function `mint`](#0x1_Libra_mint)
@@ -73,12 +60,24 @@ minting and burning of coins.
 -  [Function `update_minting_ability`](#0x1_Libra_update_minting_ability)
 -  [Function `assert_is_currency`](#0x1_Libra_assert_is_currency)
 -  [Function `assert_is_SCS_currency`](#0x1_Libra_assert_is_SCS_currency)
--  [Module Specification](#@Module_Specification_0)
-    -  [Module Specification](#@Module_Specification_1)
-        -  [Conservation of currency](#@Conservation_of_currency_2)
-        -  [Minting](#@Minting_3)
-        -  [Burning](#@Burning_4)
-        -  [Preburning](#@Preburning_5)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Module Specification](#@Module_Specification_2)
+        -  [Conservation of currency](#@Conservation_of_currency_3)
+        -  [Minting](#@Minting_4)
+        -  [Burning](#@Burning_5)
+        -  [Preburning](#@Preburning_6)
+
+
+<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_Libra_Libra"></a>
@@ -550,20 +549,12 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 </details>
 
-<a name="0x1_Libra_MAX_SCALING_FACTOR"></a>
+<a name="@Constants_0"></a>
 
-## Const `MAX_SCALING_FACTOR`
-
-
-
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_SCALING_FACTOR">MAX_SCALING_FACTOR</a>: u64 = 10000000000;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_Libra_MAX_U64"></a>
-
-## Const `MAX_U64`
 
 TODO(wrwg): This should be provided somewhere centrally in the framework.
 
@@ -575,8 +566,6 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 <a name="0x1_Libra_MAX_U128"></a>
 
-## Const `MAX_U128`
-
 
 
 <pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_U128">MAX_U128</a>: u128 = 340282366920938463463374607431768211455;
@@ -584,21 +573,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 
 
-<a name="0x1_Libra_EBURN_CAPABILITY"></a>
-
-## Const `EBURN_CAPABILITY`
-
-A <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></code> resource is in an unexpected state.
-
-
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EBURN_CAPABILITY">EBURN_CAPABILITY</a>: u64 = 0;
-</code></pre>
-
-
-
 <a name="0x1_Libra_ECURRENCY_INFO"></a>
-
-## Const `ECURRENCY_INFO`
 
 A property expected of a <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> resource didn't hold
 
@@ -608,69 +583,27 @@ A property expected of a <code><a href="Libra.md#0x1_Libra_CurrencyInfo">Currenc
 
 
 
-<a name="0x1_Libra_EPREBURN"></a>
+<a name="0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE"></a>
 
-## Const `EPREBURN`
-
-A property expected of a <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource didn't hold
+A withdrawal greater than the value of the coin was attempted.
 
 
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN">EPREBURN</a>: u64 = 2;
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE">EAMOUNT_EXCEEDS_COIN_VALUE</a>: u64 = 11;
 </code></pre>
 
 
 
-<a name="0x1_Libra_EPREBURN_OCCUPIED"></a>
+<a name="0x1_Libra_EBURN_CAPABILITY"></a>
 
-## Const `EPREBURN_OCCUPIED`
-
-The preburn slot is already occupied with coins to be burned.
+A <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></code> resource is in an unexpected state.
 
 
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN_OCCUPIED">EPREBURN_OCCUPIED</a>: u64 = 3;
-</code></pre>
-
-
-
-<a name="0x1_Libra_EPREBURN_EMPTY"></a>
-
-## Const `EPREBURN_EMPTY`
-
-A burn was attempted on <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource that cointained no coins
-
-
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN_EMPTY">EPREBURN_EMPTY</a>: u64 = 4;
-</code></pre>
-
-
-
-<a name="0x1_Libra_EMINTING_NOT_ALLOWED"></a>
-
-## Const `EMINTING_NOT_ALLOWED`
-
-Minting is not allowed for the specified currency
-
-
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EMINTING_NOT_ALLOWED">EMINTING_NOT_ALLOWED</a>: u64 = 5;
-</code></pre>
-
-
-
-<a name="0x1_Libra_EIS_SYNTHETIC_CURRENCY"></a>
-
-## Const `EIS_SYNTHETIC_CURRENCY`
-
-The currency specified is a synthetic (non-fiat) currency
-
-
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EIS_SYNTHETIC_CURRENCY">EIS_SYNTHETIC_CURRENCY</a>: u64 = 6;
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EBURN_CAPABILITY">EBURN_CAPABILITY</a>: u64 = 0;
 </code></pre>
 
 
 
 <a name="0x1_Libra_ECOIN"></a>
-
-## Const `ECOIN`
 
 A property expected of the coin provided didn't hold
 
@@ -682,8 +615,6 @@ A property expected of the coin provided didn't hold
 
 <a name="0x1_Libra_EDESTRUCTION_OF_NONZERO_COIN"></a>
 
-## Const `EDESTRUCTION_OF_NONZERO_COIN`
-
 The destruction of a non-zero coin was attempted. Non-zero coins must be burned.
 
 
@@ -692,9 +623,27 @@ The destruction of a non-zero coin was attempted. Non-zero coins must be burned.
 
 
 
-<a name="0x1_Libra_EMINT_CAPABILITY"></a>
+<a name="0x1_Libra_EIS_SYNTHETIC_CURRENCY"></a>
 
-## Const `EMINT_CAPABILITY`
+The currency specified is a synthetic (non-fiat) currency
+
+
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EIS_SYNTHETIC_CURRENCY">EIS_SYNTHETIC_CURRENCY</a>: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EMINTING_NOT_ALLOWED"></a>
+
+Minting is not allowed for the specified currency
+
+
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EMINTING_NOT_ALLOWED">EMINTING_NOT_ALLOWED</a>: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EMINT_CAPABILITY"></a>
 
 A property expected of <code><a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a></code> didn't hold
 
@@ -704,14 +653,41 @@ A property expected of <code><a href="Libra.md#0x1_Libra_MintCapability">MintCap
 
 
 
-<a name="0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE"></a>
+<a name="0x1_Libra_EPREBURN"></a>
 
-## Const `EAMOUNT_EXCEEDS_COIN_VALUE`
-
-A withdrawal greater than the value of the coin was attempted.
+A property expected of a <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource didn't hold
 
 
-<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE">EAMOUNT_EXCEEDS_COIN_VALUE</a>: u64 = 11;
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN">EPREBURN</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EPREBURN_EMPTY"></a>
+
+A burn was attempted on <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource that cointained no coins
+
+
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN_EMPTY">EPREBURN_EMPTY</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EPREBURN_OCCUPIED"></a>
+
+The preburn slot is already occupied with coins to be burned.
+
+
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_EPREBURN_OCCUPIED">EPREBURN_OCCUPIED</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_Libra_MAX_SCALING_FACTOR"></a>
+
+
+
+<pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_SCALING_FACTOR">MAX_SCALING_FACTOR</a>: u64 = 10000000000;
 </code></pre>
 
 
@@ -2848,7 +2824,7 @@ Asserts that <code>CoinType</code> is a registered currency.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
@@ -2878,7 +2854,7 @@ Returns the market cap of CoinType.
 **************** MODULE SPECIFICATION ****************
 
 
-<a name="@Module_Specification_1"></a>
+<a name="@Module_Specification_2"></a>
 
 ### Module Specification
 
@@ -2953,7 +2929,7 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<a name="@Conservation_of_currency_2"></a>
+<a name="@Conservation_of_currency_3"></a>
 
 #### Conservation of currency
 
@@ -2964,7 +2940,7 @@ TODO (dd): It would be great if we could prove that there is never a coin or a s
 aggregate value exceeds the CoinInfo.total_value.  However, that property involves summations over
 all resources and is beyond the capabilities of the specification logic or the prover, currently.
 
-<a name="@Minting_3"></a>
+<a name="@Minting_4"></a>
 
 #### Minting
 
@@ -3072,7 +3048,7 @@ If an address has a mint capability, it is an SCS currency.
 
 
 
-<a name="@Burning_4"></a>
+<a name="@Burning_5"></a>
 
 #### Burning
 
@@ -3163,7 +3139,7 @@ account, but is always moved back to the original account. This is the case in
 
 
 
-<a name="@Preburning_5"></a>
+<a name="@Preburning_6"></a>
 
 #### Preburning
 

@@ -10,6 +10,10 @@ Contains functions for [ed25519](https://en.wikipedia.org/wiki/EdDSA) digital si
 -  [Function `ed25519_verify`](#0x1_Signature_ed25519_verify)
 
 
+<pre><code></code></pre>
+
+
+
 <a name="0x1_Signature_ed25519_validate_pubkey"></a>
 
 ## Function `ed25519_validate_pubkey`

@@ -6,15 +6,22 @@
 
 
 -  [Struct `LibraTransactionPublishingOption`](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
--  [Const `SCRIPT_HASH_LENGTH`](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
--  [Const `EINVALID_SCRIPT_HASH`](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
--  [Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
+-  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_LibraTransactionPublishingOption_initialize)
 -  [Function `is_script_allowed`](#0x1_LibraTransactionPublishingOption_is_script_allowed)
 -  [Function `is_module_allowed`](#0x1_LibraTransactionPublishingOption_is_module_allowed)
 -  [Function `add_to_script_allow_list`](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
 -  [Function `set_open_script`](#0x1_LibraTransactionPublishingOption_set_open_script)
 -  [Function `set_open_module`](#0x1_LibraTransactionPublishingOption_set_open_module)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption"></a>
@@ -55,20 +62,22 @@ We represent these as the following resource.
 
 </details>
 
-<a name="0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH"></a>
+<a name="@Constants_0"></a>
 
-## Const `SCRIPT_HASH_LENGTH`
+## Constants
 
 
+<a name="0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT"></a>
 
-<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>: u64 = 32;
+The script hash already exists in the allowlist
+
+
+<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>: u64 = 1;
 </code></pre>
 
 
 
 <a name="0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH"></a>
-
-## Const `EINVALID_SCRIPT_HASH`
 
 The script hash has an invalid length
 
@@ -78,14 +87,11 @@ The script hash has an invalid length
 
 
 
-<a name="0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT"></a>
-
-## Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`
-
-The script hash already exists in the allowlist
+<a name="0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH"></a>
 
 
-<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>: u64 = 1;
+
+<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>: u64 = 32;
 </code></pre>
 
 

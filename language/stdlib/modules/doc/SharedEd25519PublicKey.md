@@ -9,13 +9,21 @@ that the two keys always stay in sync.
 
 
 -  [Resource `SharedEd25519PublicKey`](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
--  [Const `EMALFORMED_PUBLIC_KEY`](#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY)
--  [Const `ESHARED_KEY`](#0x1_SharedEd25519PublicKey_ESHARED_KEY)
+-  [Constants](#@Constants_0)
 -  [Function `publish`](#0x1_SharedEd25519PublicKey_publish)
 -  [Function `rotate_key_`](#0x1_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_rotate_key)
 -  [Function `key`](#0x1_SharedEd25519PublicKey_key)
 -  [Function `exists_at`](#0x1_SharedEd25519PublicKey_exists_at)
+
+
+<pre><code><b>use</b> <a href="Authenticator.md#0x1_Authenticator">0x1::Authenticator</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="Signature.md#0x1_Signature">0x1::Signature</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_SharedEd25519PublicKey_SharedEd25519PublicKey"></a>
@@ -53,9 +61,12 @@ authentication key derived from <code>key</code>
 
 </details>
 
-<a name="0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY"></a>
+<a name="@Constants_0"></a>
 
-## Const `EMALFORMED_PUBLIC_KEY`
+## Constants
+
+
+<a name="0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY"></a>
 
 The shared ed25519 public key is not valid ed25519 public key
 
@@ -66,8 +77,6 @@ The shared ed25519 public key is not valid ed25519 public key
 
 
 <a name="0x1_SharedEd25519PublicKey_ESHARED_KEY"></a>
-
-## Const `ESHARED_KEY`
 
 A shared ed25519 public key resource was not in the required state
 

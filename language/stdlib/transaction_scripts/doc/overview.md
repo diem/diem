@@ -756,6 +756,11 @@ Script documentation: <code><a href="overview.md#add_to_script_allow_list">add_t
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
+
+
+
 <a name="@Summary_49"></a>
 
 ##### Summary
@@ -924,6 +929,12 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_55"></a>
 
 ##### Summary
@@ -1047,6 +1058,12 @@ only Libra root has the Libra root role.
 <a name="create_validator_account"></a>
 
 #### Script `create_validator_account`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -1179,6 +1196,12 @@ only Libra root has the Libra root role.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_65"></a>
 
 ##### Summary
@@ -1299,6 +1322,12 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <a name="create_designated_dealer"></a>
 
 #### Script `create_designated_dealer`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -1434,6 +1463,11 @@ account.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
+
+
+
 <a name="@Summary_76"></a>
 
 ##### Summary
@@ -1526,6 +1560,12 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 <a name="add_recovery_rotation_capability"></a>
 
 #### Script `add_recovery_rotation_capability`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
+</code></pre>
 
 
 
@@ -1645,6 +1685,11 @@ resource stored under the account at <code>recovery_address</code>.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">0x1::SharedEd25519PublicKey</a>;
+</code></pre>
+
+
+
 <a name="@Summary_86"></a>
 
 ##### Summary
@@ -1734,6 +1779,12 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <a name="create_recovery_address"></a>
 
 #### Script `create_recovery_address`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
+</code></pre>
 
 
 
@@ -1843,6 +1894,11 @@ may be used as a recovery account for those accounts.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
+
+
+
 <a name="@Summary_96"></a>
 
 ##### Summary
@@ -1943,6 +1999,12 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 <a name="rotate_authentication_key_with_nonce"></a>
 
 #### Script `rotate_authentication_key_with_nonce`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -2058,6 +2120,12 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_106"></a>
 
 ##### Summary
@@ -2170,6 +2238,11 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
+</code></pre>
+
+
+
 <a name="@Summary_111"></a>
 
 ##### Summary
@@ -2269,6 +2342,11 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 <a name="rotate_dual_attestation_info"></a>
 
 #### Script `rotate_dual_attestation_info`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
+</code></pre>
 
 
 
@@ -2380,6 +2458,11 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">0x1::SharedEd25519PublicKey</a>;
+</code></pre>
+
+
+
 <a name="@Summary_122"></a>
 
 ##### Summary
@@ -2481,6 +2564,11 @@ rotates the authentication key using the capability stored in <code>account</cod
 <a name="peer_to_peer_with_metadata"></a>
 
 #### Script `peer_to_peer_with_metadata`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
 
 
 
@@ -2642,6 +2730,13 @@ The balances of payer and payee change by the correct amount.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+</code></pre>
+
+
+
 <a name="@Summary_135"></a>
 
 ##### Summary
@@ -2775,6 +2870,11 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+</code></pre>
+
+
+
 <a name="@Summary_140"></a>
 
 ##### Summary
@@ -2888,6 +2988,13 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 <a name="remove_validator_and_reconfigure"></a>
 
 #### Script `remove_validator_and_reconfigure`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+</code></pre>
 
 
 
@@ -3019,6 +3126,12 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 <a name="set_validator_config_and_reconfigure"></a>
 
 #### Script `set_validator_config_and_reconfigure`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+</code></pre>
 
 
 
@@ -3164,6 +3277,12 @@ for which there is no useful recovery except to resubmit the transaction.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">0x1::ValidatorOperatorConfig</a>;
+</code></pre>
+
+
+
 <a name="@Summary_155"></a>
 
 ##### Summary
@@ -3281,6 +3400,13 @@ because CapabilityHolder is published during initialization (Genesis).
 <a name="set_validator_operator_with_nonce_admin"></a>
 
 #### Script `set_validator_operator_with_nonce_admin`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
+<b>use</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">0x1::ValidatorOperatorConfig</a>;
+</code></pre>
 
 
 
@@ -3413,6 +3539,11 @@ the system is initiated by this script.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
+
+
+
 <a name="@Summary_166"></a>
 
 ##### Summary
@@ -3529,6 +3660,12 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <a name="burn"></a>
 
 #### Script `burn`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -3653,6 +3790,11 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <a name="cancel_burn"></a>
 
 #### Script `cancel_burn`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+</code></pre>
 
 
 
@@ -3801,6 +3943,11 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
+</code></pre>
+
+
+
 <a name="@Summary_184"></a>
 
 ##### Summary
@@ -3885,6 +4032,12 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <a name="tiered_mint"></a>
 
 #### Script `tiered_mint`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -4026,6 +4179,12 @@ resource published under the <code>designated_dealer_address</code>.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_196"></a>
 
 ##### Summary
@@ -4122,6 +4281,12 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_202"></a>
 
 ##### Summary
@@ -4208,6 +4373,12 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_208"></a>
 
 ##### Summary
@@ -4286,6 +4457,13 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 <a name="update_exchange_rate"></a>
 
 #### Script `update_exchange_rate`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
+<b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 
@@ -4411,6 +4589,11 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+</code></pre>
+
+
+
 <a name="@Summary_218"></a>
 
 ##### Summary
@@ -4495,6 +4678,12 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 
 
+<pre><code><b>use</b> <a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion">0x1::LibraVersion</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
+
+
+
 <a name="@Summary_224"></a>
 
 ##### Summary
@@ -4563,6 +4752,12 @@ preserve backwards compatibility with previous major versions of the VM.
 <a name="add_to_script_allow_list"></a>
 
 #### Script `add_to_script_allow_list`
+
+
+
+<pre><code><b>use</b> <a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">0x1::LibraTransactionPublishingOption</a>;
+<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
+</code></pre>
 
 
 

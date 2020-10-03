@@ -10,10 +10,7 @@ a given time period.
 -  [Resource `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
 -  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
 -  [Resource `Window`](#0x1_AccountLimits_Window)
--  [Const `ELIMITS_DEFINITION`](#0x1_AccountLimits_ELIMITS_DEFINITION)
--  [Const `EWINDOW`](#0x1_AccountLimits_EWINDOW)
--  [Const `ONE_DAY`](#0x1_AccountLimits_ONE_DAY)
--  [Const `MAX_U64`](#0x1_AccountLimits_MAX_U64)
+-  [Constants](#@Constants_0)
 -  [Function `grant_mutation_capability`](#0x1_AccountLimits_grant_mutation_capability)
 -  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
@@ -29,7 +26,15 @@ a given time period.
 -  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
 -  [Function `has_window_published`](#0x1_AccountLimits_has_window_published)
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
--  [Module Specification](#@Module_Specification_0)
+-  [Module Specification](#@Module_Specification_1)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+</code></pre>
+
 
 
 <a name="0x1_AccountLimits_AccountLimitMutationCapability"></a>
@@ -180,9 +185,21 @@ in the limits definition at <code>limit_address</code>.
 
 </details>
 
-<a name="0x1_AccountLimits_ELIMITS_DEFINITION"></a>
+<a name="@Constants_0"></a>
 
-## Const `ELIMITS_DEFINITION`
+## Constants
+
+
+<a name="0x1_AccountLimits_MAX_U64"></a>
+
+
+
+<pre><code><b>const</b> <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_ELIMITS_DEFINITION"></a>
 
 The <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource is in an invalid state
 
@@ -194,8 +211,6 @@ The <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDe
 
 <a name="0x1_AccountLimits_EWINDOW"></a>
 
-## Const `EWINDOW`
-
 The <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code> resource is in an invalid state
 
 
@@ -206,23 +221,10 @@ The <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code> 
 
 <a name="0x1_AccountLimits_ONE_DAY"></a>
 
-## Const `ONE_DAY`
-
 24 hours in microseconds
 
 
 <pre><code><b>const</b> <a href="AccountLimits.md#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>: u64 = 86400000000;
-</code></pre>
-
-
-
-<a name="0x1_AccountLimits_MAX_U64"></a>
-
-## Const `MAX_U64`
-
-
-
-<pre><code><b>const</b> <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
 </code></pre>
 
 
@@ -1254,7 +1256,7 @@ Checks whether the limits definition is unrestricted.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 

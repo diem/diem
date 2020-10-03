@@ -7,23 +7,31 @@
 
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
 -  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
--  [Const `EVALIDATOR_CONFIG`](#0x1_ValidatorConfig_EVALIDATOR_CONFIG)
--  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER)
--  [Const `EINVALID_CONSENSUS_KEY`](#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY)
--  [Const `ENOT_A_VALIDATOR_OPERATOR`](#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR)
+-  [Constants](#@Constants_0)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
 -  [Function `exists_config`](#0x1_ValidatorConfig_exists_config)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
 -  [Function `set_config`](#0x1_ValidatorConfig_set_config)
 -  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
-    -  [Validator stays valid once it becomes valid](#@Validator_stays_valid_once_it_becomes_valid_0)
+    -  [Validator stays valid once it becomes valid](#@Validator_stays_valid_once_it_becomes_valid_1)
 -  [Function `get_config`](#0x1_ValidatorConfig_get_config)
 -  [Function `get_human_name`](#0x1_ValidatorConfig_get_human_name)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_addresses`](#0x1_ValidatorConfig_get_validator_network_addresses)
--  [Module Specification](#@Module_Specification_1)
+-  [Module Specification](#@Module_Specification_2)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Option.md#0x1_Option">0x1::Option</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signature.md#0x1_Signature">0x1::Signature</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">0x1::ValidatorOperatorConfig</a>;
+</code></pre>
+
 
 
 <a name="0x1_ValidatorConfig_Config"></a>
@@ -104,33 +112,12 @@
 
 </details>
 
-<a name="0x1_ValidatorConfig_EVALIDATOR_CONFIG"></a>
+<a name="@Constants_0"></a>
 
-## Const `EVALIDATOR_CONFIG`
-
-The <code><a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code> resource was not in the required state
-
-
-<pre><code><b>const</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">EVALIDATOR_CONFIG</a>: u64 = 0;
-</code></pre>
-
-
-
-<a name="0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER"></a>
-
-## Const `EINVALID_TRANSACTION_SENDER`
-
-The sender is not the operator for the specified validator
-
-
-<pre><code><b>const</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a>: u64 = 1;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY"></a>
-
-## Const `EINVALID_CONSENSUS_KEY`
 
 The provided consensus public key is malformed
 
@@ -140,14 +127,32 @@ The provided consensus public key is malformed
 
 
 
-<a name="0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR"></a>
+<a name="0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER"></a>
 
-## Const `ENOT_A_VALIDATOR_OPERATOR`
+The sender is not the operator for the specified validator
+
+
+<pre><code><b>const</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">EINVALID_TRANSACTION_SENDER</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR"></a>
 
 Tried to set an account without the correct operator role as a Validator Operator
 
 
 <pre><code><b>const</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR">ENOT_A_VALIDATOR_OPERATOR</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_EVALIDATOR_CONFIG"></a>
+
+The <code><a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code> resource was not in the required state
+
+
+<pre><code><b>const</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">EVALIDATOR_CONFIG</a>: u64 = 0;
 </code></pre>
 
 
@@ -582,7 +587,7 @@ NB! currently we do not require the the operator_account to be set
 
 
 
-<a name="@Validator_stays_valid_once_it_becomes_valid_0"></a>
+<a name="@Validator_stays_valid_once_it_becomes_valid_1"></a>
 
 ### Validator stays valid once it becomes valid
 
@@ -791,7 +796,7 @@ Never aborts
 
 </details>
 
-<a name="@Module_Specification_1"></a>
+<a name="@Module_Specification_2"></a>
 
 ## Module Specification
 

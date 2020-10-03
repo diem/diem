@@ -6,7 +6,7 @@
 A variable-sized container that can hold both unrestricted types and resources.
 
 
--  [Const `EINDEX_OUT_OF_BOUNDS`](#0x1_Vector_EINDEX_OUT_OF_BOUNDS)
+-  [Constants](#@Constants_0)
 -  [Function `empty`](#0x1_Vector_empty)
 -  [Function `length`](#0x1_Vector_length)
 -  [Function `borrow`](#0x1_Vector_borrow)
@@ -23,13 +23,20 @@ A variable-sized container that can hold both unrestricted types and resources.
 -  [Function `index_of`](#0x1_Vector_index_of)
 -  [Function `remove`](#0x1_Vector_remove)
 -  [Function `swap_remove`](#0x1_Vector_swap_remove)
--  [Module Specification](#@Module_Specification_0)
-    -  [Module specifications](#@Module_specifications_1)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Module specifications](#@Module_specifications_2)
+
+
+<pre><code></code></pre>
+
+
+
+<a name="@Constants_0"></a>
+
+## Constants
 
 
 <a name="0x1_Vector_EINDEX_OUT_OF_BOUNDS"></a>
-
-## Const `EINDEX_OUT_OF_BOUNDS`
 
 The index into the vector is out of bounds
 
@@ -574,12 +581,12 @@ Aborts if <code>i</code> is out of bounds.
 
 </details>
 
-<a name="@Module_Specification_0"></a>
+<a name="@Module_Specification_1"></a>
 
 ## Module Specification
 
 
-<a name="@Module_specifications_1"></a>
+<a name="@Module_specifications_2"></a>
 
 ### Module specifications
 

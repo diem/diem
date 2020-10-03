@@ -6,22 +6,22 @@
 
 
 -  [Struct `FixedPoint32`](#0x1_FixedPoint32_FixedPoint32)
--  [Const `MAX_U64`](#0x1_FixedPoint32_MAX_U64)
--  [Const `EDENOMINATOR`](#0x1_FixedPoint32_EDENOMINATOR)
--  [Const `EDIVISION`](#0x1_FixedPoint32_EDIVISION)
--  [Const `EMULTIPLICATION`](#0x1_FixedPoint32_EMULTIPLICATION)
--  [Const `EDIVISION_BY_ZERO`](#0x1_FixedPoint32_EDIVISION_BY_ZERO)
--  [Const `ERATIO_OUT_OF_RANGE`](#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE)
+-  [Constants](#@Constants_0)
 -  [Function `multiply_u64`](#0x1_FixedPoint32_multiply_u64)
-    -  [Abstract Semantics](#@Abstract_Semantics_0)
--  [Function `divide_u64`](#0x1_FixedPoint32_divide_u64)
     -  [Abstract Semantics](#@Abstract_Semantics_1)
--  [Function `create_from_rational`](#0x1_FixedPoint32_create_from_rational)
+-  [Function `divide_u64`](#0x1_FixedPoint32_divide_u64)
     -  [Abstract Semantics](#@Abstract_Semantics_2)
+-  [Function `create_from_rational`](#0x1_FixedPoint32_create_from_rational)
+    -  [Abstract Semantics](#@Abstract_Semantics_3)
 -  [Function `create_from_raw_value`](#0x1_FixedPoint32_create_from_raw_value)
 -  [Function `get_raw_value`](#0x1_FixedPoint32_get_raw_value)
 -  [Function `is_zero`](#0x1_FixedPoint32_is_zero)
--  [Module Specification](#@Module_Specification_3)
+-  [Module Specification](#@Module_Specification_4)
+
+
+<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+</code></pre>
+
 
 
 <a name="0x1_FixedPoint32_FixedPoint32"></a>
@@ -60,9 +60,12 @@ decimal.
 
 </details>
 
-<a name="0x1_FixedPoint32_MAX_U64"></a>
+<a name="@Constants_0"></a>
 
-## Const `MAX_U64`
+## Constants
+
+
+<a name="0x1_FixedPoint32_MAX_U64"></a>
 
 TODO(wrwg): This should be provided somewhere centrally in the framework.
 
@@ -74,8 +77,6 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 <a name="0x1_FixedPoint32_EDENOMINATOR"></a>
 
-## Const `EDENOMINATOR`
-
 The denominator provided was zero
 
 
@@ -86,8 +87,6 @@ The denominator provided was zero
 
 <a name="0x1_FixedPoint32_EDIVISION"></a>
 
-## Const `EDIVISION`
-
 The quotient value would be too large to be held in a <code>u64</code>
 
 
@@ -96,21 +95,7 @@ The quotient value would be too large to be held in a <code>u64</code>
 
 
 
-<a name="0x1_FixedPoint32_EMULTIPLICATION"></a>
-
-## Const `EMULTIPLICATION`
-
-The multiplied value would be too large to be held in a <code>u64</code>
-
-
-<pre><code><b>const</b> <a href="FixedPoint32.md#0x1_FixedPoint32_EMULTIPLICATION">EMULTIPLICATION</a>: u64 = 2;
-</code></pre>
-
-
-
 <a name="0x1_FixedPoint32_EDIVISION_BY_ZERO"></a>
-
-## Const `EDIVISION_BY_ZERO`
 
 A division by zero was encountered
 
@@ -120,9 +105,17 @@ A division by zero was encountered
 
 
 
-<a name="0x1_FixedPoint32_ERATIO_OUT_OF_RANGE"></a>
+<a name="0x1_FixedPoint32_EMULTIPLICATION"></a>
 
-## Const `ERATIO_OUT_OF_RANGE`
+The multiplied value would be too large to be held in a <code>u64</code>
+
+
+<pre><code><b>const</b> <a href="FixedPoint32.md#0x1_FixedPoint32_EMULTIPLICATION">EMULTIPLICATION</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_ERATIO_OUT_OF_RANGE"></a>
 
 The computed ratio when converting to a <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code> would be unrepresentable
 
@@ -210,7 +203,7 @@ homomorphic.
 
 
 
-<a name="@Abstract_Semantics_0"></a>
+<a name="@Abstract_Semantics_1"></a>
 
 ### Abstract Semantics
 
@@ -330,7 +323,7 @@ an abstracted, simplified semantics for verification of callers.
 
 
 
-<a name="@Abstract_Semantics_1"></a>
+<a name="@Abstract_Semantics_2"></a>
 
 ### Abstract Semantics
 
@@ -461,7 +454,7 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-<a name="@Abstract_Semantics_2"></a>
+<a name="@Abstract_Semantics_3"></a>
 
 ### Abstract Semantics
 
@@ -591,7 +584,7 @@ Returns true if the ratio is zero.
 
 </details>
 
-<a name="@Module_Specification_3"></a>
+<a name="@Module_Specification_4"></a>
 
 ## Module Specification
 

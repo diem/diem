@@ -9,18 +9,7 @@ Module providing functionality for designated dealers.
 -  [Resource `Dealer`](#0x1_DesignatedDealer_Dealer)
 -  [Resource `TierInfo`](#0x1_DesignatedDealer_TierInfo)
 -  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
--  [Const `EDEALER`](#0x1_DesignatedDealer_EDEALER)
--  [Const `EINVALID_TIER_ADDITION`](#0x1_DesignatedDealer_EINVALID_TIER_ADDITION)
--  [Const `EINVALID_TIER_START`](#0x1_DesignatedDealer_EINVALID_TIER_START)
--  [Const `EINVALID_TIER_INDEX`](#0x1_DesignatedDealer_EINVALID_TIER_INDEX)
--  [Const `EINVALID_MINT_AMOUNT`](#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT)
--  [Const `EINVALID_AMOUNT_FOR_TIER`](#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER)
--  [Const `ONE_DAY`](#0x1_DesignatedDealer_ONE_DAY)
--  [Const `MAX_NUM_TIERS`](#0x1_DesignatedDealer_MAX_NUM_TIERS)
--  [Const `TIER_0_DEFAULT`](#0x1_DesignatedDealer_TIER_0_DEFAULT)
--  [Const `TIER_1_DEFAULT`](#0x1_DesignatedDealer_TIER_1_DEFAULT)
--  [Const `TIER_2_DEFAULT`](#0x1_DesignatedDealer_TIER_2_DEFAULT)
--  [Const `TIER_3_DEFAULT`](#0x1_DesignatedDealer_TIER_3_DEFAULT)
+-  [Constants](#@Constants_0)
 -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
 -  [Function `add_currency`](#0x1_DesignatedDealer_add_currency)
 -  [Function `add_tier`](#0x1_DesignatedDealer_add_tier)
@@ -29,6 +18,18 @@ Module providing functionality for designated dealers.
 -  [Function `exists_at`](#0x1_DesignatedDealer_exists_at)
 -  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_validate_and_record_mint)
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
+
+
+<pre><code><b>use</b> <a href="Coin1.md#0x1_Coin1">0x1::Coin1</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
+<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
+<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
+<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+</code></pre>
+
 
 
 <a name="0x1_DesignatedDealer_Dealer"></a>
@@ -163,81 +164,12 @@ Message for mint events
 
 </details>
 
-<a name="0x1_DesignatedDealer_EDEALER"></a>
+<a name="@Constants_0"></a>
 
-## Const `EDEALER`
-
-The <code><a href="DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a></code> resource is in an invalid state
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">EDEALER</a>: u64 = 0;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_EINVALID_TIER_ADDITION"></a>
-
-## Const `EINVALID_TIER_ADDITION`
-
-The maximum number of tiers (4) has already been reached
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_ADDITION">EINVALID_TIER_ADDITION</a>: u64 = 1;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_EINVALID_TIER_START"></a>
-
-## Const `EINVALID_TIER_START`
-
-The starting value for the tier overlaps with the tier below or above it
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_START">EINVALID_TIER_START</a>: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_EINVALID_TIER_INDEX"></a>
-
-## Const `EINVALID_TIER_INDEX`
-
-The tier index is out-of-bounds
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_INDEX">EINVALID_TIER_INDEX</a>: u64 = 3;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_EINVALID_MINT_AMOUNT"></a>
-
-## Const `EINVALID_MINT_AMOUNT`
-
-A zero mint amount was provided
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT">EINVALID_MINT_AMOUNT</a>: u64 = 4;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER"></a>
-
-## Const `EINVALID_AMOUNT_FOR_TIER`
-
-The maximum amount of money that can be minted for the tier has been reached
-
-
-<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER">EINVALID_AMOUNT_FOR_TIER</a>: u64 = 5;
-</code></pre>
-
+## Constants
 
 
 <a name="0x1_DesignatedDealer_ONE_DAY"></a>
-
-## Const `ONE_DAY`
 
 Number of microseconds in a day
 
@@ -247,9 +179,67 @@ Number of microseconds in a day
 
 
 
-<a name="0x1_DesignatedDealer_MAX_NUM_TIERS"></a>
+<a name="0x1_DesignatedDealer_EDEALER"></a>
 
-## Const `MAX_NUM_TIERS`
+The <code><a href="DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a></code> resource is in an invalid state
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">EDEALER</a>: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER"></a>
+
+The maximum amount of money that can be minted for the tier has been reached
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER">EINVALID_AMOUNT_FOR_TIER</a>: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_MINT_AMOUNT"></a>
+
+A zero mint amount was provided
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT">EINVALID_MINT_AMOUNT</a>: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_ADDITION"></a>
+
+The maximum number of tiers (4) has already been reached
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_ADDITION">EINVALID_TIER_ADDITION</a>: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_INDEX"></a>
+
+The tier index is out-of-bounds
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_INDEX">EINVALID_TIER_INDEX</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_START"></a>
+
+The starting value for the tier overlaps with the tier below or above it
+
+
+<pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_START">EINVALID_TIER_START</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_MAX_NUM_TIERS"></a>
 
 The maximum number of tiers allowed
 
@@ -260,8 +250,6 @@ The maximum number of tiers allowed
 
 
 <a name="0x1_DesignatedDealer_TIER_0_DEFAULT"></a>
-
-## Const `TIER_0_DEFAULT`
 
 Default FIAT amounts for tiers when a DD is created
 These get scaled by coin specific scaling factor on tier setting
@@ -274,8 +262,6 @@ These get scaled by coin specific scaling factor on tier setting
 
 <a name="0x1_DesignatedDealer_TIER_1_DEFAULT"></a>
 
-## Const `TIER_1_DEFAULT`
-
 
 
 <pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_1_DEFAULT">TIER_1_DEFAULT</a>: u64 = 5000000;
@@ -285,8 +271,6 @@ These get scaled by coin specific scaling factor on tier setting
 
 <a name="0x1_DesignatedDealer_TIER_2_DEFAULT"></a>
 
-## Const `TIER_2_DEFAULT`
-
 
 
 <pre><code><b>const</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TIER_2_DEFAULT">TIER_2_DEFAULT</a>: u64 = 50000000;
@@ -295,8 +279,6 @@ These get scaled by coin specific scaling factor on tier setting
 
 
 <a name="0x1_DesignatedDealer_TIER_3_DEFAULT"></a>
-
-## Const `TIER_3_DEFAULT`
 
 
 
