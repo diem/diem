@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::coverage_map::CoverageMap;
+use crate::coverage_map::ExecCoverageMap;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -43,7 +43,7 @@ impl ModuleSummary {
     pub fn new(
         summary_options: ModuleSummaryOptions,
         module: &CompiledModule,
-        coverage_map: &CoverageMap,
+        coverage_map: &ExecCoverageMap,
     ) -> Self {
         let module_name = module.self_id();
         let module_map = coverage_map

@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use move_coverage::{
-    coverage_map::CoverageMap,
+    coverage_map::{CoverageMap, ExecCoverageMap},
     summary::{self, ModuleSummary, ModuleSummaryOptions},
 };
 use std::{
@@ -68,7 +68,11 @@ fn get_modules(args: &Args) -> Vec<CompiledModule> {
     modules
 }
 
-fn format_human_summary<W: Write>(args: &Args, coverage_map: &CoverageMap, summary_writer: &mut W) {
+fn format_human_summary<W: Write>(
+    args: &Args,
+    coverage_map: &ExecCoverageMap,
+    summary_writer: &mut W,
+) {
     writeln!(summary_writer, "+-------------------------+").unwrap();
     writeln!(summary_writer, "| Move Coverage Summary   |").unwrap();
     writeln!(summary_writer, "+-------------------------+").unwrap();
@@ -96,7 +100,11 @@ fn format_human_summary<W: Write>(args: &Args, coverage_map: &CoverageMap, summa
     writeln!(summary_writer, "+-------------------------+").unwrap();
 }
 
-fn format_csv_summary<W: Write>(args: &Args, coverage_map: &CoverageMap, summary_writer: &mut W) {
+fn format_csv_summary<W: Write>(
+    args: &Args,
+    coverage_map: &ExecCoverageMap,
+    summary_writer: &mut W,
+) {
     writeln!(summary_writer, "ModuleName,FunctionName,Covered,Uncovered").unwrap();
 
     for module in get_modules(&args).iter() {
@@ -117,6 +125,7 @@ fn main() {
     } else {
         CoverageMap::from_binary_file(&input_trace_path)
     };
+    let unified_exec_map = coverage_map.to_unified_exec_map();
 
     let mut summary_writer: Box<dyn Write> = match &args.summary_path {
         Some(x) => {
@@ -127,8 +136,8 @@ fn main() {
     };
 
     if !args.csv_output {
-        format_human_summary(&args, &coverage_map, &mut summary_writer)
+        format_human_summary(&args, &unified_exec_map, &mut summary_writer)
     } else {
-        format_csv_summary(&args, &coverage_map, &mut summary_writer)
+        format_csv_summary(&args, &unified_exec_map, &mut summary_writer)
     }
 }

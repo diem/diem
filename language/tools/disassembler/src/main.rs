@@ -112,7 +112,8 @@ fn main() {
     let mut disassembler = Disassembler::new(source_mapping, disassembler_options);
 
     if let Some(file_path) = &args.code_coverage_path {
-        disassembler.add_coverage_map(CoverageMap::from_binary_file(file_path));
+        disassembler
+            .add_coverage_map(CoverageMap::from_binary_file(file_path).to_unified_exec_map());
     }
 
     let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");

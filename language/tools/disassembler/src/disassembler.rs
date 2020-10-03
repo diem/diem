@@ -9,7 +9,7 @@ use bytecode_source_map::{
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use colored::*;
 use move_core_types::identifier::IdentStr;
-use move_coverage::coverage_map::{CoverageMap, FunctionCoverage};
+use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -51,7 +51,7 @@ pub struct Disassembler<Location: Clone + Eq> {
     // The various options that we can set for disassembly.
     options: DisassemblerOptions,
     // Optional coverage map for use in displaying code coverage
-    coverage_map: Option<CoverageMap>,
+    coverage_map: Option<ExecCoverageMap>,
 }
 
 impl<Location: Clone + Eq> Disassembler<Location> {
@@ -73,7 +73,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         })
     }
 
-    pub fn add_coverage_map(&mut self, coverage_map: CoverageMap) {
+    pub fn add_coverage_map(&mut self, coverage_map: ExecCoverageMap) {
         self.coverage_map = Some(coverage_map);
     }
 

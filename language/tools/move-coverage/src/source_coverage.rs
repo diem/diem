@@ -60,7 +60,8 @@ impl SourceCoverageBuilder {
         source_map: &SourceMap<Loc>,
     ) -> Self {
         let module_name = module.self_id();
-        let module_map = coverage_map
+        let unified_exec_map = coverage_map.to_unified_exec_map();
+        let module_map = unified_exec_map
             .module_maps
             .get(&(*module_name.address(), module_name.name().to_owned()));
 
