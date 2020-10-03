@@ -26,7 +26,7 @@ jobs:
         # Poll until images are ready
         env:
           AWS_REGION: us-west-2
-          RETRIES: 1
+          RETRIES: 30
         run: |
           set +e
           retry=0
