@@ -39,7 +39,7 @@ use move_vm_types::{
 };
 use rayon::prelude::*;
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     convert::{AsMut, AsRef},
 };
 
@@ -523,33 +523,18 @@ impl LibraVM {
             txn_effects_to_writeset_and_events_cached(&mut (), effects)?;
 
         // Make sure epilogue WriteSet doesn't intersect with the writeset in TransactionPayload.
-        if !epilogue_writeset
-            .iter()
-            .map(|(ap, _)| ap)
-            .collect::<HashSet<_>>()
-            .is_disjoint(
-                &change_set
-                    .write_set()
-                    .iter()
-                    .map(|(ap, _)| ap)
-                    .collect::<HashSet<_>>(),
-            )
-        {
+        if !check_intersection(
+            epilogue_writeset.iter().map(|a| (&a.0, &a.1)),
+            change_set.write_set().iter().map(|a| (&a.0, &a.1)),
+        ) {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
             return Ok(discard_error_vm_status(vm_status));
         }
-        if !epilogue_events
-            .iter()
-            .map(|event| event.key())
-            .collect::<HashSet<_>>()
-            .is_disjoint(
-                &change_set
-                    .events()
-                    .iter()
-                    .map(|event| event.key())
-                    .collect::<HashSet<_>>(),
-            )
-        {
+
+        if !check_intersection(
+            epilogue_events.iter().map(|event| (event.key(), event)),
+            change_set.events().iter().map(|event| (event.key(), event)),
+        ) {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
             return Ok(discard_error_vm_status(vm_status));
         }
@@ -685,6 +670,22 @@ impl LibraVM {
         let mut vm = LibraVM::new(&state_view_cache);
         vm.execute_block_impl(transactions, &mut state_view_cache)
     }
+}
+
+fn check_intersection<K: Eq + std::hash::Hash, V: Eq>(
+    lhs: impl Iterator<Item = (K, V)>,
+    rhs: impl Iterator<Item = (K, V)>,
+) -> bool {
+    let lhs_map = lhs.collect::<HashMap<K, V>>();
+    let rhs_map = rhs.collect::<HashMap<K, V>>();
+    for (k, v) in lhs_map.iter() {
+        if let Some(rhs_v) = rhs_map.get(k) {
+            if v != rhs_v {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 fn preprocess_transaction(txn: Transaction) -> Result<PreprocessedTransaction, VMStatus> {

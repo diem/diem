@@ -663,6 +663,12 @@ An invalid block time was encountered.
 
     <b>let</b> config_ref = borrow_global_mut&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
+
+    // Do not do anything <b>if</b> a reconfiguration event is already emitted within this transaction.
+    <b>if</b> (current_time == config_ref.last_reconfiguration_time) {
+        <b>return</b> ()
+    };
+
     <b>assert</b>(current_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>));
     config_ref.last_reconfiguration_time = current_time;
     config_ref.epoch = config_ref.epoch + 1;

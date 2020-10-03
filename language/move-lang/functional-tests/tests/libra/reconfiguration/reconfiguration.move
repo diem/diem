@@ -25,14 +25,20 @@ use 0x1::LibraConfig;
 
 fun main(account: &signer) {
     LibraConfig::reconfigure(account);
+    LibraConfig::reconfigure(account);
 }
 }
 // check: NewEpochEvent
+// check: event_data: "0200000000000000"
 // check: "Keep(EXECUTED)"
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
+
+// Make sure two reconfigurations will only trigger one reconfiguration event.
 //! new-transaction
 //! sender: libraroot
-// Cannot trigger two reconfiguration within the same block.
 script {
 use 0x1::LibraConfig;
 
@@ -40,4 +46,6 @@ fun main(account: &signer) {
     LibraConfig::reconfigure(account);
 }
 }
-// check: "Keep(ABORTED { code: 1025,"
+// check: NewEpochEvent
+// check: event_data: "0300000000000000"
+// check: "Keep(EXECUTED)"

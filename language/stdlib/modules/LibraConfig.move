@@ -224,6 +224,12 @@ module LibraConfig {
 
         let config_ref = borrow_global_mut<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let current_time = LibraTimestamp::now_microseconds();
+
+        // Do not do anything if a reconfiguration event is already emitted within this transaction.
+        if (current_time == config_ref.last_reconfiguration_time) {
+            return ()
+        };
+
         assert(current_time > config_ref.last_reconfiguration_time, Errors::invalid_state(EINVALID_BLOCK_TIME));
         config_ref.last_reconfiguration_time = current_time;
         config_ref.epoch = config_ref.epoch + 1;
