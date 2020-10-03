@@ -204,7 +204,7 @@ pub struct DevCommandUpgradeStdlib {}
 
 impl Command for DevCommandUpgradeStdlib {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["upgrade_stdlib"]
+        vec!["upgrade_stdlib", "u"]
     }
 
     fn get_params_help(&self) -> &'static str {
@@ -231,7 +231,7 @@ pub struct DevCommandGenWaypoint {}
 
 impl Command for DevCommandGenWaypoint {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["gen_waypoint"]
+        vec!["gen_waypoint", "g"]
     }
 
     fn get_params_help(&self) -> &'static str {

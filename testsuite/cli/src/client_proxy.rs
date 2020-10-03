@@ -659,7 +659,7 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            space_delim_strings[0] == "upgrade_stdlib",
+            space_delim_strings[0] == "upgrade_stdlib" || space_delim_strings[0] == "u",
             "inconsistent command '{}' for upgrade_stdlib",
             space_delim_strings[0]
         );
@@ -888,7 +888,7 @@ impl ClientProxy {
     /// Compile Move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<Vec<String>> {
         ensure!(
-            space_delim_strings[0] == "compile",
+            space_delim_strings[0] == "compile" || space_delim_strings[0] == "c",
             "inconsistent command '{}' for compile_program",
             space_delim_strings[0]
         );
@@ -979,7 +979,7 @@ impl ClientProxy {
     /// Publish Move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
         ensure!(
-            space_delim_strings[0] == "publish",
+            space_delim_strings[0] == "publish" || space_delim_strings[0] == "p",
             "inconsistent command '{}' for publish_module",
             space_delim_strings[0]
         );
@@ -993,7 +993,7 @@ impl ClientProxy {
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
         ensure!(
-            space_delim_strings[0] == "execute",
+            space_delim_strings[0] == "execute" || space_delim_strings[0] == "e",
             "inconsistent command '{}' for execute_script",
             space_delim_strings[0]
         );
