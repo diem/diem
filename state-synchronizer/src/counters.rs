@@ -18,9 +18,6 @@ pub const COMMIT_MSG_LABEL: &str = "commit";
 pub const CHUNK_REQUEST_MSG_LABEL: &str = "chunk_request";
 pub const CHUNK_RESPONSE_MSG_LABEL: &str = "chunk_response";
 
-// msg sender label
-pub const CONSENSUS_SENDER_LABEL: &str = "consensus";
-
 // version type labels
 pub const COMMITTED_VERSION_LABEL: &str = "committed"; // Version of latest ledger info committed.
 pub const SYNCED_VERSION_LABEL: &str = "synced"; // Version of most recent txn that was synced (even if it is not backed by an LI)
@@ -30,15 +27,19 @@ pub const TARGET_VERSION_LABEL: &str = "target"; // Version a node is trying to 
 pub const CONSENSUS_SYNC_REQ_CALLBACK: &str = "consensus_sync_req_callback";
 pub const WAYPOINT_INIT_CALLBACK: &str = "waypoint_init_callback";
 
-// reconfig result labels
-pub const RECONFIG_SUCCESS_LABEL: &str = "success";
-pub const RECONFIG_FAIL_LABEL: &str = "fail";
-
-// network error type labels
-pub const UNEXPECTED_MESSAGE_LABEL: &str = "unexpected_msg";
-
+// result labels
 pub const SUCCESS_LABEL: &str = "success";
 pub const FAIL_LABEL: &str = "fail";
+
+// commit flow fail component label
+pub const TO_MEMPOOL_LABEL: &str = "to_mempool";
+pub const FROM_MEMPOOL_LABEL: &str = "from_mempool";
+pub const CONSENSUS_LABEL: &str = "consensus";
+pub const STATE_SYNC_LABEL: &str = "state_sync";
+
+// sync request result labels
+pub const COMPLETE_LABEL: &str = "complete";
+pub const TIMEOUT_LABEL: &str = "timeout";
 
 /// Counter of pending network events to State Synchronizer
 pub static PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
@@ -49,44 +50,44 @@ pub static PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy
     ).unwrap()
 });
 
-/// Number of sync requests sent from a node
+/// Number of chunk requests sent from a node
 pub static REQUESTS_SENT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         // metric name
         "libra_state_sync_requests_sent_total",
         // metric description
-        "Number of chunk requests sent from a node",
+        "Number of chunk requests sent",
         // metric labels
-        &["requested_peer_id", "result"]
+        &["network", "peer", "result"]
     )
     .unwrap()
 });
 
+/// Number of chunk responses sent from a node (including FN subscriptions)
 pub static RESPONSES_SENT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_state_sync_responses_sent_total",
-        "Number of chunk responses sent from a node",
-        &["recipient", "result"]
+        "Number of chunk responses sent (including FN subscriptions)",
+        &["network", "peer", "result"]
     )
     .unwrap()
 });
 
-/// Number of Success results of applying a chunk
-pub static APPLY_CHUNK_SUCCESS: Lazy<IntCounterVec> = Lazy::new(|| {
+pub static RESPONSE_FROM_DOWNSTREAM_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_state_sync_apply_chunk_success_total",
+        "libra_state_sync_responses_from_downstream_total",
+        "Number of chunk responses received from a downstream peer",
+        &["network", "peer"]
+    )
+    .unwrap()
+});
+
+/// Number of attempts to apply a chunk
+pub static APPLY_CHUNK_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_state_sync_apply_chunk_total",
         "Number of Success results of applying a chunk",
-        &["chunk_sender_id"]
-    )
-    .unwrap()
-});
-
-/// Number of failed attempts to apply a chunk
-pub static APPLY_CHUNK_FAILURE: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_state_sync_apply_chunk_failure_total",
-        "Number of failed attempts to apply a chunk",
-        &["chunk_sender_id"]
+        &["network", "sender", "result"]
     )
     .unwrap()
 });
@@ -95,27 +96,39 @@ pub static PROCESS_CHUNK_REQUEST_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_state_sync_process_chunk_request_total",
         "Number of times chunk request was processed",
-        &["result", "sender"]
+        &["network", "sender", "result"]
     )
     .unwrap()
 });
 
-/// Average number of transactions in a received chunk response
+/// Number of transactions in a received chunk response
 pub static STATE_SYNC_CHUNK_SIZE: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_state_sync_chunk_size",
         "Number of transactions in a state sync chunk response",
-        &["sender"]
+        &["network", "sender"]
     )
     .unwrap()
 });
 
 /// Number of peers that are currently active and upstream.
 /// They are the set of nodes a node can make sync requests to
-pub static ACTIVE_UPSTREAM_PEERS: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
+pub static ACTIVE_UPSTREAM_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
         "libra_state_sync_active_upstream_peers",
-        "Number of upstream peers that are currently active"
+        "Number of upstream peers that are currently active",
+        &["network"]
+    )
+    .unwrap()
+});
+
+/// Number of networks this node is sending chunk requests to. It is usually 1
+/// but can be >1 if the node's primary network is unhealthy/all peers are dead
+/// and the node fails over to other networks
+pub static MULTICAST_LEVEL: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_state_sync_multicast_level",
+        "Number of networks state sync is sending chunk requests to"
     )
     .unwrap()
 });
@@ -142,7 +155,7 @@ pub static SYNC_PROGRESS_DURATION: Lazy<DurationHistogram> = Lazy::new(|| {
     DurationHistogram::new(
         register_histogram!(
             "libra_state_sync_sync_progress_duration_s",
-            "Histogram of time it takes to sync a chunk, from requesting a chunk to processing the response and committing the block"
+            "Histogram of time it takes to sync a chunk, from requesting a chunk to processing the response and committing the chunk"
         )
         .unwrap()
     )
@@ -157,28 +170,22 @@ pub static TIMEOUT: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static PROCESS_SYNC_REQUEST_FAILURE: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_state_sync_sync_request_failure_total",
-        "Number of sync requests (from consensus) that state sync failed to process"
-    )
-    .unwrap()
-});
-
-pub static SYNC_REQUEST_TIMEOUT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_state_sync_sync_request_timeout_total",
-        "Number of sync requests (from consensus) that timed out"
-    )
-    .unwrap()
-});
-
-/// Number of timeouts that occur during the commit flow across consensus, state sync, and mempool
-pub static COMMIT_TIMEOUT: Lazy<IntCounterVec> = Lazy::new(|| {
+/// Number of times sync request (from consensus) processed
+pub static SYNC_REQUEST_RESULT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_state_sync_commit_timeout_total",
+        "libra_state_sync_sync_request_total",
+        "Number of sync requests (from consensus) processed",
+        &["result"]
+    )
+    .unwrap()
+});
+
+/// Number of failures that occur during the commit flow across consensus, state sync, and mempool
+pub static COMMIT_FLOW_FAIL: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_state_sync_commit_flow_fail_total",
         "Number of timeouts that occur during the commit flow across consensus, state sync, and mempool",
-        &["component"] // component with which state sync timed out with: consensus, mempool
+        &["component"] // component with which state sync timed out with: consensus, to_mempool, from_mempool
     )
         .unwrap()
 });
@@ -187,7 +194,7 @@ pub static FAILED_CHANNEL_SEND: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_state_sync_failed_channel_sends_total",
         "Number of times a channel send failed in state sync",
-        &["type"] // type of channel sends:
+        &["type"]
     )
     .unwrap()
 });
@@ -201,21 +208,40 @@ pub static EXECUTE_CHUNK_DURATION: Lazy<Histogram> = Lazy::new(|| {
     .unwrap()
 });
 
-/// Number of times a long-poll subscription is delivered
-pub static SUBSCRIPTION_DELIVERY_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
+/// Number of times a long-poll subscription is successfully delivered
+pub static SUBSCRIPTION_DELIVERY_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
         "libra_state_sync_subscription_delivery_count",
-        "Number of times a node delivers a subscription for FN long-poll"
+        "Number of times a node delivers a subscription for FN long-poll",
+        &["network", "recipient", "result"]
     )
     .unwrap()
 });
 
-/// Time it takes to process a state sync message
+/// Time it takes to process a coordinator msg from consensus
+pub static PROCESS_COORDINATOR_MSG_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_state_sync_coordinator_msg_latency",
+        "Time it takes to process a message from consensus",
+        &["type"]
+    )
+    .unwrap()
+});
+
+/// Time it takes to process a state sync message from LibraNet
 pub static PROCESS_MSG_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_state_sync_process_msg_latency",
         "Time it takes to process a message in state sync",
-        &["type", "sender"]
+        &["network", "sender", "type"]
+    )
+    .unwrap()
+});
+
+pub static CONSENSUS_COMMIT_FAIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_state_sync_consensus_commit_fail",
+        "Number of times a commit msg from consensus failed to be processed"
     )
     .unwrap()
 });
@@ -237,11 +263,10 @@ pub static STORAGE_READ_FAIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static NETWORK_ERROR_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
+pub static NETWORK_ERROR_COUNT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
         "libra_state_sync_network_error_count",
-        "Number of network errors encountered in state sync",
-        &["type"]
+        "Number of network errors encountered in state sync"
     )
     .unwrap()
 });

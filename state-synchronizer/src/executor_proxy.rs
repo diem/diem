@@ -167,7 +167,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 "Failed to publish reconfig updates in execute_chunk"
             );
             counters::RECONFIG_PUBLISH_COUNT
-                .with_label_values(&[counters::RECONFIG_FAIL_LABEL])
+                .with_label_values(&[counters::FAIL_LABEL])
                 .inc();
         }
         Ok(())
@@ -261,7 +261,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         self.on_chain_configs = new_configs;
         if publish_success {
             counters::RECONFIG_PUBLISH_COUNT
-                .with_label_values(&[counters::RECONFIG_SUCCESS_LABEL])
+                .with_label_values(&[counters::SUCCESS_LABEL])
                 .inc();
             Ok(())
         } else {

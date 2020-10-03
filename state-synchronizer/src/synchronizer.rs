@@ -187,8 +187,8 @@ impl StateSyncClient {
 
             match timeout(Duration::from_secs(5), callback_rcv).await {
                 Err(_) => {
-                    counters::COMMIT_TIMEOUT
-                        .with_label_values(&["consensus"])
+                    counters::COMMIT_FLOW_FAIL
+                        .with_label_values(&[counters::STATE_SYNC_LABEL])
                         .inc();
                     Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
                 }

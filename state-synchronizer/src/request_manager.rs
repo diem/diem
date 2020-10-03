@@ -101,6 +101,7 @@ impl RequestManager {
         multicast_timeout: Duration,
         network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
     ) -> Self {
+        counters::MULTICAST_LEVEL.set(MIN_UPSTREAM_NETWORK_CT as i64);
         Self {
             eligible_peers: BTreeMap::new(),
             peers: HashMap::new(),
@@ -123,14 +124,15 @@ impl RequestManager {
             return;
         }
 
-        debug!("[state sync] state before: {:?}", self.peers);
+        counters::ACTIVE_UPSTREAM_PEERS
+            .with_label_values(&[&peer.raw_network_id().to_string()])
+            .inc();
         if let Some(peer_info) = self.peers.get_mut(&peer) {
             peer_info.is_alive = true;
         } else {
             self.peers.insert(peer, PeerInfo::new(true, MAX_SCORE));
         }
         self.update_peer_selection_data();
-        debug!("[state sync] state after: {:?}", self.peers);
     }
 
     pub fn disable_peer(&mut self, peer: &PeerNetworkId, origin: ConnectionOrigin) {
@@ -139,6 +141,9 @@ impl RequestManager {
             .is_upstream_peer(self.is_upstream_peer(&peer, origin)));
 
         if let Some(peer_info) = self.peers.get_mut(peer) {
+            counters::ACTIVE_UPSTREAM_PEERS
+                .with_label_values(&[&peer.raw_network_id().to_string()])
+                .dec();
             peer_info.is_alive = false;
         }
         self.update_peer_selection_data();
@@ -176,14 +181,12 @@ impl RequestManager {
     // * eligible_peers
     // * weighted_index: the chance that a peer is selected from `eligible_peers` is weighted by its score
     fn update_peer_selection_data(&mut self) {
-        let mut active_peers_count = 0;
         // group active peers by network
         let active_peers = self
             .peers
             .iter()
             .filter(|(_peer, peer_info)| peer_info.is_alive)
             .map(|(peer, peer_info)| {
-                active_peers_count += 1;
                 let network_pref = self
                     .upstream_config
                     .get_upstream_preference(peer.raw_network_id())
@@ -191,8 +194,6 @@ impl RequestManager {
                 (network_pref, (peer, peer_info))
             })
             .into_group_map();
-
-        counters::ACTIVE_UPSTREAM_PEERS.set(active_peers_count);
 
         // for each network, compute peer selection data
         self.eligible_peers = active_peers
@@ -252,10 +253,10 @@ impl RequestManager {
         }
 
         let req_info = self.add_request(req.known_version, peers.clone());
-        debug!(
-            "[state sync] request next chunk - chunk req info: {:?}",
-            req_info
-        );
+        debug!(log
+            .clone()
+            .event(LogEvent::ChunkRequestInfo)
+            .chunk_req_info(&req_info));
 
         // actually execute network send
         let target_version = req.target().version();
@@ -278,7 +279,11 @@ impl RequestManager {
                 counters::SEND_SUCCESS_LABEL
             };
             counters::REQUESTS_SENT
-                .with_label_values(&[&peer_id.to_string(), result_label])
+                .with_label_values(&[
+                    &peer.raw_network_id().to_string(),
+                    &peer_id.to_string(),
+                    result_label,
+                ])
                 .inc();
         }
 
@@ -324,10 +329,13 @@ impl RequestManager {
             .upstream_config
             .get_upstream_preference(peer.raw_network_id())
             == Some(0);
-        if is_primary_upstream_peer {
+        if is_primary_upstream_peer && self.multicast_level != MIN_UPSTREAM_NETWORK_CT {
             // if chunk from a primary upstream is successful, stop multicasting the request to failover networks
-            debug!("[state sync] exit multicast mode");
+            info!(LogSchema::event_log(LogEntry::Multicast, LogEvent::Recover)
+                .old_multicast_level(self.multicast_level)
+                .new_multicast_level(MIN_UPSTREAM_NETWORK_CT));
             self.multicast_level = MIN_UPSTREAM_NETWORK_CT;
+            counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
         }
 
         // update score
@@ -439,7 +447,13 @@ impl RequestManager {
                 self.multicast_level + 1,
                 self.upstream_config.upstream_count(),
             );
-            debug!("[state sync] multicast timeout occurred for version {}, update multicast level from {} to {}", version, prev_multicast_level, self.multicast_level);
+            info!(
+                LogSchema::event_log(LogEntry::Multicast, LogEvent::Failover)
+                    .old_multicast_level(prev_multicast_level)
+                    .new_multicast_level(self.multicast_level),
+                request_version = version,
+            );
+            counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
         }
         is_timeout
     }
@@ -455,6 +469,10 @@ impl RequestManager {
         } else {
             is_network_upstream
         }
+    }
+
+    pub fn is_known_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
+        self.peers.contains_key(peer)
     }
 
     #[cfg(test)]

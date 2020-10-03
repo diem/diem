@@ -251,26 +251,27 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 msg = self.client_events.select_next_some() => {
                     match msg {
                         CoordinatorMessage::Request(request) => {
-                            let timer = counters::PROCESS_MSG_LATENCY
-                                .with_label_values(&[counters::SYNC_MSG_LABEL, counters::CONSENSUS_SENDER_LABEL])
+                            let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
+                                .with_label_values(&[counters::SYNC_MSG_LABEL])
                                 .start_timer();
                             if let Err(e) = self.request_sync(*request) {
                                 error!(LogSchema::new(LogEntry::SyncRequest).error(&e));
-                                counters::PROCESS_SYNC_REQUEST_FAILURE.inc();
+                                counters::SYNC_REQUEST_RESULT.with_label_values(&[counters::FAIL_LABEL]).inc();
                             }
                         }
                         CoordinatorMessage::Commit(txns, events, callback) => {
                             {
-                                let timer = counters::PROCESS_MSG_LATENCY
-                                    .with_label_values(&[counters::COMMIT_MSG_LABEL, counters::CONSENSUS_SENDER_LABEL])
+                                let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
+                                    .with_label_values(&[counters::COMMIT_MSG_LABEL])
                                     .start_timer();
                                 if let Err(e) = self.process_commit(txns, Some(callback), None).await {
+                                    counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
                                     error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e));
                                 }
                             }
                             if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(events) {
                                 counters::RECONFIG_PUBLISH_COUNT
-                                    .with_label_values(&[counters::RECONFIG_FAIL_LABEL])
+                                    .with_label_values(&[counters::FAIL_LABEL])
                                     .inc();
                                 error!(LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&e));
                             }
@@ -296,9 +297,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         }
                         Event::Message(peer_id, message) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
                         unexpected_event => {
-                            counters::NETWORK_ERROR_COUNT
-                                .with_label_values(&[counters::UNEXPECTED_MESSAGE_LABEL])
-                                .inc();
+                            counters::NETWORK_ERROR_COUNT.inc();
                             warn!(LogSchema::new(LogEntry::NetworkError),
                             "received unexpected network event: {:?}", unexpected_event);
                         },
@@ -320,8 +319,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             StateSynchronizerMsg::GetChunkRequest(request) => {
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
-                        counters::CHUNK_REQUEST_MSG_LABEL,
+                        &peer.raw_network_id().to_string(),
                         &peer.peer_id().to_string(),
+                        counters::CHUNK_REQUEST_MSG_LABEL,
                     ])
                     .start_timer();
                 let result_label =
@@ -340,14 +340,19 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         counters::SUCCESS_LABEL
                     };
                 counters::PROCESS_CHUNK_REQUEST_COUNT
-                    .with_label_values(&[result_label, &peer.peer_id().to_string()])
+                    .with_label_values(&[
+                        &peer.raw_network_id().to_string(),
+                        &peer.peer_id().to_string(),
+                        result_label,
+                    ])
                     .inc();
             }
             StateSynchronizerMsg::GetChunkResponse(response) => {
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
-                        counters::CHUNK_RESPONSE_MSG_LABEL,
+                        &peer.raw_network_id().to_string(),
                         &peer.peer_id().to_string(),
+                        counters::CHUNK_RESPONSE_MSG_LABEL,
                     ])
                     .start_timer();
                 self.process_chunk_response(&peer, *response).await;
@@ -486,15 +491,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 LogSchema::new(LogEntry::CommitFlow).error(&e.into()),
                 "failed to notify mempool of commit"
             );
+            counters::COMMIT_FLOW_FAIL
+                .with_label_values(&[counters::TO_MEMPOOL_LABEL])
+                .inc();
             msg = "state sync failed to send commit notif to shared mempool";
-        }
-        if let Err(e) = timeout(Duration::from_secs(5), callback_rcv).await {
+        } else if let Err(e) = timeout(Duration::from_secs(5), callback_rcv).await {
             error!(
                 LogSchema::new(LogEntry::CommitFlow).error(&e.into()),
                 "did not receive ACK for commit notification sent to mempool"
             );
-            counters::COMMIT_TIMEOUT
-                .with_label_values(&["mempool"])
+            counters::COMMIT_FLOW_FAIL
+                .with_label_values(&[counters::FROM_MEMPOOL_LABEL])
                 .inc();
             msg = "state sync did not receive ACK for commit notification sent to mempool";
         }
@@ -507,6 +514,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }))
                 .is_err()
             {
+                counters::COMMIT_FLOW_FAIL
+                    .with_label_values(&[counters::CONSENSUS_LABEL])
+                    .inc();
                 error!(
                     LogSchema::new(LogEntry::CommitFlow),
                     "failed to send commit ACK to consensus"
@@ -546,6 +556,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     .local_synced_version(synced_version)
                     .local_epoch(local_epoch)
             );
+            counters::SYNC_REQUEST_RESULT
+                .with_label_values(&[counters::COMPLETE_LABEL])
+                .inc();
             if let Some(sync_request) = self.sync_request.take() {
                 Self::send_sync_req_callback(sync_request, Ok(()))?;
             }
@@ -757,7 +770,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             counters::SEND_SUCCESS_LABEL
         };
         counters::RESPONSES_SENT
-            .with_label_values(&[&peer.peer_id().to_string(), send_result_label])
+            .with_label_values(&[
+                &peer.raw_network_id().to_string(),
+                &peer.peer_id().to_string(),
+                send_result_label,
+            ])
             .inc();
 
         send_result.map_err(|e| {
@@ -803,6 +820,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::Received)
                 .chunk_resp(&response)
         );
+
+        if !self.request_manager.is_known_upstream_peer(peer) {
+            counters::RESPONSE_FROM_DOWNSTREAM_COUNT
+                .with_label_values(&[
+                    &peer.raw_network_id().to_string(),
+                    &peer.peer_id().to_string(),
+                ])
+                .inc();
+            bail!("received chunk response from downstream");
+        }
+
         let txn_list_with_proof = response.txn_list_with_proof.clone();
         let known_version = self.local_state.highest_version_in_local_storage();
         let chunk_start_version =
@@ -861,7 +889,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         })?;
 
         counters::STATE_SYNC_CHUNK_SIZE
-            .with_label_values(&[&peer.peer_id().to_string()])
+            .with_label_values(&[
+                &peer.raw_network_id().to_string(),
+                &peer.peer_id().to_string(),
+            ])
             .observe(chunk_size as f64);
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::ApplyChunkSuccess),
@@ -873,9 +904,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         // The overall chunk processing duration is calculated starting from the very first attempt
         // until the commit
-        if let Some(first_attempt_tst) = self
-            .request_manager
-            .get_first_request_time(known_version + 1)
+        if let Some(first_attempt_tst) = self.request_manager.get_first_request_time(known_version)
         {
             if let Ok(duration) = SystemTime::now().duration_since(first_attempt_tst) {
                 counters::SYNC_PROGRESS_DURATION.observe_duration(duration);
@@ -898,21 +927,26 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     .error(&e)
             );
 
-            // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
-            counters::APPLY_CHUNK_FAILURE
-                .with_label_values(&[&peer.peer_id().to_string()])
+            counters::APPLY_CHUNK_COUNT
+                .with_label_values(&[
+                    &peer.raw_network_id().to_string(),
+                    &peer.peer_id().to_string(),
+                    counters::FAIL_LABEL,
+                ])
                 .inc();
             return;
         }
 
-        // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
-        counters::APPLY_CHUNK_SUCCESS
-            .with_label_values(&[&peer.peer_id().to_string()])
+        counters::APPLY_CHUNK_COUNT
+            .with_label_values(&[
+                &peer.raw_network_id().to_string(),
+                &peer.peer_id().to_string(),
+                counters::SUCCESS_LABEL,
+            ])
             .inc();
 
         // Part 2: post-chunk-process stage: process commit
         if let Err(e) = self.process_commit(new_txns, None, Some(peer)).await {
-            // log and count
             error!(
                 LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::PostCommitFail)
                     .error(&e)
@@ -1072,7 +1106,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         });
         // notify consensus if sync request timed out
         if sync_request_expired {
-            counters::SYNC_REQUEST_TIMEOUT.inc();
+            counters::SYNC_REQUEST_RESULT
+                .with_label_values(&[counters::TIMEOUT_LABEL])
+                .inc();
             warn!(LogSchema::event_log(
                 LogEntry::SyncRequest,
                 LogEvent::Timeout
@@ -1159,7 +1195,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer: PeerNetworkId,
         request_info: PendingRequestInfo,
     ) -> Result<()> {
-        counters::SUBSCRIPTION_DELIVERY_COUNT.inc();
         let response_li = self.choose_response_li(request_info.request_epoch, None)?;
         self.deliver_chunk(
             peer,
@@ -1197,9 +1232,22 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         });
 
         ready.into_iter().for_each(|(peer, request_info)| {
-            if let Err(err) = self.deliver_subscription(peer, request_info) {
-                error!("[state sync] failed to notify subscriber {}", err);
-            }
+            let result_label =
+                if let Err(err) = self.deliver_subscription(peer.clone(), request_info) {
+                    error!(LogSchema::new(LogEntry::SubscriptionDeliveryFail)
+                        .peer(&peer)
+                        .error(&err));
+                    counters::FAIL_LABEL
+                } else {
+                    counters::SUCCESS_LABEL
+                };
+            counters::SUBSCRIPTION_DELIVERY_COUNT
+                .with_label_values(&[
+                    &peer.raw_network_id().to_string(),
+                    &peer.peer_id().to_string(),
+                    result_label,
+                ])
+                .inc();
         });
     }
 

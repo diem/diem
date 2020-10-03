@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse};
+use crate::{
+    chunk_request::GetChunkRequest, chunk_response::GetChunkResponse,
+    request_manager::ChunkRequestInfo,
+};
 use anyhow::Error;
 use libra_config::config::PeerNetworkId;
 use libra_logger::Schema;
@@ -9,6 +12,7 @@ use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint,
 };
 use serde::Serialize;
+
 #[derive(Clone, Schema)]
 pub struct LogSchema<'a> {
     name: LogEntry,
@@ -36,6 +40,10 @@ pub struct LogSchema<'a> {
     old_epoch: Option<u64>,
     new_epoch: Option<u64>,
     target_version: Option<u64>,
+    old_multicast_level: Option<usize>,
+    new_multicast_level: Option<usize>,
+    #[schema(debug)]
+    chunk_req_info: Option<&'a ChunkRequestInfo>,
 }
 
 impl<'a> LogSchema<'a> {
@@ -68,6 +76,9 @@ impl<'a> LogSchema<'a> {
             new_epoch: None,
             old_epoch: None,
             target_version: None,
+            old_multicast_level: None,
+            new_multicast_level: None,
+            chunk_req_info: None,
         }
     }
 
@@ -100,6 +111,8 @@ pub enum LogEntry {
     NetworkError,
     EpochChange,
     CommitFlow,
+    Multicast,
+    SubscriptionDeliveryFail,
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -117,6 +130,7 @@ pub enum LogEvent {
     OldSyncRequest,
     NetworkSendError,
     Success,
+    ChunkRequestInfo,
 
     // ProcessChunkResponse events
     Received,
@@ -129,4 +143,8 @@ pub enum LogEvent {
     // ProcessChunkRequest events
     PastEpochRequested,
     DeliverChunk,
+
+    // Multicast network events
+    Failover,
+    Recover,
 }
