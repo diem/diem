@@ -32,6 +32,9 @@ macro_rules! register_rpc_method {
                         )));
                     }
 
+                    fail_point!(format!("jsonrpc::method::{}", $name).as_str(), |_| {
+                        Err(anyhow::format_err!("Injected error for method {} error", $name).into())
+                    });
                     Ok(serde_json::to_value($method(service, request).await?)?)
                 })
             }),

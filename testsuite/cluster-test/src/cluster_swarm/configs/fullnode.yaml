@@ -43,3 +43,18 @@ metrics:
 
 storage:
   prune_window: 50000
+
+# this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
+failpoints:
+  jsonrpc::get_latest_ledger_info: 1%return
+  jsonrpc::method::submit::mempool_sender: 1%return
+  jsonrpc::method::submit: 1%return
+  jsonrpc::method::get_metadata: 1%return
+  jsonrpc::method::get_account: 1%return
+  jsonrpc::method::get_transactions: 1%return
+  jsonrpc::method::get_account_transaction: 1%return
+  jsonrpc::method::get_events: 1%return
+  jsonrpc::method::get_currencies: 1%return
+  jsonrpc::method::get_state_proof: 1%return
+  jsonrpc::method::get_account_state_with_proof: 1%return
+  jsonrpc::method::get_network_status: 1%return

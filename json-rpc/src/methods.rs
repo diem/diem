@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
+use fail::fail_point;
 use futures::{channel::oneshot, SinkExt};
 use libra_config::config::RoleType;
 use libra_crypto::hash::CryptoHash;
@@ -68,6 +69,12 @@ impl JsonRpcService {
     }
 
     pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        fail_point!("jsonrpc::get_latest_ledger_info", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error for get latest ledger info error"
+            ))
+        });
+
         self.db.get_latest_ledger_info()
     }
 
@@ -208,6 +215,11 @@ async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<
     trace_code_block!("json-rpc::submit", {"txn", transaction.sender(), transaction.sequence_number()});
 
     let (req_sender, callback) = oneshot::channel();
+
+    fail_point!("jsonrpc::method::submit::mempool_sender", |_| {
+        Err(anyhow::anyhow!("Injected error for mempool_sender call error").into())
+    });
+
     service
         .mempool_sender
         .send((transaction, req_sender))

@@ -2927,6 +2927,7 @@ dependencies = [
  "compiled-stdlib",
  "executor",
  "executor-types",
+ "fail",
  "futures 0.3.5",
  "generate-key",
  "hex",
