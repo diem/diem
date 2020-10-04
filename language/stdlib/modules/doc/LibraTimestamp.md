@@ -12,6 +12,11 @@ It interacts with the other modules in the following ways:
 * LibraBlock: to reach consensus on the global wall clock time
 * AccountLimits: to limit the time of account limits
 
+This module moreover enables code to assert that it is running in genesis (<code><a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">Self::assert_genesis</a></code>) or after
+genesis (<code><a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">Self::assert_operating</a></code>). These are essentially distinct states of the system. Specifically,
+if <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">Self::assert_operating</a></code> succeeds, assumptions about invariants over the global state can be made
+which reflect that the system has been successfully initialized.
+
 
 -  [Resource `CurrentTimeMicroseconds`](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
 -  [Constants](#@Constants_0)
@@ -471,14 +476,6 @@ Helper schema to specify that a function aborts if not operating.
 ## Module Specification
 
 
-All functions which do not have an <code><b>aborts_if</b></code> specification in this module are implicitly declared
-to never abort.
-
-
-<pre><code><b>pragma</b> aborts_if_is_strict;
-</code></pre>
-
-
 
 After genesis, time progresses monotonically.
 
@@ -488,6 +485,16 @@ After genesis, time progresses monotonically.
 </code></pre>
 
 
+
+All functions which do not have an <code><b>aborts_if</b></code> specification in this module are implicitly declared
+to never abort.
+
+
+<pre><code><b>pragma</b> aborts_if_is_strict;
+</code></pre>
+
+
 [//]: # ("File containing references which can be used from documentation")
+[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
 [ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
 [PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
