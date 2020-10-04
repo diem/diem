@@ -449,6 +449,8 @@ mod test {
     use rand::SeedableRng as _;
     use std::sync::{Arc, RwLock};
 
+    const TEST_SEED_2: [u8; 32] = [42; 32];
+
     /// helper to setup two testing peers
     fn build_peers(
         is_mutual_auth: bool,
@@ -601,9 +603,8 @@ mod test {
 
     fn test_handshake_self_fails(is_mutual_auth: bool) {
         let (_, (server, server_public_key)) = build_peers(is_mutual_auth);
-
         let (client_res, server_res) = perform_handshake(&server, &server, server_public_key);
-        // Both sides should error
+
         client_res.unwrap_err();
         server_res.unwrap_err();
     }
@@ -616,6 +617,56 @@ mod test {
     #[test]
     fn test_handshake_self_fails_mutual_auth() {
         test_handshake_self_fails(true /* is_mutual_auth */);
+    }
+
+    #[test]
+    fn test_handshake_unauthed_keypair_fails_mutual_auth() {
+        let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED_2);
+        let client_private_key = x25519::PrivateKey::generate(&mut rng);
+
+        let ((mut client, _), (server, server_public_key)) =
+            build_peers(true /* is_mutual_auth */);
+
+        // swap in a different keypair, so the connection will be unauthenticated
+        client.noise_config = noise::NoiseConfig::new(client_private_key);
+        let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
+
+        client_res.unwrap_err();
+        server_res.unwrap_err();
+    }
+
+    #[test]
+    fn test_handshake_unauthed_peerid_fails_mutual_auth() {
+        let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED_2);
+        let client_private_key = x25519::PrivateKey::generate(&mut rng);
+
+        // build a client with an unrecognized peer id, so the connection will be
+        // unauthenticated
+        let client_peer_id = PeerId::random();
+        let client = NoiseUpgrader::new(
+            NetworkContext::mock_with_peer_id(client_peer_id),
+            client_private_key,
+            HandshakeAuthMode::mutual(Arc::new(RwLock::new(HashMap::new()))),
+        );
+
+        let (_, (server, server_public_key)) = build_peers(true /* is_mutual_auth */);
+        let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
+
+        client_res.unwrap_err();
+        server_res.unwrap_err();
+    }
+
+    #[test]
+    fn test_handshake_client_peerid_mismatch_fails_server_only_auth() {
+        ::libra_logger::Logger::init_for_testing();
+
+        let ((mut client, _), (server, server_public_key)) =
+            build_peers(false /* is_mutual_auth */);
+        client.network_context = NetworkContext::mock_with_peer_id(PeerId::random());
+        let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
+
+        trace!("client_res: {}", client_res.unwrap_err());
+        trace!("server_res: {}", server_res.unwrap_err());
     }
 
     #[test]
