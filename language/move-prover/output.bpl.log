@@ -1,0 +1,20 @@
+Boogie program verifier version 2.7.32.0, Copyright (c) 2003-2014, Microsoft.
+Fatal Error: ProverException: Microsoft.Boogie.ProverException: Cannot find specified prover: /usr/local/bin/z3
+   at Microsoft.Boogie.ProverOptions.ExecutablePath() in /home/travis/build/boogie-org/boogie/Source/Core/VCExp.cs:line 132
+   at Microsoft.Boogie.SMTLib.SMTLibProcess..ctor(SMTLibProverOptions options) in /home/travis/build/boogie-org/boogie/Source/Provers/SMTLib/SMTLibProcess.cs:line 30
+   at Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver.SetupProcess() in /home/travis/build/boogie-org/boogie/Source/Provers/SMTLib/ProverInterface.cs:line 143
+   at Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver..ctor(ProverOptions options, VCExpressionGenerator gen, SMTLibProverContext ctx) in /home/travis/build/boogie-org/boogie/Source/Provers/SMTLib/ProverInterface.cs:line 92
+   at Microsoft.Boogie.SMTLib.Factory.SpawnProver(ProverOptions options, VCExpressionGenerator gen, SMTLibProverContext ctx) in /home/travis/build/boogie-org/boogie/Source/Provers/SMTLib/ProverInterface.cs:line 3296
+   at Microsoft.Boogie.SMTLib.Factory.SpawnProver(ProverOptions options, Object ctxt) in /home/travis/build/boogie-org/boogie/Source/Provers/SMTLib/ProverInterface.cs:line 3256
+   at Microsoft.Boogie.Checker..ctor(ConditionGeneration vcgen, Program prog, String logFilePath, Boolean appendLogFile, ProverContext ctx) in /home/travis/build/boogie-org/boogie/Source/VCGeneration/Check.cs:line 174
+   at VC.ConditionGeneration.FindCheckerFor(Boolean isBlocking, Int32 waitTimeinMs, Int32 maxRetries) in /home/travis/build/boogie-org/boogie/Source/VCGeneration/ConditionGeneration.cs:line 577
+   at VC.VCGen.VerifyImplementation(Implementation impl, VerifierCallback callback) in /home/travis/build/boogie-org/boogie/Source/VCGeneration/VC.cs:line 2152
+   at VC.ConditionGeneration.VerifyImplementation(Implementation impl, List`1& errors, String requestId) in /home/travis/build/boogie-org/boogie/Source/VCGeneration/ConditionGeneration.cs:line 137
+   at Microsoft.Boogie.ExecutionEngine.VerifyImplementation(Program program, PipelineStatistics stats, ErrorReporterDelegate er, String requestId, Dictionary`2 extractLoopMappingInfo, Implementation[] stablePrioritizedImpls, Int32 index, OutputCollector outputCollector, List`1 checkers, String programId) in /home/travis/build/boogie-org/boogie/Source/ExecutionEngine/ExecutionEngine.cs:line 1251
+   at Microsoft.Boogie.ExecutionEngine.<>c__DisplayClass28_2.<InferAndVerify>b__5(Object dummy) in /home/travis/build/boogie-org/boogie/Source/ExecutionEngine/ExecutionEngine.cs:line 1026
+   at System.Threading.Tasks.Task.InnerInvoke()
+   at System.Threading.Tasks.Task.<>c.<.cctor>b__274_0(Object obj)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)

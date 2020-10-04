@@ -3,15 +3,18 @@
 
 # Module `0x1::LibraSystem`
 
-The <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code> module provides an interface for maintaining information
-about the set of validators used during consensus.
+Maintains information about the set of validators used during consensus.
+Provides functions to add, remove, and update validators in the
+validator set.
+
+> Note: When trying to understand this code, it's important to know that "config"
+and "configuration" are used for several distinct concepts.
 
 
 -  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
 -  [Resource `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
 -  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
 -  [Constants](#@Constants_0)
-    -  [Error codes](#@Error_codes_1)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
 -  [Function `set_libra_system_config`](#0x1_LibraSystem_set_libra_system_config)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
@@ -25,7 +28,10 @@ about the set of validators used during consensus.
 -  [Function `get_validator_index_`](#0x1_LibraSystem_get_validator_index_)
 -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
-    -  [Module specifications](#@Module_specifications_2)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Access Control](#@Access_Control_3)
+    -  [Helper Functions](#@Helper_Functions_4)
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
@@ -45,7 +51,7 @@ about the set of validators used during consensus.
 
 ## Struct `ValidatorInfo`
 
-ValidatorInfo contains information about a Validator Owner.
+Information about a Validator Owner.
 
 
 <pre><code><b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>
@@ -74,7 +80,9 @@ ValidatorInfo contains information about a Validator Owner.
 <code>config: <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a></code>
 </dt>
 <dd>
- Configuration information about the Validator.
+ Configuration information about the Validator, such as the
+ Validator Operator, human name, and info such as consensus key
+ and network addresses.
 </dd>
 </dl>
 
@@ -87,12 +95,11 @@ ValidatorInfo contains information about a Validator Owner.
 
 Enables a scheme that restricts the LibraSystem config
 in LibraConfig from being modified by any other module.  Only
-code in this module can get a reference to the ModifyConfigCapability<LibraSystem>
-that is required by LibraConfig::set_with_capability_and_reconfigure to
-modify that the LibraSystem config. This is only needed in order to permit
-Validator Operators to modify the ValidatorInfo for the Validator Owner
-who has delegated management to them.  For all other LibraConfig configs,
-Libra root is the only signer who can modify them.
+code in this module can get a reference to the ModifyConfigCapability<LibraSystem>,
+which is required by <code><a href="LibraConfig.md#0x1_LibraConfig_set_with_capability_and_reconfigure">LibraConfig::set_with_capability_and_reconfigure</a></code> to
+modify the LibraSystem config. This is only needed by <code>update_config_and_reconfigure</code>.
+Only Libra root can add or remove a validator from the validator set, so the
+capability is not needed for access control in those functions.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>
@@ -109,7 +116,8 @@ Libra root is the only signer who can modify them.
 <code>cap: <a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>&gt;</code>
 </dt>
 <dd>
-
+ Holds a capability returned by <code><a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_and_get_capability">LibraConfig::publish_new_config_and_get_capability</a></code>
+ which is called in <code>initialize_validator_set</code>.
 </dd>
 </dl>
 
@@ -121,7 +129,8 @@ Libra root is the only signer who can modify them.
 ## Struct `LibraSystem`
 
 The LibraSystem struct stores the validator set and crypto scheme in
-LibraConfig.
+LibraConfig. The LibraSystem struct is stored by LibraConfig, which publishes a
+LibraConfig<LibraSystem> resource.
 
 
 <pre><code><b>struct</b> <a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>
@@ -144,7 +153,7 @@ LibraConfig.
 <code>validators: vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;</code>
 </dt>
 <dd>
- The current validator set. Updated only at epoch boundaries via reconfiguration.
+ The current validator set.
 </dd>
 </dl>
 
@@ -184,7 +193,7 @@ The validator operator is not the operator for the specified validator
 
 <a name="0x1_LibraSystem_EALREADY_A_VALIDATOR"></a>
 
-Tried to add an existing validator to the validator set
+Tried to add a validator to the validator set that was already in it
 
 
 <pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">EALREADY_A_VALIDATOR</a>: u64 = 2;
@@ -193,11 +202,6 @@ Tried to add an existing validator to the validator set
 
 
 <a name="0x1_LibraSystem_ECAPABILITY_HOLDER"></a>
-
-
-<a name="@Error_codes_1"></a>
-
-### Error codes
 
 The <code><a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a></code> resource was not in the required state
 
@@ -219,7 +223,7 @@ Tried to add a validator with an invalid state to the validator set
 
 <a name="0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR"></a>
 
-An operation was attempted on a non-active validator
+An operation was attempted on an address not in the vaidator set
 
 
 <pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR">ENOT_AN_ACTIVE_VALIDATOR</a>: u64 = 3;
@@ -242,9 +246,9 @@ An out of bounds index for the validator set was encountered
 ## Function `initialize_validator_set`
 
 Publishes the LibraConfig for the LibraSystem struct, which contains the current
-validator set, and  publishes the Capability holder with the
+validator set. Also publishes the CapabilityHolder with the
 ModifyConfigCapability<LibraSystem> returned by the publish function, which allows
-code in this module to change the validator set.
+code in this module to change LibraSystem config (including the validator set).
 Must be invoked by the Libra root a single time in Genesis.
 
 
@@ -307,6 +311,8 @@ Must be invoked by the Libra root a single time in Genesis.
 
 ## Function `set_libra_system_config`
 
+Copies a LibraSystem struct into the LibraConfig<LibraSystem> resource
+Called by the add, remove, and update functions.
 
 
 <pre><code><b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(value: <a href="LibraSystem.md#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
@@ -324,6 +330,7 @@ Must be invoked by the Libra root a single time in Genesis.
         <b>exists</b>&lt;<a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
         <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="LibraSystem.md#0x1_LibraSystem_ECAPABILITY_HOLDER">ECAPABILITY_HOLDER</a>)
     );
+    // Updates the <a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt; and emits a reconfigure event.
     <a href="LibraConfig.md#0x1_LibraConfig_set_with_capability_and_reconfigure">LibraConfig::set_with_capability_and_reconfigure</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;(
         &borrow_global&lt;<a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).cap,
         value
@@ -345,7 +352,13 @@ Must be invoked by the Libra root a single time in Genesis.
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">LibraConfig::Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
-<b>ensures</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).payload == value;
+</code></pre>
+
+
+<code>payload</code> is the only field of LibraConfig, so next completely specifies it.
+
+
+<pre><code><b>ensures</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).payload == value;
 </code></pre>
 
 
@@ -356,6 +369,7 @@ Must be invoked by the Libra root a single time in Genesis.
 
 ## Function `add_validator`
 
+Adds a new validator to the validator set.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_add_validator">add_validator</a>(lr_account: &signer, validator_addr: address)
@@ -440,8 +454,9 @@ Must be invoked by the Libra root a single time in Genesis.
 
 
 LIP-6 property: validator has validator role. The code does not check this explicitly,
-but it is implied by the assert ValidatorConfig::is_valid, since
-a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorConfig).
+but it is implied by the <code><b>assert</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a></code>, since there
+is an invariant (in ValidatorConfig) that a an address with a published ValidatorConfig has
+a ValidatorRole
 
 
 <pre><code><b>schema</b> <a href="LibraSystem.md#0x1_LibraSystem_AddValidatorEnsures">AddValidatorEnsures</a> {
@@ -469,6 +484,7 @@ a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorCon
 
 ## Function `remove_validator`
 
+Removes a validator, aborts unless called by libra root account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_remove_validator">remove_validator</a>(lr_account: &signer, validator_addr: address)
@@ -560,6 +576,10 @@ in validator_set
 
 ## Function `update_config_and_reconfigure`
 
+Copy the information from ValidatorConfig into the validator set.
+This function makes no changes to the size or the members of the set.
+If the config in the ValidatorSet changes, it stores the new LibraSystem
+and emits a reconfigurationevent.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_update_config_and_reconfigure">update_config_and_reconfigure</a>(validator_operator_account: &signer, validator_addr: address)
@@ -659,7 +679,7 @@ for validator_addr, and doesn't change any addresses.
 </code></pre>
 
 
-No addresses change
+No addresses change in the validator set
 
 
 <pre><code><b>schema</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a> {
@@ -668,7 +688,7 @@ No addresses change
 </code></pre>
 
 
-If the validator info address is not the one we're changing, the info does not change.
+If the <code><a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a></code> address is not the one we're changing, the info does not change.
 
 
 <pre><code><b>schema</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a> {
@@ -685,6 +705,14 @@ It updates the correct entry in the correct way
     <b>ensures</b> <b>forall</b> i in 0..len(vs): vs[i].config == <b>old</b>(vs[i].config) ||
                 (<b>old</b>(vs)[i].addr == validator_addr &&
                 vs[i].config == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_addr));
+}
+</code></pre>
+
+
+LIP-6 property
+
+
+<pre><code><b>schema</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a> {
     <b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_addr);
 }
 </code></pre>
@@ -697,6 +725,7 @@ It updates the correct entry in the correct way
 
 ## Function `get_libra_system_config`
 
+Get the LibraSystem configuration from LibraConfig
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>(): <a href="LibraSystem.md#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
@@ -735,6 +764,7 @@ It updates the correct entry in the correct way
 
 ## Function `is_validator`
 
+Return true if <code>addr</code> is in the current validator set
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_is_validator">is_validator</a>(addr: address): bool
@@ -784,6 +814,7 @@ It updates the correct entry in the correct way
 
 ## Function `get_validator_config`
 
+Returns validator config. Aborts if <code>addr</code> is not in the validator set.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a>
@@ -828,6 +859,7 @@ It updates the correct entry in the correct way
 
 ## Function `validator_set_size`
 
+Return the size of the current validator set
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_validator_set_size">validator_set_size</a>(): u64
@@ -866,6 +898,7 @@ It updates the correct entry in the correct way
 
 ## Function `get_ith_validator_address`
 
+Used in <code>transaction_fee.<b>move</b></code> to distribute transaction fees among validators
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_get_ith_validator_address">get_ith_validator_address</a>(i: u64): address
@@ -906,6 +939,8 @@ It updates the correct entry in the correct way
 
 ## Function `get_validator_index_`
 
+Get the index of the validator by address in the <code>validators</code> vector
+It has a loop, so there are spec blocks in the code to assert loop invariants.
 
 
 <pre><code><b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;u64&gt;
@@ -958,8 +993,22 @@ It updates the correct entry in the correct way
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_LibraSystem_size$21"></a>
 <b>let</b> size = len(validators);
-<b>ensures</b> (<b>forall</b> i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
-<b>ensures</b>
+</code></pre>
+
+
+If <code>addr</code> is not in validator set, returns none.
+
+
+<pre><code><b>ensures</b> (<b>forall</b> i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
+</code></pre>
+
+
+If <code>addr</code> is in validator set, return the least index of an entry with that address.
+The data invariant associated with the LibraSystem.validators that implies
+that there is exactly one such address.
+
+
+<pre><code><b>ensures</b>
     (<b>exists</b> i in 0..size: validators[i].addr == addr) ==&gt;
         <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result)
         && {
@@ -976,6 +1025,8 @@ It updates the correct entry in the correct way
 
 ## Function `update_ith_validator_info_`
 
+Updates *i*th validator info, if nothing changed, return false.
+This function never aborts.
 
 
 <pre><code><b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators: &<b>mut</b> vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;, i: u64): bool
@@ -989,14 +1040,14 @@ It updates the correct entry in the correct way
 
 <pre><code><b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators: &<b>mut</b> vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, i: u64): bool {
     <b>let</b> size = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(validators);
-    // This provably cannot happen, but leaving it here <b>as</b> a sanity check.
+    // This provably cannot happen, but left it here for safety.
     <b>if</b> (i &gt;= size) {
         <b>return</b> <b>false</b>
     };
     <b>let</b> validator_info = <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(validators, i);
-    // I believe this cannot happen (depending on an <b>invariant</b> that doesn't terminate right now),
-    // but leaving it in <b>as</b> a sanity check.
-    // ValidatorConfig::ValidatorConfigRemainsValid
+    // I believe "is_valid" below always holds, based on a <b>global</b> <b>invariant</b> later
+    // in the file (which proves <b>if</b> we comment out some other specifications),
+    // but left it here for safety.
     <b>if</b> (!<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_info.addr)) {
         <b>return</b> <b>false</b>
     };
@@ -1035,13 +1086,6 @@ in calling context.
 </code></pre>
 
 
-Every member of validators is valid.
-
-
-<pre><code><b>requires</b> [deactivated] <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i].addr);
-</code></pre>
-
-
 Somewhat simplified from the code because of properties guaranteed
 by the calling context.
 
@@ -1071,12 +1115,18 @@ Does not change validators if result is false
 
 
 <pre><code><b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
-<b>ensures</b> validators == update_vector(<b>old</b>(validators), i, validators[i]);
 </code></pre>
 
 
-Needed this to make "consensus voting power is always 1" invariant
-prove, for unclear reasons.
+Updates the ith validator entry (and nothing else), as appropriate.
+
+
+<pre><code><b>ensures</b> validators == update_vector(<b>old</b>(validators), i, validators[i]);
+</code></pre>
+
+
+Needed these assertions to make "consensus voting power is always 1" invariant
+prove (not sure why).
 
 
 <pre><code><b>requires</b> <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
@@ -1093,6 +1143,7 @@ prove, for unclear reasons.
 
 ## Function `is_validator_`
 
+Private function checks for membership of <code>addr</code> in validator set.
 
 
 <pre><code><b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_is_validator_">is_validator_</a>(addr: address, validators_vec_ref: &vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;): bool
@@ -1125,24 +1176,21 @@ prove, for unclear reasons.
 
 
 
-<a name="@Module_specifications_2"></a>
+</details>
 
-### Module specifications
+<a name="@Module_Specification_1"></a>
 
-
-
-<a name="0x1_LibraSystem_spec_get_validators"></a>
+## Module Specification
 
 
-<pre><code><b>define</b> <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
-    <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;().validators
-}
-</code></pre>
+
+<a name="@Initialization_2"></a>
+
+### Initialization
 
 
 After genesis, the <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code> configuration is published, as well as the capability
-to modify it. This invariant removes the need to specify aborts_if's for missing
-CapabilityHolder at Libra root.
+which grants the right to modify it to certain functions in this module.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
@@ -1151,6 +1199,19 @@ CapabilityHolder at Libra root.
 </code></pre>
 
 
+
+<a name="@Access_Control_3"></a>
+
+### Access Control
+
+Access control requirements for validator set are a bit more complicated than
+many parts of the framework because of <code>update_config_and_reconfigure</code>.
+That function updates the validator info (e.g., the network address) for a
+particular Validator Owner, but only if the signer is the Operator for that owner.
+Therefore, we must ensure that the information for other validators in the
+validator set are not changed, which is specified locally for
+<code>update_config_and_reconfigure</code>.
+
 The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISSION].
 
 
@@ -1158,18 +1219,6 @@ The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISS
 </code></pre>
 
 
-Restricts the set of functions that can modify the validator set config.
-To specify proper access, it is sufficient to show the following conditions,
-which are all specified and verified in function specifications, above.
-1. <code>initialize</code> aborts if not called during genesis
-2. <code>add_validator</code> adds a validator without changing anything else in the validator set
-and only completes successfully if the signer is Libra Root.
-3. <code>remove_validator</code> removes a validator without changing anything else and only
-completes successfully if the signer is Libra Root
-4. <code>update_config_and_reconfigure</code> changes only entry for the validator it's supposed
-to update, and only completes successfully if the signer is the validator operator
-for that validator.
-set_libra_system_config is a private function, so it does not have to preserve the property.
 
 
 <a name="0x1_LibraSystem_ValidatorSetConfigRemainsSame"></a>
@@ -1184,6 +1233,9 @@ set_libra_system_config is a private function, so it does not have to preserve t
 
 Only {add, remove} validator [[H12]][PERMISSION] and update_config_and_reconfigure
 [[H13]][PERMISSION] may change the set of validators in the configuration.
+<code>set_libra_system_config</code> is a private function which is only called by other
+functions in the "except" list. <code>initialize_validator_set</code> is only called in
+Genesis.
 
 
 <pre><code><b>apply</b> <a href="LibraSystem.md#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> <b>to</b> *, *&lt;T&gt;
@@ -1193,9 +1245,28 @@ Only {add, remove} validator [[H12]][PERMISSION] and update_config_and_reconfigu
 
 
 
+<a name="@Helper_Functions_4"></a>
+
+### Helper Functions
+
+
+Fetches the currently published validator set from the published LibraConfig<LibraSystem>
+resource.
+
+
+<a name="0x1_LibraSystem_spec_get_validators"></a>
+
+
+<pre><code><b>define</b> <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): vector&lt;<a href="LibraSystem.md#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
+    <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;().validators
+}
+</code></pre>
+
+
+
 Every validator has a published ValidatorConfig whose config option is "some"
 (meaning of ValidatorConfig::is_valid).
-Unfortunately, this times out for unknown reasons (it doesn't seem to be hard),
+> Unfortunately, this times out for unknown reasons (it doesn't seem to be hard),
 so it is deactivated.
 The Prover can prove it if the uniqueness invariant for the LibraSystem resource
 is commented out, along with aborts for update_config_and_reconfigure and everything
@@ -1209,9 +1280,9 @@ commented out)
 
 
 Every validator in the validator set has a validator role.
-Note: Verification of LibraSystem seems to be very sensitive, and will
-often time out because of very small changes.  Disabling this property
-(with [deactivate, global]) is a quick temporary fix.
+> Note: Verification of LibraSystem seems to be very sensitive, and will
+often time out after small changes.  Disabling this property
+(with [deactivate, global]) is sometimes a quick temporary fix.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
@@ -1219,16 +1290,16 @@ often time out because of very small changes.  Disabling this property
 </code></pre>
 
 
-Consensus_voting_power is always 1.
+<code>Consensus_voting_power</code> is always 1. In future implementations, this
+field may have different values in which case this property will have to
+change. It's here currently because and accidental or illicit change
+to the voting power of a validator could defeat the Byzantine fault tolerance
+of LibraBFT.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> i1 in 0..len(<a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
     <a href="LibraSystem.md#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].consensus_voting_power == 1;
 </code></pre>
-
-
-
-</details>
 
 
 [//]: # ("File containing references which can be used from documentation")
