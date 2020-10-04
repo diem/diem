@@ -25,7 +25,7 @@ use netcore::{
 };
 use network::noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader};
 use rand::prelude::*;
-use std::{env, ffi::OsString, sync::Arc};
+use std::{env, ffi::OsString, io, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
@@ -92,7 +92,8 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
             .upgrade_with_noise(socket, origin, remote_public_key)
-            .await?;
+            .await
+            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
         Ok(socket)
     })
 }
@@ -112,7 +113,8 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
             .upgrade_with_noise(socket, origin, remote_public_key)
-            .await?;
+            .await
+            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
         Ok(socket)
     })
 }

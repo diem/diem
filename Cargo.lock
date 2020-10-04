@@ -4219,6 +4219,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serial_test",
+ "short-hex-str",
  "socket-bench-server",
  "stream-ratelimiter",
  "thiserror",

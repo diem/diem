@@ -18,9 +18,9 @@
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use libra_types::PeerId;
-//! use std::{collections::{HashSet, HashMap}, sync::{Arc, RwLock}};
+//! use std::{collections::{HashSet, HashMap}, io, sync::{Arc, RwLock}};
 //!
-//! fn example() -> std::io::Result<()> {
+//! fn example() -> io::Result<()> {
 //! // create client and server NoiseUpgrader
 //! let mut rng = StdRng::from_seed(TEST_SEED);
 //! let client_private = x25519::PrivateKey::generate(&mut rng);
@@ -65,8 +65,10 @@
 //!    server.upgrade_inbound(listener_socket),
 //! ));
 //!
-//! let mut client_session = client_session?;
-//! let (mut server_session, _client_peer_id) = server_session?;
+//! let mut client_session = client_session
+//!     .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+//! let (mut server_session, _client_peer_id) = server_session
+//!     .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 //!
 //! // client -> server
 //! executor::block_on(client_session.write_all(b"client hello"))?;
@@ -94,10 +96,12 @@
 //! [ik]: https://noiseexplorer.com/patterns/IK
 //! [crypto]: ../libra_crypto/noise/index.html
 
+pub mod error;
 pub mod handshake;
 pub mod stream;
 
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
+pub use error::NoiseHandshakeError;
 pub use handshake::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};

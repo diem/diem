@@ -10,19 +10,18 @@
 //!
 //! [stream]: network::noise::stream
 
-use crate::{logging::NetworkSchema, noise::stream::NoiseStream};
+use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
 use libra_infallible::duration_since_epoch;
-use libra_logger::debug;
+use libra_logger::trace;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom as _,
     fmt::Debug,
-    io,
     sync::{Arc, RwLock},
 };
 
@@ -136,7 +135,7 @@ impl HandshakeAuthMode {
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
 pub struct NoiseUpgrader {
     /// The validator's network context
-    network_context: Arc<NetworkContext>,
+    pub network_context: Arc<NetworkContext>,
     /// Config for executing Noise handshakes. Includes our static private key.
     noise_config: noise::NoiseConfig,
     /// Handshake authentication can be either mutual or server-only authentication.
@@ -167,7 +166,7 @@ impl NoiseUpgrader {
         socket: TSocket,
         origin: ConnectionOrigin,
         remote_public_key: Option<x25519::PublicKey>,
-    ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
+    ) -> Result<(x25519::PublicKey, NoiseStream<TSocket>), NoiseHandshakeError>
     where
         TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
@@ -177,12 +176,7 @@ impl NoiseUpgrader {
                 let remote_public_key = match remote_public_key {
                     Some(key) => key,
                     None if cfg!(any(test, feature = "fuzzing")) => unreachable!(),
-                    None => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "noise: SHOULD NOT HAPPEN: missing server's key when dialing",
-                        ));
-                    }
+                    None => return Err(NoiseHandshakeError::MissingServerPublicKey),
                 };
                 self.upgrade_outbound(socket, remote_public_key, AntiReplayTimestamps::now)
                     .await?
@@ -220,7 +214,7 @@ impl NoiseUpgrader {
         mut socket: TSocket,
         remote_public_key: x25519::PublicKey,
         time_provider: F,
-    ) -> io::Result<NoiseStream<TSocket>>
+    ) -> Result<NoiseStream<TSocket>, NoiseHandshakeError>
     where
         TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
         F: Fn() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE],
@@ -249,49 +243,45 @@ impl NoiseUpgrader {
                 Some(&payload),
                 &mut client_noise_msg,
             )
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(NoiseHandshakeError::BuildClientHandshakeMessageFailed)?;
 
         // send the first handshake message
-        debug!(
-            NetworkSchema::new(&self.network_context),
-            noise_role = "client",
-            step = "writing_data",
-            remote_public_key = remote_public_key,
-            "{} noise client writing_data: {}",
+        trace!(
+            "{} noise client: handshake write: remote_public_key: {}",
             self.network_context,
-            remote_public_key
+            remote_public_key,
         );
-        socket.write_all(&client_message).await?;
-        socket.flush().await?;
+        socket
+            .write_all(&client_message)
+            .await
+            .map_err(NoiseHandshakeError::ClientWriteFailed)?;
+        socket
+            .flush()
+            .await
+            .map_err(NoiseHandshakeError::ClientFlushFailed)?;
 
         // receive the server's response (<- e, ee, se)
-        debug!(
-            NetworkSchema::new(&self.network_context),
-            noise_role = "client",
-            step = "reading_data",
-            remote_public_key = remote_public_key,
-            "{} noise client reading_data: {}",
+        trace!(
+            "{} noise client: handshake read: remote_public_key: {}",
             self.network_context,
-            remote_public_key
+            remote_public_key,
         );
         let mut server_response = [0u8; Self::SERVER_MESSAGE_SIZE];
-        socket.read_exact(&mut server_response).await?;
+        socket
+            .read_exact(&mut server_response)
+            .await
+            .map_err(NoiseHandshakeError::ClientReadFailed)?;
 
         // parse the server's response
-        // TODO: security logging here? (mimoo)
-        debug!(
-            NetworkSchema::new(&self.network_context),
-            noise_role = "client",
-            step = "finalizing",
-            remote_public_key = remote_public_key,
-            "{} noise client finalize: {}",
+        trace!(
+            "{} noise client: handshake finalize: remote_public_key: {}",
             self.network_context,
-            remote_public_key
+            remote_public_key,
         );
         let (_, session) = self
             .noise_config
             .finalize_connection(initiator_state, &server_response)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(NoiseHandshakeError::ClientFinalizeFailed)?;
 
         // finalize the connection
         Ok(NoiseStream::new(socket, session))
@@ -308,7 +298,7 @@ impl NoiseUpgrader {
     pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
-    ) -> io::Result<(NoiseStream<TSocket>, PeerId)>
+    ) -> Result<(NoiseStream<TSocket>, PeerId), NoiseHandshakeError>
     where
         TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
@@ -316,15 +306,11 @@ impl NoiseUpgrader {
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
         // receive the prologue + first noise handshake message
-        debug!(
-            NetworkSchema::new(&self.network_context),
-            noise_role = "server",
-            step = "reading_data",
-            "{} noise client finalize: {:?}",
-            self.network_context,
-            socket
-        );
-        socket.read_exact(&mut client_message).await?;
+        trace!("{} noise server: handshake read", self.network_context);
+        socket
+            .read_exact(&mut client_message)
+            .await
+            .map_err(NoiseHandshakeError::ServerReadFailed)?;
 
         // extract prologue (remote_peer_id | self_public_key)
         let (remote_peer_id, self_expected_public_key) =
@@ -333,38 +319,23 @@ impl NoiseUpgrader {
         // parse the client's peer id
         // note: in mutual authenticated network, we could verify that their peer_id is in the trust peer set now.
         // We do this later in this function instead (to batch a number of checks) as there is no known attack here.
-        let remote_peer_id = PeerId::try_from(remote_peer_id).map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "noise: client sent invalid peer id: {}",
-                    hex::encode(remote_peer_id)
-                ),
-            )
-        })?;
+        let remote_peer_id = PeerId::try_from(remote_peer_id)
+            .map_err(|_| NoiseHandshakeError::InvalidClientPeerId(hex::encode(remote_peer_id)))?;
+        let remote_peer_short = remote_peer_id.short_str();
 
-        // prevent accidental self-dials
+        // reject accidental self-dials
         // this situation could occur either as a result of our own discovery
         // mis-configuration or a potentially malicious discovery peer advertising
         // a (loopback ip or mirror proxy) and our public key.
         if remote_peer_id == self.network_context.peer_id() {
-            // TODO(philiphayes): security logging. someone should investigate
-            // on-chain reconfiguration history to see if someone is misbehaving.
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "noise: detected accidental self-dial: we have the same peer id as the client",
-            ));
+            return Err(NoiseHandshakeError::SelfDialDetected);
         }
 
         // verify that this is indeed our public key
         if self_expected_public_key != self.noise_config.public_key().as_slice() {
-            // TODO: security logging (mimoo)
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "noise: client expecting us to have incorrect public key: {}",
-                    hex::encode(self_expected_public_key)
-                ),
+            return Err(NoiseHandshakeError::ClientExpectingDifferentPubkey(
+                remote_peer_short,
+                hex::encode(self_expected_public_key),
             ));
         }
 
@@ -373,53 +344,34 @@ impl NoiseUpgrader {
         let (remote_public_key, handshake_state, payload) = self
             .noise_config
             .parse_client_init_message(&prologue, &client_init_message)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|err| NoiseHandshakeError::ServerParseClient(remote_peer_short, err))?;
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
         if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
-            match trusted_peers
-                .read()
-                .map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        "noise: unable to read trusted_peers lock",
-                    )
-                })?
-                .get(&remote_peer_id)
-            {
+            match trusted_peers.read().unwrap().get(&remote_peer_id) {
                 Some(remote_pubkey_set) => {
                     if !remote_pubkey_set.contains(&remote_public_key) {
-                        return Err(io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            format!(
-                                "noise: peer id {} connecting to us with an unknown public key: {}, expected one of: {:?}",
-                                remote_peer_id, remote_public_key, remote_pubkey_set,
-                            ),
+                        return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
+                            remote_peer_short,
+                            hex::encode(remote_public_key.as_slice()),
                         ));
                     }
                 }
                 None => {
-                    // TODO: security logging (mimoo)
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "noise: client connecting to us with an unknown peer id: {}",
-                            remote_peer_id
-                        ),
-                    ));
+                    return Err(NoiseHandshakeError::UnauthenticatedClient(
+                        remote_peer_short,
+                        remote_peer_id,
+                    ))
                 }
             };
         } else {
             // if not, verify that their peerid is constructed correctly from their public key
-            let expected_remote_peer_id = PeerId::from_identity_public_key(remote_public_key);
-            if expected_remote_peer_id != remote_peer_id {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "noise: peer id expected: {}, received: {}",
-                        hex::encode(expected_remote_peer_id),
-                        hex::encode(remote_peer_id),
-                    ),
+            let derived_remote_peer_id = PeerId::from_identity_public_key(remote_public_key);
+            if derived_remote_peer_id != remote_peer_id {
+                return Err(NoiseHandshakeError::ClientPeerIdMismatch(
+                    remote_peer_short,
+                    remote_peer_id,
+                    derived_remote_peer_id,
                 ));
             }
         }
@@ -429,31 +381,21 @@ impl NoiseUpgrader {
         if let Some(anti_replay_timestamps) = self.auth_mode.anti_replay_timestamps() {
             // check that the payload received as the client timestamp (in seconds)
             if payload.len() != AntiReplayTimestamps::TIMESTAMP_SIZE {
-                // TODO: security logging (mimoo)
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "noise: client initiated connection without an 8-byte timestamp",
+                return Err(NoiseHandshakeError::MissingAntiReplayTimestamp(
+                    remote_peer_short,
                 ));
             }
+
             let mut client_timestamp = [0u8; AntiReplayTimestamps::TIMESTAMP_SIZE];
             client_timestamp.copy_from_slice(&payload);
             let client_timestamp = u64::from_le_bytes(client_timestamp);
 
             // check the timestamp is not a replay
-            let mut anti_replay_timestamps = anti_replay_timestamps.write().map_err(|_| {
-                io::Error::new(
-                    io::ErrorKind::Other,
-                    "noise: unable to read anti_replay_timestamps lock",
-                )
-            })?;
+            let mut anti_replay_timestamps = anti_replay_timestamps.write().unwrap();
             if anti_replay_timestamps.is_replay(remote_public_key, client_timestamp) {
-                // TODO: security logging
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!(
-                        "noise: client initiated connection with a timestamp already seen before: {}",
-                        client_timestamp
-                    ),
+                return Err(NoiseHandshakeError::ServerReplayDetected(
+                    remote_peer_short,
+                    client_timestamp,
                 ));
             }
 
@@ -467,27 +409,26 @@ impl NoiseUpgrader {
         let session = self
             .noise_config
             .respond_to_client(&mut rng, handshake_state, None, &mut server_response)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(|err| {
+                NoiseHandshakeError::BuildServerHandshakeMessageFailed(remote_peer_short, err)
+            })?;
 
         // send the response
-        debug!(
-            NetworkSchema::new(&self.network_context).remote_peer(&remote_peer_id),
-            noise_role = "server",
-            step = "writing_data",
-            "{} noise server writing_data: {}",
+        trace!(
+            "{} noise server: handshake write: remote_peer_id: {}",
             self.network_context,
-            remote_peer_id.short_str()
+            remote_peer_short,
         );
-        socket.write_all(&server_response).await?;
+        socket
+            .write_all(&server_response)
+            .await
+            .map_err(|err| NoiseHandshakeError::ServerWriteFailed(remote_peer_short, err))?;
 
         // finalize the connection
-        debug!(
-            NetworkSchema::new(&self.network_context).remote_peer(&remote_peer_id),
-            noise_role = "server",
-            step = "finalize",
-            "{} noise server finalize: {}",
+        trace!(
+            "{} noise server: handshake finalize: remote_peer_id: {}",
             self.network_context,
-            remote_peer_id.short_str()
+            remote_peer_short,
         );
         Ok((NoiseStream::new(socket, session), remote_peer_id))
     }
@@ -506,10 +447,7 @@ mod test {
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
-    use std::{
-        io,
-        sync::{Arc, RwLock},
-    };
+    use std::sync::{Arc, RwLock};
 
     /// helper to setup two testing peers
     fn build_peers(
@@ -573,8 +511,8 @@ mod test {
         server: &NoiseUpgrader,
         server_public_key: x25519::PublicKey,
     ) -> (
-        io::Result<NoiseStream<MemorySocket>>,
-        io::Result<(NoiseStream<MemorySocket>, PeerId)>,
+        Result<NoiseStream<MemorySocket>, NoiseHandshakeError>,
+        Result<(NoiseStream<MemorySocket>, PeerId), NoiseHandshakeError>,
     ) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();

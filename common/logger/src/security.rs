@@ -68,14 +68,12 @@ pub enum SecurityEvent {
 
     // Network
     // -------
-    /// Network identified an invalid peer
-    InvalidNetworkPeer,
-
-    /// Network couldn't negotiate
-    InvalidNetworkHandshakeMsg,
-
     /// Network received an invalid message from a remote peer
     InvalidNetworkEvent,
+
+    /// A failed noise handshake that's either a clear bug or indicates some
+    /// security issue.
+    NoiseHandshake,
 }
 
 impl Schema for SecurityEvent {

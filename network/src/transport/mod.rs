@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    logging::NetworkSchema,
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
@@ -186,37 +187,13 @@ struct UpgradeContext {
     network_id: NetworkId,
 }
 
-pub struct TransportError {
-    pub inner: io::Error,
-    pub addr: NetworkAddress,
-}
-
-impl TransportError {
-    pub fn new(error: io::Error, addr: NetworkAddress) -> Self {
-        Self { inner: error, addr }
-    }
-}
-
-impl std::error::Error for TransportError {}
-
-impl std::fmt::Display for TransportError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ProxiedAddr:{} Error:{}", self.addr, self.inner)
-    }
-}
-
-impl std::fmt::Debug for TransportError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-/// Puts a `TransportError` in the `io::Error` to append a proxied `NetworkAddress`
-/// TODO: Refactor transport to take different Input and Output errors
-/// This is a hack because we need to unravel a lot to make more complex error types
+/// If we have proxy protocol enabled, then prepend the un-proxied address to the error.
 fn add_pp_addr(proxy_protocol_enabled: bool, error: io::Error, addr: &NetworkAddress) -> io::Error {
     if proxy_protocol_enabled {
-        io::Error::new(error.kind(), TransportError::new(error, addr.clone()))
+        io::Error::new(
+            error.kind(),
+            format!("proxied address: {}, error: {}", addr, error),
+        )
     } else {
         error
     }
@@ -256,15 +233,19 @@ async fn upgrade_inbound<T: TSocket>(
 
     // try authenticating via noise handshake
     let (mut socket, remote_peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
-        // security logging
-        warn!(
-            SecurityEvent::InvalidNetworkPeer,
-            error = err.to_string(),
-            network_address = addr,
-            "security: InvalidNetworkPeer {}: '{}'",
-            addr,
-            err
-        );
+        if err.should_security_log() {
+            sample!(
+                SampleRate::Duration(Duration::from_secs(15)),
+                error!(
+                    SecurityEvent::NoiseHandshake,
+                    NetworkSchema::new(&ctxt.noise.network_context)
+                        .network_address(&addr)
+                        .connection_origin(&origin),
+                    error = %err,
+                )
+            );
+        }
+        let err = io::Error::new(io::ErrorKind::Other, err);
         add_pp_addr(proxy_protocol_enabled, err, &addr)
     })?;
     let remote_pubkey = socket.get_remote_static();
@@ -284,16 +265,10 @@ async fn upgrade_inbound<T: TSocket>(
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|err| {
-            warn!(
-                SecurityEvent::InvalidNetworkHandshakeMsg,
-                error = err.to_string(),
-                origin = "inbound",
-                remote_peer = remote_peer_id,
-                network_address = addr
-            );
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",
-                remote_peer_id, err
+                remote_peer_id.short_str(),
+                err
             );
             add_pp_addr(
                 proxy_protocol_enabled,
@@ -332,7 +307,22 @@ async fn upgrade_outbound<T: TSocket>(
     let mut socket = ctxt
         .noise
         .upgrade_outbound(socket, remote_pubkey, AntiReplayTimestamps::now)
-        .await?;
+        .await
+        .map_err(|err| {
+            if err.should_security_log() {
+                sample!(
+                    SampleRate::Duration(Duration::from_secs(15)),
+                    error!(
+                        SecurityEvent::NoiseHandshake,
+                        NetworkSchema::new(&ctxt.noise.network_context)
+                            .network_address(&addr)
+                            .connection_origin(&origin),
+                        error = %err,
+                    )
+                );
+            }
+            io::Error::new(io::ErrorKind::Other, err)
+        })?;
 
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
@@ -349,7 +339,6 @@ async fn upgrade_outbound<T: TSocket>(
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|e| {
-            // TODO(mimoo): security log?
             let e = format!(
                 "handshake negotiation with peer {} failed: {}",
                 remote_peer_id, e
