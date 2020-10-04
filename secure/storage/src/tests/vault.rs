@@ -341,7 +341,7 @@ fn test_vault_crypto_policies() {
     assert_ne!(rotater_store.rotate_key(CRYPTO_KEY).unwrap(), pubkey);
     rotater_store.sign(CRYPTO_KEY, &message).unwrap_err();
     // Verify a rotater with another namespace has no permission for the operations
-    let rotater_store_with_namespace = VaultStorage::new(
+    let mut rotater_store_with_namespace = VaultStorage::new(
         dev::test_host(),
         rotater_token,
         Some(VAULT_NAMESPACE_1.into()),
@@ -350,7 +350,7 @@ fn test_vault_crypto_policies() {
         true,
     );
     rotater_store_with_namespace
-        .get_public_key(CRYPTO_KEY)
+        .rotate_key(CRYPTO_KEY)
         .unwrap_err();
 
     let new_pubkey = storage.get_public_key(CRYPTO_KEY).unwrap().public_key;
