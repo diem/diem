@@ -56,18 +56,16 @@
 //! ```
 //!
 
-use std::{
-    convert::TryFrom as _,
-    io::{Cursor, Read as _, Write as _},
-};
-
 use crate::{hash::HashValue, hkdf::Hkdf, traits::Uniform as _, x25519};
-
 use aes_gcm::{
     aead::{generic_array::GenericArray, Aead, AeadInPlace, NewAead, Payload},
     Aes256Gcm,
 };
 use sha2::Digest;
+use std::{
+    convert::TryFrom as _,
+    io::{Cursor, Read as _, Write as _},
+};
 use thiserror::Error;
 
 //
