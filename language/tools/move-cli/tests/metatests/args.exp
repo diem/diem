@@ -9,8 +9,8 @@ Command `test cov`:
 Command `test cov --track-cov`:
 Module 00000000000000000000000000000042::M
 	fun test
-		total instructions: 1
-		covered instructions: 1
+		total: 1
+		covered: 1
 		% coverage: 100.00
 >>> % Module coverage: 100.00
 1 / 1 test(s) passed.

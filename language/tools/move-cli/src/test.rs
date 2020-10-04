@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{DEFAULT_BUILD_OUTPUT_DIR, MOVE_DATA};
-use move_coverage::{
-    coverage_map::CoverageMap,
-    summary::{ModuleSummary, ModuleSummaryOptions},
-};
+use move_coverage::{coverage_map::CoverageMap, summary::summarize_inst_cov};
 use move_lang::test_utils::*;
 use std::{
     env,
@@ -86,15 +83,13 @@ fn show_coverage(trace_file: &Path, move_data: &Path) -> anyhow::Result<()> {
     }
 
     // collect trace
-    let coverage_map = CoverageMap::from_trace_file(trace_file);
+    let coverage_map = CoverageMap::from_trace_file(trace_file).to_unified_exec_map();
 
     // summarize
     let mut summary_writer: Box<dyn Write> = Box::new(io::stdout());
     for module in modules.iter() {
-        let mut summary_options = ModuleSummaryOptions::default();
-        summary_options.summarize_function_coverage = true;
-        ModuleSummary::new(summary_options, module, &coverage_map)
-            .summarize_human(&mut summary_writer)?;
+        let module_summary = summarize_inst_cov(module, &coverage_map);
+        module_summary.summarize_human(&mut summary_writer, true)?;
     }
 
     Ok(())

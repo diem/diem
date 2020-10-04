@@ -4,8 +4,8 @@
 #![forbid(unsafe_code)]
 
 use move_coverage::{
-    coverage_map::{CoverageMap, ExecCoverageMap},
-    summary::{self, ModuleSummary, ModuleSummaryOptions},
+    coverage_map::CoverageMap,
+    summary::{self, ModuleSummary},
 };
 use std::{
     fs::{self, File},
@@ -68,11 +68,14 @@ fn get_modules(args: &Args) -> Vec<CompiledModule> {
     modules
 }
 
-fn format_human_summary<W: Write>(
+fn format_human_summary<M, F, W: Write>(
     args: &Args,
-    coverage_map: &ExecCoverageMap,
+    coverage_map: &M,
+    summary_func: F,
     summary_writer: &mut W,
-) {
+) where
+    F: Fn(&CompiledModule, &M) -> ModuleSummary,
+{
     writeln!(summary_writer, "+-------------------------+").unwrap();
     writeln!(summary_writer, "| Move Coverage Summary   |").unwrap();
     writeln!(summary_writer, "+-------------------------+").unwrap();
@@ -81,10 +84,9 @@ fn format_human_summary<W: Write>(
     let mut total_instructions = 0;
 
     for module in get_modules(&args).iter() {
-        let mut summary_options = ModuleSummaryOptions::default();
-        summary_options.summarize_function_coverage = args.summarize_functions;
-        let (total, covered) = ModuleSummary::new(summary_options, &module, coverage_map)
-            .summarize_human(summary_writer)
+        let coverage_summary = summary_func(&module, coverage_map);
+        let (total, covered) = coverage_summary
+            .summarize_human(summary_writer, args.summarize_functions)
             .unwrap();
         total_covered += covered;
         total_instructions += total;
@@ -94,25 +96,25 @@ fn format_human_summary<W: Write>(
     writeln!(
         summary_writer,
         "| % Move Coverage: {:.2}  |",
-        summary::percent_coverage_for_counts(total_instructions, total_covered)
+        (total_covered as f64 / total_instructions as f64) * 100f64
     )
     .unwrap();
     writeln!(summary_writer, "+-------------------------+").unwrap();
 }
 
-fn format_csv_summary<W: Write>(
+fn format_csv_summary<M, F, W: Write>(
     args: &Args,
-    coverage_map: &ExecCoverageMap,
+    coverage_map: &M,
+    summary_func: F,
     summary_writer: &mut W,
-) {
+) where
+    F: Fn(&CompiledModule, &M) -> ModuleSummary,
+{
     writeln!(summary_writer, "ModuleName,FunctionName,Covered,Uncovered").unwrap();
 
     for module in get_modules(&args).iter() {
-        let mut summary_options = ModuleSummaryOptions::default();
-        summary_options.summarize_function_coverage = true;
-        ModuleSummary::new(summary_options, &module, coverage_map)
-            .summarize_csv(summary_writer)
-            .unwrap();
+        let coverage_summary = summary_func(&module, coverage_map);
+        coverage_summary.summarize_csv(summary_writer).unwrap();
     }
 }
 
@@ -125,7 +127,6 @@ fn main() {
     } else {
         CoverageMap::from_binary_file(&input_trace_path)
     };
-    let unified_exec_map = coverage_map.to_unified_exec_map();
 
     let mut summary_writer: Box<dyn Write> = match &args.summary_path {
         Some(x) => {
@@ -135,9 +136,20 @@ fn main() {
         None => Box::new(io::stdout()),
     };
 
+    let unified_exec_map = coverage_map.to_unified_exec_map();
     if !args.csv_output {
-        format_human_summary(&args, &unified_exec_map, &mut summary_writer)
+        format_human_summary(
+            &args,
+            &unified_exec_map,
+            summary::summarize_inst_cov,
+            &mut summary_writer,
+        )
     } else {
-        format_csv_summary(&args, &unified_exec_map, &mut summary_writer)
+        format_csv_summary(
+            &args,
+            &unified_exec_map,
+            summary::summarize_inst_cov,
+            &mut summary_writer,
+        )
     }
 }
