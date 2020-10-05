@@ -13,6 +13,7 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     path::Path,
 };
+use vm::file_format::CodeOffset;
 
 pub type FunctionCoverage = BTreeMap<u64, u64>;
 
@@ -32,6 +33,19 @@ pub struct ModuleCoverageMap {
 pub struct ExecCoverageMap {
     pub exec_id: String,
     pub module_maps: BTreeMap<(AccountAddress, Identifier), ModuleCoverageMap>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TraceEntry {
+    pub module_addr: AccountAddress,
+    pub module_name: Identifier,
+    pub func_name: Identifier,
+    pub func_pc: CodeOffset,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TraceMap {
+    pub exec_maps: BTreeMap<String, Vec<TraceEntry>>,
 }
 
 impl CoverageMap {
@@ -147,13 +161,6 @@ impl ModuleCoverageMap {
     }
 }
 
-pub fn output_map_to_file<M: Serialize, P: AsRef<Path>>(file_name: P, data: &M) -> Result<()> {
-    let bytes = lcs::to_bytes(data)?;
-    let mut file = File::create(file_name)?;
-    file.write_all(&bytes)?;
-    Ok(())
-}
-
 impl ExecCoverageMap {
     pub fn new(exec_id: String) -> Self {
         ExecCoverageMap {
@@ -186,4 +193,82 @@ impl ExecCoverageMap {
     ) {
         self.insert_multi(module_addr, module_name, func_name, pc, 1);
     }
+}
+
+impl TraceMap {
+    /// Takes in a file containing a raw VM trace, and returns an updated coverage map.
+    pub fn update_from_trace_file<P: AsRef<Path>>(mut self, filename: P) -> Self {
+        let file = File::open(filename).unwrap();
+        for line in BufReader::new(file).lines() {
+            let line = line.unwrap();
+            let mut splits = line.split(',');
+            let exec_id = splits.next().unwrap();
+            let context = splits.next().unwrap();
+            let pc = splits.next().unwrap().parse::<u64>().unwrap();
+
+            let mut context_segs: Vec<_> = context.split("::").collect();
+            let is_script = context_segs.len() == 2;
+            if !is_script {
+                let func_name = Identifier::new(context_segs.pop().unwrap()).unwrap();
+                let module_name = Identifier::new(context_segs.pop().unwrap()).unwrap();
+                let module_addr =
+                    AccountAddress::from_hex_literal(context_segs.pop().unwrap()).unwrap();
+                self.insert(exec_id, module_addr, module_name, func_name, pc);
+            } else {
+                // Don't count scripts (for now)
+                assert_eq!(context_segs.pop().unwrap(), "main",);
+                assert_eq!(context_segs.pop().unwrap(), "Script",);
+            }
+        }
+        self
+    }
+
+    // Takes in a file containing a raw VM trace, and returns a parsed trace.
+    pub fn from_trace_file<P: AsRef<Path>>(filename: P) -> Self {
+        let trace_map = TraceMap {
+            exec_maps: BTreeMap::new(),
+        };
+        trace_map.update_from_trace_file(filename)
+    }
+
+    // Takes in a file containing a serialized trace and deserialize it.
+    pub fn from_binary_file<P: AsRef<Path>>(filename: P) -> Self {
+        let mut bytes = Vec::new();
+        File::open(filename)
+            .ok()
+            .and_then(|mut file| file.read_to_end(&mut bytes).ok())
+            .ok_or_else(|| format_err!("Error while reading in coverage map binary"))
+            .unwrap();
+        lcs::from_bytes(&bytes)
+            .map_err(|_| format_err!("Error deserializing into coverage map"))
+            .unwrap()
+    }
+
+    // add entries in a cascading manner
+    pub fn insert(
+        &mut self,
+        exec_id: &str,
+        module_addr: AccountAddress,
+        module_name: Identifier,
+        func_name: Identifier,
+        pc: u64,
+    ) {
+        let exec_entry = self
+            .exec_maps
+            .entry(exec_id.to_owned())
+            .or_insert_with(Vec::new);
+        exec_entry.push(TraceEntry {
+            module_addr,
+            module_name,
+            func_name,
+            func_pc: pc as CodeOffset,
+        });
+    }
+}
+
+pub fn output_map_to_file<M: Serialize, P: AsRef<Path>>(file_name: P, data: &M) -> Result<()> {
+    let bytes = lcs::to_bytes(data)?;
+    let mut file = File::create(file_name)?;
+    file.write_all(&bytes)?;
+    Ok(())
 }
