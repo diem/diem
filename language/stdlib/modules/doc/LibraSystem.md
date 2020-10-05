@@ -246,7 +246,7 @@ An out of bounds index for the validator set was encountered
 ## Function `initialize_validator_set`
 
 Publishes the LibraConfig for the LibraSystem struct, which contains the current
-validator set. Also publishes the CapabilityHolder with the
+validator set. Also publishes the <code><a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a></code> with the
 ModifyConfigCapability<LibraSystem> returned by the publish function, which allows
 code in this module to change LibraSystem config (including the validator set).
 Must be invoked by the Libra root a single time in Genesis.

@@ -77,7 +77,7 @@ module LibraSystem {
 
 
     /// Publishes the LibraConfig for the LibraSystem struct, which contains the current
-    /// validator set. Also publishes the CapabilityHolder with the
+    /// validator set. Also publishes the `CapabilityHolder` with the
     /// ModifyConfigCapability<LibraSystem> returned by the publish function, which allows
     /// code in this module to change LibraSystem config (including the validator set).
     /// Must be invoked by the Libra root a single time in Genesis.
