@@ -24,7 +24,7 @@ To build your own complete testnet:
     1. Enter the **mint** directory: `cd mint`
     2. Copy the testnet waypoint: `cp ../validator-testnet/waypoint.txt .`
     3. Copy the testnet mint.key: `cp ../validator-testnet/libra_root_key mint.key`
-    4. Start the composition `docker-compose -up -d`
+    4. Start the composition `docker-compose up -d`
     5. Return to the compose directory: `cd ..`
 3. Enjoy your testnet:
     1. Faucet/mint will be available at http://127.0.0.1:8000
