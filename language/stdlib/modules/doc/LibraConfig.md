@@ -738,7 +738,7 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
     <b>let</b> config = <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <a name="0x1_LibraConfig_current_time$16"></a>
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
-    <b>aborts_if</b> [concrete] current_time &lt;= config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+    <b>aborts_if</b> [concrete] current_time &lt; config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> [concrete] config.epoch == <a href="LibraConfig.md#0x1_LibraConfig_MAX_U64">MAX_U64</a> <b>with</b> EXECUTION_FAILURE;
 }
 </code></pre>

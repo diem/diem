@@ -207,6 +207,15 @@ impl ConfigurationResource {
             events,
         }
     }
+
+    #[cfg(feature = "fuzzing")]
+    pub fn new_for_test(epoch: u64, last_reconfiguration_time: u64, event_count: u64) -> Self {
+        Self {
+            epoch,
+            last_reconfiguration_time,
+            events: EventHandle::new(new_epoch_event_key(), event_count),
+        }
+    }
 }
 
 #[cfg(feature = "fuzzing")]

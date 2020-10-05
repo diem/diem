@@ -22,6 +22,7 @@ use libra_types::{
 use move_core_types::{
     identifier::Identifier,
     language_storage::{ResourceKey, StructTag},
+    move_resource::MoveResource,
 };
 
 #[test]
@@ -173,7 +174,7 @@ fn bad_writesets() {
         .account()
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
-            write_set.clone(),
+            write_set,
             vec![],
         )))
         .sequence_number(1)
@@ -184,12 +185,13 @@ fn bad_writesets() {
         &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
     );
 
-    // (2) The WriteSet contains a reconfiguration event, will be dropped.
-    let event = ContractEvent::new(new_epoch_event_key(), 0, lbr_type_tag(), vec![]);
+    // (2) The WriteSet contains a conflicting reconfiguration event from that emitted by the
+    // writeset epilogue, will be dropped.
+    let event = ContractEvent::new(new_epoch_event_key(), 1, lbr_type_tag(), vec![]);
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
-            write_set,
+            WriteSet::default(),
             vec![event],
         )))
         .sequence_number(1)
@@ -282,6 +284,48 @@ fn bad_writesets() {
     assert_eq!(
         output.status(),
         &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    );
+
+    // (7) The WriteSet attempts to write the Configuration to the same value as emitted from
+    // writeset epilogue, should be kept
+    let key = ResourceKey::new(
+        *genesis_account.address(),
+        libra_types::on_chain_config::ConfigurationResource::struct_tag(),
+    );
+    let path = AccessPath::resource_access_path(&key);
+
+    let configuration_value =
+        lcs::to_bytes(&libra_types::on_chain_config::ConfigurationResource::new_for_test(2, 1, 2))
+            .unwrap();
+    let write_set = WriteSetMut::new(vec![(path, WriteOp::Value(configuration_value))])
+        .freeze()
+        .unwrap();
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(1)
+        .sign();
+    let output = executor.execute_transaction(writeset_txn);
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed),
+    );
+
+    // (8) The WriteSet contains the same reconfiguration event as that emitted from writeset
+    // epilogue, will be kept.
+    let event = ContractEvent::new(new_epoch_event_key(), 2, lbr_type_tag(), vec![2]);
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
+            WriteSet::default(),
+            vec![event],
+        )))
+        .sequence_number(1)
+        .sign();
+    let output = executor.execute_transaction(writeset_txn);
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed),
     );
 }
 

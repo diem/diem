@@ -535,9 +535,17 @@ impl LibraVM {
 
         // Make sure epilogue event set either does not emit the same EventKey/Sequence number tuple
         // or they both emit the very same event.
+        //
+        // Note that this check will not make sure the only one reconfiguration event is emitted
+        // during this process!! It is the user's job to make sure they don't mess the events up.
         if !check_intersection(
-            epilogue_events.iter().map(|event| ((event.key(), event.sequence_number()), event)),
-            change_set.events().iter().map(|event| ((event.key(),  event.sequence_number()), event)),
+            epilogue_events
+                .iter()
+                .map(|event| ((event.key(), event.sequence_number()), event)),
+            change_set
+                .events()
+                .iter()
+                .map(|event| ((event.key(), event.sequence_number()), event)),
         ) {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
             return Ok(discard_error_vm_status(vm_status));

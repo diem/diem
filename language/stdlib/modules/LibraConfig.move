@@ -281,7 +281,7 @@ module LibraConfig {
     spec schema InternalReconfigureAbortsIf {
         let config = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let current_time = LibraTimestamp::spec_now_microseconds();
-        aborts_if [concrete] current_time <= config.last_reconfiguration_time with Errors::INVALID_STATE;
+        aborts_if [concrete] current_time < config.last_reconfiguration_time with Errors::INVALID_STATE;
         aborts_if [concrete] config.epoch == MAX_U64 with EXECUTION_FAILURE;
     }
     spec schema ReconfigureAbortsIf {
