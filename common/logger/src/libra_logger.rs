@@ -260,6 +260,10 @@ impl LibraLogger {
         self.filter.write().unwrap().local_filter = filter;
     }
 
+    pub fn set_remote_filter(&self, filter: Filter) {
+        self.filter.write().unwrap().remote_filter = filter;
+    }
+
     fn send_entry(&self, entry: LogEntry) {
         if let Some(printer) = &self.printer {
             let s = format(&entry).expect("Unable to format");
