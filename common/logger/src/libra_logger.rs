@@ -8,7 +8,7 @@ use crate::{
     },
     logger::Logger,
     struct_log::TcpWriter,
-    Event, Filter, Level, Metadata,
+    Event, Filter, Level, LevelFilter, Metadata,
 };
 use chrono::{SecondsFormat, Utc};
 use once_cell::sync::Lazy;
@@ -98,6 +98,7 @@ impl LogEntry {
 pub struct LibraLoggerBuilder {
     channel_size: usize,
     level: Level,
+    remote_level: Level,
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
     is_async: bool,
@@ -109,6 +110,7 @@ impl LibraLoggerBuilder {
         Self {
             channel_size: CHANNEL_SIZE,
             level: Level::Info,
+            remote_level: Level::Debug,
             address: None,
             printer: Some(Box::new(StderrWriter)),
             is_async: false,
@@ -129,6 +131,11 @@ impl LibraLoggerBuilder {
 
     pub fn level(&mut self, level: Level) -> &mut Self {
         self.level = level;
+        self
+    }
+
+    pub fn remote_level(&mut self, level: Level) -> &mut Self {
+        self.remote_level = level;
         self
     }
 
@@ -153,29 +160,48 @@ impl LibraLoggerBuilder {
 
     pub fn build(&mut self) -> Arc<LibraLogger> {
         let filter = {
-            let mut filter_builder = Filter::builder();
+            let local_filter = {
+                let mut filter_builder = Filter::builder();
 
-            if env::var(RUST_LOG).is_ok() {
-                filter_builder.with_env(RUST_LOG);
-            } else {
-                filter_builder.filter_level(self.level.into());
+                if env::var(RUST_LOG).is_ok() {
+                    filter_builder.with_env(RUST_LOG);
+                } else {
+                    filter_builder.filter_level(self.level.into());
+                }
+
+                filter_builder.build()
+            };
+            let remote_filter = {
+                let mut filter_builder = Filter::builder();
+
+                if self.is_async && self.address.is_some() {
+                    filter_builder.filter_level(self.remote_level.into());
+                } else {
+                    filter_builder.filter_level(LevelFilter::Off);
+                }
+
+                filter_builder.build()
+            };
+
+            LibraFilter {
+                local_filter,
+                remote_filter,
             }
-
-            filter_builder.build()
         };
 
         let logger = if self.is_async {
             let (sender, receiver) = mpsc::sync_channel(self.channel_size);
-            let service = LoggerService {
-                receiver,
-                address: self.address.clone(),
-                printer: self.printer.take(),
-            };
             let logger = Arc::new(LibraLogger {
                 sender: Some(sender),
                 printer: None,
                 filter: RwLock::new(filter),
             });
+            let service = LoggerService {
+                receiver,
+                address: self.address.clone(),
+                printer: self.printer.take(),
+                facade: logger.clone(),
+            };
 
             thread::spawn(move || service.run());
             logger
@@ -192,10 +218,21 @@ impl LibraLoggerBuilder {
     }
 }
 
+struct LibraFilter {
+    local_filter: Filter,
+    remote_filter: Filter,
+}
+
+impl LibraFilter {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.local_filter.enabled(metadata) || self.remote_filter.enabled(metadata)
+    }
+}
+
 pub struct LibraLogger {
     sender: Option<SyncSender<LogEntry>>,
     printer: Option<Box<dyn Writer>>,
-    filter: RwLock<Filter>,
+    filter: RwLock<LibraFilter>,
 }
 
 impl LibraLogger {
@@ -220,7 +257,7 @@ impl LibraLogger {
     }
 
     pub fn set_filter(&self, filter: Filter) {
-        *self.filter.write().unwrap() = filter;
+        self.filter.write().unwrap().local_filter = filter;
     }
 
     fn send_entry(&self, entry: LogEntry) {
@@ -254,6 +291,7 @@ struct LoggerService {
     receiver: Receiver<LogEntry>,
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
+    facade: Arc<LibraLogger>,
 }
 
 impl LoggerService {
@@ -264,12 +302,30 @@ impl LoggerService {
             PROCESSED_STRUCT_LOG_COUNT.inc();
 
             if let Some(printer) = &self.printer {
-                let s = format(&entry).expect("Unable to format");
-                printer.write(s)
+                if self
+                    .facade
+                    .filter
+                    .read()
+                    .unwrap()
+                    .local_filter
+                    .enabled(&entry.metadata)
+                {
+                    let s = format(&entry).expect("Unable to format");
+                    printer.write(s)
+                }
             }
 
             if let Some(writer) = &mut writer {
-                Self::write_to_logstash(writer, entry);
+                if self
+                    .facade
+                    .filter
+                    .read()
+                    .unwrap()
+                    .remote_filter
+                    .enabled(&entry.metadata)
+                {
+                    Self::write_to_logstash(writer, entry);
+                }
             }
         }
     }
