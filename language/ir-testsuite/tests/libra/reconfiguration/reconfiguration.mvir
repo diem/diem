@@ -24,25 +24,13 @@ import 0x1.LibraConfig;
 
 main(account: &signer) {
     LibraConfig.reconfigure(copy(account));
-    return;
-}
-
-// check: NewEpochEvent
-// check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: libraroot
-// Cannot trigger two reconfiguration within the same block.
-import 0x1.LibraConfig;
-// import 0x1.Roles;
-
-main(account: &signer) {
     LibraConfig.reconfigure(copy(account));
     return;
 }
 
-// check: ABORT
-// check: 23
+// check: NewEpochEvent
+// check: event_data: "0200000000000000"
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -58,4 +46,5 @@ main(account: &signer) {
 }
 
 // check: NewEpochEvent
+// check: event_data: "0300000000000000"
 // check: "Keep(EXECUTED)"
