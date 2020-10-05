@@ -17,9 +17,25 @@ use move_vm_types::{
 use std::collections::btree_map::BTreeMap;
 use vm::errors::*;
 
-/// Trait for the Move VM to abstract `StateView` operations.
+/// Trait for the Move VM to abstract storage operations.
 ///
-/// Can be used to define a "fake" implementation of the remote cache.
+/// Storage backends should return
+///   - Ok(Some(..)) if the data exists
+///   - Ok(None)     if the data does not exist
+///   - Err(..)      only when something really wrong happens, for example
+///                    - invariants are broken and observable from the storage side
+///                      (this is not currently possible as ModuleId and StructTag
+///                       are always structurally valid)
+///                    - storage encounters internal errors
+///
+/// Move VM on the other hand, should NOT blindly trust the storage impl and assume
+/// the protocol above is honored. When receiving an error from storage, the Move VM
+/// MUST catch the error and convert it into an invariant violation, no matter what
+/// type the original error has before propagating the error back to the VM caller.
+///
+/// Eventually we should replace (Partial)VMError with a dedicated VMStorageError or
+/// an associated error type so that storage implementations will no longer be able to
+/// return a bogus VMError.
 pub trait RemoteCache {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>>;
     fn get_resource(
@@ -63,6 +79,9 @@ pub(crate) struct TransactionDataCache<'r, 'l, R> {
     event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
+/// Collection of side effects produced by a Session.
+///
+/// The Move VM MUST guarantee that no duplicate entries exist.
 pub struct TransactionEffects {
     pub resources: Vec<(
         AccountAddress,

@@ -42,6 +42,7 @@ impl VMRuntime {
         }
     }
 
+    // See Session::publish_module for what contracts to follow.
     pub(crate) fn publish_module(
         &self,
         module: Vec<u8>,
@@ -91,6 +92,7 @@ impl VMRuntime {
         data_store.publish_module(&module_id, module)
     }
 
+    // See Session::execute_script for what contracts to follow.
     pub(crate) fn execute_script(
         &self,
         script: Vec<u8>,
@@ -150,6 +152,7 @@ impl VMRuntime {
         )
     }
 
+    // See Session::execute_function for what contracts to follow.
     pub(crate) fn execute_function(
         &self,
         module: &ModuleId,
