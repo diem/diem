@@ -84,27 +84,33 @@ pub fn setup_swarm_and_client_proxy(
     (env, ac_client)
 }
 
-/// Loads the validator's storage backend from the given node config
-pub fn load_backend_storage(node_config: &&NodeConfig) -> SecureBackend {
-    if let Identity::FromStorage(storage_identity) =
-        &node_config.validator_network.as_ref().unwrap().identity
-    {
-        storage_identity.backend.clone()
-    } else {
-        panic!("Couldn't load identity from storage");
-    }
+/// Loads the libra root storage backend from the given node config.
+pub fn load_libra_root_storage(node_config: &NodeConfig) -> SecureBackend {
+    fetch_backend_storage(node_config, Some("libra_root".to_string()))
 }
 
-pub fn load_libra_root_storage(node_config: &NodeConfig) -> SecureBackend {
+/// Loads the validator's storage backend from the given node config.
+pub fn load_backend_storage(node_config: &NodeConfig) -> SecureBackend {
+    fetch_backend_storage(node_config, None)
+}
+
+/// Loads the validator's storage backend from the given node config. If a namespace
+/// is specified, the storage namespace will be overridden.
+fn fetch_backend_storage(
+    node_config: &NodeConfig,
+    overriding_namespace: Option<String>,
+) -> SecureBackend {
     if let Identity::FromStorage(storage_identity) =
         &node_config.validator_network.as_ref().unwrap().identity
     {
         match storage_identity.backend.clone() {
             SecureBackend::OnDiskStorage(mut config) => {
-                config.namespace = Some("libra_root".to_string());
+                if let Some(namespace) = overriding_namespace {
+                    config.namespace = Some(namespace);
+                }
                 SecureBackend::OnDiskStorage(config)
             }
-            _ => unimplemented!("only support on-disk storage in smoke tests"),
+            _ => unimplemented!("On-disk storage is the only backend supported in smoke tests"),
         }
     } else {
         panic!("Couldn't load identity from storage");

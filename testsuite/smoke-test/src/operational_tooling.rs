@@ -37,7 +37,7 @@ fn test_consensus_key_rotation() {
     let op_tool = swarm.get_op_tool(0);
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&&node_config);
+    let backend = load_backend_storage(&node_config);
 
     // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
@@ -155,7 +155,7 @@ fn test_network_key_rotation() {
     let op_tool = swarm.get_op_tool(0);
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&&node_config);
+    let backend = load_backend_storage(&node_config);
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
@@ -203,7 +203,7 @@ fn test_network_key_rotation_recovery() {
     let op_tool = swarm.get_op_tool(0);
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&&node_config);
+    let backend = load_backend_storage(&node_config);
 
     // Rotate the network key in storage manually and perform a key rotation using the op_tool.
     // Here, we expected the op_tool to see that the network key in storage doesn't match the one
@@ -260,7 +260,7 @@ fn test_operator_key_rotation() {
     );
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&&node_config);
+    let backend = load_backend_storage(&node_config);
 
     let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
@@ -307,7 +307,7 @@ fn test_operator_key_rotation_recovery() {
     );
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&&node_config);
+    let backend = load_backend_storage(&node_config);
 
     // Rotate the operator key
     let (txn_ctx, new_operator_key) = op_tool.rotate_operator_key(&backend).unwrap();
