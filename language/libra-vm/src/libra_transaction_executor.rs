@@ -522,7 +522,9 @@ impl LibraVM {
         let (epilogue_writeset, epilogue_events) =
             txn_effects_to_writeset_and_events_cached(&mut (), effects)?;
 
-        // Make sure epilogue WriteSet doesn't intersect with the writeset in TransactionPayload.
+        // Make sure epilogue WriteSet either is not trying to write to the same access path as the
+        // changet coming from the transaction, or is writing to the same access path but with the
+        // exact same value.
         if !check_intersection(
             epilogue_writeset.iter().map(|a| (&a.0, &a.1)),
             change_set.write_set().iter().map(|a| (&a.0, &a.1)),
@@ -531,9 +533,11 @@ impl LibraVM {
             return Ok(discard_error_vm_status(vm_status));
         }
 
+        // Make sure epilogue event set either does not emit the same EventKey/Sequence number tuple
+        // or they both emit the very same event.
         if !check_intersection(
-            epilogue_events.iter().map(|event| (event.key(), event)),
-            change_set.events().iter().map(|event| (event.key(), event)),
+            epilogue_events.iter().map(|event| ((event.key(), event.sequence_number()), event)),
+            change_set.events().iter().map(|event| ((event.key(),  event.sequence_number()), event)),
         ) {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
             return Ok(discard_error_vm_status(vm_status));
@@ -672,6 +676,9 @@ impl LibraVM {
     }
 }
 
+// Returns true if either:
+// 1. lhs and rhs have different Ks.
+// 2. lhs and rhs have intersecting Ks but have the same V for those intersecting items.
 fn check_intersection<K: Eq + std::hash::Hash, V: Eq>(
     lhs: impl Iterator<Item = (K, V)>,
     rhs: impl Iterator<Item = (K, V)>,

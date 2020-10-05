@@ -226,8 +226,22 @@ module LibraConfig {
         let current_time = LibraTimestamp::now_microseconds();
 
         // Do not do anything if a reconfiguration event is already emitted within this transaction.
+        //
+        // This is OK because:
+        // - The time changes in every non-empty block
+        // - A block automatically ends after a transaction that emits a reconfiguration event, which is guarenteed by
+        //   LibraVM spec that all transactions comming after a reconfiguration transaction will be returned as Retry
+        //   status.
+        // - Each transaction must emit at most one reconfiguration event
+        //
+        // Thus, this check ensures that a transaction that does multiple "reconfiguration required" actions emits only
+        // one reconfiguration event.
+        //
+        // Another footnote is that the reasoning above hinders reconfiguration in a NIL block after a reconfiguration
+        // block: the configuration changes gets proposed in a NIL block's block prologue will not be emitted as there's
+        // no time changes.
         if (current_time == config_ref.last_reconfiguration_time) {
-            return ()
+            return
         };
 
         assert(current_time > config_ref.last_reconfiguration_time, Errors::invalid_state(EINVALID_BLOCK_TIME));

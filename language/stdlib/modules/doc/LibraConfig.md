@@ -665,8 +665,22 @@ An invalid block time was encountered.
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
 
     // Do not do anything <b>if</b> a reconfiguration event is already emitted within this transaction.
+    //
+    // This is OK because:
+    // - The time changes in every non-empty block
+    // - A block automatically ends after a transaction that emits a reconfiguration event, which is guarenteed by
+    //   LibraVM <b>spec</b> that all transactions comming after a reconfiguration transaction will be returned <b>as</b> Retry
+    //   status.
+    // - Each transaction must emit at most one reconfiguration event
+    //
+    // Thus, this check <b>ensures</b> that a transaction that does multiple "reconfiguration required" actions emits only
+    // one reconfiguration event.
+    //
+    // Another footnote is that the reasoning above hinders reconfiguration in a NIL block after a reconfiguration
+    // block: the configuration changes gets proposed in a NIL block's block prologue will not be emitted <b>as</b> there's
+    // no time changes.
     <b>if</b> (current_time == config_ref.last_reconfiguration_time) {
-        <b>return</b> ()
+        <b>return</b>
     };
 
     <b>assert</b>(current_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>));

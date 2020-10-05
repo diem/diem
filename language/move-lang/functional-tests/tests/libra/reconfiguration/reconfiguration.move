@@ -49,4 +49,3 @@ fun main(account: &signer) {
 // check: NewEpochEvent
 // check: event_data: "0300000000000000"
 // check: "Keep(EXECUTED)"
-ß
