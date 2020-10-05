@@ -77,8 +77,6 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 * <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>
 * <code><a href="Hash.md#0x1_Hash">Hash</a></code>
 * <code><a href="LCS.md#0x1_LCS">LCS</a></code>
-* <code><a href="Compare.md#0x1_Compare">Compare</a></code>
-* <code><a href="Debug.md#0x1_Debug">Debug</a></code> (Note: not callable outside of local testing)
 * <code><a href="Offer.md#0x1_Offer">Offer</a></code>
 * <code><a href="Option.md#0x1_Option">Option</a></code>
 * <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>
@@ -96,9 +94,7 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
 -  [`0x1::ChainId`](ChainId.md#0x1_ChainId)
 -  [`0x1::Coin1`](Coin1.md#0x1_Coin1)
--  [`0x1::Compare`](Compare.md#0x1_Compare)
 -  [`0x1::CoreAddresses`](CoreAddresses.md#0x1_CoreAddresses)
--  [`0x1::Debug`](Debug.md#0x1_Debug)
 -  [`0x1::DesignatedDealer`](DesignatedDealer.md#0x1_DesignatedDealer)
 -  [`0x1::DualAttestation`](DualAttestation.md#0x1_DualAttestation)
 -  [`0x1::Errors`](Errors.md#0x1_Errors)

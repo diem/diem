@@ -1,0 +1,9 @@
+Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
+Command `publish move_src/modules`:
+Command `run move_src/scripts/print_values.move --dry-run`:
+[debug] 42
+[debug] (&) [100, 200, 300]
+[debug] (&) { false }
+[debug] (&) { 404, { false }, true }
+[debug] (&) { { false } }

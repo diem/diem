@@ -53,8 +53,6 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 * `FixedPoint32`
 * `Hash`
 * `LCS`
-* `Compare`
-* `Debug` (Note: not callable outside of local testing)
 * `Offer`
 * `Option`
 * `SlidingNonce`

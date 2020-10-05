@@ -1,4 +1,5 @@
 Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
 Command `publish move_src/modules`:
 Command `run move_src/scripts/script.move --dry-run`:
 Call Stack:
