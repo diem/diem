@@ -9,11 +9,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAccountEvent {
     created: AccountAddress,
+    role_id: u64,
 }
 
 impl CreateAccountEvent {
     pub fn created(&self) -> AccountAddress {
         self.created
+    }
+
+    pub fn role_id(&self) -> u64 {
+        self.role_id
     }
 
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {

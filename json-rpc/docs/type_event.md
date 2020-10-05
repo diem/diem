@@ -148,9 +148,11 @@ Event emitted after minted, destination address received the minted coins.
 
 Event emitted when a new account is created
 
-| Name    | Type   | Description                    |
-|---------|--------|--------------------------------|
-| type    | string | Constant string "createaccount"|
+| Name            | Type   | Description                    |
+|-----------------|--------|--------------------------------|
+| type            | string | Constant string "createaccount"|
+| created_address | string | Address of the created account |
+| role_id         | u64    | Role id of the created account, see [LIP-2](https://lip.libra.org/lip-2/#move-implementation) for more details |
 
 #### unknown
 

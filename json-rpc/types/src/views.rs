@@ -192,7 +192,10 @@ pub enum EventDataView {
         time_rotated_seconds: u64,
     },
     #[serde(rename = "createaccount")]
-    CreateAccount {},
+    CreateAccount {
+        created_address: BytesView,
+        role_id: u64,
+    },
     #[serde(rename = "unknown")]
     Unknown {},
 }
@@ -306,7 +309,13 @@ impl TryFrom<ContractEvent> for EventDataView {
                 epoch: new_epoch_event.epoch(),
             }
         } else if event.type_tag() == &TypeTag::Struct(CreateAccountEvent::struct_tag()) {
-            EventDataView::CreateAccount {}
+            let create_account_event = CreateAccountEvent::try_from(&event)?;
+            let created_address = BytesView::from(create_account_event.created().as_ref());
+            let role_id = create_account_event.role_id();
+            EventDataView::CreateAccount {
+                created_address,
+                role_id,
+            }
         } else if event.type_tag() == &TypeTag::Struct(UpgradeEvent::struct_tag()) {
             // TODO: missing test
             let upgrade_event = UpgradeEvent::try_from(&event)?;

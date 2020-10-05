@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2020-10-05 Add `created_address` and `role_id` fields to `CreateAccount` event
+
+- `created_address` is the address created account.
+- `role_id` is the role id of the created account.
+
 ## 2020-09-30 Add `CreateAccount` event
 
 - New event data type createaccount.
