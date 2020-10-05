@@ -218,7 +218,7 @@ transaction script categorized in the same manner as here can be found in the
 Creates a Child VASP account with its parent being the sending account of the transaction.
 The sender of the transaction must be a Parent VASP account.
 
-Script documentation: <code><a href="overview.md#create_child_vasp_account">create_child_vasp_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a></code>
 
 ---
 
@@ -230,7 +230,7 @@ Script documentation: <code><a href="overview.md#create_child_vasp_account">crea
 Creates a Validator Operator account. This transaction can only be sent by the Libra
 Root account.
 
-Script documentation: <code><a href="overview.md#create_validator_operator_account">create_validator_operator_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a></code>
 
 ---
 
@@ -242,7 +242,7 @@ Script documentation: <code><a href="overview.md#create_validator_operator_accou
 Creates a Validator account. This transaction can only be sent by the Libra
 Root account.
 
-Script documentation: <code><a href="overview.md#create_validator_account">create_validator_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a></code>
 
 ---
 
@@ -253,7 +253,7 @@ Script documentation: <code><a href="overview.md#create_validator_account">creat
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
-Script documentation: <code><a href="overview.md#create_parent_vasp_account">create_parent_vasp_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a></code>
 
 
 ---
@@ -266,7 +266,7 @@ Script documentation: <code><a href="overview.md#create_parent_vasp_account">cre
 Creates a Designated Dealer account with the provided information, and initializes it with
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
-Script documentation: <code><a href="overview.md#create_designated_dealer">create_designated_dealer</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a></code>
 
 
 
@@ -287,7 +287,7 @@ send, receive, and hold <code><a href="../../modules/doc/Libra.md#0x1_Libra_Libr
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
-Script documentation: <code><a href="overview.md#add_currency_to_account">add_currency_to_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a></code>
 
 
 ---
@@ -302,7 +302,7 @@ account. Both the sending and recovery accounts need to belong to the same VASP 
 both be VASP accounts. After this transaction both the sending account and the
 specified recovery account can rotate the sender account's authentication key.
 
-Script documentation: <code><a href="overview.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a></code>
 
 
 ---
@@ -316,7 +316,7 @@ Rotates the authentication key of the sending account to the
 newly-specified public key and publishes a new shared authentication key
 under the sender's account. Any account can send this transaction.
 
-Script documentation: <code><a href="overview.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a></code>
 
 
 ---
@@ -329,7 +329,7 @@ Script documentation: <code><a href="overview.md#publish_shared_ed25519_public_k
 Rotates the transaction sender's authentication key to the supplied new authentication key. May
 be sent by any account.
 
-Script documentation: <code><a href="overview.md#rotate_authentication_key">rotate_authentication_key</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a></code>
 
 
 ---
@@ -343,7 +343,7 @@ Rotates the sender's authentication key to the supplied new authentication key. 
 any account that has a sliding nonce resource published under it (usually this is Treasury
 Compliance or Libra Root accounts).
 
-Script documentation: <code><a href="overview.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a></code>
 
 
 ---
@@ -357,7 +357,7 @@ Rotates the specified account's authentication key to the supplied new authentic
 only be sent by the Libra Root account as a write set transaction.
 
 
-Script documentation: <code><a href="overview.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a></code>
 
 
 ---
@@ -369,9 +369,9 @@ Script documentation: <code><a href="overview.md#rotate_authentication_key_with_
 
 Rotates the authentication key of a specified account that is part of a recovery address to a
 new authentication key. Only used for accounts that are part of a recovery address (see
-<code><a href="overview.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code> for account restrictions).
+<code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code> for account restrictions).
 
-Script documentation: <code><a href="overview.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a></code>
 
 
 ---
@@ -386,7 +386,7 @@ attestation on-chain. Transaction can be sent by any account that has dual attes
 information published under it. In practice the only such accounts are Designated Dealers and
 Parent VASPs.
 
-Script documentation: <code><a href="overview.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a></code>
 
 
 ---
@@ -398,9 +398,9 @@ Script documentation: <code><a href="overview.md#rotate_dual_attestation_info">r
 
 Rotates the authentication key in a <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code>. This transaction can be sent by
 any account that has previously published a shared ed25519 public key using
-<code><a href="overview.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>.
+<code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>.
 
-Script documentation: <code><a href="overview.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a></code>
 
 
 ---
@@ -453,7 +453,7 @@ agreed to receive the coins.  This transaction can be sent by any account that c
 balance, and to any account that can hold a balance. Both accounts must hold balances in the
 currency being transacted.
 
-Script documentation: <code><a href="overview.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a></code>
 
 
 
@@ -473,7 +473,7 @@ Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
 transaction can only be successfully called by the Libra Root account.
 
-Script documentation: <code><a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a></code>
 
 
 ---
@@ -488,7 +488,7 @@ the configuration in the validator set that is seen by other validators in the n
 only be successfully sent by a Validator Operator account that is already registered with a
 validator.
 
-Script documentation: <code><a href="overview.md#register_validator_config">register_validator_config</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#register_validator_config">register_validator_config</a></code>
 
 
 ---
@@ -502,7 +502,7 @@ This script removes a validator account from the validator set, and triggers a r
 of the system to remove the validator from the system. This transaction can only be
 successfully called by the Libra Root account.
 
-Script documentation: <code><a href="overview.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a></code>
 
 
 ---
@@ -516,7 +516,7 @@ Updates a validator's configuration, and triggers a reconfiguration of the syste
 validator set with this new validator configuration.  Can only be successfully sent by a
 Validator Operator account that is already registered with a validator.
 
-Script documentation: <code><a href="overview.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a></code>
 
 
 ---
@@ -531,7 +531,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by an account with
 Validator role.
 
-Script documentation: <code><a href="overview.md#set_validator_operator">set_validator_operator</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#set_validator_operator">set_validator_operator</a></code>
 
 
 ---
@@ -546,7 +546,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by the Libra Root
 account as a write set transaction.
 
-Script documentation: <code><a href="overview.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a></code>
 
 
 
@@ -567,7 +567,7 @@ balance to its preburn area after which the coins may be burned. This
 transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
-Script documentation: <code><a href="overview.md#preburn">preburn</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#preburn">preburn</a></code>
 
 
 ---
@@ -583,7 +583,7 @@ be the Treasury Compliance account.
 The account that holds the preburn resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
-Script documentation: <code><a href="overview.md#burn">burn</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#burn">burn</a></code>
 
 
 ---
@@ -597,7 +597,7 @@ Cancels and returns all coins held in the preburn area under
 <code>preburn_address</code> and returns the funds to the <code>preburn_address</code>'s balance.
 Can only be successfully sent by an account with Treasury Compliance role.
 
-Script documentation: <code><a href="overview.md#cancel_burn">cancel_burn</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a></code>
 
 
 ---
@@ -611,7 +611,7 @@ Burns the transaction fees collected in the <code>CoinType</code> currency so th
 Libra association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
-Script documentation: <code><a href="overview.md#burn_txn_fees">burn_txn_fees</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a></code>
 
 
 ---
@@ -625,7 +625,7 @@ Mints a specified number of coins in a currency to a Designated Dealer. The send
 must be the Treasury Compliance account, and coins can only be minted to a Designated Dealer
 account.
 
-Script documentation: <code><a href="overview.md#tiered_mint">tiered_mint</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a></code>
 
 
 ---
@@ -641,7 +641,7 @@ the Libra Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
-Script documentation: <code><a href="overview.md#freeze_account">freeze_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#freeze_account">freeze_account</a></code>
 
 
 ---
@@ -655,7 +655,7 @@ Unfreezes the account at <code>address</code>. The sending account of this trans
 Treasury Compliance account. After the successful execution of this transaction transactions
 may be sent from the previously frozen account, and coins may be sent and received.
 
-Script documentation: <code><a href="overview.md#unfreeze_account">unfreeze_account</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a></code>
 
 
 ---
@@ -669,7 +669,7 @@ Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The 
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
-Script documentation: <code><a href="overview.md#update_dual_attestation_limit">update_dual_attestation_limit</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a></code>
 
 
 ---
@@ -684,7 +684,7 @@ to micro-LBR). The transaction can only be sent by the Treasury Compliance accou
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
-Script documentation: <code><a href="overview.md#update_exchange_rate">update_exchange_rate</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a></code>
 
 
 ---
@@ -698,7 +698,7 @@ Script to allow or disallow minting of new coins in a specified currency.  This 
 only be sent by the Treasury Compliance account.  Turning minting off for a currency will have
 no effect on coins already in circulation, and coins may still be removed from the system.
 
-Script documentation: <code><a href="overview.md#update_minting_ability">update_minting_ability</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a></code>
 
 
 
@@ -717,7 +717,7 @@ Script documentation: <code><a href="overview.md#update_minting_ability">update_
 Updates the Libra major version that is stored on-chain and is used by the VM.  This
 transaction can only be sent from the Libra Root account.
 
-Script documentation: <code><a href="overview.md#update_libra_version">update_libra_version</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a></code>
 
 
 ---
@@ -731,7 +731,7 @@ Adds a script hash to the transaction allowlist. This transaction
 can only be sent by the Libra Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
-Script documentation: <code><a href="overview.md#add_to_script_allow_list">add_to_script_allow_list</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a></code>
 
 
 
@@ -833,14 +833,14 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
-* <code><a href="overview.md#add_currency_to_account">Script::add_currency_to_account</a></code>
-* <code><a href="overview.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
-* <code><a href="overview.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
-* <code><a href="overview.md#create_recovery_address">Script::create_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_currency_to_account">Script::add_currency_to_account</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
+* <code><a href="transaction_script_documentation.md#create_recovery_address">Script::create_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
 </code></pre>
 
 
@@ -849,7 +849,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
     parent_vasp: &signer,
     child_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -993,16 +993,16 @@ This script does not assign the validator operator to any validator accounts but
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_validator_operator_account">create_validator_operator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1011,7 +1011,7 @@ This script does not assign the validator operator to any validator accounts but
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_validator_operator_account">create_validator_operator_account</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
@@ -1136,16 +1136,16 @@ but only creates the account.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_validator_account">create_validator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1154,7 +1154,7 @@ but only creates the account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_validator_account">create_validator_account</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
@@ -1279,15 +1279,15 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
-* <code><a href="overview.md#add_currency_to_account">Script::add_currency_to_account</a></code>
-* <code><a href="overview.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
-* <code><a href="overview.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
-* <code><a href="overview.md#create_recovery_address">Script::create_recovery_address</a></code>
-* <code><a href="overview.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
+* <code><a href="transaction_script_documentation.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_currency_to_account">Script::add_currency_to_account</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
+* <code><a href="transaction_script_documentation.md#create_recovery_address">Script::create_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1296,7 +1296,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
@@ -1421,12 +1421,12 @@ account.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#tiered_mint">Script::tiered_mint</a></code>
-* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
-* <code><a href="overview.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
+* <code><a href="transaction_script_documentation.md#tiered_mint">Script::tiered_mint</a></code>
+* <code><a href="transaction_script_documentation.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1435,7 +1435,7 @@ account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     addr: address,
@@ -1553,12 +1553,12 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
-* <code><a href="overview.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
-* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
+* <code><a href="transaction_script_documentation.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
 </code></pre>
 
 
@@ -1567,7 +1567,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
@@ -1642,7 +1642,7 @@ The sending account of this transaction (<code>to_recover_account</code>) must n
 rotation capability, and must be a VASP account. The account at <code>recovery_address</code>
 must also be a VASP account belonging to the same VASP as the <code>to_recover_account</code>.
 Additionally the account at <code>recovery_address</code> must have already initialized itself as
-a recovery account address using the <code><a href="overview.md#create_recovery_address">Script::create_recovery_address</a></code> transaction script.
+a recovery account address using the <code><a href="transaction_script_documentation.md#create_recovery_address">Script::create_recovery_address</a></code> transaction script.
 
 The sending account's (<code>to_recover_account</code>) key rotation capability is
 removed in this transaction and stored in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code>
@@ -1674,11 +1674,11 @@ resource stored under the account at <code>recovery_address</code>.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_recovery_address">Script::create_recovery_address</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#create_recovery_address">Script::create_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
 </code></pre>
 
 
@@ -1687,7 +1687,7 @@ resource stored under the account at <code>recovery_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(
         <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(to_recover_account), recovery_address
     )
@@ -1783,10 +1783,10 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 ##### Related Scripts
 
-* <code><a href="overview.md#rotate_shared_ed25519_public_key">Script::rotate_shared_ed25519_public_key</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">Script::rotate_shared_ed25519_public_key</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1795,7 +1795,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_publish">SharedEd25519PublicKey::publish</a>(account, public_key)
 }
 </code></pre>
@@ -1883,11 +1883,11 @@ may be used as a recovery account for those accounts.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#create_recovery_address">create_recovery_address</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_recovery_address">create_recovery_address</a>(account: &signer)
 </code></pre>
 
 
@@ -1896,7 +1896,7 @@ may be used as a recovery account for those accounts.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#create_recovery_address">create_recovery_address</a>(account: &signer) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_recovery_address">create_recovery_address</a>(account: &signer) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_publish">RecoveryAddress::publish</a>(account, <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account))
 }
 </code></pre>
@@ -1989,12 +1989,12 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 ##### Related Scripts
 
-* <code><a href="overview.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2003,7 +2003,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;) {
     <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(key_rotation_capability);
@@ -2113,12 +2113,12 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 ##### Related Scripts
 
-* <code><a href="overview.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2127,7 +2127,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
@@ -2240,12 +2240,12 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 ##### Related Scripts
 
-* <code><a href="overview.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2254,7 +2254,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
     <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
@@ -2333,7 +2333,7 @@ it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
 
 Rotates the authentication key of a specified account that is part of a recovery address to a
 new authentication key. Only used for accounts that are part of a recovery address (see
-<code><a href="overview.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code> for account restrictions).
+<code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code> for account restrictions).
 
 
 <a name="@Technical_Description_112"></a>
@@ -2375,12 +2375,12 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 
 ##### Related Scripts
 
-* <code><a href="overview.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="overview.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">Script::rotate_authentication_key_with_nonce</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2389,7 +2389,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(
     account: &signer,
     recovery_address: address,
     to_recover: address,
@@ -2505,12 +2505,12 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
-* <code><a href="overview.md#create_designated_dealer">Script::create_designated_dealer</a></code>
-* <code><a href="overview.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
+* <code><a href="transaction_script_documentation.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_designated_dealer">Script::create_designated_dealer</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2519,7 +2519,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_rotate_base_url">DualAttestation::rotate_base_url</a>(account, new_url);
     <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_rotate_compliance_public_key">DualAttestation::rotate_compliance_public_key</a>(account, new_key)
 }
@@ -2577,7 +2577,7 @@ Credential is granted to either a Parent VASP or a designated dealer [[H15]][PER
 
 Rotates the authentication key in a <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code>. This transaction can be sent by
 any account that has previously published a shared ed25519 public key using
-<code><a href="overview.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>.
+<code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>.
 
 
 <a name="@Technical_Description_123"></a>
@@ -2614,10 +2614,10 @@ rotates the authentication key using the capability stored in <code>account</cod
 
 ##### Related Scripts
 
-* <code><a href="overview.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>
+* <code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2626,7 +2626,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_rotate_key">SharedEd25519PublicKey::rotate_key</a>(account, public_key)
 }
 </code></pre>
@@ -2751,12 +2751,12 @@ Successful execution of this script emits two events:
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
-* <code><a href="overview.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
-* <code><a href="overview.md#add_currency_to_account">Script::add_currency_to_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_currency_to_account">Script::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2765,7 +2765,7 @@ Successful execution of this script emits two events:
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(
     payer: &signer,
     payee: address,
     amount: u64,
@@ -2910,16 +2910,16 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -2928,7 +2928,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
@@ -2966,7 +2966,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 <pre><code><b>aborts_with</b> [check]
-    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    0, // Odd error code in <b>assert</b> on second statement in <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -3048,16 +3048,16 @@ only "locally" under the <code>validator_account</code> account address.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3066,7 +3066,7 @@ only "locally" under the <code>validator_account</code> account address.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#register_validator_config">register_validator_config</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#register_validator_config">register_validator_config</a>(
     validator_operator_account: &signer,
     // TODO Rename <b>to</b> validator_addr, since it is an address.
     validator_account: address,
@@ -3187,16 +3187,16 @@ is not in the validator set.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -3205,7 +3205,7 @@ is not in the validator set.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
@@ -3244,7 +3244,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 <pre><code><b>aborts_with</b> [check]
-    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    0, // Odd error code in <b>assert</b> on second statement in <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -3336,7 +3336,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 * </code>Script::register_validator_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3345,7 +3345,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(
     validator_operator_account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
@@ -3488,16 +3488,16 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -3506,7 +3506,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#set_validator_operator">set_validator_operator</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator">set_validator_operator</a>(
     account: &signer,
     operator_name: vector&lt;u8&gt;,
     operator_account: address
@@ -3542,7 +3542,7 @@ because CapabilityHolder is published during initialization (Genesis).
 
 
 <pre><code><b>aborts_with</b> [check]
-    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    0, // Odd error code in <b>assert</b> on second statement in <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
@@ -3634,16 +3634,16 @@ the system is initiated by this script.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_validator_account">Script::create_validator_account</a></code>
-* <code><a href="overview.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
-* <code><a href="overview.md#register_validator_config">Script::register_validator_config</a></code>
-* <code><a href="overview.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
-* <code><a href="overview.md#set_validator_operator">Script::set_validator_operator</a></code>
-* <code><a href="overview.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -3652,7 +3652,7 @@ the system is initiated by this script.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
     lr_account: &signer,
     account: &signer,
     sliding_nonce: u64,
@@ -3685,7 +3685,7 @@ the system is initiated by this script.
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">ValidatorConfig::SetOperatorEnsures</a>{validator_account: account, operator_addr: operator_account};
 <b>aborts_with</b> [check]
-    0, // Odd error code in <b>assert</b> on second statement in <a href="overview.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
+    0, // Odd error code in <b>assert</b> on second statement in <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
@@ -3792,12 +3792,12 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 ##### Related Scripts
 
-* <code><a href="overview.md#cancel_burn">Script::cancel_burn</a></code>
-* <code><a href="overview.md#burn">Script::burn</a></code>
-* <code><a href="overview.md#burn_txn_fees">Script::burn_txn_fees</a></code>
+* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
+* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
+* <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
 </code></pre>
 
 
@@ -3806,7 +3806,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_preburn">LibraAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);
@@ -3933,12 +3933,12 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 ##### Related Scripts
 
-* <code><a href="overview.md#burn_txn_fees">Script::burn_txn_fees</a></code>
-* <code><a href="overview.md#cancel_burn">Script::cancel_burn</a></code>
-* <code><a href="overview.md#preburn">Script::preburn</a></code>
+* <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
+* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
+* <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address)
 </code></pre>
 
 
@@ -3947,7 +3947,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/Libra.md#0x1_Libra_burn">Libra::burn</a>&lt;Token&gt;(account, preburn_address)
 }
@@ -4066,12 +4066,12 @@ being <code>preburn_address</code>.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#burn_txn_fees">Script::burn_txn_fees</a></code>
-* <code><a href="overview.md#burn">Script::burn</a></code>
-* <code><a href="overview.md#preburn">Script::preburn</a></code>
+* <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
+* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
+* <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
 </code></pre>
 
 
@@ -4080,7 +4080,7 @@ being <code>preburn_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_cancel_burn">LibraAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address)
 }
 </code></pre>
@@ -4175,7 +4175,7 @@ Burns the transaction fees collected in <code>CoinType</code> so that the
 association may reclaim the backing coins. Once this transaction has executed
 successfully all transaction fees that will have been collected in
 <code>CoinType</code> since the last time this script was called with that specific
-currency. Both <code>balance</code> and <code><a href="overview.md#preburn">preburn</a></code> fields in the
+currency. Both <code>balance</code> and <code><a href="transaction_script_documentation.md#preburn">preburn</a></code> fields in the
 <code><a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_TransactionFee">TransactionFee::TransactionFee</a>&lt;CoinType&gt;</code> resource published under the <code>0xB1E55ED</code>
 account address will have a value of 0 after the successful execution of this script.
 
@@ -4214,11 +4214,11 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 ##### Related Scripts
 
-* <code><a href="overview.md#burn">Script::burn</a></code>
-* <code><a href="overview.md#cancel_burn">Script::cancel_burn</a></code>
+* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
+* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
 </code></pre>
 
 
@@ -4227,7 +4227,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer) {
     <a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_burn_fees">TransactionFee::burn_fees</a>&lt;CoinType&gt;(tc_account);
 }
 </code></pre>
@@ -4325,12 +4325,12 @@ resource published under the <code>designated_dealer_address</code>.
 
 ##### Related Scripts
 
-* <code><a href="overview.md#create_designated_dealer">Script::create_designated_dealer</a></code>
-* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
-* <code><a href="overview.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
+* <code><a href="transaction_script_documentation.md#create_designated_dealer">Script::create_designated_dealer</a></code>
+* <code><a href="transaction_script_documentation.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
+* <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -4339,7 +4339,7 @@ resource published under the <code>designated_dealer_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     designated_dealer_address: address,
@@ -4471,7 +4471,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 * <code>Scripts::unfreeze_account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
 </code></pre>
 
 
@@ -4480,7 +4480,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
     <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_freeze_account">AccountFreezing::freeze_account</a>(tc_account, to_freeze_account);
 }
@@ -4563,7 +4563,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 * <code>Scripts::freeze_account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
 </code></pre>
 
 
@@ -4572,7 +4572,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_unfreeze_account">AccountFreezing::unfreeze_account</a>(account, to_unfreeze_account);
 }
@@ -4646,7 +4646,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 * <code>Scripts::update_minting_ability</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
 </code></pre>
 
 
@@ -4655,7 +4655,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_micro_lbr_limit: u64
@@ -4741,7 +4741,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 * <code>Scripts::update_minting_ability</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
 </code></pre>
 
 
@@ -4750,7 +4750,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_numerator: u64,
@@ -4868,7 +4868,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 * <code>Scripts::update_exchange_rate</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: &signer, allow_minting: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: &signer, allow_minting: bool)
 </code></pre>
 
 
@@ -4877,7 +4877,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(
     tc_account: &signer,
     allow_minting: bool
 ) {
@@ -4953,7 +4953,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">LibraVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code> | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64)
 </code></pre>
 
 
@@ -4962,7 +4962,7 @@ preserve backwards compatibility with previous major versions of the VM.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_set">LibraVersion::set</a>(account, major)
 }
@@ -5037,7 +5037,7 @@ with this <code>hash</code> can be successfully sent to the network.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">LibraTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code> | The on-chain allowlist already contains the script <code>hash</code>.                                 |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="overview.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
 </code></pre>
 
 
@@ -5046,7 +5046,7 @@ with this <code>hash</code> can be successfully sent to the network.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="overview.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
     <a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">LibraTransactionPublishingOption::add_to_script_allow_list</a>(lr_account, hash)
 }
@@ -5097,40 +5097,40 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`0x1::ValidatorConfig`](../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [`0x1::Vector`](../../modules/doc/Vector.md#0x1_Vector)
--  [`add_currency_to_account`](overview.md#add_currency_to_account)
--  [`add_recovery_rotation_capability`](overview.md#add_recovery_rotation_capability)
--  [`add_to_script_allow_list`](overview.md#add_to_script_allow_list)
--  [`add_validator_and_reconfigure`](overview.md#add_validator_and_reconfigure)
--  [`burn`](overview.md#burn)
--  [`burn_txn_fees`](overview.md#burn_txn_fees)
--  [`cancel_burn`](overview.md#cancel_burn)
--  [`create_child_vasp_account`](overview.md#create_child_vasp_account)
--  [`create_designated_dealer`](overview.md#create_designated_dealer)
--  [`create_parent_vasp_account`](overview.md#create_parent_vasp_account)
--  [`create_recovery_address`](overview.md#create_recovery_address)
--  [`create_validator_account`](overview.md#create_validator_account)
--  [`create_validator_operator_account`](overview.md#create_validator_operator_account)
--  [`freeze_account`](overview.md#freeze_account)
--  [`peer_to_peer_with_metadata`](overview.md#peer_to_peer_with_metadata)
--  [`preburn`](overview.md#preburn)
--  [`publish_shared_ed25519_public_key`](overview.md#publish_shared_ed25519_public_key)
--  [`register_validator_config`](overview.md#register_validator_config)
--  [`remove_validator_and_reconfigure`](overview.md#remove_validator_and_reconfigure)
--  [`rotate_authentication_key`](overview.md#rotate_authentication_key)
--  [`rotate_authentication_key_with_nonce`](overview.md#rotate_authentication_key_with_nonce)
--  [`rotate_authentication_key_with_nonce_admin`](overview.md#rotate_authentication_key_with_nonce_admin)
--  [`rotate_authentication_key_with_recovery_address`](overview.md#rotate_authentication_key_with_recovery_address)
--  [`rotate_dual_attestation_info`](overview.md#rotate_dual_attestation_info)
--  [`rotate_shared_ed25519_public_key`](overview.md#rotate_shared_ed25519_public_key)
--  [`set_validator_config_and_reconfigure`](overview.md#set_validator_config_and_reconfigure)
--  [`set_validator_operator`](overview.md#set_validator_operator)
--  [`set_validator_operator_with_nonce_admin`](overview.md#set_validator_operator_with_nonce_admin)
--  [`tiered_mint`](overview.md#tiered_mint)
--  [`unfreeze_account`](overview.md#unfreeze_account)
--  [`update_dual_attestation_limit`](overview.md#update_dual_attestation_limit)
--  [`update_exchange_rate`](overview.md#update_exchange_rate)
--  [`update_libra_version`](overview.md#update_libra_version)
--  [`update_minting_ability`](overview.md#update_minting_ability)
+-  [`add_currency_to_account`](transaction_script_documentation.md#add_currency_to_account)
+-  [`add_recovery_rotation_capability`](transaction_script_documentation.md#add_recovery_rotation_capability)
+-  [`add_to_script_allow_list`](transaction_script_documentation.md#add_to_script_allow_list)
+-  [`add_validator_and_reconfigure`](transaction_script_documentation.md#add_validator_and_reconfigure)
+-  [`burn`](transaction_script_documentation.md#burn)
+-  [`burn_txn_fees`](transaction_script_documentation.md#burn_txn_fees)
+-  [`cancel_burn`](transaction_script_documentation.md#cancel_burn)
+-  [`create_child_vasp_account`](transaction_script_documentation.md#create_child_vasp_account)
+-  [`create_designated_dealer`](transaction_script_documentation.md#create_designated_dealer)
+-  [`create_parent_vasp_account`](transaction_script_documentation.md#create_parent_vasp_account)
+-  [`create_recovery_address`](transaction_script_documentation.md#create_recovery_address)
+-  [`create_validator_account`](transaction_script_documentation.md#create_validator_account)
+-  [`create_validator_operator_account`](transaction_script_documentation.md#create_validator_operator_account)
+-  [`freeze_account`](transaction_script_documentation.md#freeze_account)
+-  [`peer_to_peer_with_metadata`](transaction_script_documentation.md#peer_to_peer_with_metadata)
+-  [`preburn`](transaction_script_documentation.md#preburn)
+-  [`publish_shared_ed25519_public_key`](transaction_script_documentation.md#publish_shared_ed25519_public_key)
+-  [`register_validator_config`](transaction_script_documentation.md#register_validator_config)
+-  [`remove_validator_and_reconfigure`](transaction_script_documentation.md#remove_validator_and_reconfigure)
+-  [`rotate_authentication_key`](transaction_script_documentation.md#rotate_authentication_key)
+-  [`rotate_authentication_key_with_nonce`](transaction_script_documentation.md#rotate_authentication_key_with_nonce)
+-  [`rotate_authentication_key_with_nonce_admin`](transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin)
+-  [`rotate_authentication_key_with_recovery_address`](transaction_script_documentation.md#rotate_authentication_key_with_recovery_address)
+-  [`rotate_dual_attestation_info`](transaction_script_documentation.md#rotate_dual_attestation_info)
+-  [`rotate_shared_ed25519_public_key`](transaction_script_documentation.md#rotate_shared_ed25519_public_key)
+-  [`set_validator_config_and_reconfigure`](transaction_script_documentation.md#set_validator_config_and_reconfigure)
+-  [`set_validator_operator`](transaction_script_documentation.md#set_validator_operator)
+-  [`set_validator_operator_with_nonce_admin`](transaction_script_documentation.md#set_validator_operator_with_nonce_admin)
+-  [`tiered_mint`](transaction_script_documentation.md#tiered_mint)
+-  [`unfreeze_account`](transaction_script_documentation.md#unfreeze_account)
+-  [`update_dual_attestation_limit`](transaction_script_documentation.md#update_dual_attestation_limit)
+-  [`update_exchange_rate`](transaction_script_documentation.md#update_exchange_rate)
+-  [`update_libra_version`](transaction_script_documentation.md#update_libra_version)
+-  [`update_minting_ability`](transaction_script_documentation.md#update_minting_ability)
 
 
 [//]: # ("File containing references which can be used from documentation")

@@ -36,7 +36,8 @@ pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
 /// The documentation root template for stdlib.
 pub const STD_LIB_DOC_TEMPLATE: &str = "modules/overview_template.md";
 /// The documentation root template for scripts.
-pub const TRANSACTION_SCRIPT_DOC_TEMPLATE: &str = "transaction_scripts/overview_template.md";
+pub const TRANSACTION_SCRIPT_DOC_TEMPLATE: &str =
+    "transaction_scripts/transaction_script_documentation_template.md";
 /// Path to the references template.
 pub const REFERENCES_DOC_TEMPLATE: &str = "modules/references_template.md";
 
