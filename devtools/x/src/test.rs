@@ -67,6 +67,8 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
             ("RUSTC_BOOTSTRAP", "1"),
             // Recommend setting for grcov, avoids using the cargo cache.
             ("CARGO_INCREMENTAL", "0"),
+            // language/ir-testsuite's tests will stack overflow without this setting.
+            ("RUST_MIN_STACK", "8388608"),
             // Recommend flags for use with grcov, with these flags removed: -Copt-level=0, -Clink-dead-code.
             // for more info see:  https://github.com/mozilla/grcov#example-how-to-generate-gcda-fiels-for-a-rust-project
             (
