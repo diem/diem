@@ -292,17 +292,10 @@ fn test_network_key_rotation_recovery() {
 
 #[test]
 fn test_e2e_reconfiguration() {
-    let (env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
-    let node_configs: Vec<_> = env
-        .validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config_path| NodeConfig::load(config_path).unwrap())
-        .collect();
+    let (swarm, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
+    let mut client_proxy_0 = swarm.get_validator_client(0, None);
 
-    // the client connected to the removed validator
-    let mut client_proxy_0 = env.get_validator_client(0, None);
+    // Mint some coins and verify the balances have been updated
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_1
@@ -315,7 +308,8 @@ fn test_e2e_reconfiguration() {
         vec![(10.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap(),
     ));
-    // wait for the mint txn in node 0
+
+    // Wait for the mint transaction to be processed by node 0
     client_proxy_0
         .wait_for_transaction(testnet_dd_account_address(), 1)
         .unwrap();
@@ -323,14 +317,23 @@ fn test_e2e_reconfiguration() {
         vec![(10.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap(),
     ));
-    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
-    let op_tool = env.get_op_tool(1);
-    let libra_root = load_libra_root_storage(node_configs.first().unwrap());
+
+    // Connect the operator tool to the second node's JSON RPC API
+    let op_tool = swarm.get_op_tool(1);
+
+    // Load libra root's on disk storage
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+    let libra_root = load_libra_root_storage(&node_config);
+
+    // Remove node 0
+    let peer_id = swarm.get_validator(0).unwrap().validator_peer_id().unwrap();
     let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy_1
         .wait_for_transaction(context.address, context.sequence_number + 1)
         .unwrap();
-    // mint another 10 coins after remove node 0
+
+    // Mint another 10 coins after removing node 0
     client_proxy_1
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
@@ -338,17 +341,18 @@ fn test_e2e_reconfiguration() {
         vec![(20.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap(),
     ));
-    // client connected to removed validator can not see the update
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap(),
     ));
+
     // Add the node back
     let context = op_tool.add_validator(peer_id, &libra_root).unwrap();
     client_proxy_0
         .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
-    // Wait for it catches up, mint1 + mint2 => seq == 2
+
+    // Wait for the node to catch up
     client_proxy_0
         .wait_for_transaction(testnet_dd_account_address(), 2)
         .unwrap();
