@@ -3977,6 +3977,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytecode-source-map",
+ "bytecode-verifier",
  "codespan",
  "colored",
  "libra-canonical-serialization",
@@ -3985,6 +3986,7 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "once_cell",
+ "petgraph",
  "serde",
  "structopt 0.3.18",
  "vm",

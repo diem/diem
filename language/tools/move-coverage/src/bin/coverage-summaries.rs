@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use move_coverage::{
-    coverage_map::CoverageMap,
+    coverage_map::{CoverageMap, TraceMap},
     summary::{self, ModuleSummary},
 };
 use std::{
@@ -39,6 +39,9 @@ struct Args {
     /// The path to the standard library binary directory for Move
     #[structopt(long = "stdlib-path", short = "s")]
     pub stdlib_path: Option<String>,
+    /// Whether path coverage should be derived (default is instruction coverage)
+    #[structopt(long = "derive-path-coverage", short = "p")]
+    pub derive_path_coverage: bool,
     /// Output CSV data of coverage
     #[structopt(long = "csv", short = "c")]
     pub csv_output: bool,
@@ -122,12 +125,6 @@ fn main() {
     let args = Args::from_args();
     let input_trace_path = Path::new(&args.input_trace_path);
 
-    let coverage_map = if args.is_raw_trace_file {
-        CoverageMap::from_trace_file(&input_trace_path)
-    } else {
-        CoverageMap::from_binary_file(&input_trace_path)
-    };
-
     let mut summary_writer: Box<dyn Write> = match &args.summary_path {
         Some(x) => {
             let path = Path::new(x);
@@ -136,20 +133,48 @@ fn main() {
         None => Box::new(io::stdout()),
     };
 
-    let unified_exec_map = coverage_map.to_unified_exec_map();
-    if !args.csv_output {
-        format_human_summary(
-            &args,
-            &unified_exec_map,
-            summary::summarize_inst_cov,
-            &mut summary_writer,
-        )
+    if args.derive_path_coverage {
+        let trace_map = if args.is_raw_trace_file {
+            TraceMap::from_trace_file(&input_trace_path)
+        } else {
+            TraceMap::from_binary_file(&input_trace_path)
+        };
+        if !args.csv_output {
+            format_human_summary(
+                &args,
+                &trace_map,
+                summary::summarize_path_cov,
+                &mut summary_writer,
+            )
+        } else {
+            format_csv_summary(
+                &args,
+                &trace_map,
+                summary::summarize_path_cov,
+                &mut summary_writer,
+            )
+        }
     } else {
-        format_csv_summary(
-            &args,
-            &unified_exec_map,
-            summary::summarize_inst_cov,
-            &mut summary_writer,
-        )
+        let coverage_map = if args.is_raw_trace_file {
+            CoverageMap::from_trace_file(&input_trace_path)
+        } else {
+            CoverageMap::from_binary_file(&input_trace_path)
+        };
+        let unified_exec_map = coverage_map.to_unified_exec_map();
+        if !args.csv_output {
+            format_human_summary(
+                &args,
+                &unified_exec_map,
+                summary::summarize_inst_cov,
+                &mut summary_writer,
+            )
+        } else {
+            format_csv_summary(
+                &args,
+                &unified_exec_map,
+                summary::summarize_inst_cov,
+                &mut summary_writer,
+            )
+        }
     }
 }
