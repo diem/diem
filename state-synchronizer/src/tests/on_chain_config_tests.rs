@@ -102,7 +102,7 @@ fn test_on_chain_config_pub_sub() {
         )),
     );
 
-    let block1 = vec![txn1, txn2];
+    let block1 = vec![txn1.clone(), txn2.clone()];
     let block1_id = gen_block_id(1);
     let parent_block_id = block_executor.committed_block_id();
 
@@ -114,9 +114,9 @@ fn test_on_chain_config_pub_sub() {
         "execution missing reconfiguration"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output, block1_id, vec![]);
+    let ledger_info_with_sigs_epoch_1 = gen_ledger_info_with_sigs(1, output, block1_id, vec![]);
     let (_, reconfig_events) = block_executor
-        .commit_blocks(vec![block1_id], ledger_info_with_sigs)
+        .commit_blocks(vec![block1_id], ledger_info_with_sigs_epoch_1.clone())
         .unwrap();
     assert!(
         !reconfig_events.is_empty(),
@@ -181,9 +181,9 @@ fn test_on_chain_config_pub_sub() {
         "execution missing reconfiguration"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output, block2_id, vec![]);
+    let ledger_info_with_sigs_epoch_2 = gen_ledger_info_with_sigs(2, output, block2_id, vec![]);
     let (_, reconfig_events) = block_executor
-        .commit_blocks(vec![block2_id], ledger_info_with_sigs)
+        .commit_blocks(vec![block2_id], ledger_info_with_sigs_epoch_2.clone())
         .unwrap();
     assert!(
         !reconfig_events.is_empty(),
@@ -199,4 +199,78 @@ fn test_on_chain_config_pub_sub() {
         None,
         "did not expect reconfig update"
     );
+
+    ////////////////////////////////////////////////////////////////
+    // Case 3: test failed on-chain reconfig publish throws error //
+    ////////////////////////////////////////////////////////////////
+    // test error throwing on failed reconfig publish
+    drop(reconfig_receiver);
+
+    // Create a dummy block prologue transaction that will bump the timer.
+    let txn6 = encode_block_prologue_script(gen_block_metadata(3, validator_account));
+    let txn7 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 3,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_add_to_script_allow_list_script(
+            HashValue::sha3_256_of(&[1]).to_vec(),
+            0,
+        )),
+    );
+
+    let block3 = vec![txn6, txn7];
+    let block3_id = gen_block_id(3);
+    let parent_block_id = block_executor.committed_block_id();
+
+    let output = block_executor
+        .execute_block((block3_id, block3), parent_block_id)
+        .expect("failed to execute block");
+    assert!(
+        output.has_reconfiguration(),
+        "execution missing reconfiguration"
+    );
+
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output, block3_id, vec![]);
+    let (_, reconfig_events) = block_executor
+        .commit_blocks(vec![block3_id], ledger_info_with_sigs)
+        .unwrap();
+    assert!(
+        !reconfig_events.is_empty(),
+        "expected reconfig events from executor commit"
+    );
+
+    // assert publishing on-chain config updates fails for dropped receiver
+    assert!(executor_proxy
+        .publish_on_chain_config_updates(reconfig_events)
+        .is_err());
+
+    // test state of DB using non-mocked executor proxy interface
+    // Note: we mock out the executor proxy in the state sync integration tests because we also mock
+    // out the storage/execution layer. We piggy-back on this expensive DB/runtime setup here in testing
+    // on-chain reconfig to test the executor proxy interface against.
+    let state = executor_proxy.get_local_storage_state().unwrap();
+    assert_eq!(state.epoch(), 4);
+    assert_eq!(state.highest_version_in_local_storage(), 7);
+
+    let txns = executor_proxy.get_chunk(0, 2, 2).unwrap();
+    assert_eq!(txns.transactions, vec![txn1, txn2]);
+
+    assert!(executor_proxy
+        .execute_chunk(txns, ledger_info_with_sigs_epoch_1.clone(), None)
+        .is_ok());
+
+    let epoch_li = executor_proxy.get_epoch_proof(1).unwrap();
+    assert_eq!(epoch_li, ledger_info_with_sigs_epoch_1);
+    let epoch_li = executor_proxy.get_epoch_proof(2).unwrap();
+    assert_eq!(epoch_li, ledger_info_with_sigs_epoch_2);
+
+    // epoch 1 ended at version 2
+    let epoch_li = executor_proxy.get_epoch_ending_ledger_info(2).unwrap();
+    assert_eq!(epoch_li, ledger_info_with_sigs_epoch_1);
+    // epoch 2 ended at version 5
+    let epoch_li = executor_proxy.get_epoch_ending_ledger_info(5).unwrap();
+    assert_eq!(epoch_li, ledger_info_with_sigs_epoch_2);
+
+    assert!(executor_proxy.get_epoch_ending_ledger_info(3).is_err());
 }
