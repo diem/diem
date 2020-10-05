@@ -33,8 +33,10 @@ use vm::file_format::CodeOffset;
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_caller_resource_memory_domain_name, boogie_field_name,
-        boogie_function_name, boogie_local_type, boogie_requires_well_formed,
+        boogie_byte_blob, boogie_caller_resource_memory_domain_name,
+        boogie_debug_track_abort_via_attrib, boogie_debug_track_abort_via_function,
+        boogie_debug_track_local_via_attrib, boogie_debug_track_local_via_function,
+        boogie_field_name, boogie_function_name, boogie_local_type, boogie_requires_well_formed,
         boogie_resource_memory_name, boogie_saved_resource_memory_name,
         boogie_self_resource_memory_domain_name, boogie_struct_name, boogie_type_value,
         boogie_type_value_array, boogie_type_values, boogie_well_formed_check, WellFormedMode,
@@ -425,12 +427,31 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
 
-        // Generate $DebugTrackLocal so we can see the constructed value before invariant
-        // evaluation may abort.
+        // Debug track so we can see the constructed value before invariant
+        // evaluation may abort. $byte_index > 0 indicates whether we have a valid position to
+        // report on.
+        emitln!(self.writer, "if ($byte_index > 0) {");
+        self.writer.indent();
         emitln!(
             self.writer,
-            "if ($byte_index > 0) { assume $DebugTrackLocal($file_id, $byte_index, $var_idx, $struct); }"
+            &if self.options.backend.use_boogie_debug_attrib {
+                boogie_debug_track_local_via_attrib(
+                    "$file_id",
+                    "$byte_index",
+                    "$var_idx",
+                    "$struct",
+                )
+            } else {
+                boogie_debug_track_local_via_function(
+                    "$file_id",
+                    "$byte_index",
+                    "$var_idx",
+                    "$struct",
+                )
+            }
         );
+        self.writer.unindent();
+        emitln!(self.writer, "}");
 
         // Insert invariant code.
         let spec_translator = self.new_spec_translator(struct_env.clone(), false);
@@ -848,6 +869,11 @@ impl<'env> ModuleTranslator<'env> {
                 "[$TypeValueArray, int]bool;"
             );
         });
+        if self.options.backend.use_boogie_debug_attrib {
+            // Declare temporaries for debug tracing.
+            emitln!(self.writer, "var $trace_temp: $Value;");
+            emitln!(self.writer, "var $trace_abort_temp: int;");
+        }
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assume !$abort_flag;");
@@ -950,15 +976,19 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         let propagate_abort = || {
-            format!(
-                "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {}, $abort_code);\n  goto Abort;\n}}",
-                func_target
-                    .func_env
-                    .module_env
-                    .env
-                    .file_id_to_idx(loc.file_id()),
-                loc.span().start(),
-            )
+            let file_idx = func_target
+                .func_env
+                .module_env
+                .env
+                .file_id_to_idx(loc.file_id())
+                .to_string();
+            let pos = loc.span().start().to_string();
+            let track = if self.options.backend.use_boogie_debug_attrib {
+                boogie_debug_track_abort_via_attrib(&file_idx, &pos, "$abort_code")
+            } else {
+                boogie_debug_track_abort_via_function(&file_idx, &pos, "$abort_code")
+            };
+            format!("if ($abort_flag) {{\n  {}\n  goto Abort;\n}}", track)
         };
         let propagate_abort_from_call = |callee_target: &FunctionTarget<'_>| {
             if callee_target.is_native() || callee_target.is_opaque() {
@@ -1881,24 +1911,24 @@ impl<'env> ModuleTranslator<'env> {
                 }
             }
             Abort(_, src) => {
-                // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
-                // a execution trace entry for this statement.
-                emitln!(
-                    self.writer,
-                    "if (true) {{ assume $DebugTrackAbort({}, {}, i#$Integer({})); }}",
-                    func_target
-                        .func_env
-                        .module_env
-                        .env
-                        .file_id_to_idx(loc.file_id()),
-                    loc.span().start(),
-                    str_local(*src)
-                );
                 emitln!(
                     self.writer,
                     "$abort_code := i#$Integer({});",
                     str_local(*src)
                 );
+                let file_idx = func_target
+                    .func_env
+                    .module_env
+                    .env
+                    .file_id_to_idx(loc.file_id())
+                    .to_string();
+                let pos = loc.span().start().to_string();
+                let track = if self.options.backend.use_boogie_debug_attrib {
+                    boogie_debug_track_abort_via_attrib(&file_idx, &pos, "$abort_code")
+                } else {
+                    boogie_debug_track_abort_via_function(&file_idx, &pos, "$abort_code")
+                };
+                emitln!(self.writer, &track);
                 emitln!(self.writer, "goto Abort;")
             }
             Nop(..) => {}
@@ -2024,17 +2054,19 @@ impl<'env> ModuleTranslator<'env> {
         } else {
             value.to_string()
         };
-        format!(
-            "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
-            func_target
-                .func_env
-                .module_env
-                .env
-                .file_id_to_idx(loc.file_id()),
-            loc.span().start(),
-            idx,
-            value
-        )
+        let file_idx = func_target
+            .func_env
+            .module_env
+            .env
+            .file_id_to_idx(loc.file_id())
+            .to_string();
+        let pos = loc.span().start().to_string();
+        let local_idx = idx.to_string();
+        if self.options.backend.use_boogie_debug_attrib {
+            boogie_debug_track_local_via_attrib(&file_idx, &pos, &local_idx, &value)
+        } else {
+            boogie_debug_track_local_via_function(&file_idx, &pos, &local_idx, &value)
+        }
     }
 }
 

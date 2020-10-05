@@ -212,6 +212,8 @@ pub struct BackendOptions {
     pub eager_threshold: usize,
     /// Lazy threshold for quantifier instantiation.
     pub lazy_threshold: usize,
+    /// Whether to use the new Boogie `{:debug ..}` attribute for tracking debug values.
+    pub use_boogie_debug_attrib: bool,
 }
 
 impl Default for BackendOptions {
@@ -239,6 +241,7 @@ impl Default for BackendOptions {
             keep_artifacts: false,
             eager_threshold: 100,
             lazy_threshold: 100,
+            use_boogie_debug_attrib: false,
         }
     }
 }

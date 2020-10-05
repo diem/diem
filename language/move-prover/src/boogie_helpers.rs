@@ -412,3 +412,52 @@ pub fn boogie_byte_blob(options: &Options, val: &[u8]) -> String {
         format!("$Vector($ValueArray({}, {}))", ctor_expr, val.len())
     }
 }
+
+/// Construct a statement to debug track a local based on the function table approach. This
+/// works without specific Boogie support.
+pub fn boogie_debug_track_local_via_function(
+    file_idx: &str,
+    pos: &str,
+    var_idx: &str,
+    value: &str,
+) -> String {
+    format!(
+        "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
+        file_idx, pos, var_idx, value
+    )
+}
+
+/// Construct a statement to debug track a local based on the Boogie attribute approach.
+pub fn boogie_debug_track_local_via_attrib(
+    file_idx: &str,
+    pos: &str,
+    var_idx: &str,
+    value: &str,
+) -> String {
+    format!(
+        "$trace_temp := {};\n\
+        assume {{:print \"$track_local({},{},{}):\", $trace_temp}} true;",
+        value, file_idx, pos, var_idx,
+    )
+}
+
+/// Construct a statement to debug track an abort. This works without specific Boogie support.
+pub fn boogie_debug_track_abort_via_function(
+    file_idx: &str,
+    pos: &str,
+    abort_code: &str,
+) -> String {
+    format!(
+        "if (true) {{ assume $DebugTrackAbort({}, {}, {}); }}",
+        file_idx, pos, abort_code
+    )
+}
+
+/// Construct a statement to debug track an abort using the Boogie attribute approach.
+pub fn boogie_debug_track_abort_via_attrib(file_idx: &str, pos: &str, abort_code: &str) -> String {
+    format!(
+        "$trace_abort_temp := {};\n\
+        assume {{:print \"$track_abort({}, {}):\", $trace_abort_temp}} true;",
+        abort_code, file_idx, pos,
+    )
+}
