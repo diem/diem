@@ -93,18 +93,9 @@ fn drop_config_test() {
     let n3_twin_id = nodes[3].id;
 
     assert!(playground.split_network(vec![n2_twin_id], vec![n0_twin_id, n1_twin_id, n3_twin_id]));
+    runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
-            .await;
-
-        // Pull enough votes to get a few commits
-        // The proposer's votes are implicit and do not go in the queue.
-        playground
-            .wait_for_messages(50, NetworkPlayground::votes_only)
-            .await;
-
         // Check that the commit log for n0 is not empty
         let node0_commit = nodes[0].commit_cb_receiver.next().await;
         assert!(node0_commit.is_some());
@@ -164,18 +155,9 @@ fn twins_vote_dedup_test() {
         vec![n1_twin_id, n3_twin_id],
         vec![twin0_twin_id, n0_twin_id, n2_twin_id],
     ));
+    runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        playground
-            .wait_for_messages(1, NetworkPlayground::proposals_only)
-            .await;
-
-        // Pull enough votes to get a few commits.
-        // The proposer's votes are implicit and do not go in the queue.
-        playground
-            .wait_for_messages(50, NetworkPlayground::votes_only)
-            .await;
-
         // No node should be able to commit because of the way partitions
         // have been created
         let mut commit_seen = false;
@@ -252,18 +234,9 @@ fn twins_proposer_test() {
         );
     }
     assert!(playground.split_network_round(&round_partitions));
+    runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        // Pull two proposals (by n0 and twin0)
-        playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
-            .await;
-
-        // Pull enough votes to get a few commits.
-        playground
-            .wait_for_messages(50, NetworkPlayground::votes_only)
-            .await;
-
         let node0_commit = nodes[0].commit_cb_receiver.next().await;
         let twin0_commit = nodes[4].commit_cb_receiver.next().await;
 
@@ -317,19 +290,9 @@ fn twins_commit_test() {
         RoundProposer(HashMap::new()),
         Some(round_proposers),
     );
+    runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        // Pull two proposals (by n0 and twin0)
-        playground
-            .wait_for_messages(2, NetworkPlayground::proposals_only)
-            .await;
-
-        // Pull enough votes to get a few commits.
-        // The proposer's votes are implicit and do not go in the queue.
-        playground
-            .wait_for_messages(50, NetworkPlayground::votes_only)
-            .await;
-
         let node0_commit = nodes[0].commit_cb_receiver.next().await;
         let twin0_commit = nodes[4].commit_cb_receiver.next().await;
 

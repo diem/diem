@@ -82,13 +82,10 @@ impl StateComputer for MockStateComputer {
                 .ok_or_else(|| format_err!("Cannot find block"))?;
             txns.append(&mut payload);
         }
-        self.state_sync_client
-            .unbounded_send(txns)
-            .expect("Fail to notify state sync about commit");
+        // they may fail during shutdown
+        let _ = self.state_sync_client.unbounded_send(txns);
 
-        self.commit_callback
-            .unbounded_send(commit)
-            .expect("Fail to notify about commit.");
+        let _ = self.commit_callback.unbounded_send(commit);
         Ok(())
     }
 

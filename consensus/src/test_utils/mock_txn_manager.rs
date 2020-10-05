@@ -38,10 +38,9 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
     let mut statuses = vec![];
     // generate count + 1 status to mock the block metadata txn in mempool proxy
     for _ in 0..=count {
-        let random_status = match rand::thread_rng().gen_range(0, 2) {
-            0 => TransactionStatus::Keep(KeptVMStatus::Executed),
-            1 => TransactionStatus::Discard(StatusCode::UNKNOWN_VALIDATION_STATUS),
-            _ => unreachable!(),
+        let random_status = match rand::thread_rng().gen_range(0, 1000) {
+            0 => TransactionStatus::Discard(StatusCode::UNKNOWN_VALIDATION_STATUS),
+            _ => TransactionStatus::Keep(KeptVMStatus::Executed),
         };
         statuses.push(random_status);
     }
@@ -53,10 +52,11 @@ impl TxnManager for MockTransactionManager {
     /// The returned future is fulfilled with the vector of SignedTransactions
     async fn pull_txns(
         &self,
-        max_size: u64,
+        _max_size: u64,
         _exclude_txns: Vec<&Payload>,
     ) -> Result<Payload, MempoolError> {
-        Ok(random_payload(max_size as usize))
+        // generate 1k txn is too slow with coverage instrumentation
+        Ok(random_payload(10))
     }
 
     async fn notify(

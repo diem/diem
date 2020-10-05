@@ -234,12 +234,10 @@ impl NetworkPlayground {
                 msg_notif
             ),
         };
-        node_consensus_tx
-            .push(
-                (src_twin_id.author, ProtocolId::ConsensusDirectSend),
-                msg_notif,
-            )
-            .unwrap();
+        let _ = node_consensus_tx.push(
+            (src_twin_id.author, ProtocolId::ConsensusDirectSend),
+            msg_notif,
+        );
         msg_copy
     }
 

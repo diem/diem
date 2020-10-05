@@ -94,7 +94,11 @@ impl SMRNode {
         reconfig_sender.push((), payload).unwrap();
 
         let runtime = Builder::new()
-            .thread_name(format!("node-{}", twin_id.id))
+            .thread_name(format!(
+                "{}-node-{}",
+                twin_id.id,
+                std::thread::current().name().unwrap_or("")
+            ))
             .threaded_scheduler()
             .enable_all()
             .build()
@@ -199,9 +203,8 @@ impl SMRNode {
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type.clone();
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
-            // Change initial timeout from default 1s to 2s. Our experience
-            // suggests that 1s is too small for twins testing
-            config.consensus.round_initial_timeout_ms = 2000;
+            // Disable timeout in twins test to avoid flakiness
+            config.consensus.round_initial_timeout_ms = 2_000_000;
 
             let author = author_from_config(&config);
 
