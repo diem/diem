@@ -23,6 +23,6 @@ impl UpgradeEvent {
 }
 
 impl MoveResource for UpgradeEvent {
-    const MODULE_NAME: &'static str = "LibraWriteSetManager";
+    const MODULE_NAME: &'static str = "LibraAccount";
     const STRUCT_NAME: &'static str = "UpgradeEvent";
 }

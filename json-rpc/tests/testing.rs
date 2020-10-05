@@ -7,7 +7,8 @@ use libra_json_rpc_types::response::JsonRpcResponse;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{
-        coin1_tmp_tag, testnet_dd_account_address, treasury_compliance_account_address, COIN1_NAME,
+        coin1_tmp_tag, libra_root_address, testnet_dd_account_address,
+        treasury_compliance_account_address, COIN1_NAME,
     },
     chain_id::ChainId,
     transaction::SignedTransaction,
@@ -19,6 +20,7 @@ pub struct Env {
     pub url: String,
     pub tc: Account,
     pub dd: Account,
+    pub root: Account,
     pub vasps: Vec<Account>,
     pub client: reqwest::blocking::Client,
     allow_execution_failures: bool,
@@ -32,7 +34,8 @@ impl Env {
                 treasury_compliance_account_address(),
                 root_private_key.clone(),
             ),
-            dd: Account::new_with_address(testnet_dd_account_address(), root_private_key),
+            dd: Account::new_with_address(testnet_dd_account_address(), root_private_key.clone()),
+            root: Account::new_with_address(libra_root_address(), root_private_key),
             vasps: vec![],
             client: reqwest::blocking::Client::new(),
             allow_execution_failures: false,
@@ -151,12 +154,23 @@ impl Env {
         account: &Account,
         script: libra_types::transaction::Script,
     ) -> SignedTransaction {
+        self.create_txn_by_payload(
+            account,
+            libra_types::transaction::TransactionPayload::Script(script),
+        )
+    }
+
+    pub fn create_txn_by_payload(
+        &self,
+        account: &Account,
+        payload: libra_types::transaction::TransactionPayload,
+    ) -> SignedTransaction {
         let seq = self
             .get_account_sequence(account.address.to_string())
             .expect("account should exist onchain for create transaction");
         libra_types::transaction::helpers::create_user_txn(
             account,
-            libra_types::transaction::TransactionPayload::Script(script),
+            payload,
             account.address,
             seq,
             1_000_000,
