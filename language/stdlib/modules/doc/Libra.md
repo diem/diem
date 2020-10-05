@@ -61,11 +61,12 @@ minting and burning of coins.
 -  [Function `assert_is_currency`](#0x1_Libra_assert_is_currency)
 -  [Function `assert_is_SCS_currency`](#0x1_Libra_assert_is_SCS_currency)
 -  [Module Specification](#@Module_Specification_1)
-    -  [Module Specification](#@Module_Specification_2)
-        -  [Conservation of currency](#@Conservation_of_currency_3)
-        -  [Minting](#@Minting_4)
-        -  [Burning](#@Burning_5)
-        -  [Preburning](#@Preburning_6)
+    -  [Access Control](#@Access_Control_2)
+        -  [Minting](#@Minting_3)
+        -  [Burning](#@Burning_4)
+        -  [Preburning](#@Preburning_5)
+        -  [Update Exchange Rates](#@Update_Exchange_Rates_6)
+    -  [Helper Functions](#@Helper_Functions_7)
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
@@ -216,14 +217,13 @@ minted, and that is defined in the <code>currency_code</code> field of the
 
 ## Struct `BurnEvent`
 
-A <code><a href="Libra.md#0x1_Libra_BurnEvent">BurnEvent</a></code> is emitted every time a non-synthetic[1] Libra coin is
+A <code><a href="Libra.md#0x1_Libra_BurnEvent">BurnEvent</a></code> is emitted every time a non-synthetic Libra coin
+(i.e., a Libra coin with false <code>is_synthetic</code> field) is
 burned. It contains the <code>amount</code> burned in base units for the
 currency, along with the <code>currency_code</code> for the coins being burned
 (and as defined in the <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> resource for that currency).
 It also contains the <code>preburn_address</code> from which the coin is
 extracted for burning.
-[1] As defined by the <code>is_synthetic</code> field in the <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code>
-for that currency.
 
 
 <pre><code><b>struct</b> <a href="Libra.md#0x1_Libra_BurnEvent">BurnEvent</a>
@@ -390,7 +390,7 @@ pieces of information needed for a currency (<code>CoinType</code>) that is
 registered on-chain. This resource _must_ be published under the
 address given by <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> in order for the registration of
 <code>CoinType</code> as a recognized currency on-chain to be successful. At
-the time of registration the <code><a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> and
+the time of registration, the <code><a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> and
 <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> capabilities are returned to the caller.
 Unless they are specified otherwise the fields in this resource are immutable.
 
@@ -435,11 +435,9 @@ currency would be the LBR.
 <code>scaling_factor: u64</code>
 </dt>
 <dd>
- The scaling factor for the coin (i.e. the amount to multiply by
+ The scaling factor for the coin (i.e. the amount to divide by
  to get to the human-readable representation for this currency).
  e.g. 10^6 for <code><a href="Coin1.md#0x1_Coin1">Coin1</a></code>
-
- > TODO(wrwg): should the above be "to divide by"?
 </dd>
 <dt>
 <code>fractional_part: u64</code>
@@ -460,6 +458,7 @@ currency would be the LBR.
 <code>can_mint: bool</code>
 </dt>
 <dd>
+ Minting of new currency of CoinType is allowed only if this field is true.
  We may want to disable the ability to mint further coins of a
  currency while that currency is still around. This allows us to
  keep the currency in circulation while disallowing further
@@ -505,6 +504,8 @@ currency would be the LBR.
 <details>
 <summary>Specification</summary>
 
+Data structure invariant for CurrencyInfo.  Asserts that <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>.scaling_factor</code>
+is always greater than 0 and not greater than <code><a href="Libra.md#0x1_Libra_MAX_SCALING_FACTOR">MAX_SCALING_FACTOR</a></code>
 
 
 <pre><code><b>invariant</b> 0 &lt; scaling_factor && <a href="Libra.md#0x1_Libra_scaling_factor">scaling_factor</a> &lt;= <a href="Libra.md#0x1_Libra_MAX_SCALING_FACTOR">MAX_SCALING_FACTOR</a>;
@@ -524,7 +525,7 @@ This resource can only be created by the holder of a <code><a href="Libra.md#0x1
 contains this address has the authority to initiate a burn request. A burn request can be
 resolved by the holder of a <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></code> by either (1) burning the funds, or (2)
 returning the funds to the account that initiated the burn request.
-Concurrent preburn requests are not allowed, only one request (in to_burn) can be handled at any time.
+Concurrent preburn requests are not allowed, only one request (in <code>to_burn</code>) can be handled at any time.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;
@@ -542,7 +543,7 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 </dt>
 <dd>
  A single pending burn amount.
- There is no pending burn request if the value in to_burn is 0
+ There is no pending burn request if the value in <code>to_burn</code> is 0
 </dd>
 </dl>
 
@@ -556,7 +557,7 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 <a name="0x1_Libra_MAX_U64"></a>
 
-TODO(wrwg): This should be provided somewhere centrally in the framework.
+Maximum u64 value.
 
 
 <pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
@@ -566,6 +567,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 <a name="0x1_Libra_MAX_U128"></a>
 
+Maximum u128 value.
 
 
 <pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_U128">MAX_U128</a>: u128 = 340282366920938463463374607431768211455;
@@ -685,6 +687,7 @@ The preburn slot is already occupied with coins to be burned.
 
 <a name="0x1_Libra_MAX_SCALING_FACTOR"></a>
 
+The maximum value for <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>.scaling_factor</code>
 
 
 <pre><code><b>const</b> <a href="Libra.md#0x1_Libra_MAX_SCALING_FACTOR">MAX_SCALING_FACTOR</a>: u64 = 10000000000;
@@ -696,13 +699,13 @@ The preburn slot is already occupied with coins to be burned.
 
 ## Function `initialize`
 
-Initialization of the <code><a href="Libra.md#0x1_Libra">Libra</a></code> module; initializes the set of
+Initialization of the <code><a href="Libra.md#0x1_Libra">Libra</a></code> module. Initializes the set of
 registered currencies in the <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain
 config, and publishes the <code>CurrencyRegistrationCapability</code> under the
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>. This can only be called from genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_initialize">initialize</a>(config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -712,13 +715,28 @@ config, and publishes the <code>CurrencyRegistrationCapability</code> under the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_initialize">initialize</a>(
-    config_account: &signer,
+    lr_account: &signer,
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     // Operational constraint
-    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(config_account);
-    <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
+    <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(lr_account);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_InitializeAbortsIf">RegisteredCurrencies::InitializeAbortsIf</a>;
+<b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_InitializeEnsures">RegisteredCurrencies::InitializeEnsures</a>;
 </code></pre>
 
 
@@ -802,9 +820,9 @@ must be a registered currency type. The caller must pass a treasury compliance a
 
 ## Function `mint`
 
-Mints <code>amount</code> coins. The <code>account</code> must hold a
+Mints <code>amount</code> of currency. The <code>account</code> must hold a
 <code><a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> at the top-level in order for this call
-to be successful, and will fail with <code>MISSING_DATA</code> otherwise.
+to be successful.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_mint">mint</a>&lt;CoinType&gt;(account: &signer, value: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
@@ -1105,12 +1123,12 @@ reference.
 
 ## Function `preburn_with_resource`
 
-Add the <code>coin</code> to the <code>preburn</code> to_burn field in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource
+Add the <code>coin</code> to the <code>preburn.to_burn</code> field in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource
 held at the address <code>preburn_address</code> if it is empty, otherwise raise
 a PendingPreburn Error (code 6). Emits a <code><a href="Libra.md#0x1_Libra_PreburnEvent">PreburnEvent</a></code> to
 the <code>preburn_events</code> event stream in the <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> for the
-<code>CoinType</code> passed in. However, if the currency being preburned is
-<code>synthetic</code> then no <code><a href="Libra.md#0x1_Libra_PreburnEvent">PreburnEvent</a></code> event will be emitted.
+<code>CoinType</code> passed in. However, if the currency being preburned has true
+<code>is_synthetic</code> then no <code><a href="Libra.md#0x1_Libra_PreburnEvent">PreburnEvent</a></code> event will be emitted.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_preburn_with_resource">preburn_with_resource</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address)
@@ -1365,7 +1383,7 @@ Calls to this function will fail if <code>account</code> does not have a
 </code></pre>
 
 
-Must abort if the account does have the Preburn [[H3]][PERMISSION].
+Must abort if the account does have the Preburn resource [[H3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
@@ -1382,11 +1400,11 @@ Must abort if the account does have the Preburn [[H3]][PERMISSION].
 
 ## Function `burn_with_capability`
 
-Permanently removes the coins held in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource (in to_burn field)
+Permanently removes the coins held in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource (in <code>to_burn</code> field)
 stored at <code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
-resource under <code>preburn_address</code>, or, if the preburn to_burn area for
+resource under <code>preburn_address</code>, or, if the <code>preburn.to_burn</code> area for
 <code>CoinType</code> is empty.
 
 
@@ -1435,11 +1453,11 @@ resource under <code>preburn_address</code>, or, if the preburn to_burn area for
 
 ## Function `burn_with_resource_cap`
 
-Permanently removes the coins held in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource (in to_burn field)
+Permanently removes the coins held in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code> resource (in <code>to_burn</code> field)
 stored at <code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
-resource under <code>preburn_address</code>, or, if the preburn to_burn area for
+resource under <code>preburn_address</code>, or, if the preburn <code>to_burn</code> area for
 <code>CoinType</code> is empty (error code 7).
 
 
@@ -1645,8 +1663,6 @@ at <code>preburn_address</code> does not contain a pending burn request.
 
 A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is
 used for administrative burns, like unpacking an LBR coin or charging fees.
-> TODO(wrwg): consider removing complexity here by removing the need for a preburn resource. The preburn
-> resource is required to have 0 value on entry and will have so also after this call, so it is redundant.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_burn_now">burn_now</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, capability: &<a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
@@ -1992,7 +2008,8 @@ zero. Does not abort.
 
 ## Function `join`
 
-and returns a new coin whose value is equal to the sum of the two inputs.
+Takes two coins as input, returns a single coin with the total value of both coins.
+Destroys on of the input coins.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Libra.md#0x1_Libra_join">join</a>&lt;CoinType&gt;(coin1: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, coin2: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
@@ -2089,7 +2106,7 @@ The <code>check</code> coin is consumed in the process
 ## Function `destroy_zero`
 
 Destroy a zero-value coin. Calls will fail if the <code>value</code> in the passed-in <code>coin</code> is non-zero
-so you cannot "burn" any non-zero amount of <code><a href="Libra.md#0x1_Libra">Libra</a></code> without having
+so it is impossible to "burn" any non-zero amount of <code><a href="Libra.md#0x1_Libra">Libra</a></code> without having
 a <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></code> for the specific <code>CoinType</code>.
 
 
@@ -2242,7 +2259,7 @@ Must abort if the signer does not have the LibraRoot role [[H7]][PERMISSION].
 
 Registers a stable currency (SCS) coin -- i.e., a non-synthetic currency.
 Resources are published on two distinct
-accounts: The CoinInfo is published on the Libra root account, and the mint and
+accounts: The <code>CoinInfo</code> is published on the Libra root account, and the mint and
 burn capabilities are published on a treasury compliance account.
 This code allows different currencies to have different treasury compliance
 accounts.
@@ -2718,9 +2735,9 @@ Returns the (rough) exchange rate between <code>CoinType</code> and <code><a hre
 
 There may be situations in which we disallow the further minting of
 coins in the system without removing the currency. This function
-allows the association TC account to control whether or not further coins of
-<code>CoinType</code> can be minted or not. If this is called with <code>can_mint =
-<b>true</b></code>, then minting is allowed, if <code>can_mint = <b>false</b></code> then minting is
+allows the association treasury compliance account to control whether or not further coins of
+<code>CoinType</code> can be minted or not. If this is called with <code>can_mint = <b>true</b></code>,
+then minting is allowed, if <code>can_mint = <b>false</b></code> then minting is
 disallowed until it is turned back on via this function. All coins
 start out in the default state of <code>can_mint = <b>true</b></code>.
 
@@ -2851,142 +2868,11 @@ Returns the market cap of CoinType.
 </code></pre>
 
 
-**************** MODULE SPECIFICATION ****************
 
 
-<a name="@Module_Specification_2"></a>
+<a name="@Access_Control_2"></a>
 
-### Module Specification
-
-
-Checks whether currency is registered. Mirrors <code><a href="Libra.md#0x1_Libra_is_currency">Self::is_currency</a>&lt;CoinType&gt;</code>.
-
-
-<a name="0x1_Libra_spec_is_currency"></a>
-
-
-<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;(): bool {
-    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
-}
-</code></pre>
-
-
-Returns currency information.
-
-
-<a name="0x1_Libra_spec_currency_info"></a>
-
-
-<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;(): <a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
-    <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
-}
-</code></pre>
-
-
-Specification version of <code><a href="Libra.md#0x1_Libra_approx_lbr_for_value">Self::approx_lbr_for_value</a></code>.
-
-
-<a name="0x1_Libra_spec_approx_lbr_for_value"></a>
-
-
-<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;CoinType&gt;(value: num):  num {
-    <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(value, <a href="Libra.md#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;())
-}
-<a name="0x1_Libra_spec_lbr_exchange_rate"></a>
-<b>define</b> <a href="Libra.md#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> {
-    <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
-}
-<a name="0x1_Libra_spec_is_SCS_currency"></a>
-<b>define</b> <a href="Libra.md#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;CoinType&gt;(): bool {
-    <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() && !<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().is_synthetic
-}
-</code></pre>
-
-
-Checks whether the currency has a mint capability.  This is only relevant for
-SCS coins
-
-
-<a name="0x1_Libra_spec_has_mint_capability"></a>
-
-
-<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(addr: address): bool {
-    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)
-}
-</code></pre>
-
-
-Returns true if a BurnCapability for CoinType exists at addr.
-
-
-<a name="0x1_Libra_spec_has_burn_capability"></a>
-
-
-<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_has_burn_capability">spec_has_burn_capability</a>&lt;CoinType&gt;(addr: address): bool {
-    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
-}
-</code></pre>
-
-
-
-<a name="@Conservation_of_currency_3"></a>
-
-#### Conservation of currency
-
-TODO (dd): Unfortunately, improvements to the memory model have made it
-difficult to compute sum_of_coin_values correctly. We will need
-another approach for expressing this invariant.
-TODO (dd): It would be great if we could prove that there is never a coin or a set of coins whose
-aggregate value exceeds the CoinInfo.total_value.  However, that property involves summations over
-all resources and is beyond the capabilities of the specification logic or the prover, currently.
-
-<a name="@Minting_4"></a>
-
-#### Minting
-
-
-
-<a name="0x1_Libra_TotalValueNotIncrease"></a>
-
-The total amount of currency does not increase.
-
-
-<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_TotalValueNotIncrease">TotalValueNotIncrease</a>&lt;CoinType&gt; {
-    <b>ensures</b> <b>old</b>(<a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;())
-        ==&gt; <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value &lt;= <b>old</b>(<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value);
-}
-</code></pre>
-
-
-
-
-<a name="0x1_Libra_PreserveMintCapExistence"></a>
-
-The existence of MintCapability is preserved.
-
-
-<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreserveMintCapExistence">PreserveMintCapExistence</a>&lt;CoinType&gt; {
-    <b>ensures</b> <b>forall</b> addr: address:
-        <b>old</b>(<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)) ==&gt;
-            <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr);
-}
-</code></pre>
-
-
-
-
-<a name="0x1_Libra_PreserveMintCapAbsence"></a>
-
-The absence of MintCapability is preserved.
-
-
-<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreserveMintCapAbsence">PreserveMintCapAbsence</a>&lt;CoinType&gt; {
-    <b>ensures</b> <b>forall</b> addr: address:
-        <b>old</b>(!<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)) ==&gt;
-            !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr);
-}
-</code></pre>
-
+### Access Control
 
 
 Only mint functions can increase the total amount of currency [[H1]][PERMISSION].
@@ -3048,7 +2934,56 @@ If an address has a mint capability, it is an SCS currency.
 
 
 
-<a name="@Burning_5"></a>
+<a name="@Minting_3"></a>
+
+#### Minting
+
+
+
+<a name="0x1_Libra_TotalValueNotIncrease"></a>
+
+The total amount of currency does not increase.
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_TotalValueNotIncrease">TotalValueNotIncrease</a>&lt;CoinType&gt; {
+    <b>ensures</b> <b>old</b>(<a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;())
+        ==&gt; <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value &lt;= <b>old</b>(<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value);
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_PreserveMintCapExistence"></a>
+
+The existence of MintCapability is preserved.
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreserveMintCapExistence">PreserveMintCapExistence</a>&lt;CoinType&gt; {
+    <b>ensures</b> <b>forall</b> addr: address:
+        <b>old</b>(<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)) ==&gt;
+            <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr);
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_PreserveMintCapAbsence"></a>
+
+The absence of MintCapability is preserved.
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreserveMintCapAbsence">PreserveMintCapAbsence</a>&lt;CoinType&gt; {
+    <b>ensures</b> <b>forall</b> addr: address:
+        <b>old</b>(!<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)) ==&gt;
+            !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr);
+}
+</code></pre>
+
+
+
+<a name="@Burning_4"></a>
 
 #### Burning
 
@@ -3112,7 +3047,8 @@ Only <code>register_SCS_currency</code> and <code>publish_burn_capability</code>
 which must abort if the account does not have the TreasuryCompliance role [[H7]][PERMISSION].
 
 
-<pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreserveBurnCapAbsence">PreserveBurnCapAbsence</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt; <b>except</b> <a href="Libra.md#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;, <a href="Libra.md#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;;
+<pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreserveBurnCapAbsence">PreserveBurnCapAbsence</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
+    <b>except</b> <a href="Libra.md#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;, <a href="Libra.md#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;;
 <b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="Libra.md#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -3139,7 +3075,7 @@ account, but is always moved back to the original account. This is the case in
 
 
 
-<a name="@Preburning_6"></a>
+<a name="@Preburning_5"></a>
 
 #### Preburning
 
@@ -3248,6 +3184,11 @@ Preburn is not transferrable [[J3]][PERMISSION].
 
 
 
+<a name="@Update_Exchange_Rates_6"></a>
+
+#### Update Exchange Rates
+
+
 
 <a name="0x1_Libra_ExchangeRateRemainsSame"></a>
 
@@ -3256,7 +3197,8 @@ The exchange rate to LBR stays constant.
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; {
     <b>ensures</b> <b>old</b>(<a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;())
-        ==&gt; <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_lbr_exchange_rate == <b>old</b>(<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_lbr_exchange_rate);
+        ==&gt; <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_lbr_exchange_rate
+            == <b>old</b>(<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().to_lbr_exchange_rate);
 }
 </code></pre>
 
@@ -3274,6 +3216,81 @@ Only update_lbr_exchange_rate can change the exchange rate [[H4]][PERMISSION].
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
     <b>except</b> <a href="Libra.md#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+<a name="@Helper_Functions_7"></a>
+
+### Helper Functions
+
+
+Checks whether currency is registered. Mirrors <code><a href="Libra.md#0x1_Libra_is_currency">Self::is_currency</a>&lt;CoinType&gt;</code>.
+
+
+<a name="0x1_Libra_spec_is_currency"></a>
+
+
+<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;(): bool {
+    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
+}
+</code></pre>
+
+
+Returns currency information.
+
+
+<a name="0x1_Libra_spec_currency_info"></a>
+
+
+<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;(): <a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
+    <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
+}
+</code></pre>
+
+
+Specification version of <code><a href="Libra.md#0x1_Libra_approx_lbr_for_value">Self::approx_lbr_for_value</a></code>.
+
+
+<a name="0x1_Libra_spec_approx_lbr_for_value"></a>
+
+
+<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;CoinType&gt;(value: num):  num {
+    <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(value, <a href="Libra.md#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;())
+}
+<a name="0x1_Libra_spec_lbr_exchange_rate"></a>
+<b>define</b> <a href="Libra.md#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> {
+    <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
+}
+<a name="0x1_Libra_spec_is_SCS_currency"></a>
+<b>define</b> <a href="Libra.md#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;CoinType&gt;(): bool {
+    <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() && !<a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().is_synthetic
+}
+</code></pre>
+
+
+Checks whether the currency has a mint capability.  This is only relevant for
+SCS coins
+
+
+<a name="0x1_Libra_spec_has_mint_capability"></a>
+
+
+<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(addr: address): bool {
+    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr)
+}
+</code></pre>
+
+
+Returns true if a BurnCapability for CoinType exists at addr.
+
+
+<a name="0x1_Libra_spec_has_burn_capability"></a>
+
+
+<pre><code><b>define</b> <a href="Libra.md#0x1_Libra_spec_has_burn_capability">spec_has_burn_capability</a>&lt;CoinType&gt;(addr: address): bool {
+    <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
+}
 </code></pre>
 
 

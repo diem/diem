@@ -28,15 +28,22 @@ module RegisteredCurrencies {
         );
     }
     spec fun initialize {
+        include InitializeAbortsIf;
+        include InitializeEnsures;
+    }
+
+    spec schema InitializeAbortsIf {
+        lr_account: signer;
         include LibraTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include LibraConfig::PublishNewConfigAbortsIf<RegisteredCurrencies>;
+    }
+    spec schema InitializeEnsures {
         include LibraConfig::PublishNewConfigEnsures<RegisteredCurrencies>{
             payload: RegisteredCurrencies { currency_codes: Vector::empty() }
         };
         ensures len(get_currency_codes()) == 0;
     }
-
 
     /// Adds a new currency code. The currency code must not yet exist.
     public fun add_currency_code(
