@@ -265,7 +265,7 @@ impl Experiment for PerformanceBenchmark {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(600) + self.duration
+        Duration::from_secs(900) + self.duration
     }
 }
 
