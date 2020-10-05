@@ -1057,6 +1057,14 @@ only Libra root has the Libra root role.
 </code></pre>
 
 
+Access Control
+Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+</code></pre>
+
+
 
 </details>
 
@@ -1192,6 +1200,14 @@ only Libra root has the Libra root role.
 </code></pre>
 
 
+Access Control
+Only the Libra Root account can create Validator accounts [[A3]][ROLE].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+</code></pre>
+
+
 
 </details>
 
@@ -1318,6 +1334,14 @@ also be added. This can only be invoked by an TreasuryCompliance account.
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+Access Control
+Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 </code></pre>
 
 
@@ -1450,6 +1474,14 @@ account.
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+Access Control
+Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 </code></pre>
 
 
@@ -2262,6 +2294,14 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 
 Access Control
+Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+
+
+<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
+</code></pre>
+
+
+This is ensured by LibraAccount::writeset_prologue.
 The account can rotate its own authentication key unless
 it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
 
@@ -2749,8 +2789,7 @@ Successful execution of this script emits two events:
 
 
 
-<pre><code><b>pragma</b> verify;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: payer};
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: payer};
 <a name="peer_to_peer_with_metadata_payer_addr$1"></a>
 <b>let</b> payer_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer);
 <a name="peer_to_peer_with_metadata_cap$2"></a>
@@ -2777,6 +2816,16 @@ The balances of payer and payee change by the correct amount.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+</code></pre>
+
+
+Access Control
+Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
+Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
+
+
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(payer_addr) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(payee) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -2926,6 +2975,14 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 </code></pre>
 
 
+Access Control
+Only the Libra Root account can add Validators [[H12]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+</code></pre>
+
+
 
 </details>
 
@@ -3044,6 +3101,17 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+</code></pre>
+
+
+Access Control
+Only the Validator Operator account which has been registered with the validator can
+update the validator's configuration [[H13]][PERMISSION].
+
+
+<pre><code><b>aborts_if</b> <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
+            <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(validator_account)
+                <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -3182,6 +3250,14 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+Access Control
+Only the Libra Root account can remove Validators [[H12]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 </code></pre>
 
 
@@ -3333,6 +3409,17 @@ for which there is no useful recovery except to resubmit the transaction.
 </code></pre>
 
 
+Access Control
+Only the Validator Operator account which has been registered with the validator can
+update the validator's configuration [[H13]][PERMISSION].
+
+
+<pre><code><b>aborts_if</b> <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
+            <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(validator_account)
+                <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
 
 </details>
 
@@ -3438,8 +3525,12 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
+<a name="set_validator_operator_account_addr$1"></a>
+
+
+<pre><code><b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: account_addr};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">ValidatorConfig::SetOperatorEnsures</a>{validator_account: account, operator_addr: operator_account};
@@ -3456,6 +3547,14 @@ because CapabilityHolder is published during initialization (Genesis).
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+</code></pre>
+
+
+Access Control
+Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
 </code></pre>
 
 
@@ -3575,9 +3674,13 @@ the system is initiated by this script.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<a name="set_validator_operator_with_nonce_admin_account_addr$1"></a>
+
+
+<pre><code><b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
-<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: account_addr};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">ValidatorConfig::SetOperatorEnsures</a>{validator_account: account, operator_addr: operator_account};
@@ -3586,6 +3689,22 @@ the system is initiated by this script.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+</code></pre>
+
+
+Access Control
+Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+
+
+<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
+</code></pre>
+
+
+This is ensured by LibraAccount::writeset_prologue.
+Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
 </code></pre>
 
 
@@ -3857,7 +3976,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 Access Control
-Only the account with the burn capability can burn [[H2]][PERMISSION].
+Only the account with the burn capability can burn coins [[H2]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
@@ -4011,6 +4130,14 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+</code></pre>
+
+
+Access Control
+Only the account with the burn capability can cancel burning [[H2]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
 </code></pre>
 
 
@@ -4665,6 +4792,14 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+</code></pre>
+
+
+Access Control
+Only the Treasury Compliance account can update the exchange rate [[H4]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 </code></pre>
 
 

@@ -65,11 +65,13 @@ spec fun set_validator_operator_with_nonce_admin {
     use 0x1::LibraAccount;
     use 0x1::Signer;
     use 0x1::Errors;
+    use 0x1::Roles;
 
+    let account_addr = Signer::address_of(account);
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
     // next is due to abort in get_human_name
-    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: Signer::address_of(account)};
+    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: account_addr};
     // TODO: use an error code from Errors.move instead of 0.
     aborts_if ValidatorOperatorConfig::get_human_name(operator_account) != operator_name with 0;
     include ValidatorConfig::SetOperatorAbortsIf{validator_account: account, operator_addr: operator_account};
@@ -80,5 +82,11 @@ spec fun set_validator_operator_with_nonce_admin {
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ROLE;
-    }
+
+    /// Access Control
+    /// Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+    requires Roles::has_libra_root_role(lr_account); /// This is ensured by LibraAccount::writeset_prologue.
+    /// Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+    include Roles::AbortsIfNotValidator{validator_addr: account_addr};
+}
 }

@@ -55,6 +55,7 @@ fun update_exchange_rate<Currency>(
 spec fun update_exchange_rate {
     use 0x1::Errors;
     use 0x1::LibraAccount;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
@@ -74,5 +75,9 @@ spec fun update_exchange_rate {
         Errors::LIMIT_EXCEEDED,
         Errors::REQUIRES_ROLE,
         Errors::NOT_PUBLISHED;
+
+    /// Access Control
+    /// Only the Treasury Compliance account can update the exchange rate [[H4]][PERMISSION].
+    include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }
 }

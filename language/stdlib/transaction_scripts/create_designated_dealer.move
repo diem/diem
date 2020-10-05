@@ -65,6 +65,7 @@ fun create_designated_dealer<Currency>(
 
 spec fun create_designated_dealer {
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
@@ -78,5 +79,9 @@ spec fun create_designated_dealer {
         Errors::NOT_PUBLISHED,
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
+
+    /// Access Control
+    /// Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].
+    include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }
 }

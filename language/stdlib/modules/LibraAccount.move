@@ -1434,6 +1434,7 @@ module LibraAccount {
     spec fun writeset_prologue {
         include WritesetPrologueAbortsIf {txn_expiration_time_seconds: txn_expiration_time};
         ensures prologue_guarantees(sender);
+        ensures Roles::has_libra_root_role(sender);
     }
 
     spec schema WritesetPrologueAbortsIf {

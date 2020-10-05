@@ -60,6 +60,7 @@ fun register_validator_config(
 spec fun register_validator_config {
     use 0x1::Errors;
     use 0x1::LibraAccount;
+    use 0x1::Signer;
 
     include LibraAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
     include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
@@ -68,5 +69,12 @@ spec fun register_validator_config {
     aborts_with [check]
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED;
+
+    /// Access Control
+    /// Only the Validator Operator account which has been registered with the validator can
+    /// update the validator's configuration [[H13]][PERMISSION].
+    aborts_if Signer::address_of(validator_operator_account) !=
+                ValidatorConfig::get_operator(validator_account)
+                    with Errors::INVALID_ARGUMENT;
 }
 }

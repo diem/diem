@@ -63,6 +63,7 @@ fun add_validator_and_reconfigure(
 spec fun add_validator_and_reconfigure {
     use 0x1::LibraAccount;
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: lr_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
@@ -85,5 +86,9 @@ spec fun add_validator_and_reconfigure {
         Errors::REQUIRES_ADDRESS,
         Errors::INVALID_STATE,
         Errors::REQUIRES_ROLE;
-    }
+
+    /// Access Control
+    /// Only the Libra Root account can add Validators [[H12]][PERMISSION].
+    include Roles::AbortsIfNotLibraRoot{account: lr_account};
+}
 }

@@ -71,6 +71,7 @@ fun create_validator_account(
 ///   only Libra root has the Libra root role.
 spec fun create_validator_account {
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: lr_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
@@ -83,5 +84,9 @@ spec fun create_validator_account {
         Errors::REQUIRES_ADDRESS,
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
+
+    /// Access Control
+    /// Only the Libra Root account can create Validator accounts [[A3]][ROLE].
+    include Roles::AbortsIfNotLibraRoot{account: lr_account};
 }
 }

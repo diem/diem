@@ -80,5 +80,9 @@ spec fun cancel_burn {
         Errors::INVALID_ARGUMENT,
         Errors::LIMIT_EXCEEDED,
         Errors::INVALID_STATE;
+
+    /// Access Control
+    /// Only the account with the burn capability can cancel burning [[H2]][PERMISSION].
+    include Libra::AbortsIfNoBurnCapability<Token>{account: account};
 }
 }

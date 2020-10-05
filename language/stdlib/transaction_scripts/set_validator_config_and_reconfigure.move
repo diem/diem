@@ -61,6 +61,7 @@ spec fun set_validator_config_and_reconfigure {
     use 0x1::LibraConfig;
     use 0x1::LibraSystem;
     use 0x1::Errors;
+    use 0x1::Signer;
 
      // properties checked by the prologue.
    include LibraAccount::TransactionChecks{sender: validator_operator_account};
@@ -103,5 +104,12 @@ spec fun set_validator_config_and_reconfigure {
         Errors::REQUIRES_ROLE,
         Errors::INVALID_ARGUMENT,
         Errors::INVALID_STATE;
-    }
+
+    /// Access Control
+    /// Only the Validator Operator account which has been registered with the validator can
+    /// update the validator's configuration [[H13]][PERMISSION].
+    aborts_if Signer::address_of(validator_operator_account) !=
+                ValidatorConfig::get_operator(validator_account)
+                    with Errors::INVALID_ARGUMENT;
+}
 }

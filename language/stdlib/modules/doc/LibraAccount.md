@@ -3438,6 +3438,7 @@ The prologue for WriteSet transaction
 
 <pre><code><b>include</b> <a href="LibraAccount.md#0x1_LibraAccount_WritesetPrologueAbortsIf">WritesetPrologueAbortsIf</a> {txn_expiration_time_seconds: txn_expiration_time};
 <b>ensures</b> <a href="LibraAccount.md#0x1_LibraAccount_prologue_guarantees">prologue_guarantees</a>(sender);
+<b>ensures</b> <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(sender);
 </code></pre>
 
 

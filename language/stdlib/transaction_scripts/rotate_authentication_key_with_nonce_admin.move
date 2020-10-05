@@ -43,6 +43,7 @@ fun rotate_authentication_key_with_nonce_admin(lr_account: &signer, account: &si
 spec fun rotate_authentication_key_with_nonce_admin {
     use 0x1::Signer;
     use 0x1::Errors;
+    use 0x1::Roles;
 
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
@@ -60,6 +61,8 @@ spec fun rotate_authentication_key_with_nonce_admin {
         Errors::NOT_PUBLISHED; // TOOD: Undocumented error code. Added due to the possible absence of SlidingNonce in SlidingNonce::try_record_nonce;
 
     /// Access Control
+    /// Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+    requires Roles::has_libra_root_role(lr_account); /// This is ensured by LibraAccount::writeset_prologue.
     /// The account can rotate its own authentication key unless
     /// it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
     include LibraAccount::AbortsIfDelegatedKeyRotationCapability{account: account};

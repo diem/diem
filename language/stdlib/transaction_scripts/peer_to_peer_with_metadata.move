@@ -69,7 +69,6 @@ fun peer_to_peer_with_metadata<Currency>(
 spec fun peer_to_peer_with_metadata {
     use 0x1::Signer;
     use 0x1::Errors;
-    pragma verify;
 
     include LibraAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
     let payer_addr = Signer::spec_address_of(payer);
@@ -93,5 +92,11 @@ spec fun peer_to_peer_with_metadata {
         Errors::INVALID_STATE,
         Errors::INVALID_ARGUMENT,
         Errors::LIMIT_EXCEEDED;
+
+    /// Access Control
+    /// Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
+    /// Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
+    aborts_if !exists<LibraAccount::Balance<Currency>>(payer_addr) with Errors::NOT_PUBLISHED;
+    aborts_if !exists<LibraAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
 }
 }

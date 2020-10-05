@@ -54,10 +54,12 @@ spec fun set_validator_operator {
     use 0x1::LibraAccount;
     use 0x1::Signer;
     use 0x1::Errors;
+    use 0x1::Roles;
 
+    let account_addr = Signer::address_of(account);
     include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     // next is due to abort in get_human_name
-    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: Signer::address_of(account)};
+    include ValidatorConfig::AbortsIfNoValidatorConfig{addr: account_addr};
     // TODO: use an error code from Errors.move instead of 0.
     aborts_if ValidatorOperatorConfig::get_human_name(operator_account) != operator_name with 0;
     include ValidatorConfig::SetOperatorAbortsIf{validator_account: account, operator_addr: operator_account};
@@ -71,7 +73,9 @@ spec fun set_validator_operator {
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ROLE,
         Errors::INVALID_STATE;
-    }
 
-
+    /// Access Control
+    /// Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+    include Roles::AbortsIfNotValidator{validator_addr: account_addr};
+}
 }
