@@ -1,7 +1,7 @@
 address 0x1 {
 
 /// The `LibraAccount` module manages accounts. It defines the `LibraAccount` resource and
-/// numerous auxilliary data structures. It also defines the prolog and epilog that run
+/// numerous auxiliary data structures. It also defines the prolog and epilog that run
 /// before and after every transaction.
 
 module LibraAccount {
@@ -36,11 +36,11 @@ module LibraAccount {
         /// The current authentication key.
         /// This can be different from the key used to create the account
         authentication_key: vector<u8>,
-        /// A `withdrawal_capability` allows whoever holds this capability
+        /// A `withdraw_capability` allows whoever holds this capability
         /// to withdraw from the account. At the time of account creation
         /// this capability is stored in this option. It can later be
         /// and can also be restored via `restore_withdraw_capability`.
-        withdrawal_capability: Option<WithdrawCapability>,
+        withdraw_capability: Option<WithdrawCapability>,
         /// A `key_rotation_capability` allows whoever holds this capability
         /// the ability to rotate the authentication key for the account. At
         /// the time of account creation this capability is stored in this
@@ -72,7 +72,6 @@ module LibraAccount {
     /// The holder of WithdrawCapability for account_address can withdraw Libra from
     /// account_address/LibraAccount/balance.
     /// There is at most one WithdrawCapability in existence for a given address.
-    // TODO: Write an informal proof.
     resource struct WithdrawCapability {
         /// Address that WithdrawCapability was associated with when it was created.
         /// This field does not change.
@@ -82,7 +81,6 @@ module LibraAccount {
     /// The holder of KeyRotationCapability for account_address can rotate the authentication key for
     /// account_address (i.e., write to account_address/LibraAccount/authentication_key).
     /// There is at most one KeyRotationCapability in existence for a given address.
-    // TODO: Write an informal proof.
     resource struct KeyRotationCapability {
         /// Address that KeyRotationCapability was associated with when it was created.
         /// This field does not change.
@@ -156,7 +154,7 @@ module LibraAccount {
     /// The withdrawal of funds would have exceeded the the account's limits
     const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
     /// The `WithdrawCapability` for this account has already been extracted
-    const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
+    const EWITHDRAW_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
     /// The provided authentication had an invalid length
     const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
     /// The `KeyRotationCapability` for this account has already been extracted
@@ -164,7 +162,7 @@ module LibraAccount {
     /// An account cannot be created at the reserved VM address of 0x0
     const ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
     /// The `WithdrawCapability` for this account is not extracted
-    const EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED: u64 = 11;
+    const EWITHDRAW_CAPABILITY_NOT_EXTRACTED: u64 = 11;
     /// Tried to add a balance in a currency that this account already has
     const EADD_EXISTING_CURRENCY: u64 = 15;
     /// Attempted to send funds to an account that does not exist
@@ -186,7 +184,6 @@ module LibraAccount {
     /// important to the semantics of the system. Those codes also need to be
     /// directly used in aborts instead of augmenting them with a category
     /// via the `Errors` module.
-    /// const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
     const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
     const PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1001;
     const PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 1002;
@@ -226,6 +223,10 @@ module LibraAccount {
             AccountLimits::has_window_published<Token>(addr)
         }
     }
+    spec define spec_has_published_account_limits<Token>(addr: address): bool {
+        if (VASP::is_vasp(addr)) VASP::spec_has_account_limits<Token>(addr)
+        else AccountLimits::has_window_published<Token>(addr)
+    }
 
     /// Returns whether we should track and record limits for the `payer` or `payee` account.
     /// Depending on the `is_withdrawal` flag passed in we determine whether the
@@ -249,23 +250,17 @@ module LibraAccount {
         aborts_if false;
         ensures result == spec_should_track_limits_for_account<Token>(payer, payee, is_withdrawal);
     }
-    spec module {
-        define spec_has_published_account_limits<Token>(addr: address): bool {
-            if (VASP::is_vasp(addr)) VASP::spec_has_account_limits<Token>(addr)
-            else AccountLimits::has_window_published<Token>(addr)
-        }
-        define spec_should_track_limits_for_account<Token>(
-            payer: address, payee: address, is_withdrawal: bool
-        ): bool {
-            if (is_withdrawal) {
-                spec_has_published_account_limits<Token>(payer) &&
-                VASP::is_vasp(payer) &&
-                !VASP::spec_is_same_vasp(payer, payee)
-            } else {
-                spec_has_published_account_limits<Token>(payee) &&
-                VASP::is_vasp(payee) &&
-                !VASP::spec_is_same_vasp(payee, payer)
-            }
+    spec define spec_should_track_limits_for_account<Token>(
+        payer: address, payee: address, is_withdrawal: bool
+    ): bool {
+        if (is_withdrawal) {
+            spec_has_published_account_limits<Token>(payer) &&
+            VASP::is_vasp(payer) &&
+            !VASP::spec_is_same_vasp(payer, payee)
+        } else {
+            spec_has_published_account_limits<Token>(payee) &&
+            VASP::is_vasp(payee) &&
+            !VASP::spec_is_same_vasp(payee, payer)
         }
     }
 
@@ -329,10 +324,10 @@ module LibraAccount {
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payee));
         ensures exists<LibraAccount>(payee);
         ensures exists<Balance<Token>>(payee);
-        ensures global<LibraAccount>(payee).withdrawal_capability
-            == old(global<LibraAccount>(payee).withdrawal_capability);
+        ensures global<LibraAccount>(payee).withdraw_capability
+            == old(global<LibraAccount>(payee).withdraw_capability);
         include DepositAbortsIf<Token>{amount: to_deposit.value};
-        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64() with Errors::LIMIT_EXCEEDED;
+        include DepositOverflowAbortsIf<Token>{amount: to_deposit.value};
         include DepositEnsures<Token>{amount: to_deposit.value};
     }
     spec schema DepositAbortsIf<Token> {
@@ -346,7 +341,11 @@ module LibraAccount {
         aborts_if !exists<Balance<Token>>(payee) with Errors::INVALID_ARGUMENT;
         aborts_if !exists_at(payee) with Errors::NOT_PUBLISHED;
     }
-
+    spec schema DepositOverflowAbortsIf<Token> {
+        payee: address;
+        amount: u64;
+        aborts_if balance<Token>(payee) + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+    }
     spec schema DepositAbortsIfRestricted<Token> {
         payer: address;
         payee: address;
@@ -406,7 +405,7 @@ module LibraAccount {
         include DesignatedDealer::TieredMintAbortsIf<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
         include DepositAbortsIf<Token>{payer: CoreAddresses::VM_RESERVED_ADDRESS(),
             payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
-        aborts_if global<Balance<Token>>(designated_dealer_address).coin.value + mint_amount > max_u64() with Errors::LIMIT_EXCEEDED;
+        include DepositOverflowAbortsIf<Token>{payee: designated_dealer_address, amount: mint_amount};
     }
 
     spec schema TieredMintEnsures<Token> {
@@ -454,7 +453,7 @@ module LibraAccount {
             metadata: x"",
             metadata_signature: x""
         };
-        aborts_if balance<Token>(preburn_address) + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+        include DepositOverflowAbortsIf<Token>{payee: preburn_address, amount: amount};
     }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -546,22 +545,17 @@ module LibraAccount {
         );
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
-    spec fun withdraw_from {
-        /// Can only withdraw from the balances of cap.account_address [[H17]][PERMISSION].
-        ensures forall addr1: address where old(exists<Balance<Token>>(addr1)) && addr1 != cap.account_address:
-            global<Balance<Token>>(addr1).coin.value == old(global<Balance<Token>>(addr1).coin.value);
-        // TODO(jkpark): this spec block is incomplete.
-    }
 
     spec fun withdraw_from {
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
         modifies global<LibraAccount>(payer);
         ensures exists<LibraAccount>(payer);
-        ensures global<LibraAccount>(payer).withdrawal_capability
-                    == old(global<LibraAccount>(payer).withdrawal_capability);
+        ensures global<LibraAccount>(payer).withdraw_capability
+                    == old(global<LibraAccount>(payer).withdraw_capability);
         include WithdrawFromAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>{balance: global<Balance<Token>>(payer)};
+        include WithdrawOnlyFromCapAddress<Token>;
     }
 
     spec schema WithdrawFromAbortsIf<Token> {
@@ -571,9 +565,17 @@ module LibraAccount {
         let payer = cap.account_address;
         include LibraTimestamp::AbortsIfNotOperating;
         include Libra::AbortsIfNoCurrency<Token>;
-        include WithdrawFromBalanceAbortsIf<Token>{payer: payer, balance: global<Balance<Token>>(payer)};
+        include WithdrawFromBalanceAbortsIf<Token>{payer, balance: global<Balance<Token>>(payer)};
         aborts_if !exists_at(payer) with Errors::NOT_PUBLISHED;
         aborts_if !exists<Balance<Token>>(payer) with Errors::NOT_PUBLISHED;
+    }
+
+    /// # Access Control
+    spec schema WithdrawOnlyFromCapAddress<Token> {
+        cap: WithdrawCapability;
+        /// Can only withdraw from the balances of cap.account_address [[H17]][PERMISSION].
+        ensures forall addr: address where old(exists<Balance<Token>>(addr)) && addr != cap.account_address:
+            balance<Token>(addr) == old(balance<Token>(addr));
     }
 
     /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
@@ -593,10 +595,10 @@ module LibraAccount {
         let payer = cap.account_address;
         modifies global<LibraAccount>(payer);
         ensures exists<LibraAccount>(payer);
-        ensures global<LibraAccount>(payer).withdrawal_capability
-                == old(global<LibraAccount>(payer).withdrawal_capability);
+        ensures global<LibraAccount>(payer).withdraw_capability
+                == old(global<LibraAccount>(payer).withdraw_capability);
         include PreburnAbortsIf<Token>;
-        include PreburnEnsures<Token>{dd_addr: dd_addr, payer: payer};
+        include PreburnEnsures<Token>{dd_addr, payer};
     }
 
     spec schema PreburnAbortsIf<Token> {
@@ -619,7 +621,6 @@ module LibraAccount {
         include Libra::PreburnEnsures<Token>{preburn: preburn};
     }
 
-
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
     public fun extract_withdraw_capability(
         sender: &signer
@@ -628,11 +629,11 @@ module LibraAccount {
         // Abort if we already extracted the unique withdraw capability for this account.
         assert(
             !delegated_withdraw_capability(sender_addr),
-            Errors::invalid_state(EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED)
+            Errors::invalid_state(EWITHDRAW_CAPABILITY_ALREADY_EXTRACTED)
         );
         assert(exists_at(sender_addr), Errors::not_published(EACCOUNT));
         let account = borrow_global_mut<LibraAccount>(sender_addr);
-        Option::extract(&mut account.withdrawal_capability)
+        Option::extract(&mut account.withdraw_capability)
     }
 
     spec fun extract_withdraw_capability {
@@ -640,7 +641,6 @@ module LibraAccount {
         let sender_addr = Signer::spec_address_of(sender);
         modifies global<LibraAccount>(sender_addr);
         include ExtractWithdrawCapAbortsIf{sender_addr};
-
         ensures exists<LibraAccount>(sender_addr);
         ensures result == old(spec_get_withdraw_cap(sender_addr));
         ensures result.account_address == sender_addr;
@@ -662,10 +662,10 @@ module LibraAccount {
         // indicating that the withdraw capability is not unique.
         assert(
             delegated_withdraw_capability(cap.account_address),
-            Errors::invalid_state(EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED)
+            Errors::invalid_state(EWITHDRAW_CAPABILITY_NOT_EXTRACTED)
         );
         let account = borrow_global_mut<LibraAccount>(cap.account_address);
-        Option::fill(&mut account.withdrawal_capability, cap)
+        Option::fill(&mut account.withdraw_capability, cap)
     }
 
     spec fun restore_withdraw_capability {
@@ -709,12 +709,11 @@ module LibraAccount {
         ensures exists_at(payee);
         ensures exists<Balance<Token>>(payer);
         ensures exists<Balance<Token>>(payee);
-        ensures global<LibraAccount>(payer).withdrawal_capability ==
-            old(global<LibraAccount>(payer).withdrawal_capability);
+        ensures global<LibraAccount>(payer).withdraw_capability ==
+            old(global<LibraAccount>(payer).withdraw_capability);
         include PayFromAbortsIf<Token>;
-        ensures payer == payee ==> balance<Token>(payer) == old(balance<Token>(payer));
-        ensures payer != payee ==> balance<Token>(payer) == old(balance<Token>(payer)) - amount;
-        ensures payer != payee ==> balance<Token>(payee) == old(balance<Token>(payee)) + amount;
+        include PayFromEnsures<Token>{payer};
+
     }
     spec schema PayFromAbortsIf<Token> {
         cap: WithdrawCapability;
@@ -723,8 +722,7 @@ module LibraAccount {
         metadata: vector<u8>;
         metadata_signature: vector<u8> ;
         include DepositAbortsIf<Token>{payer: cap.account_address};
-        aborts_if cap.account_address != payee &&
-            global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+        include cap.account_address != payee ==> DepositOverflowAbortsIf<Token>;
         include WithdrawFromAbortsIf<Token>;
     }
     spec schema PayFromAbortsIfRestricted<Token> {
@@ -735,8 +733,16 @@ module LibraAccount {
         metadata_signature: vector<u8> ;
         let payer = cap.account_address;
         include DepositAbortsIfRestricted<Token>{payer: cap.account_address};
-        include WithdrawFromBalanceNoLimitsAbortsIf<Token>{payer: payer, balance: global<Balance<Token>>(payer)};
+        include WithdrawFromBalanceNoLimitsAbortsIf<Token>{payer, balance: global<Balance<Token>>(payer)};
         aborts_if !exists<Balance<Token>>(payer) with Errors::NOT_PUBLISHED;
+    }
+    spec schema PayFromEnsures<Token> {
+        payer: address;
+        payee: address;
+        amount: u64;
+        ensures payer == payee ==> balance<Token>(payer) == old(balance<Token>(payer));
+        ensures payer != payee ==> balance<Token>(payer) == old(balance<Token>(payer)) - amount;
+        ensures payer != payee ==> balance<Token>(payee) == old(balance<Token>(payee)) + amount;
     }
 
     /// Rotate the authentication key for the account under cap.account_address
@@ -756,10 +762,7 @@ module LibraAccount {
     spec fun rotate_authentication_key {
         include RotateAuthenticationKeyAbortsIf;
         include RotateAuthenticationKeyEnsures{addr: cap.account_address};
-
-        /// Can only rotate the authentication_key of cap.account_address [[H16]][PERMISSION].
-        ensures forall addr1: address where addr1 != cap.account_address && old(exists_at(addr1)):
-            global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
+        include RotateOnlyKeyOfCapAddress;
     }
     spec schema RotateAuthenticationKeyAbortsIf {
         cap: &KeyRotationCapability;
@@ -771,6 +774,14 @@ module LibraAccount {
         addr: address;
         new_authentication_key: vector<u8>;
         ensures global<LibraAccount>(addr).authentication_key == new_authentication_key;
+    }
+
+    /// # Access Control
+    spec schema RotateOnlyKeyOfCapAddress {
+        cap: KeyRotationCapability;
+        /// Can only rotate the authentication_key of cap.account_address [[H16]][PERMISSION].
+        ensures forall addr: address where addr != cap.account_address && old(exists_at(addr)):
+            global<LibraAccount>(addr).authentication_key == old(global<LibraAccount>(addr).authentication_key);
     }
 
     /// Return a unique capability granting permission to rotate the sender's authentication key
@@ -826,9 +837,8 @@ module LibraAccount {
         ensures spec_holds_own_key_rotation_cap(cap.account_address);
     }
 
-
     /// Add balances for `Token` to `new_account`.  If `add_all_currencies` is true,
-    /// then add for each of the three token types.
+    /// then add for both token types.
     /// It is important that this be a private function. Otherwise, balances could
     /// be added to inappropriate accounts. See invariant, "Only reasonable accounts
     /// have currencies", below.
@@ -886,8 +896,6 @@ module LibraAccount {
         new_account: signer,
         auth_key_prefix: vector<u8>,
     ) acquires AccountOperationsCapability {
-        // Magically create a signer so we can do `move_to` to store LibraAccount, etc.
-        // at the new address.
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
         assert(
@@ -923,7 +931,7 @@ module LibraAccount {
             &new_account,
             LibraAccount {
                 authentication_key,
-                withdrawal_capability: Option::some(
+                withdraw_capability: Option::some(
                     WithdrawCapability {
                         account_address: new_account_addr
                 }),
@@ -953,7 +961,8 @@ module LibraAccount {
         aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
         // There is an invariant below that says that there is always an AccountOperationsCapability
         // after Genesis, so this can only abort during Genesis.
-        aborts_if LibraTimestamp::is_genesis() && !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+        aborts_if LibraTimestamp::is_genesis()
+            && !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
             with Errors::NOT_PUBLISHED;
         aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
             with Errors::INVALID_ARGUMENT;
@@ -1212,11 +1221,10 @@ module LibraAccount {
         account: signer;
         /// `Currency` must be valid
         include Libra::AbortsIfNoCurrency<Token>;
-        /// `account` must be allowed to hold balances. This function must abort if the predicate
-        /// `can_hold_balance` for `account` returns false [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
-        aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT;
         /// `account` cannot have an existing balance in `Currency`
         aborts_if exists<Balance<Token>>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
+        /// `account` must be allowed to hold balances.
+        include AbortsIfAccountCantHoldBalance;
     }
 
     spec schema AddCurrencyEnsures<Token> {
@@ -1225,6 +1233,14 @@ module LibraAccount {
         ensures exists<Balance<Token>>(addr);
         ensures global<Balance<Token>>(addr)
             == Balance<Token>{ coin: Libra<Token> { value: 0 } };
+    }
+
+    /// # Access Control
+    spec schema AbortsIfAccountCantHoldBalance {
+        account: signer;
+        /// This function must abort if the predicate `can_hold_balance` for `account` returns false
+        /// [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
+        aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT;
     }
 
     /// Return whether the account at `addr` accepts `Token` type coins
@@ -1260,7 +1276,7 @@ module LibraAccount {
     public fun delegated_withdraw_capability(addr: address): bool
     acquires LibraAccount {
         assert(exists_at(addr), Errors::not_published(EACCOUNT));
-        Option::is_none(&borrow_global<LibraAccount>(addr).withdrawal_capability)
+        Option::is_none(&borrow_global<LibraAccount>(addr).withdraw_capability)
     }
 
     /// Return a reference to the address associated with the given withdraw capability
@@ -1310,17 +1326,13 @@ module LibraAccount {
     spec fun module_prologue {
         let transaction_sender = Signer::spec_address_of(sender);
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        include AbortsIfModulePrologue<Token> {
-            sender,
-            txn_sequence_number,
-            txn_public_key,
-            chain_id,
+        include ModulePrologueAbortsIf<Token> {
             max_transaction_fee,
             txn_expiration_time_seconds: txn_expiration_time,
         };
         ensures prologue_guarantees(sender);
     }
-    spec schema AbortsIfModulePrologue<Token> {
+    spec schema ModulePrologueAbortsIf<Token> {
         sender: signer;
         txn_sequence_number: u64;
         txn_public_key: vector<u8>;
@@ -1328,7 +1340,7 @@ module LibraAccount {
         max_transaction_fee: u128;
         txn_expiration_time_seconds: u64;
         let transaction_sender = Signer::spec_address_of(sender);
-        include AbortsIfPrologueCommon<Token> {
+        include PrologueCommonAbortsIf<Token> {
             transaction_sender,
             txn_sequence_number,
             txn_public_key,
@@ -1371,13 +1383,13 @@ module LibraAccount {
     spec fun script_prologue {
         let transaction_sender = Signer::spec_address_of(sender);
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        include AbortsIfScriptPrologue<Token>{
+        include ScriptPrologueAbortsIf<Token>{
             max_transaction_fee,
             txn_expiration_time_seconds: txn_expiration_time,
         };
         ensures prologue_guarantees(sender);
     }
-    spec schema AbortsIfScriptPrologue<Token> {
+    spec schema ScriptPrologueAbortsIf<Token> {
         sender: signer;
         txn_sequence_number: u64;
         txn_public_key: vector<u8>;
@@ -1386,22 +1398,11 @@ module LibraAccount {
         txn_expiration_time_seconds: u64;
         script_hash: vector<u8>;
         let transaction_sender = Signer::spec_address_of(sender);
-        include AbortsIfPrologueCommon<Token> {transaction_sender};
+        include PrologueCommonAbortsIf<Token> {transaction_sender};
         /// Aborts only in Genesis. Does not need to be handled.
         include LibraTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
         /// Covered: L74 (Match 8)
         aborts_if !LibraTransactionPublishingOption::spec_is_script_allowed(sender, script_hash) with Errors::INVALID_STATE;
-    }
-
-    spec define prologue_guarantees(sender: signer) : bool {
-        let addr = Signer::spec_address_of(sender);
-        LibraTimestamp::is_operating() && exists_at(addr) && !AccountFreezing::account_is_frozen(addr)
-    }
-
-    /// Used in transaction script to specify properties checked by the prologue.
-    spec schema TransactionChecks {
-        sender: signer;
-        requires prologue_guarantees(sender);
     }
 
     /// The prologue for WriteSet transaction
@@ -1431,11 +1432,11 @@ module LibraAccount {
     }
 
     spec fun writeset_prologue {
-        include AbortsIfWritesetPrologue {txn_expiration_time_seconds: txn_expiration_time};
+        include WritesetPrologueAbortsIf {txn_expiration_time_seconds: txn_expiration_time};
         ensures prologue_guarantees(sender);
     }
 
-    spec schema AbortsIfWritesetPrologue {
+    spec schema WritesetPrologueAbortsIf {
         sender: signer;
         txn_sequence_number: u64;
         txn_public_key: vector<u8>;
@@ -1447,7 +1448,7 @@ module LibraAccount {
         /// Must abort if the signer does not have the LibraRoot role [[H8]][PERMISSION].
         /// Covered: L146 (Match 0)
         aborts_if !Roles::spec_has_libra_root_role_addr(transaction_sender) with Errors::INVALID_ARGUMENT;
-        include AbortsIfPrologueCommon<Coin1>{
+        include PrologueCommonAbortsIf<Coin1>{
             transaction_sender,
             max_transaction_fee: 0,
         };
@@ -1535,12 +1536,12 @@ module LibraAccount {
     spec fun prologue_common {
         let transaction_sender = Signer::spec_address_of(sender);
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        include AbortsIfPrologueCommon<Token> {
+        include PrologueCommonAbortsIf<Token> {
             transaction_sender,
             max_transaction_fee,
         };
     }
-    spec schema AbortsIfPrologueCommon<Token> {
+    spec schema PrologueCommonAbortsIf<Token> {
         transaction_sender: address;
         txn_sequence_number: u64;
         txn_public_key: vector<u8>;
@@ -1562,7 +1563,7 @@ module LibraAccount {
         /// [PCA6] Covered: L69 (Match 5)
         aborts_if max_transaction_fee > 0 && !exists<Balance<Token>>(transaction_sender) with Errors::INVALID_ARGUMENT;
         /// [PCA7] Covered: L69 (Match 5)
-        aborts_if max_transaction_fee > 0 && spec_get_balance_value<Token>(transaction_sender) < max_transaction_fee with Errors::INVALID_ARGUMENT;
+        aborts_if max_transaction_fee > 0 && balance<Token>(transaction_sender) < max_transaction_fee with Errors::INVALID_ARGUMENT;
         /// [PCA8] Covered: L61 (Match 2)
         aborts_if txn_sequence_number < global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
         /// [PCA9] Covered: L63 (match 3)
@@ -1680,17 +1681,17 @@ module LibraAccount {
     spec schema CreateValidatorAccountAbortsIf {
         lr_account: signer;
         new_account_address: address;
-        // from Roles::new_validator_role
+        // from `Roles::new_validator_role`
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include MakeAccountAbortsIf{addr: new_account_address};
-        // from ValidatorConfig::publish
+        // from `ValidatorConfig::publish`
         include LibraTimestamp::AbortsIfNotOperating;
         aborts_if ValidatorConfig::exists_config(new_account_address) with Errors::ALREADY_PUBLISHED;
     }
 
     spec schema CreateValidatorAccountEnsures {
         new_account_address: address;
-        // Note: GrantRole has both ensure's and aborts_if's.
+        // Note: `Roles::GrantRole` has both ensure's and aborts_if's.
         include Roles::GrantRole{addr: new_account_address, role_id: Roles::VALIDATOR_ROLE_ID};
         ensures exists_at(new_account_address);
         ensures ValidatorConfig::exists_config(new_account_address);
@@ -1718,10 +1719,10 @@ module LibraAccount {
     spec schema CreateValidatorOperatorAccountAbortsIf {
         lr_account: signer;
         new_account_address: address;
-        // from Roles::new_validator_operator_role
+        // from `Roles::new_validator_operator_role`
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include MakeAccountAbortsIf{addr: new_account_address};
-        // from ValidatorConfig::publish
+        // from `ValidatorConfig::publish`
         include LibraTimestamp::AbortsIfNotOperating;
         aborts_if ValidatorOperatorConfig::has_validator_operator_config(new_account_address) with Errors::ALREADY_PUBLISHED;
     }
@@ -1738,8 +1739,135 @@ module LibraAccount {
     // End of the proof of concept code
     ///////////////////////////////////////////////////////////////////////////
 
-    // ****************** SPECIFICATIONS *******************
+    // ****************** Module Specifications *******************
     spec module {} // switch documentation context back to module level
+
+    /// # Access Control
+
+    /// ## Key Rotation Capability
+    spec module {
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H16]][PERMISSION].
+        /// When an account is created, its KeyRotationCapability is granted to the account.
+        apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
+
+        /// Only `make_account` creates KeyRotationCap [[H16]][PERMISSION][[I16]][PERMISSION]. `create_*_account` only calls
+        /// `make_account`, and does not pack KeyRotationCap by itself.
+        /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
+        apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account,
+              restore_key_rotation_capability, initialize;
+
+        /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
+        /// or the key rotation capability for addr itself [[H16]][PERMISSION].
+        invariant [global] forall addr: address where exists_at(addr):
+            delegated_key_rotation_capability(addr) || spec_holds_own_key_rotation_cap(addr);
+    }
+
+    spec schema EnsuresHasKeyRotationCap {
+        account: signer;
+        let addr = Signer::spec_address_of(account);
+        ensures spec_holds_own_key_rotation_cap(addr);
+    }
+    spec schema PreserveKeyRotationCapAbsence {
+        /// The absence of KeyRotationCap is preserved.
+        ensures forall addr: address:
+            old(!exists<LibraAccount>(addr) || !spec_has_key_rotation_cap(addr)) ==>
+                (!exists<LibraAccount>(addr) || !spec_has_key_rotation_cap(addr));
+    }
+
+    /// ## Withdraw Capability
+    spec module {
+        /// the permission "WithdrawCapability(addr)" is granted to the account at addr [[H17]][PERMISSION].
+        /// When an account is created, its WithdrawCapability is granted to the account.
+        apply EnsuresWithdrawCap{account: new_account} to make_account;
+
+        /// Only `make_account` creates WithdrawCap [[H17]][PERMISSION][[I17]][PERMISSION]. `create_*_account` only calls
+        /// `make_account`, and does not pack KeyRotationCap by itself.
+        /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
+        apply PreserveWithdrawCapAbsence to * except make_account, create_*_account,
+                restore_withdraw_capability, initialize;
+
+        /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
+        /// or the withdraw capability for addr itself [[H17]][PERMISSION].
+        invariant [global] forall addr: address where exists_at(addr):
+            delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
+    }
+
+    spec schema EnsuresWithdrawCap {
+        account: signer;
+        let addr = Signer::spec_address_of(account);
+        ensures spec_holds_own_withdraw_cap(addr);
+    }
+    spec schema PreserveWithdrawCapAbsence {
+        /// The absence of WithdrawCap is preserved.
+        ensures forall addr: address:
+            old(!exists<LibraAccount>(addr) || Option::is_none(global<LibraAccount>(addr).withdraw_capability)) ==>
+                (!exists<LibraAccount>(addr) || Option::is_none(global<LibraAccount>(addr).withdraw_capability));
+    }
+
+    /// ## Authentication Key
+
+    spec module {
+        /// only `Self::rotate_authentication_key` can rotate authentication_key [[H16]][PERMISSION].
+        apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
+    }
+
+    spec schema AuthenticationKeyRemainsSame {
+        ensures forall addr: address where old(exists_at(addr)):
+            global<LibraAccount>(addr).authentication_key == old(global<LibraAccount>(addr).authentication_key);
+    }
+
+    /// ## Balance
+
+    spec module {
+        /// only `Self::withdraw_from` and its helper and clients can withdraw [[H17]][PERMISSION].
+        apply BalanceNotDecrease<Token> to *<Token>
+            except withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr,
+                preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
+    }
+
+    spec schema BalanceNotDecrease<Token> {
+        ensures forall addr: address where old(exists<Balance<Token>>(addr)):
+            global<Balance<Token>>(addr).coin.value >= old(global<Balance<Token>>(addr).coin.value);
+    }
+
+    /// # Persistence of Resources
+
+    spec module {
+
+        /// Every address that has a published RoleId also has a published Account.
+        invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
+
+        /// Accounts are never deleted.
+        invariant update [global] forall addr: address where old(exists_at(addr)): exists_at(addr);
+
+        /// After genesis, the `AccountOperationsCapability` exists.
+        invariant [global]
+            LibraTimestamp::is_operating() ==> exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// After genesis, the `LibraWriteSetManager` exists.
+        invariant [global]
+            LibraTimestamp::is_operating() ==> exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// Every address that has a published account has a published RoleId
+        invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
+
+        /// Every address that has a published account has a published FreezingBit
+        invariant [global] forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);
+
+    }
+
+    /// # Consistency Between Resources and Roles
+
+    /// If an account has a balance, the role of the account is compatible with having a balance.
+    /// ref: Only reasonable accounts have currencies.
+    spec module {
+        invariant [global] forall token: type: forall addr: address where exists<Balance<token>>(addr):
+            Roles::spec_can_hold_balance_addr(addr);
+    }
+
+    /// # Helper Functions and Schemas
+
+    /// ## Capabilities
 
     spec module {
         /// Returns field `key_rotation_capability` of the LibraAccount under `addr`.
@@ -1769,12 +1897,12 @@ module LibraAccount {
             exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
 
-        /// Returns field `withdrawal_capability` of LibraAccount under `addr`.
+        /// Returns field `withdraw_capability` of LibraAccount under `addr`.
         define spec_get_withdraw_cap_field(addr: address): Option<WithdrawCapability> {
-            global<LibraAccount>(addr).withdrawal_capability
+            global<LibraAccount>(addr).withdraw_capability
         }
 
-        /// Returns the WithdrawCapability of the field `withdrawal_capability`.
+        /// Returns the WithdrawCapability of the field `withdraw_capability`.
         define spec_get_withdraw_cap(addr: address): WithdrawCapability {
             Option::spec_get(spec_get_withdraw_cap_field(addr))
         }
@@ -1789,120 +1917,19 @@ module LibraAccount {
             spec_has_withdraw_cap(addr)
             && addr == spec_get_withdraw_cap(addr).account_address
         }
-
-        /// Returns the value of the coins held in the specified currency.
-        define spec_get_balance_value<Currency>(addr: address): u64 {
-            Libra::value(global<Balance<Currency>>(addr).coin)
-        }
     }
 
-    spec schema EnsuresHasKeyRotationCap {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
-        ensures spec_holds_own_key_rotation_cap(addr);
-    }
-    spec schema PreserveKeyRotationCapAbsence {
-        /// The absence of KeyRotationCap is preserved.
-        ensures forall addr1: address:
-            old(!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1)) ==>
-                (!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1));
-    }
-    spec module {
-        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H16]][PERMISSION].
-        /// When an account is created, its KeyRotationCapability is granted to the account.
-        apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
+    /// ## Prologue
 
-        /// Only `make_account` creates KeyRotationCap [[H16]][PERMISSION][[I16]][PERMISSION]. `create_*_account` only calls
-        /// `make_account`, and does not pack KeyRotationCap by itself.
-        /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
-        apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account,
-              restore_key_rotation_capability, initialize;
-
-        /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
-        /// or the key rotation capability for addr itself [[H16]][PERMISSION].
-        invariant [global] forall addr1: address where exists_at(addr1):
-            delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
+    spec define prologue_guarantees(sender: signer) : bool {
+        let addr = Signer::spec_address_of(sender);
+        LibraTimestamp::is_operating() && exists_at(addr) && !AccountFreezing::account_is_frozen(addr)
     }
 
-    spec schema EnsuresWithdrawalCap {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
-        ensures spec_holds_own_withdraw_cap(addr);
+    /// Used in transaction script to specify properties checked by the prologue.
+    spec schema TransactionChecks {
+        sender: signer;
+        requires prologue_guarantees(sender);
     }
-    spec schema PreserveWithdrawCapAbsence {
-        /// The absence of WithdrawCap is preserved.
-        ensures forall addr1: address:
-            old(!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability)) ==>
-                (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability));
-    }
-    spec module {
-        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [[H17]][PERMISSION].
-        /// When an account is created, its WithdrawCapability is granted to the account.
-        apply EnsuresWithdrawalCap{account: new_account} to make_account;
-
-        /// Only `make_account` creates WithdrawCap [[H17]][PERMISSION][[I17]][PERMISSION]. `create_*_account` only calls
-        /// `make_account`, and does not pack KeyRotationCap by itself.
-        /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
-        apply PreserveWithdrawCapAbsence to * except make_account, create_*_account,
-                restore_withdraw_capability, initialize;
-
-        /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
-        /// or the withdraw capability for addr itself [[H17]][PERMISSION].
-        invariant [global] forall addr1: address where exists_at(addr1):
-            delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
-    }
-
-    /// Invariants
-    spec module {
-
-        /// Every address that has a published RoleId also has a published Account.
-        invariant [global] forall addr1: address where exists_at(addr1): exists<Roles::RoleId>(addr1);
-
-        /// Accounts are never deleted.
-        invariant update [global] forall addr1: address where old(exists_at(addr1)): exists_at(addr1);
-
-        /// After genesis, the `AccountOperationsCapability` exists.
-        invariant [global]
-            LibraTimestamp::is_operating() ==> exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-
-        /// After genesis, the `LibraWriteSetManager` exists.
-        invariant [global]
-            LibraTimestamp::is_operating() ==> exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-
-        /// Every address that has a published account has a published RoleId
-        invariant [global] forall addr1: address where exists_at(addr1): exists<Roles::RoleId>(addr1);
-
-        /// Every address that has a published account has a published FreezingBit
-        invariant [global] forall addr1: address where exists_at(addr1): exists<AccountFreezing::FreezingBit>(addr1);
-
-    }
-
-    /// only rotate_authentication_key can rotate authentication_key [[H16]][PERMISSION].
-    spec schema AuthenticationKeyRemainsSame {
-        ensures forall addr1: address where old(exists_at(addr1)):
-            global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
-    }
-    spec module {
-        apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
-    }
-
-    /// If an account has a balance, the role of the account is compatible with having a balance.
-    /// ref: Only reasonable accounts have currencies.
-    spec module {
-        invariant [global] forall t: type: forall addr1: address where exists<Balance<t>>(addr1):
-            Roles::spec_can_hold_balance_addr(addr1);
-    }
-
-    /// only withdraw_from and its helper and clients can withdraw [[H17]][PERMISSION].
-    spec schema BalanceNotDecrease<Token> {
-        ensures forall addr1: address where old(exists<Balance<Token>>(addr1)):
-            global<Balance<Token>>(addr1).coin.value >= old(global<Balance<Token>>(addr1).coin.value);
-    }
-    spec module {
-        apply BalanceNotDecrease<Token> to *<Token>
-            except withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr,
-                preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
-    }
-
 }
 }
