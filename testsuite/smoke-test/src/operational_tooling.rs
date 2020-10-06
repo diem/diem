@@ -7,6 +7,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
 use libra_management::storage::to_x25519;
+use libra_network_address::NetworkAddress;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
@@ -17,6 +18,7 @@ use libra_types::{
 use std::{
     convert::{TryFrom, TryInto},
     fs,
+    str::FromStr,
 };
 
 #[test]
@@ -448,6 +450,58 @@ fn test_validate_transaction() {
         .validate_transaction(operator_account, txn_ctx.sequence_number)
         .unwrap();
     assert_eq!(VMStatusView::Executed, result.unwrap());
+}
+
+#[test]
+fn test_validator_config() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let mut storage: Storage = (&backend).try_into().unwrap();
+
+    // Fetch the initial validator config for this operator's owner
+    let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let consensus_key = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
+    let original_validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    assert_eq!(
+        consensus_key,
+        original_validator_config.consensus_public_key
+    );
+
+    // Rotate the consensus key locally and update the validator network address using the config
+    let new_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
+    let new_network_address = NetworkAddress::from_str("/ip4/10.0.0.16/tcp/80").unwrap();
+    let txn_ctx = op_tool
+        .set_validator_config(Some(new_network_address.clone()), None, &backend)
+        .unwrap();
+
+    // Wait for the transaction to be executed
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Re-fetch the validator config and verify the changes
+    let new_validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    assert_eq!(new_consensus_key, new_validator_config.consensus_public_key);
+    assert!(new_validator_config
+        .validator_network_address
+        .to_string()
+        .contains(&new_network_address.to_string()));
+    assert_eq!(original_validator_config.name, new_validator_config.name);
+    assert_eq!(
+        original_validator_config.fullnode_network_address,
+        new_validator_config.fullnode_network_address
+    );
 }
 
 fn wait_for_transaction_on_all_nodes(

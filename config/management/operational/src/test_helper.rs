@@ -126,6 +126,7 @@ impl OperationalTool {
         &self,
         validator_address: Option<NetworkAddress>,
         fullnode_address: Option<NetworkAddress>,
+        backend: &config::SecureBackend,
     ) -> Result<TransactionContext, Error> {
         let args = format!(
             "
@@ -134,12 +135,14 @@ impl OperationalTool {
                 {validator_address}
                 --chain-id {chain_id}
                 --json-server {host}
+                --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::SetValidatorConfig),
             host = self.host,
             chain_id = self.chain_id.id(),
             fullnode_address = optional_arg("fullnode-address", fullnode_address),
             validator_address = optional_arg("validator-address", validator_address),
+            backend_args = backend_args(backend)?,
         );
 
         let command = Command::from_iter(args.split_whitespace());
