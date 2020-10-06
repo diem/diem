@@ -9,6 +9,7 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
+use libra_logger::prelude::error;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, num::NonZeroU16, pin::Pin, sync::Mutex};
 
@@ -90,8 +91,11 @@ impl MemoryListener {
     /// ```
     ///
     /// [`local_addr`]: #method.local_addr
-    pub fn bind(port: u16) -> Result<Self> {
-        let mut switchboard = (&*SWITCHBOARD).lock().unwrap();
+    pub fn bind(port: u16) -> Result<Self,> {
+        let mut switchboard =  match (&*SWITCHBOARD).lock() {
+            Ok(switchboard) => switchboard,
+            Err(_e) => return Err(ErrorKind::AddrInUse.into()),
+        };
 
         // Get the port we should bind to.  If 0 was given, use a random port
         let port = if let Some(port) = NonZeroU16::new(port) {
@@ -101,7 +105,10 @@ impl MemoryListener {
             port
         } else {
             loop {
-                let port = NonZeroU16::new(switchboard.1).unwrap_or_else(|| unreachable!());
+                let port = match NonZeroU16::new(switchboard.1) {
+                    Some(port) => port,
+                    None => return Err(ErrorKind::AddrInUse.into()),
+                };
 
                 // The switchboard is full and all ports are in use
                 if switchboard.0.len() == (std::u16::MAX - 1) as usize {
@@ -292,7 +299,10 @@ impl MemorySocket {
     /// # Ok(())}
     /// ```
     pub fn connect(port: u16) -> Result<MemorySocket> {
-        let mut switchboard = (&*SWITCHBOARD).lock().unwrap();
+        let mut switchboard =  match (&*SWITCHBOARD).lock() {
+            Ok(switchboard) => switchboard,
+            Err(_e) => return Err(ErrorKind::Other.into()),
+        };
 
         // Find port to connect to
         let port = NonZeroU16::new(port).ok_or_else(|| ErrorKind::AddrNotAvailable)?;
@@ -305,11 +315,11 @@ impl MemorySocket {
         let (socket_a, socket_b) = Self::new_pair();
         // Send the socket to the listener
         if let Err(e) = sender.unbounded_send(socket_a) {
-            if e.is_disconnected() {
-                return Err(ErrorKind::AddrNotAvailable.into());
+            if !e.is_disconnected() {
+                error!("MUST_FIX e should not be disconnected");
             }
+            return Err(ErrorKind::AddrNotAvailable.into());
 
-            unreachable!();
         }
 
         Ok(socket_b)

@@ -3735,6 +3735,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "futures 0.3.6",
+ "libra-logger",
  "libra-workspace-hack",
  "once_cell",
 ]
