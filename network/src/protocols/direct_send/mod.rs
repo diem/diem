@@ -20,7 +20,7 @@
 //! of messages received at the Peer actor should be sufficient for safe-guarding against malicious
 //! actors.
 use crate::{
-    counters::{self, FAILED_LABEL, RECEIVED_LABEL, SENT_LABEL},
+    counters::{self, inc_by_with_context, FAILED_LABEL, RECEIVED_LABEL, SENT_LABEL},
     logging::NetworkSchema,
     peer::{PeerHandle, PeerNotification},
     protocols::wire::messaging::v1::{DirectSendMsg, NetworkMessage, Priority},
@@ -178,8 +178,15 @@ impl DirectSend {
                         );
                     }
                 } else {
+                    inc_by_with_context(
+                        &counters::INVALID_NETWORK_MESSAGES,
+                        &self.network_context,
+                        "direct_send",
+                        1,
+                    );
                     error!(
-                        NetworkSchema::new(&self.network_context),
+                        NetworkSchema::new(&self.network_context)
+                            .remote_peer(&self.peer_handle.peer_id()),
                         message = message,
                         "{} Unexpected message from peer actor: {:?}",
                         self.network_context,
@@ -187,10 +194,19 @@ impl DirectSend {
                     );
                 }
             }
-            _ => error!(
-                NetworkSchema::new(&self.network_context),
-                "{} Unexpected PeerNotification: {:?}", self.network_context, notif
-            ),
+            _ => {
+                inc_by_with_context(
+                    &counters::INVALID_NETWORK_MESSAGES,
+                    &self.network_context,
+                    "direct_send",
+                    1,
+                );
+                error!(
+                    NetworkSchema::new(&self.network_context)
+                        .remote_peer(&self.peer_handle.peer_id()),
+                    "{} Unexpected PeerNotification: {:?}", self.network_context, notif
+                )
+            }
         }
     }
 

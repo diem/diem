@@ -188,6 +188,24 @@ pub fn rpc_bytes(
     ])
 }
 
+pub static INVALID_NETWORK_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_network_invalid_messages",
+        "Number of invalid messages (RPC/direct_send)",
+        &["role_type", "network_id", "peer_id", "type"]
+    )
+    .unwrap()
+});
+
+pub static PEER_SEND_FAILURES: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_network_peer_send_failures",
+        "Number of messages failed to send to peer",
+        &["role_type", "network_id", "peer_id", "protocol_id"]
+    )
+    .unwrap()
+});
+
 // TODO(philiphayes): somehow get per-peer latency metrics without using a
 // separate peer_id label ==> cardinality explosion.
 

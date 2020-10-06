@@ -44,8 +44,8 @@
 
 use crate::{
     counters::{
-        self, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
-        RESPONSE_LABEL, SENT_LABEL,
+        self, inc_by_with_context, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL,
+        REQUEST_LABEL, RESPONSE_LABEL, SENT_LABEL,
     },
     logging::NetworkSchema,
     peer::{PeerHandle, PeerNotification},
@@ -292,8 +292,15 @@ impl Rpc {
                         self.handle_inbound_request(request, inbound_rpc_tasks);
                     }
                     _ => {
+                        inc_by_with_context(
+                            &counters::INVALID_NETWORK_MESSAGES,
+                            &self.network_context,
+                            "rpc",
+                            1,
+                        );
                         error!(
-                            NetworkSchema::new(&self.network_context),
+                            NetworkSchema::new(&self.network_context)
+                                .remote_peer(&self.peer_handle.peer_id()),
                             "{} Received non-RPC message from Peer actor: {:?}",
                             self.network_context,
                             message
@@ -301,11 +308,21 @@ impl Rpc {
                     }
                 }
             }
-            notif => debug_assert!(
-                false,
-                "Received unexpected event from Peer: {:?}, expected NewMessage",
-                notif
-            ),
+            notif => {
+                inc_by_with_context(
+                    &counters::INVALID_NETWORK_MESSAGES,
+                    &self.network_context,
+                    "rpc",
+                    1,
+                );
+                error!(
+                    NetworkSchema::new(&self.network_context)
+                        .remote_peer(&self.peer_handle.peer_id()),
+                    "{} Received unexpected event from Peer: {:?}, expected NewMessage",
+                    self.network_context,
+                    notif
+                )
+            }
         }
     }
 

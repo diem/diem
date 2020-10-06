@@ -5,6 +5,7 @@
 //! and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{
     counters,
+    counters::inc_by_with_context,
     logging::NetworkSchema,
     peer_manager::PeerManagerError,
     protocols::wire::messaging::v1::{ErrorCode, NetworkMessage},
@@ -474,6 +475,12 @@ where
         match request {
             PeerRequest::SendMessage(message, protocol, channel) => {
                 if let Err(e) = write_reqs_tx.send((message, channel)).await {
+                    inc_by_with_context(
+                        &counters::PEER_SEND_FAILURES,
+                        &self.network_context,
+                        protocol.as_str(),
+                        1,
+                    );
                     error!(
                         NetworkSchema::new(&self.network_context)
                             .connection_metadata(&self.connection_metadata),
