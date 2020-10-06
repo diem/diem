@@ -483,6 +483,16 @@ where
             self.network_context
         );
 
+        // Log the eligible peers with addresses from discovery
+        sample!(SampleRate::Duration(Duration::from_secs(60)), {
+            info!(
+                NetworkSchema::new(&self.network_context),
+                eligible_addrs = ?self.peer_addrs,
+                eligible_keys = ?self.peer_pubkeys,
+                "Current eligible peers"
+            )
+        });
+
         // Cancel dials to peers that are no longer eligible.
         self.cancel_stale_dials().await;
         // Disconnect from connected peers that are no longer eligible.
