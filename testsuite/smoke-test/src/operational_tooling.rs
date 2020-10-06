@@ -14,7 +14,10 @@ use libra_types::{
     account_address::AccountAddress, chain_id::ChainId,
     transaction::authenticator::AuthenticationKey,
 };
-use std::convert::{TryFrom, TryInto};
+use std::{
+    convert::{TryFrom, TryInto},
+    fs,
+};
 
 #[test]
 fn test_account_resource() {
@@ -99,6 +102,35 @@ fn test_consensus_key_rotation() {
     let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
     let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     assert_eq!(rotated_consensus_key, new_consensus_key);
+}
+
+#[test]
+fn test_extract_public_key() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
+    let node_config = NodeConfig::load(node_config_path.clone()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    // Extract the operator key to file
+    let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
+    let _ = op_tool
+        .extract_public_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+
+    // Verify the operator key has been written correctly
+    let file_contents = fs::read(key_file_path).unwrap();
+    let key_from_file = lcs::from_bytes(&file_contents).unwrap();
+    let key_from_storage = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
+    assert_eq!(key_from_storage, key_from_file);
 }
 
 #[test]
