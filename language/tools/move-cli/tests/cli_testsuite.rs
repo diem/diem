@@ -6,7 +6,11 @@ use move_cli::test;
 use std::path::Path;
 
 fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
-    Ok(test::run_one(args_path, "../../../target/debug/move-cli")?)
+    Ok(test::run_one(
+        args_path,
+        "../../../target/debug/move-cli",
+        false,
+    )?)
 }
 
 // runs all the tests
