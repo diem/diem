@@ -3,6 +3,21 @@
 
 # Module `0x1::Offer`
 
+Provides a way to transfer structs from one account to another in two transactions.
+Unlike many languages, Move cannot move data from one account to another with
+single-signer transactions. As of this writing, ordinary transactions can only have
+a single signer, and Move code can only store to an address (via <code>move_to</code>) if it
+can supply a reference to a signer for the destination address (there are special case
+exceptions in Genesis and LibraAccount where there can temporarily be multiple signers).
+
+Offer solves this problem by providing an <code><a href="Offer.md#0x1_Offer">Offer</a></code> resource.  To move a struct <code>T</code> from
+account A to B, account A first publishes an <code><a href="Offer.md#0x1_Offer">Offer</a>&lt;T&gt;</code> resource at <code><a href="Offer.md#0x1_Offer_address_of">address_of</a>(A)</code>,
+using the <code><a href="Offer.md#0x1_Offer_create">Offer::create</a></code> function.
+Then account B, in a separate transaction, can move the struct <code>T</code> from the <code><a href="Offer.md#0x1_Offer">Offer</a></code> at
+A's address to the desired destination. B accesses the resource using the <code>redeem</code> function,
+which aborts unless the <code>for</code> field is B's address (preventing other addresses from
+accessing the <code>T</code> that is intended only for B). A can also redeem the <code>T</code> value if B hasn't
+redeemed it.
 
 
 -  [Resource `Offer`](#0x1_Offer_Offer)
@@ -12,9 +27,10 @@
 -  [Function `exists_at`](#0x1_Offer_exists_at)
 -  [Function `address_of`](#0x1_Offer_address_of)
 -  [Module Specification](#@Module_Specification_1)
-    -  [Module specification](#@Module_specification_2)
+    -  [Access Control](#@Access_Control_2)
         -  [Creation of Offers](#@Creation_of_Offers_3)
         -  [Removal of Offers](#@Removal_of_Offers_4)
+    -  [Helper Functions](#@Helper_Functions_5)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -27,6 +43,7 @@
 
 ## Resource `Offer`
 
+A wrapper around value <code>offered</code> that can be claimed by the address stored in <code>for</code>.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;
@@ -61,6 +78,16 @@
 ## Constants
 
 
+<a name="0x1_Offer_EOFFER_ALREADY_CREATED"></a>
+
+Address already has an offer of this type.
+
+
+<pre><code><b>const</b> <a href="Offer.md#0x1_Offer_EOFFER_ALREADY_CREATED">EOFFER_ALREADY_CREATED</a>: u64 = 1;
+</code></pre>
+
+
+
 <a name="0x1_Offer_EOFFER_DNE_FOR_ACCOUNT"></a>
 
 An offer of the specified type for the account does not exist
@@ -71,10 +98,22 @@ An offer of the specified type for the account does not exist
 
 
 
+<a name="0x1_Offer_EOFFER_DOES_NOT_EXIST"></a>
+
+Address does not have an offer of this type to redeem.
+
+
+<pre><code><b>const</b> <a href="Offer.md#0x1_Offer_EOFFER_DOES_NOT_EXIST">EOFFER_DOES_NOT_EXIST</a>: u64 = 2;
+</code></pre>
+
+
+
 <a name="0x1_Offer_create"></a>
 
 ## Function `create`
 
+Publish a value of type <code>Offered</code> under the sender's account. The value can be claimed by
+either the <code>for</code> address or the transaction sender.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Offer.md#0x1_Offer_create">create</a>&lt;Offered&gt;(account: &signer, offered: Offered, for: address)
@@ -87,6 +126,7 @@ An offer of the specified type for the account does not exist
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Offer.md#0x1_Offer_create">create</a>&lt;Offered&gt;(account: &signer, offered: Offered, for: address) {
+  <b>assert</b>(!<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="Offer.md#0x1_Offer_EOFFER_ALREADY_CREATED">EOFFER_ALREADY_CREATED</a>));
   move_to(account, <a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt; { offered, for });
 }
 </code></pre>
@@ -103,7 +143,8 @@ Offer a struct to the account under address <code>for</code> by
 placing the offer under the signer's address
 
 
-<pre><code><b>aborts_if</b> <b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>aborts_if</b> <b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+    <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>ensures</b> <b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 <b>ensures</b> <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) == <a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt; { offered: offered, for: for };
 </code></pre>
@@ -116,6 +157,10 @@ placing the offer under the signer's address
 
 ## Function `redeem`
 
+Claim the value of type <code>Offered</code> published at <code>offer_address</code>.
+Only succeeds if the sender is the intended recipient stored in <code>for</code> or the original
+publisher <code>offer_address</code>.
+Also fails if there is no <code><a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;</code> published.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Offer.md#0x1_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered
@@ -128,6 +173,7 @@ placing the offer under the signer's address
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Offer.md#0x1_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="Offer.md#0x1_Offer">Offer</a> {
+  <b>assert</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="Offer.md#0x1_Offer_EOFFER_DOES_NOT_EXIST">EOFFER_DOES_NOT_EXIST</a>));
   <b>let</b> <a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
   <b>assert</b>(sender == for || sender == offer_address, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Offer.md#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT">EOFFER_DNE_FOR_ACCOUNT</a>));
@@ -145,12 +191,14 @@ placing the offer under the signer's address
 
 Aborts if there is no offer under <code>offer_address</code> or if the account
 cannot redeem the offer.
-Ensures that the offered struct under <code>offer_address</code> is removed is returned.
+Ensures that the offered struct under <code>offer_address</code> is removed.
 
 
-<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
-<b>aborts_if</b> !<a href="Offer.md#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_address, <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address)) && !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address)
+    <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>aborts_if</b> !<a href="Offer.md#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_address, <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+    <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>ensures</b> !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
 <b>ensures</b> result == <b>old</b>(<b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address).offered);
 </code></pre>
 
@@ -186,6 +234,11 @@ Ensures that the offered struct under <code>offer_address</code> is removed is r
 <summary>Specification</summary>
 
 
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+</code></pre>
+
+
 Returns whether or not an <code><a href="Offer.md#0x1_Offer">Offer</a></code> resource is under the given address <code>offer_address</code>.
 
 
@@ -212,6 +265,7 @@ Returns whether or not an <code><a href="Offer.md#0x1_Offer">Offer</a></code> re
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Offer.md#0x1_Offer_address_of">address_of</a>&lt;Offered&gt;(offer_address: address): address <b>acquires</b> <a href="Offer.md#0x1_Offer">Offer</a> {
+  <b>assert</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="Offer.md#0x1_Offer_EOFFER_DOES_NOT_EXIST">EOFFER_DOES_NOT_EXIST</a>));
   borrow_global&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address).for
 }
 </code></pre>
@@ -229,7 +283,7 @@ Returns the address of the intended recipient of the Offer
 under the <code>offer_address</code>.
 
 
-<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>ensures</b> result == <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address).for;
 </code></pre>
 
@@ -243,48 +297,9 @@ under the <code>offer_address</code>.
 
 
 
-<a name="@Module_specification_2"></a>
+<a name="@Access_Control_2"></a>
 
-### Module specification
-
-
-This module defines a resource <code><a href="Offer.md#0x1_Offer">Offer</a></code> that is used as a permissioned trading scheme between accounts.
-It defines two main functions for creating and retrieving a struct offered by some user
-inside the resource <code><a href="Offer.md#0x1_Offer">Offer</a></code> under the offerer's account.
-
-Currently, the only other module that depends on this module is LibraConfig, where it's used to
-pass a capability to an account that allows it to modify a config.
-
-
-Helper function that returns whether or not the <code>recipient</code> is an intended
-recipient of the offered struct in the <code><a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;</code> resource at the address <code>offer_address</code>
-Returns true if the recipient is allowed to redeem <code><a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;</code> at <code>offer_address</code>
-and false otherwise.
-
-TODO (dd): this is undefined if the offer does not exist. Should this be anded with
-"exists_at"?
-
-
-<a name="0x1_Offer_is_allowed_recipient"></a>
-
-
-<pre><code><b>define</b> <a href="Offer.md#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_addr: address, recipient: address): bool {
-  recipient == <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_addr).for || recipient == offer_addr
-}
-</code></pre>
-
-
-Mirrors the Move function exists_at<Offered>, above.
-
-
-<a name="0x1_Offer_spec_exists_at"></a>
-
-
-<pre><code><b>define</b> <a href="Offer.md#0x1_Offer_spec_exists_at">spec_exists_at</a>&lt;Offered&gt;(offer_addr: address): bool {
-    <b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_addr)
-}
-</code></pre>
-
+### Access Control
 
 
 <a name="@Creation_of_Offers_3"></a>
@@ -293,28 +308,24 @@ Mirrors the Move function exists_at<Offered>, above.
 
 
 
-<a name="0x1_Offer_OnlyCreateCanCreateOffer"></a>
+<a name="0x1_Offer_NoOfferCreated"></a>
 
-Only <code><a href="Offer.md#0x1_Offer_create">Self::create</a></code> can create a resource <code><a href="Offer.md#0x1_Offer">Offer</a></code> under an address.
-
-**Informally:** No function to which this is applied can create an offer.
-If there didn't exist an offer under some <code>addr</code>, then it continues
-not to have one.
+Says no offer is created or any type or address. Later, it is applied to all functions
+except <code>create</code>
 
 
-<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_OnlyCreateCanCreateOffer">OnlyCreateCanCreateOffer</a> {
+<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a> {
     <b>ensures</b> <b>forall</b> ty: type, addr: address <b>where</b> !<b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)) : !<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr);
 }
 </code></pre>
 
 
 
-Apply OnlyCreateCanCreateOffer
+Apply OnlyCreateCanCreateOffer to every function except <code>create</code>
 
 
-<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_OnlyCreateCanCreateOffer">OnlyCreateCanCreateOffer</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> create;
+<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferCreated">NoOfferCreated</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> create;
 </code></pre>
-
 
 
 
@@ -324,14 +335,12 @@ Apply OnlyCreateCanCreateOffer
 
 
 
-<a name="0x1_Offer_OnlyRedeemCanRemoveOffer"></a>
+<a name="0x1_Offer_NoOfferRemoved"></a>
 
-Only <code><a href="Offer.md#0x1_Offer_redeem">Self::redeem</a></code> can remove the <code><a href="Offer.md#0x1_Offer">Offer</a></code> resource from an account.
-
-**Informally:** No other function except for <code>redeem</code> can remove an offer from an account.
+Says no offer is removed for any type or address. Applied below to everything except <code>redeem</code>
 
 
-<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> {
+<pre><code><b>schema</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a> {
     <b>ensures</b> <b>forall</b> ty: type, addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)) :
               (<b>exists</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr) && <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr) == <b>old</b>(<b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;ty&gt;&gt;(addr)));
 }
@@ -339,10 +348,29 @@ Only <code><a href="Offer.md#0x1_Offer_redeem">Self::redeem</a></code> can remov
 
 
 
-Enforce that every function except <code><a href="Offer.md#0x1_Offer_redeem">Self::redeem</a></code> can remove an offer from the global store.
+Only <code>redeem</code> can remove an offer from the global store.
 
 
-<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
+<pre><code><b>apply</b> <a href="Offer.md#0x1_Offer_NoOfferRemoved">NoOfferRemoved</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
+</code></pre>
+
+
+
+<a name="@Helper_Functions_5"></a>
+
+### Helper Functions
+
+
+Returns true if the recipient is allowed to redeem <code><a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;</code> at <code>offer_address</code>
+and false otherwise.
+
+
+<a name="0x1_Offer_is_allowed_recipient"></a>
+
+
+<pre><code><b>define</b> <a href="Offer.md#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_addr: address, recipient: address): bool {
+  recipient == <b>global</b>&lt;<a href="Offer.md#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_addr).for || recipient == offer_addr
+}
 </code></pre>
 
 
