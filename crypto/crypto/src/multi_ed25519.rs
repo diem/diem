@@ -507,10 +507,12 @@ impl Signature for MultiEd25519Signature {
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let last_bit = match bitmap_last_set_bit(self.bitmap) {
             Some(last_bit) => last_bit,
-            None => return Err(anyhow!(
-                "{}",
-                CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
-            )),
+            None => {
+                return Err(anyhow!(
+                    "{}",
+                    CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
+                ))
+            }
         };
         if last_bit as usize > public_key.length() {
             return Err(anyhow!(
