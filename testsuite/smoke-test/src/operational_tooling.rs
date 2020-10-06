@@ -405,12 +405,49 @@ fn test_print_account() {
     assert_eq!(storage_owner_account, op_tool_owner_account);
 
     // Print the operator account
-    let op_tool_owner_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
-    let storage_owner_account = storage
+    let op_tool_operator_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
+    let storage_operator_account = storage
         .get::<AccountAddress>(OPERATOR_ACCOUNT)
         .unwrap()
         .value;
-    assert_eq!(storage_owner_account, op_tool_owner_account);
+    assert_eq!(storage_operator_account, op_tool_operator_account);
+}
+
+#[test]
+fn test_validate_transaction() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+
+    // Validate an unknown transaction and verify no VM state found
+    let operator_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
+    assert_eq!(
+        None,
+        op_tool
+            .validate_transaction(operator_account, 1000)
+            .unwrap()
+    );
+
+    // Submit a transaction (rotate the operator key) and validate the transaction execution
+    let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(operator_account, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    let result = op_tool
+        .validate_transaction(operator_account, txn_ctx.sequence_number)
+        .unwrap();
+    assert_eq!(VMStatusView::Executed, result.unwrap());
 }
 
 fn wait_for_transaction_on_all_nodes(
