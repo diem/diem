@@ -103,7 +103,7 @@ spec fun set_validator_config_and_reconfigure {
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ROLE,
         Errors::INVALID_ARGUMENT,
-        Errors::INVALID_STATE;
+        Errors::INVALID_STATE; // TODO: Undocumented error code. Can be raised in `LibraConfig::reconfigure_`.
 
     /// Access Control
     /// Only the Validator Operator account which has been registered with the validator can

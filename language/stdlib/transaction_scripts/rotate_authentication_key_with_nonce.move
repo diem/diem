@@ -57,7 +57,7 @@ spec fun rotate_authentication_key_with_nonce {
     aborts_with [check]
         Errors::INVALID_ARGUMENT,
         Errors::INVALID_STATE,
-        Errors::NOT_PUBLISHED; // TOOD: Undocumented error code. Added due to the possible absence of SlidingNonce in SlidingNonce::try_record_nonce.
+        Errors::NOT_PUBLISHED;
 
     /// Access Control
     /// The account can rotate its own authentication key unless

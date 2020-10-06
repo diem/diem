@@ -71,8 +71,7 @@ spec fun set_validator_operator {
         0, // Odd error code in assert on second statement in add_validator_and_reconfigure
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED,
-        Errors::REQUIRES_ROLE,
-        Errors::INVALID_STATE;
+        Errors::REQUIRES_ROLE;
 
     /// Access Control
     /// Only a Validator account can set its Validator Operator [[H14]][PERMISSION].

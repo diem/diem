@@ -84,7 +84,7 @@ spec fun add_validator_and_reconfigure {
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ADDRESS,
-        Errors::INVALID_STATE,
+        Errors::INVALID_STATE, // TODO: Undocumented error code. Can be raised in `LibraConfig::reconfigure_`.
         Errors::REQUIRES_ROLE;
 
     /// Access Control

@@ -52,12 +52,6 @@ spec fun create_recovery_address {
         rotation_cap: rotation_cap
     };
 
-    // TODO: Commented out due to the unsupported feature below.
-    // include RecoveryAddress::PublishEnsures{
-    //     recovery_account: account,
-    //     rotation_cap: old(rotation_cap) //! error: `old(..)` expression not allowed in this context
-    // };
-    // Instead, the postconditions in RecoveryAddress::PublishEnsures are expanded here.
     ensures RecoveryAddress::spec_is_recovery_address(account_addr);
     ensures len(RecoveryAddress::spec_get_rotation_caps(account_addr)) == 1;
     ensures RecoveryAddress::spec_get_rotation_caps(account_addr)[0] == old(rotation_cap);
