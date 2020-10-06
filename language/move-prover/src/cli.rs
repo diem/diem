@@ -26,7 +26,8 @@ pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
     "-printVerifiedProceduresCount:0",
-    "-printModel:4",
+    "-printModel:1",
+    "-enhancedErrorMessages:1",
 ];
 
 /// Atomic used to prevent re-initialization of logging.
