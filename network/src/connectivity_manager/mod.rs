@@ -555,7 +555,6 @@ where
 
         // Keep track of if any peer's addresses have actually changed, so we can
         // log without too much spam.
-        let mut have_any_changed = false;
         let self_peer_id = self.network_context.peer_id();
 
         // 3. add or update intersection
@@ -569,7 +568,6 @@ where
             // Update peer's addresses
             let addrs = self.peer_addrs.0.entry(peer_id).or_default();
             if addrs.update(src, new_addrs) {
-                have_any_changed = true;
                 info!(
                     NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
                     network_addresses = addrs,
@@ -587,18 +585,6 @@ where
                 // out if we can't reach any of their previous addresses).
                 self.reset_dial_state(&peer_id);
             }
-        }
-
-        // Only log the total state if anything has actually changed.
-        if have_any_changed {
-            let peer_addrs = &self.peer_addrs;
-            info!(
-                NetworkSchema::new(&self.network_context).discovery_source(&src),
-                new_peer_addrs = peer_addrs,
-                "{} New peer addresses: {}",
-                self.network_context,
-                peer_addrs
-            );
         }
     }
 
@@ -648,15 +634,6 @@ where
             // For each peer, union all of the pubkeys from each discovery source
             // to generate the new eligible peers set.
             let new_eligible = self.peer_pubkeys.union_all();
-
-            info!(
-                NetworkSchema::new(&self.network_context),
-                eligible_peers = format!("{:?}", new_eligible),
-                discovery_source = src,
-                "{} New eligible peers: {:?}",
-                self.network_context,
-                new_eligible
-            );
 
             // Swap in the new eligible peers set. Drop the old set after releasing
             // the write lock.
