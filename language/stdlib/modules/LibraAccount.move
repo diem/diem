@@ -1885,7 +1885,7 @@ module LibraAccount {
 
         /// Returns the KeyRotationCapability of the field `key_rotation_capability`.
         define spec_get_key_rotation_cap(addr: address): KeyRotationCapability {
-            Option::spec_get(spec_get_key_rotation_cap_field(addr))
+            Option::borrow(spec_get_key_rotation_cap_field(addr))
         }
 
         // Returns if the account holds KeyRotationCapability.
@@ -1912,7 +1912,7 @@ module LibraAccount {
 
         /// Returns the WithdrawCapability of the field `withdraw_capability`.
         define spec_get_withdraw_cap(addr: address): WithdrawCapability {
-            Option::spec_get(spec_get_withdraw_cap_field(addr))
+            Option::borrow(spec_get_withdraw_cap_field(addr))
         }
 
         /// Returns true if the LibraAccount at `addr` holds a `WithdrawCapability`.

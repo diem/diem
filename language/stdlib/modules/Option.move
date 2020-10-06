@@ -1,15 +1,9 @@
 address 0x1 {
 
-/**
-This module defines the Option type and its methods to represent and handle an optional value.
-*/
+/// This module defines the Option type and its methods to represent and handle an optional value.
 module Option {
     use 0x1::Errors;
     use 0x1::Vector;
-
-    spec module {
-        pragma aborts_if_is_strict;
-    }
 
     /// Abstraction of a value that may or may not be present. Implemented with a vector of size
     /// zero or one because Move bytecode does not have ADTs.
@@ -23,8 +17,10 @@ module Option {
     }
 
     /// The `Option` is in an invalid state for the operation attempted.
+    /// The `Option` is `Some` while it should be `None`.
     const EOPTION_IS_SET: u64 = 0;
     /// The `Option` is in an invalid state for the operation attempted.
+    /// The `Option` is `None` while it should be `Some`.
     const EOPTION_NOT_SET: u64 = 1;
 
     /// Return an empty `Option`
@@ -60,10 +56,7 @@ module Option {
     spec fun is_none {
         pragma opaque;
         aborts_if false;
-        ensures result == spec_is_none(t);
-    }
-    spec define spec_is_none<Element>(t: Option<Element>): bool {
-        len(t.vec) == 0
+        ensures result == is_none(t);
     }
 
     /// Return true if `t` holds a value
@@ -73,10 +66,7 @@ module Option {
     spec fun is_some {
         pragma opaque;
         aborts_if false;
-        ensures result == spec_is_some(t);
-    }
-    spec define spec_is_some<Element>(t: Option<Element>): bool {
-        !spec_is_none(t)
+        ensures result == is_some(t);
     }
 
     /// Return true if the value in `t` is equal to `e_ref`
@@ -90,7 +80,7 @@ module Option {
         ensures result == spec_contains(t, e_ref);
     }
     spec define spec_contains<Element>(t: Option<Element>, e: Element): bool {
-        spec_is_some(t) && spec_get(t) == e
+        is_some(t) && borrow(t) == e
     }
 
     /// Return an immutable reference to the value inside `t`
@@ -102,14 +92,7 @@ module Option {
     spec fun borrow {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == spec_get(t);
-    }
-    spec define spec_get<Element>(t: Option<Element>): Element {
-        t.vec[0]
-    }
-    spec schema AbortsIfNone<Element> {
-        t: Option<Element>;
-        aborts_if !spec_is_some(t) with Errors::INVALID_ARGUMENT;
+        ensures result == borrow(t);
     }
 
     /// Return a reference to the value inside `t` if it holds one
@@ -122,7 +105,7 @@ module Option {
     spec fun borrow_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(t)) spec_get(t) else default_ref);
+        ensures result == (if (is_some(t)) borrow(t) else default_ref);
     }
 
     /// Return the value inside `t` if it holds one
@@ -135,7 +118,7 @@ module Option {
     spec fun get_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(t)) spec_get(t) else default);
+        ensures result == (if (is_some(t)) borrow(t) else default);
     }
 
     /// Convert the none option `t` to a some option by adding `e`.
@@ -147,9 +130,9 @@ module Option {
     }
     spec fun fill {
         pragma opaque;
-        aborts_if spec_is_some(t) with Errors::INVALID_ARGUMENT;
-        ensures spec_is_some(t);
-        ensures spec_get(t) == e;
+        aborts_if is_some(t) with Errors::INVALID_ARGUMENT;
+        ensures is_some(t);
+        ensures borrow(t) == e;
     }
 
     /// Convert a `some` option to a `none` by removing and returning the value stored inside `t`
@@ -161,8 +144,8 @@ module Option {
     spec fun extract {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == spec_get(old(t));
-        ensures spec_is_none(t);
+        ensures result == borrow(old(t));
+        ensures is_none(t);
     }
 
     /// Return a mutable reference to the value inside `t`
@@ -174,7 +157,7 @@ module Option {
     spec fun borrow_mut {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == spec_get(t);
+        ensures result == borrow(t);
     }
 
     /// Swap the old value inside `t` with `e` and return the old value
@@ -189,9 +172,9 @@ module Option {
     spec fun swap {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == spec_get(old(t));
-        ensures spec_is_some(t);
-        ensures spec_get(t) == e;
+        ensures result == borrow(old(t));
+        ensures is_some(t);
+        ensures borrow(t) == e;
     }
 
     /// Destroys `t.` If `t` holds a value, return it. Returns `default` otherwise
@@ -203,7 +186,7 @@ module Option {
     spec fun destroy_with_default {
         pragma opaque;
         aborts_if false;
-        ensures result == (if (spec_is_some(old(t))) spec_get(old(t)) else default);
+        ensures result == (if (is_some(old(t))) borrow(old(t)) else default);
     }
 
     /// Unpack `t` and return its contents
@@ -218,9 +201,8 @@ module Option {
     spec fun destroy_some {
         pragma opaque;
         include AbortsIfNone<Element>;
-        ensures result == spec_get(old(t));
+        ensures result == borrow(old(t));
     }
-
 
     /// Unpack `t`
     /// Aborts if `t` holds a value
@@ -231,8 +213,20 @@ module Option {
     }
     spec fun destroy_none {
         pragma opaque;
-        aborts_if spec_is_some(t) with Errors::INVALID_ARGUMENT;
+        aborts_if is_some(t) with Errors::INVALID_ARGUMENT;
+    }
+
+    spec module {} // switch documentation context back to module level
+
+    spec module {
+        pragma aborts_if_is_strict;
+    }
+
+    /// # Helper Schema
+
+    spec schema AbortsIfNone<Element> {
+        t: Option<Element>;
+        aborts_if is_none(t) with Errors::INVALID_ARGUMENT;
     }
 }
-
 }

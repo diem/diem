@@ -245,7 +245,7 @@ module ValidatorConfig {
     spec fun get_config {
         pragma opaque;
         include AbortsIfNoValidatorConfig;
-        aborts_if Option::spec_is_none(global<ValidatorConfig>(addr).config) with Errors::INVALID_ARGUMENT;
+        aborts_if Option::is_none(global<ValidatorConfig>(addr).config) with Errors::INVALID_ARGUMENT;
         ensures result == spec_get_config(addr);
     }
 

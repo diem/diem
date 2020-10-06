@@ -4305,7 +4305,7 @@ Returns the KeyRotationCapability of the field <code>key_rotation_capability</co
 
 
 <pre><code><b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address): <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> {
-    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
+    <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
 }
 <a name="0x1_LibraAccount_spec_has_key_rotation_cap"></a>
 <b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr: address): bool {
@@ -4359,7 +4359,7 @@ Returns the WithdrawCapability of the field <code>withdraw_capability</code>.
 
 
 <pre><code><b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): <a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a> {
-    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
+    <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
 }
 </code></pre>
 

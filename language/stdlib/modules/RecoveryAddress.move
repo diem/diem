@@ -1,4 +1,6 @@
 address 0x1 {
+
+/// This module defines an account recovery mechanism that can be used by VASPs.
 module RecoveryAddress {
     use 0x1::Errors;
     use 0x1::LibraAccount::{Self, KeyRotationCapability};
@@ -131,7 +133,7 @@ module RecoveryAddress {
         to_recover: address;
         new_key: vector<u8>;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
-        aborts_if !exists<LibraAccount::LibraAccount>(to_recover) with Errors::NOT_PUBLISHED;
+        aborts_if !LibraAccount::exists_at(to_recover) with Errors::NOT_PUBLISHED;
         aborts_if len(new_key) != 32 with Errors::INVALID_ARGUMENT;
         aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
         aborts_if !(Signer::spec_address_of(account) == recovery_address
@@ -140,7 +142,7 @@ module RecoveryAddress {
     spec schema RotateAuthenticationKeyEnsures {
         to_recover: address;
         new_key: vector<u8>;
-        ensures global<LibraAccount::LibraAccount>(to_recover).authentication_key == new_key;
+        ensures LibraAccount::authentication_key(to_recover) == new_key;
     }
 
     /// Add `to_recover` to the `RecoveryAddress` resource under `recovery_address`.
@@ -171,23 +173,60 @@ module RecoveryAddress {
         recovery_address: address;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
         let to_recover_address = LibraAccount::key_rotation_capability_address(to_recover);
-        aborts_if !VASP::is_vasp(recovery_address) with Errors::INVALID_ARGUMENT;
-        aborts_if !VASP::is_vasp(to_recover_address) with Errors::INVALID_ARGUMENT;
-        aborts_if VASP::spec_parent_address(recovery_address) != VASP::spec_parent_address(to_recover_address)
-            with Errors::INVALID_ARGUMENT;
+        aborts_if !VASP::spec_is_same_vasp(recovery_address, to_recover_address) with Errors::INVALID_ARGUMENT;
     }
     spec schema AddRotationCapabilityEnsures {
         to_recover: KeyRotationCapability;
         recovery_address: address;
-
-        ensures spec_get_rotation_caps(recovery_address)[
-            len(spec_get_rotation_caps(recovery_address)) - 1] == to_recover;
+        let num_rotation_caps = len(spec_get_rotation_caps(recovery_address));
+        ensures spec_get_rotation_caps(recovery_address)[num_rotation_caps - 1] == to_recover;
     }
 
     // ****************** SPECIFICATIONS *******************
     spec module {} // switch documentation context back to module level
 
-    /// # Module specifications
+
+    /// # Initialization
+
+    spec module {
+        /// A RecoveryAddress has its own `KeyRotationCapability`.
+        invariant [global, isolated]
+            forall addr1: address where spec_is_recovery_address(addr1):
+                len(spec_get_rotation_caps(addr1)) > 0 &&
+                spec_get_rotation_caps(addr1)[0].account_address == addr1;
+    }
+
+    /// # Persistence of Resource
+
+    spec module {
+        invariant update [global]
+           forall addr: address:
+               old(spec_is_recovery_address(addr)) ==> spec_is_recovery_address(addr);
+    }
+
+    /// # Persistence of KeyRotationCapability
+
+    spec module {
+        /// If `recovery_addr` holds the `KeyRotationCapability` of `to_recovery_addr`
+        /// in the previous state, then it continues to hold the capability after the update.
+        invariant update [global]
+            forall recovery_addr: address, to_recovery_addr: address
+            where old(spec_is_recovery_address(recovery_addr)):
+                old(spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr))
+                ==> spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr);
+    }
+
+
+    /// # Consistency Between Resources and Roles
+
+    spec module {
+        /// Only VASPs can hold `RecoverAddress` resources.
+        invariant [global, isolated]
+            forall recovery_addr: address where spec_is_recovery_address(recovery_addr):
+                VASP::is_vasp(recovery_addr);
+    }
+
+    /// # Helper Functions
 
     spec module {
         /// Returns true if `addr` is a recovery address.
@@ -209,52 +248,11 @@ module RecoveryAddress {
             recovery_address: address,
             addr: address): bool
         {
-            // BUG: the commented out version will break the postconditions.
-            // exists i in 0..len(spec_get_rotation_caps(recovery_address)):
-            //     spec_get_rotation_caps(recovery_address)[i].account_address == addr
             exists i: u64
                 where 0 <= i && i < len(spec_get_rotation_caps(recovery_address)):
                     spec_get_rotation_caps(recovery_address)[i].account_address == addr
         }
     }
-
-    /// ## RecoveryAddress has its own KeyRotationCapability
-
-    spec module {
-        invariant [global, isolated]
-            forall addr1: address where spec_is_recovery_address(addr1):
-                len(spec_get_rotation_caps(addr1)) > 0 &&
-                spec_get_rotation_caps(addr1)[0].account_address == addr1;
-    }
-
-    /// ## RecoveryAddress resource stays
-
-    spec module {
-        invariant update [global]
-           forall addr1: address:
-               old(spec_is_recovery_address(addr1)) ==> spec_is_recovery_address(addr1);
-    }
-
-    /// ## RecoveryAddress remains same
-
-    spec module {
-        invariant update [global]
-            forall recovery_addr: address, to_recovery_addr: address
-            where old(spec_is_recovery_address(recovery_addr)):
-                old(spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr))
-                ==> spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr);
-    }
-
-
-    /// ## Only VASPs can be RecoveryAddress
-
-    spec module {
-        invariant [global, isolated]
-            forall recovery_addr: address where spec_is_recovery_address(recovery_addr):
-                VASP::is_vasp(recovery_addr);
-    }
-
-
 
 }
 }

@@ -1012,7 +1012,7 @@ that there is exactly one such address.
     (<b>exists</b> i in 0..size: validators[i].addr == addr) ==&gt;
         <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result)
         && {
-                <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+                <b>let</b> at = <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(result);
                 0 &lt;= at && at &lt; size && validators[at].addr == addr
             };
 </code></pre>

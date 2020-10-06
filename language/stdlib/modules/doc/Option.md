@@ -3,7 +3,6 @@
 
 # Module `0x1::Option`
 
-
 This module defines the Option type and its methods to represent and handle an optional value.
 
 
@@ -25,6 +24,7 @@ This module defines the Option type and its methods to represent and handle an o
 -  [Function `destroy_some`](#0x1_Option_destroy_some)
 -  [Function `destroy_none`](#0x1_Option_destroy_none)
 -  [Module Specification](#@Module_Specification_1)
+    -  [Helper Schema](#@Helper_Schema_2)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -85,6 +85,7 @@ because it's 0 for "none" or 1 for "some".
 <a name="0x1_Option_EOPTION_IS_SET"></a>
 
 The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
+The <code><a href="Option.md#0x1_Option">Option</a></code> is <code>Some</code> while it should be <code>None</code>.
 
 
 <pre><code><b>const</b> <a href="Option.md#0x1_Option_EOPTION_IS_SET">EOPTION_IS_SET</a>: u64 = 0;
@@ -95,6 +96,7 @@ The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid stat
 <a name="0x1_Option_EOPTION_NOT_SET"></a>
 
 The <code><a href="Option.md#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
+The <code><a href="Option.md#0x1_Option">Option</a></code> is <code>None</code> while it should be <code>Some</code>.
 
 
 <pre><code><b>const</b> <a href="Option.md#0x1_Option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>: u64 = 1;
@@ -234,18 +236,7 @@ Return true if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_is_none">spec_is_none</a>(t);
-</code></pre>
-
-
-
-
-<a name="0x1_Option_spec_is_none"></a>
-
-
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_is_none">spec_is_none</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): bool {
-   len(t.vec) == 0
-}
+<b>ensures</b> result == <a href="Option.md#0x1_Option_is_none">is_none</a>(t);
 </code></pre>
 
 
@@ -284,18 +275,7 @@ Return true if <code>t</code> holds a value
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t);
-</code></pre>
-
-
-
-
-<a name="0x1_Option_spec_is_some"></a>
-
-
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): bool {
-   !<a href="Option.md#0x1_Option_spec_is_none">spec_is_none</a>(t)
-}
+<b>ensures</b> result == <a href="Option.md#0x1_Option_is_some">is_some</a>(t);
 </code></pre>
 
 
@@ -345,7 +325,7 @@ Always returns <code><b>false</b></code> if <code>t</code> does not hold a value
 
 
 <pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_contains">spec_contains</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;, e: Element): bool {
-   <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t) && <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t) == e
+   <a href="Option.md#0x1_Option_is_some">is_some</a>(t) && <a href="Option.md#0x1_Option_borrow">borrow</a>(t) == e
 }
 </code></pre>
 
@@ -387,30 +367,7 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t);
-</code></pre>
-
-
-
-
-<a name="0x1_Option_spec_get"></a>
-
-
-<pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_get">spec_get</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): Element {
-   t.vec[0]
-}
-</code></pre>
-
-
-
-
-<a name="0x1_Option_AbortsIfNone"></a>
-
-
-<pre><code><b>schema</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt; {
-    t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;;
-    <b>aborts_if</b> !<a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-}
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(t);
 </code></pre>
 
 
@@ -452,7 +409,7 @@ Return <code>default_ref</code> if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t)) <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t) <b>else</b> default_ref);
+<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_is_some">is_some</a>(t)) <a href="Option.md#0x1_Option_borrow">borrow</a>(t) <b>else</b> default_ref);
 </code></pre>
 
 
@@ -494,7 +451,7 @@ Return <code>default</code> if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t)) <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t) <b>else</b> default);
+<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_is_some">is_some</a>(t)) <a href="Option.md#0x1_Option_borrow">borrow</a>(t) <b>else</b> default);
 </code></pre>
 
 
@@ -535,9 +492,9 @@ Aborts if <code>t</code> already holds a value
 
 
 <pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t);
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t) == e;
+<b>aborts_if</b> <a href="Option.md#0x1_Option_is_some">is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>ensures</b> <a href="Option.md#0x1_Option_is_some">is_some</a>(t);
+<b>ensures</b> <a href="Option.md#0x1_Option_borrow">borrow</a>(t) == e;
 </code></pre>
 
 
@@ -578,8 +535,8 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_get">spec_get</a>(<b>old</b>(t));
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t));
+<b>ensures</b> <a href="Option.md#0x1_Option_is_none">is_none</a>(t);
 </code></pre>
 
 
@@ -620,7 +577,7 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t);
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(t);
 </code></pre>
 
 
@@ -664,9 +621,9 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_get">spec_get</a>(<b>old</b>(t));
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t);
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_get">spec_get</a>(t) == e;
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t));
+<b>ensures</b> <a href="Option.md#0x1_Option_is_some">is_some</a>(t);
+<b>ensures</b> <a href="Option.md#0x1_Option_borrow">borrow</a>(t) == e;
 </code></pre>
 
 
@@ -707,7 +664,7 @@ Destroys <code>t.</code> If <code>t</code> holds a value, return it. Returns <co
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(<b>old</b>(t))) <a href="Option.md#0x1_Option_spec_get">spec_get</a>(<b>old</b>(t)) <b>else</b> default);
+<b>ensures</b> result == (<b>if</b> (<a href="Option.md#0x1_Option_is_some">is_some</a>(<b>old</b>(t))) <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t)) <b>else</b> default);
 </code></pre>
 
 
@@ -751,7 +708,7 @@ Aborts if <code>t</code> does not hold a value
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt;;
-<b>ensures</b> result == <a href="Option.md#0x1_Option_spec_get">spec_get</a>(<b>old</b>(t));
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">borrow</a>(<b>old</b>(t));
 </code></pre>
 
 
@@ -792,7 +749,7 @@ Aborts if <code>t</code> holds a value
 
 
 <pre><code><b>pragma</b> opaque;
-<b>aborts_if</b> <a href="Option.md#0x1_Option_spec_is_some">spec_is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> <a href="Option.md#0x1_Option_is_some">is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -805,7 +762,25 @@ Aborts if <code>t</code> holds a value
 
 
 
+
 <pre><code><b>pragma</b> aborts_if_is_strict;
+</code></pre>
+
+
+
+<a name="@Helper_Schema_2"></a>
+
+### Helper Schema
+
+
+
+<a name="0x1_Option_AbortsIfNone"></a>
+
+
+<pre><code><b>schema</b> <a href="Option.md#0x1_Option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt; {
+    t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;;
+    <b>aborts_if</b> <a href="Option.md#0x1_Option_is_none">is_none</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
 </code></pre>
 
 

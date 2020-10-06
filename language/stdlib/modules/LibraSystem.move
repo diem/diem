@@ -431,7 +431,7 @@ module LibraSystem {
             (exists i in 0..size: validators[i].addr == addr) ==>
                 Option::is_some(result)
                 && {
-                        let at = Option::spec_get(result);
+                        let at = Option::borrow(result);
                         0 <= at && at < size && validators[at].addr == addr
                     };
     }
