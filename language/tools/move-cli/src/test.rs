@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{DEFAULT_BUILD_OUTPUT_DIR, MOVE_DATA};
+use move_coverage::{
+    coverage_map::CoverageMap,
+    summary::{ModuleSummary, ModuleSummaryOptions},
+};
 use move_lang::test_utils::*;
-
 use std::{
+    env,
     fs::{self, File},
-    io::{self, BufRead},
+    io::{self, BufRead, Write},
     path::Path,
     process::Command,
 };
+use vm::file_format::CompiledModule;
 
 /// Basic datatest testing framework for the CLI. The `run_one` entrypoint expects
 /// an `args.txt` file with arguments that the `move` binary understands (one set
@@ -29,6 +34,15 @@ const NO_MOVE_CLEAN: &str = "NO_MOVE_CLEAN";
 /// output.
 const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
 const UB: &str = "UB";
+
+/// Name of the environment variable we need to set in order to get tracing
+/// enabled in the move VM.
+const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
+
+/// The default file name for the runtime to dump the execution trace to.
+/// The trace will be used by the coverage tool if --track-cov is set.
+/// If --track-cov is not set, then no trace file will be produced.
+const DEFAULT_TRACE_FILE: &str = "trace";
 
 fn format_diff(expected: String, actual: String) -> String {
     use difference::*;
@@ -60,8 +74,34 @@ fn format_diff(expected: String, actual: String) -> String {
     ret
 }
 
+fn show_coverage(trace_file: &Path, move_data: &Path) -> anyhow::Result<()> {
+    // collect modules
+    let mut modules: Vec<CompiledModule> = Vec::new();
+    for entry in move_lang::find_filenames(&[move_data.to_str().unwrap().to_owned()], |fpath| {
+        fpath.extension().map_or(false, |e| e == "mv")
+    })? {
+        let bytecode_bytes = fs::read(entry).unwrap();
+        let compiled_module = CompiledModule::deserialize(&bytecode_bytes).unwrap();
+        modules.push(compiled_module);
+    }
+
+    // collect trace
+    let coverage_map = CoverageMap::from_trace_file(trace_file);
+
+    // summarize
+    let mut summary_writer: Box<dyn Write> = Box::new(io::stdout());
+    for module in modules.iter() {
+        let mut summary_options = ModuleSummaryOptions::default();
+        summary_options.summarize_function_coverage = true;
+        ModuleSummary::new(summary_options, module, &coverage_map)
+            .summarize_human(&mut summary_writer)?;
+    }
+
+    Ok(())
+}
+
 /// Run the `args_path` batch file with`cli_binary`
-pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
+pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::Result<()> {
     let args_file = io::BufReader::new(File::open(args_path)?).lines();
     // path where we will run the binary
     let exe_dir = args_path.parent().unwrap();
@@ -87,6 +127,17 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
             // allow blank lines in args.txt
             continue;
         }
+
+        // enable tracing in the VM by setting the env var.
+        // for tracing file path: always use the absolute path so we do not need
+        // to worry about where the VM is executed.
+        let mut trace_file = env::current_dir()?;
+        trace_file.push(&move_data);
+        trace_file.push(DEFAULT_TRACE_FILE);
+        if track_cov {
+            env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, trace_file.as_os_str());
+        }
+
         let cmd_output = Command::new(cli_binary_path.clone())
             .current_dir(exe_dir)
             .args(args_iter)
@@ -94,6 +145,16 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
         output += &format!("Command `{}`:\n", args_line);
         output += std::str::from_utf8(&cmd_output.stdout)?;
         output += std::str::from_utf8(&cmd_output.stderr)?;
+
+        // show coverage information
+        if track_cov && trace_file.exists() {
+            if !trace_file.exists() {
+                eprintln!("Trace file {} not found", trace_file.to_string_lossy());
+                eprintln!("Coverage is only applicable to the RUN command in args.txt");
+            } else {
+                show_coverage(Path::new(&trace_file), Path::new(&move_data))?;
+            }
+        }
     }
 
     // post-test cleanup and cleanup checks
@@ -137,13 +198,13 @@ pub fn run_one(args_path: &Path, cli_binary: &str) -> anyhow::Result<()> {
     }
 }
 
-pub fn run_all(args_path: &str, cli_binary: &str) -> anyhow::Result<()> {
+pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Result<()> {
     let mut test_total = 0;
     let mut test_passed = 0;
     for entry in move_lang::find_filenames(&[args_path.to_owned()], |fpath| {
         fpath.file_name().expect("unexpected file entry path") == "args.txt"
     })? {
-        match run_one(Path::new(&entry), cli_binary) {
+        match run_one(Path::new(&entry), cli_binary, track_cov) {
             Ok(_) => test_passed += 1,
             Err(ex) => eprintln!("Test {} failed with error: {}", entry, ex),
         }

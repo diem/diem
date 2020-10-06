@@ -20,5 +20,5 @@ fn get_metatest_path() -> String {
 
 #[test]
 fn run_metatest() {
-    assert!(test::run_all(&get_metatest_path(), &get_cli_binary_path()).is_ok());
+    assert!(test::run_all(&get_metatest_path(), &get_cli_binary_path(), false).is_ok());
 }

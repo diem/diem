@@ -3897,6 +3897,7 @@ dependencies = [
  "libra-vm",
  "libra-workspace-hack",
  "move-core-types",
+ "move-coverage",
  "move-lang",
  "move-vm-runtime",
  "move-vm-types",
