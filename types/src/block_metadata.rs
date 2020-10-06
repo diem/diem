@@ -63,6 +63,10 @@ impl BlockMetadata {
         ))
     }
 
+    pub fn timestamp_usec(&self) -> u64 {
+        self.timestamp_usecs
+    }
+
     pub fn proposer(&self) -> AccountAddress {
         self.proposer
     }

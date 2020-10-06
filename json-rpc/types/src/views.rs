@@ -520,13 +520,11 @@ impl ScriptView {
 
 impl From<Transaction> for TransactionDataView {
     fn from(tx: Transaction) -> Self {
-        let x = match tx {
-            Transaction::BlockMetadata(t) => {
-                t.into_inner().map(|x| TransactionDataView::BlockMetadata {
-                    timestamp_usecs: x.1,
-                })
-            }
-            Transaction::GenesisTransaction(_) => Ok(TransactionDataView::WriteSet {}),
+        match tx {
+            Transaction::BlockMetadata(t) => TransactionDataView::BlockMetadata {
+                timestamp_usecs: t.timestamp_usec(),
+            },
+            Transaction::GenesisTransaction(_) => TransactionDataView::WriteSet {},
             Transaction::UserTransaction(t) => {
                 let script_hash = match t.payload() {
                     TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
@@ -540,7 +538,7 @@ impl From<Transaction> for TransactionDataView {
                 }
                 .into();
 
-                Ok(TransactionDataView::UserTransaction {
+                TransactionDataView::UserTransaction {
                     sender: t.sender().to_string(),
                     signature_scheme: t.authenticator().scheme().to_string(),
                     signature: hex::encode(t.authenticator().signature_bytes()),
@@ -554,11 +552,9 @@ impl From<Transaction> for TransactionDataView {
                     script_hash,
                     script_bytes,
                     script: t.into_raw_transaction().into_payload().into(),
-                })
+                }
             }
-        };
-
-        x.unwrap_or(TransactionDataView::UnknownTransaction {})
+        }
     }
 }
 

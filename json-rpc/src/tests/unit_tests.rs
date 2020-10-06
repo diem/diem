@@ -234,6 +234,20 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "invalid request format: request is not an object",
+            json!(true),
+            json!({
+                "error": {
+                    "code": -32604, "data": null, "message": "Invalid request format",
+                },
+                "id": null,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
             "method not found",
             json!({"jsonrpc": "2.0", "method": "add", "params": [], "id": 1}),
             json!({
