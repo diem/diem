@@ -147,7 +147,7 @@ fn validator_rotate_key_and_reconfigure() {
         .iter()
         .any(|e| e.key() == &new_epoch_event_key()));
 
-    executor.new_block();
+    executor.new_block_with_timestamp(300000010);
 
     executor.execute_and_apply(
         validator_account
@@ -335,7 +335,7 @@ fn validator_set_operator_set_key_reconfigure() {
         .iter()
         .any(|e| e.key() == &new_epoch_event_key()));
 
-    executor.new_block();
+    executor.new_block_with_timestamp(300000010);
 
     let output = executor.execute_and_apply(
         operator_account_0

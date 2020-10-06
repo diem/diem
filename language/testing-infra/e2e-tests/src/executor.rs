@@ -263,9 +263,13 @@ impl FakeExecutor {
     }
 
     pub fn new_block(&mut self) {
+        self.new_block_with_timestamp(self.block_time + 1);
+    }
+
+    pub fn new_block_with_timestamp(&mut self, time_stamp: u64) {
         let validator_set = ValidatorSet::fetch_config(&self.data_store)
             .expect("Unable to retrieve the validator set from storage");
-        self.block_time += 1;
+        self.block_time = time_stamp;
         let new_block = BlockMetadata::new(
             HashValue::zero(),
             0,

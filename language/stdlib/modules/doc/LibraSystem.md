@@ -84,6 +84,13 @@ Information about a Validator Owner.
  Validator Operator, human name, and info such as consensus key
  and network addresses.
 </dd>
+<dt>
+<code>last_config_update_time: u64</code>
+</dt>
+<dd>
+ The time of last reconfiguration invoked by this validator
+ in microseconds
+</dd>
 </dl>
 
 
@@ -211,6 +218,16 @@ The <code><a href="LibraSystem.md#0x1_LibraSystem_CapabilityHolder">CapabilityHo
 
 
 
+<a name="0x1_LibraSystem_ECONFIG_UPDATE_RATE_LIMITED"></a>
+
+Rate limited when trying to update config
+
+
+<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_ECONFIG_UPDATE_RATE_LIMITED">ECONFIG_UPDATE_RATE_LIMITED</a>: u64 = 6;
+</code></pre>
+
+
+
 <a name="0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR"></a>
 
 Tried to add a validator with an invalid state to the validator set
@@ -237,6 +254,16 @@ An out of bounds index for the validator set was encountered
 
 
 <pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_EVALIDATOR_INDEX">EVALIDATOR_INDEX</a>: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_FIVE_MINUTES"></a>
+
+Number of microseconds in 5 minutes
+
+
+<pre><code><b>const</b> <a href="LibraSystem.md#0x1_LibraSystem_FIVE_MINUTES">FIVE_MINUTES</a>: u64 = 300000000;
 </code></pre>
 
 
@@ -404,6 +431,7 @@ Adds a new validator to the validator set.
         addr: validator_addr,
         config, // <b>copy</b> the config over <b>to</b> ValidatorSet
         consensus_voting_power: 1,
+        last_config_update_time: <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(),
     });
 
     <a href="LibraSystem.md#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
@@ -471,6 +499,7 @@ a ValidatorRole
                                      addr: validator_addr,
                                      config: <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_addr),
                                      consensus_voting_power: 1,
+                                     last_config_update_time: <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>(),
                                   }
                                );
 }
@@ -607,6 +636,11 @@ and emits a reconfigurationevent.
     <b>let</b> to_update_index = *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&to_update_index_vec);
     <b>let</b> is_validator_info_updated = <a href="LibraSystem.md#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(&<b>mut</b> libra_system_config.validators, to_update_index);
     <b>if</b> (is_validator_info_updated) {
+        <b>let</b> validator_info = <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(&<b>mut</b> libra_system_config.validators, to_update_index);
+        <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>() &gt;
+               validator_info.last_config_update_time + <a href="LibraSystem.md#0x1_LibraSystem_FIVE_MINUTES">FIVE_MINUTES</a>,
+               <a href="LibraSystem.md#0x1_LibraSystem_ECONFIG_UPDATE_RATE_LIMITED">ECONFIG_UPDATE_RATE_LIMITED</a>);
+        validator_info.last_config_update_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
         <a href="LibraSystem.md#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
     }
 }
@@ -622,6 +656,7 @@ and emits a reconfigurationevent.
 
 
 <pre><code><b>pragma</b> opaque;
+<b>pragma</b> verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureAbortsIf">UpdateConfigAndReconfigureAbortsIf</a>;
 <b>include</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a>;

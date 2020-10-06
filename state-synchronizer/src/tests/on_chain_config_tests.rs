@@ -13,6 +13,7 @@ use futures::{future::FutureExt, stream::StreamExt};
 use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{coin1_tmp_tag, libra_root_address},
+    block_metadata::BlockMetadata,
     on_chain_config::{OnChainConfig, VMPublishingOption},
     transaction::{Transaction, WriteSetPayload},
 };
@@ -153,7 +154,13 @@ fn test_on_chain_config_pub_sub() {
     );
 
     // Create a dummy block prologue transaction that will bump the timer.
-    let txn4 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
+    let txn4 = encode_block_prologue_script(BlockMetadata::new(
+        gen_block_id(2),
+        2,
+        300000010,
+        vec![],
+        validator_account,
+    ));
 
     // rotate the validator's consensus pubkey to trigger a reconfiguration
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
@@ -207,7 +214,13 @@ fn test_on_chain_config_pub_sub() {
     drop(reconfig_receiver);
 
     // Create a dummy block prologue transaction that will bump the timer.
-    let txn6 = encode_block_prologue_script(gen_block_metadata(3, validator_account));
+    let txn6 = encode_block_prologue_script(BlockMetadata::new(
+        gen_block_id(2),
+        3,
+        300000020,
+        vec![],
+        validator_account,
+    ));
     let txn7 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 3,

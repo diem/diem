@@ -58,13 +58,12 @@ script {
 
 //! block-prologue
 //! proposer: carrol
-//! block-time: 2
+//! block-time: 300000001
 
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
-//! expiration-time: 3
 script {
     use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;

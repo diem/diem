@@ -27,6 +27,9 @@ module LibraSystem {
         /// Validator Operator, human name, and info such as consensus key
         /// and network addresses.
         config: ValidatorConfig::Config,
+        /// The time of last reconfiguration invoked by this validator
+        /// in microseconds
+        last_config_update_time: u64,
     }
 
     /// Enables a scheme that restricts the LibraSystem config
@@ -70,6 +73,11 @@ module LibraSystem {
     const EINVALID_TRANSACTION_SENDER: u64 = 4;
     /// An out of bounds index for the validator set was encountered
     const EVALIDATOR_INDEX: u64 = 5;
+    /// Rate limited when trying to update config
+    const ECONFIG_UPDATE_RATE_LIMITED: u64 = 6;
+
+    /// Number of microseconds in 5 minutes
+    const FIVE_MINUTES: u64 = 300000000;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -166,6 +174,7 @@ module LibraSystem {
             addr: validator_addr,
             config, // copy the config over to ValidatorSet
             consensus_voting_power: 1,
+            last_config_update_time: LibraTimestamp::now_microseconds(),
         });
 
         set_libra_system_config(libra_system_config);
@@ -200,6 +209,7 @@ module LibraSystem {
                                          addr: validator_addr,
                                          config: ValidatorConfig::spec_get_config(validator_addr),
                                          consensus_voting_power: 1,
+                                         last_config_update_time: LibraTimestamp::spec_now_microseconds(),
                                       }
                                    );
     }
@@ -264,11 +274,17 @@ module LibraSystem {
         let to_update_index = *Option::borrow(&to_update_index_vec);
         let is_validator_info_updated = update_ith_validator_info_(&mut libra_system_config.validators, to_update_index);
         if (is_validator_info_updated) {
+            let validator_info = Vector::borrow_mut(&mut libra_system_config.validators, to_update_index);
+            assert(LibraTimestamp::now_microseconds() >
+                   validator_info.last_config_update_time + FIVE_MINUTES,
+                   ECONFIG_UPDATE_RATE_LIMITED);
+            validator_info.last_config_update_time = LibraTimestamp::now_microseconds();
             set_libra_system_config(libra_system_config);
         }
     }
     spec fun update_config_and_reconfigure {
         pragma opaque;
+        pragma verify_duration_estimate = 100;
         modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include UpdateConfigAndReconfigureAbortsIf;
         include UpdateConfigAndReconfigureEnsures;

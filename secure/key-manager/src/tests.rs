@@ -499,6 +499,8 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
     let mut rng = StdRng::from_seed([44u8; 32]);
     let new_privkey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_privkey.public_key();
+    // Increment time to 5min + 1sec, so that the rotation passes through rate limits
+    node.time.increment_by(301);
     let txn1 = crate::build_rotation_transaction(
         owner_account,
         operator_account,
@@ -556,6 +558,9 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
         pre_exe_rotated_info.consensus_public_key()
     );
     assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
+
+    // Increment time to 5min + 1sec, so that the rotation passes through rate limits
+    node.time.increment_by(301);
 
     // Execute key rotation on-chain
     node.execute_and_commit(node.libra.take_all_transactions());

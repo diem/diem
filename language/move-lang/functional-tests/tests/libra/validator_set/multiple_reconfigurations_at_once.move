@@ -66,7 +66,7 @@ script{
 
 //! block-prologue
 //! proposer: alice
-//! block-time: 3
+//! block-time: 300000001
 
 // check: "Keep(EXECUTED)"
 
