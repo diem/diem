@@ -6,12 +6,15 @@ use futures::{sink::SinkExt, StreamExt};
 use libra_config::{config::RoleType, network_id::NetworkContext};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
-use libra_metrics::{register_histogram, DurationHistogram};
+use libra_metrics::{
+    register_histogram, register_int_counter_vec, DurationHistogram, IntCounterVec,
+};
 use libra_network_address::NetworkAddress;
 use libra_network_address_encryption::{Encryptor, Error as EncryptorError};
 use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    counters::inc_by_with_context,
     logging::NetworkSchema,
 };
 use once_cell::sync::Lazy;
@@ -46,6 +49,15 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
     )
 });
 
+pub static DISCOVERY_COUNTS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_simple_onchain_discovery_counts",
+        "Histogram of busy time of spent in event processing loop",
+        &["role_type", "network_id", "peer_id", "metric"]
+    )
+    .unwrap()
+});
+
 /// Listener which converts published  updates from the OnChainConfig to ConnectivityRequests
 /// for the ConnectivityManager.
 pub struct ConfigurationChangeListener {
@@ -75,7 +87,7 @@ fn extract_updates(
             let peer_id = *info.account_address();
             let config = info.into_config();
 
-            let addrs_res = match role {
+            let addrs = match role {
                 RoleType::Validator => {
                     let result = encryptor.decrypt(&config.validator_network_addresses, peer_id);
                     if let Err(EncryptorError::StorageError(_)) = result {
@@ -89,20 +101,18 @@ fn extract_updates(
                 RoleType::FullNode => config
                     .fullnode_network_addresses()
                     .map_err(anyhow::Error::from),
-            };
+            }
+            .map_err(|err| {
+                inc_by_with_context(&DISCOVERY_COUNTS, &network_context, "read_failure", 1);
 
-            let addrs = match addrs_res {
-                Ok(addrs) => addrs,
-                Err(err) => {
-                    warn!(
-                        NetworkSchema::new(&network_context),
-                        "OnChainDiscovery: Failed to parse any network address: peer: {}, err: {}",
-                        peer_id,
-                        err
-                    );
-                    Vec::new()
-                }
-            };
+                warn!(
+                    NetworkSchema::new(&network_context),
+                    "OnChainDiscovery: Failed to parse any network address: peer: {}, err: {}",
+                    peer_id,
+                    err
+                )
+            })
+            .unwrap_or_default();
 
             (peer_id, addrs)
         })
@@ -151,6 +161,12 @@ impl ConfigurationChangeListener {
 
         let updates = extract_updates(self.network_context.clone(), &self.encryptor, node_set);
 
+        inc_by_with_context(
+            &DISCOVERY_COUNTS,
+            &self.network_context,
+            "new_nodes",
+            updates.len() as i64,
+        );
         info!(
             NetworkSchema::new(&self.network_context),
             "Update {} Network about new Node IDs",
@@ -160,10 +176,18 @@ impl ConfigurationChangeListener {
         for update in updates {
             match self.conn_mgr_reqs_tx.send(update).await {
                 Ok(()) => (),
-                Err(e) => warn!(
-                    NetworkSchema::new(&self.network_context),
-                    "Failed to send update to ConnectivityManager {}", e
-                ),
+                Err(e) => {
+                    inc_by_with_context(
+                        &DISCOVERY_COUNTS,
+                        &self.network_context,
+                        "send_failure",
+                        1,
+                    );
+                    warn!(
+                        NetworkSchema::new(&self.network_context),
+                        "Failed to send update to ConnectivityManager {}", e
+                    )
+                }
             }
         }
     }
