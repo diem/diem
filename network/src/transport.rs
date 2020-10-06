@@ -183,6 +183,42 @@ struct UpgradeContext {
     network_id: NetworkId,
 }
 
+pub struct TransportError {
+    pub inner: io::Error,
+    pub addr: NetworkAddress,
+}
+
+impl TransportError {
+    pub fn new(error: io::Error, addr: NetworkAddress) -> Self {
+        Self { inner: error, addr }
+    }
+}
+
+impl std::error::Error for TransportError {}
+
+impl std::fmt::Display for TransportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ProxiedAddr:{} Error:{}", self.addr, self.inner)
+    }
+}
+
+impl std::fmt::Debug for TransportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+/// Puts a `TransportError` in the `io::Error` to append a proxied `NetworkAddress`
+/// TODO: Refactor transport to take different Input and Output errors
+/// This is a hack because we need to unravel a lot to make more complex error types
+fn add_pp_addr(proxy_protocol_enabled: bool, error: io::Error, addr: &NetworkAddress) -> io::Error {
+    if proxy_protocol_enabled {
+        io::Error::new(error.kind(), TransportError::new(error, addr.clone()))
+    } else {
+        error
+    }
+}
+
 /// Upgrade an inbound connection. This means we run a Noise IK handshake for
 /// authentication and then negotiate common supported protocols. If
 /// `ctxt.trusted_peers` is `Some(_)`, then we will only allow connections from
@@ -226,7 +262,7 @@ async fn upgrade_inbound<T: TSocket>(
             addr,
             err
         );
-        err
+        add_pp_addr(proxy_protocol_enabled, err, &addr)
     })?;
     let remote_pubkey = socket.get_remote_static();
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
@@ -237,7 +273,9 @@ async fn upgrade_inbound<T: TSocket>(
         chain_id: ctxt.chain_id,
         network_id: ctxt.network_id.clone(),
     };
-    let remote_handshake = exchange_handshake(&handshake_msg, &mut socket).await?;
+    let remote_handshake = exchange_handshake(&handshake_msg, &mut socket)
+        .await
+        .map_err(|err| add_pp_addr(proxy_protocol_enabled, err, &addr))?;
 
     // try to negotiate common libranet version and supported application protocols
     let (messaging_protocol, application_protocols) = handshake_msg
@@ -247,13 +285,18 @@ async fn upgrade_inbound<T: TSocket>(
                 SecurityEvent::InvalidNetworkHandshakeMsg,
                 error = err.to_string(),
                 origin = "inbound",
-                remote_peer = remote_peer_id
+                remote_peer = remote_peer_id,
+                network_address = addr
             );
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",
                 remote_peer_id, err
             );
-            io::Error::new(io::ErrorKind::Other, err)
+            add_pp_addr(
+                proxy_protocol_enabled,
+                io::Error::new(io::ErrorKind::Other, err),
+                &addr,
+            )
         })?;
 
     // return successful connection
