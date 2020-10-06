@@ -226,6 +226,7 @@ impl fmt::Display for CommittedTransaction {
 }
 
 /// excluded txn
+#[derive(Clone)]
 pub struct TransactionExclusion {
     /// sender
     pub sender: AccountAddress,
