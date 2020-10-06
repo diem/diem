@@ -48,11 +48,13 @@ impl OperationalTool {
         command.account_resource()
     }
 
-    pub fn extract_public_key(
+    fn extract_key(
         &self,
         key_name: &str,
         key_file: &str,
         backend: &config::SecureBackend,
+        command_name: CommandName,
+        execute: fn(Command) -> Result<(), Error>,
     ) -> Result<(), Error> {
         let args = format!(
             "
@@ -61,14 +63,44 @@ impl OperationalTool {
                 --key-file {key_file}
                 --validator-backend {backend_args}
             ",
-            command = command(TOOL_NAME, CommandName::ExtractPublicKey),
+            command = command(TOOL_NAME, command_name),
             key_name = key_name,
             key_file = key_file,
             backend_args = backend_args(backend)?,
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        command.extract_public_key()
+        execute(command)
+    }
+
+    pub fn extract_public_key(
+        &self,
+        key_name: &str,
+        key_file: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<(), Error> {
+        self.extract_key(
+            key_name,
+            key_file,
+            backend,
+            CommandName::ExtractPublicKey,
+            |cmd| cmd.extract_public_key(),
+        )
+    }
+
+    pub fn extract_private_key(
+        &self,
+        key_name: &str,
+        key_file: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<(), Error> {
+        self.extract_key(
+            key_name,
+            key_file,
+            backend,
+            CommandName::ExtractPrivateKey,
+            |cmd| cmd.extract_private_key(),
+        )
     }
 
     pub fn print_account(

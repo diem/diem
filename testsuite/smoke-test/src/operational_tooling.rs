@@ -105,6 +105,35 @@ fn test_consensus_key_rotation() {
 }
 
 #[test]
+fn test_extract_private_key() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
+    let node_config = NodeConfig::load(node_config_path.clone()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    // Extract the operator private key to file
+    let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
+    let _ = op_tool
+        .extract_private_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+
+    // Verify the operator private key has been written correctly
+    let file_contents = fs::read(key_file_path).unwrap();
+    let key_from_file = lcs::from_bytes(&file_contents).unwrap();
+    let key_from_storage = storage.export_private_key(OPERATOR_KEY).unwrap();
+    assert_eq!(key_from_storage, key_from_file);
+}
+
+#[test]
 fn test_extract_public_key() {
     let mut swarm = SmokeTestEnvironment::new(1);
     swarm.validator_swarm.launch();
