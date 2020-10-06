@@ -17,6 +17,46 @@ use libra_types::{
 use std::convert::{TryFrom, TryInto};
 
 #[test]
+fn test_account_resource() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    // Fetch the owner account resource
+    let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let account_resource = op_tool.account_resource(owner_account).unwrap();
+    assert_eq!(owner_account, account_resource.account);
+    assert_eq!(0, account_resource.sequence_number);
+
+    // Fetch the operator account resource
+    let operator_account = storage
+        .get::<AccountAddress>(OPERATOR_ACCOUNT)
+        .unwrap()
+        .value;
+    let account_resource = op_tool.account_resource(operator_account).unwrap();
+    assert_eq!(operator_account, account_resource.account);
+    assert_eq!(0, account_resource.sequence_number);
+
+    // Verify operator key
+    let on_chain_operator_key = hex::decode(account_resource.authentication_key).unwrap();
+    let operator_key = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
+    assert_eq!(
+        AuthenticationKey::ed25519(&operator_key),
+        AuthenticationKey::try_from(on_chain_operator_key).unwrap()
+    );
+}
+
+#[test]
 fn test_consensus_key_rotation() {
     let mut swarm = SmokeTestEnvironment::new(5);
     swarm.validator_swarm.launch();
