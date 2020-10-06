@@ -48,6 +48,25 @@ impl OperationalTool {
         command.account_resource()
     }
 
+    pub fn print_account(
+        &self,
+        account_name: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<AccountAddress, Error> {
+        let args = format!(
+            "
+            {command}
+            --account-name {account_name}
+            --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::PrintAccount),
+            account_name = account_name,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.print_account()
+    }
+
     pub fn set_validator_config(
         &self,
         validator_address: Option<NetworkAddress>,

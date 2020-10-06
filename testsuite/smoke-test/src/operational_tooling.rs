@@ -4,7 +4,7 @@
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::load_backend_storage};
 use libra_config::config::NodeConfig;
 use libra_global_constants::{
-    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
 use libra_management::storage::to_x25519;
 use libra_operational_tool::test_helper::OperationalTool;
@@ -280,6 +280,36 @@ fn test_operator_key_rotation_recovery() {
         AuthenticationKey::ed25519(&new_operator_key),
         AuthenticationKey::try_from(on_chain_operator_key).unwrap()
     );
+}
+
+#[test]
+fn test_print_account() {
+    let mut swarm = SmokeTestEnvironment::new(1);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    // Print the owner account
+    let op_tool_owner_account = op_tool.print_account(OWNER_ACCOUNT, &backend).unwrap();
+    let storage_owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    assert_eq!(storage_owner_account, op_tool_owner_account);
+
+    // Print the operator account
+    let op_tool_owner_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
+    let storage_owner_account = storage
+        .get::<AccountAddress>(OPERATOR_ACCOUNT)
+        .unwrap()
+        .value;
+    assert_eq!(storage_owner_account, op_tool_owner_account);
 }
 
 fn wait_for_transaction_on_all_nodes(
