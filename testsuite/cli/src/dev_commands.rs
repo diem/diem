@@ -27,6 +27,8 @@ impl Command for DevCommand {
             Box::new(DevCommandUpgradeStdlib {}),
             Box::new(DevCommandGenWaypoint {}),
             Box::new(DevCommandChangeLibraVersion {}),
+            Box::new(DevCommandEnableCustomScript {}),
+            Box::new(AddToScriptAllowList {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -123,7 +125,7 @@ pub struct DevCommandEnableCustomScript {}
 
 impl Command for DevCommandEnableCustomScript {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["enable_custom_script"]
+        vec!["enable_custom_script", "s"]
     }
 
     fn get_params_help(&self) -> &'static str {
@@ -131,7 +133,7 @@ impl Command for DevCommandEnableCustomScript {
     }
 
     fn get_description(&self) -> &'static str {
-        "Allow executing arbitrary script in the network."
+        "Allow executing arbitrary script in the network. This disables script hash verification."
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
@@ -150,15 +152,15 @@ pub struct AddToScriptAllowList {}
 
 impl Command for AddToScriptAllowList {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["add_to_script_allow_list"]
+        vec!["add_to_script_allow_list", "a"]
     }
 
     fn get_params_help(&self) -> &'static str {
-        ""
+        "<hash>"
     }
 
     fn get_description(&self) -> &'static str {
-        "Add a script hash to the allow list"
+        "Add a script hash to the allow list. This enables script hash verification."
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
@@ -177,7 +179,7 @@ pub struct DevCommandChangeLibraVersion {}
 
 impl Command for DevCommandChangeLibraVersion {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["change_libra_version"]
+        vec!["change_libra_version", "v"]
     }
 
     fn get_params_help(&self) -> &'static str {
