@@ -3,13 +3,17 @@
 
 # Module `0x1::RegisteredCurrencies`
 
-Module managing the registered currencies in the Libra framework.
+Module for registering currencies in Libra. Basically, this means adding a
+string (vector<u8>) for the currency name to vector of names in LibraConfig.
 
 
 -  [Struct `RegisteredCurrencies`](#0x1_RegisteredCurrencies_RegisteredCurrencies)
 -  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
 -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Helper Functions](#@Helper_Functions_3)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -25,7 +29,7 @@ Module managing the registered currencies in the Libra framework.
 
 ## Struct `RegisteredCurrencies`
 
-An on-chain config holding all of the currency codes for registered
+A LibraConfig config holding all of the currency codes for registered
 currencies. The inner vector<u8>'s are string representations of
 currency names.
 
@@ -70,7 +74,8 @@ Attempted to add a currency code that is already in use
 
 ## Function `initialize`
 
-Initializes this module. Can only be called from genesis.
+Initializes this module. Can only be called from genesis, with
+a Libra root signer.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">initialize</a>(lr_account: &signer)
@@ -213,19 +218,37 @@ The same currency code can be only added once.
 
 <pre><code><b>schema</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeEnsures">AddCurrencyCodeEnsures</a> {
     currency_code: vector&lt;u8&gt;;
-}
-</code></pre>
-
-
-The resulting currency_codes is the one before this function is called, with the new one added to the end.
-
-
-<pre><code><b>schema</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeEnsures">AddCurrencyCodeEnsures</a> {
     <b>ensures</b> <a href="Vector.md#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_get_currency_codes">get_currency_codes</a>(), <b>old</b>(<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_get_currency_codes">get_currency_codes</a>()), currency_code);
     <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetEnsures">LibraConfig::SetEnsures</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt; {payload: <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;()};
 }
 </code></pre>
 
+
+
+</details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+<a name="@Initialization_2"></a>
+
+### Initialization
+
+
+Global invariant that currency config is always available after genesis.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
+</code></pre>
+
+
+
+<a name="@Helper_Functions_3"></a>
+
+### Helper Functions
 
 
 Helper to get the currency code vector.
@@ -238,17 +261,6 @@ Helper to get the currency code vector.
     <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes
 }
 </code></pre>
-
-
-Global invariant that currency config is always available after genesis.
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
-</code></pre>
-
-
-
-</details>
 
 
 [//]: # ("File containing references which can be used from documentation")

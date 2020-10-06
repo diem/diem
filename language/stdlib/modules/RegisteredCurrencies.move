@@ -1,6 +1,7 @@
 address 0x1 {
 
-/// Module managing the registered currencies in the Libra framework.
+/// Module for registering currencies in Libra. Basically, this means adding a
+/// string (vector<u8>) for the currency name to vector of names in LibraConfig.
 module RegisteredCurrencies {
     use 0x1::Errors;
     use 0x1::LibraConfig;
@@ -8,7 +9,7 @@ module RegisteredCurrencies {
     use 0x1::Roles;
     use 0x1::Vector;
 
-    /// An on-chain config holding all of the currency codes for registered
+    /// A LibraConfig config holding all of the currency codes for registered
     /// currencies. The inner vector<u8>'s are string representations of
     /// currency names.
     struct RegisteredCurrencies {
@@ -18,7 +19,8 @@ module RegisteredCurrencies {
     /// Attempted to add a currency code that is already in use
     const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 0;
 
-    /// Initializes this module. Can only be called from genesis.
+    /// Initializes this module. Can only be called from genesis, with
+    /// a Libra root signer.
     public fun initialize(lr_account: &signer) {
         LibraTimestamp::assert_genesis();
         Roles::assert_libra_root(lr_account);
@@ -74,32 +76,30 @@ module RegisteredCurrencies {
     }
     spec schema AddCurrencyCodeEnsures {
         currency_code: vector<u8>;
-        /// The resulting currency_codes is the one before this function is called, with the new one added to the end.
+        // The resulting currency_codes is the one before this function is called, with the new one added to the end.
         ensures Vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
         include LibraConfig::SetEnsures<RegisteredCurrencies> {payload: LibraConfig::get<RegisteredCurrencies>()};
     }
 
-    // **************** Global Specification ****************
+    // =================================================================
+    // Module Specification
+
+    spec module {} // switch documentation context back to module level
+
+    /// # Initialization
+
+    spec module {
+        /// Global invariant that currency config is always available after genesis.
+        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
+    }
+
+    /// # Helper Functions
 
     spec module {
         /// Helper to get the currency code vector.
         define get_currency_codes(): vector<vector<u8>> {
             LibraConfig::get<RegisteredCurrencies>().currency_codes
         }
-
-        /// Global invariant that currency config is always available after genesis.
-        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
-
-        /*
-        /// Global invariant that only LIBRA_ROOT can have a currency registration.
-        /// TODO(wrwg): deactivated because it is causing inconsistencies(?)
-        invariant [global] LibraTimestamp::is_operating() ==> (
-            forall holder: address where exists<LibraConfig::LibraConfig<RegisteredCurrencies>>(holder):
-                holder == CoreAddresses::LIBRA_ROOT_ADDRESS()
-        );
-        */
     }
-
 }
-
 }
