@@ -3,6 +3,7 @@
 
 use serde_json::json;
 
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
     access_path::AccessPath,
@@ -82,6 +83,9 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(metadata["timestamp"], resp.libra_ledger_timestampusec);
                 assert_eq!(metadata["version"], resp.libra_ledger_version);
                 assert_eq!(metadata["chain_id"], 4);
+                // for testing chain id, we init genesis with VMPublishingOption#open
+                assert_eq!(metadata["script_hash_allow_list"], json!([]));
+                assert_eq!(metadata["module_publishing_allowed"], true);
                 assert_ne!(resp.libra_ledger_timestampusec, 0);
                 assert_ne!(resp.libra_ledger_version, 0);
             },
@@ -738,6 +742,24 @@ fn create_test_cases() -> Vec<Test> {
                 }
             },
         },
+        Test {
+            name: "block metadata returns script_hash_allow_list",
+            run: |env: &mut testing::Env| {
+                let hash = StdlibScript::AddCurrencyToAccount.compiled_bytes().hash();
+                let txn = env.create_txn(
+                    &env.root,
+                    stdlib::encode_add_to_script_allow_list_script(hash.to_vec(), 0),
+                );
+                env.submit_and_wait(txn);
+
+                let resp = env.send("get_metadata", json!([]));
+                let metadata = resp.result.unwrap();
+                assert_eq!(metadata["script_hash_allow_list"], json!([hash.to_hex()]));
+                assert_eq!(metadata["module_publishing_allowed"], true);
+            },
+        },
+        // no test after this one, as your scripts may not in allow list.
+        // add test before above test
     ]
 }
 

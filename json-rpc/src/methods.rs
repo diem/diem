@@ -5,8 +5,8 @@
 use crate::{
     errors::JsonRpcError,
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, CurrencyInfoView, EventView,
-        StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, CurrencyInfoView,
+        EventView, StateProofView, TransactionView,
     },
 };
 use anyhow::{ensure, format_err, Error, Result};
@@ -25,6 +25,7 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::MempoolStatusCode,
+    on_chain_config::VMPublishingOption,
     transaction::SignedTransaction,
 };
 use network::counters;
@@ -65,6 +66,30 @@ impl JsonRpcService {
             chain_id,
             batch_size_limit,
             page_size_limit,
+        }
+    }
+
+    fn get_vm_publishing_option(&self, version: u64) -> Result<Option<VMPublishingOption>> {
+        if let Some(account) = self.get_account_state(libra_root_address(), version)? {
+            account.get_vm_publishing_option()
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn get_account_state(
+        &self,
+        address: AccountAddress,
+        version: u64,
+    ) -> Result<Option<AccountState>> {
+        if let Some(blob) = self
+            .db
+            .get_account_state_with_proof_by_version(address, version)?
+            .0
+        {
+            Ok(Some(AccountState::try_from(&blob)?))
+        } else {
+            Ok(None)
         }
     }
 
@@ -241,17 +266,11 @@ async fn get_account(
     request: JsonRpcRequest,
 ) -> Result<Option<AccountView>> {
     let account_address: AccountAddress = request.parse_account_address(0)?;
-    let account_state_blob = service
-        .db
-        .get_account_state_with_proof_by_version(account_address, request.version())?
-        .0;
 
-    let blob = match account_state_blob {
+    let account_state = match service.get_account_state(account_address, request.version())? {
         Some(val) => val,
         None => return Ok(None),
     };
-
-    let account_state = AccountState::try_from(&blob)?;
     let account_resource = account_state
         .get_account_resource()?
         .ok_or_else(|| format_err!("invalid account data: no account resource"))?;
@@ -285,20 +304,33 @@ async fn get_account(
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
     let chain_id = service.chain_id().id();
-    if !request.params.is_empty() {
-        let version = request.parse_version_param(0, "version")?;
-        Ok(BlockMetadata {
-            version,
-            timestamp: service.db.get_block_timestamp(version)?,
-            chain_id,
-        })
+    let version = if !request.params.is_empty() {
+        request.parse_version_param(0, "version")?
     } else {
-        Ok(BlockMetadata {
-            version: request.version(),
-            timestamp: request.ledger_info.ledger_info().timestamp_usecs(),
-            chain_id,
-        })
-    }
+        request.version()
+    };
+    let (script_hash_allow_list, module_publishing_allowed) =
+        if let Some(vm_publishing_option) = service.get_vm_publishing_option(version)? {
+            (
+                Some(
+                    vm_publishing_option
+                        .script_allow_list
+                        .iter()
+                        .map(|v| BytesView::from(v.to_vec()))
+                        .collect(),
+                ),
+                Some(vm_publishing_option.is_open_module),
+            )
+        } else {
+            (None, None)
+        };
+    Ok(BlockMetadata {
+        version,
+        timestamp: service.db.get_block_timestamp(version)?,
+        chain_id,
+        script_hash_allow_list,
+        module_publishing_allowed,
+    })
 }
 
 /// Returns transactions by range
@@ -431,12 +463,9 @@ async fn get_currencies(
     service: JsonRpcService,
     request: JsonRpcRequest,
 ) -> Result<Vec<CurrencyInfoView>> {
-    if let Some(blob) = service
-        .db
-        .get_account_state_with_proof_by_version(libra_root_address(), request.version())?
-        .0
+    if let Some(account_state) =
+        service.get_account_state(libra_root_address(), request.version())?
     {
-        let account_state = AccountState::try_from(&blob)?;
         Ok(account_state
             .get_registered_currency_info_resources()?
             .iter()

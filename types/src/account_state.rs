@@ -12,7 +12,8 @@ use crate::{
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
     on_chain_config::{
-        ConfigurationResource, LibraVersion, OnChainConfig, RegisteredCurrencies, ValidatorSet,
+        ConfigurationResource, LibraVersion, OnChainConfig, RegisteredCurrencies,
+        VMPublishingOption, ValidatorSet,
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
@@ -136,6 +137,14 @@ impl AccountState {
 
     pub fn get_libra_version(&self) -> Result<Option<LibraVersion>> {
         self.get_resource(&LibraVersion::CONFIG_ID.access_path().path)
+    }
+
+    pub fn get_vm_publishing_option(&self) -> Result<Option<VMPublishingOption>> {
+        self.0
+            .get(&VMPublishingOption::CONFIG_ID.access_path().path)
+            .map(|bytes| VMPublishingOption::deserialize_into_config(bytes))
+            .transpose()
+            .map_err(Into::into)
     }
 
     pub fn get_registered_currency_info_resources(&self) -> Result<Vec<CurrencyInfoResource>> {

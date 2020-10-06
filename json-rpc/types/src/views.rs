@@ -348,6 +348,8 @@ pub struct BlockMetadata {
     pub version: u64,
     pub timestamp: u64,
     pub chain_id: u8,
+    pub script_hash_allow_list: Option<Vec<BytesView>>,
+    pub module_publishing_allowed: Option<bool>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]

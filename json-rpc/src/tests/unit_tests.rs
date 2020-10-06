@@ -811,7 +811,9 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "result": {
                     "chain_id": ChainId::test().id(),
                     "timestamp": timestamp,
-                    "version": version
+                    "version": version,
+                    "script_hash_allow_list": [],
+                    "module_publishing_allowed": true,
                 }
             }),
         ),
