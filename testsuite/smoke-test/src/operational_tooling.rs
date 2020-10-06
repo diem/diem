@@ -4,7 +4,8 @@
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::load_backend_storage};
 use libra_config::config::NodeConfig;
 use libra_global_constants::{
-    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_ADDRESS_KEYS,
+    VALIDATOR_NETWORK_KEY,
 };
 use libra_management::storage::to_x25519;
 use libra_network_address::NetworkAddress;
@@ -92,7 +93,9 @@ fn test_consensus_key_rotation() {
     assert_eq!(new_consensus_key, config_consensus_key);
 
     // Verify that the validator set info contains the new consensus key
-    let info_consensus_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
+    let info_consensus_key = op_tool
+        .validator_set(Some(validator_account), &backend)
+        .unwrap()[0]
         .consensus_public_key
         .clone();
     assert_eq!(new_consensus_key, info_consensus_key);
@@ -200,7 +203,9 @@ fn test_network_key_rotation() {
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
+    let info_network_key = op_tool
+        .validator_set(Some(validator_account), &backend)
+        .unwrap()[0]
         .validator_network_address
         .find_noise_proto()
         .unwrap();
@@ -255,7 +260,9 @@ fn test_network_key_rotation_recovery() {
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
+    let info_network_key = op_tool
+        .validator_set(Some(validator_account), &backend)
+        .unwrap()[0]
         .validator_network_address
         .find_noise_proto()
         .unwrap();
@@ -501,6 +508,78 @@ fn test_validator_config() {
     assert_eq!(
         original_validator_config.fullnode_network_address,
         new_validator_config.fullnode_network_address
+    );
+}
+
+#[test]
+fn test_validator_set() {
+    let mut swarm = SmokeTestEnvironment::new(3);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let mut storage: Storage = (&backend).try_into().unwrap();
+
+    // Fetch the validator config and validator info for this operator's owner
+    let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let validator_set_infos = op_tool
+        .validator_set(Some(owner_account), &backend)
+        .unwrap();
+    assert_eq!(1, validator_set_infos.len());
+
+    // Compare the validator config and the validator info
+    let validator_info = validator_set_infos.first().unwrap();
+    assert_eq!(validator_info.account_address, owner_account);
+    assert_eq!(validator_info.name, validator_config.name);
+    assert_eq!(
+        validator_info.consensus_public_key,
+        validator_config.consensus_public_key
+    );
+    assert_eq!(
+        validator_info.validator_network_address,
+        validator_config.validator_network_address
+    );
+    assert_eq!(
+        validator_info.fullnode_network_address,
+        validator_config.fullnode_network_address
+    );
+
+    // Fetch the entire validator set and check this account is included
+    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    assert_eq!(3, validator_set_infos.len());
+    let _ = validator_set_infos
+        .iter()
+        .find(|info| info.account_address == owner_account)
+        .unwrap();
+
+    // Overwrite the shared network encryption key in storage and verify that the
+    // validator set can still be retrieved (but unable to decrypt the validator
+    // network address)
+    let _ = storage
+        .set(VALIDATOR_NETWORK_ADDRESS_KEYS, "random string")
+        .unwrap();
+    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    assert_eq!(3, validator_set_infos.len());
+
+    let validator_info = validator_set_infos
+        .iter()
+        .find(|info| info.account_address == owner_account)
+        .unwrap();
+    assert_eq!(
+        validator_info.fullnode_network_address,
+        validator_config.fullnode_network_address
+    );
+    assert_ne!(
+        validator_info.validator_network_address,
+        validator_config.validator_network_address
     );
 }
 
