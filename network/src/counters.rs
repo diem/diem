@@ -72,6 +72,23 @@ pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId,
     }
 }
 
+/// Increments the counter based on `NetworkContext`
+pub fn inc_by_with_context(
+    counter: &IntCounterVec,
+    network_context: &NetworkContext,
+    label: &str,
+    val: i64,
+) {
+    counter
+        .with_label_values(&[
+            network_context.role().as_str(),
+            network_context.network_id().as_str(),
+            network_context.peer_id().short_str().as_str(),
+            label,
+        ])
+        .inc_by(val)
+}
+
 pub static LIBRA_NETWORK_PENDING_CONNECTION_UPGRADES: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "libra_network_pending_connection_upgrades",
