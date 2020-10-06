@@ -421,10 +421,10 @@ pub fn boogie_debug_track_local_via_function(
     var_idx: &str,
     value: &str,
 ) -> String {
-    format!(
-        "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
+    ensure_trace_info(format!(
+        "assume $DebugTrackLocal({}, {}, {}, {});",
         file_idx, pos, var_idx, value
-    )
+    ))
 }
 
 /// Construct a statement to debug track a local based on the Boogie attribute approach.
@@ -434,11 +434,25 @@ pub fn boogie_debug_track_local_via_attrib(
     var_idx: &str,
     value: &str,
 ) -> String {
-    format!(
+    ensure_trace_info(format!(
         "$trace_temp := {};\n\
         assume {{:print \"$track_local({},{},{}):\", $trace_temp}} true;",
         value, file_idx, pos, var_idx,
-    )
+    ))
+}
+
+/// Construct a statement to debug track a local based on the Boogie attribute approach, with
+/// dynamically (via variables) provided parameters.
+pub fn boogie_debug_track_local_via_attrib_dynamic(
+    file_idx: &str,
+    pos: &str,
+    var_idx: &str,
+    value: &str,
+) -> String {
+    ensure_trace_info(format!(
+        "assume {{:print \"$track_local(\",{},\",\",{},\",\",{},\"):\", {}}} true;",
+        file_idx, pos, var_idx, value,
+    ))
 }
 
 /// Construct a statement to debug track an abort. This works without specific Boogie support.
@@ -447,17 +461,25 @@ pub fn boogie_debug_track_abort_via_function(
     pos: &str,
     abort_code: &str,
 ) -> String {
-    format!(
-        "if (true) {{ assume $DebugTrackAbort({}, {}, {}); }}",
+    ensure_trace_info(format!(
+        "assume $DebugTrackAbort({}, {}, {});",
         file_idx, pos, abort_code
-    )
+    ))
 }
 
 /// Construct a statement to debug track an abort using the Boogie attribute approach.
 pub fn boogie_debug_track_abort_via_attrib(file_idx: &str, pos: &str, abort_code: &str) -> String {
-    format!(
+    ensure_trace_info(format!(
         "$trace_abort_temp := {};\n\
-        assume {{:print \"$track_abort({}, {}):\", $trace_abort_temp}} true;",
+        assume {{:print \"$track_abort({},{}):\", $trace_abort_temp}} true;",
         abort_code, file_idx, pos,
-    )
+    ))
+}
+
+/// Wraps a statement such that Boogie does not elimiate it in execution traces. Boogie
+/// does not seem to account for `assume` statements in execution traces, so in order to
+/// let our tracking statements above not be forgotten, this trick ensures that they always
+/// appear in the trace.
+fn ensure_trace_info(s: String) -> String {
+    format!("if (true) {{\n {}\n}}", s.replace("\n", "\n  "))
 }

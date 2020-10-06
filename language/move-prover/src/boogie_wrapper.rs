@@ -17,7 +17,7 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 use num::BigInt;
 use pretty::RcDoc;
-use regex::Regex;
+use regex::{Captures, Regex};
 
 use spec_lang::{
     code_writer::CodeWriter,
@@ -32,7 +32,9 @@ use crate::{
 // DEBUG
 // use backtrace::Backtrace;
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
+use once_cell::sync::Lazy;
 use spec_lang::env::{ConditionTag, NodeId};
+use std::num::ParseIntError;
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.
@@ -330,8 +332,8 @@ impl<'env> BoogieWrapper<'env> {
                     }
                     // DEBUG
                     //warn!(
-                    //    "checking abort at {}.{}",
-                    //    source_pos.1.line, source_pos.1.column
+                    //   "checking abort at {}.{}",
+                    //   source_pos.1.line, source_pos.1.column
                     //);
                     // END DEBUG
                     let abort_marker = error.model.as_ref().and_then(|model| {
@@ -391,15 +393,19 @@ impl<'env> BoogieWrapper<'env> {
                     diag.message =
                         "abort not covered by any of the `aborts_if` clauses".to_string();
                 }
-                let reason = if code == -1 {
-                    "with execution failure".to_string()
+                let reason = if let Some(c) = code {
+                    if c == -1 {
+                        " with execution failure".to_string()
+                    } else {
+                        format!(" with code `0x{:X}`", c)
+                    }
                 } else {
-                    format!("with code `0x{:X}`", code)
+                    "".to_string()
                 };
                 diag.secondary_labels = vec![Label::new(
                     abort_loc.file_id(),
                     abort_loc.span(),
-                    &format!("abort happened here {}", reason),
+                    &format!("abort happened here{}", reason),
                 )];
             }
             diag = diag.with_notes(trace);
@@ -558,24 +564,20 @@ impl<'env> BoogieWrapper<'env> {
     ///    ...
     /// ```
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
-        let model_region =
-            Regex::new(r"(?m)^\*\*\* MODEL$(?P<mod>(?s:.)*?^\*\*\* END_MODEL$)").unwrap();
-        let verification_diag_start =
-            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap();
-        let verification_diag_related =
-            Regex::new(r"^\n.+\((?P<line>\d+),(?P<col>\d+)\): Related.*\n").unwrap();
-        let verification_diag_trace = Regex::new(r"(?m)^Execution trace:$").unwrap();
-        let verification_diag_trace_entry =
-            Regex::new(r"(?m)^    .*\((?P<line>\d+),(?P<col>\d+)\): (?P<msg>.*)$").unwrap();
+        static VERIFICATION_DIAG_STARTS: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap()
+        });
+        static VERIFICATION_DIAG_RELATED: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"^\n.+\((?P<line>\d+),(?P<col>\d+)\): Related.*\n").unwrap());
         let mut errors = vec![];
-        let mut at: usize = 0;
-        while let Some(cap) = verification_diag_start.captures(&out[at..]) {
+        let mut at = 0;
+        while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
             let msg = cap.name("msg").unwrap().as_str();
             at += cap.get(0).unwrap().end();
             // Check whether there is a `Related` message which points to the pre/post condition.
             // If so, this has the real position.
             let (pos, context_pos) =
-                if let Some(cap1) = verification_diag_related.captures(&out[at..]) {
+                if let Some(cap1) = VERIFICATION_DIAG_RELATED.captures(&out[at..]) {
                     let call_line = cap.name("line").unwrap().as_str();
                     let call_col = cap.name("col").unwrap().as_str();
                     at += cap1.get(0).unwrap().end();
@@ -590,51 +592,11 @@ impl<'env> BoogieWrapper<'env> {
                     let col = cap.name("col").unwrap().as_str();
                     (make_position(line, col), None)
                 };
-            let mut trace = vec![];
-            if let Some(m) = verification_diag_trace.find(&out[at..]) {
-                at += m.end();
-                while let Some(cap) = verification_diag_trace_entry.captures(&out[at..]) {
-                    let line = cap.name("line").unwrap().as_str();
-                    let col = cap.name("col").unwrap().as_str();
-                    let msg = cap.name("msg").unwrap().as_str();
-                    let trace_kind = if msg.ends_with("$Entry") {
-                        TraceKind::EnterFunction
-                    } else if msg.ends_with("$Return") {
-                        TraceKind::ExitFunction
-                    } else if msg.contains("_update_inv$") {
-                        TraceKind::UpdateInvariant
-                    } else if msg.contains("$Pack_") {
-                        TraceKind::Pack
-                    } else {
-                        TraceKind::Regular
-                    };
-                    trace.push((make_position(line, col), trace_kind, msg.to_string()));
-                    at += cap.get(0).unwrap().end();
-                    if !out[at..].starts_with("\n  ") && !out[at..].starts_with("\r\n  ") {
-                        // Don't read further if this line does not start with an indent,
-                        // as all trace entries do. Otherwise we would match the trace entry
-                        // for the next error.
-                        break;
-                    }
-                }
-            }
-            let model = model_region.captures(&out[at..]).and_then(|cap| {
-                at += cap.get(0).unwrap().end();
-                match Model::parse(self, cap.name("mod").unwrap().as_str()) {
-                    Ok(model) => Some(model),
-                    Err(parse_error) => {
-                        let context_module = self
-                            .env
-                            .symbol_pool()
-                            .string(self.env.get_modules().last().unwrap().get_name().name());
-                        warn!(
-                            "failed to parse boogie model (module context `{}`): {}",
-                            context_module, parse_error.0
-                        );
-                        None
-                    }
-                }
-            });
+            // Extract trace, augmented trace, and model.
+            let mut model = Model::new(self);
+            let trace = self.extract_execution_trace(out, &mut at);
+            self.extract_augmented_trace(&mut model, out, &mut at);
+            self.extract_model(&mut model, out, &mut at);
             errors.push(BoogieError {
                 kind: if msg.contains("assertion might not hold") {
                     BoogieErrorKind::Assertion
@@ -647,10 +609,172 @@ impl<'env> BoogieWrapper<'env> {
                 context_position: context_pos,
                 message: msg.to_string(),
                 execution_trace: trace,
-                model,
+                model: if model.is_empty() { None } else { Some(model) },
             });
         }
         errors
+    }
+
+    /// Extracts a model.
+    fn extract_model(&self, model: &mut Model, out: &str, at: &mut usize) {
+        static MODEL_REGION: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"(?m)^\*\*\* MODEL$(?P<mod>(?s:.)*?^\*\*\* END_MODEL$)").unwrap()
+        });
+
+        if let Some(cap) = MODEL_REGION.captures(&out[*at..]) {
+            *at += cap.get(0).unwrap().end();
+            match model
+                .parse(self, cap.name("mod").unwrap().as_str())
+                .and_then(|_| model.derive(self))
+            {
+                Ok(_) => {}
+                Err(parse_error) => {
+                    let context_module = self
+                        .env
+                        .symbol_pool()
+                        .string(self.env.get_modules().last().unwrap().get_name().name());
+                    warn!(
+                        "failed to parse boogie model (module context `{}`): {}",
+                        context_module, parse_error.0
+                    );
+                }
+            }
+        }
+    }
+
+    /// Extracts an execution trace.
+    fn extract_execution_trace(
+        &self,
+        out: &str,
+        at: &mut usize,
+    ) -> Vec<(Location, TraceKind, String)> {
+        static TRACE_START: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"(?m)^Execution trace:$").unwrap());
+        static TRACE_ENTRY: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"(?m)^    .*\((?P<line>\d+),(?P<col>\d+)\): (?P<msg>.*)$").unwrap()
+        });
+        let mut trace = vec![];
+        if let Some(m) = TRACE_START.find(&out[*at..]) {
+            *at += m.end();
+            while let Some(cap) = TRACE_ENTRY.captures(&out[*at..]) {
+                let line = cap.name("line").unwrap().as_str();
+                let col = cap.name("col").unwrap().as_str();
+                let msg = cap.name("msg").unwrap().as_str();
+                let trace_kind = if msg.ends_with("$Entry") {
+                    TraceKind::EnterFunction
+                } else if msg.ends_with("$Return") {
+                    TraceKind::ExitFunction
+                } else if msg.contains("_update_inv$") {
+                    TraceKind::UpdateInvariant
+                } else if msg.contains("$Pack_") {
+                    TraceKind::Pack
+                } else {
+                    TraceKind::Regular
+                };
+                trace.push((make_position(line, col), trace_kind, msg.to_string()));
+                *at += cap.get(0).unwrap().end();
+                if !out[*at..].starts_with("\n  ") && !out[*at..].starts_with("\r\n  ") {
+                    // Don't read further if this line does not start with an indent,
+                    // as all trace entries do. Otherwise we would match the trace entry
+                    // for the next error.
+                    break;
+                }
+            }
+        }
+        trace
+    }
+
+    /// Extracts augmented execution trace and merges it into the model.
+    fn extract_augmented_trace(&self, model: &mut Model, out: &str, at: &mut usize) {
+        static TRACE_START: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"^(\s|\n)*Augmented execution trace:\s*\n").unwrap());
+        static TRACE_ENTRY: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"^\$(?P<name>[a-zA-Z_]+)\((?P<file>\d+),(?P<pos>\d+)(,(?P<var>\d+))?\):(?P<value>.*)\n").unwrap()
+        });
+        if let Some(m) = TRACE_START.find(&out[*at..]) {
+            *at += m.end();
+            while let Some(cap) = TRACE_ENTRY.captures(&out[*at..]) {
+                *at += cap.get(0).unwrap().end();
+                match self.extract_augmented_entry(model, cap) {
+                    Ok(_) => {}
+                    Err(parse_error) => {
+                        let context_module = self
+                            .env
+                            .symbol_pool()
+                            .string(self.env.get_modules().last().unwrap().get_name().name());
+                        warn!(
+                            "failed to parse augmented execution trace (module context `{}`): {}",
+                            context_module, parse_error.0
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn extract_augmented_entry(
+        &self,
+        model: &mut Model,
+        cap: Captures,
+    ) -> Result<(), ModelParseError> {
+        let name = cap.name("name").unwrap().as_str();
+        let file_id = self
+            .env
+            .file_idx_to_id(cap.name("file").unwrap().as_str().parse::<u16>()?);
+        let pos = ByteIndex::from(cap.name("pos").unwrap().as_str().parse::<u32>()?);
+        let loc = Loc::new(file_id, Span::new(pos, pos + ByteOffset(1)));
+        if let Some(func) = self.env.get_enclosing_function(loc.clone()) {
+            match name {
+                "track_local" => {
+                    let var_idx = cap.name("var").unwrap().as_str().parse::<usize>()?;
+                    let val = cap.name("value").unwrap().as_str().trim();
+                    let model_val = if !val.is_empty() {
+                        let mut parser = ModelParser {
+                            input: cap.name("value").unwrap().as_str(),
+                            at: 0,
+                        };
+                        parser.parse_value()?
+                    } else {
+                        ModelValue::error()
+                    };
+                    let var = LocalDescriptor {
+                        module_id: func.module_env.get_id(),
+                        func_id: func.get_id(),
+                        var_idx,
+                    };
+                    model
+                        .tracked_locals
+                        .entry(loc)
+                        .or_insert_with(Vec::new)
+                        .push((var, model_val));
+                    return Ok(());
+                }
+                "track_abort" => {
+                    let val = cap.name("value").unwrap().as_str().trim();
+                    let code = if val.is_empty() {
+                        None
+                    } else if val.starts_with("(- ") && val.ends_with(')') {
+                        Some(-val[3..val.len() - 1].parse::<i128>()?)
+                    } else {
+                        Some(val.parse::<i128>()?)
+                    };
+                    if let Some((file, pos)) = self.env.get_position(loc) {
+                        let mark = AbortDescriptor {
+                            module_id: func.module_env.get_id(),
+                            func_id: func.get_id(),
+                            code,
+                        };
+                        model.tracked_aborts.insert((file, pos.line), mark);
+                        return Ok(());
+                    }
+                }
+                _ => {}
+            }
+        }
+        Err(ModelParseError::new(&format!(
+            "unrecognized augmented trace entry `{}`",
+            &cap[0]
+        )))
     }
 
     /// Extracts inconclusive (timeout) errors.
@@ -740,8 +864,27 @@ pub struct Model {
 }
 
 impl Model {
+    /// Create a new model.
+    fn new(wrapper: &BoogieWrapper<'_>) -> Self {
+        Model {
+            vars: Default::default(),
+            tracked_locals: Default::default(),
+            tracked_aborts: Default::default(),
+            tracked_exps: Default::default(),
+            value_array_rep: if wrapper.options.backend.vector_using_sequences {
+                ValueArrayRep::ValueArrayIsSeq
+            } else {
+                ValueArrayRep::ValueArrayIsMap
+            },
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.vars.is_empty()
+    }
+
     /// Parses the given string into a model. The string is expected to end with MODULE_END_MARKER.
-    fn parse(wrapper: &BoogieWrapper<'_>, input: &str) -> Result<Model, ModelParseError> {
+    fn parse(&mut self, _wrapper: &BoogieWrapper<'_>, input: &str) -> Result<(), ModelParseError> {
         let mut model_parser = ModelParser { input, at: 0 };
         model_parser
             .parse_map()
@@ -750,94 +893,90 @@ impl Model {
                 Ok(m)
             })
             .and_then(|m| match m {
-                ModelValue::Map(vars) => Ok(vars),
+                ModelValue::Map(vars) => {
+                    self.vars.extend(vars);
+                    Ok(())
+                }
                 _ => Err(ModelParseError("expected ModelValue::Map".to_string())),
             })
-            .and_then(|vars| {
-                // Extract the tracked locals.
-                let mut tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>> =
-                    BTreeMap::new();
-                let track_local_map = vars
-                    .get(&ModelValue::literal("$DebugTrackLocal"))
-                    .and_then(|x| x.extract_map())
-                    .ok_or_else(Self::invalid_track_info)?;
-                for k in track_local_map.keys() {
-                    if k == &ModelValue::literal("else") {
-                        continue;
-                    }
-                    let (var, loc, value) = Self::extract_debug_var(wrapper, k)?;
-                    tracked_locals
-                        .entry(loc)
-                        .or_insert_with(Vec::new)
-                        .push((var, value));
-                }
+    }
 
-                // Extract the tracked aborts.
-                let mut tracked_aborts = BTreeMap::new();
-                let track_abort_map = vars
-                    .get(&ModelValue::literal("$DebugTrackAbort"))
-                    .and_then(|x| x.extract_map())
-                    .ok_or_else(Self::invalid_track_info)?;
-                for k in track_abort_map.keys() {
-                    if k == &ModelValue::literal("else") {
-                        continue;
-                    }
-                    let (mark, loc) = Self::extract_abort_marker(wrapper, k)?;
-                    let pos = wrapper
-                        .env
-                        .get_position(loc)
-                        .ok_or_else(Self::invalid_track_info)?;
-                    tracked_aborts.insert((pos.0, pos.1.line), mark);
+    /// Derive information from the model.
+    fn derive(&mut self, wrapper: &BoogieWrapper<'_>) -> Result<(), ModelParseError> {
+        // Extract the tracked locals, unless we track them via Boogie attributes.
+        if !wrapper.options.backend.use_boogie_debug_attrib {
+            let track_local_map = self
+                .vars
+                .get(&ModelValue::literal("$DebugTrackLocal"))
+                .and_then(|x| x.extract_map())
+                .ok_or_else(Self::invalid_track_info)?;
+            for k in track_local_map.keys() {
+                if k == &ModelValue::literal("else") {
+                    continue;
                 }
+                let (var, loc, value) = Self::extract_debug_var(wrapper, k)?;
+                self.tracked_locals
+                    .entry(loc)
+                    .or_insert_with(Vec::new)
+                    .push((var, value));
+            }
+        }
 
-                // Extract the tracked expressions.
-                let mut tracked_exps = BTreeMap::new();
-                let track_exp_map = vars
-                    .get(&ModelValue::literal("$DebugTrackExp"))
-                    .and_then(|x| x.extract_map())
-                    .ok_or_else(Self::invalid_track_info)?;
-                for k in track_exp_map.keys() {
-                    if k == &ModelValue::literal("else") {
-                        continue;
-                    }
-                    let (desc, value) = Self::extract_debug_exp(wrapper, k)?;
-                    tracked_exps
-                        .entry(desc)
-                        .or_insert_with(Vec::new)
-                        .push(value);
+        // Extract the tracked aborts, unless we track them via Boogie attributes.
+        if !wrapper.options.backend.use_boogie_debug_attrib {
+            let track_abort_map = self
+                .vars
+                .get(&ModelValue::literal("$DebugTrackAbort"))
+                .and_then(|x| x.extract_map())
+                .ok_or_else(Self::invalid_track_info)?;
+            for k in track_abort_map.keys() {
+                if k == &ModelValue::literal("else") {
+                    continue;
                 }
+                let (mark, loc) = Self::extract_abort_marker(wrapper, k)?;
+                let pos = wrapper
+                    .env
+                    .get_position(loc)
+                    .ok_or_else(Self::invalid_track_info)?;
+                self.tracked_aborts.insert((pos.0, pos.1.line), mark);
+            }
+        }
 
-                // DEBUG
-                // for (loc, values) in &tracked_locals {
-                //     info!("{} -> ", loc.span());
-                //     for (var, val) in values {
-                //         info!("  {} -> {:?}", var.var_idx, val);
-                //     }
-                // }
-                // END DEBUG
-                // DEBUG
-                // for (pos, mark) in &tracked_aborts {
-                //    warn!(
-                //        "{} -> {}",
-                //       pos.1,
-                //        mark.func_id.symbol().display(wrapper.env.symbol_pool())
-                //    );
-                // }
-                // END DEBUG
-                let value_array_rep = if wrapper.options.backend.vector_using_sequences {
-                    ValueArrayRep::ValueArrayIsSeq
-                } else {
-                    ValueArrayRep::ValueArrayIsMap
-                };
-                let model = Model {
-                    vars,
-                    tracked_locals,
-                    tracked_aborts,
-                    tracked_exps,
-                    value_array_rep,
-                };
-                Ok(model)
-            })
+        // Extract the tracked expressions. (No boogie attribute/other support for this.)
+        let track_exp_map = self
+            .vars
+            .get(&ModelValue::literal("$DebugTrackExp"))
+            .and_then(|x| x.extract_map())
+            .ok_or_else(Self::invalid_track_info)?;
+        for k in track_exp_map.keys() {
+            if k == &ModelValue::literal("else") {
+                continue;
+            }
+            let (desc, value) = Self::extract_debug_exp(wrapper, k)?;
+            self.tracked_exps
+                .entry(desc)
+                .or_insert_with(Vec::new)
+                .push(value);
+        }
+
+        // DEBUG
+        // for (loc, values) in &tracked_locals {
+        //     info!("{} -> ", loc.span());
+        //     for (var, val) in values {
+        //         info!("  {} -> {:?}", var.var_idx, val);
+        //     }
+        // }
+        // END DEBUG
+        // DEBUG
+        // for (pos, mark) in &tracked_aborts {
+        //    warn!(
+        //        "{} -> {}",
+        //       pos.1,
+        //        mark.func_id.symbol().display(wrapper.env.symbol_pool())
+        //    );
+        // }
+        // END DEBUG
+        Ok(())
     }
 
     /// Extract and validate a tracked local from $DebugTrackLocal map.
@@ -897,7 +1036,7 @@ impl Model {
                 AbortDescriptor {
                     module_id: func_target.func_env.module_env.get_id(),
                     func_id: func_target.get_id(),
-                    code,
+                    code: Some(code),
                 },
                 loc,
             ))
@@ -1408,7 +1547,7 @@ impl LocalDescriptor {
 struct AbortDescriptor {
     module_id: ModuleId,
     func_id: FunId,
-    code: i128,
+    code: Option<i128>,
 }
 
 /// Represents an expression descriptor.
@@ -1433,6 +1572,12 @@ impl ModelParseError {
     }
 }
 
+impl From<ParseIntError> for ModelParseError {
+    fn from(_: ParseIntError) -> Self {
+        Self::new("invalid integer")
+    }
+}
+
 const MODEL_END_MARKER: &str = "*** END_MODEL";
 
 impl<'s> ModelParser<'s> {
@@ -1445,6 +1590,13 @@ impl<'s> ModelParser<'s> {
     fn looking_at(&mut self, s: &str) -> bool {
         self.skip_space();
         self.input[self.at..].starts_with(s)
+    }
+
+    fn looking_at_eol(&mut self) -> bool {
+        while self.input[self.at..].starts_with(|ch| [' ', '\r', '\t'].contains(&ch)) {
+            self.at += 1;
+        }
+        self.input[self.at..].starts_with('\n')
     }
 
     fn looking_at_then_consume(&mut self, s: &str) -> bool {
@@ -1476,6 +1628,10 @@ impl<'s> ModelParser<'s> {
         while !self.looking_at("}") && !self.looking_at(MODEL_END_MARKER) {
             let key = self.parse_key()?;
             self.expect("->")?;
+            if self.looking_at_eol() {
+                // Entry without a value, skip
+                continue;
+            }
             let value = if self.looking_at_then_consume("{") {
                 let value = self.parse_map()?;
                 self.expect("}")?;

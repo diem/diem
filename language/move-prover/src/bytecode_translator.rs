@@ -35,11 +35,12 @@ use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_caller_resource_memory_domain_name,
         boogie_debug_track_abort_via_attrib, boogie_debug_track_abort_via_function,
-        boogie_debug_track_local_via_attrib, boogie_debug_track_local_via_function,
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_requires_well_formed,
-        boogie_resource_memory_name, boogie_saved_resource_memory_name,
-        boogie_self_resource_memory_domain_name, boogie_struct_name, boogie_type_value,
-        boogie_type_value_array, boogie_type_values, boogie_well_formed_check, WellFormedMode,
+        boogie_debug_track_local_via_attrib, boogie_debug_track_local_via_attrib_dynamic,
+        boogie_debug_track_local_via_function, boogie_field_name, boogie_function_name,
+        boogie_local_type, boogie_requires_well_formed, boogie_resource_memory_name,
+        boogie_saved_resource_memory_name, boogie_self_resource_memory_domain_name,
+        boogie_struct_name, boogie_type_value, boogie_type_value_array, boogie_type_values,
+        boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
@@ -435,7 +436,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(
             self.writer,
             &if self.options.backend.use_boogie_debug_attrib {
-                boogie_debug_track_local_via_attrib(
+                boogie_debug_track_local_via_attrib_dynamic(
                     "$file_id",
                     "$byte_index",
                     "$var_idx",

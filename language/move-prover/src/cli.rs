@@ -242,7 +242,7 @@ impl Default for BackendOptions {
             keep_artifacts: false,
             eager_threshold: 100,
             lazy_threshold: 100,
-            use_boogie_debug_attrib: false,
+            use_boogie_debug_attrib: true,
         }
     }
 }

@@ -566,6 +566,10 @@ axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent($DefaultValue());
 var $abort_flag: bool;
 var $abort_code: int;
 
+function {:inline} $process_abort_code(code: int): int {
+    code
+}
+
 const $EXEC_FAILURE_CODE: int;
 axiom $EXEC_FAILURE_CODE == -1;
 
