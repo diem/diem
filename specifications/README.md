@@ -58,8 +58,7 @@ In addition, these specifications build on top of a common set of specifications
 * **[LibraNet](network/)**. This describes a handshake and wire protocol for all networking protocols. This relies on the [Noise protocol framework](https://noiseprotocol.org/) for integrity and confidentiality.
 * **[On-chain discovery](network/onchain-discovery.md)**. This defines how clients can safely find the endpoints of the LPN validators.
 * **[Authenticated data structures](common/authenticated_data_structures.md)**. This describes the ledger history, ledger state, and events data structures.
-* **Move virtual machine (VM)**. This defines the semantics of the Move bytecode interpreter and Move bytecode verifier.
-* **Libra adapter**. This defines the checks performed on a transaction before passing its script into the Move VM (e.g., signature checking).
+* **[Move adapter and Move virtual machine (VM)](move_adapter/)**. Libra transactions are implemented as scripts in the Move programming language, and this specification defines how transactions are validated and executed using the Move VM.
 
 ## Specification upgrades
 
