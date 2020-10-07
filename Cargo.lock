@@ -3154,6 +3154,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-mutex"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack",
+]
+
+[[package]]
 name = "libra-network-address"
 version = "0.1.0"
 dependencies = [
