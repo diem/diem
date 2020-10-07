@@ -102,7 +102,6 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
 
             let src_addr = u32::from_be_bytes(address_bytes[0..4].try_into().unwrap());
             let src_port = u16::from_be_bytes(address_bytes[8..10].try_into().unwrap());
-            // TODO: What do we want to do about the destination information?
             let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::from(src_addr)), src_port);
             NetworkAddress::from(socket_addr)
         }
@@ -118,7 +117,6 @@ pub async fn read_header<T: AsyncRead + std::marker::Unpin>(
             let src_addr = u128::from_be_bytes(address_bytes[0..16].try_into().unwrap());
             let src_port = u16::from_be_bytes(address_bytes[32..34].try_into().unwrap());
 
-            // TODO: What do we want to do about the destination information?
             let socket_addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::from(src_addr)), src_port);
             NetworkAddress::from(socket_addr)
         }

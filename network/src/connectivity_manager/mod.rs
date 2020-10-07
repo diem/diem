@@ -130,7 +130,6 @@ impl fmt::Display for DiscoverySource {
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
 #[derive(Debug, Serialize)]
 pub enum ConnectivityRequest {
-    // TODO(philiphayes): can we consolidate these UpdateX messages into one message?
     /// Request to update known addresses of peer with id `PeerId` to given list.
     UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
@@ -642,9 +641,6 @@ where
                 mem::replace(&mut *eligible, new_eligible)
             };
         }
-
-        // TODO(philiphayes): we can probably do `cancel_stale_dials` and
-        // possibly `cancel_stale_connections` in here?
     }
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
@@ -655,7 +651,6 @@ where
         );
         match notif {
             peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _origin, _context) => {
-                // TODO(gnazario): Keep track of inbound and outbound separately?  Somehow handle limits between both
                 counters::peer_connected(&self.network_context, &peer_id, 1);
                 self.connected.insert(peer_id, addr);
 

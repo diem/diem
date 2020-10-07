@@ -206,9 +206,6 @@ pub static PEER_SEND_FAILURES: Lazy<IntCounterVec> = Lazy::new(|| {
     .unwrap()
 });
 
-// TODO(philiphayes): somehow get per-peer latency metrics without using a
-// separate peer_id label ==> cardinality explosion.
-
 pub static LIBRA_NETWORK_OUTBOUND_RPC_REQUEST_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_outbound_rpc_request_latency_seconds",

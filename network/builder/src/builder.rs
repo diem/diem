@@ -174,7 +174,7 @@ impl NetworkBuilder {
         {
             network_builder.add_connectivity_manager(
                 config.seed_addrs.clone(),
-                config.seed_pubkeys.clone(), // TODO: this should be encoded in network config
+                config.seed_pubkeys.clone(),
                 trusted_peers,
                 constants::MAX_FULLNODE_CONNECTIONS,
                 // TODO: this should be encoded in network_config
