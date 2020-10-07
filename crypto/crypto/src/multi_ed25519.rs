@@ -510,7 +510,7 @@ impl Signature for MultiEd25519Signature {
             None => {
                 return Err(anyhow!(
                     "{}",
-                    CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
+                    CryptoMaterialError::BitVecError("Failed to find last set bit".to_string())
                 ))
             }
         };
