@@ -505,7 +505,13 @@ impl Signature for MultiEd25519Signature {
     ) -> Result<()> {
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
-        let last_bit = match bitmap_last_set_bit(self.bitmap) {
+        match bitmap_last_set_bit(self.bitmap) {
+            Some(last_bit) if last_bit as usize > public_key.length() => {
+                return Err(anyhow!(
+                    "{}",
+                    CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
+                ))
+            }
             Some(last_bit) => last_bit,
             None => {
                 return Err(anyhow!(
@@ -514,12 +520,6 @@ impl Signature for MultiEd25519Signature {
                 ))
             }
         };
-        if last_bit as usize > public_key.length() {
-            return Err(anyhow!(
-                "{}",
-                CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
-            ));
-        }
         if bitmap_count_ones(self.bitmap) < public_key.threshold as u32 {
             return Err(anyhow!(
                 "{}",
