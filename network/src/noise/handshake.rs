@@ -14,8 +14,8 @@ use crate::{logging::NetworkSchema, noise::stream::NoiseStream};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
+use libra_infallible::duration_since_epoch;
 use libra_logger::debug;
-use libra_time::duration_since_epoch;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{

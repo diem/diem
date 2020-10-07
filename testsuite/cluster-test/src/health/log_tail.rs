@@ -4,9 +4,8 @@
 #![forbid(unsafe_code)]
 
 use crate::health::ValidatorEvent;
+use libra_infallible::{duration_since_epoch, Mutex};
 use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
-use libra_mutex::Mutex;
-use libra_time::duration_since_epoch;
 use std::{
     sync::{
         atomic::{AtomicBool, AtomicI64, Ordering},

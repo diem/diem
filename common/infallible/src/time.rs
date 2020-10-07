@@ -5,7 +5,7 @@
 
 use std::time::{Duration, SystemTime};
 
-// Gives the duration since the Unix epoch, notice the expect.
+/// Gives the duration since the Unix epoch, notice the expect.
 pub fn duration_since_epoch() -> Duration {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

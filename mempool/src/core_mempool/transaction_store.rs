@@ -385,7 +385,7 @@ impl TransactionStore {
         &mut self,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
     ) {
-        let now = libra_time::duration_since_epoch();
+        let now = libra_infallible::duration_since_epoch();
 
         self.gc(now, true, metrics_cache);
     }

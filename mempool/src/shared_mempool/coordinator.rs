@@ -24,8 +24,8 @@ use futures::{
     StreamExt,
 };
 use libra_config::{config::PeerNetworkId, network_id::NodeNetworkId};
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_trace::prelude::*;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
@@ -228,9 +228,7 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
 pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_interval_secs: u64) {
     let mut interval = interval(Duration::from_secs(snapshot_interval_secs));
     while let Some(_interval) = interval.next().await {
-        let snapshot = mempool
-            .lock()
-            .gen_snapshot();
+        let snapshot = mempool.lock().gen_snapshot();
         debug!(LogSchema::new(LogEntry::MempoolSnapshot).txns(snapshot));
     }
 }

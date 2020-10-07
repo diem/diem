@@ -7,8 +7,8 @@ use consensus_types::{
     common::{Author, Round},
 };
 use libra_crypto::HashValue;
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use std::{
     cmp::Ordering,

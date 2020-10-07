@@ -12,13 +12,14 @@ mirai-annotations = { version = "1.10.1", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 serde = { version = "1.0.116", default-features = false }
 
+executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
-libra-time = { path = "../../common/time", version = "0.1.0" }
+libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+
 
 [dev-dependencies]
 proptest = "0.10.1"

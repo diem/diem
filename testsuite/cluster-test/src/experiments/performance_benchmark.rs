@@ -13,8 +13,8 @@ use crate::{
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::{future::try_join_all, join, FutureExt};
+use libra_infallible::duration_since_epoch;
 use libra_logger::{info, warn};
-use libra_time::duration_since_epoch;
 use libra_trace::{
     trace::{find_peer_with_stage, random_node, trace_node},
     LibraTraceClient,

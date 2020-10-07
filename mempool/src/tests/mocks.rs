@@ -14,7 +14,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},

@@ -15,8 +15,8 @@ use libra_config::{
     config::{MempoolConfig, PeerNetworkId, UpstreamConfig},
     network_id::NetworkId,
 };
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_types::transaction::SignedTransaction;
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;

@@ -18,7 +18,7 @@ use futures::channel::{
     oneshot,
 };
 use libra_config::{config::NodeConfig, network_id::NodeNetworkId};
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     collections::HashMap,

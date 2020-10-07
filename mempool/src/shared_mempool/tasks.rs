@@ -18,9 +18,9 @@ use crate::{
 use anyhow::Result;
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
 use libra_metrics::HistogramTimer;
-use libra_mutex::Mutex;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::OnChainConfigPayload,
@@ -409,7 +409,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 let mut mempool = mempool.lock();
                 // gc before pulling block as extra protection against txns that may expire in consensus
                 // Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp
-                let curr_time = libra_time::duration_since_epoch();
+                let curr_time = libra_infallible::duration_since_epoch();
                 mempool.gc_by_expiration_time(curr_time);
                 let block_size = cmp::max(max_block_size, 1);
                 txns = mempool.get_block(block_size, exclude_transactions);

@@ -18,7 +18,7 @@ use libra_config::{
     config::{MempoolConfig, PeerNetworkId},
     network_id::NodeNetworkId,
 };
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,

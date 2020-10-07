@@ -42,7 +42,7 @@ prop_compose! {
         Block::new_proposal(
             vec![],
             round,
-            libra_time::duration_since_epoch().as_micros() as u64,
+            libra_infallible::duration_since_epoch().as_micros() as u64,
             parent_qc,
             &signer,
         )
@@ -87,7 +87,7 @@ prop_compose! {
                     block.payload().unwrap().clone(),
                     block.author().unwrap(),
                     block.round(),
-                    libra_time::duration_since_epoch().as_micros() as u64,
+                    libra_infallible::duration_since_epoch().as_micros() as u64,
                     block.quorum_cert().clone(),
                 ),
                 signature: Some(block.signature().unwrap().clone()),

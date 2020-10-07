@@ -132,7 +132,8 @@ impl Mempool {
             ));
         }
 
-        let expiration_time = libra_time::duration_since_epoch() + self.system_transaction_timeout;
+        let expiration_time =
+            libra_infallible::duration_since_epoch() + self.system_transaction_timeout;
         if timeline_state != TimelineState::NonQualified {
             self.metrics_cache
                 .insert((txn.sender(), txn.sequence_number()), SystemTime::now());

@@ -24,7 +24,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_network_address::NetworkAddress;
 use libra_types::{
     transaction::{GovernanceRole, SignedTransaction},

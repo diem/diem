@@ -35,7 +35,7 @@ impl RealTimeService {
 
 impl TimeService for RealTimeService {
     fn now(&self) -> u64 {
-        libra_time::duration_since_epoch().as_secs()
+        libra_infallible::duration_since_epoch().as_secs()
     }
 
     fn sleep(&self, seconds: u64) {
