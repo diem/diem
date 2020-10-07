@@ -24,7 +24,7 @@ use libra_types::{
     account_config::{
         from_currency_code_string, libra_root_address, testnet_dd_account_address,
         treasury_compliance_account_address, type_tag_for_currency_code,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, COIN1_NAME,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, COIN1_NAME, LBR_NAME,
     },
     account_state::AccountState,
     chain_id::ChainId,
@@ -1543,13 +1543,17 @@ impl ClientProxy {
         value.to_u64().ok_or_else(|| format_err!("invalid value"))
     }
 
-    /// convert number of coins (main unit) given as string to its on-chain represention
+    /// convert number of coins (main unit) given as string to its on-chain representation
     pub fn convert_to_on_chain_representation(
         &mut self,
         input: &str,
         currency: &str,
     ) -> Result<u64> {
         ensure!(!input.is_empty(), "Empty input not allowed for libra unit");
+        ensure!(
+            currency != LBR_NAME,
+            "LBR not allowed to be minted or transferred. Use Coin1 instead"
+        );
         // This is not supposed to panic as it is used as constant here.
         let currencies_info = self.client.get_currency_info()?;
         let currency_info = currencies_info
