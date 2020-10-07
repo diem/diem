@@ -7,7 +7,7 @@ use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::{
-    config::RoleType,
+    config::{RoleType, NETWORK_CHANNEL_SIZE},
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
@@ -35,6 +35,7 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::Runtime;
+use libra_config::config::CONNECTION_BACKOFF_BASE;
 
 const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
@@ -147,24 +148,16 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
         listener_peer_id,
     ));
-    let mut network_builder = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        trusted_peers.clone(),
-        network_context,
-        listener_addr,
-        authentication_mode,
-        constants::MAX_FRAME_SIZE,
-        false, /* Disable proxy protocol */
-    );
-    network_builder.add_connectivity_manager(
         HashMap::new(),
         seed_pubkeys.clone(),
         trusted_peers,
-        constants::MAX_FULLNODE_CONNECTIONS,
-        constants::MAX_CONNECTION_DELAY_MS,
-        constants::CONNECTIVITY_CHECK_INTERNAL_MS,
-        constants::NETWORK_CHANNEL_SIZE,
+        network_context,
+        listener_addr,
+        authentication_mode,
     );
+
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     network_builder.build(runtime.handle().clone()).start();
@@ -185,24 +178,16 @@ pub fn setup_network() -> DummyNetwork {
 
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
-    let mut network_builder = NetworkBuilder::new(
+    let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        trusted_peers.clone(),
-        network_context,
-        dialer_addr,
-        authentication_mode,
-        constants::MAX_FRAME_SIZE,
-        false, /* Disable proxy protocol */
-    );
-    network_builder.add_connectivity_manager(
         seed_addrs,
         seed_pubkeys,
         trusted_peers,
-        constants::MAX_FULLNODE_CONNECTIONS,
-        constants::MAX_CONNECTION_DELAY_MS,
-        constants::CONNECTIVITY_CHECK_INTERNAL_MS,
-        constants::NETWORK_CHANNEL_SIZE,
+        network_context,
+        dialer_addr,
+        authentication_mode,
     );
+
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     network_builder.build(runtime.handle().clone()).start();

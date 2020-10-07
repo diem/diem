@@ -11,7 +11,11 @@
 //! long as the latter is in its trusted peers set.
 use channel::{self, message_queues::QueueStyle};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkConfig, RoleType},
+    config::{
+        DiscoveryMethod, NetworkConfig, RoleType, CONNECTION_BACKOFF_BASE,
+        CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
+        MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_CONNECTIONS, NETWORK_CHANNEL_SIZE,
+    },
     network_id::NetworkContext,
 };
 use libra_crypto::x25519;
@@ -22,7 +26,6 @@ use libra_network_address_encryption::Encryptor;
 use libra_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
-    constants,
     logging::NetworkSchema,
     peer_manager::{
         builder::{AuthenticationMode, PeerManagerBuilder},
@@ -82,6 +85,9 @@ impl NetworkBuilder {
         authentication_mode: AuthenticationMode,
         max_frame_size: usize,
         enable_proxy_protocol: bool,
+        network_channel_size: usize,
+        max_concurrent_network_reqs: usize,
+        max_concurrent_network_notifs: usize,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -91,12 +97,9 @@ impl NetworkBuilder {
             listen_address,
             trusted_peers,
             authentication_mode,
-            // TODO: Encode this value in NetworkConfig
-            constants::NETWORK_CHANNEL_SIZE,
-            // TODO: Encode this value in NetworkConfig
-            constants::MAX_CONCURRENT_NETWORK_REQS,
-            // TODO: Encode this value in NetworkConfig
-            constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+            network_channel_size,
+            max_concurrent_network_reqs,
+            max_concurrent_network_notifs,
             max_frame_size,
             enable_proxy_protocol,
         );
@@ -111,6 +114,42 @@ impl NetworkBuilder {
             peer_manager_builder,
             reconfig_subscriptions: vec![],
         }
+    }
+
+    pub fn new_for_test(
+        chain_id: ChainId,
+        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
+        seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        network_context: Arc<NetworkContext>,
+        listen_address: NetworkAddress,
+        authentication_mode: AuthenticationMode,
+    ) -> NetworkBuilder {
+        let mut builder = NetworkBuilder::new(
+            chain_id,
+            trusted_peers.clone(),
+            network_context,
+            listen_address,
+            authentication_mode,
+            MAX_FRAME_SIZE,
+            false, /* Disable proxy protocol */
+            NETWORK_CHANNEL_SIZE,
+            MAX_CONCURRENT_NETWORK_REQS,
+            MAX_CONCURRENT_NETWORK_NOTIFS,
+        );
+
+        builder.add_connectivity_manager(
+            seed_addrs,
+            seed_pubkeys,
+            trusted_peers,
+            MAX_FULLNODE_CONNECTIONS,
+            CONNECTION_BACKOFF_BASE,
+            MAX_CONNECTION_DELAY_MS,
+            CONNECTIVITY_CHECK_INTERVAL_MS,
+            NETWORK_CHANNEL_SIZE,
+        );
+
+        builder
     }
 
     /// Create a new NetworkBuilder based on the provided configuration.
@@ -140,15 +179,15 @@ impl NetworkBuilder {
             authentication_mode,
             config.max_frame_size,
             config.enable_proxy_protocol,
+            config.network_channel_size,
+            config.max_concurrent_network_reqs,
+            config.max_concurrent_network_notifs,
         );
 
         network_builder.add_connection_monitoring(
-            // TODO: Encode this value in NetworkConfig
-            constants::PING_INTERVAL_MS,
-            // TODO: Encode this value in NetworkConfig
-            constants::PING_TIMEOUT_MS,
-            // TODO: Encode this value in NetworkConfig
-            constants::PING_FAILURES_TOLERATED,
+            config.ping_interval_ms,
+            config.ping_timeout_ms,
+            config.ping_failures_tolerated,
         );
 
         // Sanity check seed addresses.
@@ -176,11 +215,11 @@ impl NetworkBuilder {
                 config.seed_addrs.clone(),
                 config.seed_pubkeys.clone(),
                 trusted_peers,
-                constants::MAX_FULLNODE_CONNECTIONS,
-                // TODO: this should be encoded in network_config
-                constants::MAX_CONNECTION_DELAY_MS,
+                config.max_fullnode_connections,
+                config.connection_backoff_base,
+                config.max_connection_delay_ms,
                 config.connectivity_check_interval_ms,
-                constants::NETWORK_CHANNEL_SIZE,
+                config.network_channel_size,
             );
         }
 
@@ -265,6 +304,7 @@ impl NetworkBuilder {
         mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         max_fullnode_connections: usize,
+        connection_backoff_base: u64,
         max_connection_delay_ms: u64,
         connectivity_check_interval_ms: u64,
         channel_size: usize,
@@ -294,8 +334,7 @@ impl NetworkBuilder {
             seed_addrs,
             seed_pubkeys,
             connectivity_check_interval_ms,
-            // TODO:  move this into a config
-            2, // Legacy hardcoded value,
+            connection_backoff_base,
             max_connection_delay_ms,
             channel_size,
             ConnectionRequestSender::new(self.peer_manager_builder.connection_reqs_tx()),
@@ -358,8 +397,7 @@ impl NetworkBuilder {
     }
 
     /// Add a HealthChecker to the network.
-    // TODO: remove the pub qualifier
-    pub fn add_connection_monitoring(
+    fn add_connection_monitoring(
         &mut self,
         ping_interval_ms: u64,
         ping_timeout_ms: u64,

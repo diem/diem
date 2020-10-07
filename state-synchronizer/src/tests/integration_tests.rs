@@ -27,7 +27,6 @@ use libra_types::{
 };
 use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
 use network::{
-    constants,
     peer_manager::{
         builder::AuthenticationMode, conn_notifs_channel, ConnectionNotification,
         ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
@@ -241,23 +240,14 @@ impl SynchronizerEnv {
             let (port, _suffix) = parse_memory(addr_protos).unwrap();
             let base_addr = NetworkAddress::from(Protocol::Memory(port));
 
-            let mut network_builder = NetworkBuilder::new(
+            let mut network_builder = NetworkBuilder::new_for_test(
                 ChainId::default(),
-                trusted_peers.clone(),
-                network_context,
-                base_addr,
-                auth_mode,
-                constants::MAX_FRAME_SIZE,
-                false, /* Disable proxy protocol */
-            );
-            network_builder.add_connectivity_manager(
                 seed_addrs,
                 seed_pubkeys,
                 trusted_peers,
-                constants::MAX_FULLNODE_CONNECTIONS,
-                constants::MAX_CONNECTION_DELAY_MS,
-                constants::CONNECTIVITY_CHECK_INTERNAL_MS,
-                constants::NETWORK_CHANNEL_SIZE,
+                network_context,
+                base_addr,
+                auth_mode,
             );
 
             let (sender, events) =
