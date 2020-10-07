@@ -15,6 +15,7 @@ mod reconfiguration_test;
 mod recovery_time;
 mod twin_validator;
 mod versioning_test;
+mod vfn_failover_test;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -37,6 +38,7 @@ pub use reconfiguration_test::{Reconfiguration, ReconfigurationParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 pub use twin_validator::{TwinValidators, TwinValidatorsParams};
 pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
+pub use vfn_failover_test::{VfnFailover, VfnFailoverParams};
 
 use crate::{
     cluster::Cluster,
@@ -156,6 +158,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
     known_experiments.insert("reconfiguration", f::<ReconfigurationParams>());
     known_experiments.insert("load_test", f::<LoadTestParams>());
+    known_experiments.insert("vfn_failover", f::<VfnFailoverParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
