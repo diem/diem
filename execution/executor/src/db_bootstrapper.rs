@@ -46,7 +46,7 @@ pub fn maybe_bootstrap<V: VMExecutor>(
     // if the waypoint is not targeted with the genesis txn, it may be either already bootstrapped, or
     // aiming for state sync to catch up.
     if tree_state.num_transactions != waypoint.version() {
-        info!("Skip genesis txn");
+        info!(waypoint = %waypoint, "Skip genesis txn.");
         return Ok(false);
     }
 
