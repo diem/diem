@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use futures::{future::try_join_all, join};
+use futures::{future::try_join_all, join, FutureExt};
 use libra_logger::{info, warn};
 use libra_time::duration_since_epoch;
 use libra_trace::{
@@ -61,6 +61,8 @@ pub struct PerformanceBenchmarkParams {
     pub backup: bool,
     #[structopt(long, default_value = "0", help = "Set gas price in tx")]
     pub gas_price: u64,
+    #[structopt(long, help = "Set periodic stat aggregator step")]
+    pub periodic_stats: Option<u64>,
 }
 
 pub struct PerformanceBenchmark {
@@ -75,6 +77,7 @@ pub struct PerformanceBenchmark {
     use_logs_for_trace: bool,
     backup: bool,
     gas_price: u64,
+    periodic_stats: Option<u64>,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -90,6 +93,7 @@ impl PerformanceBenchmarkParams {
             use_logs_for_trace: false,
             backup: false,
             gas_price: 0,
+            periodic_stats: None,
         }
     }
 
@@ -103,6 +107,7 @@ impl PerformanceBenchmarkParams {
             use_logs_for_trace: false,
             backup: false,
             gas_price: 0,
+            periodic_stats: None,
         }
     }
 
@@ -116,6 +121,7 @@ impl PerformanceBenchmarkParams {
             use_logs_for_trace: false,
             backup: false,
             gas_price,
+            periodic_stats: None,
         }
     }
 
@@ -154,6 +160,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             use_logs_for_trace: self.use_logs_for_trace,
             backup: self.backup,
             gas_price: self.gas_price,
+            periodic_stats: self.periodic_stats,
         }
     }
 }
@@ -184,7 +191,17 @@ impl Experiment for PerformanceBenchmark {
                 self.gas_price,
             ),
         };
-        let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
+        let emit_txn = match self.periodic_stats {
+            Some(interval) => context
+                .tx_emitter
+                .emit_txn_for_with_stats(window, emit_job_request, interval)
+                .boxed(),
+            None => context
+                .tx_emitter
+                .emit_txn_for(window, emit_job_request)
+                .boxed(),
+        };
+
         let start = chrono::Utc::now();
         let trace_tail = &context.trace_tail;
         let trace_delay = buffer;
