@@ -5,7 +5,7 @@ use crate::{
     core_mempool::CoreMempool,
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::{
-        coordinator::{coordinator, gc_coordinator},
+        coordinator::{coordinator, gc_coordinator, snapshot_job},
         peer_manager::PeerManager,
         types::{SharedMempool, SharedMempoolNotification},
     },
@@ -80,8 +80,13 @@ pub(crate) fn start_shared_mempool<V>(
     ));
 
     executor.spawn(gc_coordinator(
-        mempool,
+        mempool.clone(),
         config.mempool.system_transaction_gc_interval_ms,
+    ));
+
+    executor.spawn(snapshot_job(
+        mempool,
+        config.mempool.mempool_snapshot_interval_secs,
     ));
 }
 

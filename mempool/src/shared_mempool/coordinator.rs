@@ -223,3 +223,17 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
         LogEvent::Terminated
     ));
 }
+
+/// Periodically logs a snapshot of transactions in core mempool
+/// In the future we may want a interactive way to directly query mempool's internal state
+/// For now, we will rely on this periodic snapshot to observe the internal state
+pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_interval_secs: u64) {
+    let mut interval = interval(Duration::from_secs(snapshot_interval_secs));
+    while let Some(_interval) = interval.next().await {
+        let snapshot = mempool
+            .lock()
+            .expect("failed to acquire mempool lock")
+            .gen_snapshot();
+        debug!(LogSchema::new(LogEntry::MempoolSnapshot).txns(snapshot));
+    }
+}

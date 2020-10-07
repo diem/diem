@@ -341,6 +341,13 @@ impl ParkingLotIndex {
         }
     }
 
+    pub(crate) fn contains(&self, account: &AccountAddress, seq_num: &u64) -> bool {
+        self.account_indices
+            .get(&account)
+            .and_then(|idx| self.data.get(*idx))
+            .map_or(false, |(_account, txns)| txns.contains(seq_num))
+    }
+
     /// returns random "non-ready" transaction (with highest sequence number for that account)
     pub(crate) fn get_poppable(&mut self) -> Option<TxnPointer> {
         let mut rng = rand::thread_rng();

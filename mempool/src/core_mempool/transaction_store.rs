@@ -475,6 +475,21 @@ impl TransactionStore {
         self.priority_index.iter()
     }
 
+    pub(crate) fn gen_snapshot(&self) -> TxnsLog {
+        let mut txns_log = TxnsLog::new();
+        for (account, txns) in self.transactions.iter() {
+            for (seq_num, _txn) in txns.iter() {
+                let status = if self.parking_lot_index.contains(account, seq_num) {
+                    "parked"
+                } else {
+                    "ready"
+                };
+                txns_log.add_with_status(*account, *seq_num, status);
+            }
+        }
+        txns_log
+    }
+
     #[cfg(test)]
     pub(crate) fn get_parking_lot_size(&self) -> usize {
         self.parking_lot_index.size()

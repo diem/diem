@@ -139,6 +139,7 @@ pub enum LogEntry {
     DBError,
     UpstreamNetwork,
     UnexpectedNetworkMsg,
+    MempoolSnapshot,
 }
 
 #[derive(Clone, Copy, Serialize)]

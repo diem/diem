@@ -266,6 +266,10 @@ impl Mempool {
         self.transactions.timeline_range(start_id, end_id)
     }
 
+    pub fn gen_snapshot(&self) -> TxnsLog {
+        self.transactions.gen_snapshot()
+    }
+
     #[cfg(test)]
     pub fn get_parking_lot_size(&self) -> usize {
         self.transactions.get_parking_lot_size()
