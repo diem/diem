@@ -33,6 +33,7 @@ pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<S
         abis.push(lcs::from_bytes(&buffer)?);
     }
     // Sorting scripts by alphabetical order.
+    #[allow(clippy::unnecessary_sort_by)]
     abis.sort_by(|a, b| a.name().cmp(b.name()));
     Ok(abis)
 }

@@ -63,7 +63,7 @@ impl Cargo {
         // The environment is inherited for child processes so we only need to set RUSTUP_TOOLCHAIN
         // if it isn't already present in the environment
         if env::var_os(RUSTUP_TOOLCHAIN).is_none() {
-            inner.env(RUSTUP_TOOLCHAIN, RUST_TOOLCHAIN_VERSION);
+            inner.env(RUSTUP_TOOLCHAIN, RUST_TOOLCHAIN_VERSION.trim());
         }
 
         // Set the `CARGO` envvar with the path to the cargo binary being used

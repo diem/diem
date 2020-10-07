@@ -326,8 +326,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
         Some(
             options
                 .move_sources
-                .iter()
-                .next()
+                .get(0)
                 .cloned()
                 .unwrap_or_else(|| "bytecode".to_string())
                 .replace(".move", ""),
