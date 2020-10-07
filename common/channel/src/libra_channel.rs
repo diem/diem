@@ -14,12 +14,13 @@ use futures::{
     stream::{FusedStream, Stream},
 };
 use libra_metrics::IntCounterVec;
+use libra_mutex::Mutex;
 use std::{
     fmt::{Debug, Formatter},
     hash::Hash,
     num::NonZeroUsize,
     pin::Pin,
-    sync::{Arc, Mutex},
+    sync::Arc,
     task::{Context, Poll, Waker},
 };
 
@@ -94,7 +95,7 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
         message: M,
         status_ch: Option<oneshot::Sender<ElementStatus<M>>>,
     ) -> Result<()> {
-        let mut shared_state = self.shared_state.lock().unwrap();
+        let mut shared_state = self.shared_state.lock();
         ensure!(!shared_state.receiver_dropped, "Channel is closed");
         debug_assert!(shared_state.num_senders > 0);
 
@@ -116,7 +117,7 @@ impl<K: Eq + Hash + Clone, M> Clone for Sender<K, M> {
     fn clone(&self) -> Self {
         let shared_state = self.shared_state.clone();
         {
-            let mut shared_state_lock = shared_state.lock().unwrap();
+            let mut shared_state_lock = shared_state.lock();
             debug_assert!(shared_state_lock.num_senders > 0);
             shared_state_lock.num_senders += 1;
         }
@@ -126,7 +127,7 @@ impl<K: Eq + Hash + Clone, M> Clone for Sender<K, M> {
 
 impl<K: Eq + Hash + Clone, M> Drop for Sender<K, M> {
     fn drop(&mut self) {
-        let mut shared_state = self.shared_state.lock().unwrap();
+        let mut shared_state = self.shared_state.lock();
 
         debug_assert!(shared_state.num_senders > 0);
         shared_state.num_senders -= 1;
@@ -148,14 +149,14 @@ impl<K: Eq + Hash + Clone, M> Receiver<K, M> {
     /// Removes all the previously sent transactions that have not been consumed yet and cleans up
     /// the internal queue structure (GC of the previous keys).
     pub fn clear(&mut self) {
-        let mut shared_state = self.shared_state.lock().unwrap();
+        let mut shared_state = self.shared_state.lock();
         shared_state.internal_queue.clear();
     }
 }
 
 impl<K: Eq + Hash + Clone, M> Drop for Receiver<K, M> {
     fn drop(&mut self) {
-        let mut shared_state = self.shared_state.lock().unwrap();
+        let mut shared_state = self.shared_state.lock();
         debug_assert!(!shared_state.receiver_dropped);
         shared_state.receiver_dropped = true;
     }
@@ -167,7 +168,7 @@ impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
     /// queue. If there is, then it returns immediately. If the internal_queue is empty,
     /// it sets the waker passed to it by the scheduler/executor and returns Pending
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut shared_state = self.shared_state.lock().unwrap();
+        let mut shared_state = self.shared_state.lock();
         if let Some((val, status_ch)) = shared_state.internal_queue.pop() {
             if let Some(status_ch) = status_ch {
                 let _err = status_ch.send(ElementStatus::Dequeued);
@@ -186,7 +187,7 @@ impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
 
 impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
     fn is_terminated(&self) -> bool {
-        self.shared_state.lock().unwrap().stream_terminated
+        self.shared_state.lock().stream_terminated
     }
 }
 

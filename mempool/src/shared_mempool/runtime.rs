@@ -18,10 +18,11 @@ use futures::channel::{
     oneshot,
 };
 use libra_config::{config::NodeConfig, network_id::NodeNetworkId};
+use libra_mutex::Mutex;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
 };
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};

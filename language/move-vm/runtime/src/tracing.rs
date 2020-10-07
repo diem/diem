@@ -3,24 +3,25 @@
 
 #[cfg(debug_assertions)]
 use crate::debug::DebugContext;
+
+#[cfg(debug_assertions)]
+use ::{
+    libra_mutex::Mutex,
+    move_vm_types::values::Locals,
+    once_cell::sync::Lazy,
+    std::{
+        env,
+        fs::{File, OpenOptions},
+        io::Write,
+    },
+    vm::file_format::Bytecode,
+};
+
 use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},
     logging::LogContext,
 };
-#[cfg(debug_assertions)]
-use move_vm_types::values::Locals;
-#[cfg(debug_assertions)]
-use once_cell::sync::Lazy;
-#[cfg(debug_assertions)]
-use std::{
-    env,
-    fs::{File, OpenOptions},
-    io::Write,
-    sync::Mutex,
-};
-#[cfg(debug_assertions)]
-use vm::file_format::Bytecode;
 
 #[cfg(debug_assertions)]
 const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
@@ -66,13 +67,12 @@ pub(crate) fn trace<L: LogContext>(
     interp: &Interpreter<L>,
 ) {
     if *TRACING_ENABLED {
-        let f = &mut *LOGGING_FILE.lock().unwrap();
+        let f = &mut *LOGGING_FILE.lock();
         writeln!(f, "{},{},{:?}", function_desc.pretty_string(), pc, instr).unwrap();
     }
     if *DEBUGGING_ENABLED {
         DEBUG_CONTEXT
             .lock()
-            .unwrap()
             .debug_loop(function_desc, locals, pc, instr, loader, interp);
     }
 }

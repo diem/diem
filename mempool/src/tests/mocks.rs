@@ -14,6 +14,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
+use libra_mutex::Mutex;
 use libra_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},
@@ -24,7 +25,7 @@ use network::{
 };
 use std::{
     num::NonZeroUsize,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
 };
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
@@ -114,10 +115,7 @@ impl MockSharedMempool {
     /// add txns to mempool
     pub fn add_txns(&self, txns: Vec<SignedTransaction>) -> Result<()> {
         {
-            let mut pool = self
-                .mempool
-                .lock()
-                .expect("[mock shared mempool] failed to acquire mempool lock");
+            let mut pool = self.mempool.lock();
             for txn in txns {
                 if pool
                     .add_txn(
@@ -140,10 +138,7 @@ impl MockSharedMempool {
 
     /// true if all given txns are in mempool, else false
     pub fn read_timeline(&self, timeline_id: u64, count: usize) -> Vec<SignedTransaction> {
-        let mut pool = self
-            .mempool
-            .lock()
-            .expect("[mock shared mempool] failed to acquire mempool lock");
+        let mut pool = self.mempool.lock();
         pool.read_timeline(timeline_id, count)
             .0
             .into_iter()

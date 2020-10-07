@@ -9,6 +9,7 @@ use bytecode_verifier::{
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -19,12 +20,7 @@ use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::{StructType, Type},
 };
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    hash::Hash,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMError, VMResult},
@@ -451,17 +447,15 @@ impl Loader {
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
-        let opt_main = self.scripts.lock().unwrap().get(&hash_value);
+        let opt_main = self.scripts.lock().get(&hash_value);
         let main = match opt_main {
             Some(main) => main,
             None => {
                 let ver_script =
                     self.deserialize_and_verify_script(script_blob, data_store, log_context)?;
-                let script =
-                    Script::new(ver_script, &hash_value, &self.module_cache.lock().unwrap())?;
+                let script = Script::new(ver_script, &hash_value, &self.module_cache.lock())?;
                 self.scripts
                     .lock()
-                    .unwrap()
                     .insert(hash_value, script)
                     .map_err(|e| e.finish(Location::Script))?
             }
@@ -568,12 +562,11 @@ impl Loader {
         let idx = self
             .module_cache
             .lock()
-            .unwrap()
             .resolve_function_by_name(function_name, module_id)
             .map_err(|err| {
                 expect_no_verification_errors(err.finish(Location::Undefined), log_context)
             })?;
-        let func = self.module_cache.lock().unwrap().function_at(idx);
+        let func = self.module_cache.lock().function_at(idx);
 
         // verify type arguments
         let mut type_params = vec![];
@@ -718,7 +711,6 @@ impl Loader {
                 let (idx, struct_type) = self
                     .module_cache
                     .lock()
-                    .unwrap()
                     // GOOD module was loaded above
                     .resolve_struct_by_name(&struct_tag.name, &module_id)
                     .map_err(|e| e.finish(Location::Undefined))?;
@@ -777,7 +769,7 @@ impl Loader {
             Ok(module)
         }
 
-        if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
+        if let Some(module) = self.module_cache.lock().module_at(id) {
             return Ok(module);
         }
 
@@ -795,7 +787,6 @@ impl Loader {
             .map_err(|err| expect_no_verification_errors(err, log_context))?;
         self.module_cache
             .lock()
-            .unwrap()
             .insert(id.clone(), module, log_context)
     }
 
@@ -874,18 +865,17 @@ impl Loader {
     //
 
     fn function_at(&self, idx: usize) -> Arc<Function> {
-        self.module_cache.lock().unwrap().function_at(idx)
+        self.module_cache.lock().function_at(idx)
     }
 
     fn struct_at(&self, idx: usize) -> Arc<StructType> {
-        self.module_cache.lock().unwrap().struct_at(idx)
+        self.module_cache.lock().struct_at(idx)
     }
 
     fn get_module(&self, idx: &ModuleId) -> Arc<Module> {
         Arc::clone(
             self.module_cache
                 .lock()
-                .unwrap()
                 .modules
                 .get(idx)
                 .expect("ModuleId on Function must exist"),
@@ -896,7 +886,6 @@ impl Loader {
         Arc::clone(
             self.scripts
                 .lock()
-                .unwrap()
                 .scripts
                 .get(hash)
                 .expect("Script hash on Function must exist"),
@@ -905,21 +894,9 @@ impl Loader {
 
     fn is_resource(&self, type_: &Type) -> bool {
         match type_ {
-            Type::Struct(idx) => {
-                self.module_cache
-                    .lock()
-                    .unwrap()
-                    .struct_at(*idx)
-                    .is_resource
-            }
+            Type::Struct(idx) => self.module_cache.lock().struct_at(*idx).is_resource,
             Type::StructInstantiation(idx, instantiation) => {
-                if self
-                    .module_cache
-                    .lock()
-                    .unwrap()
-                    .struct_at(*idx)
-                    .is_resource
-                {
+                if self.module_cache.lock().struct_at(*idx).is_resource {
                     true
                 } else {
                     for ty in instantiation {
@@ -1776,7 +1753,7 @@ const VALUE_DEPTH_MAX: usize = 256;
 
 impl Loader {
     fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<StructTag> {
-        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+        if let Some(struct_map) = self.type_cache.lock().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
                 if let Some(struct_tag) = &struct_info.struct_tag {
                     return Ok(struct_tag.clone());
@@ -1788,7 +1765,7 @@ impl Loader {
             .iter()
             .map(|ty| self.type_to_type_tag(ty))
             .collect::<PartialVMResult<Vec<_>>>()?;
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        let struct_type = self.module_cache.lock().struct_at(gidx);
         let struct_tag = StructTag {
             address: *struct_type.module.address(),
             module: struct_type.module.name().to_owned(),
@@ -1798,7 +1775,6 @@ impl Loader {
 
         self.type_cache
             .lock()
-            .unwrap()
             .structs
             .entry(gidx)
             .or_insert_with(HashMap::new)
@@ -1837,7 +1813,7 @@ impl Loader {
         ty_args: &[Type],
         depth: usize,
     ) -> PartialVMResult<MoveStructLayout> {
-        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+        if let Some(struct_map) = self.type_cache.lock().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
                 if let Some(layout) = &struct_info.struct_layout {
                     return Ok(layout.clone());
@@ -1845,7 +1821,7 @@ impl Loader {
             }
         }
 
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        let struct_type = self.module_cache.lock().struct_at(gidx);
         let field_tys = struct_type
             .fields
             .iter()
@@ -1859,7 +1835,6 @@ impl Loader {
 
         self.type_cache
             .lock()
-            .unwrap()
             .structs
             .entry(gidx)
             .or_insert_with(HashMap::new)
@@ -1905,7 +1880,7 @@ impl Loader {
         ty_args: &[Type],
         depth: usize,
     ) -> PartialVMResult<(MoveKind, Vec<MoveKindInfo>)> {
-        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+        if let Some(struct_map) = self.type_cache.lock().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
                 if let Some(kind_info) = &struct_info.kind_info {
                     return Ok(kind_info.clone());
@@ -1913,7 +1888,7 @@ impl Loader {
             }
         }
 
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        let struct_type = self.module_cache.lock().struct_at(gidx);
 
         let mut is_resource = struct_type.is_resource;
         if !is_resource {
@@ -1936,7 +1911,6 @@ impl Loader {
 
         self.type_cache
             .lock()
-            .unwrap()
             .structs
             .entry(gidx)
             .or_insert_with(HashMap::new)

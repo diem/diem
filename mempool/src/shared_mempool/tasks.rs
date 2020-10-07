@@ -20,6 +20,7 @@ use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
 use libra_metrics::HistogramTimer;
+use libra_mutex::Mutex;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::OnChainConfigPayload,
@@ -29,7 +30,7 @@ use libra_types::{
 use std::{
     cmp,
     collections::HashSet,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
 use tokio::runtime::Handle;
@@ -280,10 +281,7 @@ where
     vm_validation_timer.stop_and_record();
 
     {
-        let mut mempool = smp
-            .mempool
-            .lock()
-            .expect("[shared mempool] failed to acquire mempool lock");
+        let mut mempool = smp.mempool.lock();
         for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
             if let Ok(validation_result) = &validation_results[idx] {
                 match validation_result.status() {
@@ -408,7 +406,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 .collect();
             let mut txns;
             {
-                let mut mempool = mempool.lock().expect("failed to acquire mempool lock");
+                let mut mempool = mempool.lock();
                 // gc before pulling block as extra protection against txns that may expire in consensus
                 // Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp
                 let curr_time = libra_time::duration_since_epoch();
@@ -463,9 +461,7 @@ async fn commit_txns(
     block_timestamp_usecs: u64,
     is_rejected: bool,
 ) {
-    let mut pool = mempool
-        .lock()
-        .expect("[shared mempool] failed to get mempool lock");
+    let mut pool = mempool.lock();
 
     for transaction in transactions {
         pool.remove_transaction(

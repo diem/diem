@@ -5,11 +5,12 @@
 
 use crate::health::ValidatorEvent;
 use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
+use libra_mutex::Mutex;
 use libra_time::duration_since_epoch;
 use std::{
     sync::{
         atomic::{AtomicBool, AtomicI64, Ordering},
-        mpsc, Arc, Mutex,
+        mpsc, Arc,
     },
     thread,
     time::{Duration, Instant},
@@ -72,7 +73,7 @@ impl TraceTail {
         tokio::time::delay_for(duration).await;
         self.trace_enabled.store(false, Ordering::Relaxed);
         let mut events = vec![];
-        while let Ok(event) = self.trace_receiver.lock().unwrap().try_recv() {
+        while let Ok(event) = self.trace_receiver.lock().try_recv() {
             events.push(event);
         }
         events

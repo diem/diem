@@ -8,11 +8,12 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use storage_interface::{DbReader, Order};
 
@@ -54,7 +55,7 @@ impl LibraDBBackend {
                 result.push((v, e));
             }
         }
-        *self.window.lock().unwrap() = result;
+        *self.window.lock() = result;
         Ok(())
     }
 }
@@ -65,7 +66,6 @@ impl MetadataBackend for LibraDBBackend {
         let (known_version, known_round) = self
             .window
             .lock()
-            .unwrap()
             .first()
             .map(|(v, e)| (*v, e.round()))
             .unwrap_or((0, 0));
@@ -81,7 +81,6 @@ impl MetadataBackend for LibraDBBackend {
         }
         self.window
             .lock()
-            .unwrap()
             .clone()
             .into_iter()
             .map(|(_, e)| e)
@@ -184,7 +183,7 @@ impl ProposerElection for LeaderReputation {
     fn is_valid_proposal(&self, block: &Block) -> bool {
         block.author().map_or(false, |author| {
             let valid = self.is_valid_proposer(author, block.round());
-            let mut already_proposed = self.already_proposed.lock().unwrap();
+            let mut already_proposed = self.already_proposed.lock();
             if !valid {
                 return false;
             }

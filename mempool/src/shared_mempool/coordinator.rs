@@ -25,11 +25,12 @@ use futures::{
 };
 use libra_config::{config::PeerNetworkId, network_id::NodeNetworkId};
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_trace::prelude::*;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     ops::Deref,
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
@@ -212,10 +213,7 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
             SampleRate::Duration(Duration::from_secs(60)),
             info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Live))
         );
-        mempool
-            .lock()
-            .expect("[shared mempool] failed to acquire mempool lock")
-            .gc();
+        mempool.lock().gc();
     }
 
     error!(LogSchema::event_log(
@@ -232,7 +230,6 @@ pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_inte
     while let Some(_interval) = interval.next().await {
         let snapshot = mempool
             .lock()
-            .expect("failed to acquire mempool lock")
             .gen_snapshot();
         debug!(LogSchema::new(LogEntry::MempoolSnapshot).txns(snapshot));
     }

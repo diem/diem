@@ -24,6 +24,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
+use libra_mutex::Mutex;
 use libra_network_address::NetworkAddress;
 use libra_types::{
     transaction::{GovernanceRole, SignedTransaction},
@@ -41,7 +42,7 @@ use network::{
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
 };
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
@@ -266,7 +267,7 @@ impl SharedMempoolNetwork {
     }
 
     fn add_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {
-        let mut mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
+        let mut mempool = self.mempools.get(peer_id).unwrap().lock();
         for txn in txns {
             let transaction = txn.make_signed_transaction_with_max_gas_amount(5);
             mempool.add_txn(
@@ -281,7 +282,7 @@ impl SharedMempoolNetwork {
     }
 
     fn commit_txns(&mut self, peer_id: &PeerId, txns: Vec<TestTransaction>) {
-        let mut mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
+        let mut mempool = self.mempools.get(peer_id).unwrap().lock();
         for txn in txns {
             mempool.remove_transaction(
                 &TestTransaction::get_address(txn.address),
@@ -384,7 +385,7 @@ impl SharedMempoolNetwork {
                 // verify transaction was inserted into Mempool
                 if check_txns_in_mempool {
                     let mempool = self.mempools.get(&peer_id).unwrap();
-                    let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+                    let block = mempool.lock().get_block(100, HashSet::new());
                     for txn in transactions.iter() {
                         assert!(block.contains(txn));
                     }
@@ -429,7 +430,7 @@ impl SharedMempoolNetwork {
     }
 
     fn exist_in_metrics_cache(&self, peer_id: &PeerId, txn: &TestTransaction) -> bool {
-        let mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
+        let mempool = self.mempools.get(peer_id).unwrap().lock();
         mempool
             .metrics_cache
             .get(&(
@@ -667,10 +668,7 @@ fn test_consensus_events_rejected_txns() {
     ];
     // add txns to mempool
     {
-        let mut pool = smp
-            .mempool
-            .lock()
-            .expect("[mempool test] failed to acquire lock");
+        let mut pool = smp.mempool.lock();
         assert!(batch_add_signed_txn(&mut pool, txns).is_ok());
     }
 
@@ -688,10 +686,7 @@ fn test_consensus_events_rejected_txns() {
     });
 
     // check mempool
-    let mut pool = smp
-        .mempool
-        .lock()
-        .expect("[mempool test] failed to acquire mempool lock");
+    let mut pool = smp.mempool.lock();
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline.get(0).unwrap(), &kept_txn);
@@ -716,10 +711,7 @@ fn test_state_sync_events_committed_txns() {
     ];
     // add txns to mempool
     {
-        let mut pool = smp
-            .mempool
-            .lock()
-            .expect("[mempool test] failed to acquire lock");
+        let mut pool = smp.mempool.lock();
         assert!(batch_add_signed_txn(&mut pool, txns).is_ok());
     }
 
@@ -741,10 +733,7 @@ fn test_state_sync_events_committed_txns() {
     });
 
     // check mempool
-    let mut pool = smp
-        .mempool
-        .lock()
-        .expect("[mempool test] failed to acquire mempool lock");
+    let mut pool = smp.mempool.lock();
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline.get(0).unwrap(), &kept_txn);
