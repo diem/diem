@@ -5,8 +5,8 @@
 use crate::{
     errors::JsonRpcError,
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, CurrencyInfoView,
-        EventView, StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
+        MetadataView, StateProofView, TransactionView,
     },
 };
 use anyhow::{ensure, format_err, Error, Result};
@@ -302,7 +302,7 @@ async fn get_account(
 /// Returns the blockchain metadata for a specified version. If no version is specified, default to
 /// returning the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
-async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
+async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<MetadataView> {
     let chain_id = service.chain_id().id();
     let version = if !request.params.is_empty() {
         request.parse_version_param(0, "version")?
@@ -324,7 +324,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
         } else {
             (None, None)
         };
-    Ok(BlockMetadata {
+    Ok(MetadataView {
         version,
         timestamp: service.db.get_block_timestamp(version)?,
         chain_id,

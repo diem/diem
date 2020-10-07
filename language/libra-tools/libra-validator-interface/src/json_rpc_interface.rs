@@ -74,7 +74,7 @@ impl LibraValidatorInterface for JsonRpcDebuggerInterface {
         batch.add_get_metadata_request(None);
 
         let resp = self.execute_single_command(batch)?;
-        if let JsonRpcResponse::BlockMetadataResponse(metadata) = resp {
+        if let JsonRpcResponse::MetadataViewResponse(metadata) = resp {
             Ok(metadata.version)
         } else {
             bail!("Unexpected response type");

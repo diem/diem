@@ -14,7 +14,7 @@ use libra_crypto::{
     test_utils::KeyPair,
 };
 use libra_json_rpc_client::views::{
-    AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
+    AccountView, EventView, MetadataView, TransactionView, VMStatusView,
 };
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
@@ -1240,7 +1240,7 @@ impl ClientProxy {
     }
 
     /// Test JSON RPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<BlockMetadata> {
+    pub fn test_validator_connection(&mut self) -> Result<MetadataView> {
         self.client.get_metadata()
     }
 

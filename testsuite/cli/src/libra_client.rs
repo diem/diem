@@ -7,8 +7,8 @@ use libra_json_rpc_client::{
     errors::JsonRpcError,
     get_response_from_batch,
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, CurrencyInfoView,
-        EventView, StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
+        MetadataView, StateProofView, TransactionView,
     },
     JsonRpcBatch, JsonRpcClient, JsonRpcResponse, ResponseAsView,
 };
@@ -183,13 +183,13 @@ impl LibraClient {
     }
 
     /// Gets the block metadata
-    pub fn get_metadata(&mut self) -> Result<BlockMetadata> {
+    pub fn get_metadata(&mut self) -> Result<MetadataView> {
         let mut batch = JsonRpcBatch::new();
         batch.add_get_metadata_request(None);
         let responses = self.client.execute(batch)?;
 
         match get_response_from_batch(0, &responses)? {
-            Ok(resp) => Ok(BlockMetadata::from_response(resp.clone())?),
+            Ok(resp) => Ok(MetadataView::from_response(resp.clone())?),
             Err(e) => bail!("Failed to get block metadata with error: {:?}", e),
         }
     }

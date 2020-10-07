@@ -19,8 +19,8 @@ use libra_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use libra_json_rpc_client::{
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
-        StateProofView, TransactionDataView, TransactionView, VMStatusView,
+        AccountStateWithProofView, AccountView, BytesView, EventView, MetadataView, StateProofView,
+        TransactionDataView, TransactionView, VMStatusView,
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
@@ -1018,7 +1018,7 @@ fn test_get_metadata_latest() {
 
     let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
 
-    let result_view = BlockMetadata::from_response(result).unwrap();
+    let result_view = MetadataView::from_response(result).unwrap();
     assert_eq!(result_view.version, actual_version);
     assert_eq!(result_view.timestamp, actual_timestamp);
 }
@@ -1032,7 +1032,7 @@ fn test_get_metadata() {
 
     let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
 
-    let result_view = BlockMetadata::from_response(result).unwrap();
+    let result_view = MetadataView::from_response(result).unwrap();
     assert_eq!(result_view.version, 1);
     assert_eq!(result_view.timestamp, mock_db.timestamps[1]);
 }

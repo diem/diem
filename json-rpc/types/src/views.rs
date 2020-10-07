@@ -344,7 +344,7 @@ impl TryFrom<(u64, ContractEvent)> for EventView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct BlockMetadata {
+pub struct MetadataView {
     pub version: u64,
     pub timestamp: u64,
     pub chain_id: u8,
