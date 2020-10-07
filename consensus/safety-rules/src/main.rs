@@ -30,6 +30,7 @@ fn main() {
         .read_env()
         .init();
 
+    crash_handler::setup_panic_handler();
     let _mp = MetricsPusher::start();
 
     let mut service = Process::new(config);

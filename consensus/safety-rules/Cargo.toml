@@ -12,6 +12,7 @@ rand = { version = "0.7.3", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 rand_core = "0.5.1"
 
+crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
