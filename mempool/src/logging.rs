@@ -13,32 +13,26 @@ use serde::Serialize;
 use std::fmt;
 
 pub struct TxnsLog {
-    txns: Vec<(AccountAddress, u64)>,
-    status: Vec<String>,
+    txns: Vec<(AccountAddress, u64, Option<String>)>,
 }
 
 impl TxnsLog {
     pub fn new() -> Self {
-        Self {
-            txns: vec![],
-            status: vec![],
-        }
+        Self { txns: vec![] }
     }
 
     pub fn new_txn(account: AccountAddress, seq_num: u64) -> Self {
         Self {
-            txns: vec![(account, seq_num)],
-            status: vec![],
+            txns: vec![(account, seq_num, None)],
         }
     }
 
     pub fn add(&mut self, account: AccountAddress, seq_num: u64) {
-        self.txns.push((account, seq_num));
+        self.txns.push((account, seq_num, None));
     }
 
     pub fn add_with_status(&mut self, account: AccountAddress, seq_num: u64, status: &str) {
-        self.add(account, seq_num);
-        self.status.push(status.to_string());
+        self.txns.push((account, seq_num, Some(status.to_string())));
     }
 }
 
@@ -46,9 +40,9 @@ impl fmt::Display for TxnsLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut txns = "".to_string();
 
-        for (idx, (account, seq_num)) in self.txns.iter().enumerate() {
+        for (account, seq_num, status) in self.txns.iter() {
             let mut txn = format!("{}:{}", account, seq_num);
-            if let Some(status) = self.status.get(idx) {
+            if let Some(status) = status {
                 txn += &format!(":{}", status)
             }
 
