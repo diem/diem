@@ -67,3 +67,27 @@ pub static TRANSACTION_REPLAY_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static COORDINATOR_START_TS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_db_restore_coordinator_start_timestamp_s",
+        "Timestamp when the verify coordinator starts."
+    )
+    .unwrap()
+});
+
+pub static COORDINATOR_SUCC_TS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_db_restore_coordinator_succeed_timestamp_s",
+        "Timestamp when the verify coordinator fails."
+    )
+    .unwrap()
+});
+
+pub static COORDINATOR_FAIL_TS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_db_restore_coordinator_succeed_timestamp_s",
+        "Timestamp when the verify coordinator fails."
+    )
+    .unwrap()
+});

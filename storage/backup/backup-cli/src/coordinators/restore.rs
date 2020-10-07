@@ -9,9 +9,11 @@ use crate::{
     },
     metadata,
     metadata::{cache::MetadataCacheOpt, TransactionBackupMeta},
-    metrics::restore::COORDINATOR_TARGET_VERSION,
+    metrics::restore::{
+        COORDINATOR_FAIL_TS, COORDINATOR_START_TS, COORDINATOR_SUCC_TS, COORDINATOR_TARGET_VERSION,
+    },
     storage::BackupStorage,
-    utils::{GlobalRestoreOptions, RestoreRunMode},
+    utils::{unix_timestamp_sec, GlobalRestoreOptions, RestoreRunMode},
 };
 use anyhow::{bail, Result};
 use libra_logger::prelude::*;
@@ -46,6 +48,25 @@ impl RestoreCoordinator {
 
     pub async fn run(self) -> Result<()> {
         info!("Restore coordinator started.");
+        COORDINATOR_START_TS.set(unix_timestamp_sec());
+
+        let ret = self.run_impl().await;
+
+        if let Err(e) = &ret {
+            error!(
+                error = ?e,
+                "Restore coordinator failed."
+            );
+            COORDINATOR_FAIL_TS.set(unix_timestamp_sec());
+        } else {
+            info!("Restore coordinator exiting with success.");
+            COORDINATOR_SUCC_TS.set(unix_timestamp_sec());
+        }
+
+        ret
+    }
+
+    async fn run_impl(self) -> Result<()> {
         let metadata_view =
             metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
                 .await?;
@@ -122,7 +143,6 @@ impl RestoreCoordinator {
             .await?;
         }
 
-        info!("Restore coordinator exiting with success.");
         Ok(())
     }
 }

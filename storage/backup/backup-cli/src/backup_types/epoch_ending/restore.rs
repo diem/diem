@@ -3,7 +3,10 @@
 
 use crate::{
     backup_types::epoch_ending::manifest::EpochEndingBackup,
-    metrics::restore::{EPOCH_ENDING_EPOCH, EPOCH_ENDING_VERSION},
+    metrics::{
+        restore::{EPOCH_ENDING_EPOCH, EPOCH_ENDING_VERSION},
+        verify::{VERIFY_EPOCH_ENDING_EPOCH, VERIFY_EPOCH_ENDING_VERSION},
+    },
     storage::{BackupStorage, FileHandle},
     utils::{
         read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
@@ -150,24 +153,17 @@ impl EpochEndingRestoreController {
 
             // write to db
             if !lis.is_empty() {
+                let last_li = lis.last().expect("Verified not empty.").ledger_info();
                 match self.run_mode.as_ref() {
                     RestoreRunMode::Restore { restore_handler } => {
                         restore_handler.save_ledger_infos(&lis)?;
-                        EPOCH_ENDING_EPOCH.set(
-                            lis.last()
-                                .expect("Verified not empty.")
-                                .ledger_info()
-                                .epoch() as i64,
-                        );
-                        EPOCH_ENDING_VERSION.set(
-                            lis.last()
-                                .expect("Verified not empty.")
-                                .ledger_info()
-                                .version() as i64,
-                        );
+
+                        EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
+                        EPOCH_ENDING_VERSION.set(last_li.version() as i64);
                     }
                     RestoreRunMode::Verify => {
-                        // add counters
+                        VERIFY_EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
+                        VERIFY_EPOCH_ENDING_VERSION.set(last_li.version() as i64);
                     }
                 };
                 output_lis.extend(lis.into_iter().map(|x| x.ledger_info().clone()));

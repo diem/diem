@@ -6,7 +6,10 @@ use crate::{
         epoch_ending::restore::EpochHistory,
         transaction::manifest::{TransactionBackup, TransactionChunk},
     },
-    metrics::restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
+    metrics::{
+        restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
+        verify::VERIFY_TRANSACTION_VERSION,
+    },
     storage::{BackupStorage, FileHandle},
     utils::{
         read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
@@ -250,7 +253,7 @@ impl TransactionRestoreController {
                 }
             }
         } else {
-            // FIXME: add counters
+            VERIFY_TRANSACTION_VERSION.set(last as i64);
         }
 
         Ok(())

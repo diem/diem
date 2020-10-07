@@ -257,6 +257,7 @@ dependencies = [
  "libra-proptest-helpers",
  "libra-secure-push-metrics",
  "libra-temppath",
+ "libra-time",
  "libra-types",
  "libra-vm",
  "libra-workspace-hack",

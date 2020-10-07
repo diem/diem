@@ -5,8 +5,14 @@ use crate::{
     backup_types::{
         epoch_ending::restore::EpochHistory, state_snapshot::manifest::StateSnapshotBackup,
     },
-    metrics::restore::{
-        STATE_SNAPSHOT_LEAF_INDEX, STATE_SNAPSHOT_TARGET_LEAF_INDEX, STATE_SNAPSHOT_VERSION,
+    metrics::{
+        restore::{
+            STATE_SNAPSHOT_LEAF_INDEX, STATE_SNAPSHOT_TARGET_LEAF_INDEX, STATE_SNAPSHOT_VERSION,
+        },
+        verify::{
+            VERIFY_STATE_SNAPSHOT_LEAF_INDEX, VERIFY_STATE_SNAPSHOT_TARGET_LEAF_INDEX,
+            VERIFY_STATE_SNAPSHOT_VERSION,
+        },
     },
     storage::{BackupStorage, FileHandle},
     utils::{
@@ -106,17 +112,29 @@ impl StateSnapshotRestoreController {
             .run_mode
             .get_state_restore_receiver(self.version, manifest.root_hash)?;
 
+        let (ver_gauge, tgt_leaf_idx, leaf_idx) = if self.run_mode.is_verify() {
+            (
+                &VERIFY_STATE_SNAPSHOT_VERSION,
+                &VERIFY_STATE_SNAPSHOT_TARGET_LEAF_INDEX,
+                &VERIFY_STATE_SNAPSHOT_LEAF_INDEX,
+            )
+        } else {
+            (
+                &STATE_SNAPSHOT_VERSION,
+                &STATE_SNAPSHOT_TARGET_LEAF_INDEX,
+                &STATE_SNAPSHOT_LEAF_INDEX,
+            )
+        };
+
         // FIXME update counters
-        STATE_SNAPSHOT_VERSION.set(self.version as i64);
-        STATE_SNAPSHOT_TARGET_LEAF_INDEX
-            .set(manifest.chunks.last().map_or(0, |c| c.last_idx as i64));
+        ver_gauge.set(self.version as i64);
+        tgt_leaf_idx.set(manifest.chunks.last().map_or(0, |c| c.last_idx as i64));
         for chunk in manifest.chunks {
             let blobs = self.read_account_state_chunk(chunk.blobs).await?;
             let proof = self.storage.load_lcs_file(&chunk.proof).await?;
 
             receiver.add_chunk(blobs, proof)?;
-            // FIXME update counters
-            STATE_SNAPSHOT_LEAF_INDEX.set(chunk.last_idx as i64);
+            leaf_idx.set(chunk.last_idx as i64);
         }
 
         receiver.finish()?;
