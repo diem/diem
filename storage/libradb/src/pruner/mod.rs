@@ -14,9 +14,9 @@ use crate::{
     },
 };
 use anyhow::Result;
+use libra_infallible::Mutex;
 use libra_jellyfish_merkle::StaleNodeIndex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_types::transaction::Version;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 #[cfg(test)]

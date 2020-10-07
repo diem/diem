@@ -23,7 +23,7 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
-libra-mutex = { path = "../../common/mutex", version = "0.1.0" }
+libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-trace = { path = "../../common/trace", version = "0.1.0" }

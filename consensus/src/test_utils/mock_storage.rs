@@ -12,7 +12,7 @@ use consensus_types::{
     block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_types::{
     epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},

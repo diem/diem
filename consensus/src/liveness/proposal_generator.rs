@@ -12,8 +12,8 @@ use consensus_types::{
     quorum_cert::QuorumCert,
 };
 
-use std::sync::{Arc};
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
+use std::sync::Arc;
 
 #[cfg(test)]
 #[path = "proposal_generator_test.rs"]

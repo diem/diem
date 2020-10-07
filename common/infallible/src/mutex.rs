@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use std::sync::{Mutex as StdMutex, MutexGuard};
 
 /// A simple wrapper around the lock() function of a std::sync::Mutex

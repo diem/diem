@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::util::time_service::{ScheduledTask, TimeService};
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use std::{sync::Arc, time::Duration};
 
 /// SimulatedTimeService implements TimeService, however it does not depend on actual time

@@ -5,8 +5,8 @@
 
 use anyhow::Result;
 use libra_crypto::HashValue;
+use libra_infallible::Mutex;
 use libra_logger::warn;
-use libra_mutex::Mutex;
 use libra_secure_net::NetworkClient;
 use libra_types::{
     account_address::AccountAddress,

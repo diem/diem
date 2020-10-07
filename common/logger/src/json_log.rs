@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_mutex::Mutex;
-use libra_time::duration_since_epoch;
+use libra_infallible::{duration_since_epoch, Mutex};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value as json};

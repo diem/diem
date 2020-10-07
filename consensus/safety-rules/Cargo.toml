@@ -18,13 +18,13 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
+libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-time = { path = "../../common/time", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-vault-client = { path = "../../secure/storage/vault", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

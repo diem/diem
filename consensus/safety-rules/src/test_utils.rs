@@ -20,8 +20,8 @@ use libra_crypto::{
     traits::SigningKey,
     Uniform,
 };
+use libra_infallible::duration_since_epoch;
 use libra_secure_storage::{InMemoryStorage, Storage};
-use libra_time::duration_since_epoch;
 use libra_types::{
     block_info::BlockInfo,
     epoch_change::EpochChangeProof,

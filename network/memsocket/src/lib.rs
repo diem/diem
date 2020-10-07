@@ -9,7 +9,7 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, num::NonZeroU16, pin::Pin};
 

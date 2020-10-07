@@ -41,10 +41,9 @@ libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
-libra-mutex = { path = "../common/mutex", version = "0.1.0" }
+libra-infallible = { path = "../common/infallible", version = "0.1.0" }
 libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-time = { path = "../common/time", version = "0.1.0" }
 libra-trace = { path = "../common/trace", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }

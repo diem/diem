@@ -13,8 +13,8 @@ use futures::{
     channel::oneshot,
     stream::{FusedStream, Stream},
 };
+use libra_infallible::Mutex;
 use libra_metrics::IntCounterVec;
-use libra_mutex::Mutex;
 use std::{
     fmt::{Debug, Formatter},
     hash::Hash,

@@ -25,8 +25,8 @@ use anyhow::{format_err, Result};
 use consensus_types::block::Block;
 use executor_types::{Error, ExecutedTrees};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfo, transaction::Transaction,
 };

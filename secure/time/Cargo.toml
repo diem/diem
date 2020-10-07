@@ -11,5 +11,5 @@ edition = "2018"
 
 [dependencies]
 
-libra-time = { path = "../../common/time", version = "0.1.0" }
+libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

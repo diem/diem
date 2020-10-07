@@ -13,7 +13,7 @@ use executor::Executor;
 use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_global_constants::EXECUTION_KEY;
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_secure_storage::{CryptoStorage, Storage};
 use libra_vm::LibraVM;
 use std::{convert::TryInto, net::SocketAddr, sync::Arc};

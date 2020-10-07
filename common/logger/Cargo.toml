@@ -17,8 +17,7 @@ erased-serde = "0.3.12"
 hex = "0.4.2"
 hostname = "0.3.1"
 libra-log-derive = { path = "derive", version = "0.1.0" }
-libra-mutex = { path = "../mutex", version = "0.1.0" }
-libra-time = { path = "../time", version = "0.1.0" }
+libra-infallible = { path = "../infallible", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 once_cell = "1.4.1"
 serde = { version = "1.0.116", features = ["derive"] }

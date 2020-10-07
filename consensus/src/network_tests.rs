@@ -17,7 +17,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
-use libra_mutex::Mutex;
+use libra_infallible::Mutex;
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{

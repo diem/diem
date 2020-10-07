@@ -8,8 +8,8 @@ use bytecode_verifier::{
     RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use libra_crypto::HashValue;
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},

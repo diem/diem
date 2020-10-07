@@ -31,8 +31,8 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use fail::fail_point;
+use libra_infallible::duration_since_epoch;
 use libra_logger::prelude::*;
-use libra_time::duration_since_epoch;
 use libra_trace::prelude::*;
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]

@@ -24,8 +24,8 @@ use futures::{
     StreamExt,
 };
 use libra_config::{config::PeerNetworkId, network_id::NodeNetworkId};
+use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_mutex::Mutex;
 use libra_trace::prelude::*;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
