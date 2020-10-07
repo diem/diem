@@ -25,7 +25,6 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::MempoolStatusCode,
-    on_chain_config::VMPublishingOption,
     transaction::SignedTransaction,
 };
 use network::counters;
@@ -66,14 +65,6 @@ impl JsonRpcService {
             chain_id,
             batch_size_limit,
             page_size_limit,
-        }
-    }
-
-    fn get_vm_publishing_option(&self, version: u64) -> Result<Option<VMPublishingOption>> {
-        if let Some(account) = self.get_account_state(libra_root_address(), version)? {
-            account.get_vm_publishing_option()
-        } else {
-            Ok(None)
         }
     }
 
@@ -309,27 +300,33 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     } else {
         request.version()
     };
-    let (script_hash_allow_list, module_publishing_allowed) =
-        if let Some(vm_publishing_option) = service.get_vm_publishing_option(version)? {
-            (
-                Some(
-                    vm_publishing_option
-                        .script_allow_list
-                        .iter()
-                        .map(|v| BytesView::from(v.to_vec()))
-                        .collect(),
-                ),
-                Some(vm_publishing_option.is_open_module),
-            )
-        } else {
-            (None, None)
-        };
+
+    let mut script_hash_allow_list: Option<Vec<BytesView>> = None;
+    let mut module_publishing_allowed: Option<bool> = None;
+    let mut libra_version: Option<u64> = None;
+    if let Some(account) = service.get_account_state(libra_root_address(), version)? {
+        if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
+            script_hash_allow_list = Some(
+                vm_publishing_option
+                    .script_allow_list
+                    .iter()
+                    .map(|v| BytesView::from(v.to_vec()))
+                    .collect(),
+            );
+
+            module_publishing_allowed = Some(vm_publishing_option.is_open_module);
+        }
+        if let Some(v) = account.get_libra_version()? {
+            libra_version = Some(v.major)
+        }
+    }
     Ok(MetadataView {
         version,
         timestamp: service.db.get_block_timestamp(version)?,
         chain_id,
         script_hash_allow_list,
         module_publishing_allowed,
+        libra_version,
     })
 }
 

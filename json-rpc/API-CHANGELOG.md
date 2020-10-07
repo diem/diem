@@ -13,6 +13,14 @@ Please add the API change in the following format:
 
 ```
 
+
+## 2020-10-07 Add `libra_version` field to `get_metadata` response
+
+- `libra_version` number of libra onchain version
+
+See [doc](docs/type_metadata.md) for more details.
+
+
 ## [breaking] 2020-10-07 Rename unknown script type from `unknown_transaction` to `unknown`
 
 - `unknown_transaction` may cause user think the transaction is invalid. Change to `unknown` which is align with other unknown types.
@@ -28,6 +36,7 @@ See [doc](docs/type_transaction.md#type-script) for more details.
 - `module_publishing_allowed` returns bool value indicates whether publishing customized scripts are allowed
 
 See [doc](docs/type_metadata.md) for more details.
+
 
 ## 2020-10-05 Add `created_address` and `role_id` fields to `CreateAccount` event
 

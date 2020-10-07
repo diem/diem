@@ -814,6 +814,7 @@ fn test_json_rpc_protocol_invalid_requests() {
                     "version": version,
                     "script_hash_allow_list": [],
                     "module_publishing_allowed": true,
+                    "libra_version": 1
                 }
             }),
         ),

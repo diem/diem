@@ -86,6 +86,7 @@ fn create_test_cases() -> Vec<Test> {
                 // for testing chain id, we init genesis with VMPublishingOption#open
                 assert_eq!(metadata["script_hash_allow_list"], json!([]));
                 assert_eq!(metadata["module_publishing_allowed"], true);
+                assert_eq!(metadata["libra_version"], 1);
                 assert_ne!(resp.libra_ledger_timestampusec, 0);
                 assert_ne!(resp.libra_ledger_version, 0);
             },
