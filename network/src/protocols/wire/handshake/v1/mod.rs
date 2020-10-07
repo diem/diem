@@ -142,10 +142,12 @@ impl fmt::Display for MessagingProtocolVersion {
 /// An enum to list the possible errors during the libra handshake negotiation
 #[derive(Debug, Error)]
 pub enum HandshakeError {
-    #[error("libra-handshake: the received message has an invalid chain id: {0}")]
-    InvalidChainId(ChainId),
-    #[error("libra-handshake: the received message has an invalid network id: {0}")]
-    InvalidNetworkId(NetworkId),
+    #[error("libra-handshake: the received message has a different chain id: {0}, expected: {1}")]
+    InvalidChainId(ChainId, ChainId),
+    #[error(
+        "libra-handshake: the received message has an different network id: {0}, expected: {1}"
+    )]
+    InvalidNetworkId(NetworkId, NetworkId),
     #[error("libra-handshake: could not find an intersection of supported protocol with the peer")]
     NoCommonProtocols,
 }
@@ -184,12 +186,18 @@ impl HandshakeMsg {
     ) -> Result<(MessagingProtocolVersion, SupportedProtocols), HandshakeError> {
         // verify that both peers are on the same chain
         if self.chain_id != other.chain_id {
-            return Err(HandshakeError::InvalidChainId(other.chain_id));
+            return Err(HandshakeError::InvalidChainId(
+                other.chain_id,
+                self.chain_id,
+            ));
         }
 
         // verify that both peers are on the same type of network
         if self.network_id != other.network_id {
-            return Err(HandshakeError::InvalidNetworkId(other.network_id.clone()));
+            return Err(HandshakeError::InvalidNetworkId(
+                other.network_id.clone(),
+                self.network_id.clone(),
+            ));
         }
 
         // first, find the highest MessagingProtocolVersion supported by both nodes.
