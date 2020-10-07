@@ -199,9 +199,16 @@ module AccountLimits {
         )
     }
     spec fun publish_unrestricted_limits {
-        // TODO(wrwg): put these conditions into a schema.
+        include PublishUnrestrictedLimitsAbortsIf<CoinType>;
+    }
+    spec schema PublishUnrestrictedLimitsAbortsIf<CoinType> {
+        publish_account: signer;
         aborts_if exists<LimitsDefinition<CoinType>>(Signer::spec_address_of(publish_account))
             with Errors::ALREADY_PUBLISHED;
+    }
+    spec schema PublishUnrestrictedLimitsEnsures<CoinType> {
+        publish_account: signer;
+        ensures exists<LimitsDefinition<CoinType>>(Signer::spec_address_of(publish_account));
     }
 
     /// Updates the `LimitsDefinition<CoinType>` resource at `limit_address`.

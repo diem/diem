@@ -795,6 +795,15 @@ must be a registered currency type. The caller must pass a treasury compliance a
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt; {
     tc_account: &signer;
+}
+</code></pre>
+
+
+Must abort if tc_account does not have the TreasuryCompliance role.
+Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
     <b>aborts_if</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
@@ -1247,6 +1256,31 @@ Create a <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;<
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="Libra.md#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { to_burn: <a href="Libra.md#0x1_Libra_zero">zero</a>&lt;CoinType&gt;() }
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_CreatePreburnAbortsIf">CreatePreburnAbortsIf</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_CreatePreburnAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_CreatePreburnAbortsIf">CreatePreburnAbortsIf</a>&lt;CoinType&gt; {
+    tc_account: signer;
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
 }
 </code></pre>
 
@@ -2218,8 +2252,7 @@ adds the currency to the set of <code><a href="RegisteredCurrencies.md#0x1_Regis
 
 
 <pre><code><b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value == 0;
+<b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyEnsures">RegisterCurrencyEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
 
@@ -2246,6 +2279,18 @@ Must abort if the signer does not have the LibraRoot role [[H7]][PERMISSION].
     <b>aborts_if</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account))
         <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
     <b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_RegisterCurrencyEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyEnsures">RegisterCurrencyEnsures</a>&lt;CoinType&gt; {
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value == 0;
 }
 </code></pre>
 
@@ -2309,15 +2354,49 @@ accounts.
 <summary>Specification</summary>
 
 
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyAbortsIf">RegisterSCSCurrencyAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyEnsures">RegisterSCSCurrencyEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_RegisterSCSCurrencyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyAbortsIf">RegisterSCSCurrencyAbortsIf</a>&lt;CoinType&gt; {
+    tc_account: signer;
+    lr_account: signer;
+    currency_code: vector&lt;u8&gt;;
+    scaling_factor: u64;
+}
+</code></pre>
+
+
 Must abort if tc_account does not have the TreasuryCompliance role.
-Only an account with the TreasuryCompliance role can have the MintCapability [[H1]][PERMISSION].
+Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
+Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
-<b>aborts_if</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
-<b>include</b> <a href="Libra.md#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt;;
-<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyAbortsIf">RegisterSCSCurrencyAbortsIf</a>&lt;CoinType&gt; {
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
+    <b>include</b> <a href="Libra.md#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt;;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_RegisterSCSCurrencyEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyEnsures">RegisterSCSCurrencyEnsures</a>&lt;CoinType&gt; {
+    tc_account: signer;
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
+}
 </code></pre>
 
 
@@ -2767,6 +2846,45 @@ start out in the default state of <code>can_mint = <b>true</b></code>.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityAbortsIf">UpdateMintingAbilityAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityEnsures">UpdateMintingAbilityEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_UpdateMintingAbilityAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityAbortsIf">UpdateMintingAbilityAbortsIf</a>&lt;CoinType&gt; {
+    tc_account: signer;
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_UpdateMintingAbilityEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityEnsures">UpdateMintingAbilityEnsures</a>&lt;CoinType&gt; {
+    tc_account: signer;
+    can_mint: bool;
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().can_mint == can_mint;
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Libra_assert_is_currency"></a>
 
 ## Function `assert_is_currency`
@@ -2886,7 +3004,7 @@ Only mint functions can increase the total amount of currency [[H1]][PERMISSION]
 In order to successfully call <code>mint</code> and <code>mint_with_capability</code>, MintCapability is
 required. MintCapability must be only granted to a TreasuryCompliance account [[H1]][PERMISSION].
 Only <code>register_SCS_currency</code> creates MintCapability, which must abort if the account
-does not have the TreasuryCompliance role [[H7]][PERMISSION].
+does not have the TreasuryCompliance role [[H1]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreserveMintCapAbsence">PreserveMintCapAbsence</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt; <b>except</b> <a href="Libra.md#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;;

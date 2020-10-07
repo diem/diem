@@ -239,6 +239,8 @@ module Libra {
     }
     spec schema PublishBurnCapAbortsIfs<CoinType> {
         tc_account: &signer;
+        /// Must abort if tc_account does not have the TreasuryCompliance role.
+        /// Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if exists<BurnCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
     }
@@ -447,6 +449,14 @@ module Libra {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<CoinType>();
         Preburn<CoinType> { to_burn: zero<CoinType>() }
+    }
+    spec fun create_preburn {
+        include CreatePreburnAbortsIf<CoinType>;
+    }
+    spec schema CreatePreburnAbortsIf<CoinType> {
+        tc_account: signer;
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include AbortsIfNoCurrency<CoinType>;
     }
 
     /// Publishes a `Preburn` resource under `account`. This function is
@@ -866,8 +876,7 @@ module Libra {
     }
     spec fun register_currency {
         include RegisterCurrencyAbortsIf<CoinType>;
-        ensures spec_is_currency<CoinType>();
-        ensures spec_currency_info<CoinType>().total_value == 0;
+        include RegisterCurrencyEnsures<CoinType>;
     }
 
     spec schema RegisterCurrencyAbortsIf<CoinType> {
@@ -883,6 +892,11 @@ module Libra {
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account))
             with Errors::ALREADY_PUBLISHED;
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
+    }
+
+    spec schema RegisterCurrencyEnsures<CoinType> {
+        ensures spec_is_currency<CoinType>();
+        ensures spec_currency_info<CoinType>().total_value == 0;
     }
 
     /// Registers a stable currency (SCS) coin -- i.e., a non-synthetic currency.
@@ -918,13 +932,26 @@ module Libra {
     }
 
     spec fun register_SCS_currency {
+        include RegisterSCSCurrencyAbortsIf<CoinType>;
+        include RegisterSCSCurrencyEnsures<CoinType>;
+    }
+    spec schema RegisterSCSCurrencyAbortsIf<CoinType> {
+        tc_account: signer;
+        lr_account: signer;
+        currency_code: vector<u8>;
+        scaling_factor: u64;
+
         /// Must abort if tc_account does not have the TreasuryCompliance role.
-        /// Only an account with the TreasuryCompliance role can have the MintCapability [[H1]][PERMISSION].
+        /// Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
+        /// Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         aborts_if exists<MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
         include RegisterCurrencyAbortsIf<CoinType>;
         include PublishBurnCapAbortsIfs<CoinType>;
+    }
+    spec schema RegisterSCSCurrencyEnsures<CoinType> {
+        tc_account: signer;
         ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
     }
 
@@ -1080,6 +1107,20 @@ module Libra {
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
     }
+    spec fun update_minting_ability {
+        include UpdateMintingAbilityAbortsIf<CoinType>;
+        include UpdateMintingAbilityEnsures<CoinType>;
+    }
+    spec schema UpdateMintingAbilityAbortsIf<CoinType> {
+        tc_account: signer;
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include AbortsIfNoCurrency<CoinType>;
+    }
+    spec schema UpdateMintingAbilityEnsures<CoinType> {
+        tc_account: signer;
+        can_mint: bool;
+        ensures spec_currency_info<CoinType>().can_mint == can_mint;
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Helper functions
@@ -1121,7 +1162,7 @@ module Libra {
         /// In order to successfully call `mint` and `mint_with_capability`, MintCapability is
         /// required. MintCapability must be only granted to a TreasuryCompliance account [[H1]][PERMISSION].
         /// Only `register_SCS_currency` creates MintCapability, which must abort if the account
-        /// does not have the TreasuryCompliance role [[H7]][PERMISSION].
+        /// does not have the TreasuryCompliance role [[H1]][PERMISSION].
         // TODO(jkpark): this spec does not cover the following two scenarios:
         // a function (possibly in an other module) obtains a MintCapability from `register_currency`, and
         // (1) uses the MintCapability for minting without publishing it, and/or

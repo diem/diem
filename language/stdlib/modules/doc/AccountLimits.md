@@ -564,8 +564,32 @@ resource once it's published.
 
 
 
-<pre><code><b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account))
-    <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<pre><code><b>include</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsAbortsIf">PublishUnrestrictedLimitsAbortsIf</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_PublishUnrestrictedLimitsAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsAbortsIf">PublishUnrestrictedLimitsAbortsIf</a>&lt;CoinType&gt; {
+    publish_account: signer;
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account))
+        <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_PublishUnrestrictedLimitsEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsEnsures">PublishUnrestrictedLimitsEnsures</a>&lt;CoinType&gt; {
+    publish_account: signer;
+    <b>ensures</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account));
+}
 </code></pre>
 
 

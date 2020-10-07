@@ -16,6 +16,8 @@ Once the component makeup of the LBR has been chosen the
 -  [Function `is_lbr`](#0x1_LBR_is_lbr)
 -  [Function `reserve_address`](#0x1_LBR_reserve_address)
 -  [Module Specification](#@Module_Specification_1)
+    -  [Persistence of Resources](#@Persistence_of_Resources_2)
+    -  [Helper Functions](#@Helper_Functions_3)
 
 
 <pre><code><b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
@@ -170,6 +172,50 @@ restrictions are enforced in the <code><a href="Libra.md#0x1_Libra_register_curr
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">CoreAddresses::AbortsIfNotCurrencyInfo</a>{account: lr_account};
+<b>aborts_if</b> <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">Libra::RegisterCurrencyAbortsIf</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{
+    currency_code: b"<a href="LBR.md#0x1_LBR">LBR</a>",
+    scaling_factor: 1000000
+};
+<b>include</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsAbortsIf">AccountLimits::PublishUnrestrictedLimitsAbortsIf</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{publish_account: lr_account};
+<b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyEnsures">Libra::RegisterCurrencyEnsures</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityEnsures">Libra::UpdateMintingAbilityEnsures</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{can_mint: <b>false</b>};
+<b>include</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsEnsures">AccountLimits::PublishUnrestrictedLimitsEnsures</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{publish_account: lr_account};
+<b>ensures</b> <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+Registering LBR can only be done in genesis.
+
+
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+</code></pre>
+
+
+Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+</code></pre>
+
+
+Only the TreasuryCompliance role can update the <code>can_mint</code> field of CurrencyInfo.
+Moreover, only the TreasuryCompliance role can create Preburn.
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_LBR_is_lbr"></a>
 
 ## Function `is_lbr`
@@ -214,18 +260,6 @@ can currently not prove it, therefore verify is false.
 </code></pre>
 
 
-Returns true if CoinType is LBR.
-
-
-<a name="0x1_LBR_spec_is_lbr"></a>
-
-
-<pre><code><b>define</b> <a href="LBR.md#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;(): bool {
-   type&lt;CoinType&gt;() == type&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;()
-}
-</code></pre>
-
-
 
 </details>
 
@@ -258,13 +292,53 @@ Return the account address where the globally unique LBR::Reserve resource is st
 
 ## Module Specification
 
-Global invariant that the Reserve resource exists after genesis.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LBR.md#0x1_LBR_reserve_exists">reserve_exists</a>() && <a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;();
+<a name="@Persistence_of_Resources_2"></a>
+
+### Persistence of Resources
+
+
+After genesis, the Reserve resource exists.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LBR.md#0x1_LBR_reserve_exists">reserve_exists</a>();
+</code></pre>
+
+
+After genesis, LBR is registered.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;();
+</code></pre>
+
+
+
+<a name="@Helper_Functions_3"></a>
+
+### Helper Functions
+
+
+Checks whether the Reserve resource exists.
+
+
 <a name="0x1_LBR_reserve_exists"></a>
-<b>define</b> <a href="LBR.md#0x1_LBR_reserve_exists">reserve_exists</a>(): bool {
+
+
+<pre><code><b>define</b> <a href="LBR.md#0x1_LBR_reserve_exists">reserve_exists</a>(): bool {
    <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
+}
+</code></pre>
+
+
+Returns true if CoinType is LBR.
+
+
+<a name="0x1_LBR_spec_is_lbr"></a>
+
+
+<pre><code><b>define</b> <a href="LBR.md#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;(): bool {
+    type&lt;CoinType&gt;() == type&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;()
 }
 </code></pre>
 

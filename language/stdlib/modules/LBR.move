@@ -36,15 +36,6 @@ module LBR {
         // up the reserve.
     }
 
-    /// Global invariant that the Reserve resource exists after genesis.
-    spec module {
-        invariant [global] LibraTimestamp::is_operating() ==> reserve_exists() && Libra::is_currency<LBR>();
-
-        define reserve_exists(): bool {
-           exists<Reserve>(CoreAddresses::CURRENCY_INFO_ADDRESS())
-        }
-    }
-
     /// The `Reserve` resource is in an invalid state
     const ERESERVE: u64 = 0;
 
@@ -78,6 +69,29 @@ module LBR {
         let preburn_cap = Libra::create_preburn<LBR>(tc_account);
         move_to(lr_account, Reserve { mint_cap, burn_cap, preburn_cap });
     }
+    spec fun initialize {
+       use 0x1::Roles;
+        include CoreAddresses::AbortsIfNotCurrencyInfo{account: lr_account};
+        aborts_if exists<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS()) with Errors::ALREADY_PUBLISHED;
+        include Libra::RegisterCurrencyAbortsIf<LBR>{
+            currency_code: b"LBR",
+            scaling_factor: 1000000
+        };
+        include AccountLimits::PublishUnrestrictedLimitsAbortsIf<LBR>{publish_account: lr_account};
+
+        include Libra::RegisterCurrencyEnsures<LBR>;
+        include Libra::UpdateMintingAbilityEnsures<LBR>{can_mint: false};
+        include AccountLimits::PublishUnrestrictedLimitsEnsures<LBR>{publish_account: lr_account};
+        ensures exists<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// Registering LBR can only be done in genesis.
+        include LibraTimestamp::AbortsIfNotGenesis;
+        /// Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        /// Only the TreasuryCompliance role can update the `can_mint` field of CurrencyInfo.
+        /// Moreover, only the TreasuryCompliance role can create Preburn.
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+    }
 
     /// Returns true if `CoinType` is `LBR::LBR`
     public fun is_lbr<CoinType>(): bool {
@@ -93,14 +107,38 @@ module LBR {
         ensures result == Libra::spec_is_currency<CoinType>() && spec_is_lbr<CoinType>();
     }
 
-    /// Returns true if CoinType is LBR.
-    spec define spec_is_lbr<CoinType>(): bool {
-        type<CoinType>() == type<LBR>()
-    }
-
     /// Return the account address where the globally unique LBR::Reserve resource is stored
     public fun reserve_address(): address {
         CoreAddresses::CURRENCY_INFO_ADDRESS()
     }
+
+    // =================================================================
+    // Module Specification
+
+    spec module {} // switch documentation context back to module level
+
+    /// # Persistence of Resources
+
+    spec module {
+        /// After genesis, the Reserve resource exists.
+        invariant [global] LibraTimestamp::is_operating() ==> reserve_exists();
+
+        /// After genesis, LBR is registered.
+        invariant [global] LibraTimestamp::is_operating() ==> Libra::is_currency<LBR>();
+    }
+
+    /// # Helper Functions
+    spec module {
+        /// Checks whether the Reserve resource exists.
+        define reserve_exists(): bool {
+           exists<Reserve>(CoreAddresses::CURRENCY_INFO_ADDRESS())
+        }
+
+        /// Returns true if CoinType is LBR.
+        define spec_is_lbr<CoinType>(): bool {
+            type<CoinType>() == type<LBR>()
+        }
+    }
+
 }
 }
