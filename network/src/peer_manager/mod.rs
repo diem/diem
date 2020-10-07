@@ -587,11 +587,13 @@ where
         self.sample_connected_peers();
         match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
+                let protocol_id = msg.protocol_id;
                 if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
                     if let Err(err) = sender.push(msg.protocol_id, NetworkRequest::SendMessage(msg))
                     {
                         info!(
                             NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata),
+                            protocol_id = %protocol_id,
                             error = ?err,
                             "{} Failed to forward outbound message to downstream actor. Error: {:?}",
                             self.network_context, err
@@ -600,18 +602,22 @@ where
                 } else {
                     warn!(
                         NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-                        "{} Peer {} is not connected",
+                        protocol_id = %protocol_id,
+                        "{} Can't send message to peer.  Peer {} is currently not connected",
                         self.network_context,
                         peer_id.short_str()
                     );
                 }
             }
             PeerManagerRequest::SendRpc(peer_id, req) => {
+                let protocol_id = req.protocol_id;
                 if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
                     if let Err(err) = sender.push(req.protocol_id, NetworkRequest::SendRpc(req)) {
                         info!(
                             NetworkSchema::new(&self.network_context)
                                 .connection_metadata(conn_metadata),
+                            protocol_id = %protocol_id,
+                            error = ?err,
                             "{} Failed to forward outbound rpc to downstream actor. Error: {:?}",
                             self.network_context,
                             err
@@ -620,7 +626,8 @@ where
                 } else {
                     warn!(
                         NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-                        "{} Peer {} is not connected",
+                        protocol_id = %protocol_id,
+                        "{} Can't send RPC message to peer.  Peer {} is currently not connected",
                         self.network_context,
                         peer_id.short_str()
                     );
