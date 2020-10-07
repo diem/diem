@@ -52,18 +52,10 @@ pub enum Protocol {
 /// protocol delimiter and Rust's [`::std::net::ToSocketAddr`] API requires a
 /// `&str`.
 pub struct DnsName(String);
-
-/// A `RawNetworkAddress` is the serialized, unverified, on-chain representation
-/// of a [`NetworkAddress`]. Specifically, a `RawNetworkAddress` is an
-/// [`lcs`]-serialized `NetworkAddress`.
-///
-/// Note: deserializing a `RawNetworkAddress` does no validation, other than
-/// deserializing the underlying `Vec<u8>`.
-pub struct RawNetworkAddress(Vec<u8>);
 ```
 
 (TODO(philiphayes): link to x25519 ser/de spec)
-(TODO(philiphayes): hardening to limit NetworkAddress and RawNetworkAddress max size)
+(TODO(philiphayes): hardening to limit NetworkAddress max size)
 
 ## Human-readable Format
 
