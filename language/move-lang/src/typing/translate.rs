@@ -1555,7 +1555,7 @@ fn add_field_types<T>(
         N::StructFields::Native(nloc) => {
             let msg = format!(
                 "Invalid {} usage for native struct '{}::{}'. Native structs cannot be directly \
-                 constructed/deconstructd, and their fields cannot be dirctly accessed",
+                 constructed/deconstructed, and their fields cannot be dirctly accessed",
                 verb, m, n
             );
             context.error(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);

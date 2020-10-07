@@ -256,12 +256,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
                 function(context, &mut functions, f)
             }
             P::ModuleMember::Constant(c) => constant(context, &mut constants, c),
-            P::ModuleMember::Struct(mut s) => {
-                if !context.is_source_module {
-                    s.fields = P::StructFields::Native(s.loc)
-                }
-                struct_def(context, &mut structs, s)
-            }
+            P::ModuleMember::Struct(s) => struct_def(context, &mut structs, s),
             P::ModuleMember::Spec(s) => specs.push(spec(context, s)),
         }
     }
