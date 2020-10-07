@@ -247,6 +247,10 @@ impl Env {
         }
         serde_json::from_value(json).expect("should be valid JsonRpcResponse")
     }
+
+    pub fn get_account(&self, vasp_id: usize, child_id: usize) -> &Account {
+        &self.vasps[vasp_id].children[child_id]
+    }
 }
 
 impl std::panic::UnwindSafe for Env {}

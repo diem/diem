@@ -3646,24 +3646,27 @@ The main properties that it verifies:
         );
     };
 
-    // [PCA8]: Check that the transaction sequence number is not too <b>old</b> (in the past)
+    // [PCA8]: Check that the transaction hasn't expired
+    <b>assert</b>(
+        <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_seconds">LibraTimestamp::now_seconds</a>() &lt; txn_expiration_time_seconds,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED">PROLOGUE_ETRANSACTION_EXPIRED</a>)
+    );
+
+    // [PCA9]: Check that the transaction sequence number is not too <b>old</b> (in the past)
     <b>assert</b>(
         txn_sequence_number &gt;= sender_account.sequence_number,
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>)
     );
 
-    // [PCA9]: Check that the transaction's sequence number matches the
+    // [PCA10]: Check that the transaction's sequence number matches the
     // current sequence number. Otherwise sequence number is too new by [PCA8].
     <b>assert</b>(
         txn_sequence_number == sender_account.sequence_number,
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
     );
 
-    // [PCA10]: Check that the transaction hasn't expired
-    <b>assert</b>(
-        <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_seconds">LibraTimestamp::now_seconds</a>() &lt; txn_expiration_time_seconds,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraAccount.md#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED">PROLOGUE_ETRANSACTION_EXPIRED</a>)
-    );
+    // WARNING: No checks should be added here <b>as</b> the sequence number too new check should be the last check run
+    // by the prologue.
 }
 </code></pre>
 
@@ -3777,7 +3780,16 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 </code></pre>
 
 
-[PCA8] Covered: L61 (Match 2)
+[PCA8] Covered: L72 (Match 6)
+
+
+<pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_seconds">LibraTimestamp::spec_now_seconds</a>() &gt;= txn_expiration_time_seconds <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+[PCA9] Covered: L61 (Match 2)
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
@@ -3786,20 +3798,11 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 </code></pre>
 
 
-[PCA9] Covered: L63 (match 3)
+[PCA10] Covered: L63 (match 3)
 
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
     <b>aborts_if</b> txn_sequence_number &gt; <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-}
-</code></pre>
-
-
-[PCA10] Covered: L72 (Match 6)
-
-
-<pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
-    <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_seconds">LibraTimestamp::spec_now_seconds</a>() &gt;= txn_expiration_time_seconds <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 

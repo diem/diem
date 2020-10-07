@@ -1546,24 +1546,27 @@ module LibraAccount {
             );
         };
 
-        // [PCA8]: Check that the transaction sequence number is not too old (in the past)
+        // [PCA8]: Check that the transaction hasn't expired
+        assert(
+            LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
+            Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
+        );
+
+        // [PCA9]: Check that the transaction sequence number is not too old (in the past)
         assert(
             txn_sequence_number >= sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
         );
 
-        // [PCA9]: Check that the transaction's sequence number matches the
+        // [PCA10]: Check that the transaction's sequence number matches the
         // current sequence number. Otherwise sequence number is too new by [PCA8].
         assert(
             txn_sequence_number == sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
         );
 
-        // [PCA10]: Check that the transaction hasn't expired
-        assert(
-            LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
-            Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
-        );
+        // WARNING: No checks should be added here as the sequence number too new check should be the last check run
+        // by the prologue.
     }
     spec fun prologue_common {
         let transaction_sender = Signer::spec_address_of(sender);
@@ -1596,12 +1599,12 @@ module LibraAccount {
         aborts_if max_transaction_fee > 0 && !exists<Balance<Token>>(transaction_sender) with Errors::INVALID_ARGUMENT;
         /// [PCA7] Covered: L69 (Match 5)
         aborts_if max_transaction_fee > 0 && balance<Token>(transaction_sender) < max_transaction_fee with Errors::INVALID_ARGUMENT;
-        /// [PCA8] Covered: L61 (Match 2)
-        aborts_if txn_sequence_number < global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
-        /// [PCA9] Covered: L63 (match 3)
-        aborts_if txn_sequence_number > global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
-        /// [PCA10] Covered: L72 (Match 6)
+        /// [PCA8] Covered: L72 (Match 6)
         aborts_if LibraTimestamp::spec_now_seconds() >= txn_expiration_time_seconds with Errors::INVALID_ARGUMENT;
+        /// [PCA9] Covered: L61 (Match 2)
+        aborts_if txn_sequence_number < global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
+        /// [PCA10] Covered: L63 (match 3)
+        aborts_if txn_sequence_number > global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
     }
 
     /// Collects gas and bumps the sequence number for executing a transaction.

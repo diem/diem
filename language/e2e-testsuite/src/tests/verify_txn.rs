@@ -479,6 +479,25 @@ fn verify_expiration_time() {
         executor.execute_transaction(txn).status(),
         StatusCode::TRANSACTION_EXPIRED
     );
+
+    // 10 is picked to make sure that SEQUENCE_NUMBER_TOO_NEW will not override the
+    // TRANSACTION_EXPIRED error.
+    let txn = transaction_test_helpers::get_test_signed_transaction(
+        *sender.address(),
+        10, /* sequence_number */
+        private_key,
+        private_key.public_key(),
+        None, /* script */
+        0,    /* expiration_time */
+        0,    /* gas_unit_price */
+        account_config::COIN1_NAME.to_owned(),
+        None, /* max_gas_amount */
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::TRANSACTION_EXPIRED
+    );
 }
 
 #[test]
