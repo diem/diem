@@ -101,7 +101,6 @@ impl Write for TcpWriter {
             }
             result
         } else {
-            self.stream = None;
             Err(io::Error::new(
                 io::ErrorKind::NotConnected,
                 "Can't write to stream, not connected",
