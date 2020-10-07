@@ -14,6 +14,7 @@ use std::{
 
 const RUST_TOOLCHAIN_VERSION: &str = include_str!("../../../rust-toolchain");
 const RUSTUP_TOOLCHAIN: &str = "RUSTUP_TOOLCHAIN";
+const CARGO: &str = "CARGO";
 
 pub struct Cargo {
     inner: Command,
@@ -64,6 +65,9 @@ impl Cargo {
         if env::var_os(RUSTUP_TOOLCHAIN).is_none() {
             inner.env(RUSTUP_TOOLCHAIN, RUST_TOOLCHAIN_VERSION);
         }
+
+        // Set the `CARGO` envvar with the path to the cargo binary being used
+        inner.env(CARGO, cargo_binary.trim());
 
         inner.arg(command);
         Self {
