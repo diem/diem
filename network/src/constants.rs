@@ -7,10 +7,11 @@
 // data. If you run into a limit and believe that it is unreasonably tight, please submit a PR
 // with your use-case. If you do change a value, please add a comment linking to the PR which
 // advocated the change.
-// TODO:  Each of these should be commented with semantic meaning, intended use place, and justification for the value.
-// TODO:  Better --- these should be encapsulated in configurations somewhere.
+/// The timeout for any inbound RPC call before it's cut off
 pub const INBOUND_RPC_TIMEOUT_MS: u64 = 10_000;
+/// Limit on concurrent Outbound RPC requests before backpressure is applied
 pub const MAX_CONCURRENT_OUTBOUND_RPCS: u32 = 100;
+/// Limit on concurrent Inbound RPC requests before backpressure is applied
 pub const MAX_CONCURRENT_INBOUND_RPCS: u32 = 100;
 
 // These are only used in tests
