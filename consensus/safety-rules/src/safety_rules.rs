@@ -219,6 +219,16 @@ impl SafetyRules {
     // Internal functions mapped to the public interface to enable exhaustive logging and metrics
 
     fn guarded_consensus_state(&mut self) -> Result<ConsensusState, Error> {
+        let waypoint = self.persistent_storage.waypoint()?;
+        let safety_data = self.persistent_storage.safety_data()?;
+
+        info!(SafetyLogSchema::new(LogEntry::State, LogEvent::Update)
+            .author(self.persistent_storage.author()?)
+            .epoch(safety_data.epoch)
+            .last_voted_round(safety_data.last_voted_round)
+            .preferred_round(safety_data.preferred_round)
+            .waypoint(waypoint));
+
         Ok(ConsensusState::new(
             self.persistent_storage.safety_data()?,
             self.persistent_storage.waypoint()?,

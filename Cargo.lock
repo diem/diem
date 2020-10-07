@@ -5548,6 +5548,7 @@ name = "safety-rules"
 version = "0.1.0"
 dependencies = [
  "consensus-types",
+ "crash-handler",
  "criterion",
  "libra-canonical-serialization",
  "libra-config",
