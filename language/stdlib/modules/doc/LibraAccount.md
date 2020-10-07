@@ -2379,7 +2379,9 @@ vector concatenation of serialization results. The actual value of the key
 is assumed to be irrelevant for callers. Instead the uninterpreted function
 <code>spec_abstract_create_authentication_key</code> is used to represent the key value.
 The aborts behavior is, however, preserved: the caller must provide a
-key prefix of a specific length.
+key prefix of a specific length. This length is currently arbitrarily
+chosen; this might be refined once LCS has a specification, and if this would
+ever become relevant for verification of callers.
 
 
 <pre><code><b>pragma</b> opaque;
@@ -2397,7 +2399,7 @@ key prefix of a specific length.
 
 <pre><code><b>schema</b> <a href="LibraAccount.md#0x1_LibraAccount_CreateAuthenticationKeyAbortsIf">CreateAuthenticationKeyAbortsIf</a> {
     auth_key_prefix: vector&lt;u8&gt;;
-    <b>aborts_if</b> 16 + len(auth_key_prefix) != 32 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> 8 + len(auth_key_prefix) != 32 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 
@@ -4379,7 +4381,7 @@ Returns the KeyRotationCapability of the field <code>key_rotation_capability</co
 
 
 <pre><code><b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address): <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> {
-    <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
+    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
 }
 <a name="0x1_LibraAccount_spec_has_key_rotation_cap"></a>
 <b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr: address): bool {
@@ -4433,7 +4435,7 @@ Returns the WithdrawCapability of the field <code>withdraw_capability</code>.
 
 
 <pre><code><b>define</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): <a href="LibraAccount.md#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a> {
-    <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
+    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
 }
 </code></pre>
 
