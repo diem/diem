@@ -10,10 +10,10 @@ use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::Schema;
 use libra_types::{account_address::AccountAddress, on_chain_config::OnChainConfigPayload};
 use serde::Serialize;
-use std::fmt;
+use std::{fmt, time::SystemTime};
 
 pub struct TxnsLog {
-    txns: Vec<(AccountAddress, u64, Option<String>)>,
+    txns: Vec<(AccountAddress, u64, Option<String>, Option<SystemTime>)>,
 }
 
 impl TxnsLog {
@@ -23,16 +23,28 @@ impl TxnsLog {
 
     pub fn new_txn(account: AccountAddress, seq_num: u64) -> Self {
         Self {
-            txns: vec![(account, seq_num, None)],
+            txns: vec![(account, seq_num, None, None)],
         }
     }
 
     pub fn add(&mut self, account: AccountAddress, seq_num: u64) {
-        self.txns.push((account, seq_num, None));
+        self.txns.push((account, seq_num, None, None));
     }
 
     pub fn add_with_status(&mut self, account: AccountAddress, seq_num: u64, status: &str) {
-        self.txns.push((account, seq_num, Some(status.to_string())));
+        self.txns
+            .push((account, seq_num, Some(status.to_string()), None));
+    }
+
+    pub fn add_full_metadata(
+        &mut self,
+        account: AccountAddress,
+        seq_num: u64,
+        status: &str,
+        timestamp: Option<SystemTime>,
+    ) {
+        self.txns
+            .push((account, seq_num, Some(status.to_string()), timestamp));
     }
 }
 
@@ -40,10 +52,13 @@ impl fmt::Display for TxnsLog {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut txns = "".to_string();
 
-        for (account, seq_num, status) in self.txns.iter() {
+        for (account, seq_num, status, timestamp) in self.txns.iter() {
             let mut txn = format!("{}:{}", account, seq_num);
             if let Some(status) = status {
                 txn += &format!(":{}", status)
+            }
+            if let Some(timestamp) = timestamp {
+                txn += &format!(":{:?}", timestamp)
             }
 
             txns += &format!("{} ", txn);

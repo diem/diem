@@ -475,7 +475,10 @@ impl TransactionStore {
         self.priority_index.iter()
     }
 
-    pub(crate) fn gen_snapshot(&self) -> TxnsLog {
+    pub(crate) fn gen_snapshot(
+        &self,
+        metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
+    ) -> TxnsLog {
         let mut txns_log = TxnsLog::new();
         for (account, txns) in self.transactions.iter() {
             for (seq_num, _txn) in txns.iter() {
@@ -484,7 +487,8 @@ impl TransactionStore {
                 } else {
                     "ready"
                 };
-                txns_log.add_with_status(*account, *seq_num, status);
+                let timestamp = metrics_cache.get(&(*account, *seq_num)).cloned();
+                txns_log.add_full_metadata(*account, *seq_num, status, timestamp);
             }
         }
         txns_log

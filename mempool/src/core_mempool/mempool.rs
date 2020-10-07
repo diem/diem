@@ -32,7 +32,6 @@ pub struct Mempool {
     transactions: TransactionStore,
 
     sequence_number_cache: TtlCache<AccountAddress, u64>,
-    // temporary DS. TODO: eventually retire it
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
@@ -267,7 +266,7 @@ impl Mempool {
     }
 
     pub fn gen_snapshot(&self) -> TxnsLog {
-        self.transactions.gen_snapshot()
+        self.transactions.gen_snapshot(&self.metrics_cache)
     }
 
     #[cfg(test)]
