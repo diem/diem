@@ -4,7 +4,7 @@
 use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
-    Error, SafetyRules,
+    Error, SafetyRules, TSafetyRules,
 };
 use libra_logger::warn;
 use libra_secure_net::{NetworkClient, NetworkServer};
@@ -33,13 +33,17 @@ pub fn execute(
     verify_vote_proposal_signature: bool,
     network_timeout_ms: u64,
 ) {
-    let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
+    let mut safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
+    if let Err(e) = safety_rules.consensus_state() {
+        warn!("Unable to print consensus state: {}", e);
+    }
+
     let mut serializer_service = SerializerService::new(safety_rules);
     let mut network_server = NetworkServer::new("safety-rules", listen_addr, network_timeout_ms);
 
     loop {
         if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {
-            warn!("Warning: Failed to process message: {}", e);
+            warn!("Failed to process message: {}", e);
         }
     }
 }
