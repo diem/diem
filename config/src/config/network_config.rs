@@ -81,6 +81,7 @@ pub struct NetworkConfig {
     // mutual_authentication network. This config field is intended as a fallback
     // in case some peers don't have well defined addresses.
     pub seed_pubkeys: SeedPublicKeys,
+    // The maximum size of an inbound or outbound request frame
     pub max_frame_size: usize,
     // Enables proxy protocol on incoming connections to get original source addresses
     pub enable_proxy_protocol: bool,

@@ -16,7 +16,6 @@ use libra_network_address::NetworkAddress;
 use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::ConnectionOrigin;
 use network::{
-    constants,
     error::NetworkError,
     peer_manager::{
         builder::AuthenticationMode, ConnectionRequestSender, PeerManagerRequestSender,
@@ -35,7 +34,6 @@ use std::{
     time::Duration,
 };
 use tokio::runtime::Runtime;
-use libra_config::config::CONNECTION_BACKOFF_BASE;
 
 const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
@@ -54,7 +52,7 @@ pub fn network_endpoint_config() -> (
         vec![TEST_RPC_PROTOCOL],
         vec![TEST_DIRECT_SEND_PROTOCOL],
         QueueStyle::LIFO,
-        constants::NETWORK_CHANNEL_SIZE,
+        NETWORK_CHANNEL_SIZE,
         None,
     )
 }
