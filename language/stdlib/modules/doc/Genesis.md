@@ -3,6 +3,11 @@
 
 # Module `0x1::Genesis`
 
+The <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> module defines the Move initialization entry point of the Libra framework
+when executing from a fresh state.
+
+> TODO: Currently there are a few additional functions called from Rust during genesis.
+> Document which these are and in which order they are called.
 
 
 -  [Function `initialize`](#0x1_Genesis_initialize)
@@ -31,6 +36,7 @@
 
 ## Function `initialize`
 
+Initializes the Libra framework.
 
 
 <pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, lr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
@@ -106,8 +112,35 @@
     <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, tc_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
+
+    // After we have called this function, all invariants which are guarded by
+    // `<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; ...` will become active and a verification condition.
+    // See also discussion at function specification.
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_set_time_has_started">LibraTimestamp::set_time_has_started</a>(lr_account);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+For verification of genesis, the goal is to prove that all the invariants which
+become active after the end of this function hold. This cannot be achieved with
+modular verification as we do in regular continuous testing. Rather, this module must
+be verified **together** with the module(s) which provides the invariant.
+
+> TODO: currently verifying this module together with modules providing invariants
+> (see above) times out. This can likely be solved by making more of the initialize
+> functions called by this function opaque, and prove the according invariants locally to
+> each module.
+
+Assume that this is called in genesis state (no timestamp).
+
+
+<pre><code><b>requires</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
 </code></pre>
 
 

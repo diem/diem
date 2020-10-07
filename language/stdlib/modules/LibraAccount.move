@@ -645,15 +645,15 @@ module LibraAccount {
         include ExtractWithdrawCapAbortsIf{sender_addr};
         ensures exists<LibraAccount>(sender_addr);
         ensures result == old(spec_get_withdraw_cap(sender_addr));
+        ensures global<LibraAccount>(sender_addr) == update_field(old(global<LibraAccount>(sender_addr)),
+            withdraw_capability, Option::spec_none());
         ensures result.account_address == sender_addr;
-        ensures delegated_withdraw_capability(sender_addr);
-        ensures spec_get_key_rotation_cap_field(sender_addr) == old(spec_get_key_rotation_cap_field(sender_addr));
     }
 
     spec schema ExtractWithdrawCapAbortsIf {
         sender_addr: address;
-        aborts_if delegated_withdraw_capability(sender_addr) with Errors::INVALID_STATE;
         aborts_if !exists_at(sender_addr) with Errors::NOT_PUBLISHED;
+        aborts_if spec_holds_delegated_withdraw_capability(sender_addr) with Errors::INVALID_STATE;
     }
 
     /// Return the withdraw capability to the account it originally came from
@@ -1036,7 +1036,6 @@ module LibraAccount {
                 upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(&lr_account),
             }
         );
-
         make_account(lr_account, auth_key_prefix)
     }
 
@@ -1824,7 +1823,7 @@ module LibraAccount {
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
         /// or the withdraw capability for addr itself [[H17]][PERMISSION].
         invariant [global] forall addr: address where exists_at(addr):
-            delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
+            spec_holds_delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
     }
 
     spec schema EnsuresWithdrawCap {
@@ -1952,6 +1951,12 @@ module LibraAccount {
             spec_has_withdraw_cap(addr)
             && addr == spec_get_withdraw_cap(addr).account_address
         }
+
+        /// Returns true of the account holds a delegated withdraw capability.
+        define spec_holds_delegated_withdraw_capability(addr: address): bool {
+            exists_at(addr) && Option::is_none(global<LibraAccount>(addr).withdraw_capability)
+        }
+
     }
 
     /// ## Prologue

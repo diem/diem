@@ -143,8 +143,13 @@ account.
 <summary>Specification</summary>
 
 
+Verification of this function is turned off because it cannot be verified without genesis execution
+context. After time has started, all invariants guarded by <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a></code> will become
+activated and need to hold.
 
-<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>ensures</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">is_operating</a>();
 </code></pre>

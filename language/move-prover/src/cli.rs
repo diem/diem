@@ -234,7 +234,7 @@ impl Default for BackendOptions {
             stratification_depth: 4,
             aggressive_func_inline: "".to_owned(),
             func_inline: "{:inline}".to_owned(),
-            serialize_bound: 4,
+            serialize_bound: 0,
             vector_using_sequences: false,
             random_seed: 1,
             proc_cores: 1,

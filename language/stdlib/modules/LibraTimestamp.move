@@ -41,6 +41,10 @@ module LibraTimestamp {
         move_to(lr_account, timer);
     }
     spec fun set_time_has_started {
+        /// Verification of this function is turned off because it cannot be verified without genesis execution
+        /// context. After time has started, all invariants guarded by `LibraTimestamp::is_operating` will become
+        /// activated and need to hold.
+        pragma verify = false;
         include AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
         ensures is_operating();

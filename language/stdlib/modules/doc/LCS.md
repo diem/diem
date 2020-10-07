@@ -46,6 +46,9 @@ Return the binary representation of <code>v</code> in LCS (Libra Canonical Seria
 
 
 
+Native function which is defined in the prover's prelude.
+
+
 <a name="0x1_LCS_serialize"></a>
 
 
