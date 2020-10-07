@@ -1,13 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    smoke_test_environment::SmokeTestEnvironment,
-    test_utils::{
-        compare_balances, load_backend_storage, load_libra_root_storage,
-        setup_swarm_and_client_proxy,
-    },
-};
+use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::load_backend_storage};
 use libra_config::config::NodeConfig;
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
@@ -17,9 +11,7 @@ use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{
-    account_address::AccountAddress,
-    account_config::{testnet_dd_account_address, treasury_compliance_account_address},
-    chain_id::ChainId,
+    account_address::AccountAddress, chain_id::ChainId,
     transaction::authenticator::AuthenticationKey,
 };
 use std::convert::{TryFrom, TryInto};
@@ -67,78 +59,6 @@ fn test_consensus_key_rotation() {
     let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
     let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     assert_eq!(rotated_consensus_key, new_consensus_key);
-}
-
-#[test]
-fn test_e2e_reconfiguration() {
-    let (swarm, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
-    let mut client_proxy_0 = swarm.get_validator_client(0, None);
-
-    // Mint some coins and verify the balances have been updated
-    client_proxy_1.create_next_account(false).unwrap();
-    client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
-    client_proxy_1
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
-        .unwrap();
-    client_proxy_1
-        .wait_for_transaction(treasury_compliance_account_address(), 1)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(10.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "0"]).unwrap(),
-    ));
-
-    // Wait for the mint transaction to be processed by node 0
-    client_proxy_0
-        .wait_for_transaction(testnet_dd_account_address(), 1)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(10.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
-    ));
-
-    // Connect the operator tool to the second node's JSON RPC API
-    let op_tool = swarm.get_op_tool(1);
-
-    // Load libra root's on disk storage
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-    let libra_root = load_libra_root_storage(&node_config);
-
-    // Remove node 0
-    let peer_id = swarm.get_validator(0).unwrap().validator_peer_id().unwrap();
-    let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
-    client_proxy_1
-        .wait_for_transaction(context.address, context.sequence_number + 1)
-        .unwrap();
-
-    // Mint another 10 coins after removing node 0
-    client_proxy_1
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(20.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "0"]).unwrap(),
-    ));
-    assert!(compare_balances(
-        vec![(10.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
-    ));
-
-    // Add the node back
-    let context = op_tool.add_validator(peer_id, &libra_root).unwrap();
-    client_proxy_0
-        .wait_for_transaction(context.address, context.sequence_number)
-        .unwrap();
-
-    // Wait for the node to catch up
-    client_proxy_0
-        .wait_for_transaction(testnet_dd_account_address(), 2)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(20.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
-    ));
 }
 
 #[test]
