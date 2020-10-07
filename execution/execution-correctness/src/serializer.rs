@@ -5,11 +5,12 @@ use crate::{execution_correctness::ExecutionCorrectness, id_and_transactions_fro
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use executor_types::{BlockExecutor, Error, StateComputeResult};
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
+use libra_mutex::Mutex;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Deserialize, Serialize)]
 pub enum ExecutionCorrectnessInput {
@@ -133,9 +134,6 @@ struct LocalService {
 impl TSerializerClient for LocalService {
     fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        self.serializer_service
-            .lock()
-            .unwrap()
-            .handle_message(input_message)
+        self.serializer_service.lock().handle_message(input_message)
     }
 }

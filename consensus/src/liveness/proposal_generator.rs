@@ -12,7 +12,8 @@ use consensus_types::{
     quorum_cert::QuorumCert,
 };
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
+use libra_mutex::Mutex;
 
 #[cfg(test)]
 #[path = "proposal_generator_test.rs"]
@@ -83,7 +84,7 @@ impl ProposalGenerator {
     /// error.
     pub async fn generate_proposal(&mut self, round: Round) -> anyhow::Result<BlockData> {
         {
-            let mut last_round_generated = self.last_round_generated.lock().unwrap();
+            let mut last_round_generated = self.last_round_generated.lock();
             if *last_round_generated < round {
                 *last_round_generated = round;
             } else {

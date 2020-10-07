@@ -16,6 +16,7 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_types::transaction::SignedTransaction;
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
@@ -23,7 +24,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     ops::{Add, Deref, DerefMut},
-    sync::Mutex,
     time::{Duration, Instant, SystemTime},
 };
 use vm_validator::vm_validator::TransactionValidation;
@@ -100,10 +100,7 @@ impl PeerManager {
 
     // returns true if `peer` is discovered for first time, else false
     pub fn add_peer(&self, peer: PeerNetworkId, origin: ConnectionOrigin) -> bool {
-        let mut peer_info = self
-            .peer_info
-            .lock()
-            .expect("failed to acquire peer_info lock");
+        let mut peer_info = self.peer_info.lock();
         let is_new_peer = !peer_info.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(origin)) {
             counters::ACTIVE_UPSTREAM_PEERS_COUNT
@@ -140,12 +137,7 @@ impl PeerManager {
     }
 
     pub fn disable_peer(&self, peer: PeerNetworkId) {
-        if let Some(state) = self
-            .peer_info
-            .lock()
-            .expect("failed to get peer info lock")
-            .get_mut(&peer)
-        {
+        if let Some(state) = self.peer_info.lock().get_mut(&peer) {
             counters::ACTIVE_UPSTREAM_PEERS_COUNT
                 .with_label_values(&[&peer.raw_network_id().to_string()])
                 .dec();
@@ -157,7 +149,6 @@ impl PeerManager {
     pub fn is_backoff_mode(&self, peer: &PeerNetworkId) -> bool {
         self.peer_info
             .lock()
-            .expect("failed to acquire peer info lock")
             .get(peer)
             .expect("missing peer info for peer")
             .broadcast_info
@@ -175,10 +166,7 @@ impl PeerManager {
         // start timer for tracking broadcast latency
         let start_time = Instant::now();
 
-        let mut peer_info = self
-            .peer_info
-            .lock()
-            .expect("failed to acquire peer info lock");
+        let mut peer_info = self.peer_info.lock();
         let state = peer_info
             .get_mut(&peer)
             .expect("missing peer info for peer");
@@ -199,10 +187,7 @@ impl PeerManager {
         let transactions: Vec<SignedTransaction>;
         let mut metric_label = None;
         {
-            let mut mempool = smp
-                .mempool
-                .lock()
-                .expect("failed to acquire core mempool lock");
+            let mut mempool = smp.mempool.lock();
 
             // Sync peer's pending broadcasts with latest mempool state
             // A pending broadcast might become empty if the corresponding txns were committed through
@@ -350,12 +335,9 @@ impl PeerManager {
         }
 
         // declare `failover` as standalone to satisfy lifetime requirement
-        let mut failover = self
-            .failover_peer
-            .lock()
-            .expect("failed to acquire failover lock");
+        let mut failover = self.failover_peer.lock();
         let current_failover = failover.deref_mut();
-        let peer_info = self.peer_info.lock().expect("can not get peer info lock");
+        let peer_info = self.peer_info.lock();
         let active_peers_by_network = peer_info
             .iter()
             .filter_map(|(peer, state)| {
@@ -450,10 +432,7 @@ impl PeerManager {
             return;
         };
 
-        let mut peer_info = self
-            .peer_info
-            .lock()
-            .expect("failed to acquire peer_info lock");
+        let mut peer_info = self.peer_info.lock();
 
         let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
 
@@ -515,10 +494,7 @@ impl PeerManager {
                     .is_some()
             }
         } else {
-            self.peer_info
-                .lock()
-                .expect("failed to acquire peer lock")
-                .contains_key(peer)
+            self.peer_info.lock().contains_key(peer)
         }
     }
 
@@ -552,7 +528,6 @@ impl PeerManager {
         // will temporarily broadcast to all peers in its selected failover network as well
         self.failover_peer
             .lock()
-            .expect("failed to get failover peer")
             .deref()
             .as_ref()
             .map_or(false, |failover| {

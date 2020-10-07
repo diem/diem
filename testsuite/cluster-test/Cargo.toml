@@ -45,6 +45,7 @@ libra-global-constants = { path = "../../config/global-constants", version = "0.
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
 libra-mempool = { path = "../../mempool", version = "0.1.0" }
+libra-mutex = { path = "../../common/mutex", version = "0.1.0" }
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-network-address-encryption = { path = "../../config/management/network-address-encryption", version = "0.1.0" }
 libra-node = { path = "../../libra-node", version = "0.1.0" }

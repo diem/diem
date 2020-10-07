@@ -17,6 +17,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
+use libra_mutex::Mutex;
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{
@@ -32,7 +33,7 @@ use network::{
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
     time::Duration,
 };
 use tokio::runtime::Handle;
@@ -144,12 +145,8 @@ impl NetworkPlayground {
                         None => continue, // drop rpc
                     };
 
-                    let mut node_consensus_tx = node_consensus_txs
-                        .lock()
-                        .unwrap()
-                        .get(&dst_twin_id)
-                        .unwrap()
-                        .clone();
+                    let mut node_consensus_tx =
+                        node_consensus_txs.lock().get(&dst_twin_id).unwrap().clone();
 
                     let inbound_req = InboundRpcRequest {
                         protocol_id: outbound_req.protocol_id,
@@ -186,10 +183,7 @@ impl NetworkPlayground {
         network_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         conn_mgr_reqs_rx: channel::Receiver<network::ConnectivityRequest>,
     ) {
-        self.node_consensus_txs
-            .lock()
-            .unwrap()
-            .insert(twin_id, consensus_tx);
+        self.node_consensus_txs.lock().insert(twin_id, consensus_tx);
         self.drop_config.write().unwrap().add_node(twin_id);
 
         self.extend_author_to_twin_ids(twin_id.author, twin_id);
@@ -218,7 +212,6 @@ impl NetworkPlayground {
         let mut node_consensus_tx = self
             .node_consensus_txs
             .lock()
-            .unwrap()
             .get(&dst_twin_id)
             .unwrap()
             .clone();
