@@ -376,7 +376,7 @@ fn create_transaction(
     public_key: Ed25519PublicKey,
     program: Script,
 ) -> Transaction {
-    let now = libra_time::duration_since_epoch();
+    let now = libra_infallible::duration_since_epoch();
     let expiration_time = now.as_secs() + 3600;
 
     let raw_txn = RawTransaction::new_script(

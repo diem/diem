@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
-use libra_time::duration_since_epoch;
+use libra_infallible::duration_since_epoch;
 use libra_types::{
     account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
     epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,

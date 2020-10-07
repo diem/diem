@@ -18,8 +18,8 @@ use consensus_types::{
 };
 use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
+use libra_infallible::duration_since_epoch;
 use libra_logger::prelude::*;
-use libra_time::duration_since_epoch;
 use libra_trace::prelude::*;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use std::{

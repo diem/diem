@@ -632,6 +632,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures 0.3.6",
+ "libra-infallible",
  "libra-metrics",
  "libra-types",
  "libra-workspace-hack",
@@ -758,6 +759,7 @@ dependencies = [
  "libra-crypto",
  "libra-genesis-tool",
  "libra-global-constants",
+ "libra-infallible",
  "libra-json-rpc-client",
  "libra-logger",
  "libra-management",
@@ -769,7 +771,6 @@ dependencies = [
  "libra-retrier",
  "libra-secure-storage",
  "libra-swarm",
- "libra-time",
  "libra-trace",
  "libra-types",
  "libra-workspace-hack",
@@ -895,12 +896,12 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
+ "libra-infallible",
  "libra-logger",
  "libra-mempool",
  "libra-metrics",
  "libra-secure-storage",
  "libra-temppath",
- "libra-time",
  "libra-trace",
  "libra-types",
  "libra-vm",
@@ -936,7 +937,7 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-crypto",
  "libra-crypto-derive",
- "libra-time",
+ "libra-infallible",
  "libra-types",
  "libra-workspace-hack",
  "mirai-annotations",
@@ -1512,6 +1513,7 @@ dependencies = [
  "libra-crypto",
  "libra-genesis-tool",
  "libra-global-constants",
+ "libra-infallible",
  "libra-logger",
  "libra-secure-net",
  "libra-secure-storage",
@@ -1542,6 +1544,7 @@ dependencies = [
  "libra-config",
  "libra-crypto",
  "libra-genesis-tool",
+ "libra-infallible",
  "libra-logger",
  "libra-metrics",
  "libra-secure-net",
@@ -1574,8 +1577,8 @@ dependencies = [
  "libra-config",
  "libra-crypto",
  "libra-genesis-tool",
+ "libra-infallible",
  "libra-logger",
- "libra-time",
  "libra-types",
  "libra-vm",
  "libra-workspace-hack",
@@ -2898,6 +2901,13 @@ name = "libra-global-constants"
 version = "0.1.0"
 
 [[package]]
+name = "libra-infallible"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack",
+]
+
+[[package]]
 name = "libra-jellyfish-merkle"
 version = "0.1.0"
 dependencies = [
@@ -3050,8 +3060,8 @@ dependencies = [
  "erased-serde",
  "hex",
  "hostname",
+ "libra-infallible",
  "libra-log-derive",
- "libra-time",
  "libra-workspace-hack",
  "once_cell",
  "prometheus",
@@ -3103,11 +3113,11 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
+ "libra-infallible",
  "libra-logger",
  "libra-metrics",
  "libra-network-address",
  "libra-proptest-helpers",
- "libra-time",
  "libra-trace",
  "libra-types",
  "libra-workspace-hack",
@@ -3363,7 +3373,7 @@ dependencies = [
 name = "libra-secure-time"
 version = "0.1.0"
 dependencies = [
- "libra-time",
+ "libra-infallible",
  "libra-workspace-hack",
 ]
 
@@ -3421,13 +3431,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libra-time"
-version = "0.1.0"
-dependencies = [
- "libra-workspace-hack",
-]
-
-[[package]]
 name = "libra-trace"
 version = "0.1.0"
 dependencies = [
@@ -3479,9 +3482,9 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-crypto",
  "libra-crypto-derive",
+ "libra-infallible",
  "libra-network-address",
  "libra-proptest-helpers",
- "libra-time",
  "libra-workspace-hack",
  "mirai-annotations",
  "move-core-types",
@@ -3608,6 +3611,7 @@ dependencies = [
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-crypto",
+ "libra-infallible",
  "libra-jellyfish-merkle",
  "libra-logger",
  "libra-metrics",
@@ -3735,6 +3739,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "futures 0.3.6",
+ "libra-infallible",
  "libra-workspace-hack",
  "once_cell",
 ]
@@ -4065,6 +4070,7 @@ dependencies = [
  "fail",
  "hex",
  "libra-crypto",
+ "libra-infallible",
  "libra-logger",
  "libra-state-view",
  "libra-types",
@@ -4192,11 +4198,11 @@ dependencies = [
  "libra-config",
  "libra-crypto",
  "libra-crypto-derive",
+ "libra-infallible",
  "libra-logger",
  "libra-metrics",
  "libra-network-address",
  "libra-proptest-helpers",
- "libra-time",
  "libra-types",
  "libra-workspace-hack",
  "memsocket",
@@ -5556,13 +5562,13 @@ dependencies = [
  "libra-config",
  "libra-crypto",
  "libra-global-constants",
+ "libra-infallible",
  "libra-logger",
  "libra-proptest-helpers",
  "libra-secure-net",
  "libra-secure-push-metrics",
  "libra-secure-storage",
  "libra-temppath",
- "libra-time",
  "libra-types",
  "libra-vault-client",
  "libra-workspace-hack",
@@ -5987,6 +5993,7 @@ dependencies = [
  "libra-crypto",
  "libra-genesis-tool",
  "libra-global-constants",
+ "libra-infallible",
  "libra-json-rpc",
  "libra-key-manager",
  "libra-logger",
@@ -5998,7 +6005,6 @@ dependencies = [
  "libra-secure-time",
  "libra-swarm",
  "libra-temppath",
- "libra-time",
  "libra-trace",
  "libra-transaction-replay",
  "libra-types",
@@ -6228,6 +6234,7 @@ dependencies = [
  "anyhow",
  "libra-canonical-serialization",
  "libra-crypto",
+ "libra-infallible",
  "libra-logger",
  "libra-secure-net",
  "libra-types",

@@ -115,7 +115,7 @@ impl TimeService for ClockTimeService {
     }
 
     fn get_current_timestamp(&self) -> Duration {
-        libra_time::duration_since_epoch()
+        libra_infallible::duration_since_epoch()
     }
 
     fn sleep(&self, t: Duration) {

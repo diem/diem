@@ -12,8 +12,8 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::future::try_join_all;
+use libra_infallible::duration_since_epoch;
 use libra_logger::info;
-use libra_time::duration_since_epoch;
 use rand::Rng;
 use std::{
     collections::HashSet,

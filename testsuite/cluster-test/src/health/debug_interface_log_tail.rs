@@ -9,14 +9,14 @@ use crate::{
     instance::Instance,
 };
 use debug_interface::AsyncNodeDebugClient;
+use libra_infallible::{duration_since_epoch, Mutex};
 use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
-use libra_time::duration_since_epoch;
 use serde_json::{self, value as json};
 use std::{
     env,
     sync::{
         atomic::{AtomicBool, AtomicI64, Ordering},
-        mpsc, Arc, Mutex,
+        mpsc, Arc,
     },
     time::Duration,
 };
