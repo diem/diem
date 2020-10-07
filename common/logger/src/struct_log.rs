@@ -104,7 +104,7 @@ impl Write for TcpWriter {
             self.stream = None;
             Err(io::Error::new(
                 io::ErrorKind::NotConnected,
-                "Can't write to strean, not connected",
+                "Can't write to stream, not connected",
             ))
         }
     }
