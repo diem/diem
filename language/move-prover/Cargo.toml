@@ -23,7 +23,7 @@ move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 
 # external dependencies
 async-trait = "0.1.41"
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 clap = "2.33.3"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"

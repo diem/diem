@@ -13,7 +13,7 @@ edition = "2018"
 once_cell = "1.4.1"
 structopt = "0.3.18"
 serde = { version = "1.0.116", default-features = false }
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 codespan = { version = "0.8.0", features = ["serialization"] }
 colored = "2.0.0"
 

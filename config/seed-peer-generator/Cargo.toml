@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 hex = "0.4.2"
 rand = "0.7.3"
 serde_yaml = "0.8.13"

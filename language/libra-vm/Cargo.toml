@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 fail = "0.4.0"
 once_cell = "1.4.1"
 rayon = "1.4.1"

@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 mirai-annotations = "1.10.1"
 petgraph = "0.5.1"
 

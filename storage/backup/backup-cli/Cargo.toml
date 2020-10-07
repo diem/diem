@@ -9,7 +9,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 async-trait = "0.1.41"
 byteorder = "1.3.4"
 bytes = "0.5.6"

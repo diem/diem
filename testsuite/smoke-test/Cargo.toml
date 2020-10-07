@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dev-dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 hex = "0.4.2"
 once_cell = "1.4.1"
 num = "0.3.0"

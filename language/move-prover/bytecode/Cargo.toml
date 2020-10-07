@@ -28,7 +28,7 @@ test-utils = { path = "../test-utils", version = "0.1.0" }
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 
 [[test]]
 name = "testsuite"

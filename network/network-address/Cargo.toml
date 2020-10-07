@@ -24,7 +24,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
 

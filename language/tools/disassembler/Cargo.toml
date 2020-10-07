@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 colored = "2.0.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }

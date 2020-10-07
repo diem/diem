@@ -7,7 +7,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 hex = "0.4.2"

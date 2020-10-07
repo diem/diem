@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 libra-config = { path = "../config", version = "0.1.0" }
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }

@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 arc-swap = "0.4.7"
 byteorder = "1.3.4"
 itertools = "0.9.0"

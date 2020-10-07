@@ -15,7 +15,7 @@ structopt = "0.3.18"
 tokio = { version = "0.2.22", features = ["full"] }
 serde_json = "1.0.58"
 serde = "1.0.116"
-anyhow = "1.0.32"
+anyhow = "1.0.33"
 reqwest = { version = "0.10.8", features = ["blocking", "json"], default_features = false }
 once_cell = "1.4.1"
 
