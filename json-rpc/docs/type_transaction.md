@@ -82,11 +82,15 @@ User submitted transaction.
 | gas_unit_price            | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
 | gas_currency              | string                 | Gas price currency code                                               |
 | expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
-| script_hash               | string                 | Hex-encoded hash of the script used in this transaction               |
-| script_bytes              | string                 | Hex-encoded string of the bytes of the script                         |
-| script                    | [Script](#type-script) | The transaction script and arguments of this transaction              |
+| script_hash               | string                 | Hex-encoded sha3 256 hash of the script binary code bytes used in this transaction |
+| script_bytes              | string                 | Hex-encoded string of LCS bytes of the script, decode it to get back transaction script arguments |
+| script                    | [Script](#type-script) | The transaction script and arguments of this transaction, you can decode `script_bytes` by LCS to get same data. |
 
-TODO: how the script_hash is created?
+Note: script_hash is not hash of the script_bytes, it's hash of the script binary code bytes. More specifically, you can get same hash string by the following steps:
+
+    1. Decode script_bytes into script call [struct](https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.Script.html).
+    2. Sha3 256 hash of the code binary bytes in the script call struct.
+    3. Hex-encode the hash result bytes.
 
 #### unknown
 
@@ -99,9 +103,9 @@ Metadata for unsupported transaction types
 
 ### Type Script
 
-The transaction script and arguments of this transaction.
+The transaction script and arguments of the script call.
 
-Transaction data is serialized into one JSON object with a "type" field to indicate it's type.
+Script call data is serialized into one JSON object with a "type" field to indicate it's type.
 
 | Name                | Type           | Description                                                    |
 |---------------------|----------------|----------------------------------------------------------------|
@@ -136,14 +140,15 @@ Transaction script for a special transaction used by the faucet to mint Libra an
 | amount                    | unsigned int64 | The amount of microlibras being sent                                  |
 
 
-#### unknown_transaction
+#### unknown
 
-Currently unsupported transaction script
+Transaction script is unknown.
 
-| Name                      | Type           | Description                                                           |
-|---------------------------|----------------|-----------------------------------------------------------------------|
-| type                      | string         | constant of string "unknown_transaction"                              |
+You can still decode transaction script call ([struct](https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.Script.html)) from script_bytes by LCS deserializer.
 
+| Name                      | Type           | Description                  |
+|---------------------------|----------------|------------------------------|
+| type                      | string         | constant of string "unknown" |
 
 ### Type VMStatus
 
@@ -252,4 +257,4 @@ error reason for the error e.g., `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`. Both the ca
 | reason_description        | string         | Description of the error reason                                       |
 
 
-[1]: https://libra.github.io/libra/libra_types/transaction/metadata/enum.Metadata.html "Transaction Metadata"
+[1]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/metadata/enum.Metadata.html "Transaction Metadata"

@@ -512,7 +512,7 @@ pub enum ScriptView {
         auth_key_prefix: BytesView,
         amount: u64,
     },
-    #[serde(rename = "unknown_transaction")]
+    #[serde(rename = "unknown")]
     Unknown {},
 }
 

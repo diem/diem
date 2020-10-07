@@ -12,7 +12,7 @@ This document is organized as follows:
 4. [Abstracted modules](#Abstracted-modules) - The components this specification depends on.
 5. [Consensus modules](#Consensus-modules) - The components built upon common data structures that are described as a part of this specification.
 
-All network communication occurs over LibraNet and any serialization, deserialization and hashing is determined by [LCS](https://libra.github.io/libra/libra_canonical_serialization/).
+All network communication occurs over LibraNet and any serialization, deserialization and hashing is determined by [LCS](https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/).
 
 ## Architecture
 

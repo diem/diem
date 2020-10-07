@@ -37,6 +37,7 @@ This file is a checklist of requirement & technical details for a Libra client S
 - [ ] Validate server chain id: client should be initialized with chain id and validate server response chain id is the same.
 - [ ] Validate input parameters, e.g. invalid account address: "kkk". Should return / raise InvalidArgumentError.
 - [ ] Send request with "client sdk name / version" as HTTP User-Agent: this is for server to recognize client sdk version, so that server can block a specific client version if we found unacceptable bugs.
+- [ ] Decode transaction script bytes
 
 # [LIP-4][7] support
 

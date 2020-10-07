@@ -80,6 +80,6 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 }
 ```
 
-[1]: https://libra.github.io/libra/libra_canonical_serialization/index.html "LCS"
-[2]: https://libra.github.io/libra/libra_types/transaction/struct.RawTransaction.html "RawTransaction"
-[3]: https://libra.github.io/libra/libra_types/transaction/struct.SignedTransaction.html "SignedTransaction"
+[1]: https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/index.html "LCS"
+[2]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.RawTransaction.html "RawTransaction"
+[3]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.SignedTransaction.html "SignedTransaction"

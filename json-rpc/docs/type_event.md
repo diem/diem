@@ -162,4 +162,4 @@ Represents events currently unsupported by JSON-RPC API.
 |---------|--------|-----------------------------|
 | type    | string | Constant string "unknown"   |
 
-[1]: https://libra.github.io/libra/libra_canonical_serialization/index.html "LCS"
+[1]: https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/index.html "LCS"

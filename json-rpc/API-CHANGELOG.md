@@ -13,6 +13,22 @@ Please add the API change in the following format:
 
 ```
 
+## [breaking] 2020-10-07 Rename unknown script type from `unknown_transaction` to `unknown`
+
+- `unknown_transaction` may cause user think the transaction is invalid. Change to `unknown` which is align with other unknown types.
+
+This is breaking change if a client used `unknown_transaction` to handle result.
+
+See [doc](docs/type_transaction.md#type-script) for more details.
+
+
+## 2020-10-06 Add `script_hash_allow_list` and `module_publishing_allowed` fields to `get_metadata` method response
+
+- `script_hash_allow_list` returns list of allowed scripts hash.
+- `module_publishing_allowed` returns bool value indicates whether publishing customized scripts are allowed
+
+See [doc](docs/type_metadata.md) for more details.
+
 ## 2020-10-05 Add `created_address` and `role_id` fields to `CreateAccount` event
 
 - `created_address` is the address created account.

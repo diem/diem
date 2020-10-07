@@ -323,11 +323,11 @@ Other than general error handling, another type of error that client / applicati
 Once the above basic function works, you have a minimum client ready for usage.
 To make a production quality client, please checkout our [Client CHECKLIST](client_checklist.md).
 
-[1]: https://libra.github.io/libra/libra_types/transaction/struct.SignedTransaction.html "SignedTransaction"
+[1]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.SignedTransaction.html "SignedTransaction"
 [2]: ../../language/transaction-builder/generator/README.md "Transaction Builder Generator"
 [3]: ./../../client/swiss-knife/README.md "Libra Swiss Knife"
-[4]: https://libra.github.io/libra/libra_types/transaction/struct.RawTransaction.html "RawTransaction"
-[5]: https://libra.github.io/libra/libra_canonical_serialization/index.html "LCS"
+[4]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.RawTransaction.html "RawTransaction"
+[5]: https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/index.html "LCS"
 [6]: ./../../client/swiss-knife#generate-a-ed25519-keypair "Swiss Knife Gen Keys"
 [7]: ./../../language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md#function-peer_to_peer_with_metadata-1 "P2P script doc"
 [8]: ./../../client/swiss-knife/README.md#examples-for-generate-raw-txn-and-generate-signed-txn-operations "Swiss Knife gen txn"

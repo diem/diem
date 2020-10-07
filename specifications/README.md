@@ -53,7 +53,7 @@ As [depicted](#The-Libra-network), there are 4 network protocol specifications:
 
 In addition, these specifications build on top of a common set of specifications:
 
-* **[Libra canonical serialization (LCS)](https://libra.github.io/libra/libra_canonical_serialization/)**. This details how data is canonically serialized and deserialized. Hashing and signing of data structures are applied after LCS serialization.
+* **[Libra canonical serialization (LCS)](https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/)**. This details how data is canonically serialized and deserialized. Hashing and signing of data structures are applied after LCS serialization.
 * **[Common data structures](common/data_structures.md)**. These are the data structures that are used across more than one specification.
 * **[LibraNet](network/)**. This describes a handshake and wire protocol for all networking protocols. This relies on the [Noise protocol framework](https://noiseprotocol.org/) for integrity and confidentiality.
 * **[On-chain discovery](network/onchain-discovery.md)**. This defines how clients can safely find the endpoints of the LPN validators.

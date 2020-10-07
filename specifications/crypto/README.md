@@ -157,7 +157,7 @@ We will look at how the domain separator defined in this section is used
 ## Serialization
 
 Serialization of a payload is done using
-[LCS](https://libra.github.io/libra/libra_canonical_serialization/). This
+[LCS](https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/). This
 serialization library guarantees deterministic serialization for any Libra data
 structure.
 
