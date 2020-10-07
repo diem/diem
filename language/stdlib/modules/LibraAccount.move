@@ -910,14 +910,8 @@ module LibraAccount {
         );
 
         // Construct authentication key.
-        let authentication_key = auth_key_prefix;
-        Vector::append(
-            &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
-        );
-        assert(
-            Vector::length(&authentication_key) == 32,
-            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
-        );
+        let authentication_key = create_authentication_key(&new_account, auth_key_prefix);
+
         // Publish AccountFreezing::FreezingBit (initially not frozen)
         AccountFreezing::create(&new_account);
         // The AccountOperationsCapability is published during Genesis, so it should
@@ -971,11 +965,41 @@ module LibraAccount {
         aborts_if LibraTimestamp::is_genesis()
             && !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
             with Errors::NOT_PUBLISHED;
-        aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
-            with Errors::INVALID_ARGUMENT;
+        include CreateAuthenticationKeyAbortsIf;
         // We do not need to specify aborts_if if account already exists, because make_account will
         // abort because of a published FreezingBit, first.
     }
+
+    /// Construct an authentication key, aborting if the prefix is not valid.
+    fun create_authentication_key(account: &signer, auth_key_prefix: vector<u8>): vector<u8> {
+        let authentication_key = auth_key_prefix;
+        Vector::append(
+            &mut authentication_key, LCS::to_bytes(Signer::borrow_address(account))
+        );
+        assert(
+            Vector::length(&authentication_key) == 32,
+            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
+        );
+        authentication_key
+    }
+    spec fun create_authentication_key {
+        /// The specification of this function is abstracted to avoid the complexity of
+        /// vector concatenation of serialization results. The actual value of the key
+        /// is assumed to be irrelevant for callers. Instead the uninterpreted function
+        /// `spec_abstract_create_authentication_key` is used to represent the key value.
+        /// The aborts behavior is, however, preserved: the caller must provide a
+        /// key prefix of a specific length.
+        pragma opaque;
+        include [abstract] CreateAuthenticationKeyAbortsIf;
+        ensures [abstract]
+            result == spec_abstract_create_authentication_key(auth_key_prefix) &&
+            len(result) == 32;
+    }
+    spec schema CreateAuthenticationKeyAbortsIf {
+        auth_key_prefix: vector<u8>;
+        aborts_if 16 + len(auth_key_prefix) != 32 with Errors::INVALID_ARGUMENT;
+    }
+    spec define spec_abstract_create_authentication_key(auth_key_prefix: vector<u8>): vector<u8>;
 
 
     /// Creates the libra root account (during genesis). Publishes the Libra root role,
