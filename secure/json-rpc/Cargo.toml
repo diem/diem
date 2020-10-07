@@ -15,7 +15,7 @@ proptest = { version = "0.10.1", optional = true }
 serde = { version = "1.0.116", features = ["derive"], default-features = false }
 serde_json = "1.0.58"
 thiserror = "1.0.20"
-ureq = { version = "1.5.0", features = ["json", "native-tls"], default-features = false }
+ureq = { version = "1.5.1", features = ["json", "native-tls"], default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

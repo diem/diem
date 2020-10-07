@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-ureq = { version = "1.5.0", features = ["json", "native-tls"], default-features = false }
+ureq = { version = "1.5.1", features = ["json", "native-tls"], default-features = false }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics-core = { path = "../../common/metrics-core", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
