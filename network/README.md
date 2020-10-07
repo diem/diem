@@ -10,6 +10,8 @@ components of a validator.
 
 ## Overview
 
+For more detailed info, see the [Network Specification](../specifications/network/README.md).
+
 The network component is specifically designed to facilitate the consensus and
 shared mempool protocols. Currently, it provides these consumers with two
 primary interfaces:
@@ -20,10 +22,7 @@ The network component uses:
 * TCP for reliable transport.
 * [Noise](https://noiseprotocol.org/noise.html) for authentication and full
  end-to-end encryption.
-* [Yamux](https://github.com/hashicorp/yamux/blob/master/spec.md) for
-multiplexing substreams over a single connection.
-* Push-style [gossip](https://en.wikipedia.org/wiki/Gossip_protocol) for peer
-discovery.
+* On-chain addresses for discovery, with a seed peers file for initial discovery.
 
 Each new substream is assigned a *protocol* supported by both the sender and
 the receiver. Each RPC and DirectSend type corresponds to one such protocol.
@@ -71,28 +70,33 @@ running as independent "tasks." The [tokio](https://tokio.rs/) framework is
 used as the task runtime. The different subcomponents in the network component
 are:
 
-* **NetworkProvider** &mdash; Exposes network API to clients. It forwards
-requests from upstream clients to appropriate downstream components and sends
+* **NetworkProvider** &mdash; An application level client interface to the network API.
+It forwards requests from upstream clients to appropriate downstream components and sends
 incoming RPC and DirectSend requests to appropriate upstream handlers.
-* **Peer Manager** &mdash; Listens for incoming connections and dials other
-peers on the network. It also notifies other components about new/lost
-connection events and demultiplexes incoming substreams to appropriate protocol
-handlers.
-* **Connectivity Manager** &mdash; Ensures that we remain connected to a node
-if and only if it is an eligible member of the network. Connectivity Manager
-receives addresses of peers from the Discovery component and issues
-dial/disconnect requests to the Peer Manager.
-* **Discovery** &mdash; Uses push-style gossip for discovering new peers and
-updates to addresses of existing peers. On every *tick*, it opens a new
-substream with a randomly selected peer and sends its view of the network to
-this peer. It informs the connectivity manager of any changes to the network
-detected from inbound discovery messages.
+
+* **Peer Manager** &mdash; Listens for incoming connections, and dials outbound
+connections to other peers.  Demultiplexes and forwards messages to appropriate
+protocol handlers.  Additionally, notifies upstream components of new or closed
+connections.  Optionally can be connected to ConnectivityManager for a network with
+Discovery.
+
+* **Connectivity Manager** &mdash; Establishes connections to known peers found via
+Discovery.  Notifies Peer Manager to make outbound dials, or disconnects based
+on updates to known peers via Discovery updates.  This is only needed on a network
+that uses Discovery e.g. the Validator network.
+
+* **OnChain Discovery** &mdash; Discovers via OnChain configuration the set of peers
+to connect to.  In the case of the Validator network, this is the ValidatorSet.
+Notifies ConnectivityManager of updates to the known peer set.
+
 * **Health Checker** &mdash; Performs periodic liveness probes to ensure the
 health of a peer/connection. It resets the connection with the peer if a
 configurable number of probes fail in succession. Probes currently fail on a
 configurable static timeout.
+
 * **Direct Send** &mdash; Allows sending/receiving messages to/from remote
 peers. It notifies upstream handlers of inbound messages.
+
 * **RPC** &mdash; Allows sending/receiving RPCs to/from other peers. It notifies
 upstream handlers about inbound RPCs. The upstream handler is passed a channel
 through which can send a serialized response to the caller.
@@ -104,24 +108,23 @@ negotiation, etc.
 ## How is this module organized?
 
     network
-    ├── benches                       # network benchmarks
-    ├── memsocket                     # In-memory transport for tests
+    ├── benches                        # network benchmarks
+    ├── builder                        # Builds a network from a NetworkConfig
+    ├── memsocket                      # In-memory transport for tests
     ├── netcore
     │   └── src
-    │       ├── multiplexing          # substream multiplexing over a transport
-    │       ├── negotiate             # protocol negotiation
-    │       └── transport             # composable transport API
-    ├── noise                         # noise framework for authentication and encryption
+    │       └── transport              # composable transport API
+    ├── network-address                # network addresses and encryption
+    |── simple-onchain-discovery       # protocol for peer discovery
     └── src
-        ├── channel                    # mpsc channel wrapped in IntGauge
         ├── connectivity_manager       # component to ensure connectivity to peers
         ├── interface                  # generic network API
+        ├── noise                      # noise integration
         ├── peer_manager               # component to dial/listen for connections
-        ├── proto                      # protobuf definitions for network messages
         ├── protocols                  # message protocols
         │   ├── direct_send            # protocol for fire-and-forget style message delivery
-        │   ├── discovery              # protocol for peer discovery and gossip
         │   ├── health_checker         # protocol for health probing
-        │   └── rpc                    # protocol for remote procedure calls
-        ├── sink                       # utilities over message sinks
-        └── validator_network          # network API for consensus and mempool
+        │   ├── network                # components for interaction with applications
+        │   ├── rpc                    # protocol for remote procedure calls
+        │   └── wire                   # protocol for LibraNet handshakes and messaging
+        └── testutils                  # utilities for testing
