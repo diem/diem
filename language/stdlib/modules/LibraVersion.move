@@ -1,5 +1,8 @@
 address 0x1 {
 
+
+/// Maintains the version number for the Libra blockchain. The version is stored in a
+/// LibraConfig, and may be updated by Libra root.
 module LibraVersion {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
@@ -14,7 +17,7 @@ module LibraVersion {
     /// Tried to set an invalid major version for the VM. Major versions must be strictly increasing
     const EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
 
-
+    /// Publishes the LibraVersion config. Must be called during Genesis.
     public fun initialize(
         lr_account: &signer,
     ) {
@@ -34,6 +37,7 @@ module LibraVersion {
         include LibraConfig::PublishNewConfigEnsures<LibraVersion>{payload: LibraVersion { major: 1 }};
     }
 
+    /// Allows Libra root to update the major version to a larger version.
     public fun set(lr_account: &signer, major: u64) {
         LibraTimestamp::assert_operating();
 
@@ -61,14 +65,18 @@ module LibraVersion {
         include LibraConfig::SetEnsures<LibraVersion>{payload: LibraVersion { major }};
     }
 
+    // =================================================================
+    // Module Specification
+
+    spec module {} // Switch to module documentation context
+
+    /// # Initialization
     spec module {
         /// After genesis, version is published.
         invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<LibraVersion>();
-
-        /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [[H9]][PERMISSION].
-        invariant [global, isolated] forall addr: address where exists<LibraConfig<LibraVersion>>(addr):
-            addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
     }
+
+    /// # Access Control
 
     /// Only "set" can modify the LibraVersion config [[H9]][PERMISSION]
     spec schema LibraVersionRemainsSame {
@@ -79,5 +87,19 @@ module LibraVersion {
     spec module {
         apply LibraVersionRemainsSame to * except set;
     }
+
+    spec module {
+        /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [[H9]][PERMISSION].
+        invariant [global, isolated] forall addr: address where exists<LibraConfig<LibraVersion>>(addr):
+            addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
+    }
+
+    /// # Other Invariants
+    spec module {
+        /// Version number never decreases
+        invariant update [global, isolated]
+            old(LibraConfig::get<LibraVersion>().major) <= LibraConfig::get<LibraVersion>().major;
+    }
+
 }
 }
