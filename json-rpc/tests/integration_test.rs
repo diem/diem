@@ -740,20 +740,23 @@ fn create_test_cases() -> Vec<Test> {
             name: "upgrade event & newepoch",
             run: |env: &mut testing::Env| {
                 let write_set = ChangeSet::new(create_common_write_set(), vec![]);
-                let write_set_hex = hex::encode(lcs::to_bytes(&write_set).unwrap());
                 let txn = env.create_txn_by_payload(
                     &env.root,
                     TransactionPayload::WriteSet(WriteSetPayload::Direct(write_set)),
                 );
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
+                let committed_time = result["events"][0]["data"]["committed_timestamp_secs"]
+                    .as_u64()
+                    .unwrap();
+                assert!(committed_time != 0);
                 assert_eq!(
                     result["events"],
                     json!([
                         {
                             "data":{
-                                "type": "upgrade",
-                                "write_set": write_set_hex
+                                "type": "admintransaction",
+                                "committed_timestamp_secs": committed_time,
                             },
                             "key": "01000000000000000000000000000000000000000a550c18",
                             "sequence_number": 0,

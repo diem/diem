@@ -6,10 +6,10 @@ use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
-        AccountResource, AccountRole, BalanceResource, BaseUrlRotationEvent, BurnEvent,
-        CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent, CurrencyInfoResource,
-        FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent,
-        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
+        AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
+        BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
+        CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
+        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -167,8 +167,8 @@ pub enum EventDataView {
         sender: BytesView,
         metadata: BytesView,
     },
-    #[serde(rename = "upgrade")]
-    Upgrade { write_set: BytesView },
+    #[serde(rename = "admintransaction")]
+    AdminTransaction { committed_timestamp_secs: u64 },
     #[serde(rename = "newepoch")]
     NewEpoch { epoch: u64 },
     #[serde(rename = "newblock")]
@@ -317,11 +317,10 @@ impl TryFrom<ContractEvent> for EventDataView {
                 created_address,
                 role_id,
             }
-        } else if event.type_tag() == &TypeTag::Struct(UpgradeEvent::struct_tag()) {
-            // TODO: missing test
-            let upgrade_event = UpgradeEvent::try_from(&event)?;
-            EventDataView::Upgrade {
-                write_set: BytesView::from(upgrade_event.write_set()),
+        } else if event.type_tag() == &TypeTag::Struct(AdminTransactionEvent::struct_tag()) {
+            let admin_transaction_event = AdminTransactionEvent::try_from(&event)?;
+            EventDataView::AdminTransaction {
+                committed_timestamp_secs: admin_transaction_event.committed_timestamp_secs(),
             }
         } else {
             EventDataView::Unknown {}

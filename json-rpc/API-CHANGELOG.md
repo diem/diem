@@ -12,6 +12,9 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+## 2020-10-05 Rename `upgradeevent` to `admintransaction` event
+- Changed the name and structure for `upgradeevent`
+- [See PR #6449](https://github.com/libra/libra/pull/6449)
 
 
 ## 2020-10-08 Decode transaction script as name, code, arguments and type_arguments

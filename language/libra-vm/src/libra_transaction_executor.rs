@@ -532,7 +532,6 @@ impl LibraVM {
         // Emit the reconfiguration event
         self.0.run_writeset_epilogue(
             &mut session,
-            &change_set,
             &txn_data,
             txn.payload().should_trigger_reconfiguration_by_default(),
             log_context,

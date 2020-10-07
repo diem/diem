@@ -96,7 +96,7 @@ module LibraAccount {
 
     /// A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
     resource struct LibraWriteSetManager {
-        upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
+        upgrade_events: Event::EventHandle<Self::AdminTransactionEvent>,
     }
 
 
@@ -125,8 +125,9 @@ module LibraAccount {
     }
 
     /// Message for committed WriteSet transaction.
-    struct UpgradeEvent {
-        writeset_payload: vector<u8>,
+    struct AdminTransactionEvent {
+        // The block time when this WriteSet is committed.
+        committed_timestamp_secs: u64,
     }
 
     /// Message for creation of a new account
@@ -1033,7 +1034,7 @@ module LibraAccount {
         move_to(
             &lr_account,
             LibraWriteSetManager {
-                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(&lr_account),
+                upgrade_events: Event::new_event_handle<Self::AdminTransactionEvent>(&lr_account),
             }
         );
         make_account(lr_account, auth_key_prefix)
@@ -1675,14 +1676,13 @@ module LibraAccount {
     /// Epilogue for WriteSet trasnaction
     fun writeset_epilogue(
         lr_account: &signer,
-        writeset_payload: vector<u8>,
         txn_sequence_number: u64,
         should_trigger_reconfiguration: bool,
     ) acquires LibraWriteSetManager, LibraAccount, Balance {
         let writeset_events_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        Event::emit_event<UpgradeEvent>(
+        Event::emit_event<AdminTransactionEvent>(
             &mut writeset_events_ref.upgrade_events,
-            UpgradeEvent { writeset_payload },
+            AdminTransactionEvent { committed_timestamp_secs: LibraTimestamp::now_seconds() },
         );
         // Currency code don't matter here as it won't be charged anyway.
         epilogue<Coin1>(lr_account, txn_sequence_number, 0, 0, 0);

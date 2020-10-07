@@ -104,14 +104,14 @@ Event emitted when the url used for off-chain dual attestation checking is rotat
 | new_base_url                | string | New URL endpoint for off-chain communication            |
 | time_rotated_seconds        | u64    | Blockchain time (in seconds) when the rotation occurred |
 
-#### upgrade
+#### admintransaction
 
 Event emitted when a WriteSet transaction is committed which causes the state to be updated.
 
-| Name      | Type   | Description                 |
-|-----------|--------|-----------------------------|
-| type      | string | Constant string "upgrade"   |
-| write_set | string | lcs serialized writeset     |
+| Name                   | Type   | Description                                         |
+|------------------------|--------|-----------------------------------------------------|
+| type                   | string | Constant string "admintransaction"                  |
+| committed_timestamp_secs | u64    | The block time when this transaction is committed   |
 
 #### newepoch
 
