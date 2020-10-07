@@ -63,8 +63,11 @@ All `NetworkAddress` sent and received over-the-wire or stored on-chain are in t
 format. However, implementations may also wish to implement the optional human-readable format to aid reading
 `NetworkAddress`es from configuration or printing `NetworkAddress` in logs.
 
-Each `Protocol` segment is formatted like:
+Each `Protocol` segment is formatted of the form `/<Protocol>/<ProtocolConfig>`, and applies to the following rules:
+1. `Protocol` and `ProtocolConfig` must not contain any forward slash `/`
+2. Must be able to be UTF-8 encoded
 
+Examples:
 ```
 Ip4([127, 0, 0, 1]) => "/ip4/127.0.0.1",
 Ip6([0x2601, 0, .., 0, 0xfebc]) => "/ip6/2601::febc",
@@ -88,6 +91,18 @@ NetworkAddress([
     Handshake(0),
 ]) => "/ip4/127.0.0.1/tcp/6080/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0"
 ```
+
+A `NetworkAddress` as a concatenation of `Protocol` segments must have the following characteristics:
+1. The address must contain exactly one Layer3 protocol (e.g. `Ip4` or `Dns`) and
+2. The address must contain exactly one Layer4 protocol (e.g. `Tcp`).
+3. `Memory` is a special protocol that is both Layer3 and Layer4.
+4. A protocol may be used at most once in an address.
+5. The address must not end in a forward slash `/`
+
+Example possible combinations:
+* `/ip4/127.0.0.1/tcp/6080`
+* `/memory/6080`
+* `/dns/novi.com/tcp/80/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0`
 
 ## Network Protocol Upgradability
 
