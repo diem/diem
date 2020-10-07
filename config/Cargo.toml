@@ -16,7 +16,7 @@ mirai-annotations = "1.10.1"
 rand = "0.7.3"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
 serde_yaml = "0.8.13"
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

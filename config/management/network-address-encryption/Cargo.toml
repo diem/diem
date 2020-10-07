@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 base64 = "0.13.0"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-global-constants = { path = "../../../config/global-constants", version = "0.1.0"}

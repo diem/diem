@@ -31,7 +31,7 @@ serde-name = "0.1.1"
 sha2 = "0.9.1"
 short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 static_assertions = "1.1.0"
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 vanilla-x25519-dalek = { version = "1.0.1", package = 'x25519-dalek', default-features = false, features = ["std"], optional = true }
 x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat3", version = "1.0.1", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}

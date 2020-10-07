@@ -21,7 +21,7 @@ bytecode-source-map = { path = "../bytecode-source-map", version = "0.1.0" }
 log = "0.4.11"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 
 [features]
 default = []

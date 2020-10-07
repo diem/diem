@@ -26,7 +26,7 @@ rand = { version = "0.7.3", default-features = false }
 serde = { version = "1.0.116", default-features = false }
 serde_json = "1.0.58"
 termion = { version = "1.5.5", default-features = false }
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 tokio = { version = "0.2.22", features = ["full"] }
 
 channel = { path = "../common/channel", version = "0.1.0" }

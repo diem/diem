@@ -22,7 +22,7 @@ libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 once_cell = "1.4.1"
 regex = { version = "1.3.9", default-features = false, features = ["std", "perf"] }
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 aho-corasick = "0.7.13"
 termcolor = "1.1.0"
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }

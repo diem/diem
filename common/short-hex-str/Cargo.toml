@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 mirai-annotations = "1.10.1"
 serde = { version = "1.0.116", default-features = false }
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 

@@ -23,7 +23,7 @@ rand = { version = "0.7.3", features = ["small_rng"] }
 rand_core = { version = "0.5.1", optional = true }
 serde = { version = "1.0.116", default-features = false }
 serde_bytes = "0.11.5"
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 tokio = { version = "0.2.22", features = ["full"] }
 tokio-retry = "0.2.0"
 tokio-util = { version = "0.3.1", features = ["codec"] }
