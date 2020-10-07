@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.32"
-futures = "0.3.5"
+futures = "0.3.6"
 hyper = "0.13.8"
 once_cell = "1.4.1"
 prometheus = { version = "0.10.0", default-features = false }

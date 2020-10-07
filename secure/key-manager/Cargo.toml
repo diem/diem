@@ -29,7 +29,7 @@ transaction-builder-generated = { path = "../../client/transaction-builder", ver
 
 [dev-dependencies]
 anyhow = "1.0.32"
-futures = "0.3.5"
+futures = "0.3.6"
 rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["full"] }
 

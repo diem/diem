@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.32"
 async-trait = "0.1.41"
 tokio = { version = "0.2.22", features = ["full"] }
-futures = "0.3.5"
+futures = "0.3.6"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
