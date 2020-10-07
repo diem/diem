@@ -85,7 +85,7 @@ pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     let logger = Some(logger.build());
 
     // Let's now log some important information, since the logger is set up
-    info!(config = config, "Loaded config");
+    info!(config = config, "Loaded LibraNode config");
 
     if config.metrics.enabled {
         for network in &config.full_node_networks {
