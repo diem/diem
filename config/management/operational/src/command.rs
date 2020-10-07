@@ -19,6 +19,8 @@ pub enum Command {
     AccountResource(crate::account_resource::AccountResource),
     #[structopt(about = "Remove a validator from ValidatorSet")]
     AddValidator(crate::governance::AddValidator),
+    #[structopt(about = "Check an endpoint for a listening socket")]
+    CheckEndpoint(crate::network_checker::CheckEndpoint),
     #[structopt(about = "Create a new validator account")]
     CreateValidator(crate::governance::CreateValidator),
     #[structopt(about = "Create a new validator operator account")]
@@ -57,6 +59,7 @@ pub enum Command {
 pub enum CommandName {
     AccountResource,
     AddValidator,
+    CheckEndpoint,
     CreateValidator,
     CreateValidatorOperator,
     ExtractPrivateKey,
@@ -80,6 +83,7 @@ impl From<&Command> for CommandName {
         match command {
             Command::AccountResource(_) => CommandName::AccountResource,
             Command::AddValidator(_) => CommandName::AddValidator,
+            Command::CheckEndpoint(_) => CommandName::CheckEndpoint,
             Command::CreateValidator(_) => CommandName::CreateValidator,
             Command::CreateValidatorOperator(_) => CommandName::CreateValidatorOperator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
@@ -105,6 +109,7 @@ impl std::fmt::Display for CommandName {
         let name = match self {
             CommandName::AccountResource => "account-resource",
             CommandName::AddValidator => "add-validator",
+            CommandName::CheckEndpoint => "check-endpoint",
             CommandName::CreateValidator => "create-validator",
             CommandName::CreateValidatorOperator => "create-validator-operator",
             CommandName::ExtractPrivateKey => "extract-private-key",
@@ -131,6 +136,7 @@ impl Command {
         match self {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CheckEndpoint(cmd) => Self::pretty_print(cmd.execute()),
             Command::CreateValidator(cmd) => Self::pretty_print(cmd.execute()),
             Command::CreateValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),

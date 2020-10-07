@@ -15,6 +15,7 @@ mod validator_config;
 mod validator_set;
 mod waypoint;
 
+mod network_checker;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_helper;
 
