@@ -3,6 +3,7 @@
 
 # Module `0x1::LibraTransactionPublishingOption`
 
+This module defines a struct storing the publishing policies for the VM.
 
 
 -  [Struct `LibraTransactionPublishingOption`](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
@@ -13,6 +14,10 @@
 -  [Function `add_to_script_allow_list`](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
 -  [Function `set_open_script`](#0x1_LibraTransactionPublishingOption_set_open_script)
 -  [Function `set_open_module`](#0x1_LibraTransactionPublishingOption_set_open_module)
+-  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
+    -  [Access Control](#@Access_Control_3)
+    -  [Helper Functions](#@Helper_Functions_4)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -29,7 +34,7 @@
 ## Struct `LibraTransactionPublishingOption`
 
 Defines and holds the publishing policies for the VM. There are three possible configurations:
-1. No module publishing, only allowlisted scripts are allowed.
+1. No module publishing, only allow-listed scripts are allowed.
 2. No module publishing, custom scripts are allowed.
 3. Both module publishing and custom scripts are allowed.
 We represent these as the following resource.
@@ -49,13 +54,14 @@ We represent these as the following resource.
 <code>script_allow_list: vector&lt;vector&lt;u8&gt;&gt;</code>
 </dt>
 <dd>
-
+ Only script hashes in the following list can be executed by the network. If the vector is empty, no
+ limitation would be enforced.
 </dd>
 <dt>
 <code>module_publishing_allowed: bool</code>
 </dt>
 <dd>
-
+ Anyone can publish new module if this flag is set to true.
 </dd>
 </dl>
 
@@ -156,6 +162,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 ## Function `is_script_allowed`
 
+Check if sender can execute script with <code>hash</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool
@@ -201,19 +208,13 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 
-
-<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
-</code></pre>
-
-
-
 </details>
 
 <a name="0x1_LibraTransactionPublishingOption_is_module_allowed"></a>
 
 ## Function `is_module_allowed`
 
+Check if a sender can publish a module
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool
@@ -252,6 +253,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 ## Function `add_to_script_allow_list`
 
+Add <code>new_hash</code> to the list of script hashes that is allowed to be executed by the network.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;)
@@ -286,16 +288,16 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 <summary>Specification</summary>
 
 
-
-<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
 Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<a name="0x1_LibraTransactionPublishingOption_allow_list$8"></a>
+<b>let</b> allow_list = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;().script_allow_list;
+<b>aborts_if</b> <a href="Vector.md#0x1_Vector_length">Vector::length</a>(new_hash) != <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a> <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> <a href="Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(allow_list, new_hash) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetAbortsIf">LibraConfig::SetAbortsIf</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;{account: lr_account};
 </code></pre>
 
 
@@ -306,6 +308,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 ## Function `set_open_script`
 
+Allow the execution of arbitrary script or not.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer)
@@ -334,16 +337,12 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 <summary>Specification</summary>
 
 
-
-<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
 Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetAbortsIf">LibraConfig::SetAbortsIf</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;{account: lr_account};
 </code></pre>
 
 
@@ -354,6 +353,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 ## Function `set_open_module`
 
+Allow module publishing from arbitrary sender or not.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool)
@@ -383,20 +383,41 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 <summary>Specification</summary>
 
 
-
-<pre><code><b>pragma</b> aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
 Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetAbortsIf">LibraConfig::SetAbortsIf</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;{account: lr_account};
 </code></pre>
 
 
-Only add_to_script_allow_list, set_open_script, and set_open_module can modify the
+
+</details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+<a name="@Initialization_2"></a>
+
+### Initialization
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+</code></pre>
+
+
+
+<a name="@Access_Control_3"></a>
+
+### Access Control
+
+Only <code>add_to_script_allow_list</code>, <code>set_open_script</code>, and <code>set_open_module</code> can modify the
 LibraTransactionPublishingOption config [[H10]][PERMISSION]
 
 
@@ -418,6 +439,11 @@ LibraTransactionPublishingOption config [[H10]][PERMISSION]
 
 
 
+<a name="@Helper_Functions_4"></a>
+
+### Helper Functions
+
+
 
 <a name="0x1_LibraTransactionPublishingOption_spec_is_script_allowed"></a>
 
@@ -434,10 +460,6 @@ LibraTransactionPublishingOption config [[H10]][PERMISSION]
     publish_option.module_publishing_allowed || <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account)
 }
 </code></pre>
-
-
-
-</details>
 
 
 [//]: # ("File containing references which can be used from documentation")

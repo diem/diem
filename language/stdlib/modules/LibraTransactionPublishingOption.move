@@ -1,5 +1,6 @@
 address 0x1 {
 
+/// This module defines a struct storing the publishing policies for the VM.
 module LibraTransactionPublishingOption {
     use 0x1::Vector;
     use 0x1::LibraConfig::{Self, LibraConfig};
@@ -16,15 +17,15 @@ module LibraTransactionPublishingOption {
     const EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 1;
 
     /// Defines and holds the publishing policies for the VM. There are three possible configurations:
-    /// 1. No module publishing, only allowlisted scripts are allowed.
+    /// 1. No module publishing, only allow-listed scripts are allowed.
     /// 2. No module publishing, custom scripts are allowed.
     /// 3. Both module publishing and custom scripts are allowed.
     /// We represent these as the following resource.
     struct LibraTransactionPublishingOption {
-        // Only script hashes in the following list can be executed by the network. If the vector is empty, no
-        // limitation would be enforced.
+        /// Only script hashes in the following list can be executed by the network. If the vector is empty, no
+        /// limitation would be enforced.
         script_allow_list: vector<vector<u8>>,
-        // Anyone can publish new module if this flag is set to true.
+        /// Anyone can publish new module if this flag is set to true.
         module_publishing_allowed: bool,
     }
 
@@ -55,7 +56,7 @@ module LibraTransactionPublishingOption {
             }};
     }
 
-    // Check if sender can execute script with `hash`
+    /// Check if sender can execute script with `hash`
     public fun is_script_allowed(account: &signer, hash: &vector<u8>): bool {
         let publish_option = LibraConfig::get<LibraTransactionPublishingOption>();
 
@@ -70,12 +71,7 @@ module LibraTransactionPublishingOption {
         include LibraTimestamp::is_genesis() ==> LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>{};
     }
 
-    spec module {
-        invariant [global] LibraTimestamp::is_operating() ==>
-            LibraConfig::spec_is_published<LibraTransactionPublishingOption>();
-    }
-
-    // Check if a sender can publish a module
+    /// Check if a sender can publish a module
     public fun is_module_allowed(account: &signer): bool {
         let publish_option = LibraConfig::get<LibraTransactionPublishingOption>();
 
@@ -85,7 +81,7 @@ module LibraTransactionPublishingOption {
         include AbortsIfNoTransactionPublishingOption;
     }
 
-    // Add `new_hash` to the list of script hashes that is allowed to be executed by the network.
+    /// Add `new_hash` to the list of script hashes that is allowed to be executed by the network.
     public fun add_to_script_allow_list(lr_account: &signer, new_hash: vector<u8>) {
         Roles::assert_libra_root(lr_account);
 
@@ -100,15 +96,17 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun add_to_script_allow_list {
-        pragma aborts_if_is_partial = true;
         /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
-        // TODO(jkpark): this spec block is incomplete.
+        let allow_list = LibraConfig::get<LibraTransactionPublishingOption>().script_allow_list;
+        aborts_if Vector::length(new_hash) != SCRIPT_HASH_LENGTH with Errors::INVALID_ARGUMENT;
+        aborts_if Vector::spec_contains(allow_list, new_hash) with Errors::INVALID_ARGUMENT;
+        include LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>;
+        include LibraConfig::SetAbortsIf<LibraTransactionPublishingOption>{account: lr_account};
     }
 
-    // Allow the execution of arbitrary script or not.
+    /// Allow the execution of arbitrary script or not.
     public fun set_open_script(lr_account: &signer) {
         Roles::assert_libra_root(lr_account);
         let publish_option = LibraConfig::get<LibraTransactionPublishingOption>();
@@ -117,15 +115,14 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun set_open_script {
-        pragma aborts_if_is_partial = true;
         /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
-        // TODO(jkpark): this spec block is incomplete.
+        include LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>;
+        include LibraConfig::SetAbortsIf<LibraTransactionPublishingOption>{account: lr_account};
     }
 
-    // Allow module publishing from arbitrary sender or not.
+    /// Allow module publishing from arbitrary sender or not.
     public fun set_open_module(lr_account: &signer, open_module: bool) {
         Roles::assert_libra_root(lr_account);
 
@@ -135,15 +132,24 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun set_open_module {
-        pragma aborts_if_is_partial = true;
         /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
-        // TODO(jkpark): this spec block is incomplete.
+        include LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>;
+        include LibraConfig::SetAbortsIf<LibraTransactionPublishingOption>{account: lr_account};
     }
 
-    /// Only add_to_script_allow_list, set_open_script, and set_open_module can modify the
+    spec module { } // Switch documentation context to module level.
+
+    /// # Initialization
+    spec module {
+        invariant [global] LibraTimestamp::is_operating() ==>
+            LibraConfig::spec_is_published<LibraTransactionPublishingOption>();
+    }
+
+    /// # Access Control
+
+    /// Only `add_to_script_allow_list`, `set_open_script`, and `set_open_module` can modify the
     /// LibraTransactionPublishingOption config [[H10]][PERMISSION]
     spec schema LibraVersionRemainsSame {
         ensures old(LibraConfig::spec_is_published<LibraTransactionPublishingOption>()) ==>
@@ -154,6 +160,7 @@ module LibraTransactionPublishingOption {
         apply LibraVersionRemainsSame to * except add_to_script_allow_list, set_open_script, set_open_module;
     }
 
+    /// # Helper Functions
     spec module {
         define spec_is_script_allowed(account: signer, hash: vector<u8>): bool {
             let publish_option = LibraConfig::spec_get_config<LibraTransactionPublishingOption>();

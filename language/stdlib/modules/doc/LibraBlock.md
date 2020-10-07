@@ -3,6 +3,7 @@
 
 # Module `0x1::LibraBlock`
 
+This module defines a struct storing the metadata of the block and new block events.
 
 
 -  [Resource `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
@@ -13,6 +14,7 @@
 -  [Function `block_prologue`](#0x1_LibraBlock_block_prologue)
 -  [Function `get_current_block_height`](#0x1_LibraBlock_get_current_block_height)
 -  [Module Specification](#@Module_Specification_1)
+    -  [Initialization](#@Initialization_2)
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
@@ -299,6 +301,7 @@ Get the current block height
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraBlock.md#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>(): u64 <b>acquires</b> <a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
+    <b>assert</b>(<a href="LibraBlock.md#0x1_LibraBlock_is_initialized">is_initialized</a>(), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="LibraBlock.md#0x1_LibraBlock_EBLOCK_METADATA">EBLOCK_METADATA</a>));
     borrow_global&lt;<a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).height
 }
 </code></pre>
@@ -310,6 +313,12 @@ Get the current block height
 <a name="@Module_Specification_1"></a>
 
 ## Module Specification
+
+
+
+<a name="@Initialization_2"></a>
+
+### Initialization
 
 
 

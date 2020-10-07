@@ -1,5 +1,6 @@
 address 0x1 {
 
+/// This module defines a struct storing the metadata of the block and new block events.
 module LibraBlock {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
@@ -12,10 +13,6 @@ module LibraBlock {
         height: u64,
         /// Handle where events with the time of new blocks are emitted
         new_block_events: Event::EventHandle<Self::NewBlockEvent>,
-    }
-
-    spec module {
-        invariant [global] LibraTimestamp::is_operating() ==> is_initialized();
     }
 
     struct NewBlockEvent {
@@ -107,7 +104,15 @@ module LibraBlock {
 
     /// Get the current block height
     public fun get_current_block_height(): u64 acquires BlockMetadata {
+        assert(is_initialized(), Errors::not_published(EBLOCK_METADATA));
         borrow_global<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS()).height
+    }
+
+    spec module { } // Switch documentation context to module level.
+
+    /// # Initialization
+    spec module {
+        invariant [global] LibraTimestamp::is_operating() ==> is_initialized();
     }
 }
 

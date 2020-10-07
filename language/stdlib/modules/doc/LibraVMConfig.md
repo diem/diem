@@ -3,6 +3,8 @@
 
 # Module `0x1::LibraVMConfig`
 
+This module defines structs and methods to initialize VM configurations,
+including different costs of running the VM.
 
 
 -  [Struct `LibraVMConfig`](#0x1_LibraVMConfig_LibraVMConfig)
@@ -10,6 +12,8 @@
 -  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
 -  [Function `initialize`](#0x1_LibraVMConfig_initialize)
 -  [Module Specification](#@Module_Specification_0)
+    -  [Initialization](#@Initialization_1)
+    -  [Access Control](#@Access_Control_2)
 
 
 <pre><code><b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
@@ -23,6 +27,7 @@
 
 ## Struct `LibraVMConfig`
 
+The struct to hold config data needed to operate the LibraVM.
 
 
 <pre><code><b>struct</b> <a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>
@@ -39,7 +44,7 @@
 <code>gas_schedule: <a href="LibraVMConfig.md#0x1_LibraVMConfig_GasSchedule">LibraVMConfig::GasSchedule</a></code>
 </dt>
 <dd>
-
+ Cost of running the VM.
 </dd>
 </dl>
 
@@ -50,6 +55,17 @@
 
 ## Struct `GasSchedule`
 
+The gas schedule keeps two separate schedules for the gas:
+* The instruction_schedule: This holds the gas for each bytecode instruction.
+* The native_schedule: This holds the gas for used (per-byte operated over) for each native
+function.
+A couple notes:
+1. In the case that an instruction is deleted from the bytecode, that part of the cost schedule
+still needs to remain the same; once a slot in the table is taken by an instruction, that is its
+slot for the rest of time (since that instruction could already exist in a module on-chain).
+2. The initialization of the module will publish the instruction table to the libra root account
+address, and will preload the vector with the gas schedule for instructions. The VM will then
+load this into memory at the startup of each block.
 
 
 <pre><code><b>struct</b> <a href="LibraVMConfig.md#0x1_LibraVMConfig_GasSchedule">GasSchedule</a>
@@ -183,6 +199,7 @@
 
 ## Function `initialize`
 
+Initialize the table under the libra root account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
@@ -276,6 +293,30 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 </code></pre>
 
 
+
+</details>
+
+<a name="@Module_Specification_0"></a>
+
+## Module Specification
+
+
+
+<a name="@Initialization_1"></a>
+
+### Initialization
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
+</code></pre>
+
+
+
+<a name="@Access_Control_2"></a>
+
+### Access Control
+
 Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
 
 
@@ -293,19 +334,6 @@ Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
 
 
 <pre><code><b>apply</b> <a href="LibraVMConfig.md#0x1_LibraVMConfig_LibraVMConfigRemainsSame">LibraVMConfigRemainsSame</a> <b>to</b> *;
-</code></pre>
-
-
-
-</details>
-
-<a name="@Module_Specification_0"></a>
-
-## Module Specification
-
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
 </code></pre>
 
 
