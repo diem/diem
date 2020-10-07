@@ -122,13 +122,14 @@ pub static ACTIVE_UPSTREAM_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-/// Number of networks this node is sending chunk requests to. It is usually 1
-/// but can be >1 if the node's primary network is unhealthy/all peers are dead
+/// Highest preference of the networks this node is sending chunk requests to.
+/// It is usually 0 if the node's primary network is healthy, but can be >0 if the node's primary
+/// network is unhealthy/all peers in that network are dead
 /// and the node fails over to other networks
 pub static MULTICAST_LEVEL: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_state_sync_multicast_level",
-        "Number of networks state sync is sending chunk requests to"
+        "Max network preference of the networks state sync is sending chunk requests to"
     )
     .unwrap()
 });

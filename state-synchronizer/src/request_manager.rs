@@ -21,12 +21,13 @@ use rand::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
+    ops::Bound::{self, Excluded, Included},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
-const MIN_UPSTREAM_NETWORK_CT: usize = 1;
+const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
 #[derive(Default, Debug, Clone)]
 pub struct PeerInfo {
@@ -87,9 +88,8 @@ pub struct RequestManager {
     request_timeout: Duration,
     // duration with the same version before multicasting, i.e. sending the next chunk request to more networks
     multicast_timeout: Duration,
-    // number of networks to try to multicast the same chunk request to
-    // the node will try send chunk requests to one peer per the first `multicast_level` networks
-    // available, in order of preference specified by the upstream config
+    // the maximum preference level of all the networks to try to multicast the same chunk request to,
+    // where network preference is specified by the upstream config
     multicast_level: usize,
     network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
 }
@@ -101,7 +101,7 @@ impl RequestManager {
         multicast_timeout: Duration,
         network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
     ) -> Self {
-        counters::MULTICAST_LEVEL.set(MIN_UPSTREAM_NETWORK_CT as i64);
+        counters::MULTICAST_LEVEL.set(PRIMARY_NETWORK_PREFERENCE as i64);
         Self {
             eligible_peers: BTreeMap::new(),
             peers: HashMap::new(),
@@ -109,7 +109,7 @@ impl RequestManager {
             upstream_config,
             request_timeout,
             multicast_timeout,
-            multicast_level: MIN_UPSTREAM_NETWORK_CT,
+            multicast_level: PRIMARY_NETWORK_PREFERENCE,
             network_senders,
         }
     }
@@ -234,12 +234,47 @@ impl RequestManager {
         None
     }
 
-    pub fn pick_peers(&self) -> Vec<PeerNetworkId> {
-        self.eligible_peers
-            .iter()
-            .take(self.multicast_level)
+    pub fn pick_peers(&mut self) -> Vec<PeerNetworkId> {
+        // Strategy: pick peers using multicast level
+        // if no live peers exist for this multicast level, keep failing over to next level
+
+        // find peers in all networks for the current multicast level
+        let peers = self
+            .eligible_peers
+            .range((Bound::Unbounded, Included(self.multicast_level)))
             .filter_map(|(_, (peers, weighted_index))| Self::pick_peer(peers, weighted_index))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        if !peers.is_empty() {
+            return peers;
+        }
+
+        // if no peers were found from current multicast level above,
+        // do best effort search for next network with live peers to fail over to and pick a peer from it
+        // and update multicast level accordingly
+        let failover = self
+            .eligible_peers
+            .range((Excluded(self.multicast_level), Bound::Unbounded))
+            .next()
+            .map(|(network_preference, (peers, weighted_index))| {
+                (
+                    *network_preference,
+                    Self::pick_peer(peers, weighted_index).map_or(vec![], |peer| vec![peer]),
+                )
+            });
+
+        if let Some((new_multicast_level, failover_peer)) = failover {
+            info!(
+                LogSchema::event_log(LogEntry::Multicast, LogEvent::Failover)
+                    .old_multicast_level(self.multicast_level)
+                    .new_multicast_level(new_multicast_level),
+            );
+            self.multicast_level = new_multicast_level;
+            counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
+            failover_peer
+        } else {
+            vec![]
+        }
     }
 
     pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
@@ -329,12 +364,12 @@ impl RequestManager {
             .upstream_config
             .get_upstream_preference(peer.raw_network_id())
             == Some(0);
-        if is_primary_upstream_peer && self.multicast_level != MIN_UPSTREAM_NETWORK_CT {
+        if is_primary_upstream_peer && self.multicast_level != PRIMARY_NETWORK_PREFERENCE {
             // if chunk from a primary upstream is successful, stop multicasting the request to failover networks
             info!(LogSchema::event_log(LogEntry::Multicast, LogEvent::Recover)
                 .old_multicast_level(self.multicast_level)
-                .new_multicast_level(MIN_UPSTREAM_NETWORK_CT));
-            self.multicast_level = MIN_UPSTREAM_NETWORK_CT;
+                .new_multicast_level(PRIMARY_NETWORK_PREFERENCE));
+            self.multicast_level = PRIMARY_NETWORK_PREFERENCE;
             counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
         }
 
@@ -445,7 +480,7 @@ impl RequestManager {
             let prev_multicast_level = self.multicast_level;
             self.multicast_level = std::cmp::min(
                 self.multicast_level + 1,
-                self.upstream_config.upstream_count(),
+                self.upstream_config.upstream_count() - 1, // multicast_level (=network preference) is 0-indexed
             );
             info!(
                 LogSchema::event_log(LogEntry::Multicast, LogEvent::Failover)
