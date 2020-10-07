@@ -5,13 +5,11 @@ use crate::{execution_correctness::ExecutionCorrectness, id_and_transactions_fro
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use executor_types::{BlockExecutor, Error, StateComputeResult};
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
+use libra_mutex::Mutex;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
-use std::{
-    boxed::Box,
-    sync::{Arc, Mutex},
-};
+use std::{boxed::Box, sync::Arc};
 
 pub struct LocalService {
     block_executor: Box<dyn BlockExecutor>,
@@ -42,15 +40,11 @@ impl LocalClient {
 
 impl ExecutionCorrectness for LocalClient {
     fn committed_block_id(&mut self) -> Result<HashValue, Error> {
-        self.internal
-            .lock()
-            .unwrap()
-            .block_executor
-            .committed_block_id()
+        self.internal.lock().block_executor.committed_block_id()
     }
 
     fn reset(&mut self) -> Result<(), Error> {
-        self.internal.lock().unwrap().block_executor.reset()
+        self.internal.lock().block_executor.reset()
     }
 
     fn execute_block(
@@ -58,7 +52,7 @@ impl ExecutionCorrectness for LocalClient {
         block: Block,
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
-        let mut local = self.internal.lock().unwrap();
+        let mut local = self.internal.lock();
         let mut result = local
             .block_executor
             .execute_block(id_and_transactions_from_block(&block), parent_block_id)?;
@@ -81,7 +75,6 @@ impl ExecutionCorrectness for LocalClient {
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
         self.internal
             .lock()
-            .unwrap()
             .block_executor
             .commit_blocks(block_ids, ledger_info_with_sigs)
     }

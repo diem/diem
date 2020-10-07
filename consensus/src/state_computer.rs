@@ -10,12 +10,10 @@ use fail::fail_point;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
+use libra_mutex::Mutex;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use state_synchronizer::StateSyncClient;
-use std::{
-    boxed::Box,
-    sync::{Arc, Mutex},
-};
+use std::{boxed::Box, sync::Arc};
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
@@ -61,7 +59,6 @@ impl StateComputer for ExecutionProxy {
             "execute_block",
             self.execution_correctness_client
                 .lock()
-                .unwrap()
                 .execute_block(block.clone(), parent_block_id)
         )
     }
@@ -76,7 +73,6 @@ impl StateComputer for ExecutionProxy {
             "commit_block",
             self.execution_correctness_client
                 .lock()
-                .unwrap()
                 .commit_blocks(block_ids, finality_proof)?
         );
         if let Err(e) = monitor!(
@@ -103,7 +99,7 @@ impl StateComputer for ExecutionProxy {
         let res = monitor!("sync_to", self.synchronizer.sync_to(target).await);
         // Similarily, after the state synchronization, we have to reset the cache
         // of BlockExecutor to guarantee the latest committed state is up to date.
-        self.execution_correctness_client.lock().unwrap().reset()?;
+        self.execution_correctness_client.lock().reset()?;
         res?;
         Ok(())
     }

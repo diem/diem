@@ -6,6 +6,7 @@
 use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_logger::warn;
+use libra_mutex::Mutex;
 use libra_secure_net::NetworkClient;
 use libra_types::{
     account_address::AccountAddress,
@@ -18,7 +19,7 @@ use libra_types::{
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
 };
 use serde::de::DeserializeOwned;
-use std::{net::SocketAddr, sync::Mutex};
+use std::net::SocketAddr;
 use storage_interface::{
     DbReader, DbWriter, Error, GetAccountStateWithProofByVersionRequest, Order,
     SaveTransactionsRequest, StartupInfo, StorageRequest, TreeState,
@@ -36,7 +37,7 @@ impl StorageClient {
     }
 
     fn process_one_message(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut client = self.network_client.lock().unwrap();
+        let mut client = self.network_client.lock();
         client.write(&input)?;
         client.read().map_err(|e| e.into())
     }

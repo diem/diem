@@ -16,6 +16,7 @@ use crate::{
 use anyhow::Result;
 use libra_jellyfish_merkle::StaleNodeIndex;
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_types::transaction::Version;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 #[cfg(test)]
@@ -25,7 +26,7 @@ use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
         mpsc::{channel, Receiver, Sender},
-        Arc, Mutex,
+        Arc,
     },
     thread::JoinHandle,
     time::{Duration, Instant},
@@ -79,7 +80,6 @@ impl Pruner {
             let least_readable_version = latest_version - self.historical_versions_to_keep;
             self.command_sender
                 .lock()
-                .expect("command_sender to pruner thread should lock.")
                 .send(Command::Prune {
                     least_readable_version,
                 })
@@ -115,7 +115,6 @@ impl Drop for Pruner {
     fn drop(&mut self) {
         self.command_sender
             .lock()
-            .expect("Locking command_sender should not fail.")
             .send(Command::Quit)
             .expect("Receiver should not destruct.");
         self.worker_thread

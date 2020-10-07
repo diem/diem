@@ -3,10 +3,8 @@
 
 use crate::util::time_service::{ScheduledTask, TimeService};
 use libra_logger::prelude::*;
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use libra_mutex::Mutex;
+use std::{sync::Arc, time::Duration};
 
 /// SimulatedTimeService implements TimeService, however it does not depend on actual time
 /// There are multiple ways to use it:
@@ -30,7 +28,7 @@ struct SimulatedTimeServiceInner {
 
 impl TimeService for SimulatedTimeService {
     fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         let now = inner.now;
         let deadline = now + timeout;
         if deadline > inner.time_limit {
@@ -57,12 +55,12 @@ impl TimeService for SimulatedTimeService {
     }
 
     fn get_current_timestamp(&self) -> Duration {
-        self.inner.lock().unwrap().now
+        self.inner.lock().now
     }
 
     fn sleep(&self, t: Duration) {
         let inner = self.inner.clone();
-        let mut inner = inner.lock().unwrap();
+        let mut inner = inner.lock();
         inner.now += t;
         if inner.now > inner.max {
             inner.now = inner.max;
@@ -99,7 +97,7 @@ impl SimulatedTimeService {
     /// deadline lower then new time_limit
     #[allow(dead_code)]
     pub fn update_auto_advance_limit(&mut self, time: Duration) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock();
         inner.time_limit += time;
         let time_limit = inner.time_limit;
         let mut i = 0;

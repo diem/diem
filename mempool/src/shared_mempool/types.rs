@@ -18,6 +18,7 @@ use libra_config::{
     config::{MempoolConfig, PeerNetworkId},
     network_id::NodeNetworkId,
 };
+use libra_mutex::Mutex;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
@@ -29,7 +30,7 @@ use std::{
     collections::HashMap,
     fmt,
     pin::Pin,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
     task::Waker,
     time::Instant,
 };
@@ -91,7 +92,7 @@ impl ScheduledBroadcast {
             let tokio_instant = tokio::time::Instant::from_std(deadline);
             executor.spawn(async move {
                 tokio::time::delay_until(tokio_instant).await;
-                let mut waker = waker_clone.lock().expect("failed to acquire waker lock");
+                let mut waker = waker_clone.lock();
                 if let Some(waker) = waker.take() {
                     waker.wake()
                 }
@@ -113,7 +114,7 @@ impl Future for ScheduledBroadcast {
     fn poll(self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
         if Instant::now() < self.deadline {
             let waker_clone = context.waker().clone();
-            let mut waker = self.waker.lock().expect("failed to acquire waker lock");
+            let mut waker = self.waker.lock();
             *waker = Some(waker_clone);
 
             Poll::Pending

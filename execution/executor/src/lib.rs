@@ -401,7 +401,6 @@ where
             self.cache
                 .get_block(&block_id)?
                 .lock()
-                .unwrap()
                 .output()
                 .executed_trees()
                 .clone()
@@ -690,12 +689,11 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 .cache
                 .get_block(&parent_block_id)?
                 .lock()
-                .unwrap()
                 .output()
                 .has_reconfiguration()
         {
             let parent = self.cache.get_block(&parent_block_id)?;
-            let parent_block = parent.lock().unwrap();
+            let parent_block = parent.lock();
             let parent_output = parent_block.output();
 
             info!(
@@ -822,10 +820,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             .iter()
             .map(|id| self.cache.get_block(id))
             .collect::<Result<Vec<_>, Error>>()?;
-        let blocks = arc_blocks
-            .iter()
-            .map(|b| b.lock().unwrap())
-            .collect::<Vec<_>>();
+        let blocks = arc_blocks.iter().map(|b| b.lock()).collect::<Vec<_>>();
         for (txn, txn_data) in blocks.iter().flat_map(|block| {
             itertools::zip_eq(block.transactions(), block.output().transaction_data())
         }) {

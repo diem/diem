@@ -10,11 +10,9 @@ use executor_types::{Error, StateComputeResult};
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 
 pub struct MockStateComputer {
@@ -48,7 +46,6 @@ impl StateComputer for MockStateComputer {
     ) -> Result<StateComputeResult, Error> {
         self.block_cache
             .lock()
-            .unwrap()
             .insert(block.id(), block.payload().unwrap_or(&vec![]).clone());
         let result = StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
@@ -77,7 +74,6 @@ impl StateComputer for MockStateComputer {
             let mut payload = self
                 .block_cache
                 .lock()
-                .unwrap()
                 .remove(&block_id)
                 .ok_or_else(|| format_err!("Cannot find block"))?;
             txns.append(&mut payload);

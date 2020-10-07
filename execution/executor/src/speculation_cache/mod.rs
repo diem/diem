@@ -26,12 +26,13 @@ use consensus_types::block::Block;
 use executor_types::{Error, ExecutedTrees};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
+use libra_mutex::Mutex;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfo, transaction::Transaction,
 };
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, Weak},
+    sync::{Arc, Weak},
 };
 use storage_interface::{StartupInfo, TreeState};
 
@@ -93,7 +94,6 @@ impl Drop for SpeculationBlock {
     fn drop(&mut self) {
         self.block_map
             .lock()
-            .unwrap()
             .remove(&self.id())
             .expect("Speculation block must exist in block_map before being dropped.");
         debug!(
@@ -217,7 +217,7 @@ impl SpeculationCache {
 
     pub fn reset(&mut self) {
         self.heads = vec![];
-        *self.block_map.lock().unwrap() = HashMap::new();
+        *self.block_map.lock() = HashMap::new();
     }
 
     pub fn add_block(
@@ -236,7 +236,6 @@ impl SpeculationCache {
         let old_block = self
             .block_map
             .lock()
-            .unwrap()
             .get(&block_id)
             .map(|b| {
                 b.upgrade().ok_or_else(|| {
@@ -249,7 +248,7 @@ impl SpeculationCache {
             .transpose()?;
 
         if let Some(old_block) = old_block {
-            old_block.lock().unwrap().replace(txns, output);
+            old_block.lock().replace(txns, output);
             return Ok(());
         }
 
@@ -262,7 +261,6 @@ impl SpeculationCache {
         // Add to the map
         self.block_map
             .lock()
-            .unwrap()
             .insert(block_id, Arc::downgrade(&new_block));
         // Add to the tree
         if parent_block_id == self.committed_block_id() {
@@ -270,7 +268,6 @@ impl SpeculationCache {
         } else {
             self.get_block(&parent_block_id)?
                 .lock()
-                .unwrap()
                 .add_child(new_block);
         }
         Ok(())
@@ -284,7 +281,7 @@ impl SpeculationCache {
     ) -> Result<(), Error> {
         let arc_latest_committed_block =
             self.get_block(&committed_ledger_info.consensus_block_id())?;
-        let latest_committed_block = arc_latest_committed_block.lock().unwrap();
+        let latest_committed_block = arc_latest_committed_block.lock();
         self.heads = latest_committed_block.children.clone();
         self.update_block_tree_root(
             latest_committed_block.output().executed_trees().clone(),
@@ -300,7 +297,6 @@ impl SpeculationCache {
         Ok(self
             .block_map
             .lock()
-            .unwrap()
             .get(&block_id)
             .ok_or_else(|| Error::BlockNotFound(*block_id))?
             .upgrade()
