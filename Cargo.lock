@@ -2586,10 +2586,12 @@ dependencies = [
  "libra-types",
  "libra-vm",
  "libra-workspace-hack",
+ "libra-writeset-generator",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
  "proptest",
+ "serde_json",
  "transaction-builder",
  "transaction-builder-generated",
  "vm",
@@ -3607,6 +3609,23 @@ dependencies = [
  "sha-1 0.9.1",
  "subtle",
  "syn 1.0.42",
+]
+
+[[package]]
+name = "libra-writeset-generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "handlebars",
+ "libra-canonical-serialization",
+ "libra-types",
+ "libra-workspace-hack",
+ "move-lang",
+ "serde",
+ "serde_json",
+ "stdlib",
+ "structopt 0.3.18",
+ "tempfile",
 ]
 
 [[package]]

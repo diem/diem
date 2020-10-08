@@ -10,6 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
+serde_json = "1.0.58"
 language-e2e-tests = { path = "../testing-infra/e2e-tests", version = "0.1.0" }
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -27,6 +28,7 @@ proptest = "0.10.1"
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 compiled-stdlib = { path = "../stdlib/compiled",  version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+libra-writeset-generator = { path = "../libra-tools/writeset-transaction-generator", version = "0.1.0"}
 
 [features]
 default = ["transaction-builder-generated/fuzzing"]

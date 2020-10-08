@@ -14,6 +14,7 @@ mod account_universe;
 mod admin_script;
 mod create_account;
 mod data_store;
+mod emergency_admin_script;
 mod execution_strategies;
 mod failed_transaction_tests;
 mod genesis;
