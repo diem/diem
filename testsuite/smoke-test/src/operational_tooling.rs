@@ -3,13 +3,24 @@
 
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
-    test_utils::libra_swarm_utils::{get_op_tool, load_backend_storage, load_node_config},
+    test_utils::{
+        libra_swarm_utils::{
+            get_json_rpc_libra_interface, get_op_tool, load_backend_storage,
+            load_libra_root_storage, load_node_config,
+        },
+        write_key_to_file_hex_format, write_key_to_file_lcs_format,
+    },
 };
 use libra_config::config::SecureBackend;
-use libra_global_constants::{
-    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_ADDRESS_KEYS,
-    VALIDATOR_NETWORK_KEY,
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    PrivateKey, Uniform,
 };
+use libra_global_constants::{
+    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+    VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY,
+};
+use libra_key_manager::libra_interface::LibraInterface;
 use libra_management::storage::to_x25519;
 use libra_network_address::NetworkAddress;
 use libra_operational_tool::test_helper::OperationalTool;
@@ -19,6 +30,7 @@ use libra_types::{account_address::AccountAddress, transaction::authenticator::A
 use std::{
     convert::{TryFrom, TryInto},
     fs,
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -83,6 +95,120 @@ fn test_consensus_key_rotation() {
     let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
     let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     assert_eq!(rotated_consensus_key, new_consensus_key);
+}
+
+#[test]
+fn test_create_operator_hex_file() {
+    create_operator_with_file_writer(write_key_to_file_hex_format);
+}
+
+#[test]
+fn test_create_operator_lcs_file() {
+    create_operator_with_file_writer(write_key_to_file_lcs_format);
+}
+
+#[test]
+fn test_create_validator_hex_file() {
+    create_validator_with_file_writer(write_key_to_file_hex_format);
+}
+
+#[test]
+fn test_create_validator_lcs_file() {
+    create_validator_with_file_writer(write_key_to_file_lcs_format);
+}
+
+/// Creates a new validator operator using the given file writer and verifies
+/// the operator account is correctly initialized on-chain.
+fn create_operator_with_file_writer(file_writer: fn(Ed25519PublicKey, PathBuf)) {
+    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Create a new operator key
+    let operator_key = Ed25519PrivateKey::generate_for_testing().public_key();
+    let operator_auth_key = AuthenticationKey::ed25519(&operator_key);
+    let operator_account = operator_auth_key.derived_address();
+
+    // Verify the corresponding account doesn't exist on-chain
+    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
+    libra_json_rpc
+        .retrieve_account_state(operator_account)
+        .unwrap_err();
+
+    // Write the key to a file using the provided file writer
+    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
+    let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
+    file_writer(operator_key, key_file_path.clone());
+
+    // Create the operator account
+    let backend = load_libra_root_storage(&env.validator_swarm, 0);
+    let op_human_name = "new_operator";
+    let (txn_ctx, account_address) = op_tool
+        .create_validator_operator(op_human_name, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+    assert_eq!(operator_account, account_address);
+
+    // Wait for the create operator transaction to be executed
+    let mut client = env.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify the operator account now exists on-chain
+    let account_state = libra_json_rpc
+        .retrieve_account_state(operator_account)
+        .unwrap();
+    let op_config_resource = account_state
+        .get_validator_operator_config_resource()
+        .unwrap()
+        .unwrap();
+    assert_eq!(op_human_name.as_bytes(), op_config_resource.human_name);
+}
+
+/// Creates a new validator using the given file writer and verifies
+/// the account is correctly initialized on-chain.
+fn create_validator_with_file_writer(file_writer: fn(Ed25519PublicKey, PathBuf)) {
+    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Create a new validator key
+    let validator_key = Ed25519PrivateKey::generate_for_testing().public_key();
+    let validator_auth_key = AuthenticationKey::ed25519(&validator_key);
+    let validator_account = validator_auth_key.derived_address();
+
+    // Verify the corresponding account doesn't exist on-chain
+    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
+    libra_json_rpc
+        .retrieve_account_state(validator_account)
+        .unwrap_err();
+
+    // Write the key to a file using the provided file writer
+    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
+    let key_file_path = node_config_path.with_file_name(OWNER_KEY);
+    file_writer(validator_key, key_file_path.clone());
+
+    // Create the validator account
+    let backend = load_libra_root_storage(&env.validator_swarm, 0);
+    let val_human_name = "new_validator";
+    let (txn_ctx, account_address) = op_tool
+        .create_validator(val_human_name, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+    assert_eq!(validator_account, account_address);
+
+    // Wait for the create validator transaction to be executed
+    let mut client = env.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify the validator account now exists on-chain
+    let account_state = libra_json_rpc
+        .retrieve_account_state(validator_account)
+        .unwrap();
+    let val_config_resource = account_state
+        .get_validator_config_resource()
+        .unwrap()
+        .unwrap();
+    assert_eq!(val_human_name.as_bytes(), val_config_resource.human_name);
+    assert!(val_config_resource.delegated_account.is_none());
+    assert!(val_config_resource.validator_config.is_none());
 }
 
 #[test]

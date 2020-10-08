@@ -41,9 +41,8 @@ use libra_crypto::ed25519::Ed25519PublicKey;
 use std::{convert::TryInto, fs, path::PathBuf};
 
 pub fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
-    let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let data = data.trim();
-    if let Ok(key) = lcs::from_bytes(data.as_bytes()) {
+    let data = fs::read(path).map_err(|e| e.to_string())?;
+    if let Ok(key) = lcs::from_bytes(&data) {
         Ok(key)
     } else {
         let key_data = hex::decode(&data).map_err(|e| e.to_string())?;

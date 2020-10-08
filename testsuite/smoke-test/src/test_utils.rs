@@ -4,8 +4,11 @@
 use crate::smoke_test_environment::SmokeTestEnvironment;
 use cli::client_proxy::ClientProxy;
 use libra_config::config::{Identity, NodeConfig, SecureBackend};
+use libra_crypto::ed25519::Ed25519PublicKey;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
-use std::{collections::BTreeMap, str::FromStr, string::ToString};
+use std::{
+    collections::BTreeMap, fs::File, io::Write, path::PathBuf, str::FromStr, string::ToString,
+};
 
 // TODO(joshlind): Refactor all of these so that they can be contained within the calling
 // test files and not shared across all tests.
@@ -232,4 +235,18 @@ fn fetch_backend_storage(
     } else {
         panic!("Couldn't load identity from storage");
     }
+}
+
+/// Writes a given public key to a file specified by the given path using hex encoding.
+pub fn write_key_to_file_hex_format(key: Ed25519PublicKey, key_file_path: PathBuf) {
+    let hex_encoded_key = hex::encode(key.to_bytes());
+    let mut file = File::create(key_file_path).unwrap();
+    file.write_all(&hex_encoded_key.as_bytes()).unwrap();
+}
+
+/// Writes a given public key to a file specified by the given path using lcs encoding.
+pub fn write_key_to_file_lcs_format(key: Ed25519PublicKey, key_file_path: PathBuf) {
+    let lcs_encoded_key = lcs::to_bytes(&key).unwrap();
+    let mut file = File::create(key_file_path).unwrap();
+    file.write_all(&lcs_encoded_key).unwrap();
 }

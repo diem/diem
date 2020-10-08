@@ -48,6 +48,65 @@ impl OperationalTool {
         command.account_resource()
     }
 
+    pub fn create_account(
+        &self,
+        name: &str,
+        path_to_key: &str,
+        backend: &config::SecureBackend,
+        command_name: CommandName,
+        execute: fn(Command) -> Result<(TransactionContext, AccountAddress), Error>,
+    ) -> Result<(TransactionContext, AccountAddress), Error> {
+        let args = format!(
+            "
+                {command}
+                --name {name}
+                --path-to-key {path_to_key}
+                --json-server {host}
+                --chain-id {chain_id}
+                --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, command_name),
+            name = name,
+            path_to_key = path_to_key,
+            host = self.host,
+            chain_id = self.chain_id.id(),
+            backend_args = backend_args(backend)?,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        execute(command)
+    }
+
+    pub fn create_validator(
+        &self,
+        name: &str,
+        path_to_key: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, AccountAddress), Error> {
+        self.create_account(
+            name,
+            path_to_key,
+            backend,
+            CommandName::CreateValidator,
+            |cmd| cmd.create_validator(),
+        )
+    }
+
+    pub fn create_validator_operator(
+        &self,
+        name: &str,
+        path_to_key: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, AccountAddress), Error> {
+        self.create_account(
+            name,
+            path_to_key,
+            backend,
+            CommandName::CreateValidatorOperator,
+            |cmd| cmd.create_validator_operator(),
+        )
+    }
+
     fn extract_key(
         &self,
         key_name: &str,

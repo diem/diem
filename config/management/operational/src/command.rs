@@ -17,7 +17,7 @@ use structopt::StructOpt;
 pub enum Command {
     #[structopt(about = "Displays the current account resource on the blockchain")]
     AccountResource(crate::account_resource::AccountResource),
-    #[structopt(about = "Remove a validator from ValidatorSet")]
+    #[structopt(about = "Adds a validator to the ValidatorSet")]
     AddValidator(crate::governance::AddValidator),
     #[structopt(about = "Check an endpoint for a listening socket")]
     CheckEndpoint(crate::network_checker::CheckEndpoint),
@@ -194,6 +194,18 @@ impl Command {
 
     pub fn add_validator(self) -> Result<TransactionContext, Error> {
         execute_command!(self, Command::AddValidator, CommandName::AddValidator)
+    }
+
+    pub fn create_validator(self) -> Result<(TransactionContext, AccountAddress), Error> {
+        execute_command!(self, Command::CreateValidator, CommandName::CreateValidator)
+    }
+
+    pub fn create_validator_operator(self) -> Result<(TransactionContext, AccountAddress), Error> {
+        execute_command!(
+            self,
+            Command::CreateValidatorOperator,
+            CommandName::CreateValidatorOperator
+        )
     }
 
     pub fn extract_private_key(self) -> Result<(), Error> {

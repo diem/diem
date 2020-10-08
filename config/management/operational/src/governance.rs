@@ -6,6 +6,7 @@ use libra_global_constants::LIBRA_ROOT_KEY;
 use libra_management::{
     config::{Config, ConfigPath},
     error::Error,
+    secure_backend::ValidatorBackend,
     transaction::build_raw_transaction,
 };
 use libra_types::{
@@ -29,6 +30,8 @@ pub struct CreateAccount {
     json_server: Option<String>,
     #[structopt(long, required_unless("config"))]
     chain_id: Option<ChainId>,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
 }
 
 impl CreateAccount {
@@ -46,7 +49,8 @@ impl CreateAccount {
             .config
             .load()?
             .override_chain_id(self.chain_id)
-            .override_json_server(&self.json_server);
+            .override_json_server(&self.json_server)
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
         let key = libra_management::read_key_from_file(&self.path_to_key)
             .map_err(|e| Error::UnableToReadFile(format!("{:?}", self.path_to_key), e))?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
