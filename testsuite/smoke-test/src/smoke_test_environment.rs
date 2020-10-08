@@ -8,12 +8,12 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_genesis_tool::config_builder::FullnodeType;
 use libra_swarm::swarm::LibraSwarm;
 use libra_temppath::TempPath;
-use libra_types::{chain_id::ChainId, waypoint::Waypoint};
+use libra_types::waypoint::Waypoint;
 
 pub struct SmokeTestEnvironment {
     pub validator_swarm: LibraSwarm,
     pub vfn_swarm: Option<LibraSwarm>,
-    pub public_fn_swarm: Option<LibraSwarm>,
+    pub pfn_swarm: Option<LibraSwarm>,
     libra_root_key: (Ed25519PrivateKey, String),
     mnemonic_file: TempPath,
 }
@@ -48,7 +48,7 @@ impl SmokeTestEnvironment {
         Self {
             validator_swarm,
             vfn_swarm: None,
-            public_fn_swarm: None,
+            pfn_swarm: None,
             libra_root_key: (key, key_path),
             mnemonic_file,
         }
@@ -70,8 +70,8 @@ impl SmokeTestEnvironment {
         );
     }
 
-    pub fn setup_public_fn_swarm(&mut self, num_nodes: usize) {
-        self.public_fn_swarm = Some(
+    pub fn setup_pfn_swarm(&mut self, num_nodes: usize) {
+        self.pfn_swarm = Some(
             LibraSwarm::configure_fn_swarm(
                 &workspace_builder::get_libra_node_with_failpoints(),
                 None,
@@ -80,7 +80,7 @@ impl SmokeTestEnvironment {
                 FullnodeType::PublicFullnode(num_nodes),
             )
             .unwrap(),
-        )
+        );
     }
 
     pub fn get_validator_client(
@@ -109,13 +109,9 @@ impl SmokeTestEnvironment {
         )
     }
 
-    pub fn get_public_fn_client(
-        &self,
-        node_index: usize,
-        waypoint: Option<Waypoint>,
-    ) -> ClientProxy {
+    pub fn get_pfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
         get_client_proxy(
-            self.public_fn_swarm
+            self.pfn_swarm
                 .as_ref()
                 .expect("Public fn swarm is not initialized"),
             node_index,
