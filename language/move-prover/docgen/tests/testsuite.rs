@@ -50,7 +50,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     options.setup_logging_for_test();
 
     if is_root_template {
-        options.docgen.root_doc_template = Some(path.to_string_lossy().to_string());
+        options.docgen.root_doc_templates = vec![path.to_string_lossy().to_string()];
     }
 
     options.docgen.include_specs = true;

@@ -11,7 +11,10 @@ fn assert_that_version_control_has_no_unstaged_changes() {
         .unwrap();
     assert!(
         output.stdout.is_empty(),
-        "Git repository should be in a clean state"
+        format!(
+            "Git repository should be in a clean state, but found:\n{}",
+            std::str::from_utf8(&output.stdout).unwrap_or("<binary>")
+        )
     );
     assert!(output.status.success());
 }

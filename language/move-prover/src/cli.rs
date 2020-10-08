@@ -548,8 +548,10 @@ impl Options {
         }
         if matches.is_present("docgen-template") {
             options.run_docgen = true;
-            options.docgen.root_doc_template =
-                matches.value_of("docgen-template").map(|s| s.to_string());
+            options.docgen.root_doc_templates = vec![matches
+                .value_of("docgen-template")
+                .map(|s| s.to_string())
+                .unwrap()]
         }
         if matches.is_present("abigen") {
             options.run_abigen = true;

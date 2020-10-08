@@ -112,10 +112,10 @@ pub struct DocgenOptions {
     pub output_directory: String,
     /// In which directories to look for references.
     pub doc_path: Vec<String>,
-    /// An optional path to a file containing a template for a root document for the generated
+    /// A list of paths to files containing templates for root documents for the generated
     /// documentation.
     ///
-    /// The root document is a markdown file which contains placeholders for generated
+    /// A root document is a markdown file which contains placeholders for generated
     /// documentation content. It is also processed following the same rules than
     /// documentation comments in Move, including creation of cross-references and
     /// Move code highlighting.
@@ -135,7 +135,7 @@ pub struct DocgenOptions {
     /// For a module or script which is included in the root document, no
     /// separate file is generated. References between the included and the standalone
     /// module/script content work transparently.
-    pub root_doc_template: Option<String>,
+    pub root_doc_templates: Vec<String>,
     /// An optional file containing reference definitions. The content of this file will
     /// be added to each generated markdown doc.
     pub references_file: Option<String>,
@@ -153,7 +153,7 @@ impl Default for DocgenOptions {
             collapsed_sections: true,
             output_directory: "doc".to_string(),
             doc_path: vec!["doc".to_string()],
-            root_doc_template: None,
+            root_doc_templates: vec![],
             references_file: None,
         }
     }
@@ -242,37 +242,40 @@ impl<'env> Docgen<'env> {
         // Compute missing information about schemas.
         self.compute_declared_schemas();
 
-        // If there is a root template, parse it.
-        let root_template = if let Some(file_name) = &self.options.root_doc_template {
-            let root_out_name = PathBuf::from(file_name)
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .replace("_template", "");
-            match self.parse_root_template(file_name) {
-                Ok(elements) => Some((root_out_name, elements)),
-                Err(_) => {
-                    self.env.error(
-                        &self.env.unknown_loc(),
-                        &format!("cannot read root template `{}`", file_name),
-                    );
-                    None
+        // If there is a root templates, parse them.
+        let root_templates = self
+            .options
+            .root_doc_templates
+            .iter()
+            .filter_map(|file_name| {
+                let root_out_name = PathBuf::from(file_name)
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("_template", "");
+                match self.parse_root_template(file_name) {
+                    Ok(elements) => Some((root_out_name, elements)),
+                    Err(_) => {
+                        self.env.error(
+                            &self.env.unknown_loc(),
+                            &format!("cannot read root template `{}`", file_name),
+                        );
+                        None
+                    }
                 }
-            }
-        } else {
-            None
-        };
+            })
+            .collect_vec();
 
         // Compute module infos.
-        self.compute_module_infos(&root_template);
+        self.compute_module_infos(&root_templates);
 
-        // If there is a root template, expand it.
-        if let Some((out_file, elements)) = root_template {
+        // Expand all root templates.
+        for (out_file, elements) in root_templates {
             self.expand_root_template(&out_file, elements);
         }
 
-        // Generate documentation for standalone modules which are not included in the template.
+        // Generate documentation for standalone modules which are not included in the templates.
         for (id, info) in self.infos.clone() {
             let m = self.env.get_module(id);
             if !info.is_included && !m.is_dependency() {
@@ -370,6 +373,7 @@ impl<'env> Docgen<'env> {
     /// Expand the root template.
     fn expand_root_template(&mut self, output_file_name: &str, elements: Vec<TemplateElement>) {
         self.writer = CodeWriter::new(self.env.unknown_loc());
+        *self.label_counter.borrow_mut() = 0;
         let mut toc_label = None;
         for elem in elements {
             match elem {
@@ -422,7 +426,7 @@ impl<'env> Docgen<'env> {
     }
 
     /// Compute ModuleInfo for all modules, considering root template content.
-    fn compute_module_infos(&mut self, template: &Option<(String, Vec<TemplateElement>)>) {
+    fn compute_module_infos(&mut self, templates: &[(String, Vec<TemplateElement>)]) {
         let mut out_dir = self.options.output_directory.to_string();
         if out_dir.is_empty() {
             out_dir = ".".to_string();
@@ -443,7 +447,7 @@ impl<'env> Docgen<'env> {
         };
         // First process infos for modules included via template.
         let mut included = BTreeSet::new();
-        if let Some((template_out_file, elements)) = template {
+        for (template_out_file, elements) in templates {
             for element in elements {
                 if let TemplateElement::IncludeModule(name) = element {
                     // TODO: currently we only support simple names, we may want to add support for
