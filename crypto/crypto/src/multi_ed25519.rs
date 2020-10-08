@@ -430,7 +430,10 @@ impl TryFrom<&[u8]> for MultiEd25519Signature {
             return Err(CryptoMaterialError::WrongLengthError);
         }
 
-        let bitmap = bytes[length - BITMAP_NUM_OF_BYTES..].try_into().unwrap();
+        let bitmap = match bytes[length - BITMAP_NUM_OF_BYTES..].try_into() {
+            Ok(bitmap) => bitmap,
+            Err(_) => return Err(CryptoMaterialError::DeserializationError),
+        };
         if bitmap_count_ones(bitmap) != num_of_sigs as u32 {
             return Err(CryptoMaterialError::DeserializationError);
         }
@@ -502,13 +505,15 @@ impl Signature for MultiEd25519Signature {
     ) -> Result<()> {
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
-        let last_bit = bitmap_last_set_bit(self.bitmap);
-        if last_bit == None || last_bit.unwrap() as usize > public_key.length() {
-            return Err(anyhow!(
-                "{}",
-                CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
-            ));
-        }
+        match bitmap_last_set_bit(self.bitmap) {
+            Some(last_bit) if last_bit as usize <= public_key.length() => (),
+            _ => {
+                return Err(anyhow!(
+                    "{}",
+                    CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
+                ))
+            }
+        };
         if bitmap_count_ones(self.bitmap) < public_key.threshold as u32 {
             return Err(anyhow!(
                 "{}",

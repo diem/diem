@@ -94,13 +94,14 @@ impl Write for TcpWriter {
         // Attempt to write, and if it fails clear underlying stream
         // This doesn't guarantee a message cut off mid send will work, but it does guarantee that
         // we will connect first
-        let mut stream = self.stream.as_ref().unwrap();
-        let result = stream.write(buf);
-        if result.is_err() {
-            self.stream = None;
-        }
-
-        result
+        self.stream
+            .as_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotConnected, "No stream"))
+            .and_then(|stream| stream.write(buf))
+            .map_err(|e| {
+                self.stream = None;
+                e
+            })
     }
 
     fn flush(&mut self) -> io::Result<()> {

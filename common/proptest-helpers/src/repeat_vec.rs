@@ -121,7 +121,7 @@ impl<T> RepeatVec<T> {
     /// Ignores any out of bounds indexes.
     pub fn remove_all(&mut self, logical_indexes: impl IntoIterator<Item = usize>) {
         let mut logical_indexes: Vec<_> = logical_indexes.into_iter().collect();
-        logical_indexes.sort();
+        logical_indexes.sort_unstable();
         logical_indexes.dedup();
         self.remove_all_impl(logical_indexes)
     }
