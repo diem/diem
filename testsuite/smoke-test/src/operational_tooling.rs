@@ -59,10 +59,7 @@ fn test_consensus_key_rotation() {
         .unwrap();
 
     // Verify that the config has been updated correctly with the new consensus key
-    let validator_account = storage
-        .get::<AccountAddress>(OPERATOR_ACCOUNT)
-        .unwrap()
-        .value;
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()
@@ -184,10 +181,7 @@ fn test_network_key_rotation_recovery() {
     );
 
     // Verify that config has been loaded correctly with new key
-    let validator_account = storage
-        .get::<AccountAddress>(OPERATOR_ACCOUNT)
-        .unwrap()
-        .value;
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()

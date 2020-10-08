@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{test_utils::setup_swarm_and_client_proxy, workspace_builder};
-use libra_config::config::NodeConfig;
 use libra_json_rpc::views::VMStatusView as JsonVMStatusView;
 use libra_transaction_replay::LibraDebugger;
 
 #[test]
 fn test_replay_tooling() {
     let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    let validator_config = NodeConfig::load(&swarm.validator_swarm.config.config_files[0]).unwrap();
+    let validator_config = swarm.load_node_config(0);
     let swarm_rpc_endpoint = format!("http://localhost:{}", validator_config.rpc.address.port());
     let json_debugger = LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap();
 

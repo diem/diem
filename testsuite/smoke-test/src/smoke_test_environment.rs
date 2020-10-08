@@ -84,6 +84,17 @@ impl SmokeTestEnvironment {
         )
     }
 
+    /// Loads the node config for the validator at the specified index.
+    pub fn load_node_config(&self, node_index: usize) -> NodeConfig {
+        let node_config_path = self
+            .validator_swarm
+            .config
+            .config_files
+            .get(node_index)
+            .unwrap();
+        NodeConfig::load(&node_config_path).unwrap()
+    }
+
     pub fn new(num_validators: usize) -> Self {
         Self::new_with_chunk_limit(num_validators, 10)
     }
@@ -121,6 +132,17 @@ impl SmokeTestEnvironment {
             libra_root_key: (key, key_path),
             mnemonic_file,
         }
+    }
+
+    /// Saves the node config for the validator at the specified index.
+    pub fn save_node_config(&self, mut node_config: NodeConfig, node_index: usize) {
+        let node_config_path = self
+            .validator_swarm
+            .config
+            .config_files
+            .get(node_index)
+            .unwrap();
+        node_config.save(node_config_path).unwrap();
     }
 
     /// Configures a specified number of public full nodes

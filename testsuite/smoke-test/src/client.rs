@@ -5,7 +5,6 @@ use crate::test_utils::{
     compare_balances, load_libra_root_storage, setup_swarm_and_client_proxy, test_smoke_script,
 };
 use debug_interface::NodeDebugClient;
-use libra_config::config::NodeConfig;
 use libra_trace::trace::trace_node;
 use libra_types::{
     account_address::AccountAddress, account_config::testnet_dd_account_address,
@@ -134,15 +133,8 @@ fn test_client_waypoints() {
         .unwrap()
         .validator_peer_id()
         .unwrap();
-    let node_configs: Vec<_> = env
-        .validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config_path| NodeConfig::load(config_path).unwrap())
-        .collect();
     let op_tool = env.get_op_tool(1);
-    let libra_root = load_libra_root_storage(node_configs.first().unwrap());
+    let libra_root = load_libra_root_storage(&env.load_node_config(0));
     let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy
         .wait_for_transaction(context.address, context.sequence_number + 1)

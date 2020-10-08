@@ -28,38 +28,39 @@ use transaction_builder::encode_remove_validator_and_reconfigure_script;
 /// 3. test the nodes and clients resume working after updating waypoint
 /// 4. test a node lag behind can sync to the waypoint
 fn test_genesis_transaction_flow() {
+    let num_nodes = 4;
+
     let db_bootstrapper = workspace_builder::get_bin("db-bootstrapper");
-    let mut env = SmokeTestEnvironment::new(4);
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+
     println!("1. set sync_only = true for the first node and check it can sync to others");
-    let config_path = env.validator_swarm.config.config_files.first().unwrap();
-    let mut node_config = NodeConfig::load(config_path).unwrap();
+    let mut node_config = env.load_node_config(0);
     node_config.consensus.sync_only = true;
-    node_config.save(config_path).unwrap();
+    env.save_node_config(node_config, 0);
     env.validator_swarm.launch();
+
     let mut client_proxy_0 = env.get_validator_client(0, None);
     client_proxy_0.create_next_account(false).unwrap();
     client_proxy_0
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
+
     println!("2. set sync_only = true for all nodes and restart");
-    for (i, config_path) in env
-        .validator_swarm
-        .config
-        .config_files
-        .clone()
-        .iter()
-        .enumerate()
-    {
-        let mut node_config = NodeConfig::load(config_path).unwrap();
+    for i in 0..num_nodes {
+        let mut node_config = env.load_node_config(i);
         node_config.consensus.sync_only = true;
-        node_config.save(config_path).unwrap();
+        env.save_node_config(node_config, i);
+
         env.validator_swarm.kill_node(i);
         env.validator_swarm.add_node(i).unwrap();
     }
+
     println!("3. delete one node's db and test they can still sync when sync_only is true for every nodes");
     env.validator_swarm.kill_node(0);
+    let node_config = env.load_node_config(0);
     fs::remove_dir_all(node_config.storage.dir()).unwrap();
     env.validator_swarm.add_node(0).unwrap();
+
     println!("4. verify all nodes are at the same round and no progress being made in 5 sec");
     env.validator_swarm.wait_for_all_nodes_to_catchup();
     let mut known_round = None;
@@ -86,7 +87,9 @@ fn test_genesis_transaction_flow() {
         );
         sleep(Duration::from_secs(1));
     }
+
     println!("5. kill all nodes and prepare a genesis txn to remove validator 0");
+    let node_config = env.load_node_config(0);
     let validator_address = node_config.validator_network.as_ref().unwrap().peer_id();
     let op_tool = env.get_op_tool(0);
     let libra_root = load_libra_root_storage(&node_config);
@@ -107,7 +110,9 @@ fn test_genesis_transaction_flow() {
     let mut file = File::create(genesis_path.path()).unwrap();
     file.write_all(&lcs::to_bytes(&genesis_transaction).unwrap())
         .unwrap();
+
     println!("6. prepare the waypoint with the transaction");
+    let node_config = env.load_node_config(0);
     let waypoint_command = Command::new(db_bootstrapper.as_path())
         .current_dir(workspace_root())
         .args(&vec![
@@ -135,25 +140,20 @@ fn test_genesis_transaction_flow() {
             _ => panic!("unexpected waypoint from node config"),
         }
     };
+
     println!("7. apply genesis transaction for nodes 1, 2, 3");
-    for config_path in env
-        .validator_swarm
-        .config
-        .config_files
-        .clone()
-        .iter()
-        .skip(1)
-    {
-        let mut node_config = NodeConfig::load(config_path).unwrap();
+    for i in 1..num_nodes {
+        let mut node_config = env.load_node_config(i);
         set_waypoint(&node_config);
         node_config.execution.genesis = Some(genesis_transaction.clone());
         // reset the sync_only flag to false
         node_config.consensus.sync_only = false;
-        node_config.save(config_path).unwrap();
+        env.save_node_config(node_config, i);
     }
     for i in 1..4 {
         env.validator_swarm.add_node(i).unwrap();
     }
+
     println!("8. verify it's able to mint after the waypoint");
     let mut client_proxy_1 = env.get_validator_client(1, Some(waypoint));
     client_proxy_1.set_accounts(client_proxy_0.copy_all_accounts());
@@ -164,6 +164,7 @@ fn test_genesis_transaction_flow() {
     client_proxy_1
         .wait_for_transaction(treasury_compliance_account_address(), 1)
         .unwrap();
+
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
     let op_tool = env.get_op_tool(1);
     let context = op_tool
@@ -172,13 +173,13 @@ fn test_genesis_transaction_flow() {
     client_proxy_1
         .wait_for_transaction(context.address, context.sequence_number + 1)
         .unwrap();
+
     // setup the waypoint for node 0
+    let mut node_config = env.load_node_config(0);
     node_config.execution.genesis = None;
     node_config.execution.genesis_file_location = PathBuf::from("");
     set_waypoint(&node_config);
-    node_config
-        .save(&env.validator_swarm.config.config_files[0])
-        .unwrap();
+    env.save_node_config(node_config, 0);
     env.validator_swarm.add_node(0).unwrap();
     let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
