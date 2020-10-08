@@ -1,8 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::load_backend_storage};
-use libra_config::config::{NodeConfig, SecureBackend};
+use crate::{
+    smoke_test_environment::SmokeTestEnvironment,
+    test_utils::LibraSwarmUtils::{get_op_tool, load_backend_storage},
+};
+use libra_config::config::SecureBackend;
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_ADDRESS_KEYS,
     VALIDATOR_NETWORK_KEY,
@@ -452,38 +455,27 @@ fn launch_swarm_with_op_tool_and_backend(
     Storage,
 ) {
     // Launch validator swarm
-    let mut swarm = SmokeTestEnvironment::new(num_nodes);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config = NodeConfig::load(
-        swarm
-            .validator_swarm
-            .config
-            .config_files
-            .get(node_index)
-            .unwrap(),
-    )
-    .unwrap();
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+    env.validator_swarm.launch();
 
     // Connect the operator tool to the node's JSON RPC API
-    let op_tool = swarm.get_op_tool(node_index);
+    let op_tool = get_op_tool(&env.validator_swarm, node_index);
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let backend = load_backend_storage(&env.validator_swarm, node_index);
     let storage: Storage = (&backend).try_into().unwrap();
 
-    (swarm, op_tool, backend, storage)
+    (env, op_tool, backend, storage)
 }
 
 fn wait_for_transaction_on_all_nodes(
-    swarm: &SmokeTestEnvironment,
+    env: &SmokeTestEnvironment,
     num_nodes: usize,
     account: AccountAddress,
     sequence_number: u64,
 ) {
     for i in 0..num_nodes {
-        let mut client = swarm.get_validator_client(i, None);
+        let mut client = env.get_validator_client(i, None);
         client
             .wait_for_transaction(account, sequence_number)
             .unwrap();

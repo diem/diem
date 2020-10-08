@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    smoke_test_environment::SmokeTestEnvironment,
-    test_utils::{compare_balances, setup_swarm_and_client_proxy},
+    smoke_test_environment::{setup_swarm_and_client_proxy, SmokeTestEnvironment},
+    test_utils::{compare_balances, LibraSwarmUtils::load_node_config},
 };
 use libra_config::config::NodeConfig;
 use std::fs;
@@ -135,7 +135,7 @@ fn test_startup_sync_state() {
     ));
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
-    let node_config = env.load_node_config(peer_to_stop);
+    let node_config = load_node_config(&env.validator_swarm, peer_to_stop);
     // TODO Remove hardcoded path to state db
     let state_db_path = node_config.storage.dir().join("libradb");
     // Verify that state_db_path exists and

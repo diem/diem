@@ -1,8 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::test_utils::{
-    compare_balances, load_libra_root_storage, setup_swarm_and_client_proxy, test_smoke_script,
+use crate::{
+    smoke_test_environment::setup_swarm_and_client_proxy,
+    test_utils::{
+        compare_balances, test_smoke_script,
+        LibraSwarmUtils::{get_op_tool, load_libra_root_storage},
+    },
 };
 use debug_interface::NodeDebugClient;
 use libra_trace::trace::trace_node;
@@ -101,7 +105,7 @@ fn test_basic_restartability() {
 
 #[test]
 fn test_client_waypoints() {
-    let (env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
+    let (env, mut client_proxy) = setup_swarm_and_client_proxy(4, 1);
     // Make sure some txns are committed
     client_proxy.create_next_account(false).unwrap();
     client_proxy
@@ -133,8 +137,8 @@ fn test_client_waypoints() {
         .unwrap()
         .validator_peer_id()
         .unwrap();
-    let op_tool = env.get_op_tool(1);
-    let libra_root = load_libra_root_storage(&env.load_node_config(0));
+    let op_tool = get_op_tool(&env.validator_swarm, 1);
+    let libra_root = load_libra_root_storage(&env.validator_swarm, 0);
     let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy
         .wait_for_transaction(context.address, context.sequence_number + 1)

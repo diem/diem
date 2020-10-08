@@ -1,18 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::workspace_builder;
+use crate::{test_utils::LibraSwarmUtils::get_client_proxy, workspace_builder};
 use cli::client_proxy::ClientProxy;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_genesis_tool::config_builder::FullnodeType;
-use libra_key_manager::libra_interface::JsonRpcLibraInterface;
-use libra_operational_tool::test_helper::OperationalTool;
 use libra_swarm::swarm::LibraSwarm;
 use libra_temppath::TempPath;
-use libra_types::{chain_id::ChainId, waypoint::Waypoint};
-use std::path::PathBuf;
+use libra_types::waypoint::Waypoint;
 
+/// A SmokeTestEnvironment is a testing environment that encapsulates a single
+/// deployment of a validator swarm with associated keys and files. It also
+/// provides optional deployment support for validator and public full node
+/// swarms.
 pub struct SmokeTestEnvironment {
     pub validator_swarm: LibraSwarm,
     pub vfn_swarm: Option<LibraSwarm>,
@@ -22,36 +23,15 @@ pub struct SmokeTestEnvironment {
 }
 
 impl SmokeTestEnvironment {
-    /// Returns a JSON RPC based Libra Interface pointing to a validator node at the given
-    /// node index.
-    pub fn get_json_rpc_libra_interface(&self, node_index: usize) -> JsonRpcLibraInterface {
-        let json_rpc_endpoint = format!(
-            "http://127.0.0.1:{}",
-            self.validator_swarm.get_client_port(node_index)
-        );
-        JsonRpcLibraInterface::new(json_rpc_endpoint)
-    }
-
-    /// Returns an operational tool pointing to a validator node at the given node index.
-    pub fn get_op_tool(&self, node_index: usize) -> OperationalTool {
-        OperationalTool::new(
-            format!(
-                "http://127.0.0.1:{}",
-                self.validator_swarm.get_client_port(node_index)
-            ),
-            ChainId::test(),
-        )
-    }
-
     /// Returns a client pointing to a public full node at the given node index.
     pub fn get_pfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
         get_client_proxy(
-            self.libra_root_key.1.clone(),
-            self.mnemonic_file.path().to_path_buf(),
             self.public_fn_swarm
                 .as_ref()
                 .expect("Public fn swarm is not initialized"),
             node_index,
+            self.libra_root_key.1.clone(),
+            self.mnemonic_file.path().to_path_buf(),
             waypoint,
         )
     }
@@ -63,10 +43,10 @@ impl SmokeTestEnvironment {
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
         get_client_proxy(
-            self.libra_root_key.1.clone(),
-            self.mnemonic_file.path().to_path_buf(),
             &self.validator_swarm,
             node_index,
+            self.libra_root_key.1.clone(),
+            self.mnemonic_file.path().to_path_buf(),
             waypoint,
         )
     }
@@ -74,25 +54,14 @@ impl SmokeTestEnvironment {
     /// Returns a client pointing to a validator full node at the given node index.
     pub fn get_vfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
         get_client_proxy(
-            self.libra_root_key.1.clone(),
-            self.mnemonic_file.path().to_path_buf(),
             self.vfn_swarm
                 .as_ref()
                 .expect("Vfn swarm is not initialized"),
             node_index,
+            self.libra_root_key.1.clone(),
+            self.mnemonic_file.path().to_path_buf(),
             waypoint,
         )
-    }
-
-    /// Loads the node config for the validator at the specified index.
-    pub fn load_node_config(&self, node_index: usize) -> NodeConfig {
-        let node_config_path = self
-            .validator_swarm
-            .config
-            .config_files
-            .get(node_index)
-            .unwrap();
-        NodeConfig::load(&node_config_path).unwrap()
     }
 
     pub fn new(num_validators: usize) -> Self {
@@ -134,17 +103,6 @@ impl SmokeTestEnvironment {
         }
     }
 
-    /// Saves the node config for the validator at the specified index.
-    pub fn save_node_config(&self, mut node_config: NodeConfig, node_index: usize) {
-        let node_config_path = self
-            .validator_swarm
-            .config
-            .config_files
-            .get(node_index)
-            .unwrap();
-        node_config.save(node_config_path).unwrap();
-    }
-
     /// Configures a specified number of public full nodes
     pub fn setup_pfn_swarm(&mut self, num_nodes: usize) {
         self.public_fn_swarm = Some(
@@ -174,32 +132,15 @@ impl SmokeTestEnvironment {
     }
 }
 
-fn get_client_proxy(
-    libra_root_key_path: String,
-    mnemonic_file_path: PathBuf,
-    swarm: &LibraSwarm,
+/// Sets up a SmokeTestEnvironment with specified size and connects a client
+/// proxy to the node_index.
+pub fn setup_swarm_and_client_proxy(
+    num_nodes: usize,
     node_index: usize,
-    waypoint: Option<Waypoint>,
-) -> ClientProxy {
-    let port = swarm.get_client_port(node_index);
+) -> (SmokeTestEnvironment, ClientProxy) {
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+    env.validator_swarm.launch();
 
-    let mnemonic_file_path = mnemonic_file_path
-        .canonicalize()
-        .expect("Unable to get canonical path of mnemonic_file_path")
-        .to_str()
-        .unwrap()
-        .to_string();
-
-    ClientProxy::new(
-        ChainId::test(),
-        &format!("http://localhost:{}/v1", port),
-        &libra_root_key_path,
-        &libra_root_key_path,
-        &libra_root_key_path,
-        false,
-        /* faucet server */ None,
-        Some(mnemonic_file_path),
-        waypoint.unwrap_or_else(|| swarm.config.waypoint),
-    )
-    .unwrap()
+    let client = env.get_validator_client(node_index, None);
+    (env, client)
 }

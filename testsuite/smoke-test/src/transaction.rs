@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::test_utils::setup_swarm_and_client_proxy;
+use crate::smoke_test_environment::setup_swarm_and_client_proxy;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_types::{account_config::COIN1_NAME, transaction::authenticator::AuthenticationKey};

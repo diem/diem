@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{smoke_test_environment::SmokeTestEnvironment, workspace_builder};
+use crate::{
+    smoke_test_environment::SmokeTestEnvironment,
+    test_utils::LibraSwarmUtils::{get_json_rpc_libra_interface, load_node_config},
+    workspace_builder,
+};
 use libra_config::config::{Identity, KeyManagerConfig};
 use libra_global_constants::CONSENSUS_KEY;
 use libra_key_manager::libra_interface::LibraInterface;
@@ -18,7 +22,7 @@ fn test_key_manager_consensus_rotation() {
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.
-    let node_config = env.load_node_config(0);
+    let node_config = load_node_config(&env.validator_swarm, 0);
 
     let mut key_manager_config = KeyManagerConfig::default();
     key_manager_config.json_rpc_endpoint =
@@ -43,7 +47,7 @@ fn test_key_manager_consensus_rotation() {
     key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
-    let libra_interface = env.get_json_rpc_libra_interface(0);
+    let libra_interface = get_json_rpc_libra_interface(&env.validator_swarm, 0);
     let account = node_config.validator_network.unwrap().peer_id();
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();

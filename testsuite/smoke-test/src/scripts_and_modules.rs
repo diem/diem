@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_utils::{compare_balances, setup_swarm_and_client_proxy},
+    smoke_test_environment::setup_swarm_and_client_proxy, test_utils::compare_balances,
     workspace_builder,
 };
 use libra_crypto::HashValue;
