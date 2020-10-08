@@ -83,19 +83,14 @@ impl BackupCoordinator {
             metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
                 .await?
                 .get_storage_state();
-        let db_state = self
-            .client
-            .get_db_state()
-            .await?
-            .ok_or_else(|| anyhow!("DB not bootstrapped."))?;
 
         // On new DbState retrieved:
         // `watch_db_state` informs `backup_epoch_endings` via channel 1,
         // and the the latter informs the other backup type workers via channel 2, after epoch
         // ending is properly backed up, if necessary. This way, the epoch ending LedgerInfo needed
         // for proof verification is always available in the same backup storage.
-        let (tx1, rx1) = watch::channel(db_state);
-        let (tx2, rx2) = watch::channel(db_state);
+        let (tx1, rx1) = watch::channel::<Option<DbState>>(None);
+        let (tx2, rx2) = watch::channel::<Option<DbState>>(None);
 
         // Schedule work streams.
         let watch_db_state = interval(Duration::from_secs(1))
@@ -144,12 +139,18 @@ impl BackupCoordinator {
 }
 
 impl BackupCoordinator {
-    async fn try_refresh_db_state(&self, db_state_broadcast: &watch::Sender<DbState>) {
+    async fn try_refresh_db_state(&self, db_state_broadcast: &watch::Sender<Option<DbState>>) {
         match self.client.get_db_state().await {
-            Ok(s) => db_state_broadcast
-                .broadcast(s.expect("Db should have been bootstrapped."))
-                .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
-                .unwrap(),
+            Ok(s) => {
+                if s.is_none() {
+                    warn!("DB not bootstrapped.");
+                } else {
+                    db_state_broadcast
+                        .broadcast(s)
+                        .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
+                        .unwrap()
+                }
+            }
             Err(e) => warn!(
                 "Failed pulling DbState from local Libra node: {}. Will keep trying.",
                 e
@@ -161,7 +162,7 @@ impl BackupCoordinator {
         &self,
         mut last_epoch_ending_epoch_in_backup: Option<u64>,
         db_state: DbState,
-        downstream_db_state_broadcaster: &watch::Sender<DbState>,
+        downstream_db_state_broadcaster: &watch::Sender<Option<DbState>>,
     ) -> Result<Option<u64>> {
         loop {
             let (first, last) = get_batch_range(last_epoch_ending_epoch_in_backup, 1);
@@ -186,7 +187,7 @@ impl BackupCoordinator {
         }
 
         downstream_db_state_broadcaster
-            .broadcast(db_state)
+            .broadcast(Some(db_state))
             .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
             .unwrap();
         Ok(last_epoch_ending_epoch_in_backup)
@@ -257,7 +258,7 @@ impl BackupCoordinator {
     fn backup_work_stream<'a, S, W, Fut>(
         &'a self,
         initial_state: S,
-        db_state_rx: &'a watch::Receiver<DbState>,
+        db_state_rx: &'a watch::Receiver<Option<DbState>>,
         worker: W,
     ) -> impl StreamExt<Item = ()> + 'a
     where
@@ -273,11 +274,16 @@ impl BackupCoordinator {
                     .await
                     .ok_or_else(|| anyhow!("The broadcaster has been dropped."))
                     .unwrap();
-                let next_state = worker(self, s, db_state).await.unwrap_or_else(|e| {
-                    warn!("backup failed: {}. Keep trying with state {:?}.", e, s);
-                    s
-                });
-                Some(((), (next_state, rx)))
+                if let Some(db_state) = db_state {
+                    let next_state = worker(self, s, db_state).await.unwrap_or_else(|e| {
+                        warn!("backup failed: {}. Keep trying with state {:?}.", e, s);
+                        s
+                    });
+                    Some(((), (next_state, rx)))
+                } else {
+                    // initial state
+                    Some(((), (s, rx)))
+                }
             },
         )
     }
