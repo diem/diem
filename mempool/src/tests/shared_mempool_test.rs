@@ -810,6 +810,7 @@ fn test_vfn_multi_network() {
 }
 
 #[test]
+#[ignore]
 fn test_fn_failover() {
     // test vfn failing over to fallback network
 

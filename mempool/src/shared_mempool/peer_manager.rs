@@ -22,7 +22,7 @@ use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
-    ops::{Add, Deref, DerefMut},
+    ops::Add,
     sync::Mutex,
     time::{Duration, Instant, SystemTime},
 };
@@ -49,7 +49,8 @@ pub(crate) struct PeerManager {
     peer_info: Mutex<PeerInfo>,
     // the upstream peer to failover to if all peers in the primary upstream network are dead
     // the number of failover peers is limited to 1 to avoid network competition in the failover networks
-    failover_peer: Mutex<Option<PeerNetworkId>>,
+    //    failover_peer: Mutex<Option<PeerNetworkId>>,
+    failover_set: Mutex<HashMap<usize, Option<PeerNetworkId>>>,
 }
 /// Identifier for a broadcasted batch of txns
 /// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
@@ -94,7 +95,8 @@ impl PeerManager {
             mempool_config,
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
-            failover_peer: Mutex::new(None),
+            //            failover_peer: Mutex::new(None),
+            failover_set: Mutex::new(HashMap::new()),
         }
     }
 
@@ -350,84 +352,60 @@ impl PeerManager {
         }
 
         // declare `failover` as standalone to satisfy lifetime requirement
-        let mut failover = self
-            .failover_peer
-            .lock()
-            .expect("failed to acquire failover lock");
-        let current_failover = failover.deref_mut();
+        //        let mut failover = self
+        //            .failover_peer
+        //            .lock()
+        //            .expect("failed to acquire failover lock");
+        //        let current_failover = failover.deref_mut();
         let peer_info = self.peer_info.lock().expect("can not get peer info lock");
         let active_peers_by_network = peer_info
             .iter()
             .filter_map(|(peer, state)| {
                 if state.is_alive {
-                    Some((peer.raw_network_id(), peer))
-                } else {
-                    None
+                    if let Some(pref) = self
+                        .upstream_config
+                        .get_upstream_preference(peer.raw_network_id())
+                    {
+                        return Some((pref, peer));
+                    }
                 }
+
+                None
             })
             .into_group_map();
 
-        let primary_upstream = self
-            .upstream_config
-            .networks
-            .get(0)
-            .expect("missing primary upstream network");
-        if active_peers_by_network.get(primary_upstream).is_none() {
-            // there are no live peers in the primary upstream network - pick a failover peer
+        let mut failover_set = self.failover_set.lock().expect("blah");
+        let max_network_preference = self.upstream_config.upstream_count();
+        for pref in 1..max_network_preference {
+            if let Some(active_peers) = active_peers_by_network.get(&pref) {
+                let chosen_peer = failover_set.get(&pref);
 
-            let mut failover_candidate = None;
-            // find the highest-pref'ed network (based on preference defined in upstream config)
-            // with any live peer and pick a peer from that network
-            for failover_network in self.upstream_config.networks[1..].iter() {
-                if let Some(active_peers) = active_peers_by_network.get(failover_network) {
-                    failover_candidate = active_peers.choose(&mut rand::thread_rng());
-                    if failover_candidate.is_some() {
-                        break;
-                    }
-                }
-            }
+                let should_choose = chosen_peer.map_or(true, |peer| {
+                    peer.as_ref()
+                        .map_or(true, |peer| !active_peers.contains(&&peer))
+                });
 
-            if let Some(chosen) = current_failover {
-                if let Some(candidate) = &failover_candidate {
-                    if chosen.raw_network_id() == candidate.raw_network_id()
-                        && peer_info.get(chosen).expect("missing peer state").is_alive
-                    {
-                        // if current chosen failover peer is alive, then do not overwrite it
-                        // with another live peer of the same network
-                        // for mempool broadcasts, broadcasting to the same peer consistently makes
-                        // faster progress
-                        return;
-                    }
+                if should_choose {
+                    let failover_candidate = active_peers.choose(&mut rand::thread_rng());
+                    failover_set.insert(pref, failover_candidate.cloned().cloned());
                 }
-            }
-            *current_failover = failover_candidate.cloned().cloned();
-        } else {
-            // there is at least one peer alive in the primary upstream network, so don't pick
-            // a failover peer
-            *current_failover = None;
-        }
-
-        // log/update metric for the updated failover network
-        match failover.as_ref() {
-            Some(peer) => {
-                let failover_network = peer.raw_network_id();
-                if let Some(network_preference) = self
-                    .upstream_config
-                    .get_upstream_preference(failover_network.clone())
-                {
-                    info!(LogSchema::new(LogEntry::UpstreamNetwork)
-                        .upstream_network(&failover_network)
-                        .network_level(network_preference as u64));
-                    counters::UPSTREAM_NETWORK.set(network_preference as i64);
-                }
-            }
-            None => {
-                info!(LogSchema::new(LogEntry::UpstreamNetwork)
-                    .upstream_network(primary_upstream)
-                    .network_level(PRIMARY_NETWORK_PREFERENCE as u64));
-                counters::UPSTREAM_NETWORK.set(PRIMARY_NETWORK_PREFERENCE);
             }
         }
+        //        for (network_preference, active_peers) in active_peers_by_network.range(1..) {
+        //            let chosen_peer = failover_set.get(network_preference);
+        //
+        //            let should_choose = chosen_peer
+        //                .map_or(true, |peer| {
+        //                    peer.map_or(true, |peer|
+        //                        !active_peers.contains(&peer)
+        //                    )
+        //                });
+        //
+        //            if should_choose {
+        //                let failover_candidate = active_peers.choose(&mut rand::thread_rng());
+        //                failover_set.insert(*network_preference, failover_candidate);
+        //            }
+        //        }
     }
 
     pub fn process_broadcast_ack(
@@ -550,13 +528,31 @@ impl PeerManager {
         // self-broadcasted and make no actual progress.
         // So until self-connection is actively checked against for in the networking layer, mempool
         // will temporarily broadcast to all peers in its selected failover network as well
-        self.failover_peer
-            .lock()
-            .expect("failed to get failover peer")
-            .deref()
-            .as_ref()
-            .map_or(false, |failover| {
-                failover.raw_network_id() == peer.raw_network_id()
-            })
+        //        self.failover_peer
+        //            .lock()
+        //            .expect("failed to get failover peer")
+        //            .deref()
+        //            .as_ref()
+        //            .map_or(false, |failover| {
+        //                failover.raw_network_id() == peer.raw_network_id()
+        //            })
+
+        if let Some(pref) = self
+            .upstream_config
+            .get_upstream_preference(peer.raw_network_id())
+        {
+            self.failover_set
+                .lock()
+                .expect("eh")
+                .get(&pref)
+                .map_or(false, |chosen_peer| &Some(peer.clone()) == chosen_peer)
+        } else {
+            false
+        }
+
+        //        self.failover_set
+        //            .lock()
+        //            .expect("failed ")
+        //            .get(&peer.networ)
     }
 }
