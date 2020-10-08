@@ -412,17 +412,13 @@ impl BasicSwarmUtil {
         let faucet_account_address = faucet_account.address;
         for instance in &instances {
             print!("Submitting txn through {}...", instance);
-            let receiver_address = if premainnet {
-                faucet_account_address
-            } else {
-                let tc_account = emitter
-                    .load_vasp_account(&instance.json_rpc_client())
-                    .await
-                    .map_err(|e| format_err!("Failed to load vasp account: {}", e))?;
-                tc_account.address
-            };
             let deadline = emitter
-                .submit_single_transaction(instance, &mut faucet_account, &receiver_address, 10)
+                .submit_single_transaction(
+                    instance,
+                    &mut faucet_account,
+                    &faucet_account_address,
+                    10,
+                )
                 .await
                 .map_err(|e| format_err!("Failed to submit txn through {}: {}", instance, e))?;
             println!("seq={}", faucet_account.sequence_number);
