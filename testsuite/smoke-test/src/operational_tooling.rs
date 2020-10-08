@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::load_backend_storage};
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, SecureBackend};
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_ADDRESS_KEYS,
     VALIDATOR_NETWORK_KEY,
@@ -12,10 +12,7 @@ use libra_network_address::NetworkAddress;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_types::{
-    account_address::AccountAddress, chain_id::ChainId,
-    transaction::authenticator::AuthenticationKey,
-};
+use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use std::{
     convert::{TryFrom, TryInto},
     fs,
@@ -24,19 +21,7 @@ use std::{
 
 #[test]
 fn test_account_resource() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let storage: Storage = (&backend).try_into().unwrap();
+    let (_swarm, op_tool, _, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Fetch the owner account resource
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
@@ -64,18 +49,7 @@ fn test_account_resource() {
 
 #[test]
 fn test_consensus_key_rotation() {
-    let mut swarm = SmokeTestEnvironment::new(5);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
@@ -85,7 +59,7 @@ fn test_consensus_key_rotation() {
         .unwrap();
 
     // Verify that the config has been updated correctly with the new consensus key
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()
@@ -103,7 +77,6 @@ fn test_consensus_key_rotation() {
     // Rotate the consensus key in storage manually and perform another rotation using the op_tool.
     // Here, we expected the op_tool to see that the consensus key in storage doesn't match the one
     // on-chain, and thus it should simply forward a transaction to the blockchain.
-    let mut storage: Storage = (&backend).try_into().unwrap();
     let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
     let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     assert_eq!(rotated_consensus_key, new_consensus_key);
@@ -111,21 +84,10 @@ fn test_consensus_key_rotation() {
 
 #[test]
 fn test_extract_private_key() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
-    let node_config = NodeConfig::load(node_config_path.clone()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let storage: Storage = (&backend).try_into().unwrap();
+    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Extract the operator private key to file
+    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_private_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
@@ -140,21 +102,10 @@ fn test_extract_private_key() {
 
 #[test]
 fn test_extract_public_key() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
+    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
-    // Load a node config
+    // Extract the operator public key to file
     let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
-    let node_config = NodeConfig::load(node_config_path.clone()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let storage: Storage = (&backend).try_into().unwrap();
-
-    // Extract the operator key to file
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_public_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
@@ -170,18 +121,8 @@ fn test_extract_public_key() {
 #[test]
 fn test_network_key_rotation() {
     let num_nodes = 5;
-    let mut swarm = SmokeTestEnvironment::new(num_nodes);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (mut swarm, op_tool, backend, storage) =
+        launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
@@ -193,7 +134,7 @@ fn test_network_key_rotation() {
     );
 
     // Verify that config has been loaded correctly with new key
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()
@@ -220,23 +161,12 @@ fn test_network_key_rotation() {
 #[test]
 fn test_network_key_rotation_recovery() {
     let num_nodes = 5;
-    let mut swarm = SmokeTestEnvironment::new(num_nodes);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (mut swarm, op_tool, backend, mut storage) =
+        launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Rotate the network key in storage manually and perform a key rotation using the op_tool.
     // Here, we expected the op_tool to see that the network key in storage doesn't match the one
     // on-chain, and thus it should simply forward a transaction to the blockchain.
-    let mut storage: Storage = (&backend).try_into().unwrap();
     let rotated_network_key = storage.rotate_key(VALIDATOR_NETWORK_KEY).unwrap();
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
     assert_eq!(new_network_key, to_x25519(rotated_network_key).unwrap());
@@ -250,7 +180,7 @@ fn test_network_key_rotation_recovery() {
     );
 
     // Verify that config has been loaded correctly with new key
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_network_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()
@@ -276,21 +206,7 @@ fn test_network_key_rotation_recovery() {
 
 #[test]
 fn test_operator_key_rotation() {
-    let mut swarm = SmokeTestEnvironment::new(5);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = OperationalTool::new(
-        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
-        ChainId::test(),
-    );
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
@@ -313,7 +229,7 @@ fn test_operator_key_rotation() {
         .unwrap();
 
     // Verify that the config has been updated correctly with the new consensus key
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
     let config_consensus_key = op_tool
         .validator_config(validator_account, &backend)
         .unwrap()
@@ -323,21 +239,7 @@ fn test_operator_key_rotation() {
 
 #[test]
 fn test_operator_key_rotation_recovery() {
-    let mut swarm = SmokeTestEnvironment::new(5);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = OperationalTool::new(
-        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
-        ChainId::test(),
-    );
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Rotate the operator key
     let (txn_ctx, new_operator_key) = op_tool.rotate_operator_key(&backend).unwrap();
@@ -354,7 +256,6 @@ fn test_operator_key_rotation_recovery() {
     assert_eq!(VMStatusView::Executed, vm_status);
 
     // Verify that the operator key was updated on-chain
-    let mut storage: Storage = (&backend).try_into().unwrap();
     let operator_account = storage
         .get::<AccountAddress>(OPERATOR_ACCOUNT)
         .unwrap()
@@ -394,19 +295,7 @@ fn test_operator_key_rotation_recovery() {
 
 #[test]
 fn test_print_account() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let storage: Storage = (&backend).try_into().unwrap();
+    let (_swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Print the owner account
     let op_tool_owner_account = op_tool.print_account(OWNER_ACCOUNT, &backend).unwrap();
@@ -424,18 +313,7 @@ fn test_print_account() {
 
 #[test]
 fn test_validate_transaction() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let (swarm, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Validate an unknown transaction and verify no VM state found
     let operator_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
@@ -461,19 +339,7 @@ fn test_validate_transaction() {
 
 #[test]
 fn test_validator_config() {
-    let mut swarm = SmokeTestEnvironment::new(1);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let mut storage: Storage = (&backend).try_into().unwrap();
+    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Fetch the initial validator config for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
@@ -513,19 +379,9 @@ fn test_validator_config() {
 
 #[test]
 fn test_validator_set() {
-    let mut swarm = SmokeTestEnvironment::new(3);
-    swarm.validator_swarm.launch();
-
-    // Load a node config
-    let node_config =
-        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
-
-    // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = swarm.get_op_tool(0);
-
-    // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
-    let mut storage: Storage = (&backend).try_into().unwrap();
+    let num_nodes = 4;
+    let (_swarm, op_tool, backend, mut storage) =
+        launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Fetch the validator config and validator info for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
@@ -554,7 +410,7 @@ fn test_validator_set() {
 
     // Fetch the entire validator set and check this account is included
     let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
-    assert_eq!(3, validator_set_infos.len());
+    assert_eq!(num_nodes, validator_set_infos.len());
     let _ = validator_set_infos
         .iter()
         .find(|info| info.account_address == owner_account)
@@ -567,7 +423,7 @@ fn test_validator_set() {
         .set(VALIDATOR_NETWORK_ADDRESS_KEYS, "random string")
         .unwrap();
     let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
-    assert_eq!(3, validator_set_infos.len());
+    assert_eq!(num_nodes, validator_set_infos.len());
 
     let validator_info = validator_set_infos
         .iter()
@@ -581,6 +437,35 @@ fn test_validator_set() {
         validator_info.validator_network_address,
         validator_config.validator_network_address
     );
+}
+
+/// Launches a validator swarm of a specified size, connects an operational
+/// tool to the node at the specified index and fetches the node's secure backend.
+fn launch_swarm_with_op_tool_and_backend(
+    num_nodes: usize,
+    node_index: usize,
+) -> (
+    SmokeTestEnvironment,
+    OperationalTool,
+    SecureBackend,
+    Storage,
+) {
+    // Launch validator swarm
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+    env.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(env.validator_swarm.config.config_files[node_index].clone()).unwrap();
+
+    // Connect the operator tool to the node's JSON RPC API
+    let op_tool = env.get_op_tool(node_index);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    (env, op_tool, backend, storage)
 }
 
 fn wait_for_transaction_on_all_nodes(
