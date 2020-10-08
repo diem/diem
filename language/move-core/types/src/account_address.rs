@@ -45,6 +45,11 @@ impl AccountAddress {
         )
     }
 
+    pub fn short_str_lossless(&self) -> String {
+        let hex_str = hex::encode(&self.0).trim_start_matches('0').to_string();
+        if hex_str.is_empty() { "0".to_string() } else { hex_str }
+    }
+
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }

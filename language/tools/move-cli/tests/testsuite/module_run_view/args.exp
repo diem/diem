@@ -6,9 +6,9 @@ Command `run script.move --signers 0xA 0xB --args 6 7 --dry-run -v`:
 Compiling transaction script...
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000A:
-    Added type 00000000::Test::R: [U64(6)]
+    Added type 0x2::Test::R: [U64(6)]
   Changed 1 resource(s) under address 0000000000000000000000000000000B:
-    Added type 00000000::Test::R: [U64(7)]
+    Added type 0x2::Test::R: [U64(7)]
 Discarding changes; re-run without --dry-run if you would like to keep them.
 Command `view move_data/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::Test::R.lcs`:
 Error: `move view <file>` must point to a valid file under move_data
@@ -18,14 +18,14 @@ Command `run script.move --signers 0xA 0xB --args 6 7 -v`:
 Compiling transaction script...
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000A:
-    Added type 00000000::Test::R: [U64(6)]
+    Added type 0x2::Test::R: [U64(6)]
   Changed 1 resource(s) under address 0000000000000000000000000000000B:
-    Added type 00000000::Test::R: [U64(7)]
+    Added type 0x2::Test::R: [U64(7)]
 Command `view move_data/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::Test::R.lcs`:
-resource 00000000::Test::R {
+resource 0x2::Test::R {
     i: 6
 }
 Command `view move_data/0x0000000000000000000000000000000B/resources/0x00000000000000000000000000000002::Test::R.lcs`:
-resource 00000000::Test::R {
+resource 0x2::Test::R {
     i: 7
 }
