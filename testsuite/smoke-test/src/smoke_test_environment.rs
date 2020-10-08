@@ -1,14 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::workspace_builder;
+use crate::{test_utils::libra_swarm_utils::get_client_proxy, workspace_builder};
 use cli::client_proxy::ClientProxy;
-use debug_interface::NodeDebugClient;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_genesis_tool::config_builder::FullnodeType;
-use libra_operational_tool::test_helper::OperationalTool;
-use libra_swarm::swarm::{LibraNode, LibraSwarm};
+use libra_swarm::swarm::LibraSwarm;
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 
@@ -85,69 +83,28 @@ impl SmokeTestEnvironment {
         )
     }
 
-    fn get_json_rpc_client(&self, port: u16, waypoint: Option<Waypoint>) -> ClientProxy {
-        let mnemonic_file_path = self
-            .mnemonic_file
-            .path()
-            .to_path_buf()
-            .canonicalize()
-            .expect("Unable to get canonical path of mnemonic_file_path")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        ClientProxy::new(
-            ChainId::test(),
-            &format!("http://localhost:{}/v1", port),
-            &self.libra_root_key.1,
-            &self.libra_root_key.1,
-            &self.libra_root_key.1,
-            false,
-            /* faucet server */ None,
-            Some(mnemonic_file_path),
-            waypoint.unwrap_or_else(|| self.validator_swarm.config.waypoint),
-        )
-        .unwrap()
-    }
-
-    fn get_client(
-        &self,
-        swarm: &LibraSwarm,
-        node_index: usize,
-        waypoint: Option<Waypoint>,
-    ) -> ClientProxy {
-        let port = swarm.get_client_port(node_index);
-        self.get_json_rpc_client(port, waypoint)
-    }
-
     pub fn get_validator_client(
         &self,
         node_index: usize,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
-        self.get_client(&self.validator_swarm, node_index, waypoint)
-    }
-
-    pub fn get_validator_debug_interface_client(&self, node_index: usize) -> NodeDebugClient {
-        let port = self.validator_swarm.get_validators_debug_ports()[node_index];
-        NodeDebugClient::new("localhost", port)
-    }
-
-    #[allow(dead_code)]
-    fn get_validator_debug_interface_clients(&self) -> Vec<NodeDebugClient> {
-        self.validator_swarm
-            .get_validators_debug_ports()
-            .iter()
-            .map(|port| NodeDebugClient::new("localhost", *port))
-            .collect()
+        get_client_proxy(
+            &self.validator_swarm,
+            node_index,
+            &self.libra_root_key.1,
+            self.mnemonic_file.path().to_path_buf(),
+            waypoint,
+        )
     }
 
     pub fn get_vfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
-        self.get_client(
+        get_client_proxy(
             self.vfn_swarm
                 .as_ref()
                 .expect("Vfn swarm is not initialized"),
             node_index,
+            &self.libra_root_key.1,
+            self.mnemonic_file.path().to_path_buf(),
             waypoint,
         )
     }
@@ -157,26 +114,14 @@ impl SmokeTestEnvironment {
         node_index: usize,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
-        self.get_client(
+        get_client_proxy(
             self.public_fn_swarm
                 .as_ref()
                 .expect("Public fn swarm is not initialized"),
             node_index,
+            &self.libra_root_key.1,
+            self.mnemonic_file.path().to_path_buf(),
             waypoint,
-        )
-    }
-
-    pub fn get_validator(&self, node_index: usize) -> Option<&LibraNode> {
-        self.validator_swarm.get_validator(node_index)
-    }
-
-    pub fn get_op_tool(&self, node_index: usize) -> OperationalTool {
-        OperationalTool::new(
-            format!(
-                "http://127.0.0.1:{}",
-                self.validator_swarm.get_client_port(node_index)
-            ),
-            ChainId::test(),
         )
     }
 }

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    smoke_test_environment::SmokeTestEnvironment, test_utils::load_libra_root_storage,
-    workspace_builder, workspace_builder::workspace_root,
+    smoke_test_environment::SmokeTestEnvironment,
+    test_utils::libra_swarm_utils::{get_op_tool, load_libra_root_storage},
+    workspace_builder,
+    workspace_builder::workspace_root,
 };
 use anyhow::anyhow;
 use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
@@ -88,8 +90,8 @@ fn test_genesis_transaction_flow() {
     }
     println!("5. kill all nodes and prepare a genesis txn to remove validator 0");
     let validator_address = node_config.validator_network.as_ref().unwrap().peer_id();
-    let op_tool = env.get_op_tool(0);
-    let libra_root = load_libra_root_storage(&node_config);
+    let op_tool = get_op_tool(&env.validator_swarm, 0);
+    let libra_root = load_libra_root_storage(&env.validator_swarm, 0);
     let config = op_tool
         .validator_config(validator_address, &libra_root)
         .unwrap();
@@ -165,9 +167,12 @@ fn test_genesis_transaction_flow() {
         .wait_for_transaction(treasury_compliance_account_address(), 1)
         .unwrap();
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
-    let op_tool = env.get_op_tool(1);
+    let op_tool = get_op_tool(&env.validator_swarm, 0);
     let context = op_tool
-        .add_validator(validator_address, &load_libra_root_storage(&node_config))
+        .add_validator(
+            validator_address,
+            &load_libra_root_storage(&env.validator_swarm, 0),
+        )
         .unwrap();
     client_proxy_1
         .wait_for_transaction(context.address, context.sequence_number + 1)

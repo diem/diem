@@ -3,7 +3,9 @@
 
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
-    test_utils::{compare_balances, setup_swarm_and_client_proxy},
+    test_utils::{
+        compare_balances, libra_swarm_utils::load_node_config, setup_swarm_and_client_proxy,
+    },
 };
 use libra_config::config::NodeConfig;
 use std::fs;
@@ -135,14 +137,7 @@ fn test_startup_sync_state() {
     ));
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
-    let node_config = NodeConfig::load(
-        env.validator_swarm
-            .config
-            .config_files
-            .get(peer_to_stop)
-            .unwrap(),
-    )
-    .unwrap();
+    let node_config = load_node_config(&env.validator_swarm, peer_to_stop);
     // TODO Remove hardcoded path to state db
     let state_db_path = node_config.storage.dir().join("libradb");
     // Verify that state_db_path exists and

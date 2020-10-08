@@ -1,10 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{smoke_test_environment::SmokeTestEnvironment, workspace_builder};
-use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
+use crate::{
+    smoke_test_environment::SmokeTestEnvironment,
+    test_utils::libra_swarm_utils::{get_json_rpc_libra_interface, load_node_config},
+    workspace_builder,
+};
+use libra_config::config::{Identity, KeyManagerConfig};
 use libra_global_constants::CONSENSUS_KEY;
-use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
+use libra_key_manager::libra_interface::LibraInterface;
 use libra_secure_storage::{CryptoStorage, Storage};
 use std::{convert::TryInto, process::Command, thread::sleep, time::Duration};
 
@@ -18,12 +22,10 @@ fn test_key_manager_consensus_rotation() {
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.
-    let node_config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let node_config = NodeConfig::load(&node_config_path).unwrap();
-    let json_rpc_endpoint = format!("http://127.0.0.1:{}", node_config.rpc.address.port());
-
+    let node_config = load_node_config(&env.validator_swarm, 0);
     let mut key_manager_config = KeyManagerConfig::default();
-    key_manager_config.json_rpc_endpoint = json_rpc_endpoint.clone();
+    key_manager_config.json_rpc_endpoint =
+        format!("http://127.0.0.1:{}", node_config.rpc.address.port());
     key_manager_config.rotation_period_secs = 10;
     key_manager_config.sleep_period_secs = 1000; // Large sleep period to force a single rotation
 
@@ -39,11 +41,12 @@ fn test_key_manager_consensus_rotation() {
     };
 
     // Save the key manager config to disk
+    let node_config_path = env.validator_swarm.config.config_files.get(0).unwrap();
     let key_manager_config_path = node_config_path.with_file_name("key_manager.yaml");
     key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
-    let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
+    let libra_interface = get_json_rpc_libra_interface(&env.validator_swarm, 0);
     let account = node_config.validator_network.unwrap().peer_id();
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
