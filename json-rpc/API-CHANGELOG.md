@@ -14,6 +14,14 @@ Please add the API change in the following format:
 ```
 
 
+## 2020-10-08 Decode transaction script as name, code, arguments and type_arguments
+
+- Transaction [Script](docs/type_transaction.md#type-script) is fulfilled with known script name as type, code, arguments and type_arguments. Similar with on-chain transaction [Script](https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.Script.html) type.
+- Renamed type `peer_to_peer_transaction` to `peer_to_peer_with_metadata`, which is consistent with stdlib transaction script name.
+- Removed `mint_transaction`, it is never rendered because of a bug, and the script does not exist anymore.
+- [See PR #6453](https://github.com/libra/libra/pull/6453)
+
+
 ## 2020-10-07 Add `libra_version` field to `get_metadata` response
 
 - `libra_version` number of libra onchain version

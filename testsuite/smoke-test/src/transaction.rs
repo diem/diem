@@ -3,7 +3,7 @@
 
 use crate::test_utils::setup_swarm_and_client_proxy;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
-use libra_json_rpc::views::{ScriptView, TransactionDataView};
+use libra_json_rpc::views::TransactionDataView;
 use libra_types::{account_config::COIN1_NAME, transaction::authenticator::AuthenticationKey};
 
 #[test]
@@ -103,32 +103,38 @@ fn test_external_transaction_signer() {
             assert_eq!(p_gas_unit_price, gas_unit_price);
             assert_eq!(p_gas_currency, currency_code.to_string());
             assert_eq!(p_max_gas_amount, max_gas_amount);
-            match script {
-                ScriptView::PeerToPeer {
-                    receiver: p_receiver,
-                    amount: p_amount,
-                    currency: p_currency,
-                    metadata,
-                    metadata_signature,
-                } => {
-                    assert_eq!(p_receiver, receiver_address.to_string());
-                    assert_eq!(p_amount, amount);
-                    assert_eq!(p_currency, currency_code.to_string());
-                    assert_eq!(
-                        metadata
-                            .into_bytes()
-                            .expect("failed to turn metadata to bytes"),
-                        Vec::<u8>::new()
-                    );
-                    assert_eq!(
-                        metadata_signature
-                            .into_bytes()
-                            .expect("failed to turn metadata_signature to bytes"),
-                        Vec::<u8>::new()
-                    );
-                }
-                _ => panic!("Expected peer-to-peer script for user txn"),
-            }
+
+            assert_eq!(script.r#type, "peer_to_peer_with_metadata");
+            assert_eq!(script.type_arguments.unwrap(), vec!["Coin1"]);
+            assert_eq!(
+                script.arguments.unwrap(),
+                vec![
+                    format!("{{ADDRESS: {:?}}}", &receiver_address),
+                    format!("{{U64: {}}}", amount),
+                    "{U8Vector: 0x}".to_string(),
+                    "{U8Vector: 0x}".to_string()
+                ]
+            );
+            // legacy fields
+            assert_eq!(script.receiver.unwrap(), receiver_address.to_string());
+            assert_eq!(script.amount.unwrap(), amount);
+            assert_eq!(script.currency.unwrap(), currency_code.to_string());
+            assert_eq!(
+                script
+                    .metadata
+                    .unwrap()
+                    .into_bytes()
+                    .expect("failed to turn metadata to bytes"),
+                b""
+            );
+            assert_eq!(
+                script
+                    .metadata_signature
+                    .unwrap()
+                    .into_bytes()
+                    .expect("failed to turn metadata_signature to bytes"),
+                b""
+            );
         }
         _ => panic!("Query should get user transaction"),
     }

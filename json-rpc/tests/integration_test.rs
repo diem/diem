@@ -311,12 +311,22 @@ fn create_test_cases() -> Vec<Test> {
                             "max_gas_amount": 1000000,
                             "public_key": sender.public_key.to_string(),
                             "script": {
+                                "type": "peer_to_peer_with_metadata",
+                                "type_arguments": [
+                                    "Coin1"
+                                ],
+                                "arguments": [
+                                    format!("{{ADDRESS: {:?}}}", &receiver.address),
+                                    "{U64: 200000}",
+                                    "{U8Vector: 0x}",
+                                    "{U8Vector: 0x}"
+                                ],
+                                "code": hex::encode(script.code()),
                                 "amount": 200000,
                                 "currency": "Coin1",
                                 "metadata": "",
                                 "metadata_signature": "",
                                 "receiver": format!("{:#X}", &receiver.address),
-                                "type": "peer_to_peer_transaction"
                             },
                             "script_bytes": script_bytes,
                             "script_hash": script_hash,
@@ -425,7 +435,7 @@ fn create_test_cases() -> Vec<Test> {
             name: "preburn & burn events",
             run: |env: &mut testing::Env| {
                 let script = stdlib::encode_preburn_script(coin1_tmp_tag(), 100);
-                let txn = env.create_txn(&env.dd, script);
+                let txn = env.create_txn(&env.dd, script.clone());
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
 
@@ -458,11 +468,24 @@ fn create_test_cases() -> Vec<Test> {
                     "{}",
                     result["events"]
                 );
-
-                let burn_txn = env.create_txn(
-                    &env.tc,
-                    stdlib::encode_burn_script(coin1_tmp_tag(), 0, env.dd.address),
+                assert_eq!(
+                    result["transaction"]["script"],
+                    json!({
+                        "type_arguments": [
+                            "Coin1"
+                        ],
+                        "arguments": [
+                            "{U64: 100}",
+                        ],
+                        "code": hex::encode(script.code()),
+                        "type": "preburn"
+                    }),
+                    "{}",
+                    result["transaction"]
                 );
+
+                let script = stdlib::encode_burn_script(coin1_tmp_tag(), 0, env.dd.address);
+                let burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -480,19 +503,33 @@ fn create_test_cases() -> Vec<Test> {
                     "{}",
                     result["events"]
                 );
+                assert_eq!(
+                    result["transaction"]["script"],
+                    json!({
+                        "type_arguments": [
+                            "Coin1"
+                        ],
+                        "arguments": [
+                            "{U64: 0}",
+                            "{ADDRESS: 000000000000000000000000000000DD}"
+                        ],
+                        "code": hex::encode(script.code()),
+                        "type": "burn"
+                    }),
+                    "{}",
+                    result["transaction"]
+                );
             },
         },
         Test {
             name: "cancel burn event",
             run: |env: &mut testing::Env| {
-                let script = stdlib::encode_preburn_script(coin1_tmp_tag(), 100);
-                let txn = env.create_txn(&env.dd, script);
+                let txn =
+                    env.create_txn(&env.dd, stdlib::encode_preburn_script(coin1_tmp_tag(), 100));
                 env.submit_and_wait(txn);
 
-                let cancel_burn_txn = env.create_txn(
-                    &env.tc,
-                    stdlib::encode_cancel_burn_script(coin1_tmp_tag(), env.dd.address),
-                );
+                let script = stdlib::encode_cancel_burn_script(coin1_tmp_tag(), env.dd.address);
+                let cancel_burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -524,15 +561,28 @@ fn create_test_cases() -> Vec<Test> {
                     "{}",
                     result["events"]
                 );
+                assert_eq!(
+                    result["transaction"]["script"],
+                    json!({
+                        "type_arguments": [
+                            "Coin1"
+                        ],
+                        "arguments": [
+                            "{ADDRESS: 000000000000000000000000000000DD}",
+                        ],
+                        "code": hex::encode(script.code()),
+                        "type": "cancel_burn"
+                    }),
+                    "{}",
+                    result["transaction"]
+                );
             },
         },
         Test {
             name: "update exchange rate event",
             run: |env: &mut testing::Env| {
-                let txn = env.create_txn(
-                    &env.tc,
-                    stdlib::encode_update_exchange_rate_script(coin1_tmp_tag(), 0, 1, 4),
-                );
+                let script = stdlib::encode_update_exchange_rate_script(coin1_tmp_tag(), 0, 1, 4);
+                let txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -550,21 +600,36 @@ fn create_test_cases() -> Vec<Test> {
                     "{}",
                     result["events"]
                 );
+                assert_eq!(
+                    result["transaction"]["script"],
+                    json!({
+                        "type_arguments": [
+                            "Coin1"
+                        ],
+                        "arguments": [
+                            "{U64: 0}",
+                            "{U64: 1}",
+                            "{U64: 4}"
+                        ],
+                        "code": hex::encode(script.code()),
+                        "type": "update_exchange_rate"
+                    }),
+                    "{}",
+                    result["transaction"]
+                );
             },
         },
         Test {
             name: "mint & received mint events",
             run: |env: &mut testing::Env| {
-                let txn = env.create_txn(
-                    &env.tc,
-                    stdlib::encode_tiered_mint_script(
-                        coin1_tmp_tag(),
-                        0,
-                        env.dd.address,
-                        1_000_000,
-                        1,
-                    ),
+                let script = stdlib::encode_tiered_mint_script(
+                    coin1_tmp_tag(),
+                    0,
+                    env.dd.address,
+                    1_000_000,
+                    1,
                 );
+                let txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -604,6 +669,24 @@ fn create_test_cases() -> Vec<Test> {
                     ]),
                     "{}",
                     result["events"]
+                );
+                assert_eq!(
+                    result["transaction"]["script"],
+                    json!({
+                        "type_arguments": [
+                            "Coin1"
+                        ],
+                        "arguments": [
+                            "{U64: 0}",
+                            "{ADDRESS: 000000000000000000000000000000DD}",
+                            "{U64: 1000000}",
+                            "{U64: 1}",
+                        ],
+                        "code": hex::encode(script.code()),
+                        "type": "tiered_mint"
+                    }),
+                    "{}",
+                    result["transaction"]
                 );
             },
         },

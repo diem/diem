@@ -2997,6 +2997,7 @@ name = "libra-json-rpc-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "compiled-stdlib",
  "hex",
  "libra-canonical-serialization",
  "libra-crypto",
