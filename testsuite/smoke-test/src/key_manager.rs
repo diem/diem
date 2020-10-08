@@ -22,7 +22,7 @@ fn test_key_manager_consensus_rotation() {
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.
-    let node_config = load_node_config(&env.validator_swarm, 0);
+    let (node_config, config_path) = load_node_config(&env.validator_swarm, 0);
     let mut key_manager_config = KeyManagerConfig::default();
     key_manager_config.json_rpc_endpoint =
         format!("http://127.0.0.1:{}", node_config.rpc.address.port());
@@ -41,8 +41,7 @@ fn test_key_manager_consensus_rotation() {
     };
 
     // Save the key manager config to disk
-    let node_config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let key_manager_config_path = node_config_path.with_file_name("key_manager.yaml");
+    let key_manager_config_path = config_path.with_file_name("key_manager.yaml");
     key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.

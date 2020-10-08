@@ -3,7 +3,7 @@
 
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
-    test_utils::libra_swarm_utils::{get_op_tool, load_backend_storage},
+    test_utils::libra_swarm_utils::{get_op_tool, load_backend_storage, load_node_config},
 };
 use libra_config::config::SecureBackend;
 use libra_global_constants::{
@@ -90,7 +90,7 @@ fn test_extract_private_key() {
     let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Extract the operator private key to file
-    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
+    let (_, node_config_path) = load_node_config(&swarm.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_private_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
@@ -108,7 +108,7 @@ fn test_extract_public_key() {
     let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Extract the operator public key to file
-    let node_config_path = swarm.validator_swarm.config.config_files.first().unwrap();
+    let (_, node_config_path) = load_node_config(&swarm.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_public_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)

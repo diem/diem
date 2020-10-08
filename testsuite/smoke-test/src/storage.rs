@@ -65,14 +65,14 @@ fn test_db_restore() {
     });
 
     // make a backup from node 1
-    let node1_config = load_node_config(&env.validator_swarm, 1);
+    let (node1_config, _) = load_node_config(&env.validator_swarm, 1);
     let backup_path = db_backup(node1_config.storage.backup_service_address.port(), 1, 50);
 
     // take down node 0
     env.validator_swarm.kill_node(0);
 
     // nuke db
-    let node0_config = load_node_config(&env.validator_swarm, 0);
+    let (node0_config, _) = load_node_config(&env.validator_swarm, 0);
     let db_dir = node0_config.storage.dir();
     fs::remove_dir_all(db_dir.join("libradb")).unwrap();
     fs::remove_dir_all(db_dir.join("consensusdb")).unwrap();

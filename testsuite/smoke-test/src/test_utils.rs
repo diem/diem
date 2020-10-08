@@ -149,9 +149,8 @@ pub mod libra_swarm_utils {
 
     /// Returns a Libra Debugger pointing to a node at the given node index.
     pub fn get_libra_debugger(swarm: &LibraSwarm, node_index: usize) -> LibraDebugger {
-        let validator_config = load_node_config(swarm, node_index);
-        let swarm_rpc_endpoint =
-            format!("http://localhost:{}", validator_config.rpc.address.port());
+        let (node_config, _) = load_node_config(swarm, node_index);
+        let swarm_rpc_endpoint = format!("http://localhost:{}", node_config.rpc.address.port());
         LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap()
     }
 
@@ -165,24 +164,26 @@ pub mod libra_swarm_utils {
 
     /// Loads the nodes's storage backend identified by the node index in the given swarm.
     pub fn load_backend_storage(swarm: &LibraSwarm, node_index: usize) -> SecureBackend {
-        let node_config = load_node_config(swarm, node_index);
+        let (node_config, _) = load_node_config(swarm, node_index);
         fetch_backend_storage(&node_config, None)
     }
 
     /// Loads the libra root's storage backend identified by the node index in the given swarm.
     pub fn load_libra_root_storage(swarm: &LibraSwarm, node_index: usize) -> SecureBackend {
-        let node_config = load_node_config(swarm, node_index);
+        let (node_config, _) = load_node_config(swarm, node_index);
         fetch_backend_storage(&node_config, Some("libra_root".to_string()))
     }
 
-    /// Loads the node config for the validator at the specified index.
-    pub fn load_node_config(swarm: &LibraSwarm, node_index: usize) -> NodeConfig {
+    /// Loads the node config for the validator at the specified index. Also returns the node
+    /// config path.
+    pub fn load_node_config(swarm: &LibraSwarm, node_index: usize) -> (NodeConfig, PathBuf) {
         let node_config_path = swarm.config.config_files.get(node_index).unwrap();
-        NodeConfig::load(&node_config_path).unwrap()
+        let node_config = NodeConfig::load(&node_config_path).unwrap();
+        (node_config, node_config_path.clone())
     }
 
     /// Saves the node config for the node at the specified index in the given swarm.
-    pub fn save_node_config(mut node_config: NodeConfig, swarm: &LibraSwarm, node_index: usize) {
+    pub fn save_node_config(node_config: &mut NodeConfig, swarm: &LibraSwarm, node_index: usize) {
         let node_config_path = swarm.config.config_files.get(node_index).unwrap();
         node_config.save(node_config_path).unwrap();
     }
