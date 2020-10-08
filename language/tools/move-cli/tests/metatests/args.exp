@@ -4,3 +4,13 @@ Command `test dummy/test_2`:
 1 / 1 test(s) passed.
 Command `test dummy`:
 2 / 2 test(s) passed.
+Command `test cov`:
+1 / 1 test(s) passed.
+Command `test cov --track-cov`:
+Module 00000000000000000000000000000042::M
+	fun test
+		total instructions: 1
+		covered instructions: 1
+		% coverage: 100.00
+>>> % Module coverage: 100.00
+1 / 1 test(s) passed.
