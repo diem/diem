@@ -14,7 +14,7 @@ fn test_full_node_basic_flow() {
     // launch environment of 4 validator nodes and 2 full nodes
     let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
-    env.setup_public_fn_swarm(2);
+    env.setup_pfn_swarm(2);
     env.validator_swarm.launch();
     env.vfn_swarm.as_mut().unwrap().launch();
     env.public_fn_swarm.as_mut().unwrap().launch();
@@ -25,7 +25,7 @@ fn test_full_node_basic_flow() {
     // read state from full node client
     let mut validator_ac_client = env.get_validator_client(1, None);
     let mut full_node_client = env.get_vfn_client(1, None);
-    let mut full_node_client_2 = env.get_public_fn_client(0, None);
+    let mut full_node_client_2 = env.get_pfn_client(0, None);
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
     let sender_account = testnet_dd_account_address();
@@ -162,7 +162,7 @@ fn test_vfn_failover() {
     // launch environment of 6 validator nodes and 2 full nodes
     let mut env = SmokeTestEnvironment::new(6);
     env.setup_vfn_swarm();
-    env.setup_public_fn_swarm(1);
+    env.setup_pfn_swarm(1);
     env.validator_swarm.launch();
     env.vfn_swarm.as_mut().unwrap().launch();
     env.public_fn_swarm.as_mut().unwrap().launch();
@@ -170,7 +170,7 @@ fn test_vfn_failover() {
     // set up clients
     let mut vfn_0_client = env.get_vfn_client(0, None);
     let mut vfn_1_client = env.get_vfn_client(1, None);
-    let mut pfn_0_client = env.get_public_fn_client(0, None);
+    let mut pfn_0_client = env.get_pfn_client(0, None);
 
     // some helpers for creation/minting
     let sender_account = testnet_dd_account_address();

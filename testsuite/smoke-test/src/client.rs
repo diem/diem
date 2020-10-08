@@ -4,6 +4,7 @@
 use crate::test_utils::{
     compare_balances, load_libra_root_storage, setup_swarm_and_client_proxy, test_smoke_script,
 };
+use debug_interface::NodeDebugClient;
 use libra_config::config::NodeConfig;
 use libra_trace::trace::trace_node;
 use libra_types::{
@@ -127,7 +128,12 @@ fn test_client_waypoints() {
     // Start next epoch
 
     // This ugly blob is to remove a validator, we can do better...
-    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
+    let peer_id = env
+        .validator_swarm
+        .get_validator(0)
+        .unwrap()
+        .validator_peer_id()
+        .unwrap();
     let node_configs: Vec<_> = env
         .validator_swarm
         .config
@@ -204,7 +210,8 @@ fn test_concurrent_transfers_single_node() {
 #[test]
 fn test_trace() {
     let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    let mut debug_client = swarm.get_validator_debug_interface_client(0);
+    let port = swarm.validator_swarm.get_validators_debug_ports()[0];
+    let mut debug_client = NodeDebugClient::new("localhost", port);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "100", "Coin1"], true)
