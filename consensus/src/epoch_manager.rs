@@ -30,6 +30,7 @@ use consensus_types::{
 };
 use futures::{select, StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
+use libra_infallible::duration_since_epoch;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
 use libra_types::{
@@ -574,6 +575,12 @@ impl EpochManager {
                     error!(error = ?e, kind = error_kind(&e), RoundStateLogSchema::new(round_state));
                 }
             }
+
+            // Continually capture the time of consensus process to ensure that clock skew between
+            // validators is reasonable and to find any unusual (possibly byzantine) clock behavior.
+            counters::OP_COUNTERS
+                .gauge("time_since_epoch_ms")
+                .set(duration_since_epoch().as_millis() as i64);
         }
     }
 }
