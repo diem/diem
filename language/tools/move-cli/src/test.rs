@@ -136,6 +136,13 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
         trace_file.push(DEFAULT_TRACE_FILE);
         if track_cov {
             env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, trace_file.as_os_str());
+        } else if env::var_os(MOVE_VM_TRACING_ENV_VAR_NAME).is_some() {
+            // this check prevents cascading the coverage tracking flag.
+            // in particular, if
+            //   1. we run with move-cli test <path-to-args-A.txt> --track-cov, and
+            //   2. in this <args-A.txt>, there is another command: test <args-B.txt>
+            // then, when running <args-B.txt>, coverage will not be tracked nor printed
+            env::remove_var(MOVE_VM_TRACING_ENV_VAR_NAME);
         }
 
         let cmd_output = Command::new(cli_binary_path.clone())
