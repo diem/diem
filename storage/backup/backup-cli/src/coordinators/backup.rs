@@ -159,16 +159,18 @@ impl BackupCoordinator {
 
     async fn backup_epoch_endings(
         &self,
-        last_epoch_ending_epoch_in_backup: Option<u64>,
+        mut last_epoch_ending_epoch_in_backup: Option<u64>,
         db_state: DbState,
         downstream_db_state_broadcaster: &watch::Sender<DbState>,
     ) -> Result<Option<u64>> {
-        let (first, last) = get_batch_range(last_epoch_ending_epoch_in_backup, 1);
+        loop {
+            let (first, last) = get_batch_range(last_epoch_ending_epoch_in_backup, 1);
 
-        let next_state = if db_state.epoch <= last {
-            // "<=" because `db_state.epoch` hasn't ended yet, wait for the next db_state update
-            last_epoch_ending_epoch_in_backup
-        } else {
+            if db_state.epoch <= last {
+                // "<=" because `db_state.epoch` hasn't ended yet, wait for the next db_state update
+                break;
+            }
+
             EpochEndingBackupController::new(
                 EpochEndingBackupOpt {
                     start_epoch: first,
@@ -180,14 +182,14 @@ impl BackupCoordinator {
             )
             .run()
             .await?;
-            Some(last)
-        };
+            last_epoch_ending_epoch_in_backup = Some(last)
+        }
 
         downstream_db_state_broadcaster
             .broadcast(db_state)
             .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
             .unwrap();
-        Ok(next_state)
+        Ok(last_epoch_ending_epoch_in_backup)
     }
 
     async fn backup_state_snapshot(
@@ -222,32 +224,34 @@ impl BackupCoordinator {
 
     async fn backup_transactions(
         &self,
-        last_transaction_version_in_backup: Option<Version>,
+        mut last_transaction_version_in_backup: Option<Version>,
         db_state: DbState,
     ) -> Result<Option<u64>> {
-        let (first, last) = get_batch_range(
-            last_transaction_version_in_backup,
-            self.transaction_batch_size,
-        );
+        loop {
+            let (first, last) = get_batch_range(
+                last_transaction_version_in_backup,
+                self.transaction_batch_size,
+            );
 
-        if db_state.committed_version < last {
-            // wait for the next db_state update
-            return Ok(last_transaction_version_in_backup);
+            if db_state.committed_version < last {
+                // wait for the next db_state update
+                return Ok(last_transaction_version_in_backup);
+            }
+
+            TransactionBackupController::new(
+                TransactionBackupOpt {
+                    start_version: first,
+                    num_transactions: (last + 1 - first) as usize,
+                },
+                self.global_opt.clone(),
+                Arc::clone(&self.client),
+                Arc::clone(&self.storage),
+            )
+            .run()
+            .await?;
+
+            last_transaction_version_in_backup = Some(last);
         }
-
-        TransactionBackupController::new(
-            TransactionBackupOpt {
-                start_version: first,
-                num_transactions: (last + 1 - first) as usize,
-            },
-            self.global_opt.clone(),
-            Arc::clone(&self.client),
-            Arc::clone(&self.storage),
-        )
-        .run()
-        .await?;
-
-        Ok(Some(last))
     }
 
     fn backup_work_stream<'a, S, W, Fut>(
