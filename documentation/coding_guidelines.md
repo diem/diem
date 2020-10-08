@@ -179,11 +179,16 @@ Listed below are high-level suggestions based on experience:
 
 Error handling suggestions follow the [Rust book guidance](https://doc.rust-lang.org/book/ch09-00-error-handling.html).  Rust groups errors into two major categories: recoverable and unrecoverable errors.  Recoverable errors should be handled with [Result](https://doc.rust-lang.org/std/result/).  Our suggestions on unrecoverable errors are listed below:
 
+*Fallible functions*
+
+* `duration_since_epoch()` - to obtain the unix time, call the function provided by `libra-infallible`.
+* `RwLock` and `Mutex` - Instead of calling `unwrap()` on the standard library implementations of these functions, use the infallible equivalent types that we provide in `libra-infallible`.
+
 *Panic*
 
-* `unwrap()` - Unwrap should only be used for mutexes (e.g. `lock().unwrap()`) and test code.  For all other use cases, prefer `expect()`. The only exception is if the error message is custom-generated, in which case use `.unwrap_or_else(|| panic!("error: {}", foo))`
+* `unwrap()` - Unwrap should only be used for test code.  For all other use cases, prefer `expect()`. The only exception is if the error message is custom-generated, in which case use `.unwrap_or_else(|| panic!("error: {}", foo))`.
 * `expect()` - Expect should be invoked when a system invariant is expected to be preserved.  `expect()` is preferred over `unwrap()` and should contain a detailed error message on failure in most cases.
-* `assert!()` - This macro is kept in both debug/release and should be used to protect invariants of the system as necessary
+* `assert!()` - This macro is kept in both debug/release and should be used to protect invariants of the system as necessary.
 * `unreachable!()` - This macro will panic on code that should not be reached (violating an invariant) and can be used where appropriate.
 
 In production (non-test) code, outside of lock management,  all unrecoverable errors should be cleanly documented describing why said event is unrecoverable. For example, if the system is now in a bad state, state what that state is and the motivation for why a crash / restart is more effective than resolving it within a running system, and what if any steps an operator would need to take to resolve the issue.
