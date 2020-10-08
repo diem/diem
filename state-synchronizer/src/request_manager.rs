@@ -21,7 +21,6 @@ use rand::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    ops::Bound::{self, Excluded, Included},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -238,43 +237,29 @@ impl RequestManager {
         // Strategy: pick peers using multicast level
         // if no live peers exist for this multicast level, keep failing over to next level
 
-        // find peers in all networks for the current multicast level
-        let peers = self
-            .eligible_peers
-            .range((Bound::Unbounded, Included(self.multicast_level)))
-            .filter_map(|(_, (peers, weighted_index))| Self::pick_peer(peers, weighted_index))
-            .collect::<Vec<_>>();
-
-        if !peers.is_empty() {
-            return peers;
+        let mut chosen_peers = vec![];
+        for (level, (peers, weighted_index)) in self.eligible_peers.iter() {
+            if let Some(peer) = Self::pick_peer(peers, weighted_index) {
+                chosen_peers.push(peer)
+            }
+            // at the minimum go through networks with preference level <= multicast_level
+            // if no peers are found for the current multicast_level, continue doing
+            // best effort search of the first network with live peers to failover to
+            if !chosen_peers.is_empty() && *level >= self.multicast_level {
+                if *level > self.multicast_level {
+                    info!(
+                        LogSchema::event_log(LogEntry::Multicast, LogEvent::Failover)
+                            .old_multicast_level(self.multicast_level)
+                            .new_multicast_level(*level),
+                    );
+                    self.multicast_level = *level;
+                    counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
+                }
+                break;
+            }
         }
 
-        // if no peers were found from current multicast level above,
-        // do best effort search for next network with live peers to fail over to and pick a peer from it
-        // and update multicast level accordingly
-        let failover = self
-            .eligible_peers
-            .range((Excluded(self.multicast_level), Bound::Unbounded))
-            .next()
-            .map(|(network_preference, (peers, weighted_index))| {
-                (
-                    *network_preference,
-                    Self::pick_peer(peers, weighted_index).map_or(vec![], |peer| vec![peer]),
-                )
-            });
-
-        if let Some((new_multicast_level, failover_peer)) = failover {
-            info!(
-                LogSchema::event_log(LogEntry::Multicast, LogEvent::Failover)
-                    .old_multicast_level(self.multicast_level)
-                    .new_multicast_level(new_multicast_level),
-            );
-            self.multicast_level = new_multicast_level;
-            counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
-            failover_peer
-        } else {
-            vec![]
-        }
+        chosen_peers
     }
 
     pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
