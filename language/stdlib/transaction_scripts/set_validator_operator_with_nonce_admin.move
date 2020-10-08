@@ -84,9 +84,9 @@ spec fun set_validator_operator_with_nonce_admin {
         Errors::REQUIRES_ROLE;
 
     /// Access Control
-    /// Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+    /// Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
     requires Roles::has_libra_root_role(lr_account); /// This is ensured by LibraAccount::writeset_prologue.
-    /// Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+    /// Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
     include Roles::AbortsIfNotValidator{validator_addr: account_addr};
 }
 }

@@ -800,7 +800,7 @@ must be a registered currency type. The caller must pass a treasury compliance a
 
 
 Must abort if tc_account does not have the TreasuryCompliance role.
-Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt; {
@@ -937,7 +937,7 @@ published <code><a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a></
 </code></pre>
 
 
-Must abort if the account does not have the BurnCapability [[H2]][PERMISSION].
+Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
@@ -1017,7 +1017,7 @@ outstanding in the <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a></code>
 <summary>Specification</summary>
 
 
-Must abort if the account does not have the BurnCapability [[H2]][PERMISSION].
+Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
@@ -1332,7 +1332,7 @@ this resource for the designated dealer.
 </code></pre>
 
 
-The premission "PreburnCurrency" is granted to DesignatedDealer [[H3]][PERMISSION].
+The premission "PreburnCurrency" is granted to DesignatedDealer [[H4]][PERMISSION].
 Must abort if the account does not have the DesignatedDealer role.
 
 
@@ -1417,7 +1417,7 @@ Calls to this function will fail if <code>account</code> does not have a
 </code></pre>
 
 
-Must abort if the account does have the Preburn resource [[H3]][PERMISSION].
+Must abort if the account does have the Preburn resource [[H4]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
@@ -2269,7 +2269,7 @@ adds the currency to the set of <code><a href="RegisteredCurrencies.md#0x1_Regis
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [[H7]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H8]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt; {
@@ -2376,7 +2376,7 @@ accounts.
 
 Must abort if tc_account does not have the TreasuryCompliance role.
 Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
-Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_RegisterSCSCurrencyAbortsIf">RegisterSCSCurrencyAbortsIf</a>&lt;CoinType&gt; {
@@ -2756,7 +2756,7 @@ Updates the <code>to_lbr_exchange_rate</code> held in the <code><a href="Libra.m
 </code></pre>
 
 
-Must abort if the account does not have the TreasuryCompliance Role [[H4]][PERMISSION].
+Must abort if the account does not have the TreasuryCompliance Role [[H5]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateAbortsIf">UpdateLBRExchangeRateAbortsIf</a>&lt;FromCoinType&gt; {
@@ -2863,8 +2863,16 @@ start out in the default state of <code>can_mint = <b>true</b></code>.
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityAbortsIf">UpdateMintingAbilityAbortsIf</a>&lt;CoinType&gt; {
     tc_account: signer;
-    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+}
+</code></pre>
+
+
+Only the TreasuryCompliance role can enable/disable minting [[H2]][PERMISSION].
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateMintingAbilityAbortsIf">UpdateMintingAbilityAbortsIf</a>&lt;CoinType&gt; {
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 }
 </code></pre>
 
@@ -3150,7 +3158,7 @@ The absence of BurnCapability is preserved.
 
 
 
-Only burn functions can decrease the total amount of currency [[H2]][PERMISSION].
+Only burn functions can decrease the total amount of currency [[H3]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_TotalValueNotDecrease">TotalValueNotDecrease</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
@@ -3160,9 +3168,9 @@ Only burn functions can decrease the total amount of currency [[H2]][PERMISSION]
 
 
 In order to successfully call the burn functions, BurnCapability is required.
-BurnCapability must be only granted to a TreasuryCompliance account [[H2]][PERMISSION].
+BurnCapability must be only granted to a TreasuryCompliance account [[H3]][PERMISSION].
 Only <code>register_SCS_currency</code> and <code>publish_burn_capability</code> publish BurnCapability,
-which must abort if the account does not have the TreasuryCompliance role [[H7]][PERMISSION].
+which must abort if the account does not have the TreasuryCompliance role [[H8]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreserveBurnCapAbsence">PreserveBurnCapAbsence</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
@@ -3171,7 +3179,7 @@ which must abort if the account does not have the TreasuryCompliance role [[H7]]
 </code></pre>
 
 
-Only TreasuryCompliance can have BurnCapability [[H2]][PERMISSION].
+Only TreasuryCompliance can have BurnCapability [[H3]][PERMISSION].
 If an account has BurnCapability, it is a TreasuryCompliance account.
 
 
@@ -3182,7 +3190,7 @@ If an account has BurnCapability, it is a TreasuryCompliance account.
 </code></pre>
 
 
-BurnCapability is not transferrable [[J2]][PERMISSION]. BurnCapability can be extracted from an
+BurnCapability is not transferrable [[J3]][PERMISSION]. BurnCapability can be extracted from an
 account, but is always moved back to the original account. This is the case in
 <code><a href="TransactionFee.md#0x1_TransactionFee_burn_fees">TransactionFee::burn_fees</a></code> which is the only user of <code>remove_burn_capability</code> and
 <code>publish_burn_capability</code>.
@@ -3256,7 +3264,7 @@ The absence of Preburn is preserved.
 
 
 
-Only burn functions can decrease the preburn value of currency [[H3]][PERMISSION].
+Only burn functions can decrease the preburn value of currency [[H4]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreburnValueNotDecrease">PreburnValueNotDecrease</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
@@ -3265,7 +3273,7 @@ Only burn functions can decrease the preburn value of currency [[H3]][PERMISSION
 </code></pre>
 
 
-Only preburn functions can increase the preburn value of currency [[H3]][PERMISSION].
+Only preburn functions can increase the preburn value of currency [[H4]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreburnValueNotIncrease">PreburnValueNotIncrease</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
@@ -3274,8 +3282,8 @@ Only preburn functions can increase the preburn value of currency [[H3]][PERMISS
 
 
 In order to successfully call the preburn functions, Preburn is required. Preburn must
-be only granted to a DesignatedDealer account [[H3]][PERMISSION]. Only <code>publish_preburn_to_account</code>
-publishes Preburn, which must abort if the account does not have the DesignatedDealer role [[H3]][PERMISSION].
+be only granted to a DesignatedDealer account [[H4]][PERMISSION]. Only <code>publish_preburn_to_account</code>
+publishes Preburn, which must abort if the account does not have the DesignatedDealer role [[H4]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a> <b>to</b> <a href="Libra.md#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;;
@@ -3283,7 +3291,7 @@ publishes Preburn, which must abort if the account does not have the DesignatedD
 </code></pre>
 
 
-Only DesignatedDealer can have Preburn [[H2]][PERMISSION].
+Only DesignatedDealer can have Preburn [[H3]][PERMISSION].
 If an account has Preburn, it is a DesignatedDealer account.
 
 
@@ -3294,7 +3302,7 @@ If an account has Preburn, it is a DesignatedDealer account.
 </code></pre>
 
 
-Preburn is not transferrable [[J3]][PERMISSION].
+Preburn is not transferrable [[J4]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_PreservePreburnExistence">PreservePreburnExistence</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;;
@@ -3322,14 +3330,14 @@ The exchange rate to LBR stays constant.
 
 
 
-The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H4]][PERMISSION].
+The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H5]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="Libra.md#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;;
 </code></pre>
 
 
-Only update_lbr_exchange_rate can change the exchange rate [[H4]][PERMISSION].
+Only update_lbr_exchange_rate can change the exchange rate [[H5]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Libra.md#0x1_Libra_ExchangeRateRemainsSame">ExchangeRateRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
@@ -3413,6 +3421,6 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

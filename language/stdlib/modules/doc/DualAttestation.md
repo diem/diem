@@ -375,7 +375,7 @@ the <code>created</code> account must send a transaction that invokes <code>rota
 <summary>Specification</summary>
 
 
-The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H15]][PERMISSION].
+The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created};
@@ -453,7 +453,7 @@ Rotate the base URL for <code>account</code> to <code>new_url</code>
 </code></pre>
 
 
-Must abort if the account does not have the resource Credential [[H15]][PERMISSION].
+Must abort if the account does not have the resource Credential [[H16]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">RotateBaseUrlAbortsIf</a> {
@@ -490,7 +490,7 @@ Must abort if the account does not have the resource Credential [[H15]][PERMISSI
 </code></pre>
 
 
-The sender can only rotate its own base url [[H15]][PERMISSION].
+The sender can only rotate its own base url [[H16]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
@@ -564,7 +564,7 @@ Rotate the compliance public key for <code>account</code> to <code>new_key</code
 </code></pre>
 
 
-Must abort if the account does not have the resource Credential [[H15]][PERMISSION].
+Must abort if the account does not have the resource Credential [[H16]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">RotateCompliancePublicKeyAbortsIf</a> {
@@ -590,7 +590,7 @@ Must abort if the account does not have the resource Credential [[H15]][PERMISSI
 </code></pre>
 
 
-The sender only rotates its own compliance_public_key [[H15]][PERMISSION].
+The sender only rotates its own compliance_public_key [[H16]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
@@ -1294,7 +1294,7 @@ Aborts if <code>tc_account</code> does not have the TreasuryCompliance role
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the TreasuryCompliance role [[H5]][PERMISSION].
+Must abort if the signer does not have the TreasuryCompliance role [[H6]][PERMISSION].
 The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
 
 
@@ -1390,14 +1390,14 @@ The absence of Preburn is preserved.
 
 
 
-The permission "RotateDualAttestationInfo(addr)" is not transferred [[J15]][PERMISSION].
+The permission "RotateDualAttestationInfo(addr)" is not transferred [[J16]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialExistence">PreserveCredentialExistence</a> <b>to</b> *;
 </code></pre>
 
 
-The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP or DD [[H15]][PERMISSION].
+The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP or DD [[H16]][PERMISSION].
 "Credential" resources are only published under ParentVASP or DD accounts.
 
 
@@ -1410,7 +1410,7 @@ The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP o
 </code></pre>
 
 
-Only set_microlibra_limit can change the limit [[H5]][PERMISSION].
+Only set_microlibra_limit can change the limit [[H6]][PERMISSION].
 
 
 <a name="0x1_DualAttestation_DualAttestationLimitRemainsSame"></a>
@@ -1431,7 +1431,7 @@ The DualAttestation limit stays constant.
 </code></pre>
 
 
-Only rotate_compliance_public_key can rotate the compliance public key [[H15]][PERMISSION].
+Only rotate_compliance_public_key can rotate the compliance public key [[H16]][PERMISSION].
 
 
 <a name="0x1_DualAttestation_CompliancePublicKeyRemainsSame"></a>
@@ -1452,7 +1452,7 @@ The compliance public key stays constant.
 </code></pre>
 
 
-Only rotate_base_url can rotate the base url [[H15]][PERMISSION].
+Only rotate_base_url can rotate the base url [[H16]][PERMISSION].
 
 
 <a name="0x1_DualAttestation_BaseURLRemainsSame"></a>
@@ -1474,6 +1474,6 @@ The base url stays constant.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

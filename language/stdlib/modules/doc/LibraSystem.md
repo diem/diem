@@ -650,7 +650,7 @@ and emits a reconfigurationevent.
 </code></pre>
 
 
-Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
+Must abort if the signer does not have the ValidatorOperator role [[H14]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureAbortsIf">UpdateConfigAndReconfigureAbortsIf</a> {
@@ -1212,7 +1212,7 @@ Therefore, we must ensure that the information for other validators in the
 validator set are not changed, which is specified locally for
 <code>update_config_and_reconfigure</code>.
 
-The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISSION].
+The permission "{Add, Remove} Validator" is granted to LibraRoot [[H13]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
@@ -1231,8 +1231,8 @@ The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISS
 
 
 
-Only {add, remove} validator [[H12]][PERMISSION] and update_config_and_reconfigure
-[[H13]][PERMISSION] may change the set of validators in the configuration.
+Only {add, remove} validator [[H13]][PERMISSION] and update_config_and_reconfigure
+[[H14]][PERMISSION] may change the set of validators in the configuration.
 <code>set_libra_system_config</code> is a private function which is only called by other
 functions in the "except" list. <code>initialize_validator_set</code> is only called in
 Genesis.
@@ -1303,6 +1303,6 @@ of LibraBFT.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

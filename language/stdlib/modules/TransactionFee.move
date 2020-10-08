@@ -118,7 +118,7 @@ module TransactionFee {
     }
 
     spec fun burn_fees {
-        /// Must abort if the account does not have the TreasuryCompliance role [[H2]][PERMISSION].
+        /// Must abort if the account does not have the TreasuryCompliance role [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         include LibraTimestamp::AbortsIfNotOperating;
@@ -141,14 +141,14 @@ module TransactionFee {
     /// # Specification of the case where burn type is not LBR.
     spec schema BurnFeesNotLBR<CoinType> {
         tc_account: signer;
-        /// Must abort if the account does not have BurnCapability [[H2]][PERMISSION].
+        /// Must abort if the account does not have BurnCapability [[H3]][PERMISSION].
         include Libra::AbortsIfNoBurnCapability<CoinType>{account: tc_account};
 
         let fees = spec_transaction_fee<CoinType>();
         include Libra::BurnNowAbortsIf<CoinType>{coin: fees.balance, preburn: fees.preburn};
 
-        /// tc_account retrieves BurnCapability [[H2]][PERMISSION].
-        /// BurnCapability is not transferrable [[J2]][PERMISSION].
+        /// tc_account retrieves BurnCapability [[H3]][PERMISSION].
+        /// BurnCapability is not transferrable [[J3]][PERMISSION].
         ensures exists<Libra::BurnCapability<CoinType>>(Signer::spec_address_of(tc_account));
     }
 

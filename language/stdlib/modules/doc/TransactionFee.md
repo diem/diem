@@ -328,7 +328,7 @@ underlying fiat.
 <summary>Specification</summary>
 
 
-Must abort if the account does not have the TreasuryCompliance role [[H2]][PERMISSION].
+Must abort if the account does not have the TreasuryCompliance role [[H3]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -388,7 +388,7 @@ STUB: To be filled in at a later date once the makeup of the LBR has been determ
 </code></pre>
 
 
-Must abort if the account does not have BurnCapability [[H2]][PERMISSION].
+Must abort if the account does not have BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="TransactionFee.md#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
@@ -400,8 +400,8 @@ Must abort if the account does not have BurnCapability [[H2]][PERMISSION].
 </code></pre>
 
 
-tc_account retrieves BurnCapability [[H2]][PERMISSION].
-BurnCapability is not transferrable [[J2]][PERMISSION].
+tc_account retrieves BurnCapability [[H3]][PERMISSION].
+BurnCapability is not transferrable [[J3]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="TransactionFee.md#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
@@ -448,6 +448,6 @@ If time has started ticking, then <code><a href="TransactionFee.md#0x1_Transacti
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

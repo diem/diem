@@ -290,7 +290,7 @@ module LibraSystem {
         validator_operator_account: signer;
         let validator_operator_addr = Signer::address_of(validator_operator_account);
         include LibraTimestamp::AbortsIfNotOperating;
-        /// Must abort if the signer does not have the ValidatorOperator role [[H13]][PERMISSION].
+        /// Must abort if the signer does not have the ValidatorOperator role [[H14]][PERMISSION].
         include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: validator_operator_addr};
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_addr};
         aborts_if ValidatorConfig::get_operator(validator_addr) != validator_operator_addr
@@ -529,7 +529,7 @@ module LibraSystem {
     /// `update_config_and_reconfigure`.
 
     spec module {
-       /// The permission "{Add, Remove} Validator" is granted to LibraRoot [[H12]][PERMISSION].
+       /// The permission "{Add, Remove} Validator" is granted to LibraRoot [[H13]][PERMISSION].
        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
     }
 
@@ -537,8 +537,8 @@ module LibraSystem {
         ensures spec_get_validators() == old(spec_get_validators());
     }
     spec module {
-        /// Only {add, remove} validator [[H12]][PERMISSION] and update_config_and_reconfigure
-        /// [[H13]][PERMISSION] may change the set of validators in the configuration.
+        /// Only {add, remove} validator [[H13]][PERMISSION] and update_config_and_reconfigure
+        /// [[H14]][PERMISSION] may change the set of validators in the configuration.
         /// `set_libra_system_config` is a private function which is only called by other
         /// functions in the "except" list. `initialize_validator_set` is only called in
         /// Genesis.

@@ -72,7 +72,7 @@ spec fun register_validator_config {
 
     /// Access Control
     /// Only the Validator Operator account which has been registered with the validator can
-    /// update the validator's configuration [[H13]][PERMISSION].
+    /// update the validator's configuration [[H14]][PERMISSION].
     aborts_if Signer::address_of(validator_operator_account) !=
                 ValidatorConfig::get_operator(validator_account)
                     with Errors::INVALID_ARGUMENT;

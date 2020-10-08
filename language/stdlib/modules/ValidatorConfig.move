@@ -105,7 +105,7 @@ module ValidatorConfig {
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_addr);
     }
     spec fun set_operator {
-        /// Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
+        /// Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
         include SetOperatorAbortsIf;
@@ -130,7 +130,7 @@ module ValidatorConfig {
         let validator_addr = Signer::spec_address_of(validator_account);
         ensures spec_has_operator(validator_addr);
         ensures get_operator(validator_addr) == operator_addr;
-        /// The signer can only change its own operator account [[H14]][PERMISSION].
+        /// The signer can only change its own operator account [[H15]][PERMISSION].
         ensures forall addr: address where addr != validator_addr:
             global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
@@ -146,14 +146,14 @@ module ValidatorConfig {
     }
 
     spec fun remove_operator {
-        /// Must abort if the signer does not have the Validator role [[H14]][PERMISSION].
+        /// Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
         let sender = Signer::spec_address_of(validator_account);
         include Roles::AbortsIfNotValidator{validator_addr: sender};
         include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(validator_account));
         ensures get_operator(sender) == sender;
 
-        /// The signer can only change its own operator account [[H14]][PERMISSION].
+        /// The signer can only change its own operator account [[H15]][PERMISSION].
         ensures forall addr: address where addr != sender:
             global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
@@ -305,7 +305,7 @@ module ValidatorConfig {
 
     spec module {
         /// Only `Self::set_operator` and `Self::remove_operator` may change the operator for a
-        /// particular (validator owner) address [[H14]][PERMISSION].
+        /// particular (validator owner) address [[H15]][PERMISSION].
         /// These two functions have a &signer argument for the validator account, so we know
         /// that the change has been authorized by the validator owner via signing the transaction.
         apply OperatorRemainsSame to * except set_operator, remove_operator;

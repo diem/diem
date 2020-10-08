@@ -86,9 +86,9 @@ module LBR {
 
         /// Registering LBR can only be done in genesis.
         include LibraTimestamp::AbortsIfNotGenesis;
-        /// Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
+        /// Only the LibraRoot account can register a new currency [[H8]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
-        /// Only the TreasuryCompliance role can update the `can_mint` field of CurrencyInfo.
+        /// Only the TreasuryCompliance role can update the `can_mint` field of CurrencyInfo [[H2]][PERMISSION].
         /// Moreover, only the TreasuryCompliance role can create Preburn.
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }

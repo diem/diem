@@ -76,7 +76,7 @@ module LibraVMConfig {
     ) {
         LibraTimestamp::assert_genesis();
 
-        // The permission "UpdateVMConfig" is granted to LibraRoot [[H10]][PERMISSION].
+        // The permission "UpdateVMConfig" is granted to LibraRoot [[H11]][PERMISSION].
         Roles::assert_libra_root(lr_account);
 
         let gas_constants = GasConstants {
@@ -119,7 +119,7 @@ module LibraVMConfig {
             default_account_size: 800,
         };
 
-        /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraTimestamp::AbortsIfNotGenesis;
@@ -144,7 +144,7 @@ module LibraVMConfig {
 
     /// # Access Control
 
-    /// Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
+    /// Currently, no one can update LibraVMConfig [[H11]][PERMISSION]
     spec schema LibraVMConfigRemainsSame {
         ensures old(LibraConfig::spec_is_published<LibraVMConfig>()) ==>
             global<LibraConfig<LibraVMConfig>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) ==

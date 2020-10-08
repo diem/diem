@@ -218,7 +218,7 @@ Initialize the table under the libra root account
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
 
-    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [[H10]][PERMISSION].
+    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [[H11]][PERMISSION].
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
     <b>let</b> gas_constants = <a href="LibraVMConfig.md#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
@@ -276,7 +276,7 @@ Initialize the table under the libra root account
 </code></pre>
 
 
-Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -317,7 +317,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 
 ### Access Control
 
-Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
+Currently, no one can update LibraVMConfig [[H11]][PERMISSION]
 
 
 <a name="0x1_LibraVMConfig_LibraVMConfigRemainsSame"></a>
@@ -338,6 +338,6 @@ Currently, no one can update LibraVMConfig [[H10]][PERMISSION]
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

@@ -77,7 +77,7 @@ spec fun update_exchange_rate {
         Errors::NOT_PUBLISHED;
 
     /// Access Control
-    /// Only the Treasury Compliance account can update the exchange rate [[H4]][PERMISSION].
+    /// Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISSION].
     include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }
 }

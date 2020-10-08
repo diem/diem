@@ -107,7 +107,7 @@ Registering Coin1 can only be done in genesis.
 </code></pre>
 
 
-Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
+Only the LibraRoot account can register a new currency [[H8]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -115,7 +115,7 @@ Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
 
 
 Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
-Moreover, only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+Moreover, only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -144,6 +144,6 @@ After genesis, Coin1 is registered.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

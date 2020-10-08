@@ -37,10 +37,10 @@ module Coin1 {
         include AccountLimits::PublishUnrestrictedLimitsEnsures<Coin1>{publish_account: lr_account};
         /// Registering Coin1 can only be done in genesis.
         include LibraTimestamp::AbortsIfNotGenesis;
-        /// Only the LibraRoot account can register a new currency [[H7]][PERMISSION].
+        /// Only the LibraRoot account can register a new currency [[H8]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         /// Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
-        /// Moreover, only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+        /// Moreover, only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
 

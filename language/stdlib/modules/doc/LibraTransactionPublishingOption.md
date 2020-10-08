@@ -142,7 +142,7 @@ The script hash has an invalid length
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -288,7 +288,7 @@ Add <code>new_hash</code> to the list of script hashes that is allowed to be exe
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -337,7 +337,7 @@ Allow the execution of arbitrary script or not.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -383,7 +383,7 @@ Allow module publishing from arbitrary sender or not.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -418,7 +418,7 @@ Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
 ### Access Control
 
 Only <code>add_to_script_allow_list</code>, <code>set_open_script</code>, and <code>set_open_module</code> can modify the
-LibraTransactionPublishingOption config [[H10]][PERMISSION]
+LibraTransactionPublishingOption config [[H11]][PERMISSION]
 
 
 <a name="0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame"></a>
@@ -463,6 +463,6 @@ LibraTransactionPublishingOption config [[H10]][PERMISSION]
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions

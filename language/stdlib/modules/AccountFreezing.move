@@ -183,10 +183,10 @@ module AccountFreezing {
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
-        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H6]][PERMISSION].
+        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H7]][PERMISSION].
         apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
 
-        /// Only (un)freeze functions can change the freezing bits of accounts [[H6]][PERMISSION].
+        /// Only (un)freeze functions can change the freezing bits of accounts [[H7]][PERMISSION].
         apply FreezingBitRemainsSame to * except freeze_account, unfreeze_account;
     }
 

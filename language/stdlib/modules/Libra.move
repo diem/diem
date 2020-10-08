@@ -240,7 +240,7 @@ module Libra {
     spec schema PublishBurnCapAbortsIfs<CoinType> {
         tc_account: &signer;
         /// Must abort if tc_account does not have the TreasuryCompliance role.
-        /// Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+        /// Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if exists<BurnCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
     }
@@ -293,7 +293,7 @@ module Libra {
         account: signer;
         preburn_address: address;
 
-        /// Must abort if the account does not have the BurnCapability [[H2]][PERMISSION].
+        /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
 
         include AbortsIfNoPreburn<CoinType>;
@@ -327,7 +327,7 @@ module Libra {
         )
     }
     spec fun cancel_burn {
-        /// Must abort if the account does not have the BurnCapability [[H2]][PERMISSION].
+        /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
         include CancelBurnWithCapAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
@@ -475,7 +475,7 @@ module Libra {
     }
     spec fun publish_preburn_to_account {
         modifies global<Preburn<CoinType>>(Signer::spec_address_of(account));
-        /// The premission "PreburnCurrency" is granted to DesignatedDealer [[H3]][PERMISSION].
+        /// The premission "PreburnCurrency" is granted to DesignatedDealer [[H4]][PERMISSION].
         /// Must abort if the account does not have the DesignatedDealer role.
         include Roles::AbortsIfNotDesignatedDealer;
         /// Preburn is published under the DesignatedDealer account.
@@ -513,7 +513,7 @@ module Libra {
         amount: u64;
         let account_addr = Signer::spec_address_of(account);
         let preburn = global<Preburn<CoinType>>(account_addr);
-        /// Must abort if the account does have the Preburn resource [[H3]][PERMISSION].
+        /// Must abort if the account does have the Preburn resource [[H4]][PERMISSION].
         include AbortsIfNoPreburn<CoinType>{preburn_address: account_addr};
         include PreburnWithResourceAbortsIf<CoinType>{preburn: preburn};
     }
@@ -884,7 +884,7 @@ module Libra {
         currency_code: vector<u8>;
         scaling_factor: u64;
 
-        /// Must abort if the signer does not have the LibraRoot role [[H7]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H8]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         aborts_if scaling_factor == 0 || scaling_factor > MAX_SCALING_FACTOR with Errors::INVALID_ARGUMENT;
@@ -943,7 +943,7 @@ module Libra {
 
         /// Must abort if tc_account does not have the TreasuryCompliance role.
         /// Only a TreasuryCompliance account can have the MintCapability [[H1]][PERMISSION].
-        /// Only a TreasuryCompliance account can have the BurnCapability [[H2]][PERMISSION].
+        /// Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         aborts_if exists<MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
@@ -1073,7 +1073,7 @@ module Libra {
     }
     spec schema UpdateLBRExchangeRateAbortsIf<FromCoinType> {
         tc_account: signer;
-        /// Must abort if the account does not have the TreasuryCompliance Role [[H4]][PERMISSION].
+        /// Must abort if the account does not have the TreasuryCompliance Role [[H5]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         include AbortsIfNoCurrency<FromCoinType>;
@@ -1113,8 +1113,9 @@ module Libra {
     }
     spec schema UpdateMintingAbilityAbortsIf<CoinType> {
         tc_account: signer;
-        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
+        /// Only the TreasuryCompliance role can enable/disable minting [[H2]][PERMISSION].
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
     }
     spec schema UpdateMintingAbilityEnsures<CoinType> {
         tc_account: signer;
@@ -1163,10 +1164,6 @@ module Libra {
         /// required. MintCapability must be only granted to a TreasuryCompliance account [[H1]][PERMISSION].
         /// Only `register_SCS_currency` creates MintCapability, which must abort if the account
         /// does not have the TreasuryCompliance role [[H1]][PERMISSION].
-        // TODO(jkpark): this spec does not cover the following two scenarios:
-        // a function (possibly in an other module) obtains a MintCapability from `register_currency`, and
-        // (1) uses the MintCapability for minting without publishing it, and/or
-        // (2) stashes the MintCapability inside of an other struct in the global memory.
         apply PreserveMintCapAbsence<CoinType> to *<CoinType> except register_SCS_currency<CoinType>;
         apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
 
@@ -1233,33 +1230,33 @@ module Libra {
                 !exists<BurnCapability<CoinType>>(addr);
     }
     spec module {
-        /// Only burn functions can decrease the total amount of currency [[H2]][PERMISSION].
+        /// Only burn functions can decrease the total amount of currency [[H3]][PERMISSION].
         apply TotalValueNotDecrease<CoinType> to *<CoinType>
             except burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>,
             burn_now<CoinType>;
 
         /// In order to successfully call the burn functions, BurnCapability is required.
-        /// BurnCapability must be only granted to a TreasuryCompliance account [[H2]][PERMISSION].
+        /// BurnCapability must be only granted to a TreasuryCompliance account [[H3]][PERMISSION].
         /// Only `register_SCS_currency` and `publish_burn_capability` publish BurnCapability,
-        /// which must abort if the account does not have the TreasuryCompliance role [[H7]][PERMISSION].
+        /// which must abort if the account does not have the TreasuryCompliance role [[H8]][PERMISSION].
         apply PreserveBurnCapAbsence<CoinType> to *<CoinType>
             except register_SCS_currency<CoinType>, publish_burn_capability<CoinType>;
         apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
 
-        /// Only TreasuryCompliance can have BurnCapability [[H2]][PERMISSION].
+        /// Only TreasuryCompliance can have BurnCapability [[H3]][PERMISSION].
         /// If an account has BurnCapability, it is a TreasuryCompliance account.
         invariant [global] forall coin_type: type:
             forall addr1: address:
                 exists<BurnCapability<coin_type>>(addr1) ==>
                     Roles::spec_has_treasury_compliance_role_addr(addr1);
 
-        /// BurnCapability is not transferrable [[J2]][PERMISSION]. BurnCapability can be extracted from an
+        /// BurnCapability is not transferrable [[J3]][PERMISSION]. BurnCapability can be extracted from an
         /// account, but is always moved back to the original account. This is the case in
         /// `TransactionFee::burn_fees` which is the only user of `remove_burn_capability` and
         /// `publish_burn_capability`.
         apply PreserveBurnCapExistence<CoinType> to *<CoinType> except remove_burn_capability<CoinType>;
 
-        // The permission "BurnCurrency" is unique per currency [[I2]][PERMISSION]. At most one BurnCapability
+        // The permission "BurnCurrency" is unique per currency [[I3]][PERMISSION]. At most one BurnCapability
         // can exist for each SCS CoinType. It is because when a new CoinType is registered in
         // `register_currency`, BurnCapability<CoinType> is packed (i.e., its instance is created)
         // only one time.
@@ -1292,29 +1289,29 @@ module Libra {
     }
 
     spec module {
-        /// Only burn functions can decrease the preburn value of currency [[H3]][PERMISSION].
+        /// Only burn functions can decrease the preburn value of currency [[H4]][PERMISSION].
         apply PreburnValueNotDecrease<CoinType> to *<CoinType>
             except burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>,
             burn_now<CoinType>, cancel_burn<CoinType>, cancel_burn_with_capability<CoinType>;
 
-        /// Only preburn functions can increase the preburn value of currency [[H3]][PERMISSION].
+        /// Only preburn functions can increase the preburn value of currency [[H4]][PERMISSION].
         apply PreburnValueNotIncrease<CoinType> to *<CoinType>
             except preburn_to<CoinType>, preburn_with_resource<CoinType>;
 
         /// In order to successfully call the preburn functions, Preburn is required. Preburn must
-        /// be only granted to a DesignatedDealer account [[H3]][PERMISSION]. Only `publish_preburn_to_account`
-        /// publishes Preburn, which must abort if the account does not have the DesignatedDealer role [[H3]][PERMISSION].
+        /// be only granted to a DesignatedDealer account [[H4]][PERMISSION]. Only `publish_preburn_to_account`
+        /// publishes Preburn, which must abort if the account does not have the DesignatedDealer role [[H4]][PERMISSION].
         apply Roles::AbortsIfNotDesignatedDealer to publish_preburn_to_account<CoinType>;
         apply PreservePreburnAbsence<CoinType> to *<CoinType> except publish_preburn_to_account<CoinType>;
 
-        /// Only DesignatedDealer can have Preburn [[H2]][PERMISSION].
+        /// Only DesignatedDealer can have Preburn [[H3]][PERMISSION].
         /// If an account has Preburn, it is a DesignatedDealer account.
         invariant [global] forall coin_type: type:
             forall addr1: address:
                 exists<Preburn<coin_type>>(addr1) ==>
                     Roles::spec_has_designated_dealer_role_addr(addr1);
 
-        /// Preburn is not transferrable [[J3]][PERMISSION].
+        /// Preburn is not transferrable [[J4]][PERMISSION].
         apply PreservePreburnExistence<CoinType> to *<CoinType>;
     }
 
@@ -1327,10 +1324,10 @@ module Libra {
                 == old(spec_currency_info<CoinType>().to_lbr_exchange_rate);
     }
     spec module {
-        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H4]][PERMISSION].
+        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [[H5]][PERMISSION].
         apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to update_lbr_exchange_rate<FromCoinType>;
 
-        /// Only update_lbr_exchange_rate can change the exchange rate [[H4]][PERMISSION].
+        /// Only update_lbr_exchange_rate can change the exchange rate [[H5]][PERMISSION].
         apply ExchangeRateRemainsSame<CoinType> to *<CoinType>
             except update_lbr_exchange_rate<CoinType>;
     }

@@ -61,10 +61,10 @@ spec fun rotate_authentication_key_with_nonce_admin {
         Errors::NOT_PUBLISHED;
 
     /// Access Control
-    /// Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+    /// Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
     requires Roles::has_libra_root_role(lr_account); /// This is ensured by LibraAccount::writeset_prologue.
     /// The account can rotate its own authentication key unless
-    /// it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+    /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
     include LibraAccount::AbortsIfDelegatedKeyRotationCapability{account: account};
 }
 }

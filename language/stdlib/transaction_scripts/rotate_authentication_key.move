@@ -51,7 +51,7 @@ spec fun rotate_authentication_key {
 
     /// Access Control
     /// The account can rotate its own authentication key unless
-    /// it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+    /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
     include LibraAccount::AbortsIfDelegatedKeyRotationCapability;
 }
 }

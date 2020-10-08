@@ -45,7 +45,7 @@ module LibraTransactionPublishingOption {
         );
     }
     spec fun initialize {
-        /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraTimestamp::AbortsIfNotGenesis;
@@ -96,7 +96,7 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun add_to_script_allow_list {
-        /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         let allow_list = LibraConfig::get<LibraTransactionPublishingOption>().script_allow_list;
@@ -115,7 +115,7 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun set_open_script {
-        /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>;
@@ -132,7 +132,7 @@ module LibraTransactionPublishingOption {
         LibraConfig::set<LibraTransactionPublishingOption>(lr_account, publish_option);
     }
     spec fun set_open_module {
-        /// Must abort if the signer does not have the LibraRoot role [[H10]][PERMISSION].
+        /// Must abort if the signer does not have the LibraRoot role [[H11]][PERMISSION].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
         include LibraConfig::AbortsIfNotPublished<LibraTransactionPublishingOption>;
@@ -150,7 +150,7 @@ module LibraTransactionPublishingOption {
     /// # Access Control
 
     /// Only `add_to_script_allow_list`, `set_open_script`, and `set_open_module` can modify the
-    /// LibraTransactionPublishingOption config [[H10]][PERMISSION]
+    /// LibraTransactionPublishingOption config [[H11]][PERMISSION]
     spec schema LibraVersionRemainsSame {
         ensures old(LibraConfig::spec_is_published<LibraTransactionPublishingOption>()) ==>
             global<LibraConfig<LibraTransactionPublishingOption>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) ==

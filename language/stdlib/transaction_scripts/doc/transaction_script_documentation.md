@@ -2041,7 +2041,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 Access Control
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -2168,7 +2168,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 Access Control
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -2294,7 +2294,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 
 Access Control
-Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
 
 
 <pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
@@ -2303,7 +2303,7 @@ Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
 
 This is ensured by LibraAccount::writeset_prologue.
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H16]][PERMISSION][[J16]][PERMISSION].
+it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
@@ -2420,7 +2420,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 Access Control
 The delegatee at the recovery address has to hold the key rotation capability for
 the address to recover. The address of the transaction signer has to be either
-the delegatee's address or the address to recover [[H16]][PERMISSION][[J16]][PERMISSION].
+the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 <a name="rotate_authentication_key_with_recovery_address_account_addr$1"></a>
@@ -2547,7 +2547,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 Access Control
 Only the account having Credential can rotate the info.
-Credential is granted to either a Parent VASP or a designated dealer [[H15]][PERMISSION].
+Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">DualAttestation::AbortsIfNoCredential</a>{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};
@@ -2976,7 +2976,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 Access Control
-Only the Libra Root account can add Validators [[H12]][PERMISSION].
+Only the Libra Root account can add Validators [[H13]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -3106,7 +3106,7 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 
 Access Control
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H13]][PERMISSION].
+update the validator's configuration [[H14]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -3254,7 +3254,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 Access Control
-Only the Libra Root account can remove Validators [[H12]][PERMISSION].
+Only the Libra Root account can remove Validators [[H13]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
@@ -3411,7 +3411,7 @@ for which there is no useful recovery except to resubmit the transaction.
 
 Access Control
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H13]][PERMISSION].
+update the validator's configuration [[H14]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -3550,7 +3550,7 @@ because CapabilityHolder is published during initialization (Genesis).
 
 
 Access Control
-Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
@@ -3692,7 +3692,7 @@ the system is initiated by this script.
 
 
 Access Control
-Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
+Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
 
 
 <pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
@@ -3700,7 +3700,7 @@ Only the Libra Root account can process the admin scripts [[H8]][PERMISSION].
 
 
 This is ensured by LibraAccount::writeset_prologue.
-Only a Validator account can set its Validator Operator [[H14]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
@@ -3837,7 +3837,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 Access Control
-Only the account with a preburn area can preburn [[H3]][PERMISSION].
+Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoPreburn">Libra::AbortsIfNoPreburn</a>&lt;Token&gt;{preburn_address: account_addr};
@@ -3975,7 +3975,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 Access Control
-Only the account with the burn capability can burn coins [[H2]][PERMISSION].
+Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
@@ -4133,7 +4133,7 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 
 
 Access Control
-Only the account with the burn capability can cancel burning [[H2]][PERMISSION].
+Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
@@ -4795,7 +4795,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 
 Access Control
-Only the Treasury Compliance account can update the exchange rate [[H4]][PERMISSION].
+Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
@@ -5133,6 +5133,6 @@ with this <code>hash</code> can be successfully sent to the network.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md
-[ROLE]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#roles
-[PERMISSION]: https://github.com/libra/libra/blob/master/language/move-prover/doc/user/access-control.md#permissions
+[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
+[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions
