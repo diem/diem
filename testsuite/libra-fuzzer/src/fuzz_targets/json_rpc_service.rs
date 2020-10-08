@@ -176,7 +176,7 @@ impl FuzzTargetImpl for JsonRpcGetAccountStateWithProofRequest {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(gen_request_params!([1]))
+        Some(gen_request_params!([ADDRESS, 0, 1]))
     }
 
     fn fuzz(&self, data: &[u8]) {

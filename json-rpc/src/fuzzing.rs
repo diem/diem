@@ -5,6 +5,7 @@ use crate::{methods, runtime, tests};
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::config;
 use libra_proptest_helpers::ValueGenerator;
+use libra_types::account_state_blob::AccountStateWithProof;
 use std::sync::Arc;
 use warp::reply::Reply;
 
@@ -25,8 +26,33 @@ fn test_json_rpc_service_fuzzer() {
 
 #[test]
 fn test_method_fuzzer() {
-    let params = gen_request_params!([]);
-    method_fuzzer(&params, "get_metadata");
+    method_fuzzer(&gen_request_params!([]), "get_metadata");
+    method_fuzzer(
+        &gen_request_params!(["000000000000000000000000000000dd"]),
+        "get_account",
+    );
+    method_fuzzer(
+        &gen_request_params!(["000000000000000000000000000000dd", 0, true]),
+        "get_account_transaction",
+    );
+    // todo: fix fuzzing test data to make the following test pass
+    // method_fuzzer(
+    //     &gen_request_params!([ADDRESS, 0, 1, true]),
+    //     "get_account_transactions",
+    // );
+    method_fuzzer(&gen_request_params!([0, 1, true]), "get_transactions");
+    method_fuzzer(
+        &gen_request_params!(["00000000000000000000000000000000000000000a550c18", 0, 10]),
+        "get_events",
+    );
+    method_fuzzer(&gen_request_params!([0]), "get_metadata");
+    method_fuzzer(&gen_request_params!([]), "get_currencies");
+    method_fuzzer(&gen_request_params!([1]), "get_state_proof");
+    method_fuzzer(
+        &gen_request_params!(["000000000000000000000000000000dd", 0, 1]),
+        "get_account_state_with_proof",
+    );
+    method_fuzzer(&gen_request_params!([]), "get_network_status");
 }
 
 pub fn method_fuzzer(params_data: &[u8], method: &str) {
@@ -75,13 +101,16 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
     // set up mock Shared Mempool
     let (mp_sender, mut mp_events) = channel(1);
 
+    let mut gen = ValueGenerator::new();
+    let account_state_with_proof = gen.generate(proptest::prelude::any::<AccountStateWithProof>());
+
     let db = tests::MockLibraDB {
         version: 1 as u64,
         genesis: std::collections::HashMap::new(),
         all_accounts: std::collections::HashMap::new(),
         all_txns: vec![],
         events: vec![],
-        account_state_with_proof: vec![],
+        account_state_with_proof: vec![account_state_with_proof],
         timestamps: vec![1598223353000000],
     };
     let registry = Arc::new(methods::build_registry());
@@ -146,8 +175,8 @@ fn assert_response(response: serde_json::Value) {
         return;
     }
 
-    assert!(response.get("result").is_some());
-    assert!(response.get("error").is_none());
+    assert!(response.get("result").is_some(), "{}", response);
+    assert!(response.get("error").is_none(), "{}", response);
     let response_id: u64 = serde_json::from_value(
         response
             .get("id")

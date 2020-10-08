@@ -485,13 +485,16 @@ async fn get_account_transactions(
 
     service.validate_page_size_limit(limit as usize)?;
 
-    let account_seq = AccountResource::try_from(
-        &service
-            .db
-            .get_latest_account_state(account)?
-            .ok_or_else(|| format_err!("Account doesn't exist"))?,
-    )?
-    .sequence_number();
+    let account_state = service
+        .db
+        .get_latest_account_state(account)?
+        .ok_or_else(|| {
+            JsonRpcError::invalid_request_with_msg(format!(
+                "could not find account by address {}",
+                account
+            ))
+        })?;
+    let account_seq = AccountResource::try_from(&account_state)?.sequence_number();
 
     if start >= account_seq {
         return Ok(vec![]);
@@ -558,12 +561,19 @@ async fn get_state_proof(
 async fn get_account_state_with_proof(
     service: JsonRpcService,
     request: JsonRpcRequest,
-) -> Result<AccountStateWithProofView> {
+) -> Result<AccountStateWithProofView, JsonRpcError> {
     let account_address = request.parse_account_address(0)?;
 
     // If versions are specified by the request parameters, use them, otherwise use the defaults
     let version = request.parse_version_param(1, "version")?;
     let ledger_version = request.parse_version_param(2, "ledger version for proof")?;
+
+    if version > ledger_version {
+        return Err(JsonRpcError::invalid_request_with_msg(format!(
+            "version({}) should <= ledger version({})",
+            version, ledger_version
+        )));
+    }
 
     let account_state_with_proof =
         service

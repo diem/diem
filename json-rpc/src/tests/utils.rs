@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Error, Result};
+use anyhow::{format_err, Error, Result};
 use libra_config::config::{
     RoleType, DEFAULT_BATCH_SIZE_LIMIT, DEFAULT_CONTENT_LENGTH_LIMIT, DEFAULT_PAGE_SIZE_LIMIT,
 };
@@ -245,7 +245,11 @@ impl DbReader for MockLibraDB {
         _version: Version,
         _ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
-        Ok(self.account_state_with_proof[0].clone())
+        Ok(self
+            .account_state_with_proof
+            .get(0)
+            .ok_or_else(|| format_err!("could not find account state"))?
+            .clone())
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
