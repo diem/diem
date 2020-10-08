@@ -21,11 +21,12 @@ use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
+use libra_infallible::RwLock;
 use libra_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
 };
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 /// We wrap the node in `RwLock`. The only case when we will update the node is when we
 /// drop a subtree originated from this node and commit things to storage. In that case we will
@@ -69,12 +70,12 @@ impl SparseMerkleNode {
 
     /// Get the read access of the wrapped node.
     pub fn read_lock(&self) -> RwLockReadGuard<Node> {
-        self.node.read().unwrap()
+        self.node.read()
     }
 
     /// Get the write access of the wrapped node.
     pub fn write_lock(&self) -> RwLockWriteGuard<Node> {
-        self.node.write().unwrap()
+        self.node.write()
     }
 }
 

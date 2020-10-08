@@ -7,6 +7,7 @@ use crate::{
 use anyhow::Result;
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
+use libra_infallible::RwLock;
 use libra_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     NetworkAddress, Protocol,
@@ -20,7 +21,7 @@ use libra_types::{
 };
 use memsocket::MemoryListener;
 use rand::{rngs::StdRng, SeedableRng};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 pub(crate) struct SynchronizerEnvHelper;
 
@@ -106,7 +107,7 @@ impl MockExecutorProxy {
 
 impl ExecutorProxyTrait for MockExecutorProxy {
     fn get_local_storage_state(&self) -> Result<SynchronizerState> {
-        Ok(self.storage.read().unwrap().get_local_storage_state())
+        Ok(self.storage.read().get_local_storage_state())
     }
 
     fn execute_chunk(
@@ -115,7 +116,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
-        self.storage.write().unwrap().add_txns_with_li(
+        self.storage.write().add_txns_with_li(
             txn_list_with_proof.transactions,
             ledger_info_with_sigs,
             intermediate_end_of_epoch_li,
@@ -132,7 +133,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         let txns = self
             .storage
             .read()
-            .unwrap()
             .get_chunk(known_version + 1, limit, target_version);
         let first_txn_version = txns.first().map(|_| known_version + 1);
         let txns_with_proof = TransactionListWithProof::new(
@@ -145,14 +145,11 @@ impl ExecutorProxyTrait for MockExecutorProxy {
     }
 
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
-        self.storage.read().unwrap().get_epoch_changes(epoch)
+        self.storage.read().get_epoch_changes(epoch)
     }
 
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        self.storage
-            .read()
-            .unwrap()
-            .get_epoch_ending_ledger_info(version)
+        self.storage.read().get_epoch_ending_ledger_info(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {

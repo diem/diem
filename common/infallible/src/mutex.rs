@@ -47,6 +47,6 @@ mod tests {
         let _ = thread1.join();
         let _ = thread2.join();
 
-        let _ = mutex.lock();
+        let _locked = mutex.lock();
     }
 }

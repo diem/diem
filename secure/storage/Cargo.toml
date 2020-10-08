@@ -23,6 +23,7 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-github-client = { path = "github", version = "0.1.0" }
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
+libra-infallible = { path = "../../common/infallible", versino = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-secure-time = { path = "../time", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }

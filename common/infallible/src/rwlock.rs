@@ -61,6 +61,6 @@ mod tests {
         let _ = thread1.join();
         let _ = thread2.join();
 
-        let _ = rwlock.read();
+        let _read = rwlock.read();
     }
 }

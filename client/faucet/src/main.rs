@@ -124,12 +124,9 @@ impl warp::reject::Reject for ServerInternalError {}
 mod tests {
     use crate::routes;
     use libra_faucet::mint;
+    use libra_infallible::RwLock;
     use libra_types::{account_address::AccountAddress, transaction::TransactionPayload::Script};
-    use std::{
-        collections::HashMap,
-        convert::TryFrom,
-        sync::{Arc, RwLock},
-    };
+    use std::{collections::HashMap, convert::TryFrom, sync::Arc};
     use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;
 
@@ -200,7 +197,7 @@ mod tests {
                 .reply(&filter)
                 .await;
             assert_eq!(resp.body(), "1"); // 0+1
-            let reader = accounts.read().unwrap();
+            let reader = accounts.read();
             let addr =
                 AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
             let account = reader.get(&addr).expect("account should be created");
@@ -232,7 +229,7 @@ mod tests {
             lcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
                 .expect("valid lcs vec");
         assert_eq!(txns.len(), 2);
-        let reader = accounts.read().unwrap();
+        let reader = accounts.read();
         let addr = AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
         let account = reader.get(&addr).expect("account should be created");
         assert_eq!(account["balances"][0]["amount"], amount);
@@ -306,13 +303,13 @@ mod tests {
                             new_account_address: address,
                             ..
                         }) => {
-                            let mut writer = accounts.write().unwrap();
+                            let mut writer = accounts.write();
                             let previous = writer
                                 .insert(address, create_vasp_account(&address.to_string(), 0));
                             assert!(previous.is_none(), "should not create account twice");
                         }
                         Some(ScriptCall::PeerToPeerWithMetadata { payee, amount, .. }) => {
-                            let mut writer = accounts.write().unwrap();
+                            let mut writer = accounts.write();
                             let account =
                                 writer.get_mut(&payee).expect("account should be created");
                             *account = create_vasp_account(payee.to_string().as_str(), amount);
@@ -324,7 +321,7 @@ mod tests {
             }
             Some("get_account") => {
                 let address_string: String = req["params"][0].as_str().unwrap().to_owned();
-                let reader = accounts.read().unwrap();
+                let reader = accounts.read();
                 let address_lookup = AccountAddress::try_from(address_string)
                     .ok()
                     .and_then(|address| reader.get(&address));

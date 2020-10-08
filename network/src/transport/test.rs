@@ -9,6 +9,7 @@ use bytes::{Bytes, BytesMut};
 use futures::{future, io::AsyncWriteExt, stream::StreamExt};
 use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
 use libra_crypto::{test_utils::TEST_SEED, traits::Uniform, x25519};
+use libra_infallible::RwLock;
 use libra_network_address::{NetworkAddress, Protocol::*};
 use libra_types::{chain_id::ChainId, PeerId};
 use netcore::{
@@ -19,7 +20,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     io,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 use tokio::runtime::Runtime;
 
@@ -257,7 +258,6 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
         .as_ref()
         .unwrap()
         .write()
-        .unwrap()
         .remove(&dialer_peer_id)
         .unwrap();
 

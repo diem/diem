@@ -17,6 +17,7 @@ use libra_config::{
     config::{NodeConfig, PeerNetworkId, RoleType},
     network_id::{NetworkId, NodeNetworkId},
 };
+use libra_infallible::RwLock;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
     waypoint::Waypoint, PeerId,
@@ -32,11 +33,7 @@ use proptest::{
     prelude::*,
     strategy::Strategy,
 };
-use std::{
-    collections::HashMap,
-    num::NonZeroUsize,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 
 static PEER_ID: Lazy<PeerId> = Lazy::new(|| PeerId::new([0u8; PeerId::LENGTH]));
 

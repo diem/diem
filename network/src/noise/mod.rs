@@ -16,9 +16,10 @@
 //! use memsocket::MemorySocket;
 //! use libra_config::{config::RoleType, network_id::{NetworkContext, NetworkId}};
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
+//! use libra_infallible::RwLock;
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use libra_types::PeerId;
-//! use std::{collections::{HashSet, HashMap}, io, sync::{Arc, RwLock}};
+//! use std::{collections::{HashSet, HashMap}, io, sync::Arc};
 //!
 //! fn example() -> io::Result<()> {
 //! // create client and server NoiseUpgrader

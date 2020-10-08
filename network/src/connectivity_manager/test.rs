@@ -1324,37 +1324,37 @@ fn basic_update_eligible_peers() {
 
     // basic one peer one discovery source
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
 
     // same update does nothing
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
 
     // reset
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // basic union across multiple sources
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
     conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_2);
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // does nothing even if another source has same set
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1_2.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
     conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_1_2.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
     conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // reset
     conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // empty update again does nothing
     conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
+    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 }

@@ -24,7 +24,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_network_address::NetworkAddress;
 use libra_types::{
     transaction::{GovernanceRole, SignedTransaction},
@@ -42,7 +42,7 @@ use network::{
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};

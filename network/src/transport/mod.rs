@@ -19,6 +19,7 @@ use libra_config::{
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use libra_types::{chain_id::ChainId, PeerId};
@@ -32,7 +33,7 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicU32, Ordering},
-        Arc, RwLock,
+        Arc,
     },
     time::Duration,
 };

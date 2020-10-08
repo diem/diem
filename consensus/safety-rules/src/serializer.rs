@@ -7,9 +7,10 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
+use libra_infallible::RwLock;
 use libra_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SafetyRulesInput {
@@ -119,7 +120,6 @@ impl TSerializerClient for LocalService {
         let input_message = lcs::to_bytes(&input)?;
         self.serializer_service
             .write()
-            .unwrap()
             .handle_message(input_message)
     }
 }

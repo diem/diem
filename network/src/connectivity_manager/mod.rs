@@ -38,6 +38,7 @@ use futures::{
 };
 use libra_config::network_id::NetworkContext;
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -51,7 +52,7 @@ use std::{
     cmp::min,
     collections::{HashMap, HashSet},
     fmt, mem,
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Duration,
 };
 use tokio::{time, time::Instant};
@@ -201,7 +202,7 @@ where
         connection_limit: Option<usize>,
     ) -> Self {
         assert!(
-            eligible.read().unwrap().is_empty(),
+            eligible.read().is_empty(),
             "Eligible peers must be initially empty. eligible: {:?}",
             eligible
         );
@@ -295,7 +296,7 @@ where
     /// reconfiguration. If we are currently connected to this validator, calling
     /// this function will close our connection to it.
     async fn close_stale_connections(&mut self) {
-        let eligible = self.eligible.read().unwrap().clone();
+        let eligible = self.eligible.read().clone();
         let stale_connections: Vec<_> = self
             .connected
             .keys()
@@ -331,7 +332,7 @@ where
     /// reconfiguration. If there is a pending dial to this validator, calling
     /// this function will remove it from the dial queue.
     async fn cancel_stale_dials(&mut self) {
-        let eligible = self.eligible.read().unwrap().clone();
+        let eligible = self.eligible.read().clone();
         let stale_dials: Vec<_> = self
             .dial_queue
             .keys()
@@ -354,7 +355,7 @@ where
         &'a mut self,
         pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
     ) {
-        let eligible = self.eligible.read().unwrap().clone();
+        let eligible = self.eligible.read().clone();
         let to_connect: Vec<_> = self
             .peer_addrs
             .0
@@ -637,7 +638,7 @@ where
             // Swap in the new eligible peers set. Drop the old set after releasing
             // the write lock.
             let _old_eligible = {
-                let mut eligible = self.eligible.write().unwrap();
+                let mut eligible = self.eligible.write();
                 mem::replace(&mut *eligible, new_eligible)
             };
         }

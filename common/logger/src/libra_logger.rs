@@ -11,6 +11,7 @@ use crate::{
     Event, Filter, Level, LevelFilter, Metadata,
 };
 use chrono::{SecondsFormat, Utc};
+use libra_infallible::RwLock;
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::{
@@ -19,7 +20,7 @@ use std::{
     io::Write,
     sync::{
         mpsc::{self, Receiver, SyncSender},
-        Arc, RwLock,
+        Arc,
     },
     thread,
 };
@@ -257,11 +258,11 @@ impl LibraLogger {
     }
 
     pub fn set_filter(&self, filter: Filter) {
-        self.filter.write().unwrap().local_filter = filter;
+        self.filter.write().local_filter = filter;
     }
 
     pub fn set_remote_filter(&self, filter: Filter) {
-        self.filter.write().unwrap().remote_filter = filter;
+        self.filter.write().remote_filter = filter;
     }
 
     fn send_entry(&self, entry: LogEntry) {
@@ -281,7 +282,7 @@ impl LibraLogger {
 
 impl Logger for LibraLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.read().unwrap().enabled(metadata)
+        self.filter.read().enabled(metadata)
     }
 
     fn record(&self, event: &Event) {
@@ -310,7 +311,6 @@ impl LoggerService {
                     .facade
                     .filter
                     .read()
-                    .unwrap()
                     .local_filter
                     .enabled(&entry.metadata)
                 {
@@ -324,7 +324,6 @@ impl LoggerService {
                     .facade
                     .filter
                     .read()
-                    .unwrap()
                     .remote_filter
                     .enabled(&entry.metadata)
                 {
@@ -396,7 +395,7 @@ impl Writer for StderrWriter {
 
 /// A struct for writing logs to a file
 pub struct FileWriter {
-    log_file: std::sync::RwLock<std::fs::File>,
+    log_file: RwLock<std::fs::File>,
 }
 
 impl FileWriter {
@@ -407,7 +406,7 @@ impl FileWriter {
             .open(log_file)
             .expect("Unable to open log file");
         Self {
-            log_file: std::sync::RwLock::new(file),
+            log_file: RwLock::new(file),
         }
     }
 }
@@ -415,7 +414,7 @@ impl FileWriter {
 impl Writer for FileWriter {
     /// Write to file
     fn write(&self, log: String) {
-        if let Err(err) = writeln!(self.log_file.write().unwrap(), "{}", log) {
+        if let Err(err) = writeln!(self.log_file.write(), "{}", log) {
             eprintln!("Unable to write to log file: {}", err.to_string());
         }
     }

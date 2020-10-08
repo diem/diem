@@ -11,12 +11,9 @@ use crate::{
     SafetyRules, TSafetyRules,
 };
 use libra_config::config::{SafetyRulesConfig, SafetyRulesService};
+use libra_infallible::RwLock;
 use libra_secure_storage::{KVStorage, Storage};
-use std::{
-    convert::TryInto,
-    net::SocketAddr,
-    sync::{Arc, RwLock},
-};
+use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 
 pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {
     let backend = &config.backend;

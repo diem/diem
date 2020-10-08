@@ -17,7 +17,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{
@@ -33,7 +33,7 @@ use network::{
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Duration,
 };
 use tokio::runtime::Handle;
@@ -133,12 +133,11 @@ impl NetworkPlayground {
                 // delivery, we'd have to spawn the sending behaviour on a
                 // separate task, which is inconvenient.
                 PeerManagerRequest::SendRpc(dst, outbound_req) => {
-                    let dst_twin_ids = author_to_twin_ids.read().unwrap().get_twin_ids(dst);
+                    let dst_twin_ids = author_to_twin_ids.read().get_twin_ids(dst);
 
                     let dst_twin_id = match dst_twin_ids.iter().find(|dst_twin_id| {
                         !drop_config
                             .read()
-                            .unwrap()
                             .is_message_dropped(&src_twin_id, dst_twin_id)
                     }) {
                         Some(id) => id,
@@ -184,7 +183,7 @@ impl NetworkPlayground {
         conn_mgr_reqs_rx: channel::Receiver<network::ConnectivityRequest>,
     ) {
         self.node_consensus_txs.lock().insert(twin_id, consensus_tx);
-        self.drop_config.write().unwrap().add_node(twin_id);
+        self.drop_config.write().add_node(twin_id);
 
         self.extend_author_to_twin_ids(twin_id.author, twin_id);
 
@@ -314,19 +313,15 @@ impl NetworkPlayground {
     pub fn extend_author_to_twin_ids(&mut self, author: Author, twin_id: TwinId) {
         self.author_to_twin_ids
             .write()
-            .unwrap()
             .extend_author_to_twin_ids(author, twin_id);
     }
 
     pub fn get_twin_ids(&self, author: Author) -> Vec<TwinId> {
-        self.author_to_twin_ids.read().unwrap().get_twin_ids(author)
+        self.author_to_twin_ids.read().get_twin_ids(author)
     }
 
     fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, msg: ConsensusMsg) -> bool {
-        self.drop_config
-            .read()
-            .unwrap()
-            .is_message_dropped(src, dst)
+        self.drop_config.read().is_message_dropped(src, dst)
             || Self::get_message_round(msg).map_or(false, |r| {
                 self.drop_config_round.is_message_dropped(src, dst, r)
             })
@@ -339,7 +334,6 @@ impl NetworkPlayground {
     ) -> bool {
         self.drop_config
             .write()
-            .unwrap()
             .split_network(&partition_first, &partition_second)
     }
 

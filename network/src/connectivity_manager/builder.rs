@@ -10,11 +10,12 @@ use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
 use libra_config::network_id::NetworkContext;
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Duration,
 };
 use tokio::{

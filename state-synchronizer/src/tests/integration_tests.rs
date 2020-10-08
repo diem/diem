@@ -17,6 +17,7 @@ use libra_config::{
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{parse_memory, NetworkAddress, Protocol};
 use libra_types::{
@@ -42,7 +43,7 @@ use std::{
     ops::DerefMut,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, RwLock,
+        Arc,
     },
 };
 use tokio::runtime::Runtime;
@@ -89,7 +90,6 @@ impl SynchronizerEnv {
         let validator_set = ValidatorSet::new(new_keys);
         self.storage_proxies[0]
             .write()
-            .unwrap()
             .move_to_next_epoch(signers[0].clone(), validator_set);
     }
 
@@ -290,7 +290,7 @@ impl SynchronizerEnv {
 
     // commit new txns up to the given version
     fn commit(&self, peer_id: usize, version: u64) {
-        let mut storage = self.storage_proxies[peer_id].write().unwrap();
+        let mut storage = self.storage_proxies[peer_id].write();
         let num_txns = version - storage.version();
         assert!(num_txns > 0);
         let (committed_txns, signed_txns) = storage.commit_new_txns(num_txns);
@@ -311,10 +311,7 @@ impl SynchronizerEnv {
     }
 
     fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {
-        self.storage_proxies[peer_id]
-            .read()
-            .unwrap()
-            .highest_local_li()
+        self.storage_proxies[peer_id].read().highest_local_li()
     }
 
     // Find LedgerInfo for a epoch boundary version
@@ -325,7 +322,6 @@ impl SynchronizerEnv {
     ) -> Result<LedgerInfoWithSignatures> {
         self.storage_proxies[peer_id]
             .read()
-            .unwrap()
             .get_epoch_ending_ledger_info(version)
     }
 
@@ -414,9 +410,9 @@ impl SynchronizerEnv {
     }
 
     fn clone_storage(&mut self, from_idx: usize, to_idx: usize) {
-        let storage_0_lock = self.storage_proxies[from_idx].read().unwrap();
+        let storage_0_lock = self.storage_proxies[from_idx].read();
         let storage_0 = storage_0_lock;
-        let mut storage_1_lock = self.storage_proxies[to_idx].write().unwrap();
+        let mut storage_1_lock = self.storage_proxies[to_idx].write();
         let storage_1 = storage_1_lock.deref_mut();
         *storage_1 = storage_0.clone();
     }

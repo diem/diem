@@ -18,7 +18,7 @@ use crate::{
 use anyhow::Result;
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use libra_config::config::PeerNetworkId;
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_logger::prelude::*;
 use libra_metrics::HistogramTimer;
 use libra_types::{
@@ -30,7 +30,7 @@ use libra_types::{
 use std::{
     cmp,
     collections::HashSet,
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::{Duration, Instant},
 };
 use tokio::runtime::Handle;
@@ -271,12 +271,7 @@ where
         .start_timer();
     let validation_results = transactions
         .iter()
-        .map(|t| {
-            smp.validator
-                .read()
-                .unwrap()
-                .validate_transaction(t.0.clone())
-        })
+        .map(|t| smp.validator.read().validate_transaction(t.0.clone()))
         .collect::<Vec<_>>();
     vm_validation_timer.stop_and_record();
 
@@ -489,11 +484,7 @@ pub(crate) async fn process_config_update<V>(
     );
 
     // restart VM validator
-    if let Err(e) = validator
-        .write()
-        .expect("failed to acquire VM validator lock")
-        .restart(config_update)
-    {
+    if let Err(e) = validator.write().restart(config_update) {
         counters::VM_RECONFIG_UPDATE_FAIL_COUNT.inc();
         error!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::VMUpdateFail).error(&e));
     }

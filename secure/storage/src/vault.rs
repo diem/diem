@@ -9,15 +9,13 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
+use libra_infallible::RwLock;
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        RwLock,
-    },
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 #[cfg(any(test, feature = "testing"))]
@@ -252,7 +250,6 @@ impl KVStorage for VaultStorage {
         let value: T = serde_json::from_value(resp.value)?;
         self.secret_versions
             .write()
-            .unwrap()
             .insert(key.to_string(), resp.version);
         Ok(GetResponse { last_update, value })
     }
@@ -260,7 +257,7 @@ impl KVStorage for VaultStorage {
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
         let secret = self.secret_name(key);
         let version = if self.use_cas {
-            self.secret_versions.read().unwrap().get(key).copied()
+            self.secret_versions.read().get(key).copied()
         } else {
             None
         };
@@ -269,14 +266,13 @@ impl KVStorage for VaultStorage {
                 .write_secret(&secret, key, &serde_json::to_value(&value)?, version)?;
         self.secret_versions
             .write()
-            .unwrap()
             .insert(key.to_string(), new_version);
         Ok(())
     }
 
     #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
-        self.secret_versions.write().unwrap().clear();
+        self.secret_versions.write().clear();
         self.reset_kv("")?;
         self.reset_crypto()?;
         self.reset_policies()

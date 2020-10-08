@@ -6,17 +6,14 @@ use crate::{
     shared_mempool::{peer_manager::PeerManager, tasks, types::SharedMempool},
 };
 use libra_config::config::NodeConfig;
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_types::transaction::SignedTransaction;
 use proptest::{
     arbitrary::any,
     prelude::*,
     strategy::{Just, Strategy},
 };
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, sync::Arc};
 use storage_interface::mock::MockDbReader;
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 

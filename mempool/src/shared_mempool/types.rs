@@ -18,7 +18,7 @@ use libra_config::{
     config::{MempoolConfig, PeerNetworkId},
     network_id::NodeNetworkId,
 };
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
@@ -26,14 +26,7 @@ use libra_types::{
     transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
 };
-use std::{
-    collections::HashMap,
-    fmt,
-    pin::Pin,
-    sync::{Arc, RwLock},
-    task::Waker,
-    time::Instant,
-};
+use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;

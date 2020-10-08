@@ -19,6 +19,7 @@ use libra_config::{
     network_id::NetworkContext,
 };
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
@@ -43,7 +44,7 @@ use network_simple_onchain_discovery::{
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;

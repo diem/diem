@@ -18,12 +18,9 @@ use futures::channel::{
     oneshot,
 };
 use libra_config::{config::NodeConfig, network_id::NodeNetworkId};
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};

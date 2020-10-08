@@ -14,7 +14,7 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use libra_infallible::Mutex;
+use libra_infallible::{Mutex, RwLock};
 use libra_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},
@@ -23,10 +23,7 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{
-    num::NonZeroUsize,
-    sync::{Arc, RwLock},
-};
+use std::{num::NonZeroUsize, sync::Arc};
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;

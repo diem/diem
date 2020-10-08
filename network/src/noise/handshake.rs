@@ -14,7 +14,7 @@ use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
-use libra_infallible::duration_since_epoch;
+use libra_infallible::{duration_since_epoch, RwLock};
 use libra_logger::trace;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
@@ -22,7 +22,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom as _,
     fmt::Debug,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.
@@ -348,7 +348,7 @@ impl NoiseUpgrader {
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
         if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
-            match trusted_peers.read().unwrap().get(&remote_peer_id) {
+            match trusted_peers.read().get(&remote_peer_id) {
                 Some(remote_pubkey_set) => {
                     if !remote_pubkey_set.contains(&remote_public_key) {
                         return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
@@ -391,7 +391,7 @@ impl NoiseUpgrader {
             let client_timestamp = u64::from_le_bytes(client_timestamp);
 
             // check the timestamp is not a replay
-            let mut anti_replay_timestamps = anti_replay_timestamps.write().unwrap();
+            let mut anti_replay_timestamps = anti_replay_timestamps.write();
             if anti_replay_timestamps.is_replay(remote_public_key, client_timestamp) {
                 return Err(NoiseHandshakeError::ServerReplayDetected(
                     remote_peer_short,
@@ -447,7 +447,6 @@ mod test {
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
-    use std::sync::{Arc, RwLock};
 
     const TEST_SEED_2: [u8; 32] = [42; 32];
 

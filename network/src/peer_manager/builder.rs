@@ -15,6 +15,7 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
 use libra_crypto::x25519;
+use libra_infallible::RwLock;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
@@ -30,7 +31,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     num::NonZeroUsize,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 use tokio::runtime::Handle;
 

@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
+use libra_infallible::RwLock;
 use libra_network_address::{
     encrypted::{
         EncNetworkAddress, Key, KeyVersion, TEST_SHARED_VAL_NETADDR_KEY,
@@ -14,7 +15,7 @@ use libra_network_address::{
 use libra_secure_storage::{Error as StorageError, KVStorage, Storage};
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::RwLock};
+use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -138,7 +139,7 @@ impl Encryptor {
 
         match &result {
             Ok(keys) => {
-                *self.cached_keys.write().unwrap() = Some(keys.clone());
+                *self.cached_keys.write() = Some(keys.clone());
             }
             Err(err) => libra_logger::error!(
                 "Unable to read {} from storage: {}",
@@ -147,7 +148,7 @@ impl Encryptor {
             ),
         }
 
-        let keys = self.cached_keys.read().unwrap();
+        let keys = self.cached_keys.read();
         keys.as_ref().map_or(result, |v| Ok(v.clone()))
     }
 
@@ -258,7 +259,7 @@ mod tests {
         assert_eq!(addrs, dec_addrs);
 
         // Reset cache and we should get an err
-        *encryptor.cached_keys.write().unwrap() = None;
+        *encryptor.cached_keys.write() = None;
         encryptor.encrypt(&addrs, account, 1).unwrap_err();
         encryptor.decrypt(&enc_addrs, account).unwrap_err();
     }

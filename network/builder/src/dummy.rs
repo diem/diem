@@ -11,6 +11,7 @@ use libra_config::{
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use libra_infallible::RwLock;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::{chain_id::ChainId, PeerId};
@@ -30,7 +31,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
+    sync::Arc,
     time::Duration,
 };
 use tokio::runtime::Runtime;
