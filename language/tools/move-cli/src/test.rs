@@ -218,5 +218,12 @@ pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Re
         test_total += 1;
     }
     println!("{} / {} test(s) passed.", test_total, test_passed);
-    Ok(())
+
+    // if any test fails, bail
+    let test_failed = test_total - test_passed;
+    if test_failed != 0 {
+        anyhow::bail!("{} / {} test(s) failed.", test_failed, test_total)
+    } else {
+        Ok(())
+    }
 }
