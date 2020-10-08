@@ -9,9 +9,9 @@ use crate::liveness::{
 };
 use consensus_types::{
     block::{block_test_utils::certificate_for_genesis, Block},
-    common::{Author, Round},
+    common::Round,
 };
-use libra_types::{block_metadata::NewBlockEvent, validator_signer::ValidatorSigner};
+use libra_types::{account_config::NewBlockEvent, validator_signer::ValidatorSigner};
 
 struct MockHistory {
     window_size: usize,
@@ -35,8 +35,8 @@ impl MetadataBackend for MockHistory {
     }
 }
 
-fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> NewBlockEvent {
-    NewBlockEvent::new(0, proposer, voters.iter().map(|v| v.author()).collect(), 0)
+fn create_block(participants: Vec<bool>) -> NewBlockEvent {
+    NewBlockEvent::new(0, participants, 0)
 }
 
 #[test]
@@ -61,8 +61,10 @@ fn test_simple_heuristic() {
     let weights = heuristic.get_weights(
         &proposers,
         &[
-            create_block(proposers[0], vec![&signers[1], &signers[2]]),
-            create_block(proposers[0], vec![&signers[3]]),
+            create_block(vec![true, true, true, false, false, false, false, false]),
+            create_block(vec![true, false, false, true, false, false, false, false]),
+            // a block with different size of validator set should be ignored
+            create_block(vec![false, false, false, false, true, true, true]),
         ],
     );
     assert_eq!(weights.len(), proposers.len());
@@ -88,8 +90,8 @@ fn test_api() {
         signers.push(signer);
     }
     let history = vec![
-        create_block(proposers[0], vec![&signers[1], &signers[2]]),
-        create_block(proposers[0], vec![&signers[3]]),
+        create_block(vec![true, true, true, false, false]),
+        create_block(vec![true, false, false, true, false]),
     ];
     let leader_reputation = LeaderReputation::new(
         proposers.clone(),

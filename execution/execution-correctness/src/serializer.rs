@@ -16,7 +16,7 @@ use std::sync::Arc;
 pub enum ExecutionCorrectnessInput {
     CommittedBlockId,
     Reset,
-    ExecuteBlock(Box<(Block, HashValue)>),
+    ExecuteBlock(Box<(Transaction, Block, HashValue)>),
     CommitBlocks(Box<(Vec<HashValue>, LedgerInfoWithSignatures)>),
 }
 
@@ -38,26 +38,29 @@ impl SerializerService {
                 lcs::to_bytes(&self.internal.committed_block_id())
             }
             ExecutionCorrectnessInput::Reset => lcs::to_bytes(&self.internal.reset()),
-            ExecutionCorrectnessInput::ExecuteBlock(block_with_parent_id) => lcs::to_bytes(
-                &self
-                    .internal
-                    .execute_block(
-                        id_and_transactions_from_block(&block_with_parent_id.0),
-                        block_with_parent_id.1,
-                    )
-                    .map(|mut result| {
-                        if let Some(prikey) = self.prikey.as_ref() {
-                            let vote_proposal = VoteProposal::new(
-                                result.extension_proof(),
-                                block_with_parent_id.0.clone(),
-                                result.epoch_state().clone(),
-                            );
-                            let signature = prikey.sign(&vote_proposal);
-                            result.set_signature(signature);
-                        }
-                        result
-                    }),
-            ),
+            ExecutionCorrectnessInput::ExecuteBlock(block_with_parent_id) => {
+                let (metadata_txn, block, parent_block_id) = *block_with_parent_id;
+                lcs::to_bytes(
+                    &self
+                        .internal
+                        .execute_block(
+                            id_and_transactions_from_block(&block, metadata_txn),
+                            parent_block_id,
+                        )
+                        .map(|mut result| {
+                            if let Some(prikey) = self.prikey.as_ref() {
+                                let vote_proposal = VoteProposal::new(
+                                    result.extension_proof(),
+                                    block,
+                                    result.epoch_state().clone(),
+                                );
+                                let signature = prikey.sign(&vote_proposal);
+                                result.set_signature(signature);
+                            }
+                            result
+                        }),
+                )
+            }
             ExecutionCorrectnessInput::CommitBlocks(blocks_with_li) => lcs::to_bytes(
                 &self
                     .internal
@@ -100,10 +103,12 @@ impl ExecutionCorrectness for SerializerClient {
 
     fn execute_block(
         &mut self,
+        metadata_txn: Transaction,
         block: Block,
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
         let response = self.request(ExecutionCorrectnessInput::ExecuteBlock(Box::new((
+            metadata_txn,
             block,
             parent_block_id,
         ))))?;

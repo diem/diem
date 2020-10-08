@@ -291,6 +291,8 @@ impl EpochManager {
         );
         let last_vote = recovery_data.last_vote();
 
+        self.state_computer.new_epoch(&epoch_state);
+
         info!(epoch = epoch, "Create BlockStore");
         let block_store = Arc::new(BlockStore::new(
             Arc::clone(&self.storage),

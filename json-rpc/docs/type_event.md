@@ -131,7 +131,7 @@ Event emitted when a new block is created
 |---------------|------------------------------|---------------------------------------|
 | type          | string                       | Constant string "newblock"            |
 | round         | unsigned int64               | Round number                          |
-| proposer      | unsigned int64               | proposer account address, hex-encoded |
+| participants  | List<bool>                   | Boolean mask of the current epoch's validator set (sorted by the addresses) representing participants of the block |
 | proposed_time | unsigned int64(microseconds) | proposed timestamp                    |
 
 #### receivedmint

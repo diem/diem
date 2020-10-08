@@ -922,18 +922,14 @@ impl Arbitrary for TransactionListWithProof {
 impl Arbitrary for BlockMetadata {
     type Parameters = SizeRange;
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
-        let addr_strategy = (Just(num_validators_range)).prop_flat_map(|num_validator_range| {
-            prop::collection::vec(arb_pubkey(), num_validator_range)
-        });
         (
-            any::<HashValue>(),
             any::<u64>(),
             any::<u64>(),
-            addr_strategy,
-            any::<AccountAddress>(),
+            vec(any::<bool>(), num_validators_range),
+            any::<bool>(),
         )
-            .prop_map(|(id, round, timestamp, addresses, proposer)| {
-                BlockMetadata::new(id, round, timestamp, addresses, proposer)
+            .prop_map(|(round, timestamp, participants, is_nil)| {
+                BlockMetadata::new(round, timestamp, participants, is_nil)
             })
             .boxed()
     }

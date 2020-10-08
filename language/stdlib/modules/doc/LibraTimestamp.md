@@ -165,7 +165,7 @@ activated and need to hold.
 Updates the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_update_global_time">update_global_time</a>(account: &signer, proposer: address, timestamp: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_update_global_time">update_global_time</a>(account: &signer, is_nil: bool, timestamp: u64)
 </code></pre>
 
 
@@ -176,7 +176,7 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_update_global_time">update_global_time</a>(
     account: &signer,
-    proposer: address,
+    is_nil: bool,
     timestamp: u64
 ) <b>acquires</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">assert_operating</a>();
@@ -185,7 +185,7 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
 
     <b>let</b> global_timer = borrow_global_mut&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> now = global_timer.microseconds;
-    <b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
+    <b>if</b> (is_nil) {
         // NIL block <b>with</b> null address <b>as</b> proposer. Timestamp must be equal.
         <b>assert</b>(now == timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a>));
     } <b>else</b> {
@@ -210,7 +210,7 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
 <a name="0x1_LibraTimestamp_now$10"></a>
 <b>let</b> now = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 <b>aborts_if</b> [<b>assume</b>]
-    (<b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
+    (<b>if</b> (is_nil) {
         now != timestamp
      } <b>else</b>  {
         now &gt;= timestamp

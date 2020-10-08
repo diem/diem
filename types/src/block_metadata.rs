@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_address::AccountAddress,
     account_config::libra_root_address,
     event::{EventHandle, EventKey},
 };
 use anyhow::Result;
-use libra_crypto::HashValue;
 use move_core_types::move_resource::MoveResource;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -22,53 +20,37 @@ use serde::{Deserialize, Serialize};
 ///    transaction will be executed before all of the user-submitted transactions in the blocks.
 /// 3. Once that special resource is modified, the other user transactions can read the consensus
 ///    info by calling into the read method of that resource, which would thus give users the
-///    information such as the current leader.
+///    information such as who participates in the block.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockMetadata {
-    id: HashValue,
     round: u64,
     timestamp_usecs: u64,
-    // The vector has to be sorted to ensure consistent result among all nodes
-    previous_block_votes: Vec<AccountAddress>,
-    proposer: AccountAddress,
+    // masks on the current validator set
+    participants: Vec<bool>,
+    is_nil: bool,
 }
 
 impl BlockMetadata {
-    pub fn new(
-        id: HashValue,
-        round: u64,
-        timestamp_usecs: u64,
-        previous_block_votes: Vec<AccountAddress>,
-        proposer: AccountAddress,
-    ) -> Self {
+    pub fn new(round: u64, timestamp_usecs: u64, participants: Vec<bool>, is_nil: bool) -> Self {
         Self {
-            id,
             round,
             timestamp_usecs,
-            previous_block_votes,
-            proposer,
+            participants,
+            is_nil,
         }
     }
 
-    pub fn id(&self) -> HashValue {
-        self.id
-    }
-
-    pub fn into_inner(self) -> Result<(u64, u64, Vec<AccountAddress>, AccountAddress)> {
+    pub fn into_inner(self) -> Result<(u64, u64, Vec<bool>, bool)> {
         Ok((
             self.round,
             self.timestamp_usecs,
-            self.previous_block_votes.clone(),
-            self.proposer,
+            self.participants,
+            self.is_nil,
         ))
     }
 
     pub fn timestamp_usec(&self) -> u64 {
         self.timestamp_usecs
-    }
-
-    pub fn proposer(&self) -> AccountAddress {
-        self.proposer
     }
 }
 
@@ -99,39 +81,4 @@ impl LibraBlockResource {
 impl MoveResource for LibraBlockResource {
     const MODULE_NAME: &'static str = "LibraBlock";
     const STRUCT_NAME: &'static str = "BlockMetadata";
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct NewBlockEvent {
-    round: u64,
-    proposer: AccountAddress,
-    votes: Vec<AccountAddress>,
-    timestamp: u64,
-}
-
-impl NewBlockEvent {
-    pub fn new(
-        round: u64,
-        proposer: AccountAddress,
-        votes: Vec<AccountAddress>,
-        timestamp: u64,
-    ) -> Self {
-        Self {
-            round,
-            proposer,
-            votes,
-            timestamp,
-        }
-    }
-    pub fn round(&self) -> u64 {
-        self.round
-    }
-
-    pub fn proposer(&self) -> AccountAddress {
-        self.proposer
-    }
-
-    pub fn votes(&self) -> Vec<AccountAddress> {
-        self.votes.clone()
-    }
 }

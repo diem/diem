@@ -87,14 +87,8 @@ pub fn extract_signer(config: &mut NodeConfig) -> ValidatorSigner {
     )
 }
 
-pub fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
-    BlockMetadata::new(
-        gen_block_id(index),
-        index as u64,
-        index as u64,
-        vec![],
-        proposer,
-    )
+pub fn gen_block_metadata(index: u8) -> BlockMetadata {
+    BlockMetadata::new(index as u64, index as u64, vec![], false)
 }
 
 pub fn get_test_signed_transaction(

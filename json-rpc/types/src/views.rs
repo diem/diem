@@ -174,7 +174,7 @@ pub enum EventDataView {
     #[serde(rename = "newblock")]
     NewBlock {
         round: u64,
-        proposer: BytesView,
+        participants: Vec<bool>,
         proposed_time: u64,
     },
     #[serde(rename = "receivedmint")]
@@ -300,7 +300,7 @@ impl TryFrom<ContractEvent> for EventDataView {
         } else if event.type_tag() == &TypeTag::Struct(NewBlockEvent::struct_tag()) {
             let new_block_event = NewBlockEvent::try_from(&event)?;
             EventDataView::NewBlock {
-                proposer: BytesView::from(new_block_event.proposer().as_ref()),
+                participants: new_block_event.participants().to_vec(),
                 round: new_block_event.round(),
                 proposed_time: new_block_event.proposed_time(),
             }

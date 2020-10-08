@@ -10,8 +10,7 @@ use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_infallible::duration_since_epoch;
 use libra_types::{
-    account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
-    epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,
+    block_info::BlockInfo, epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,
     validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
@@ -301,25 +300,5 @@ impl<'de> Deserialize<'de> for Block {
             block_data,
             signature,
         })
-    }
-}
-
-impl From<&Block> for BlockMetadata {
-    fn from(block: &Block) -> Self {
-        Self::new(
-            block.id(),
-            block.round(),
-            block.timestamp_usecs(),
-            // an ordered vector of voters' account address
-            block
-                .quorum_cert()
-                .ledger_info()
-                .signatures()
-                .keys()
-                .cloned()
-                .collect(),
-            // For nil block, we use 0x0 which is convention for nil address in move.
-            block.author().unwrap_or(AccountAddress::ZERO),
-        )
     }
 }

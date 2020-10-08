@@ -9,12 +9,8 @@ use consensus_types::{
 use libra_crypto::HashValue;
 use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use libra_types::{account_config::NewBlockEvent, block_metadata::new_block_event_key};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use storage_interface::{DbReader, Order};
 
 /// Interface to query committed BlockMetadata.
@@ -111,15 +107,18 @@ impl ActiveInactiveHeuristic {
 
 impl ReputationHeuristic for ActiveInactiveHeuristic {
     fn get_weights(&self, candidates: &[Author], history: &[NewBlockEvent]) -> Vec<u64> {
-        let set = history.iter().fold(HashSet::new(), |mut set, meta| {
-            set.insert(meta.proposer());
-            set.extend(meta.votes().into_iter());
-            set
-        });
-        candidates
-            .iter()
-            .map(|author| {
-                if set.contains(&author) {
+        let mut mask = vec![false; candidates.len()];
+        // set mask if it's in any of the event and ignore those with different length
+        for event in history {
+            if event.participants().len() == mask.len() {
+                mask.iter_mut()
+                    .zip(event.participants())
+                    .for_each(|(a, b)| *a |= *b)
+            }
+        }
+        mask.into_iter()
+            .map(|active| {
+                if active {
                     self.active_weight
                 } else {
                     self.inactive_weight

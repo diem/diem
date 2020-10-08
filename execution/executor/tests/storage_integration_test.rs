@@ -109,7 +109,7 @@ fn test_reconfiguration() {
         )),
     );
     // txn2 = a dummy block prologue to bump the timer.
-    let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+    let txn2 = encode_block_prologue_script(gen_block_metadata(1));
 
     // txn3 = rotate the validator's consensus pubkey
     let operator_key = validators[0].key.clone();
@@ -278,7 +278,7 @@ fn test_change_publishing_option_to_custom() {
     );
 
     // Create a dummy block prologue transaction that will bump the timer.
-    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+    let txn4 = encode_block_prologue_script(gen_block_metadata(1));
 
     let script_body = {
         let code = "
@@ -459,7 +459,7 @@ fn test_extend_allowlist() {
     );
 
     // Create a dummy block prologue transaction that will bump the timer.
-    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+    let txn4 = encode_block_prologue_script(gen_block_metadata(1));
 
     // Add script1 to allowlist.
     let txn5 = get_test_signed_transaction(

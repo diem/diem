@@ -18,6 +18,7 @@ pub trait ExecutionCorrectness: Send {
     /// Executes a block.
     fn execute_block(
         &mut self,
+        metadata_txn: Transaction,
         block: Block,
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error>;

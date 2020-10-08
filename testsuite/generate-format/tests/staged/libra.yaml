@@ -11,15 +11,11 @@ AccountAddress:
       SIZE: 16
 BlockMetadata:
   STRUCT:
-    - id:
-        TYPENAME: HashValue
     - round: U64
     - timestamp_usecs: U64
-    - previous_block_votes:
-        SEQ:
-          TYPENAME: AccountAddress
-    - proposer:
-        TYPENAME: AccountAddress
+    - participants:
+        SEQ: BOOL
+    - is_nil: BOOL
 ChainId:
   NEWTYPESTRUCT: U8
 ChangeSet:

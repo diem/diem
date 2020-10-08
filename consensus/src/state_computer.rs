@@ -3,7 +3,7 @@
 
 use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
-use consensus_types::block::Block;
+use consensus_types::{block::Block, common::Author};
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
@@ -11,15 +11,19 @@ use libra_crypto::HashValue;
 use libra_infallible::Mutex;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
+use libra_types::{
+    block_metadata::BlockMetadata, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
+    transaction::Transaction,
+};
 use state_synchronizer::StateSyncClient;
-use std::{boxed::Box, sync::Arc};
+use std::{boxed::Box, collections::HashSet, sync::Arc};
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
     synchronizer: Arc<StateSyncClient>,
+    validators: Mutex<Vec<Author>>,
 }
 
 impl ExecutionProxy {
@@ -30,7 +34,33 @@ impl ExecutionProxy {
         Self {
             execution_correctness_client: Mutex::new(execution_correctness_client),
             synchronizer,
+            validators: Mutex::new(vec![]),
         }
+    }
+
+    pub fn metadata_txn(&self, block: &Block) -> Transaction {
+        let mut participants: HashSet<_> = block
+            .quorum_cert()
+            .ledger_info()
+            .signatures()
+            .keys()
+            .cloned()
+            .collect();
+        if let Some(author) = block.author() {
+            participants.insert(author);
+        }
+        let mask: Vec<_> = self
+            .validators
+            .lock()
+            .iter()
+            .map(|author| participants.contains(author))
+            .collect();
+        Transaction::BlockMetadata(BlockMetadata::new(
+            block.round(),
+            block.timestamp_usecs(),
+            mask,
+            block.is_nil_block(),
+        ))
     }
 }
 
@@ -53,13 +83,16 @@ impl StateComputer for ExecutionProxy {
             parent_id = block.parent_id(),
             "Executing block",
         );
+        let metadata_txn = self.metadata_txn(block);
 
         // TODO: figure out error handling for the prologue txn
         monitor!(
             "execute_block",
-            self.execution_correctness_client
-                .lock()
-                .execute_block(block.clone(), parent_block_id)
+            self.execution_correctness_client.lock().execute_block(
+                metadata_txn,
+                block.clone(),
+                parent_block_id
+            )
         )
     }
 
@@ -102,5 +135,12 @@ impl StateComputer for ExecutionProxy {
         self.execution_correctness_client.lock().reset()?;
         res?;
         Ok(())
+    }
+
+    fn new_epoch(&self, epoch_state: &EpochState) {
+        *self.validators.lock() = epoch_state
+            .verifier
+            .get_ordered_account_addresses_iter()
+            .collect();
     }
 }

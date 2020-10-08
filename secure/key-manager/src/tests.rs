@@ -87,9 +87,8 @@ impl<T: LibraInterface> Node<T> {
         // Clock is supposed to be in microseconds
         let clock = self.time.now() * 1_000_000;
 
-        let owner_account = self.get_account_from_storage(OWNER_ACCOUNT);
         let block_id = HashValue::zero();
-        let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], owner_account);
+        let block_metadata = BlockMetadata::new(0, clock, vec![], false);
         let prologue = Transaction::BlockMetadata(block_metadata);
         block.insert(0, prologue);
 

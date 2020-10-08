@@ -5,6 +5,7 @@ use crate::execution_correctness::ExecutionCorrectness;
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use executor_test_helpers::{extract_signer, gen_ledger_info_with_sigs};
 use libra_crypto::{ed25519::*, traits::Signature};
+use libra_types::{block_metadata::BlockMetadata, transaction::Transaction};
 
 pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25519PublicKey>)) {
     let (mut config, _genesis_key) = libra_genesis_tool::test_config();
@@ -14,9 +15,10 @@ pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25
 
     let block = Block::make_genesis_block();
     let block_id = block.id();
+    let txn = Transaction::BlockMetadata(BlockMetadata::new(0, 1, vec![], false));
 
     let result = executor
-        .execute_block(block.clone(), parent_block_id)
+        .execute_block(txn, block.clone(), parent_block_id)
         .unwrap();
 
     if let Some(sig) = result.signature().as_ref() {

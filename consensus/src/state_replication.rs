@@ -6,7 +6,7 @@ use anyhow::Result;
 use consensus_types::{block::Block, common::Payload};
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use libra_crypto::HashValue;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
+use libra_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
@@ -60,4 +60,7 @@ pub trait StateComputer: Send + Sync {
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
     /// can assume there were no modifications to the storage made.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<(), StateSyncError>;
+
+    /// Notify about new epoch state.
+    fn new_epoch(&self, epoch_state: &EpochState);
 }

@@ -8,13 +8,12 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
 };
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
-    block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
-    on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
+    account_config::{AccountResource, BalanceResource, NewBlockEvent, CORE_CODE_ADDRESS},
+    block_metadata::{new_block_event_key, BlockMetadata},
+    on_chain_config::VMPublishingOption,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
@@ -263,16 +262,8 @@ impl FakeExecutor {
     }
 
     pub fn new_block(&mut self) {
-        let validator_set = ValidatorSet::fetch_config(&self.data_store)
-            .expect("Unable to retrieve the validator set from storage");
         self.block_time += 1;
-        let new_block = BlockMetadata::new(
-            HashValue::zero(),
-            0,
-            self.block_time,
-            vec![],
-            *validator_set.payload()[0].account_address(),
-        );
+        let new_block = BlockMetadata::new(0, self.block_time, vec![], false);
         let output = self
             .execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
             .expect("Executing block prologue should succeed")

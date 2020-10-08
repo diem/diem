@@ -53,7 +53,7 @@ module LibraTimestamp {
     /// Updates the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
     public fun update_global_time(
         account: &signer,
-        proposer: address,
+        is_nil: bool,
         timestamp: u64
     ) acquires CurrentTimeMicroseconds {
         assert_operating();
@@ -62,7 +62,7 @@ module LibraTimestamp {
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let now = global_timer.microseconds;
-        if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
+        if (is_nil) {
             // NIL block with null address as proposer. Timestamp must be equal.
             assert(now == timestamp, Errors::invalid_argument(ETIMESTAMP));
         } else {
@@ -77,7 +77,7 @@ module LibraTimestamp {
         let now = spec_now_microseconds();
         // TODO(wrwg): remove this assume by ensuring callers do not violate the condition
         aborts_if [assume]
-            (if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
+            (if (is_nil) {
                 now != timestamp
              } else  {
                 now >= timestamp

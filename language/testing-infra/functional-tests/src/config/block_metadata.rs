@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*};
-use libra_crypto::HashValue;
 use libra_types::{account_address::AccountAddress, block_metadata::BlockMetadata};
 use std::str::FromStr;
 
@@ -87,9 +86,9 @@ pub fn build_block_metadata(config: &GlobalConfig, entries: &[Entry]) -> Result<
             Entry::Timestamp(new_timestamp) => timestamp = Some(new_timestamp),
         }
     }
-    if let (Some(t), Some(addr)) = (timestamp, proposer) {
+    if let (Some(t), Some(_)) = (timestamp, proposer) {
         // TODO: Add parser for hash value and vote maps.
-        Ok(BlockMetadata::new(HashValue::zero(), 0, *t, vec![], addr))
+        Ok(BlockMetadata::new(0, *t, vec![], false))
     } else {
         Err(ErrorKind::Other("Cannot generate block metadata".to_string()).into())
     }

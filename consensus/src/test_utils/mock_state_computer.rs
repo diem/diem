@@ -11,7 +11,7 @@ use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_infallible::Mutex;
 use libra_logger::prelude::*;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
+use libra_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 
@@ -99,6 +99,8 @@ impl StateComputer for MockStateComputer {
             .expect("Fail to notify about sync");
         Ok(())
     }
+
+    fn new_epoch(&self, _epoch_state: &EpochState) {}
 }
 
 pub struct EmptyStateComputer;
@@ -133,4 +135,6 @@ impl StateComputer for EmptyStateComputer {
     async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
         Ok(())
     }
+
+    fn new_epoch(&self, _epoch_state: &EpochState) {}
 }

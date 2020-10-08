@@ -17,7 +17,6 @@ use crate::{
 use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
-use libra_trace::prelude::*;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
@@ -447,13 +446,13 @@ impl LibraVM {
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         let mut session = self.0.new_session(remote_cache);
 
-        if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
+        if let Ok((round, timestamp, participants, is_nil)) = block_metadata.into_inner() {
             let args = vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::u64(round),
                 Value::u64(timestamp),
-                Value::vector_address(previous_vote),
-                Value::address(proposer),
+                Value::vector_bool(participants),
+                Value::bool(is_nil),
             ];
             session
                 .execute_function(
@@ -614,8 +613,6 @@ impl LibraVM {
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
-        let mut current_block_id;
-        let mut execute_block_trace_guard = vec![];
         let mut should_restart = false;
 
         info!(
@@ -647,9 +644,6 @@ impl LibraVM {
             };
             let (vm_status, output) = match txn {
                 Ok(PreprocessedTransaction::BlockPrologue(block_metadata)) => {
-                    execute_block_trace_guard.clear();
-                    current_block_id = block_metadata.id();
-                    trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
                     self.process_block_prologue(data_cache, block_metadata, &log_context)?
                 }
                 Ok(PreprocessedTransaction::WaypointWriteSet(write_set_payload)) => {

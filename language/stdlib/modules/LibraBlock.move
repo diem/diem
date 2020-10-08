@@ -5,7 +5,6 @@ module LibraBlock {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
     use 0x1::Event;
-    use 0x1::LibraSystem;
     use 0x1::LibraTimestamp;
 
     resource struct BlockMetadata {
@@ -17,8 +16,7 @@ module LibraBlock {
 
     struct NewBlockEvent {
         round: u64,
-        proposer: address,
-        previous_block_votes: vector<address>,
+        participants: vector<bool>,
 
         /// On-chain time during  he block at the given height
         time_microseconds: u64,
@@ -64,28 +62,21 @@ module LibraBlock {
         vm: &signer,
         round: u64,
         timestamp: u64,
-        previous_block_votes: vector<address>,
-        proposer: address
+        participants: vector<bool>,
+        is_nil: bool,
     ) acquires BlockMetadata {
         LibraTimestamp::assert_operating();
         // Operational constraint: can only be invoked by the VM.
         CoreAddresses::assert_vm(vm);
 
-        // Authorization
-        assert(
-            proposer == CoreAddresses::VM_RESERVED_ADDRESS() || LibraSystem::is_validator(proposer),
-            Errors::requires_address(EVM_OR_VALIDATOR)
-        );
-
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        LibraTimestamp::update_global_time(vm, proposer, timestamp);
+        LibraTimestamp::update_global_time(vm, is_nil, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(
             &mut block_metadata_ref.new_block_events,
             NewBlockEvent {
                 round,
-                proposer,
-                previous_block_votes,
+                participants,
                 time_microseconds: timestamp,
             }
         );
@@ -93,8 +84,6 @@ module LibraBlock {
     spec fun block_prologue {
         include LibraTimestamp::AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM{account: vm};
-        aborts_if proposer != CoreAddresses::VM_RESERVED_ADDRESS() && !LibraSystem::spec_is_validator(proposer)
-            with Errors::REQUIRES_ADDRESS;
         ensures LibraTimestamp::spec_now_microseconds() == timestamp;
         ensures get_current_block_height() == old(get_current_block_height()) + 1;
 

@@ -49,13 +49,15 @@ impl ExecutionCorrectness for LocalClient {
 
     fn execute_block(
         &mut self,
+        metadata_txn: Transaction,
         block: Block,
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
         let mut local = self.internal.lock();
-        let mut result = local
-            .block_executor
-            .execute_block(id_and_transactions_from_block(&block), parent_block_id)?;
+        let mut result = local.block_executor.execute_block(
+            id_and_transactions_from_block(&block, metadata_txn),
+            parent_block_id,
+        )?;
         if let Some(prikey) = local.prikey.as_ref() {
             let vote_proposal = VoteProposal::new(
                 result.extension_proof(),

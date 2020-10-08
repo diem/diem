@@ -20,7 +20,6 @@ This module defines a struct storing the metadata of the block and new block eve
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
 <b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
-<b>use</b> <a href="LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
 <b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
 </code></pre>
 
@@ -82,13 +81,7 @@ This module defines a struct storing the metadata of the block and new block eve
 
 </dd>
 <dt>
-<code>proposer: address</code>
-</dt>
-<dd>
-
-</dd>
-<dt>
-<code>previous_block_votes: vector&lt;address&gt;</code>
+<code>participants: vector&lt;bool&gt;</code>
 </dt>
 <dd>
 
@@ -215,7 +208,7 @@ Set the metadata for the current block.
 The runtime always runs this before executing the transactions in a block.
 
 
-<pre><code><b>fun</b> <a href="LibraBlock.md#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
+<pre><code><b>fun</b> <a href="LibraBlock.md#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, participants: vector&lt;bool&gt;, is_nil: bool)
 </code></pre>
 
 
@@ -228,28 +221,21 @@ The runtime always runs this before executing the transactions in a block.
     vm: &signer,
     round: u64,
     timestamp: u64,
-    previous_block_votes: vector&lt;address&gt;,
-    proposer: address
+    participants: vector&lt;bool&gt;,
+    is_nil: bool,
 ) <b>acquires</b> <a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     // Operational constraint: can only be invoked by the VM.
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_vm">CoreAddresses::assert_vm</a>(vm);
 
-    // Authorization
-    <b>assert</b>(
-        proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>() || <a href="LibraSystem.md#0x1_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer),
-        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="LibraBlock.md#0x1_LibraBlock_EVM_OR_VALIDATOR">EVM_OR_VALIDATOR</a>)
-    );
-
     <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_update_global_time">LibraTimestamp::update_global_time</a>(vm, proposer, timestamp);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_update_global_time">LibraTimestamp::update_global_time</a>(vm, is_nil, timestamp);
     block_metadata_ref.height = block_metadata_ref.height + 1;
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="LibraBlock.md#0x1_LibraBlock_NewBlockEvent">NewBlockEvent</a>&gt;(
         &<b>mut</b> block_metadata_ref.new_block_events,
         <a href="LibraBlock.md#0x1_LibraBlock_NewBlockEvent">NewBlockEvent</a> {
             round,
-            proposer,
-            previous_block_votes,
+            participants,
             time_microseconds: timestamp,
         }
     );
@@ -267,8 +253,6 @@ The runtime always runs this before executing the transactions in a block.
 
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>{account: vm};
-<b>aborts_if</b> proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>() && !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">LibraSystem::spec_is_validator</a>(proposer)
-    <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>;
 <b>ensures</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == timestamp;
 <b>ensures</b> <a href="LibraBlock.md#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>() == <b>old</b>(<a href="LibraBlock.md#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>()) + 1;
 </code></pre>
