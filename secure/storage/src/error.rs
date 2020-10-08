@@ -57,7 +57,7 @@ impl From<libra_vault_client::Error> for Error {
     fn from(error: libra_vault_client::Error) -> Self {
         match error {
             libra_vault_client::Error::NotFound(_, key) => Self::KeyNotSet(key),
-            libra_vault_client::Error::HttpError(403, _) => Self::PermissionDenied,
+            libra_vault_client::Error::HttpError(403, _, _) => Self::PermissionDenied,
             _ => Self::InternalError(format!("{}", error)),
         }
     }

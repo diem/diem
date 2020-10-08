@@ -31,8 +31,8 @@ const TIMEOUT: u64 = 10_000;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    #[error("Http error: {1}")]
-    HttpError(u16, String),
+    #[error("Http error, status code: {0}, status text: {1}, body: {2}")]
+    HttpError(u16, String, String),
     #[error("Internal error: {0}")]
     InternalError(String),
     #[error("Missing field {0}")]
@@ -67,10 +67,11 @@ impl From<ureq::Response> for Error {
             // Local error
             Error::InternalError(e.to_string())
         } else {
-            // Clear buffer and use that as the message
+            // Clear the buffer
             let status = resp.status();
+            let status_text = resp.status_text().to_string();
             match resp.into_string() {
-                Ok(v) => Error::HttpError(status, v),
+                Ok(body) => Error::HttpError(status, status_text, body),
                 Err(e) => Error::InternalError(e.to_string()),
             }
         }
