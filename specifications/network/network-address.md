@@ -1,11 +1,14 @@
 # NetworkAddress
 
-`NetworkAddress` is a compact, efficient, self-describing and future-proof network address represented as a stack of protocols, inspired by libp2p's [multiaddr](https://multiformats.io/multiaddr/) format. The primary differences include using [LCS] to describe the binary format and reducing the set of supported protocols.
+`NetworkAddress` is a compact, efficient, self-describing and future-proof network address represented as a stack of
+protocols, inspired by libp2p's [multiaddr](https://multiformats.io/multiaddr/) format. The primary differences include
+using [LCS] to describe the binary format and reducing the set of supported protocols.
 
 (TODO(philiphayes): we should rename this to make it less generic sounding...)
 (TODO(philiphayes): include `EncNetworkAddress` spec)
 
-In particular, a `NetworkAddress` is intended to be a fully self-contained description of _how_ to dial a [LibraNet](spec.md) peer, describing both the base transport protocol and all subsequent connection upgrade protocols.
+In particular, a `NetworkAddress` is intended to be a fully self-contained description of _how_ to dial a
+[LibraNet](spec.md) peer, describing both the base transport protocol and all subsequent connection upgrade protocols.
 
 ## Data Structures
 
@@ -64,7 +67,9 @@ pub struct RawNetworkAddress(Vec<u8>);
 
 ## Human-readable Format
 
-All `NetworkAddress` sent and received over-the-wire or stored on-chain are in their compact `RawNetworkAddress` [`lcs`]-serialized format. However, implementations may also wish to implement the optional human-readable format to aid reading `NetworkAddress`es from configuration or printing `NetworkAddress` in logs.
+All `NetworkAddress` sent and received over-the-wire or stored on-chain are in their compact [`u8`] [`lcs`]-serialized
+format. However, implementations may also wish to implement the optional human-readable format to aid reading
+`NetworkAddress`es from configuration or printing `NetworkAddress` in logs.
 
 Each `Protocol` segment is formatted like:
 
@@ -94,11 +99,20 @@ NetworkAddress([
 
 ## Network Protocol Upgradability
 
-It is important for Libra to support upgrading its network protocols. In particular, providing a process for doing backwards-incompatible upgrades allows Libra to evolve quickly and prevents protocol ossification.
+It is important for Libra to support upgrading its network protocols. In particular, providing a process for doing
+backwards-incompatible upgrades allows Libra to evolve quickly and prevents protocol ossification.
 
-Each node advertises the full set of protocols needed to speak with a it using [onchain discovery](onchain-discovery.md). In other words, a node that sees `"/dns6/example.com/tcp/1234/ln-noise-ik/<pubkey>/ln-handshake/0"` knows unambiguously the precise set of protocols it must speak and in which order for the listening node to understand them.
+Each node advertises the full set of protocols needed to speak with a it using
+[onchain discovery](onchain-discovery.md). In other words, a node that sees
+`"/dns6/example.com/tcp/1234/ln-noise-ik/<pubkey>/ln-handshake/0"` knows unambiguously the precise set of protocols it
+must speak and in which order for the listening node to understand them.
 
-By allowing several `NetworkAddress`es to be advertised at once, nodes can also facilitate backwards-incompatible network protocol upgrades. For instance, suppose Libra wants to modify the Noise secure transport to a different handshake pattern or crypto primitives (e.g. move from `"Noise_IK_25519_AESGCM_SHA256"` to `"Noise_IX_25519_ChaChaPoly_BLAKE2s"`). A new binary version of Libra could be released that supports the new Noise handshake. Nodes that update to the new binary version would then advertise both the old handshake protocol and the new handshake protocol:
+By allowing several `NetworkAddress`es to be advertised at once, nodes can also facilitate backwards-incompatible
+network protocol upgrades. For instance, suppose Libra wants to modify the Noise secure transport to a different
+handshake pattern or crypto primitives (e.g. move from `"Noise_IK_25519_AESGCM_SHA256"` to
+`"Noise_IX_25519_ChaChaPoly_BLAKE2s"`). A new binary version of Libra could be released that supports the new Noise
+handshake. Nodes that update to the new binary version would then advertise both the old handshake protocol and the new
+handshake protocol:
 
 ```
 addrs := [
@@ -109,9 +123,14 @@ addrs := [
 ]
 ```
 
-Nodes running the old binary (a binary that doesn't understand the new handshake protocol) will simply dial updated nodes using the advertised address containing the old protocol. Meanwhile, new nodes can use the updated protocol to speak with each other. By advertising old and new simultaneously, connectivity can be maintained during the upgrade rollout.
+Nodes running the old binary (a binary that doesn't understand the new handshake protocol) will simply dial updated
+nodes using the advertised address containing the old protocol. Meanwhile, new nodes can use the updated protocol to
+speak with each other. By advertising old and new simultaneously, connectivity can be maintained during the upgrade
+rollout.
 
-Finally, when all nodes have updated, each node can rotate out the old protocol. A subsequent release can then fully remove the old handshake logic from the codebase. The final set of advertised addresses for each node will then look like:
+Finally, when all nodes have updated, each node can rotate out the old protocol. A subsequent release can then fully
+remove the old handshake logic from the codebase. The final set of advertised addresses for each node will then look
+like:
 
 ```
 // new protocol only
