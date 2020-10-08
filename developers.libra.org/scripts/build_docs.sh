@@ -3,6 +3,8 @@
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+set -x;
+
 # run this script from the project root using `./scripts/build_docs.sh`
 
 function usage() {
