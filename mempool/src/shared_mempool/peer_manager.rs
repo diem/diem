@@ -427,14 +427,21 @@ impl PeerManager {
             id
         } else {
             counters::INVALID_ACK_RECEIVED_COUNT
-                .with_label_values(&[network_id, peer_id])
+                .with_label_values(&[network_id, peer_id, counters::INVALID_REQUEST_ID])
                 .inc();
             return;
         };
 
         let mut peer_info = self.peer_info.lock();
 
-        let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
+        let sync_state = if let Some(state) = peer_info.get_mut(&peer) {
+            state
+        } else {
+            counters::INVALID_ACK_RECEIVED_COUNT
+                .with_label_values(&[network_id, peer_id, counters::UNKNOWN_PEER])
+                .inc();
+            return;
+        };
 
         if let Some(sent_timestamp) = sync_state.broadcast_info.sent_batches.remove(&batch_id) {
             // track broadcast roundtrip latency

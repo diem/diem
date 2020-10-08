@@ -67,6 +67,10 @@ pub const BACKPRESSURE_BROADCAST_LABEL: &str = "backpressure";
 pub const RECEIVED_LABEL: &str = "received";
 pub const SENT_LABEL: &str = "sent";
 
+// invalid ACK type labels
+pub const INVALID_REQUEST_ID: &str = "invalid_req_id";
+pub const UNKNOWN_PEER: &str = "unknown_peer";
+
 /// Counter tracking size of various indices in core mempool
 pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -309,7 +313,7 @@ pub static INVALID_ACK_RECEIVED_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_mempool_unrecognized_ack_received_count",
         "Number of ACK messages received with an invalid request_id that this node's mempool did not send",
-        &["sender"]
+        &["network", "sender", "type"]
     )
         .unwrap()
 });
