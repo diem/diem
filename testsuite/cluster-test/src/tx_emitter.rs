@@ -946,13 +946,12 @@ async fn gen_reusable_account(
 async fn gen_reusable_accounts(
     client: &JsonRpcAsyncClient,
     num_accounts: usize,
-    rng: StdRng,
+    rng: &mut StdRng,
 ) -> Result<Vec<AccountData>> {
     let mut vasp_accounts = vec![];
     let mut i = 0;
-    let mut seed = rng.clone();
     while i < num_accounts {
-        vasp_accounts.push(gen_reusable_account(client, &mut seed).await?);
+        vasp_accounts.push(gen_reusable_account(client, rng).await?);
         i += 1;
     }
     Ok(vasp_accounts)
@@ -1056,7 +1055,7 @@ async fn create_new_accounts(
     mut client: JsonRpcAsyncClient,
     chain_id: ChainId,
     reuse_account: bool,
-    rng: StdRng,
+    mut rng: StdRng,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
     let mut accounts = vec![];
@@ -1069,7 +1068,7 @@ async fn create_new_accounts(
                     max_num_accounts_per_batch as usize,
                     min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
                 ),
-                rng.clone(),
+                &mut rng,
             )
             .await?
         } else {
