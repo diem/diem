@@ -15,4 +15,4 @@
 # /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
 
 # Code freeze
-* @libra/release-gatekeepers
+# * @libra/release-gatekeepers
