@@ -86,7 +86,7 @@ pub static COORDINATOR_SUCC_TS: Lazy<IntGauge> = Lazy::new(|| {
 
 pub static COORDINATOR_FAIL_TS: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
-        "libra_db_restore_coordinator_succeed_timestamp_s",
+        "libra_db_restore_coordinator_fail_timestamp_s",
         "Timestamp when the verify coordinator fails."
     )
     .unwrap()
