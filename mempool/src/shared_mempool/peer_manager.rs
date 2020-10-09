@@ -22,8 +22,8 @@ use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    ops::{Add, Deref, DerefMut},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    ops::{Add, DerefMut},
     time::{Duration, Instant, SystemTime},
 };
 use vm_validator::vm_validator::TransactionValidation;
@@ -50,6 +50,9 @@ pub(crate) struct PeerManager {
     // the upstream peer to failover to if all peers in the primary upstream network are dead
     // the number of failover peers is limited to 1 to avoid network competition in the failover networks
     failover_peer: Mutex<Option<PeerNetworkId>>,
+    // set of `mempool_config.default_failover` number of peers in the non-primary networks to
+    // broadcast to in addition to the primary network when the primary network is up
+    default_failovers: Mutex<HashSet<PeerNetworkId>>,
 }
 /// Identifier for a broadcasted batch of txns
 /// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
@@ -95,6 +98,7 @@ impl PeerManager {
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
             failover_peer: Mutex::new(None),
+            default_failovers: Mutex::new(HashSet::new()),
         }
     }
 
@@ -142,6 +146,10 @@ impl PeerManager {
                 .with_label_values(&[&peer.raw_network_id().to_string()])
                 .dec();
             state.is_alive = false;
+        }
+
+        {
+            self.default_failovers.lock().remove(&peer);
         }
         self.update_failover();
     }
@@ -328,6 +336,7 @@ impl PeerManager {
     }
 
     // updates the peer chosen to failover to if all peers in the primary upstream network are down
+    // tries to pick more `default_peers` until there are `mempool_config.default_peers` number of them
     fn update_failover(&self) {
         // failover is enabled only if there are multiple upstream networks
         if self.upstream_config.networks.len() < 2 {
@@ -348,6 +357,30 @@ impl PeerManager {
                 }
             })
             .into_group_map();
+
+        // update default_failovers
+        // NOTE: this block of code, and maintaining even this concept of `default_failovers`, is a
+        // *temporary* patch to improve the reliability of txn delivery in case of the primary
+        // upstream network is lagging behind, and the txns delivered to it will not be ready for further
+        // broadcast/consensus on that end based on its stale state.
+        // So:
+        // (1) don't invest too much in refactoring this code w.r.t. the rest of this function
+        // (2) the logic of this function should later be migrated to a smarter networking layer
+        // that can handle peer selection for mempool
+        let mut default_failovers = self.default_failovers.lock();
+        if default_failovers.len() < self.mempool_config.default_failovers {
+            for failover_network in self.upstream_config.networks[1..].iter() {
+                if let Some(active_peers) = active_peers_by_network.get(failover_network) {
+                    for p in active_peers.iter().cloned() {
+                        if default_failovers.insert(p.clone())
+                            && default_failovers.len() >= self.mempool_config.default_failovers
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         let primary_upstream = self
             .upstream_config
@@ -524,21 +557,23 @@ impl PeerManager {
             return true;
         }
 
-        // checks whether this peer is a chosen upstream failover peer
-        // NOTE: originally mempool should only broadcast to one peer in the failover network. This is
-        // to avoid creating too much competition for traffic in the failover network, which is in most
-        // cases also used by other public clients
-        // However, currently for VFN's public on-chain discovery, there is the unfortunate possibility
-        // that it might discover and select itself as an upstream fallback peer, so the txns will be
-        // self-broadcasted and make no actual progress.
-        // So until self-connection is actively checked against for in the networking layer, mempool
-        // will temporarily broadcast to all peers in its selected failover network as well
-        self.failover_peer
-            .lock()
-            .deref()
-            .as_ref()
-            .map_or(false, |failover| {
-                failover.raw_network_id() == peer.raw_network_id()
-            })
+        let failover = self.failover_peer.lock();
+        if let Some(failover_peer) = failover.as_ref() {
+            // in failover mode (i.e. primary network is down).
+            // broadcast to all peers in the same network as this chosen upstream failover peer
+
+            // NOTE: originally mempool should only broadcast to one peer in the failover network. This is
+            // to avoid creating too much competition for traffic in the failover network, which is in most
+            // cases also used by other public clients
+            // However, currently for VFN's public on-chain discovery, there is the unfortunate possibility
+            // that it might discover and select itself as an upstream fallback peer, so the txns will be
+            // self-broadcasted and make no actual progress.
+            // So until self-connection is actively checked against for in the networking layer, mempool
+            // will temporarily broadcast to all peers in its selected failover network as well
+            failover_peer.raw_network_id() == peer.raw_network_id()
+        } else {
+            // if primary network is up, broadcast to all default_failovers in addition to it
+            self.default_failovers.lock().contains(peer)
+        }
     }
 }

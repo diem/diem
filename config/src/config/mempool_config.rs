@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct MempoolConfig {
     pub capacity: usize,
     pub capacity_per_user: usize,
+    // number of failovers to broadcast to when the primary network is alive
+    pub default_failovers: usize,
     pub max_broadcasts_per_peer: usize,
     pub mempool_snapshot_interval_secs: u64,
     pub shared_mempool_ack_timeout_ms: u64,
@@ -31,6 +33,7 @@ impl Default for MempoolConfig {
             mempool_snapshot_interval_secs: 180,
             capacity: 1_000_000,
             capacity_per_user: 100,
+            default_failovers: 0,
             system_transaction_timeout_secs: 86400,
             system_transaction_gc_interval_ms: 180_000,
         }
