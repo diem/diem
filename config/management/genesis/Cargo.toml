@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.33"
 rand = "0.7.3"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
-structopt = "0.3.18"
+structopt = "0.3.19"
 thiserror = "1.0.21"
 toml = { version = "0.5.6", default-features = false }
 

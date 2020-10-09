@@ -14,7 +14,7 @@ anyhow = "1.0.33"
 hex = "0.4.2"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
 serde_json = "1.0.58"
-structopt = "0.3.18"
+structopt = "0.3.19"
 thiserror = "1.0.21"
 toml = { version = "0.5.6", default-features = false }
 

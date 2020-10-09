@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-structopt = "0.3.18"
+structopt = "0.3.19"
 compiled-stdlib = { path = "../../stdlib/compiled", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 errmapgen = { path = "../../move-prover/errmapgen", version = "0.1.0" }

@@ -14,7 +14,7 @@ anyhow = "1.0.33"
 hex = "0.4.2"
 rand = "0.7.3"
 serde_yaml = "0.8.13"
-structopt = "0.3.18"
+structopt = "0.3.19"
 thiserror = "1.0.21"
 
 executor = { path = "../../execution/executor", version = "0.1.0" }

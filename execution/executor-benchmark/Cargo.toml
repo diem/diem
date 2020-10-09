@@ -13,7 +13,7 @@ edition = "2018"
 itertools = { version = "0.9.0", default-features = false }
 rand = "0.7.3"
 rayon = "1.4.1"
-structopt = "0.3.18"
+structopt = "0.3.19"
 
 executor = { path = "../executor", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }

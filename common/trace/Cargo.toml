@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.19"
-structopt = "0.3.18"
+structopt = "0.3.19"
 tokio = { version = "0.2.22", features = ["full"] }
 serde_json = "1.0.58"
 serde = "1.0.116"

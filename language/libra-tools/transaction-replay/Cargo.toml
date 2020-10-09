@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.33"
-structopt = "0.3.18"
+structopt = "0.3.19"
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }

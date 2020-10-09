@@ -13,7 +13,7 @@ edition = "2018"
 fail = "0.4.0"
 futures = "0.3.6"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
-structopt = "0.3.18"
+structopt = "0.3.19"
 tokio = { version = "0.2.22", features = ["full"] }
 
 backup-service = { path = "../storage/backup/backup-service", version = "0.1.0" }
