@@ -64,13 +64,15 @@ struct Args {
     #[structopt(
         name = "waypoint",
         long,
-        help = "Explicitly specify the waypoint to use"
+        help = "Explicitly specify the waypoint to use",
+        required_unless = "waypoint_url"
     )]
     pub waypoint: Option<Waypoint>,
     #[structopt(
         name = "waypoint_url",
         long,
-        help = "URL for a file with the waypoint to use"
+        help = "URL for a file with the waypoint to use",
+        required_unless = "waypoint"
     )]
     pub waypoint_url: Option<String>,
     /// Verbose output.
