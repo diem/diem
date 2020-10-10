@@ -27,6 +27,7 @@ use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
+use rand::rngs::OsRng;
 use std::{
     convert::{TryFrom, TryInto},
     fs,
@@ -117,88 +118,63 @@ fn test_create_validator_lcs_file() {
     create_validator_with_file_writer(write_key_to_file_lcs_format);
 }
 
-/// Creates a new validator operator using the given file writer and verifies
-/// the operator account is correctly initialized on-chain.
-fn create_operator_with_file_writer(file_writer: fn(Ed25519PublicKey, PathBuf)) {
-    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
-
-    // Create a new operator key
-    let operator_key = Ed25519PrivateKey::generate_for_testing().public_key();
-    let operator_auth_key = AuthenticationKey::ed25519(&operator_key);
-    let operator_account = operator_auth_key.derived_address();
-
-    // Verify the corresponding account doesn't exist on-chain
-    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
-    libra_json_rpc
-        .retrieve_account_state(operator_account)
-        .unwrap_err();
-
-    // Write the key to a file using the provided file writer
-    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
-    let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
-    file_writer(operator_key, key_file_path.clone());
-
-    // Create the operator account
-    let backend = load_libra_root_storage(&env.validator_swarm, 0);
-    let op_human_name = "new_operator";
-    let (txn_ctx, account_address) = op_tool
-        .create_validator_operator(op_human_name, key_file_path.to_str().unwrap(), &backend)
-        .unwrap();
-    assert_eq!(operator_account, account_address);
-
-    // Wait for the create operator transaction to be executed
+#[test]
+fn test_set_operator_and_add_new_validator() {
+    let num_nodes = 3;
+    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
     let mut client = env.get_validator_client(0, None);
-    client
-        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
-        .unwrap();
 
-    // Verify the operator account now exists on-chain
-    let account_state = libra_json_rpc
-        .retrieve_account_state(operator_account)
-        .unwrap();
-    let op_config_resource = account_state
-        .get_validator_operator_config_resource()
-        .unwrap()
-        .unwrap();
-    assert_eq!(op_human_name.as_bytes(), op_config_resource.human_name);
-}
+    // Create new validator and validator operator keys and accounts
+    let (validator_key, validator_account) = create_new_test_account();
+    let (operator_key, operator_account) = create_new_test_account();
 
-/// Creates a new validator using the given file writer and verifies
-/// the account is correctly initialized on-chain.
-fn create_validator_with_file_writer(file_writer: fn(Ed25519PublicKey, PathBuf)) {
-    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
-
-    // Create a new validator key
-    let validator_key = Ed25519PrivateKey::generate_for_testing().public_key();
-    let validator_auth_key = AuthenticationKey::ed25519(&validator_key);
-    let validator_account = validator_auth_key.derived_address();
-
-    // Verify the corresponding account doesn't exist on-chain
-    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
-    libra_json_rpc
-        .retrieve_account_state(validator_account)
-        .unwrap_err();
-
-    // Write the key to a file using the provided file writer
-    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
-    let key_file_path = node_config_path.with_file_name(OWNER_KEY);
-    file_writer(validator_key, key_file_path.clone());
-
-    // Create the validator account
-    let backend = load_libra_root_storage(&env.validator_swarm, 0);
+    // Write the validator key to a file and create the validator account
+    let validator_key_path = write_key_to_file(
+        &validator_key.public_key(),
+        &env,
+        write_key_to_file_hex_format,
+    );
+    let libra_backend = load_libra_root_storage(&env.validator_swarm, 0);
     let val_human_name = "new_validator";
-    let (txn_ctx, account_address) = op_tool
-        .create_validator(val_human_name, key_file_path.to_str().unwrap(), &backend)
+    let (txn_ctx, _) = op_tool
+        .create_validator(
+            val_human_name,
+            validator_key_path.to_str().unwrap(),
+            &libra_backend,
+        )
         .unwrap();
-    assert_eq!(validator_account, account_address);
-
-    // Wait for the create validator transaction to be executed
-    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
 
-    // Verify the validator account now exists on-chain
+    // Write the operator key to a file and create the operator account
+    let operator_key_path = write_key_to_file(
+        &operator_key.public_key(),
+        &env,
+        write_key_to_file_lcs_format,
+    );
+    let op_human_name = "new_operator";
+    let (txn_ctx, _) = op_tool
+        .create_validator_operator(
+            op_human_name,
+            operator_key_path.to_str().unwrap(),
+            &libra_backend,
+        )
+        .unwrap();
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Overwrite the keys in storage to execute the command from the new validator's perspective
+    let backend = load_backend_storage(&env.validator_swarm, 0);
+    let mut storage: Storage = (&backend).try_into().unwrap();
+    storage.set(OWNER_ACCOUNT, validator_account).unwrap();
+    storage
+        .import_private_key(OWNER_KEY, validator_key)
+        .unwrap();
+
+    // Verify no validator operator
+    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
     let account_state = libra_json_rpc
         .retrieve_account_state(validator_account)
         .unwrap();
@@ -206,9 +182,71 @@ fn create_validator_with_file_writer(file_writer: fn(Ed25519PublicKey, PathBuf))
         .get_validator_config_resource()
         .unwrap()
         .unwrap();
-    assert_eq!(val_human_name.as_bytes(), val_config_resource.human_name);
     assert!(val_config_resource.delegated_account.is_none());
     assert!(val_config_resource.validator_config.is_none());
+
+    // Set the validator operator
+    let txn_ctx = op_tool
+        .set_validator_operator(op_human_name, operator_account, &backend)
+        .unwrap();
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify the operator has been set correctly
+    let account_state = libra_json_rpc
+        .retrieve_account_state(validator_account)
+        .unwrap();
+    let val_config_resource = account_state
+        .get_validator_config_resource()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        operator_account,
+        val_config_resource.delegated_account.unwrap()
+    );
+    assert!(val_config_resource.validator_config.is_none());
+
+    // Overwrite the keys in storage to execute the command from the new operator's perspective
+    storage.set(OPERATOR_ACCOUNT, operator_account).unwrap();
+    storage
+        .import_private_key(OPERATOR_KEY, operator_key)
+        .unwrap();
+
+    // Set the validator config
+    let network_address = Some(NetworkAddress::from_str("/ip4/10.0.0.16/tcp/80").unwrap());
+    let txn_ctx = op_tool
+        .set_validator_config(network_address.clone(), network_address, &backend)
+        .unwrap();
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Check the validator set size
+    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    assert_eq!(num_nodes, validator_set_infos.len());
+    assert!(validator_set_infos
+        .iter()
+        .find(|info| info.account_address == validator_account)
+        .is_none());
+
+    // Add the validator to the validator set
+    let txn_ctx = op_tool
+        .add_validator(validator_account, &libra_backend)
+        .unwrap();
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Check the new validator has been added to the set
+    let validator_set_infos = op_tool.validator_set(None, &backend).unwrap();
+    assert_eq!(num_nodes + 1, validator_set_infos.len());
+    let validator_info = validator_set_infos
+        .iter()
+        .find(|info| info.account_address == validator_account)
+        .unwrap();
+    assert_eq!(validator_account, validator_info.account_address);
+    assert_eq!(val_human_name, validator_info.name);
 }
 
 #[test]
@@ -568,6 +606,101 @@ fn test_validator_set() {
     );
 }
 
+/// Creates a new account address and key for testing.
+fn create_new_test_account() -> (Ed25519PrivateKey, AccountAddress) {
+    let mut rng = OsRng;
+    let key = Ed25519PrivateKey::generate(&mut rng);
+    let auth_key = AuthenticationKey::ed25519(&key.public_key());
+    let account = auth_key.derived_address();
+    (key, account)
+}
+
+/// Creates a new validator operator using the given file writer and verifies
+/// the operator account is correctly initialized on-chain.
+fn create_operator_with_file_writer(file_writer: fn(&Ed25519PublicKey, PathBuf)) {
+    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Create a new operator key and account
+    let (operator_key, operator_account) = create_new_test_account();
+
+    // Verify the corresponding account doesn't exist on-chain
+    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
+    libra_json_rpc
+        .retrieve_account_state(operator_account)
+        .unwrap_err();
+
+    // Write the key to a file using the provided file writer
+    let key_file_path = write_key_to_file(&operator_key.public_key(), &env, file_writer);
+
+    // Create the operator account
+    let backend = load_libra_root_storage(&env.validator_swarm, 0);
+    let op_human_name = "new_operator";
+    let (txn_ctx, account_address) = op_tool
+        .create_validator_operator(op_human_name, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+    assert_eq!(operator_account, account_address);
+
+    // Wait for the create operator transaction to be executed
+    let mut client = env.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify the operator account now exists on-chain
+    let account_state = libra_json_rpc
+        .retrieve_account_state(operator_account)
+        .unwrap();
+    let op_config_resource = account_state
+        .get_validator_operator_config_resource()
+        .unwrap()
+        .unwrap();
+    assert_eq!(op_human_name.as_bytes(), op_config_resource.human_name);
+}
+
+/// Creates a new validator using the given file writer and verifies
+/// the account is correctly initialized on-chain.
+fn create_validator_with_file_writer(file_writer: fn(&Ed25519PublicKey, PathBuf)) {
+    let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Create a new validator key and account
+    let (validator_key, validator_account) = create_new_test_account();
+
+    // Verify the corresponding account doesn't exist on-chain
+    let libra_json_rpc = get_json_rpc_libra_interface(&env.validator_swarm, 0);
+    libra_json_rpc
+        .retrieve_account_state(validator_account)
+        .unwrap_err();
+
+    // Write the key to a file using the provided file writer
+    let key_file_path = write_key_to_file(&validator_key.public_key(), &env, file_writer);
+
+    // Create the validator account
+    let backend = load_libra_root_storage(&env.validator_swarm, 0);
+    let val_human_name = "new_validator";
+    let (txn_ctx, account_address) = op_tool
+        .create_validator(val_human_name, key_file_path.to_str().unwrap(), &backend)
+        .unwrap();
+    assert_eq!(validator_account, account_address);
+
+    // Wait for the create validator transaction to be executed
+    let mut client = env.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify the validator account now exists on-chain
+    let account_state = libra_json_rpc
+        .retrieve_account_state(validator_account)
+        .unwrap();
+    let val_config_resource = account_state
+        .get_validator_config_resource()
+        .unwrap()
+        .unwrap();
+    assert_eq!(val_human_name.as_bytes(), val_config_resource.human_name);
+    assert!(val_config_resource.delegated_account.is_none());
+    assert!(val_config_resource.validator_config.is_none());
+}
+
 /// Launches a validator swarm of a specified size, connects an operational
 /// tool to the node at the specified index and fetches the node's secure backend.
 fn launch_swarm_with_op_tool_and_backend(
@@ -605,4 +738,16 @@ fn wait_for_transaction_on_all_nodes(
             .wait_for_transaction(account, sequence_number)
             .unwrap();
     }
+}
+
+/// Writes a given key to file using a specified file writer and test environment.
+fn write_key_to_file(
+    key: &Ed25519PublicKey,
+    env: &SmokeTestEnvironment,
+    file_writer: fn(&Ed25519PublicKey, PathBuf),
+) -> PathBuf {
+    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
+    let file_path = node_config_path.with_file_name("KEY_FILE");
+    file_writer(key, file_path.clone());
+    file_path
 }

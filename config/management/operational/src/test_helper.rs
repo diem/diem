@@ -288,6 +288,33 @@ impl OperationalTool {
         command.validate_transaction()
     }
 
+    pub fn set_validator_operator(
+        &self,
+        name: &str,
+        account_address: AccountAddress,
+        backend: &config::SecureBackend,
+    ) -> Result<TransactionContext, Error> {
+        let args = format!(
+            "
+                {command}
+                --json-server {json_server}
+                --chain-id {chain_id}
+                --name {name}
+                --account-address {account_address}
+                --validator-backend {backend_args}
+        ",
+            command = command(TOOL_NAME, CommandName::SetValidatorOperator),
+            json_server = self.host,
+            name = name,
+            chain_id = self.chain_id.id(),
+            account_address = account_address,
+            backend_args = backend_args(backend)?,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.set_validator_operator()
+    }
+
     pub fn validator_config(
         &self,
         account_address: AccountAddress,

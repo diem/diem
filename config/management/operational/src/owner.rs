@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
-use libra_management::{config::ConfigPath, error::Error, transaction::build_raw_transaction};
+use libra_management::{
+    config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
+    transaction::build_raw_transaction,
+};
 use libra_types::{account_address::AccountAddress, chain_id::ChainId};
 use structopt::StructOpt;
 
@@ -18,6 +21,8 @@ pub struct SetValidatorOperator {
     json_server: Option<String>,
     #[structopt(long, required_unless("config"))]
     chain_id: Option<ChainId>,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
 }
 
 impl SetValidatorOperator {
@@ -26,7 +31,8 @@ impl SetValidatorOperator {
             .config
             .load()?
             .override_chain_id(self.chain_id)
-            .override_json_server(&self.json_server);
+            .override_json_server(&self.json_server)
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
         let mut storage = config.validator_backend();
         let owner_address = storage.account_address(libra_global_constants::OWNER_ACCOUNT)?;
 

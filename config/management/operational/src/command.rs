@@ -280,6 +280,14 @@ impl Command {
         )
     }
 
+    pub fn set_validator_operator(self) -> Result<TransactionContext, Error> {
+        execute_command!(
+            self,
+            Command::SetValidatorOperator,
+            CommandName::SetValidatorOperator
+        )
+    }
+
     pub fn validate_transaction(self) -> Result<Option<VMStatusView>, Error> {
         execute_command!(
             self,

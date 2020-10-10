@@ -238,14 +238,14 @@ fn fetch_backend_storage(
 }
 
 /// Writes a given public key to a file specified by the given path using hex encoding.
-pub fn write_key_to_file_hex_format(key: Ed25519PublicKey, key_file_path: PathBuf) {
+pub fn write_key_to_file_hex_format(key: &Ed25519PublicKey, key_file_path: PathBuf) {
     let hex_encoded_key = hex::encode(key.to_bytes());
     let mut file = File::create(key_file_path).unwrap();
     file.write_all(&hex_encoded_key.as_bytes()).unwrap();
 }
 
 /// Writes a given public key to a file specified by the given path using lcs encoding.
-pub fn write_key_to_file_lcs_format(key: Ed25519PublicKey, key_file_path: PathBuf) {
+pub fn write_key_to_file_lcs_format(key: &Ed25519PublicKey, key_file_path: PathBuf) {
     let lcs_encoded_key = lcs::to_bytes(&key).unwrap();
     let mut file = File::create(key_file_path).unwrap();
     file.write_all(&lcs_encoded_key).unwrap();
