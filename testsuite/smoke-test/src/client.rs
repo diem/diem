@@ -15,12 +15,6 @@ use libra_types::{
 };
 
 #[test]
-fn smoke_test_multi_node() {
-    let (_swarm, client_proxy) = setup_swarm_and_client_proxy(4, 0);
-    test_smoke_script(client_proxy);
-}
-
-#[test]
 fn smoke_test_single_node() {
     let (_swarm, client_proxy) = setup_swarm_and_client_proxy(1, 0);
     test_smoke_script(client_proxy);

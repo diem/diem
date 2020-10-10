@@ -17,8 +17,7 @@ const KEY_MANAGER_BIN: &str = "libra-key-manager";
 #[test]
 #[ignore]
 fn test_key_manager_consensus_rotation() {
-    // Create and launch a local validator swarm of 2 nodes.
-    let mut env = SmokeTestEnvironment::new(2);
+    let mut env = SmokeTestEnvironment::new(1);
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.

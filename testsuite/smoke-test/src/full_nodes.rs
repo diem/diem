@@ -8,7 +8,6 @@ use libra_types::account_config::{
 
 #[test]
 fn test_full_node_basic_flow() {
-    // launch environment of 4 validator nodes and 2 full nodes
     let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
     env.setup_pfn_swarm(2);
@@ -132,8 +131,7 @@ fn test_full_node_basic_flow() {
 
 #[test]
 fn test_vfn_failover() {
-    // launch environment of 6 validator nodes and 2 full nodes
-    let mut env = SmokeTestEnvironment::new(6);
+    let mut env = SmokeTestEnvironment::new(7);
     env.setup_vfn_swarm();
     env.setup_pfn_swarm(1);
 

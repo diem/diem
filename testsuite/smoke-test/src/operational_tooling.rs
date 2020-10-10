@@ -287,7 +287,7 @@ fn test_extract_public_key() {
 
 #[test]
 fn test_network_key_rotation() {
-    let num_nodes = 5;
+    let num_nodes = 4;
     let (mut swarm, op_tool, backend, storage) =
         launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
@@ -327,7 +327,7 @@ fn test_network_key_rotation() {
 
 #[test]
 fn test_network_key_rotation_recovery() {
-    let num_nodes = 5;
+    let num_nodes = 4;
     let (mut swarm, op_tool, backend, mut storage) =
         launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 

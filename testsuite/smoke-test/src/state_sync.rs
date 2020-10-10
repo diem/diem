@@ -12,14 +12,14 @@ use std::fs;
 
 #[test]
 fn test_basic_state_synchronization() {
-    // - Start a swarm of 5 nodes (3 nodes forming a QC).
+    // - Start a swarm of 4 nodes (3 nodes forming a QC).
     // - Kill one node and continue submitting transactions to the others.
     // - Restart the node
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
 
     // we set a smaller chunk limit (=5) here to properly test multi-chunk state sync
-    let mut env = SmokeTestEnvironment::new_with_chunk_limit(5, 5);
+    let mut env = SmokeTestEnvironment::new_with_chunk_limit(4, 5);
     env.validator_swarm.launch();
     let mut client_proxy = env.get_validator_client(1, None);
 

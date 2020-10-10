@@ -30,7 +30,7 @@ use std::{
 
 #[test]
 fn test_db_restore() {
-    let (mut env, mut client1) = setup_swarm_and_client_proxy(7, 1);
+    let (mut env, mut client1) = setup_swarm_and_client_proxy(4, 1);
 
     // pre-build tools
     workspace_builder::get_bin("db-backup");
