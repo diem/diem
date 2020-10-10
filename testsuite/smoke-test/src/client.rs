@@ -4,8 +4,9 @@
 use crate::test_utils::{
     compare_balances,
     libra_swarm_utils::{get_op_tool, load_libra_root_storage},
-    setup_swarm_and_client_proxy, test_smoke_script,
+    setup_swarm_and_client_proxy,
 };
+use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
 use libra_trace::trace::trace_node;
 use libra_types::{
@@ -221,4 +222,42 @@ fn test_trace() {
     let txn_node = format!("txn::{}::{}", testnet_dd_account_address(), 1);
     println!("Tracing {}", txn_node);
     trace_node(&events[..], &txn_node);
+}
+
+/// This helper function creates 3 new accounts, mints funds, transfers funds
+/// between the accounts and verifies that these operations succeed.
+fn test_smoke_script(mut client: ClientProxy) {
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(10.0, "Coin1".to_string())],
+        client.get_balances(&["b", "0"]).unwrap(),
+    ));
+
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "1", "1", "Coin1"], true)
+        .unwrap();
+    client
+        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(7.0, "Coin1".to_string())],
+        client.get_balances(&["b", "0"]).unwrap(),
+    ));
+    assert!(compare_balances(
+        vec![(4.0, "Coin1".to_string())],
+        client.get_balances(&["b", "1"]).unwrap(),
+    ));
+
+    client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", "2", "15", "Coin1"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(15.0, "Coin1".to_string())],
+        client.get_balances(&["b", "2"]).unwrap(),
+    ));
 }

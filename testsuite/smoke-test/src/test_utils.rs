@@ -6,9 +6,7 @@ use cli::client_proxy::ClientProxy;
 use libra_config::config::{Identity, NodeConfig, SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
-use std::{
-    collections::BTreeMap, fs::File, io::Write, path::PathBuf, str::FromStr, string::ToString,
-};
+use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf, str::FromStr};
 
 // TODO(joshlind): Refactor all of these so that they can be contained within the calling
 // test files and not shared across all tests.
@@ -43,40 +41,6 @@ pub fn compare_balances(
                 false
             }
         })
-}
-
-pub fn test_smoke_script(mut client_proxy: ClientProxy) {
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(10.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
-    ));
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
-        .mint_coins(&["mintb", "1", "1", "Coin1"], true)
-        .unwrap();
-    client_proxy
-        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(7.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
-    ));
-    assert!(compare_balances(
-        vec![(4.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "1"]).unwrap(),
-    ));
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
-        .mint_coins(&["mintb", "2", "15", "Coin1"], true)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(15.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "2"]).unwrap(),
-    ));
 }
 
 /// Sets up a SmokeTestEnvironment with specified size and connects a client

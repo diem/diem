@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    smoke_test_environment::SmokeTestEnvironment,
-    test_utils::{compare_balances, test_smoke_script},
-};
+use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::compare_balances};
 use libra_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address,
 };
@@ -20,39 +17,23 @@ fn test_full_node_basic_flow() {
     env.vfn_swarm.as_mut().unwrap().launch();
     env.pfn_swarm.as_mut().unwrap().launch();
 
-    // execute smoke script
-    test_smoke_script(env.get_validator_client(0, None));
-
     // read state from full node client
-    let mut validator_client = env.get_validator_client(1, None);
+    let mut validator_client = env.get_validator_client(0, None);
     let mut vfn_client = env.get_vfn_client(1, None);
     let mut pfn_client = env.get_pfn_client(0, None);
 
-    // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
-    let sender_account = testnet_dd_account_address();
-    let creation_account = treasury_compliance_account_address();
-    vfn_client.wait_for_transaction(sender_account, 3).unwrap();
-    for idx in 0..3 {
-        validator_client.create_next_account(false).unwrap();
-        vfn_client.create_next_account(false).unwrap();
-        pfn_client.create_next_account(false).unwrap();
-        assert_eq!(
-            validator_client
-                .get_balances(&["b", &idx.to_string()])
-                .unwrap(),
-            vfn_client.get_balances(&["b", &idx.to_string()]).unwrap(),
-        );
-    }
-
     // mint from full node and check both validator and full node have correct balance
-    let account3 = validator_client.create_next_account(false).unwrap().address;
+    let account = validator_client.create_next_account(false).unwrap().address;
     vfn_client.create_next_account(false).unwrap();
     pfn_client.create_next_account(false).unwrap();
 
+    let sender_account = testnet_dd_account_address();
+    let creation_account = treasury_compliance_account_address();
     let sequence_reset = format!("sequence {} true", sender_account);
     let creation_sequence_reset = format!("sequence {} true", creation_account);
     let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
     let creation_sequence_reset_command: Vec<_> = creation_sequence_reset.split(' ').collect();
+
     vfn_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
@@ -60,13 +41,13 @@ fn test_full_node_basic_flow() {
         .get_sequence_number(&creation_sequence_reset_command)
         .unwrap();
     vfn_client
-        .mint_coins(&["mintb", "3", "10", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .expect("Fail to mint!");
-
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
-        vfn_client.get_balances(&["b", "3"]).unwrap(),
+        vfn_client.get_balances(&["b", "0"]).unwrap(),
     ));
+
     let sequence = vfn_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
@@ -75,7 +56,7 @@ fn test_full_node_basic_flow() {
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
-        validator_client.get_balances(&["b", "3"]).unwrap(),
+        validator_client.get_balances(&["b", "0"]).unwrap(),
     ));
 
     // reset sequence number for sender account
@@ -98,7 +79,7 @@ fn test_full_node_basic_flow() {
     pfn_client.create_next_account(false).unwrap();
 
     validator_client
-        .mint_coins(&["mintb", "4", "10", "Coin1"], true)
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
     let sequence = validator_client
         .get_sequence_number(&sequence_reset_command)
@@ -109,43 +90,43 @@ fn test_full_node_basic_flow() {
 
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
-        validator_client.get_balances(&["b", "4"]).unwrap(),
+        validator_client.get_balances(&["b", "1"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
-        vfn_client.get_balances(&["b", "4"]).unwrap(),
+        vfn_client.get_balances(&["b", "1"]).unwrap(),
     ));
 
     // minting again on validator doesn't cause error since client sequence has been updated
     validator_client
-        .mint_coins(&["mintb", "4", "10", "Coin1"], true)
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
 
     // test transferring balance from 0 to 1 through full node proxy
     vfn_client
-        .transfer_coins(&["tb", "3", "4", "10", "Coin1"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
 
     assert!(compare_balances(
         vec![(0.0, "Coin1".to_string())],
-        vfn_client.get_balances(&["b", "3"]).unwrap(),
+        vfn_client.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(30.0, "Coin1".to_string())],
-        validator_client.get_balances(&["b", "4"]).unwrap(),
+        validator_client.get_balances(&["b", "1"]).unwrap(),
     ));
 
     let sequence = validator_client
-        .get_sequence_number(&["sequence", &format!("{}", account3), "true"])
+        .get_sequence_number(&["sequence", &format!("{}", account), "true"])
         .unwrap();
-    pfn_client.wait_for_transaction(account3, sequence).unwrap();
+    pfn_client.wait_for_transaction(account, sequence).unwrap();
     assert!(compare_balances(
         vec![(0.0, "Coin1".to_string())],
-        pfn_client.get_balances(&["b", "3"]).unwrap(),
+        pfn_client.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(30.0, "Coin1".to_string())],
-        pfn_client.get_balances(&["b", "4"]).unwrap(),
+        pfn_client.get_balances(&["b", "1"]).unwrap(),
     ));
 }
 
