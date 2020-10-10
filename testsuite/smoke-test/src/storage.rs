@@ -30,7 +30,7 @@ use std::{
 
 #[test]
 fn test_db_restore() {
-    let (mut env, mut client1) = setup_swarm_and_client_proxy(4, 1);
+    let (mut env, mut client) = setup_swarm_and_client_proxy(4, 1);
 
     // pre-build tools
     workspace_builder::get_bin("db-backup");
@@ -38,32 +38,32 @@ fn test_db_restore() {
     workspace_builder::get_bin("db-backup-verify");
 
     // set up: two accounts, a lot of money
-    client1.create_next_account(false).unwrap();
-    client1.create_next_account(false).unwrap();
-    client1
+    client.create_next_account(false).unwrap();
+    client.create_next_account(false).unwrap();
+    client
         .mint_coins(&["mb", "0", "1000000", "Coin1"], true)
         .unwrap();
-    client1
+    client
         .mint_coins(&["mb", "1", "1000000", "Coin1"], true)
         .unwrap();
-    client1
+    client
         .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(999999.0, "Coin1".to_string())],
-        client1.get_balances(&["b", "0"]).unwrap(),
+        client.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(1000001.0, "Coin1".to_string())],
-        client1.get_balances(&["b", "1"]).unwrap(),
+        client.get_balances(&["b", "1"]).unwrap(),
     ));
 
     // start thread to transfer money from account 0 to account 1
-    let accounts = client1.copy_all_accounts();
+    let accounts = client.copy_all_accounts();
     let transfer_quit = Arc::new(AtomicBool::new(false));
     let transfer_quit_clone = transfer_quit.clone();
     let transfer_thread = std::thread::spawn(|| {
-        transfer_and_reconfig(client1, 999999.0, 1000001.0, transfer_quit_clone)
+        transfer_and_reconfig(client, 999999.0, 1000001.0, transfer_quit_clone)
     });
 
     // make a backup from node 1

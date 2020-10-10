@@ -21,26 +21,26 @@ fn test_basic_state_synchronization() {
     // we set a smaller chunk limit (=5) here to properly test multi-chunk state sync
     let mut env = SmokeTestEnvironment::new_with_chunk_limit(4, 5);
     env.validator_swarm.launch();
-    let mut client_proxy = env.get_validator_client(1, None);
+    let mut client_1 = env.get_validator_client(1, None);
 
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
+    client_1.create_next_account(false).unwrap();
+    client_1.create_next_account(false).unwrap();
+    client_1
         .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
-    client_proxy
+    client_1
         .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
-    client_proxy
+    client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
+        client_1.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "1"]).unwrap(),
+        client_1.get_balances(&["b", "1"]).unwrap(),
     ));
 
     // Test single chunk sync, chunk_size = 5
@@ -49,13 +49,13 @@ fn test_basic_state_synchronization() {
     // All these are executed while one node is down
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
+        client_1.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "1"]).unwrap(),
+        client_1.get_balances(&["b", "1"]).unwrap(),
     ));
-    client_proxy
+    client_1
         .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
         .unwrap();
 
@@ -66,15 +66,15 @@ fn test_basic_state_synchronization() {
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let mut client_proxy2 = env.get_validator_client(node_to_restart, None);
-    client_proxy2.set_accounts(client_proxy.copy_all_accounts());
+    let mut client_2 = env.get_validator_client(node_to_restart, None);
+    client_2.set_accounts(client_1.copy_all_accounts());
     assert!(compare_balances(
         vec![(89.0, "Coin1".to_string())],
-        client_proxy2.get_balances(&["b", "0"]).unwrap(),
+        client_2.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(21.0, "Coin1".to_string())],
-        client_proxy2.get_balances(&["b", "1"]).unwrap(),
+        client_2.get_balances(&["b", "1"]).unwrap(),
     ));
 
     // Test multiple chunk sync
@@ -82,14 +82,14 @@ fn test_basic_state_synchronization() {
     // All these are executed while one node is down
     assert!(compare_balances(
         vec![(89.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
+        client_1.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(21.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "1"]).unwrap(),
+        client_1.get_balances(&["b", "1"]).unwrap(),
     ));
     for _ in 0..10 {
-        client_proxy
+        client_1
             .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
             .unwrap();
     }
@@ -101,39 +101,38 @@ fn test_basic_state_synchronization() {
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let mut client_proxy2 = env.get_validator_client(node_to_restart, None);
-    client_proxy2.set_accounts(client_proxy.copy_all_accounts());
+    client_2.set_accounts(client_1.copy_all_accounts());
     assert!(compare_balances(
         vec![(79.0, "Coin1".to_string())],
-        client_proxy2.get_balances(&["b", "0"]).unwrap(),
+        client_2.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(31.0, "Coin1".to_string())],
-        client_proxy2.get_balances(&["b", "1"]).unwrap(),
+        client_2.get_balances(&["b", "1"]).unwrap(),
     ));
 }
 
 #[test]
 fn test_startup_sync_state() {
-    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(4, 1);
-    client_proxy_1.create_next_account(false).unwrap();
-    client_proxy_1.create_next_account(false).unwrap();
-    client_proxy_1
+    let (mut env, mut client_1) = setup_swarm_and_client_proxy(4, 1);
+    client_1.create_next_account(false).unwrap();
+    client_1.create_next_account(false).unwrap();
+    client_1
         .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
-    client_proxy_1
+    client_1
         .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
-    client_proxy_1
+    client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "0"]).unwrap(),
+        client_1.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "1"]).unwrap(),
+        client_1.get_balances(&["b", "1"]).unwrap(),
     ));
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
@@ -149,58 +148,54 @@ fn test_startup_sync_state() {
     fs::remove_dir_all(state_db_path).unwrap();
     assert!(env.validator_swarm.add_node(peer_to_stop).is_ok());
     // create the client for the restarted node
-    let accounts = client_proxy_1.copy_all_accounts();
-    let mut client_proxy_0 = env.get_validator_client(0, None);
+    let accounts = client_1.copy_all_accounts();
+    let mut client_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
-    client_proxy_0.set_accounts(accounts);
-    client_proxy_0
-        .wait_for_transaction(sender_address, 1)
-        .unwrap();
+    client_0.set_accounts(accounts);
+    client_0.wait_for_transaction(sender_address, 1).unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
+        client_0.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "1"]).unwrap(),
+        client_0.get_balances(&["b", "1"]).unwrap(),
     ));
-    client_proxy_1
+    client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
-    client_proxy_0
-        .wait_for_transaction(sender_address, 2)
-        .unwrap();
+    client_0.wait_for_transaction(sender_address, 2).unwrap();
     assert!(compare_balances(
         vec![(80.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
+        client_0.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(30.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "1"]).unwrap(),
+        client_0.get_balances(&["b", "1"]).unwrap(),
     ));
 }
 
 #[test]
 fn test_startup_sync_state_with_empty_consensus_db() {
-    let (mut env, mut client_proxy_1) = setup_swarm_and_client_proxy(4, 1);
-    client_proxy_1.create_next_account(false).unwrap();
-    client_proxy_1.create_next_account(false).unwrap();
-    client_proxy_1
+    let (mut env, mut client_1) = setup_swarm_and_client_proxy(4, 1);
+    client_1.create_next_account(false).unwrap();
+    client_1.create_next_account(false).unwrap();
+    client_1
         .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
-    client_proxy_1
+    client_1
         .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
-    client_proxy_1
+    client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "0"]).unwrap(),
+        client_1.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy_1.get_balances(&["b", "1"]).unwrap(),
+        client_1.get_balances(&["b", "1"]).unwrap(),
     ));
     let peer_to_stop = 0;
     env.validator_swarm.kill_node(peer_to_stop);
@@ -220,33 +215,29 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     fs::remove_dir_all(consensus_db_path).unwrap();
     assert!(env.validator_swarm.add_node(peer_to_stop).is_ok());
     // create the client for the restarted node
-    let accounts = client_proxy_1.copy_all_accounts();
-    let mut client_proxy_0 = env.get_validator_client(0, None);
+    let accounts = client_1.copy_all_accounts();
+    let mut client_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
-    client_proxy_0.set_accounts(accounts);
-    client_proxy_0
-        .wait_for_transaction(sender_address, 1)
-        .unwrap();
+    client_0.set_accounts(accounts);
+    client_0.wait_for_transaction(sender_address, 1).unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
+        client_0.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(20.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "1"]).unwrap(),
+        client_0.get_balances(&["b", "1"]).unwrap(),
     ));
-    client_proxy_1
+    client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
-    client_proxy_0
-        .wait_for_transaction(sender_address, 2)
-        .unwrap();
+    client_0.wait_for_transaction(sender_address, 2).unwrap();
     assert!(compare_balances(
         vec![(80.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "0"]).unwrap(),
+        client_0.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
         vec![(30.0, "Coin1".to_string())],
-        client_proxy_0.get_balances(&["b", "1"]).unwrap(),
+        client_0.get_balances(&["b", "1"]).unwrap(),
     ));
 }

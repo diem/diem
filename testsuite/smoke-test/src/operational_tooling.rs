@@ -37,7 +37,7 @@ use std::{
 
 #[test]
 fn test_account_resource() {
-    let (_swarm, op_tool, _, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (_env, op_tool, _, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Fetch the owner account resource
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
@@ -65,11 +65,11 @@ fn test_account_resource() {
 
 #[test]
 fn test_consensus_key_rotation() {
-    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -251,10 +251,10 @@ fn test_set_operator_and_add_new_validator() {
 
 #[test]
 fn test_extract_private_key() {
-    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Extract the operator private key to file
-    let (_, node_config_path) = load_node_config(&swarm.validator_swarm, 0);
+    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_private_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
@@ -269,10 +269,10 @@ fn test_extract_private_key() {
 
 #[test]
 fn test_extract_public_key() {
-    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Extract the operator public key to file
-    let (_, node_config_path) = load_node_config(&swarm.validator_swarm, 0);
+    let (_, node_config_path) = load_node_config(&env.validator_swarm, 0);
     let key_file_path = node_config_path.with_file_name(OPERATOR_KEY);
     let _ = op_tool
         .extract_public_key(OPERATOR_KEY, key_file_path.to_str().unwrap(), &backend)
@@ -288,13 +288,12 @@ fn test_extract_public_key() {
 #[test]
 fn test_network_key_rotation() {
     let num_nodes = 4;
-    let (mut swarm, op_tool, backend, storage) =
-        launch_swarm_with_op_tool_and_backend(num_nodes, 0);
+    let (mut env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
     wait_for_transaction_on_all_nodes(
-        &swarm,
+        &env,
         num_nodes,
         txn_ctx.address,
         txn_ctx.sequence_number + 1,
@@ -321,14 +320,14 @@ fn test_network_key_rotation() {
 
     // Restart validator
     // At this point, the `add_node` call ensures connectivity to all nodes
-    swarm.validator_swarm.kill_node(0);
-    swarm.validator_swarm.add_node(0).unwrap();
+    env.validator_swarm.kill_node(0);
+    env.validator_swarm.add_node(0).unwrap();
 }
 
 #[test]
 fn test_network_key_rotation_recovery() {
     let num_nodes = 4;
-    let (mut swarm, op_tool, backend, mut storage) =
+    let (mut env, op_tool, backend, mut storage) =
         launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Rotate the network key in storage manually and perform a key rotation using the op_tool.
@@ -340,7 +339,7 @@ fn test_network_key_rotation_recovery() {
 
     // Ensure all nodes have received the transaction
     wait_for_transaction_on_all_nodes(
-        &swarm,
+        &env,
         num_nodes,
         txn_ctx.address,
         txn_ctx.sequence_number + 1,
@@ -367,16 +366,16 @@ fn test_network_key_rotation_recovery() {
 
     // Restart validator
     // At this point, the `add_node` call ensures connectivity to all nodes
-    swarm.validator_swarm.kill_node(0);
-    swarm.validator_swarm.add_node(0).unwrap();
+    env.validator_swarm.kill_node(0);
+    env.validator_swarm.add_node(0).unwrap();
 }
 
 #[test]
 fn test_operator_key_rotation() {
-    let (swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -390,7 +389,7 @@ fn test_operator_key_rotation() {
 
     // Rotate the consensus key to verify the operator key has been updated
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -406,11 +405,11 @@ fn test_operator_key_rotation() {
 
 #[test]
 fn test_operator_key_rotation_recovery() {
-    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Rotate the operator key
     let (txn_ctx, new_operator_key) = op_tool.rotate_operator_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -462,7 +461,7 @@ fn test_operator_key_rotation_recovery() {
 
 #[test]
 fn test_print_account() {
-    let (_swarm, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Print the owner account
     let op_tool_owner_account = op_tool.print_account(OWNER_ACCOUNT, &backend).unwrap();
@@ -480,7 +479,7 @@ fn test_print_account() {
 
 #[test]
 fn test_validate_transaction() {
-    let (swarm, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Validate an unknown transaction and verify no VM state found
     let operator_account = op_tool.print_account(OPERATOR_ACCOUNT, &backend).unwrap();
@@ -493,7 +492,7 @@ fn test_validate_transaction() {
 
     // Submit a transaction (rotate the operator key) and validate the transaction execution
     let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(operator_account, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -506,7 +505,7 @@ fn test_validate_transaction() {
 
 #[test]
 fn test_validator_config() {
-    let (swarm, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+    let (env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
     // Fetch the initial validator config for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
@@ -525,7 +524,7 @@ fn test_validator_config() {
         .unwrap();
 
     // Wait for the transaction to be executed
-    let mut client = swarm.get_validator_client(0, None);
+    let mut client = env.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
         .unwrap();
@@ -547,8 +546,7 @@ fn test_validator_config() {
 #[test]
 fn test_validator_set() {
     let num_nodes = 4;
-    let (_swarm, op_tool, backend, mut storage) =
-        launch_swarm_with_op_tool_and_backend(num_nodes, 0);
+    let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
 
     // Fetch the validator config and validator info for this operator's owner
     let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;

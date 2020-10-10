@@ -9,24 +9,24 @@ use libra_json_rpc::views::VMStatusView as JsonVMStatusView;
 
 #[test]
 fn test_replay_tooling() {
-    let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
-    let json_debugger = get_libra_debugger(&swarm.validator_swarm, 0);
+    let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
+    let json_debugger = get_libra_debugger(&env.validator_swarm, 0);
 
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
+    client.create_next_account(false).unwrap();
+    client.create_next_account(false).unwrap();
+    client
         .mint_coins(&["mintb", "0", "100", "Coin1"], true)
         .unwrap();
 
-    client_proxy
+    client
         .mint_coins(&["mintb", "1", "100", "Coin1"], true)
         .unwrap();
 
-    client_proxy
+    client
         .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
         .unwrap();
 
-    let txn = client_proxy
+    let txn = client
         .get_committed_txn_by_acc_seq(&["txn_acc_seq", "0", "0", "false"])
         .unwrap()
         .unwrap();
@@ -37,9 +37,7 @@ fn test_replay_tooling() {
         .pop()
         .unwrap();
 
-    let (account, _) = client_proxy
-        .get_account_address_from_parameter("0")
-        .unwrap();
+    let (account, _) = client.get_account_address_from_parameter("0").unwrap();
     let script_path = workspace_builder::workspace_root()
         .join("language/libra-tools/transaction-replay/examples/account_exists.move");
 
@@ -48,7 +46,7 @@ fn test_replay_tooling() {
         .unwrap()
         .unwrap();
 
-    let account_creation_txn = client_proxy
+    let account_creation_txn = client
         .get_committed_txn_by_acc_seq(&[
             "txn_acc_seq",
             "0000000000000000000000000b1e55ed",

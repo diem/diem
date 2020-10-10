@@ -25,6 +25,8 @@ fn test_create_mint_transfer() {
 #[test]
 fn test_create_mint_transfer_block_metadata() {
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
+
+    // This script does 4 transactions
     check_create_mint_transfer(env.get_validator_client(0, None));
 
     let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
@@ -106,8 +108,7 @@ fn test_client_waypoints() {
         .unwrap();
 
     // Create the waypoint for the initial epoch
-    let genesis_li = client
-        .latest_epoch_change_li().unwrap();
+    let genesis_li = client.latest_epoch_change_li().unwrap();
     assert_eq!(genesis_li.ledger_info().epoch(), 0);
     let genesis_waypoint = Waypoint::new_epoch_boundary(genesis_li.ledger_info()).unwrap();
 
