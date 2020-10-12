@@ -196,6 +196,10 @@ impl Command {
         execute_command!(self, Command::AddValidator, CommandName::AddValidator)
     }
 
+    pub fn check_endpoint(self) -> Result<String, Error> {
+        execute_command!(self, Command::CheckEndpoint, CommandName::CheckEndpoint)
+    }
+
     pub fn create_validator(self) -> Result<(TransactionContext, AccountAddress), Error> {
         execute_command!(self, Command::CreateValidator, CommandName::CreateValidator)
     }

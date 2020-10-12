@@ -48,6 +48,19 @@ impl OperationalTool {
         command.account_resource()
     }
 
+    pub fn check_endpoint(&self, network_address: NetworkAddress) -> Result<String, Error> {
+        let args = format!(
+            "
+            {command}
+            --address {network_address}
+            ",
+            command = command(TOOL_NAME, CommandName::CheckEndpoint),
+            network_address = network_address,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.check_endpoint()
+    }
+
     pub fn create_account(
         &self,
         name: &str,

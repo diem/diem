@@ -79,3 +79,28 @@ impl CheckEndpoint {
         ))
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::test_helper::OperationalTool;
+    use libra_network_address::NetworkAddress;
+    use libra_types::chain_id::ChainId;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_check_endpoint() {
+        let op_tool = OperationalTool::new("unused-host".into(), ChainId::test());
+
+        // Check invalid DNS
+        let addr = NetworkAddress::from_str("/dns4/libra/tcp/80").unwrap();
+        op_tool.check_endpoint(addr).unwrap_err();
+
+        // Check if endpoint responded with data
+        let addr = NetworkAddress::from_str("/dns4/libra.org/tcp/80").unwrap();
+        op_tool.check_endpoint(addr).unwrap_err();
+
+        // Check bad port
+        let addr = NetworkAddress::from_str("/dns4/libra.org/tcp/6180").unwrap();
+        op_tool.check_endpoint(addr).unwrap_err();
+    }
+}
