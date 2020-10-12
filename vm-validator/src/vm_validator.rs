@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use fail::fail_point;
 use libra_state_view::StateViewId;
 use libra_types::{
     account_address::AccountAddress,
@@ -55,6 +56,11 @@ impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVMValidator;
 
     fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
+        fail_point!("vm_validator::validate_transaction", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in vm_validator::validate_transaction"
+            ))
+        });
         use libra_vm::VMValidator;
 
         let (version, state_root) = self.db_reader.get_latest_state_root()?;
@@ -87,6 +93,11 @@ impl TransactionValidation for VMValidator {
 
 /// returns account's sequence number from storage
 pub fn get_account_sequence_number(storage: &dyn DbReader, address: AccountAddress) -> Result<u64> {
+    fail_point!("vm_validator::get_account_sequence_number", |_| {
+        Err(anyhow::anyhow!(
+            "Injected error in get_account_sequence_number"
+        ))
+    });
     match storage.get_latest_account_state(address)? {
         Some(blob) => Ok(AccountResource::try_from(&blob)?.sequence_number()),
         None => Ok(0),

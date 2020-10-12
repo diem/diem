@@ -70,3 +70,4 @@ failpoints:
   state_sync::request_sync: 1%return
   state_sync::apply_chunk: 1%return
   state_sync::process_chunk_request: 0.1%return
+  mempool::send_to: 1%return

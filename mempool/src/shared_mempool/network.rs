@@ -5,6 +5,7 @@
 
 use crate::counters;
 use channel::message_queues::QueueStyle;
+use fail::fail_point;
 use libra_metrics::IntCounterVec;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
@@ -101,6 +102,9 @@ impl MempoolNetworkSender {
         recipient: PeerId,
         message: MempoolSyncMsg,
     ) -> Result<(), NetworkError> {
+        fail_point!("mempool::send_to", |_| {
+            Err(anyhow::anyhow!("Injected error in mempool::send_to").into())
+        });
         let protocol = ProtocolId::MempoolDirectSend;
         self.inner.send_to(recipient, protocol, message)
     }
