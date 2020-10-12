@@ -59,7 +59,7 @@ impl Experiment for VfnFailover {
             println!("in job bringing V down and back");
             tokio::time::delay_for(Duration::from_secs(60)).await;
             v_to_fail.stop().await.expect("failed to fail V");
-            tokio::time::delay_for(Duration::from_secs(30)).await;
+            tokio::time::delay_for(Duration::from_secs(15)).await;
             v_to_fail.start().await.expect("failed to restart down V");
         };
 

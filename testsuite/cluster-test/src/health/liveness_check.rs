@@ -14,7 +14,7 @@ pub struct LivenessHealthCheck {
     last_committed: HashMap<String, LastCommitInfo>,
 }
 
-const MAX_BEHIND: Duration = Duration::from_secs(120);
+const MAX_BEHIND: Duration = Duration::from_secs(1200);
 
 #[derive(Default)]
 struct LastCommitInfo {
