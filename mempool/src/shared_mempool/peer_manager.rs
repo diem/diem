@@ -315,7 +315,7 @@ impl PeerManager {
             .observe(num_txns as f64);
         counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
             .with_label_values(&[network_id, &peer_id_str])
-            .inc();
+            .set(state.broadcast_info.sent_batches.len() as i64);
         counters::SHARED_MEMPOOL_BROADCAST_LATENCY
             .with_label_values(&[network_id, &peer_id_str])
             .observe(start_time.elapsed().as_secs_f64());
