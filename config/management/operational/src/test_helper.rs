@@ -51,8 +51,8 @@ impl OperationalTool {
     pub fn check_endpoint(&self, network_address: NetworkAddress) -> Result<String, Error> {
         let args = format!(
             "
-            {command}
-            --address {network_address}
+                {command}
+                --address {network_address}
             ",
             command = command(TOOL_NAME, CommandName::CheckEndpoint),
             network_address = network_address,
@@ -182,9 +182,9 @@ impl OperationalTool {
     ) -> Result<AccountAddress, Error> {
         let args = format!(
             "
-            {command}
-            --account-name {account_name}
-            --validator-backend {backend_args}
+                {command}
+                --account-name {account_name}
+                --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::PrintAccount),
             account_name = account_name,
@@ -290,7 +290,7 @@ impl OperationalTool {
                 --json-server {host}
                 --account-address {account_address}
                 --sequence-number {sequence_number}
-        ",
+            ",
             command = command(TOOL_NAME, CommandName::ValidateTransaction),
             host = self.host,
             account_address = account_address,
@@ -315,7 +315,7 @@ impl OperationalTool {
                 --name {name}
                 --account-address {account_address}
                 --validator-backend {backend_args}
-        ",
+            ",
             command = command(TOOL_NAME, CommandName::SetValidatorOperator),
             json_server = self.host,
             name = name,
@@ -339,7 +339,7 @@ impl OperationalTool {
                 --json-server {json_server}
                 --account-address {account_address}
                 --validator-backend {backend_args}
-        ",
+            ",
             command = command(TOOL_NAME, CommandName::ValidatorConfig),
             json_server = self.host,
             account_address = account_address,
@@ -361,7 +361,7 @@ impl OperationalTool {
                 {account_address}
                 --json-server {json_server}
                 --validator-backend {backend_args}
-        ",
+            ",
             command = command(TOOL_NAME, CommandName::ValidatorSet),
             json_server = self.host,
             account_address = optional_arg("account-address", account_address),
@@ -379,11 +379,11 @@ impl OperationalTool {
     ) -> Result<TransactionContext, Error> {
         let args = format!(
             "
-            {command}
-            --json-server {host}
-            --chain-id {chain_id}
-            --account-address {account_address}
-            --validator-backend {backend_args}
+                {command}
+                --json-server {host}
+                --chain-id {chain_id}
+                --account-address {account_address}
+                --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::AddValidator),
             host = self.host,
@@ -402,11 +402,11 @@ impl OperationalTool {
     ) -> Result<TransactionContext, Error> {
         let args = format!(
             "
-            {command}
-            --json-server {host}
-            --chain-id {chain_id}
-            --account-address {account_address}
-            --validator-backend {backend_args}
+                {command}
+                --json-server {host}
+                --chain-id {chain_id}
+                --account-address {account_address}
+                --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::RemoveValidator),
             host = self.host,
