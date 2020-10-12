@@ -73,6 +73,11 @@ These explanations are based off of the human-understandable explanations provid
 [Move Explain](https://github.com/libra/libra/tree/master/language/tools/move-explain)
 tool which can also be called on the command-line.
 
+### Specifications
+
+Transaction scripts come together with formal specifications. See [this document](./spec_documentation.md)
+for a discussion of specifications and pointers to further documentation.
+
 ---
 ## Transaction Script Summaries
 ---

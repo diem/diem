@@ -12,6 +12,9 @@ Move modules are not directly called by clients, but instead are used to impleme
 For documentation of transaction scripts which constitute the client API, see
 [../../transaction_scripts/doc/transaction_script_documentation.md](../../transaction_scripts/doc/transaction_script_documentation.md).
 
+Move modules come together with formal specifications. See [this document](../../transaction_scripts/doc/spec_documentation.md)
+for a discussion of specifications and pointers to further documentation.
+
 The Move modules in the Libra Framework can be bucketed in to a couple categories:
 
 
