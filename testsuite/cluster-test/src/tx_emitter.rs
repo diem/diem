@@ -439,22 +439,25 @@ impl TxEmitter {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
-        let num_seed_accounts = if requested_accounts / req.instances.len() > MAX_CHILD_VASP_NUM {
-            requested_accounts / MAX_CHILD_VASP_NUM + 1
-        } else {
-            req.instances.len()
-        };
+        let expected_num_seed_accounts =
+            if requested_accounts / req.instances.len() > MAX_CHILD_VASP_NUM {
+                requested_accounts / MAX_CHILD_VASP_NUM + 1
+            } else {
+                req.instances.len()
+            };
         let num_accounts = requested_accounts - self.accounts.len(); // Only minting extra accounts
-        let num_new_child_accounts = (num_accounts + num_seed_accounts - 1) / num_seed_accounts;
         let coins_per_account = (SEND_AMOUNT + req.gas_price) * MAX_TXNS;
-        let coins_per_seed_account = coins_per_account * num_new_child_accounts as u64;
         let coins_total = coins_per_account * num_accounts as u64;
 
         let mut faucet_account = self.get_money_source(&req.instances, coins_total).await?;
         // Create seed accounts with which we can create actual accounts concurrently
         let seed_accounts = self
-            .get_seed_accounts(&req.instances, num_seed_accounts)
+            .get_seed_accounts(&req.instances, expected_num_seed_accounts)
             .await?;
+        let actual_num_seed_accounts = seed_accounts.len();
+        let num_new_child_accounts =
+            (num_accounts + actual_num_seed_accounts - 1) / actual_num_seed_accounts;
+        let coins_per_seed_account = coins_per_account * num_new_child_accounts as u64;
         mint_to_new_accounts(
             &mut faucet_account,
             &seed_accounts,
@@ -468,7 +471,7 @@ impl TxEmitter {
         info!("Completed minting seed accounts");
         info!("Minting additional {} accounts", num_accounts);
 
-        let seed_rngs = gen_rng_for_reusable_account(num_seed_accounts);
+        let seed_rngs = gen_rng_for_reusable_account(actual_num_seed_accounts);
         // For each seed account, create a future and transfer libra from that seed account to new accounts
         let account_futures = seed_accounts
             .into_iter()
