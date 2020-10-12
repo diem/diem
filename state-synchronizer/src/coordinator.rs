@@ -12,6 +12,7 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{bail, ensure, format_err, Result};
+use fail::fail_point;
 use futures::{
     channel::{mpsc, oneshot},
     stream::select_all,
@@ -401,6 +402,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// StateSynchronizer assumes that it's the only one modifying the storage (consensus is not
     /// trying to commit transactions concurrently).
     fn request_sync(&mut self, request: SyncRequest) -> Result<()> {
+        fail_point!("state_sync::request_sync", |_| {
+            Err(anyhow::anyhow!("Injected error in request_sync"))
+        });
         let local_li_version = self.local_state.highest_local_li.ledger_info().version();
         let target_version = request.target.ledger_info().version();
         debug!(
@@ -606,6 +610,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 .chunk_req(&request)
                 .local_li_version(self.local_state.highest_local_li.ledger_info().version())
         );
+        fail_point!("state_sync::process_chunk_request", |_| {
+            Err(anyhow::anyhow!("Injected error in process_chunk_request"))
+        });
         self.sync_state_with_local_storage()?;
 
         match request.target().clone() {
@@ -820,6 +827,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::Received)
                 .chunk_resp(&response)
         );
+        fail_point!("state_sync::apply_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in apply_chunk"))
+        });
 
         if !self.request_manager.is_known_upstream_peer(peer) {
             counters::RESPONSE_FROM_DOWNSTREAM_COUNT

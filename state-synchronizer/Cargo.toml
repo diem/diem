@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.33"
+fail = "0.4.0"
 futures = "0.3.6"
 serde = { version = "1.0.116", default-features = false }
 once_cell = "1.4.1"
@@ -67,4 +68,5 @@ vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
 default = []
+failpoints = ["fail/failpoints"]
 fuzzing = ["vm-genesis", "proptest", "libra-network-address/fuzzing", "libra-config/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "libra-proptest-helpers", "memsocket/fuzzing"]

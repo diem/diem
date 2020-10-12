@@ -6115,6 +6115,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
+ "fail",
  "futures 0.3.6",
  "itertools 0.9.0",
  "libra-canonical-serialization",

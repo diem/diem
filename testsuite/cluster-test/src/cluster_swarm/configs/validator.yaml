@@ -67,3 +67,6 @@ failpoints:
   executor::commit_chunk: 1%return
   executor::vm_execute_block: 1%return
   #executor::commit_blocks: 0.01%return
+  state_sync::request_sync: 1%return
+  state_sync::apply_chunk: 1%return
+  state_sync::process_chunk_request: 0.1%return

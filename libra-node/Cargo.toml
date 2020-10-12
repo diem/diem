@@ -46,4 +46,4 @@ subscription-service = { path = "../common/subscription-service", version = "0.1
 [features]
 default = []
 assert-private-keys-not-cloneable = ["libra-crypto/assert-private-keys-not-cloneable"]
-failpoints = ["fail/failpoints", "consensus/failpoints", "executor/failpoints", "libra-json-rpc/failpoints"]
+failpoints = ["fail/failpoints", "consensus/failpoints", "executor/failpoints", "libra-json-rpc/failpoints", "state-synchronizer/failpoints"]
