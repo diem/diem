@@ -5,7 +5,7 @@
 | Name                       | Type           | Description                                    |
 |----------------------------|----------------|------------------------------------------------|
 | version                    | unsigned int64 | The latest block (ledger) version              |
-| timestamp                  | unsigned int64 | The latest block (ledger) timestamp            |
+| timestamp                  | unsigned int64 | The latest block (ledger) timestamp, unit is microsecond |
 | chain_id                   | unsigned int8  | Chain ID of the Libra network                  |
 | script_hash_allow_list     | List<string>   | List of allowed scripts hex-encoded hash bytes, server may not return this field if the allow list not found in on chain configuration. |
 | module_publishing_allowed  | boolean        | True for allowing publishing customized script, server may not return this field if the flag not found in on chain configuration. |

@@ -22,32 +22,40 @@ This file is a checklist of requirement & technical details for a Libra client S
   - Transport layer error, e.g. HTTP call failure.
   - JSON-RPC protocol error: e.g. server responds to non json data, or can't be parsed into [Libra JSON-RPC SPEC][1] defined data structure, or missing result & error field.
   - JSON-RPC error: error returned from server.
-- [ ] https.
+- [ ] Supports https.
 - [ ] Client connection pool.
 - [ ] Handle stale responses:
+  - [ ] Parse libra_chain_id, libra_ledger_version and libra_ledger_tiemstamp in the JSONRPC response.
   - [ ] client tracks latest server response block version and timestamp, raise error when received server response contains stale version / timestamp.
-    - [ ] last known blockchain version >= response version + 30: when connecting to a cluster of fullnodes, it is possible some fullnodes are behind the head couple versions.
-    - [ ] last known blockchain timestamp >= response timestamp + 30 seconds.
-  - [ ] parse and use libra_chain_id, libra_ledger_version and libra_ledger_tiemstamp in the JSONRPC response.
-- [ ] Parsing and gen Libra Account Identifier (see [LIP-5][2])
-  - bech32 addresses/subaddresses support
+    - [ ] last known blockchain version <= response version: when connecting to a cluster of fullnodes, it is possible some fullnodes are behind the head couple versions.
+    - [ ] last known blockchain timestamp <= response timestamp.
+    - [ ] Query / get actions/methods should retry on stable response error. Otherwise client may get the following confusing result:
+      - After submit and wait for a transaction executed successfully.
+      - Call get_account method to get back latest account balances.
+      - It is possible we get back an account balance from a stale server that is before the transaction executed. Then the account balance is still before transaction executed balance.
+    - [ ] Do not retry for submit transaction call, because the submitted transaction can be synced correctly even you submitted it to a stale server. You may receive a JSON-RPC error if same transaction was submitted twice.
+    - [ ] The retry logic should be configured when initializing the Client, so that client application can control the behavior and even remove the try for them to handle retry properly for async environment.
 - [ ] language specific standard release publish: e.g. java maven central repo, python pip
-- [ ] Multi-network: initialize Client with chain id, JSON-RPC server URL
-- [ ] Handle unsigned int64 data type properly
-- [ ] Validate server chain id: client should be initialized with chain id and validate server response chain id is the same.
+- [ ] Initialize a Client with chain id, JSON-RPC server URL.
+  - Chain id is used for validating get methods response, making sure we are connecting to expected network.
+  - Client can choose to initialize chain id by first server call.
+- [ ] Handle unsigned int64 data type properly. Can be simply mark the type as unsigned int64 and use int64.
 - [ ] Validate input parameters, e.g. invalid account address: "kkk". Should return / raise InvalidArgumentError.
-- [ ] Send request with "client sdk name / version" as HTTP User-Agent: this is for server to recognize client sdk version, so that server can block a specific client version if we found unacceptable bugs.
-- [ ] Decode transaction script bytes
+- [ ] Send request with "client sdk name / version" as HTTP User-Agent: this is for server to recognize client sdk version.
+- [ ] Decode transaction script bytes: it is possible we may add new transaction script without upgrading server, hence client decoding logic is important for client to recognize all transaction scripts.
+    By upgrading client side move stdlib scripts (binary and generated type information code), we can decode latest move stdlib scripts executed on-chain.
+- [ ] Create transaction hash from signed transaction: hex-encode(sha3-256([]byte("LIBRA::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/libra-client-sdk-go/blob/master/libratypes/hash.go#L27))
 
-# [LIP-4][7] support
+# [LIP-4][7] Transaction Metadata support
 
-- [ ] Non-custodial to custodial transaction
-- [ ] Custodial to non-custodial transaction
-- [ ] Custodial to Custodial transaction
-- [ ] Refund
+- [ ] Non-custodial to custodial transaction metadata
+- [ ] Custodial to non-custodial transaction metadata
+- [ ] Custodial to Custodial transaction metadata and signature
+- [ ] Refund metadata
 
-# [LIP-5][2] support
+# [LIP-5][2] Address Formating support
 
+- [ ] bech32 encoding/decoding
 - [ ] Encode and decode account identifier
 - [ ] Encode and decode intent identifier
 
@@ -76,8 +84,12 @@ This file is a checklist of requirement & technical details for a Libra client S
   - when transaction execution vm_status is not "executed", it should return / raise TransactionExecutionFailure
   - when transaction expired, it should return / raise TransactionExpiredError: compare the transaction expirationTimeSec with response latest ledger timestamp. If response latest ledger timestamp >= transaction expirationTimeSec, then we are sure the transaction will never be executed successfully.
     - Note: response latest ledger timestamp unit is microsecond, expirationTimeSec's unit is second.
+- [ ] wait for transaction(submitted signed transaction, timeout):
+  - decode submitted signed transaction
+  - create transaction hash from submitted signed transaction.
+  - call waitForTransaction(accountAddress, sequence, transcationHash, expirationTimeSec, timeout):
 
-# Testnet support
+# Testing & Testnet support
 
 - [ ] Generate ed25519 private key, derive ed25519 public keys from private key.
 - [ ] Generate Single auth-keys

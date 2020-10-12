@@ -21,6 +21,7 @@ List of released stable methods (unless specifically mentioned, all parameters a
 ## Official Client SDKs
 
 * [Go] (https://github.com/libra/libra-client-sdk-go)
+* [Java] (https://github.com/libra/libra-client-sdk-java)
 
 
 ## JSON-RPC specification

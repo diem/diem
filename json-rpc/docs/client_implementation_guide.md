@@ -99,12 +99,12 @@ There are several development tools available for you:
 
 Here we give an example of how to create and sign transactions with option 1 in Java. Please follow the guide at [Transaction Builder Generator][12] to generate code into your project.
 
-**Example**: create and sign a transaction that transfers 12 LBR coins from account1 to account2.
+**Example**: create and sign a transaction that transfers 12 Coint1 coins from account1 to account2.
 
 ```Java
 
 ChainId testNetChainID = new ChainId((byte) 2); // Testnet chain id is static value
-String currencyCode = "LBR";
+String currencyCode = "Coin1";
 String account1_address = "a74fd7c46952c497e75afb0a7932586d";
 String account1_public_key = "447fc3be296803c2303951c7816624c7566730a5cc6860a4a1bd3c04731569f5";
 String account1_private_key = "cd9a2c90296a210249128ae3c908611637b2e00efd4986670e252abf3fabd1a9";
@@ -279,24 +279,46 @@ We can call [get_account_transaction](method_get_account_transaction.md) to find
 If transaction has not been executed yet, server responses null:
 
 ```Java
+public Transaction waitForTransaction(String address, @Unsigned long sequence, String transactionHash,
+    @Unsigned long expirationTimeSec, int timeout) throws LibraException {
 
-private Transaction waitForTransaction(String address, long sequence, boolean includeEvents, long timeoutMillis) throws Exception {
-    for (long millis = 0, step = 100; millis < timeoutMillis; millis += step) {
-        Transaction transaction = this.getAccountTransaction(address, sequence, includeEvents);
-        if (transaction != null) {
-            return transaction;
+    Calendar calendar = Calendar.getInstance();
+    calendar.add(Calendar.SECOND, timeout);
+    Date maxTime = calendar.getTime();
+
+    while (Calendar.getInstance().getTime().before(maxTime)) {
+        Transaction accountTransaction = getAccountTransaction(address, sequence, true);
+
+        if (accountTransaction != null) {
+            if (!accountTransaction.getHash().equalsIgnoreCase(transactionHash)) {
+                throw new LibraException(
+                        String.format("found transaction, but hash does not match, given %s, but got %s",
+                                transactionHash, accountTransaction.getHash()));
+            }
+            if (!txn.getVmStatus() != null && "executed".equalsIgnoreCase(accountTransaction.getVmStatus().getType())) {
+                throw new LibraTransactionExecutionFailedException(
+                        String.format("transaction execution failed: %s", accountTransaction.getVmStatus()));
+            }
+
+            return accountTransaction;
         }
-        Thread.sleep(step);
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    return null;
+    throw new LibraWaitForTransactionTimeoutException(
+            String.format("transaction not found within timeout period: %d (seconds)", timeout));
 }
-
 ```
 
-After the transaction shows up, we should do the following 2 validations:
-1. transaction#signature should be the same with the signature we created for `SignedTransaction`. This makes sure the transaction we got is the one we submitted.
+In above example code, we do the following 2 validations after the transaction showed up:
+1. transaction#hash should be the same with the hash we created for `SignedTransaction`. This makes sure the transaction we got is the one we submitted.
 2. transaction#vm_status#type should be "executed". Type "executed" means the transaction is executed successfully, all other types are failures. See [VMStatus](type_transaction.md#type-vmstatus) doc for more details.
+
+We also should have a wait timeout for the case if the transaction is dropped some where for unknown reason.
 
 ### Error Handling
 
@@ -316,7 +338,8 @@ Distinguish above four types errors can help application developer to decide wha
 
 Other than general error handling, another type of error that client / application should pay attention to is server side stale response. This type problem happens when a Full Node is out of sync with the Libra network, or you connected to a sync delayed Full Node in a cluster of Full Nodes. To prevent these problems, we need:
 - Track server side data freshness, Libra JSON-RPC server will always respond `libra_ledger_version` and `libra_ledger_timestampusec` (see [Libra Extensions](./../json-rpc-spec.md#libra-extensions)) for clients to validate and track server side data freshness.
-- Use http connection pool to keep connection alive and reuse, so that it's likely we can hit the same Full Node server and less likely to get in-consistent data because of hitting different Full Node in a cluster.
+- Retry query / get methods calls when response is from a stale server.
+- Do not retry for submit transaction call, because the submitted transaction can be synced correctly even you submitted it to a stale server. You may receive a JSON-RPC error if submitted same transaction.
 
 ### More
 
