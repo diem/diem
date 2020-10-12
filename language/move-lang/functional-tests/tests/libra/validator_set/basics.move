@@ -1,6 +1,7 @@
 //! account: bob, 1000000, 0, validator
 //! account: vivian, 1000000, 0, validator
 //! account: alice, 0, 0, address
+//! account: alex, 0, 0, address
 
 //! new-transaction
 script {
@@ -10,6 +11,16 @@ fun main(account: &signer) {
 }
 }
 // check: "Keep(ABORTED { code: 1,"
+
+//! new-transaction
+script {
+use 0x1::LibraSystem;
+fun main() {
+    let len = LibraSystem::validator_set_size();
+    LibraSystem::get_ith_validator_address(len);
+}
+}
+// check: "Keep(ABORTED { code: 1287,"
 
 //! new-transaction
 script {
@@ -150,3 +161,20 @@ script {
     }
 }
 // check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{alex}}, {{alex::auth_key}}, b"alex"
+stdlib_script::create_validator_operator_account
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: alex
+script {
+use 0x1::ValidatorOperatorConfig;
+fun main(lr_account: &signer, alex_signer: &signer) {
+    ValidatorOperatorConfig::publish(alex_signer, lr_account, b"alex");
+}
+}
+// check: "Discard(INVALID_WRITE_SET)"

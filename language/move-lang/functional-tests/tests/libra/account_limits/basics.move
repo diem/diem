@@ -20,7 +20,6 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: libraroot
@@ -33,7 +32,6 @@ fun main(lr: &signer, bob_account: &signer) {
     AccountLimits::publish_window<Coin1>(lr, bob_account, {{bob}});
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -45,7 +43,6 @@ fun main(lr: &signer, bob_account: &signer) {
     AccountLimits::publish_window<Coin1>(lr, bob_account, {{bob}});
 }
 }
-// check: INVALID_WRITE_SET
 
 //! new-transaction
 //! sender: bob
@@ -56,7 +53,6 @@ fun main(bob_account: &signer) {
     AccountLimits::publish_window<Coin1>(bob_account, bob_account, {{bob}});
 }
 }
-// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: bob
@@ -67,7 +63,6 @@ fun main(bob_account: &signer) {
     AccountLimits::publish_unrestricted_limits<Coin1>(bob_account);
 }
 }
-// check: "Keep(ABORTED { code: 6,"
 
 //! new-transaction
 //! sender: blessed
@@ -85,7 +80,6 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -103,7 +97,6 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -121,7 +114,40 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::AccountLimits;
+use 0x1::Coin1::Coin1;
+fun main(tc: &signer) {
+    AccountLimits::update_limits_definition<Coin1>(
+        tc,
+        {{default}},
+        0, /* new_max_inflow */
+        0, /* new_max_outflow */
+        150, /* new_max_holding_balance */
+        10000, /* new_time_period */
+    )
+}
+}
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::AccountLimits;
+use 0x1::Coin1::Coin1;
+fun main(tc: &signer) {
+    AccountLimits::update_limits_definition<Coin1>(
+        tc,
+        {{bob}},
+        0, /* new_max_inflow */
+        0, /* new_max_outflow */
+        150, /* new_max_holding_balance */
+        10000, /* new_time_period */
+    )
+}
+}
 
 //! new-transaction
 //! sender: blessed
@@ -137,7 +163,6 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -153,7 +178,6 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -169,7 +193,6 @@ fun main(tc: &signer) {
     )
 }
 }
-// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: libraroot
@@ -185,7 +208,6 @@ fun main(lr: &signer) {
     )
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -196,7 +218,6 @@ fun main() {
     assert(AccountLimits::limits_definition_address<Coin1>({{bob}}) == {{bob}}, 0);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -209,4 +230,14 @@ fun main() {
     assert(!AccountLimits::has_limits_published<Coin1>({{alice}}), 3);
 }
 }
-// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: bob
+script {
+use 0x1::AccountLimits;
+use 0x1::Coin1::Coin1;
+fun main(lr: &signer, bob_account: &signer) {
+    AccountLimits::publish_window<Coin1>(lr, bob_account, {{default}});
+}
+}

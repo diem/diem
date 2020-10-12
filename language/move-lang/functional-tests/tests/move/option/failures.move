@@ -56,3 +56,25 @@ fun main() {
 }
 
 // check: "Keep(ABORTED { code: 7,"
+
+//! new-transaction
+script {
+use 0x1::Option;
+
+fun main() {
+    let option = Option::none<u64>();
+    Option::swap(&mut option, 1);
+}
+}
+// check: "Keep(ABORTED { code: 263,"
+
+//! new-transaction
+script {
+use 0x1::Option;
+
+fun main() {
+    let option = Option::some(10);
+    Option::destroy_none(option);
+}
+}
+// check: "Keep(ABORTED { code: 7,"

@@ -559,7 +559,6 @@ module Libra {
         // destroy the coin in Preburn area
         let Libra { value } = withdraw_all<CoinType>(&mut preburn.to_burn);
         // update the market cap
-        // > TODO(tzakian): this assertion should be moved to the top of this function.
         assert_is_currency<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         assert(info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));

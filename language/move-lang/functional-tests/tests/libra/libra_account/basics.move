@@ -159,3 +159,39 @@ stdlib_script::create_parent_vasp_account
 //! args: 0, {{abby}}, x"", b"bob", true
 stdlib_script::create_parent_vasp_account
 // check: "Keep(ABORTED { code: 2055,"
+
+//! new-transaction
+script {
+use 0x1::LibraAccount;
+fun main() {
+    LibraAccount::sequence_number(0x1);
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+//! new-transaction
+script {
+use 0x1::LibraAccount;
+fun main() {
+    LibraAccount::authentication_key(0x1);
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+//! new-transaction
+script {
+use 0x1::LibraAccount;
+fun main() {
+    LibraAccount::delegated_key_rotation_capability(0x1);
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+//! new-transaction
+script {
+use 0x1::LibraAccount;
+fun main() {
+    LibraAccount::delegated_withdraw_capability(0x1);
+}
+}
+// check: "Keep(ABORTED { code: 5,"

@@ -92,3 +92,45 @@ fun main(lr_account: &signer) {
 }
 }
 // check: "Keep(ABORTED { code: 262,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+use {{default}}::Holder;
+fun main(lr_account: &signer) {
+    let (a, b) = Libra::register_currency<u64>(
+        lr_account,
+        FixedPoint32::create_from_rational(1,1),
+        false,
+        0, // scaling factor
+        100,
+        x""
+    );
+    Holder::hold(lr_account, a);
+    Holder::hold(lr_account, b);
+}
+}
+// check: "Keep(ABORTED { code: 263,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+use {{default}}::Holder;
+fun main(lr_account: &signer) {
+    let (a, b) = Libra::register_currency<u64>(
+        lr_account,
+        FixedPoint32::create_from_rational(1,1),
+        false,
+        1000000000000000, // scaling factor > MAX_SCALING_FACTOR
+        100,
+        x""
+    );
+    Holder::hold(lr_account, a);
+    Holder::hold(lr_account, b);
+}
+}
+// check: "Keep(ABORTED { code: 263,"

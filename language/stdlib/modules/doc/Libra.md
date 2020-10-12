@@ -1515,7 +1515,6 @@ resource under <code>preburn_address</code>, or, if the preburn <code>to_burn</c
     // destroy the coin in <a href="Libra.md#0x1_Libra_Preburn">Preburn</a> area
     <b>let</b> <a href="Libra.md#0x1_Libra">Libra</a> { value } = <a href="Libra.md#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
-    // &gt; TODO(tzakian): this assertion should be moved <b>to</b> the top of this function.
     <a href="Libra.md#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>assert</b>(info.total_value &gt;= (value <b>as</b> u128), <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="Libra.md#0x1_Libra_ECURRENCY_INFO">ECURRENCY_INFO</a>));

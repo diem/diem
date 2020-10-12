@@ -461,9 +461,9 @@ module LibraSystem {
             return false
         };
         let validator_info = Vector::borrow_mut(validators, i);
-        // I believe "is_valid" below always holds, based on a global invariant later
+        // "is_valid" below should always hold based on a global invariant later
         // in the file (which proves if we comment out some other specifications),
-        // but left it here for safety.
+        // but it is left here for safety.
         if (!ValidatorConfig::is_valid(validator_info.addr)) {
             return false
         };

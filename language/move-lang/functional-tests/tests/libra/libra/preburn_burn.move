@@ -272,3 +272,16 @@ fun main(account: &signer) {
 }
 }
 // check: "Keep(ABORTED { code: 1025,"
+
+//! new-transaction
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    Libra::publish_burn_capability(
+        account,
+        Libra::remove_burn_capability<Coin1>(account)
+    );
+}
+}
+// check: "Keep(ABORTED { code: 4,"

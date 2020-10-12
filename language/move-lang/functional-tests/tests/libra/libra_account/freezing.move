@@ -288,3 +288,33 @@ script {
     }
 }
 // check: "Keep(ABORTED { code: 1281,"
+
+//! new-transaction
+//! sender: alice
+script {
+use 0x1::AccountFreezing;
+fun main(account: &signer) {
+    AccountFreezing::create(account);
+}
+}
+// check: "Keep(ABORTED { code: 518,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::AccountFreezing;
+fun main(account: &signer) {
+    AccountFreezing::freeze_account(account, 0x0);
+}
+}
+// check: "Keep(ABORTED { code: 517,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::AccountFreezing;
+fun main(account: &signer) {
+    AccountFreezing::unfreeze_account(account, 0x0);
+}
+}
+// check: "Keep(ABORTED { code: 517,"

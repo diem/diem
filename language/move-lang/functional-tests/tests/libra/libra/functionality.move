@@ -228,3 +228,18 @@ fun main(account: &signer) {
 }
 }
 // check: "Keep(ABORTED { code: 1026,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(tc_account: &signer) {
+    let max_u64 = 18446744073709551615;
+    let coin1 = Libra::mint<Coin1>(tc_account, max_u64);
+    let coin2 = Libra::mint<Coin1>(tc_account, 1);
+    Libra::deposit(&mut coin1, coin2);
+    Libra::destroy_zero(coin1);
+}
+}
+// check: "Keep(ABORTED { code: 1800,"

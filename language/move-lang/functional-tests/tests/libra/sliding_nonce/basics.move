@@ -15,7 +15,6 @@ script {
         SlidingNonce::record_nonce_or_abort(account, 129);
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -26,7 +25,6 @@ script {
         SlidingNonce::record_nonce_or_abort(account, 1);
     }
 }
-// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: bob
@@ -37,4 +35,63 @@ script {
         SlidingNonce::publish_nonce_resource(account, account);
     }
 }
-// check: "Keep(ABORTED { code: 2,"
+
+//! new-transaction
+script {
+    use 0x1::SlidingNonce;
+    fun main(account: &signer) {
+        SlidingNonce::try_record_nonce(account, 1);
+    }
+}
+
+//! new-transaction
+script {
+    use 0x1::SlidingNonce;
+    fun main(account: &signer) {
+        SlidingNonce::publish(account);
+    }
+}
+
+//! new-transaction
+script {
+    use 0x1::SlidingNonce;
+    fun main(account: &signer) {
+        SlidingNonce::publish(account);
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: default
+script {
+    use 0x1::SlidingNonce;
+    fun main(lr_account: &signer, default_account: &signer) {
+        SlidingNonce::publish_nonce_resource(lr_account, default_account);
+    }
+}
+
+//! new-transaction
+script {
+    use 0x1::SlidingNonce;
+    fun main(account: &signer) {
+        SlidingNonce::publish(account);
+    }
+}
+
+//! new-transaction
+script {
+    use 0x1::SlidingNonce;
+    fun main(account: &signer) {
+        SlidingNonce::publish(account);
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: default
+script {
+    use 0x1::SlidingNonce;
+    fun main(lr_account: &signer, default_account: &signer) {
+        SlidingNonce::publish_nonce_resource(lr_account, default_account);
+    }
+}
