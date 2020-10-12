@@ -1,5 +1,7 @@
 address 0x1 {
 
+/// Stores the string name of a ValidatorOperator account.
+
 module ValidatorOperatorConfig {
     use 0x1::Errors;
     use 0x1::Signer;

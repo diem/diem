@@ -3,6 +3,7 @@
 
 # Module `0x1::ValidatorOperatorConfig`
 
+Stores the string name of a ValidatorOperator account.
 
 
 -  [Resource `ValidatorOperatorConfig`](#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig)

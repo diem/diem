@@ -1,5 +1,7 @@
 address 0x1 {
 
+/// Functions to initialize, accumulated, and burn transaction fees.
+
 module TransactionFee {
     use 0x1::CoreAddresses;
     use 0x1::Errors;

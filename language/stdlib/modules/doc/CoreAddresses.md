@@ -6,7 +6,7 @@
 Module providing well-known addresses and related logic.
 
 > Note: this module currently defines zero-argument functions like <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">Self::LIBRA_ROOT_ADDRESS</a>()</code> using capitalization
-> in the name, as usually reserved for constants. Eventually, those functions are planned to become actually
+> in the name, following the convention for constants. Eventually, those functions are planned to become actual
 > global constants, once the Move language supports this feature.
 
 
@@ -77,7 +77,7 @@ The operation can only be performed by the VM
 
 ## Function `LIBRA_ROOT_ADDRESS`
 
-The address of the libra root account. This account is
+The address of the Libra root account. This account is
 created in genesis, and cannot be changed. This address has
 ultimate authority over the permissions granted (or removed) from
 accounts on-chain.
@@ -214,7 +214,7 @@ account can be created at this address.
 
 ## Function `assert_libra_root`
 
-Assert that the account is the libra root address.
+Assert that the account is the Libra root address.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">assert_libra_root</a>(account: &signer)
@@ -245,7 +245,7 @@ Assert that the account is the libra root address.
 </code></pre>
 
 
-Specifies that a function aborts if the account has not the Libra root address.
+Specifies that a function aborts if the account does not have the Libra root address.
 
 
 <a name="0x1_CoreAddresses_AbortsIfNotLibraRoot"></a>
@@ -300,7 +300,7 @@ Assert that the signer has the treasury compliance address.
 </code></pre>
 
 
-Specifies that a function aborts if the account has not the treasury compliance address.
+Specifies that a function aborts if the account does not have the treasury compliance address.
 
 
 <a name="0x1_CoreAddresses_AbortsIfNotTreasuryCompliance"></a>
@@ -352,7 +352,7 @@ Assert that the signer has the VM reserved address.
 </code></pre>
 
 
-Specifies that a function aborts if the account has not the VM reserved address.
+Specifies that a function aborts if the account does not have the VM reserved address.
 
 
 <a name="0x1_CoreAddresses_AbortsIfNotVM"></a>

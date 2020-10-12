@@ -1,5 +1,8 @@
 address 0x1 {
 
+/// Defines a fixed-point numeric type with a 32-bit integer part and
+/// a 32-bit fractional part.
+
 module FixedPoint32 {
 
     use 0x1::Errors;
@@ -15,7 +18,7 @@ module FixedPoint32 {
     /// decimal.
     struct FixedPoint32 { value: u64 }
 
-    /// TODO(wrwg): This should be provided somewhere centrally in the framework.
+    ///> TODO: This is a basic constant and should be provided somewhere centrally in the framework.
     const MAX_U64: u128 = 18446744073709551615;
 
     /// The denominator provided was zero
@@ -45,10 +48,11 @@ module FixedPoint32 {
         (product as u64)
     }
 
-    /// We specify the concrete semantics of the implementation but use
+    /// Because none of our SMT solvers supports non-linear arithmetic with reliable efficiency,
+    /// we specify the concrete semantics of the implementation but use
     /// an abstracted, simplified semantics for verification of callers. For the verification outcome of
     /// callers, the actual result of this function is not relevant, as long as the abstraction behaves
-    /// homomorphic.
+    /// homomorphic. This does not guarantee that arithmetic functions using this code is correct.
     spec fun multiply_u64 {
         pragma opaque;
         include [concrete] ConcreteMultiplyAbortsIf;

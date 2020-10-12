@@ -3,7 +3,9 @@
 
 # Module `0x1::ChainId`
 
-A container for storing a chain id.
+The chain id distinguishes between different chains (e.g., testnet and the main Libra network).
+One important role is to prevent transactions intended for one chain from being executed on another.
+This code provides a container for storing a chain id and functions to initialize and get it.
 
 
 -  [Resource `ChainId`](#0x1_ChainId_ChainId)

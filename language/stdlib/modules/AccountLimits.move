@@ -214,7 +214,7 @@ module AccountLimits {
     /// Updates the `LimitsDefinition<CoinType>` resource at `limit_address`.
     /// If any of the field arguments is `0` the corresponding field is not updated.
     ///
-    /// TODO(wrwg): specify
+    /// TODO: This should be specified.
     public fun update_limits_definition<CoinType>(
         tc_account: &signer,
         limit_address: address,

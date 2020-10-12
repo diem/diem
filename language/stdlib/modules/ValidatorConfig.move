@@ -1,5 +1,11 @@
 address 0x1 {
 
+/// The ValidatorConfig resource holds information about a validator. Information
+/// is published and updated by Libra root in a `Self::ValidatorConfig` in preparation for
+/// later inclusion (by functions in LibraConfig) in a `LibraConfig::LibraConfig<LibraSystem>`
+/// struct (the `Self::ValidatorConfig` in a `LibraConfig::ValidatorInfo` which is a member
+/// of the `LibraSystem::LibraSystem.validators` vector).
+
 module ValidatorConfig {
     use 0x1::LibraTimestamp;
     use 0x1::Errors;

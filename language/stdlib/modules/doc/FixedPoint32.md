@@ -3,6 +3,8 @@
 
 # Module `0x1::FixedPoint32`
 
+Defines a fixed-point numeric type with a 32-bit integer part and
+a 32-bit fractional part.
 
 
 -  [Struct `FixedPoint32`](#0x1_FixedPoint32_FixedPoint32)
@@ -67,7 +69,7 @@ decimal.
 
 <a name="0x1_FixedPoint32_MAX_U64"></a>
 
-TODO(wrwg): This should be provided somewhere centrally in the framework.
+> TODO: This is a basic constant and should be provided somewhere centrally in the framework.
 
 
 <pre><code><b>const</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MAX_U64">MAX_U64</a>: u128 = 18446744073709551615;
@@ -164,10 +166,11 @@ overflows.
 <details>
 <summary>Specification</summary>
 
-We specify the concrete semantics of the implementation but use
+Because none of our SMT solvers supports non-linear arithmetic with reliable efficiency,
+we specify the concrete semantics of the implementation but use
 an abstracted, simplified semantics for verification of callers. For the verification outcome of
 callers, the actual result of this function is not relevant, as long as the abstraction behaves
-homomorphic.
+homomorphic. This does not guarantee that arithmetic functions using this code is correct.
 
 
 <pre><code><b>pragma</b> opaque;

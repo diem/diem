@@ -1,5 +1,7 @@
 address 0x1 {
-/// A container for storing a chain id.
+/// The chain id distinguishes between different chains (e.g., testnet and the main Libra network).
+/// One important role is to prevent transactions intended for one chain from being executed on another.
+/// This code provides a container for storing a chain id and functions to initialize and get it.
 module ChainId {
     use 0x1::CoreAddresses;
     use 0x1::Errors;

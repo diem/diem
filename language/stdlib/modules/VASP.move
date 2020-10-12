@@ -1,5 +1,9 @@
 address 0x1 {
 
+/// A VASP is one type of balance-holding account on the blockchain. VASPs from a two-layer
+/// hierarchy.  The main account, called a "parent VASP" and a collection of "child VASP"s.
+/// This module provides functions to manage VASP accounts.
+
 module VASP {
     use 0x1::Errors;
     use 0x1::LibraTimestamp;

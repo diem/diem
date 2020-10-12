@@ -3,6 +3,7 @@
 
 # Module `0x1::TransactionFee`
 
+Functions to initialize, accumulated, and burn transaction fees.
 
 
 -  [Resource `TransactionFee`](#0x1_TransactionFee_TransactionFee)

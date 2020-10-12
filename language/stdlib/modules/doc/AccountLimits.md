@@ -603,7 +603,7 @@ resource once it's published.
 Updates the <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;</code> resource at <code>limit_address</code>.
 If any of the field arguments is <code>0</code> the corresponding field is not updated.
 
-TODO(wrwg): specify
+TODO: This should be specified.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>&lt;CoinType&gt;(tc_account: &signer, limit_address: address, new_max_inflow: u64, new_max_outflow: u64, new_max_holding_balance: u64, new_time_period: u64)

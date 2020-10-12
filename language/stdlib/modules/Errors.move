@@ -11,8 +11,9 @@ address 0x1 {
 ///  2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique
 ///     number relative to the module which raised the error and can be used to obtain more information about
 ///     the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
-///     framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/
-///     associated module.
+///     framework evolves.
+///
+/// >TODO: determine what kind of stability guarantees we give about reasons/associated module.
 module Errors {
     /// A function to create an error from from a category and a reason.
     fun make(category: u8, reason: u64): u64 {

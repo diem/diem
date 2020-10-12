@@ -3,6 +3,11 @@
 
 # Module `0x1::ValidatorConfig`
 
+The ValidatorConfig resource holds information about a validator. Information
+is published and updated by Libra root in a <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">Self::ValidatorConfig</a></code> in preparation for
+later inclusion (by functions in LibraConfig) in a <code><a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a>&gt;</code>
+struct (the <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">Self::ValidatorConfig</a></code> in a <code>LibraConfig::ValidatorInfo</code> which is a member
+of the <code><a href="LibraSystem.md#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>.validators</code> vector).
 
 
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)

@@ -3,6 +3,11 @@
 
 # Module `0x1::SlidingNonce`
 
+Allows transactions to be executed out-of-order while ensuring that they are executed at most once.
+Nonces are assigned to transactions off-chain by clients submitting the transactions.
+It maintains a sliding window bitvector of 128 flags.  A flag of 0 indicates that the transaction
+with that nonce has not yet been executed.
+When nonce X is recorded, all transactions with nonces lower then X-128 will abort.
 
 
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
@@ -24,12 +29,6 @@
 
 ## Resource `SlidingNonce`
 
-This struct keep last 128 nonce values in a bit map nonce_mask
-We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
-For example you can record nonce 10 and then record nonce 9
-When nonce X is recorded, all nonce lower then X-128 will be rejected with code 10001(see below)
-In a nutshell, min_nonce records minimal nonce allowed
-And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>
@@ -46,13 +45,15 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 <code>min_nonce: u64</code>
 </dt>
 <dd>
-
+ Minimum nonce in sliding window. All transactions with smaller
+ nonces will be automatically rejected, since the window cannot
+ tell whether they have been executed or not.
 </dd>
 <dt>
 <code>nonce_mask: u128</code>
 </dt>
 <dd>
-
+ Bit-vector of window of nonce values
 </dd>
 </dl>
 
@@ -86,7 +87,7 @@ The nonce was already recorded previously
 
 <a name="0x1_SlidingNonce_ENONCE_TOO_NEW"></a>
 
-The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
+The nonce is too large - this protects against nonce exhaustion
 
 
 <pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
@@ -96,7 +97,7 @@ The nonce is too far in the future - this is not allowed to protect against nonc
 
 <a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
 
-The nonce is too old and impossible to ensure whether it's duplicated or not
+The nonce aborted because it's too old (nonce smaller than <code>min_nonce</code>)
 
 
 <pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
@@ -128,7 +129,7 @@ Size of SlidingNonce::nonce_mask in bits.
 
 ## Function `record_nonce_or_abort`
 
-Calls try_record_nonce and aborts transaction if returned code is non-0
+Calls <code>try_record_nonce</code> and aborts transaction if returned code is non-0
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
@@ -236,6 +237,8 @@ Returns 0 if a nonce was recorded and non-0 otherwise
 
 
 It is currently assumed that this function raises no arithmetic overflow/underflow.
+>Note: Verification is turned off. For verifying callers, this is effectively abstracted into a function
+that returns arbitrary results because <code>spec_try_record_nonce</code> is uninterpreted.
 
 
 <pre><code><b>pragma</b> opaque, verify = <b>false</b>;
@@ -289,7 +292,7 @@ This is required before other functions in this module can be called for `accoun
 ## Function `publish_nonce_resource`
 
 Publishes nonce resource into specific account
-Only the libra root account can create this resource for different accounts
+Only the Libra root account can create this resource for different accounts
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(lr_account: &signer, account: &signer)
