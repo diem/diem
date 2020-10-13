@@ -38,6 +38,7 @@ use 0x1::ValidatorConfig;
 /// | 0                          | 0                                             | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
 /// | `Errors::INVALID_ARGUMENT` | `LibraSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
 /// | `Errors::INVALID_ARGUMENT` | `LibraSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
+/// | `Errors::INVALID_STATE`    | `LibraConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
 ///
 /// # Related Scripts
 /// * `Script::create_validator_account`
@@ -84,7 +85,7 @@ spec fun add_validator_and_reconfigure {
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ADDRESS,
-        Errors::INVALID_STATE, // TODO: Undocumented error code. Can be raised in `LibraConfig::reconfigure_`.
+        Errors::INVALID_STATE,
         Errors::REQUIRES_ROLE;
 
     /// Access Control

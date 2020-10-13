@@ -35,6 +35,7 @@ use 0x1::ValidatorConfig;
 /// | `Errors::INVALID_ARGUMENT` | `LibraSystem::ENOT_AN_ACTIVE_VALIDATOR` | The validator to be removed is not in the validator set.                                        |
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ELIBRA_ROOT`            | The sending account is not the Libra Root account.                                              |
 /// | `Errors::REQUIRES_ROLE`    | `Roles::ELIBRA_ROOT`                    | The sending account is not the Libra Root account.                                              |
+/// | `Errors::INVALID_STATE`    | `LibraConfig::EINVALID_BLOCK_TIME`      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 ///
 /// # Related Scripts
 /// * `Script::create_validator_account`
@@ -81,7 +82,7 @@ spec fun remove_validator_and_reconfigure {
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ADDRESS,
-        Errors::INVALID_STATE, // TODO: Undocumented error code. Can be raised in `LibraConfig::reconfigure_`.
+        Errors::INVALID_STATE,
         Errors::REQUIRES_ROLE;
 
     /// Access Control

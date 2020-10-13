@@ -4,7 +4,7 @@
 # Overview of Libra Transaction Scripts
 
 
--  [Background](#@Background_1)
+-  [Introduction](#@Introduction_1)
     -  [Predefined Statuses](#@Predefined_Statuses_2)
     -  [Move Aborts](#@Move_Aborts_3)
         -  [Move Explain](#@Move_Explain_4)
@@ -96,13 +96,20 @@
 
 
 
-<a name="@Background_1"></a>
+<a name="@Introduction_1"></a>
 
-## Background
+## Introduction
 
-Executing a transaction script can result in a number of different error
-conditions and statuses being returned for a transaction that is committed
-on-chain. These can be categorized into two buckets:
+
+On-chain state is updated via the execution of transaction scripts sent from
+accounts that exist on-chain. This page documents each allowed transaction
+script on Libra, and the common state changes that can be performed to the
+blockchain via these transaction scripts along with their arguments and common
+error conditions.
+
+The execution of a transaction script can result in a number of different error
+conditions and statuses being returned for each transaction that is committed
+on-chain. These statuses and errors can be categorized into two buckets:
 * [Predefined statuses](#predefined-statuses): are specific statuses that are returned from the VM, e.g., <code>OutOfGas</code>, or <code>Executed</code>; and
 * [Move Abort errors](#move-aborts): are errors that are raised from the Move modules and/or scripts published on-chain.
 
@@ -144,7 +151,7 @@ The <code>abort_code</code> is a <code>u64</code> that is constructed from two v
 1. The **error category** which is encoded in the lower 8 bits of the code. Error categories are
 declared in the <code><a href="../../modules/doc/Errors.md#0x1_Errors">Errors</a></code> module and are globally unique across the Libra framework. There is a limited
 fixed set of predefined categories, and the framework is guaranteed to use these consistently.
-2. The **error reason** which is encoded in the remaining 54 bits of the code. The reason is a unique
+2. The **error reason** which is encoded in the remaining 56 bits of the code. The reason is a unique
 number relative to the module which raised the error and can be used to obtain more information about
 the error at hand. It should primarily be used for diagnosis purposes. Error reasons may change over time as the
 framework evolves.
@@ -2914,6 +2921,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 | 0                          | 0                                             | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">LibraSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">LibraSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
 
 
 <a name="@Related_Scripts_140"></a>
@@ -2980,7 +2988,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, // TODO: Undocumented error code. Can be raised in `<a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_reconfigure_">LibraConfig::reconfigure_</a>`.
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
@@ -3191,6 +3199,7 @@ is not in the validator set.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR">LibraSystem::ENOT_AN_ACTIVE_VALIDATOR</a></code> | The validator to be removed is not in the validator set.                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                    | The sending account is not the Libra Root account.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 
 
 <a name="@Related_Scripts_150"></a>
@@ -3258,7 +3267,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, // TODO: Undocumented error code. Can be raised in `<a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_reconfigure_">LibraConfig::reconfigure_</a>`.
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
@@ -3331,6 +3340,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>     | </code>Roles::EVALIDATOR_OPERATOR<code>                   | </code>validator_operator_account<code> does not have a Validator Operator role.                                 |
 | </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_TRANSACTION_SENDER<code> | </code>validator_operator_account<code> is not the registered operator for the validator at </code>validator_address<code>. |
 | </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_CONSENSUS_KEY<code>      | </code>consensus_pubkey<code> is not a valid ed25519 <b>public</b> key.                                                 |
+| </code>Errors::INVALID_STATE<code>    | </code>LibraConfig::EINVALID_BLOCK_TIME<code>             | An invalid time value was encountered in reconfiguration. Unlikely <b>to</b> occur.                          |
 
 
 <a name="@Related_Scripts_155"></a>

@@ -44,6 +44,7 @@ The overall structure of the Libra Framework is as follows:
 ├── modules                                 # Libra Framework source modules and generated documentation
 │   ├── *.move
 │   └── doc/*.md                            # Generated documentation for the Libra Framework modules
+├── nursery/*.move                          # Move modules that are not published on-chain, but are used for testing and debugging locally
 ├── src                                     # Compilation and generation of information from Move source files in the Libra Framework. Not designed to be used as a Rust library
 ├── tests
 └── transaction_scripts/*.move              # Move source files for allowed transaction scripts

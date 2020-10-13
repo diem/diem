@@ -29,6 +29,7 @@ use 0x1::ValidatorConfig;
 /// | `Errors::REQUIRES_ROLE     | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
+/// | `Errors::INVALID_STATE`    | `LibraConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 ///
 /// # Related Scripts
 /// * `Script::create_validator_account`
@@ -103,7 +104,7 @@ spec fun set_validator_config_and_reconfigure {
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ROLE,
         Errors::INVALID_ARGUMENT,
-        Errors::INVALID_STATE; // TODO: Undocumented error code. Can be raised in `LibraConfig::reconfigure_`.
+        Errors::INVALID_STATE;
 
     /// Access Control
     /// Only the Validator Operator account which has been registered with the validator can
