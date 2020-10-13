@@ -1,7 +1,16 @@
-You will be redirected shortly.
-
-You can manually go to Libra Developer Blog by clicking [here](https://developers.libra.org/blog/).
-
 <script type = "text/javascript">
-window.location = "https://developers.libra.org/blog/";
+  var redirects = {
+    'libra.github.io/libra': 'developers.libra.org/docs/rustdocs',
+  };
+
+  var newLoc = "https://developers.libra.org/"; // default 404
+
+  for (var old in redirects) {
+    if (window.location.href.indexOf(old) > -1) {
+      var fragments = window.location.href.split(old);
+      newLoc = fragments[0] + redirects[old] + fragments[1];
+      break;
+    }
+  }
+window.location.href = newLoc;
 </script>

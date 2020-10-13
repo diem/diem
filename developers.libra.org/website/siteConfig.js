@@ -106,8 +106,6 @@ const siteConfig = {
     `${baseUrl}js/clipboardjs.2.0.0.min.js`,
     `${baseUrl}js/forms.js`,
     `${baseUrl}js/mobile_nav.js`,
-    // `${baseUrl}js/docsearch.min.js`,
-    // `${baseUrl}js/search.js`,
   ],
 
   // Custom markdown functions
