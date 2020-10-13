@@ -1,16 +1,21 @@
-<script type = "text/javascript">
-  var redirects = {
-    'libra.github.io/libra': 'developers.libra.org/docs/rustdocs',
-  };
+<html>
+  <head>
+    <script type = "text/javascript">
+      var redirects = {
+        'libra.github.io/libra': 'developers.libra.org/docs/rustdocs',
+      };
 
-  var newLoc = "https://developers.libra.org/"; // default 404
+      var newLoc = "https://developers.libra.org/"; // default 404
 
-  for (var old in redirects) {
-    if (window.location.href.indexOf(old) > -1) {
-      var fragments = window.location.href.split(old);
-      newLoc = fragments[0] + redirects[old] + fragments[1];
-      break;
-    }
-  }
-window.location.href = newLoc;
-</script>
+      for (var old in redirects) {
+        if (window.location.href.indexOf(old) > -1) {
+          var fragments = window.location.href.split(old);
+          newLoc = fragments[0] + redirects[old] + fragments[1];
+          break;
+        }
+      }
+    window.location.href = newLoc;
+    </script>
+  </head>
+  <body></body>
+</html>
