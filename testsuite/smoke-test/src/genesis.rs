@@ -4,14 +4,12 @@
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
     test_utils::libra_swarm_utils::{
-        get_op_tool, load_libra_root_storage, load_node_config, save_node_config,
+        get_op_tool, insert_waypoint, load_libra_root_storage, load_node_config, save_node_config,
     },
     workspace_builder,
     workspace_builder::workspace_root,
 };
 use anyhow::anyhow;
-use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
-use libra_secure_storage::{KVStorage, Storage};
 use libra_temppath::TempPath;
 use libra_types::{
     account_config::{libra_root_address, treasury_compliance_account_address},
@@ -124,27 +122,11 @@ fn test_genesis_transaction_flow() {
         .unwrap();
     let output = std::str::from_utf8(&waypoint_command.stdout).unwrap();
     let waypoint = parse_waypoint(output);
-    let set_waypoint = |node_config: &NodeConfig| {
-        let f = |backend: &SecureBackend| {
-            let mut storage: Storage = backend.into();
-            storage
-                .set(libra_global_constants::WAYPOINT, waypoint)
-                .expect("Unable to write waypoint");
-        };
-        let backend = &node_config.consensus.safety_rules.backend;
-        f(backend);
-        match &node_config.base.waypoint {
-            WaypointConfig::FromStorage(backend) => {
-                f(backend);
-            }
-            _ => panic!("unexpected waypoint from node config"),
-        }
-    };
 
     println!("7. apply genesis transaction for nodes 1, 2, 3");
     for i in 1..num_nodes {
         let (mut node_config, _) = load_node_config(&env.validator_swarm, i);
-        set_waypoint(&node_config);
+        insert_waypoint(&mut node_config, waypoint);
         node_config.execution.genesis = Some(genesis_transaction.clone());
         // reset the sync_only flag to false
         node_config.consensus.sync_only = false;
@@ -180,10 +162,8 @@ fn test_genesis_transaction_flow() {
     // setup the waypoint for node 0
     node_config.execution.genesis = None;
     node_config.execution.genesis_file_location = PathBuf::from("");
-    set_waypoint(&node_config);
-    node_config
-        .save(&env.validator_swarm.config.config_files[0])
-        .unwrap();
+    insert_waypoint(&mut node_config, waypoint);
+    save_node_config(&mut node_config, &env.validator_swarm, 0);
     env.validator_swarm.add_node(0).unwrap();
     let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());

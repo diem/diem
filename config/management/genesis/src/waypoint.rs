@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use executor::db_bootstrapper;
-use libra_global_constants::WAYPOINT;
+use libra_global_constants::{GENESIS_WAYPOINT, WAYPOINT};
 use libra_management::{
     config::ConfigPath,
     error::Error,
@@ -66,6 +66,7 @@ impl InsertWaypoint {
             .override_validator_backend(&self.validator_backend.validator_backend)?;
         let mut validator_storage = config.validator_backend();
         validator_storage.set(WAYPOINT, self.waypoint)?;
+        validator_storage.set(GENESIS_WAYPOINT, self.waypoint)?;
         Ok(())
     }
 }

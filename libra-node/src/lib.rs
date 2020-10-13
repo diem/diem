@@ -248,10 +248,10 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         Arc::clone(&libra_db),
     );
 
-    let waypoint = node_config.base.waypoint.waypoint();
+    let genesis_waypoint = node_config.base.waypoint.genesis_waypoint();
     // if there's genesis txn and waypoint, commit it if the result matches.
     if let Some(genesis) = get_genesis_txn(&node_config) {
-        maybe_bootstrap::<LibraVM>(&db_rw, genesis, waypoint)
+        maybe_bootstrap::<LibraVM>(&db_rw, genesis, genesis_waypoint)
             .expect("Db-bootstrapper should not fail.");
     }
 
@@ -384,7 +384,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         Arc::clone(&db_rw.reader),
         chunk_executor,
         &node_config,
-        waypoint,
+        genesis_waypoint,
         reconfig_subscriptions,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);

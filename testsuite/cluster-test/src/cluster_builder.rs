@@ -25,9 +25,9 @@ use structopt::StructOpt;
 use consensus_types::safety_data::SafetyData;
 use libra_genesis_tool::layout::Layout;
 use libra_global_constants::{
-    CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
-    SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY,
-    WAYPOINT,
+    CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, GENESIS_WAYPOINT, LIBRA_ROOT_KEY,
+    OPERATOR_KEY, OWNER_KEY, SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS,
+    VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
@@ -409,6 +409,9 @@ impl ClusterBuilder {
                 .map_err(|e| format_err!("Failed to create {}/{}: {}", pod_name, SAFETY_DATA, e))?;
             vault_storage
                 .set(WAYPOINT, Waypoint::default())
+                .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, WAYPOINT, e))?;
+            vault_storage
+                .set(GENESIS_WAYPOINT, Waypoint::default())
                 .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, WAYPOINT, e))?;
             libra_network_address_encryption::Encryptor::new(vault_storage)
                 .initialize_for_testing()

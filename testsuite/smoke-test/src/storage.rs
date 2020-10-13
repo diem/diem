@@ -3,7 +3,9 @@
 
 use crate::{
     test_utils::{
-        compare_balances, libra_swarm_utils::load_node_config, setup_swarm_and_client_proxy,
+        compare_balances,
+        libra_swarm_utils::{insert_waypoint, load_node_config, save_node_config},
+        setup_swarm_and_client_proxy,
     },
     workspace_builder,
     workspace_builder::workspace_root,
@@ -72,7 +74,10 @@ fn test_db_restore() {
     env.validator_swarm.kill_node(0);
 
     // nuke db
-    let (node0_config, _) = load_node_config(&env.validator_swarm, 0);
+    let (mut node0_config, _) = load_node_config(&env.validator_swarm, 0);
+    let genesis_waypoint = node0_config.base.waypoint.genesis_waypoint();
+    insert_waypoint(&mut node0_config, genesis_waypoint);
+    save_node_config(&mut node0_config, &env.validator_swarm, 0);
     let db_dir = node0_config.storage.dir();
     fs::remove_dir_all(db_dir.join("libradb")).unwrap();
     fs::remove_dir_all(db_dir.join("consensusdb")).unwrap();

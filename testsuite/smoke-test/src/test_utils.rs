@@ -97,9 +97,10 @@ pub fn setup_swarm_and_client_proxy(
 pub mod libra_swarm_utils {
     use crate::test_utils::fetch_backend_storage;
     use cli::client_proxy::ClientProxy;
-    use libra_config::config::{NodeConfig, SecureBackend};
+    use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
     use libra_key_manager::libra_interface::JsonRpcLibraInterface;
     use libra_operational_tool::test_helper::OperationalTool;
+    use libra_secure_storage::{KVStorage, Storage};
     use libra_swarm::swarm::LibraSwarm;
     use libra_transaction_replay::LibraDebugger;
     use libra_types::{chain_id::ChainId, waypoint::Waypoint};
@@ -186,6 +187,26 @@ pub mod libra_swarm_utils {
     pub fn save_node_config(node_config: &mut NodeConfig, swarm: &LibraSwarm, node_index: usize) {
         let node_config_path = swarm.config.config_files.get(node_index).unwrap();
         node_config.save(node_config_path).unwrap();
+    }
+
+    pub fn insert_waypoint(node_config: &mut NodeConfig, waypoint: Waypoint) {
+        let f = |backend: &SecureBackend| {
+            let mut storage: Storage = backend.into();
+            storage
+                .set(libra_global_constants::WAYPOINT, waypoint)
+                .expect("Unable to write waypoint");
+            storage
+                .set(libra_global_constants::GENESIS_WAYPOINT, waypoint)
+                .expect("Unable to write waypoint");
+        };
+        let backend = &node_config.consensus.safety_rules.backend;
+        f(backend);
+        match &node_config.base.waypoint {
+            WaypointConfig::FromStorage(backend) => {
+                f(backend);
+            }
+            _ => panic!("unexpected waypoint from node config"),
+        }
     }
 }
 

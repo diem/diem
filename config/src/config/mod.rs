@@ -147,6 +147,19 @@ impl WaypointConfig {
         };
         waypoint.expect("waypoint should be present")
     }
+
+    pub fn genesis_waypoint(&self) -> Waypoint {
+        match &self {
+            WaypointConfig::FromStorage(backend) => {
+                let storage: Storage = backend.into();
+                storage
+                    .get::<Waypoint>(libra_global_constants::GENESIS_WAYPOINT)
+                    .expect("Unable to read waypoint")
+                    .value
+            }
+            _ => self.waypoint(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]

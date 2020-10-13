@@ -24,3 +24,4 @@ pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
 /// Definitions of global data items (e.g., as held in secure storage)
 pub const SAFETY_DATA: &str = "safety_data";
 pub const WAYPOINT: &str = "waypoint";
+pub const GENESIS_WAYPOINT: &str = "genesis-waypoint";
