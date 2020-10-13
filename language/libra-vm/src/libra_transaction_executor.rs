@@ -644,17 +644,25 @@ impl LibraVM {
                 debug!(log_context, "Retry after reconfiguration");
                 continue;
             };
-            let (vm_status, output) = match txn {
+            let (vm_status, output, sender) = match txn {
                 Ok(PreprocessedTransaction::BlockPrologue(block_metadata)) => {
                     execute_block_trace_guard.clear();
                     current_block_id = block_metadata.id();
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
-                    self.process_block_prologue(data_cache, block_metadata, &log_context)?
+                    let (vm_status, output) =
+                        self.process_block_prologue(data_cache, block_metadata, &log_context)?;
+                    (vm_status, output, Some("block_prologue".to_string()))
                 }
                 Ok(PreprocessedTransaction::WaypointWriteSet(write_set_payload)) => {
-                    self.process_waypoint_change_set(data_cache, write_set_payload, &log_context)?
+                    let (vm_status, output) = self.process_waypoint_change_set(
+                        data_cache,
+                        write_set_payload,
+                        &log_context,
+                    )?;
+                    (vm_status, output, Some("waypoint_write_set".to_string()))
                 }
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
+                    let sender = txn.sender().to_string();
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
                     let (vm_status, output) =
                         self.execute_user_transaction(data_cache, &txn, &log_context);
@@ -668,15 +676,30 @@ impl LibraVM {
                     if let Some(label) = counter_label {
                         USER_TRANSACTIONS_EXECUTED.with_label_values(&[label]).inc();
                     }
-                    (vm_status, output)
+                    (vm_status, output, Some(sender))
                 }
                 Ok(PreprocessedTransaction::WriteSet(txn)) => {
-                    self.process_writeset_transaction(data_cache, *txn, &log_context)?
+                    let (vm_status, output) =
+                        self.process_writeset_transaction(data_cache, *txn, &log_context)?;
+                    (vm_status, output, Some("write_set".to_string()))
                 }
-                Err(e) => discard_error_vm_status(e),
+                Err(e) => {
+                    let (vm_status, output) = discard_error_vm_status(e);
+                    (vm_status, output, None)
+                }
             };
             if !output.status().is_discarded() {
                 data_cache.push_write_set(output.write_set());
+            } else {
+                match sender {
+                    Some(s) => trace!(
+                        log_context,
+                        "Transaction discarded, sender: {}, error: {:?}",
+                        s,
+                        vm_status,
+                    ),
+                    None => trace!(log_context, "Transaction malformed, error: {:?}", vm_status,),
+                }
             }
 
             if is_reconfiguration(&output) {
