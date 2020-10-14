@@ -49,7 +49,7 @@ spec fun rotate_authentication_key {
         Errors::INVALID_STATE,
         Errors::INVALID_ARGUMENT;
 
-    /// Access Control
+    /// **Access Control:**
     /// The account can rotate its own authentication key unless
     /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
     include LibraAccount::AbortsIfDelegatedKeyRotationCapability;

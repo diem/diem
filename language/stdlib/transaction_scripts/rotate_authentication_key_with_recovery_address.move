@@ -55,7 +55,7 @@ spec fun rotate_authentication_key_with_recovery_address {
         Errors::NOT_PUBLISHED,
         Errors::INVALID_ARGUMENT;
 
-    /// Access Control
+    /// **Access Control:**
     /// The delegatee at the recovery address has to hold the key rotation capability for
     /// the address to recover. The address of the transaction signer has to be either
     /// the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].

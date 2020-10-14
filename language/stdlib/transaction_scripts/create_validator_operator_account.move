@@ -80,7 +80,7 @@ spec fun create_validator_operator_account {
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
     include Roles::AbortsIfNotLibraRoot{account: lr_account};
 }

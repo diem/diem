@@ -80,7 +80,7 @@ spec fun create_designated_dealer {
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].
     include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }

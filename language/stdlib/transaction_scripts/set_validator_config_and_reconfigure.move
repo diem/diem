@@ -106,7 +106,7 @@ spec fun set_validator_config_and_reconfigure {
         Errors::INVALID_ARGUMENT,
         Errors::INVALID_STATE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Validator Operator account which has been registered with the validator can
     /// update the validator's configuration [[H14]][PERMISSION].
     aborts_if Signer::address_of(validator_operator_account) !=

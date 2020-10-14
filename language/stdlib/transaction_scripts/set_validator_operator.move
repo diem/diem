@@ -73,7 +73,7 @@ spec fun set_validator_operator {
         Errors::NOT_PUBLISHED,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
     include Roles::AbortsIfNotValidator{validator_addr: account_addr};
 }

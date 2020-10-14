@@ -88,7 +88,7 @@ spec fun tiered_mint {
         Errors::LIMIT_EXCEEDED,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Treasury Compliance account can mint [[H1]][PERMISSION].
     include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }

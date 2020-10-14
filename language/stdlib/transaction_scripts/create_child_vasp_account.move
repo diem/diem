@@ -116,7 +116,7 @@ spec fun create_child_vasp_account {
         Errors::INVALID_STATE,
         Errors::INVALID_ARGUMENT;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
     include Roles::AbortsIfNotParentVasp{account: parent_vasp};
 }

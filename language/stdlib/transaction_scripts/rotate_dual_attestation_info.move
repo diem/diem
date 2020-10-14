@@ -57,7 +57,7 @@ spec fun rotate_dual_attestation_info {
         Errors::NOT_PUBLISHED,
         Errors::INVALID_ARGUMENT;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the account having Credential can rotate the info.
     /// Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
     include DualAttestation::AbortsIfNoCredential{addr: Signer::spec_address_of(account)};

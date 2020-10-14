@@ -73,7 +73,7 @@ spec fun burn {
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the account with the burn capability can burn coins [[H3]][PERMISSION].
     include Libra::AbortsIfNoBurnCapability<Token>{account: account};
 }

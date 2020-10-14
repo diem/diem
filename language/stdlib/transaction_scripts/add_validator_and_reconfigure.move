@@ -88,7 +88,7 @@ spec fun add_validator_and_reconfigure {
         Errors::INVALID_STATE,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Libra Root account can add Validators [[H13]][PERMISSION].
     include Roles::AbortsIfNotLibraRoot{account: lr_account};
 }

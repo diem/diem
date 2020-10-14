@@ -934,7 +934,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
 
 
@@ -1074,7 +1074,7 @@ only Libra root has the Libra root role.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
 
 
@@ -1217,7 +1217,7 @@ only Libra root has the Libra root role.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can create Validator accounts [[A3]][ROLE].
 
 
@@ -1354,7 +1354,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE].
 
 
@@ -1494,7 +1494,7 @@ account.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].
 
 
@@ -1608,7 +1608,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 </code></pre>
 
 
-Access Control
+**Access Control:**
 The account must be allowed to hold balances. Only Designated Dealers, Parent VASPs,
 and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
 
@@ -2056,7 +2056,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 </code></pre>
 
 
-Access Control
+**Access Control:**
 The account can rotate its own authentication key unless
 it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
@@ -2183,7 +2183,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 </code></pre>
 
 
-Access Control
+**Access Control:**
 The account can rotate its own authentication key unless
 it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
@@ -2310,7 +2310,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
 
 
@@ -2434,7 +2434,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 </code></pre>
 
 
-Access Control
+**Access Control:**
 The delegatee at the recovery address has to hold the key rotation capability for
 the address to recover. The address of the transaction signer has to be either
 the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].
@@ -2562,7 +2562,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the account having Credential can rotate the info.
 Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
 
@@ -2836,7 +2836,7 @@ The balances of payer and payee change by the correct amount.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
 Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
 
@@ -2993,7 +2993,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can add Validators [[H13]][PERMISSION].
 
 
@@ -3122,7 +3122,7 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Validator Operator account which has been registered with the validator can
 update the validator's configuration [[H14]][PERMISSION].
 
@@ -3272,7 +3272,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can remove Validators [[H13]][PERMISSION].
 
 
@@ -3429,7 +3429,7 @@ for which there is no useful recovery except to resubmit the transaction.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Validator Operator account which has been registered with the validator can
 update the validator's configuration [[H14]][PERMISSION].
 
@@ -3569,7 +3569,7 @@ because CapabilityHolder is published during initialization (Genesis).
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
@@ -3711,7 +3711,7 @@ the system is initiated by this script.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
 
 
@@ -3856,7 +3856,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
@@ -3994,7 +3994,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 
 
@@ -4152,7 +4152,7 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 
 
@@ -4396,7 +4396,7 @@ resource published under the <code>designated_dealer_address</code>.
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Treasury Compliance account can mint [[H1]][PERMISSION].
 
 
@@ -4814,7 +4814,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 </code></pre>
 
 
-Access Control
+**Access Control:**
 Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISSION].
 
 

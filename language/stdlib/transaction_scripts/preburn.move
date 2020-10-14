@@ -66,7 +66,7 @@ spec fun preburn {
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the account with a preburn area can preburn [[H4]][PERMISSION].
     include Libra::AbortsIfNoPreburn<Token>{preburn_address: account_addr};
 }

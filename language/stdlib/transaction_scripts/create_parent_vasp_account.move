@@ -77,7 +77,7 @@ spec fun create_parent_vasp_account {
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE].
     include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 }

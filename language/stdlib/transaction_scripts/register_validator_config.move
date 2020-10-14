@@ -70,7 +70,7 @@ spec fun register_validator_config {
         Errors::INVALID_ARGUMENT,
         Errors::NOT_PUBLISHED;
 
-    /// Access Control
+    /// **Access Control:**
     /// Only the Validator Operator account which has been registered with the validator can
     /// update the validator's configuration [[H14]][PERMISSION].
     aborts_if Signer::address_of(validator_operator_account) !=
