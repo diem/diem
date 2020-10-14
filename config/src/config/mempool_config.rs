@@ -30,12 +30,12 @@ impl Default for MempoolConfig {
             shared_mempool_ack_timeout_ms: 2_000,
             shared_mempool_max_concurrent_inbound_syncs: 2,
             max_broadcasts_per_peer: 1,
-            mempool_snapshot_interval_secs: 180,
+            mempool_snapshot_interval_secs: 20,
             capacity: 1_000_000,
-            capacity_per_user: 100,
+            capacity_per_user: 1_000_000,
             default_failovers: 0,
             system_transaction_timeout_secs: 86400,
-            system_transaction_gc_interval_ms: 180_000,
+            system_transaction_gc_interval_ms: 20_000,
         }
     }
 }
