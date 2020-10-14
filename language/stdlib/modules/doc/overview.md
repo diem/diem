@@ -6,14 +6,12 @@
 
 This is the root document for the Libra framework module documentation. The Libra framework provides a set of Move
 modules which define the resources and functions available for the Libra blockchain. Each module is individually
-documented here, together with it's implementation and [formal specification](../../../move-prover/doc/user/spec-lang.md).
+documented here, together with its implementation and
+[formal specification](../../transaction_scripts/doc/spec_documentation.md).
 
 Move modules are not directly called by clients, but instead are used to implement *transaction scripts*.
 For documentation of transaction scripts which constitute the client API, see
 [../../transaction_scripts/doc/transaction_script_documentation.md](../../transaction_scripts/doc/transaction_script_documentation.md).
-
-Move modules come together with formal specifications. See [this document](../../transaction_scripts/doc/spec_documentation.md)
-for a discussion of specifications and pointers to further documentation.
 
 The Move modules in the Libra Framework can be bucketed in to a couple categories:
 

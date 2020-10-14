@@ -49,21 +49,20 @@ made continuous advances over the last decade, and provide fully automated solut
 ## How the Libra Framework is Specified
 
 
-The Libra framework uses the [Move Specification Language (MSL)][MSL]) for specification of properties. MSL
-is a language in the tradition of [Design by Contract][DESIGN_BY_CONTRACT]. It uses pre- and post-conditions
-to define behavior of functions, and invariants over data structures and global resource state. Conditions in MSL
+The Libra framework uses the [Move Specification Language][MSL] for specification of properties. The language
+is designed in the tradition of [Design by Contract][DESIGN_BY_CONTRACT]. It uses pre- and post-conditions
+to define behavior of functions, and invariants over data structures and global resource state. Conditions
 are described by predicates which involve access to function parameters, structured data, and global resource state.
 The specification language is fully embedded into the Move language, and re-uses syntax and semantics of Move where
-appropriate. MSL is expressive enough to capture the full semantics of Move (with minor exceptions).
+appropriate. It is expressive enough to capture the full semantics of Move (with minor exceptions).
 
 Specification of complex functions using pre/post conditions is not trivial, and some of the specifications may
 easily exceed in size the actual implementation in Move. This should not surprise, as specifications require to
 make many of the "implicit" behavior of code explicit. For example, if a Move function calls another function which
 aborts, propagation of this abort happens implicitly. Not so in the specification, where each abort condition needs
-to be explicitly accounted for at each function. MSL gives means to abstract some of this to avoid repetition
-(namely, reusable specification schemas), yet still specifications can be verbose. However, writing tests which
-provide 100% coverage of test purposes for each relevant input and state combination
-is arguably significantly more verbose.
+to be explicitly accounted for at each function. The Move specification language gives means to abstract some of this
+to avoid repetition (namely, reusable specification schemas), yet still specifications can be verbose. However, writing
+tests which provide 100% coverage for each relevant input and state combination is arguably significantly more verbose.
 
 
 <a name="@How_the_Libra_Framework_is_Verified_3"></a>
@@ -72,9 +71,9 @@ is arguably significantly more verbose.
 
 
 Move specifications are verified by the [Move Prover][PROVER]. This is a tool which works from the generated
-Move byte code and combines it with the MSL specifications to create a verification condition which is then passed
+Move byte code and combines it with the specifications to create a verification condition which is then passed
 on to off-the-shelf standard verification tools (currently [Boogie][Boogie] and [Z3][Z3]). The diagnosis created
-by those tools is then translated back to provide feedback on the level of Move and MSL, creating error messages
+by those tools is then translated back to provide feedback on the level of Move, creating error messages
 very much similar as a type checker or linter tool. No human interaction is required for this.
 
 Verification of the Libra framework is fully embedded into the developer workflow. A Rust integration test
@@ -90,8 +89,9 @@ in this process are land blockers for submitting Move code.
 At this point, the Libra framework is specified to the following extent:
 
 - Each transaction script is specified.
-- Each Module function called directly or indirectly via a transaction script is specified. Note that
-some Module code which is not called this way may not yet be fully specified.
+- Most Module functions called directly or indirectly via a transaction script are specified. Note that
+some Module code which is not called this way may not yet be fully specified. Also some functions might
+not be individually specified, but still verified in the context they are used from other functions.
 - A crosscut regards *access control* as defined by [LIP-2][ACCESS_CONTROL] has been systematically specified.
 - Some aspects of the framework have been abstracted out in the current release and are not verified; most
 notably, Event generation has not been specified and verified.

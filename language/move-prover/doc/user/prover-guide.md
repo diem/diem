@@ -1,9 +1,9 @@
 # Move Prover User Guide (DRAFT)
 
 This is the user guide for the Move prover. This document does not describe the
-[Move specification language MSL](spec-lang.md), but accompanies it.
+[Move specification language](spec-lang.md), but accompanies it.
 
-This guide is currently specific for the usage of the prover with in the Libra repo.
+This guide is currently specific for the usage of the prover within the Libra repo.
 
 ## Running the Prover
 

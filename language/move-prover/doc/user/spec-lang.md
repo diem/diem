@@ -3,18 +3,27 @@
 [PRE_POST_REFERENCE]: https://en.wikipedia.org/wiki/Design_by_contract
 
 
-# The Move Specification Language 1.0
+# Move Specification Language
 
-The *Move specification language*, abbreviated **MSL**, enables formal specification of Move programs.
-It plays together with the [Move Prover][PROVER], a tool which can verify the
-correctness of MSL specifications against Move code. In contrast to traditional testing, verification of MSL
-is exhaustive and holds for all possible inputs and global states of a Move module or transaction script.
-At the same time, it is fast and automated enough that it can be used at a similar place in the developer workflow
-where tests are, for example, for qualification of pull requests in continuous integration.
+The *Move specification language*, abbreviated **MSL**, is a subset of the Move language which enables formal
+specification of Move programs.
 
-This document describes MSL; see [here][PROVER_USAGE] for how to use the Move prover tool. The reader is expected to
-have basic knowledge of the Move language, as well as basic principles of pre/post condition specifications
-(see e.g. [this article][PRE_POST_REFERENCE]).
+MSL code is not intended to be executed, but plays together with the [Move Prover][PROVER], a tool which can
+statically verify the correctness of MSL specifications against Move programs. In contrast to traditional testing,
+verification of MSL is exhaustive and holds for all possible inputs and global states of a Move module or transaction
+script. At the same time, it is fast and automated enough that it can be used at a similar place in the developer
+workflow where tests are, for example, for qualification of pull requests in continuous integration.
+
+While the Move programming language at this point is stable, the subset represented by MSL should be considered
+evolving. This has no impact on platform stability, since MSL is not running in production, but is used for offline
+quality assurance, where it is continuously improved for evolving objectives.
+
+This document describes the language only; see [here][PROVER_USAGE] for how to use the Move prover tool. The reader is
+expected to have basic knowledge of the Move language, as well as basic principles of pre/post condition specifications
+(see e.g. [this article][PRE_POST_REFERENCE]). For examples of specifications, we refer to the [Libra
+framework documentation](https://github.com/wrwg/libra/blob/doc-fixes/language/stdlib/modules/doc/overview.md)
+which has specifications embedded.
+
 
 ---
 
@@ -23,7 +32,7 @@ have basic knowledge of the Move language, as well as basic principles of pre/po
     - [Naming](#naming)
     - [Operators](#operators)
     - [Function Calls](#function-calls)
-    - [Sequencing and Conditionals](#sequencing-and-conditionals)
+    - [Statements](#statements)
     - [Pack and Unpack](#pack-and-unpack)
     - [Quantifiers](#quantifiers)
     - [Builtin Functions](#builtin-functions)
@@ -31,7 +40,7 @@ have basic knowledge of the Move language, as well as basic principles of pre/po
 - [Specifications](#specifications)
     - [Pragmas and Properties](#pragmas-and-properties)
         - [Pragma Inheritance](#pragma-inheritance)
-        - [General Pragmas and Propertiesn](#general-pragmas-and-properties)
+        - [General Pragmas and Properties](#general-pragmas-and-properties)
     - [Pre and Post State](#pre-and-post-state)
     - [Helper Functions](#helper-functions)
         - [Uninterpreted Functions](#uninterpreted-functions)
@@ -50,7 +59,7 @@ have basic knowledge of the Move language, as well as basic principles of pre/po
     - [Assume and Assert Conditions in Code](#assume-and-assert-conditions-in-code)
     - [Specification Variables](#specification-variables)
     - [Schemas](#schemas)
-        - [Schema Usage](#schema-usage)
+        - [Basic Schema Usage](#basic-schema-usage)
         - [Schema Expressions](#schema-expressions)
         - [Schema Apply Operation](#schema-apply-operation)
     - [Opaque Specifications](#opaque-specifications)
@@ -63,7 +72,7 @@ have basic knowledge of the Move language, as well as basic principles of pre/po
 
 # Expressions
 
-Expressions in MSL are a subset of Move plus a set of additional constructs, as discussed
+Expressions in MSL are a subset of Move program expressions plus a set of additional constructs, as discussed
 in the following sections.
 
 ## Type System
@@ -77,7 +86,7 @@ The type system of MSL is similar to that of Move, with the following difference
 - The Move types `&T`, `&mut T`, and `T` are considered equivalent for MSL.  Equality is interpreted as
   value equality. There is no need to worry about dereferencing a reference from the Move program: these are
   automatically dereferenced as needed. This simplification is possible because MSL cannot modify
-  values from a Move program and the Move language cannot directly reason about reference equality (which eliminates the
+  values from a Move program and the program cannot directly reason about reference equality (which eliminates the
   need for doing so in MSL). (Note there is also a restriction in expressiveness
   coming with this, namely for [functions which return `&mut T`](#expressiveness), however, this is
   rarely hit in practice, and there are workarounds.)
@@ -92,7 +101,7 @@ MSL functions and variable names must start with a lower case letter. Schema nam
 with a capital letter (schemas are a new named construct discussed [later](#schemas)).
 
 Move functions, MSL functions, Move types, and schemas all share the same namespace, and are therefore unambiguous
-if aliased via a Move `use` clause. Because of the common name space, an MSL cannot have the same
+if aliased via a Move `use` clause. Because of the common name space, an MSL function cannot have the same
 name than a Move function. This is often handled via the convention to prefix MSL function as in
 `spec_has_access` when the related Move function is called `has_access`.
 
@@ -188,8 +197,8 @@ one can use the notation `::len(v)`.
 
 ## Partial Semantics
 
-In MSL, expressions have a partial semantics. This is in contrast to Move, where they have a total semantics, since they
-either deliver a value or abort.
+In MSL, expressions have a partial semantics. This is in contrast to Move program expressions, which have a total
+semantics, since they either deliver a value or abort.
 
 An expression `e[X]` which depends on some some variables `X` may have a known
 interpretation for some assignments to variables in `X`, but unknown for others. An unknown interpretation for a
@@ -206,8 +215,9 @@ which behave transparently. Specifically, inlining those functions is equivalent
 
 # Specifications
 
-Specifications are contained in so-called *spec(ification) blocks* that can appear as module members and
-inside Move functions. The various types of spec blocks are shown below, and will be discussed in subsequent sections.
+Specifications are contained in so-called *specification blocks* (abbreviated **spec block**) that can appear as module
+members and inside Move functions. The various types of spec blocks are shown below, and will be discussed in
+subsequent sections.
 
 ```move
 module M {
@@ -272,7 +282,7 @@ The general form of a property is:
 
 ```move
 spec .. {
-    <condtion> [<name> = <literal>] <predicate>; // condition is ensures, aborts_if, etc.
+    <directive> [<name> = <literal>] <content>; // ensures, aborts_if, include, etc..
 }
 ```
 
@@ -325,7 +335,7 @@ The following properties control general behavior of verification:
 Multiple conditions in spec blocks work with a *pre* and *post* state, relating them to each other. Function
 specifications are one example of this: in the `ensures P` condition, the pre-state (at function entry) and
 the post-state (at function exit) are related via the predicate `P`. However, the concept is more general and
-also applied for invariants.
+also applied for invariants, where the pre-state is before and post-state after a global update.
 
 In contexts where a pre/post state is active, expressions are evaluated implicitly in the post-state. To evaluate
 an expression in a pre-state, one uses the builtin function `old(exp)`, which evaluates its parameter in the pre-state
@@ -545,13 +555,16 @@ spec fun get_one_off {
 
 ## Requires Condition
 
-The `requires` condition is a spec block member which postulates a pre-condition for a function. In contrast
-to an `aborts_if` condition, if the pre-condition of a function does not hold, the result of calling the function
-is undefined. The prover verifies that such a situation does not occur: for each call to the function, the prover
-checks that the `requires` condition holds for the given parameters and global state. In turn, when the function
-is executed, the prover can assume that the pre-condition holds.
+The `requires` condition is a spec block member which postulates a pre-condition for a function. The prover
+will produce verification errors for functions which are called with violating pre-conditions.
 
-An example of a precondition is the following:
+A `requires` is different from an `aborts_if`: in the latter case, the function can be called, and any aborts
+it produces will be propagated to the caller context. In the `requires` case, the prover will not allow the function to
+be called in the first place. Nevertheless, the function can *still be called at
+runtime* if verification is skipped. Because of this, `requires` are rare in Move specifications, and
+`aborts_if` are more common. Specifically, `requires` should be avoided for public APIs.
+
+An example of `requires` is the following:
 
 ```move
 spec fun increment {
@@ -644,7 +657,7 @@ The invariant condition can be applied on structs and on global state.
 
 ### Struct Invariants
 
-When the `invariant` condition is applied to a struct, it expresses a well-formedness property of the struct's data.
+When the `invariant` condition is applied to a struct, it expresses a well-formedness property of the struct data.
 Any instance of this struct which is currently not mutated will satisfy this property (with exceptions as
 outlined below).
 
@@ -867,7 +880,7 @@ a generic spec variable is like a family of variables indexed by types.
 Schemas are a means for structuring specifications by grouping properties together. Semantically, they are just
 syntactic sugar which expand to conditions on functions, structs, or modules.
 
-### Schema Usage
+### Basic Schema Usage
 
 Schemas are used as such:
 
@@ -929,29 +942,23 @@ All type arguments provided to `Schema` must be bound in this list and vice vers
 The apply operator includes the given schema in all function spec blocks which match the patterns, except those
 which are excluded via the `except` patterns.
 
-A typical use of the apply operator is to provide module invariants. Example:
+A typical use of the apply operator is to provide common pre and post conditions to all functions in a module with
+some exceptions. Example:
 
 ```move
-spec schema ModuleInvariant {
-    invariant module sum_of_counters < 4711;
+spec schema Unchanged {
+    let resource = global<R>(ADDR):
+    ensures resource == old(resource);
 }
 
 spec module {
-    // Include invariant in both public and private functions except the initialize function.
-    apply ModuleInvariant to * except initialize;
+    // Enforce Unchanged for all functions except the initialize function.
+    apply Unchanged to * except initialize;
 }
 ```
 
-Notice that the mechanism we described for [module level invariants](#invariant-condition-on-modules) cannot provide
-this semantics. It only applies to public function, and does not allow to exclude special functions, like
-`initialize` which is a private function used in a special way in Libra genesis. Module invariants can also
-not deal with generic functions, which `apply` can.
-
-> The `apply` operator need to be handled with care, because it is easy to get something wrong
-with it. For example, in `apply Schema<T> to *<T>`, those functions which have not exactly one
-type argument will be silently excluded because they do not match. On the other hand, until now, this kind
-of mistakes often lead to verification errors, and not to the more dangerous instance of unintended
-verification success.
+Notice that while with [global invariants](#global-invariants) we can express similar things, we *cannot*
+express the restriction of the invariant to only specific functions.
 
 ## Opaque Specifications
 
@@ -1059,8 +1066,6 @@ spec fun x_or_y_test {
 ```
 
 
-
-
 # Appendix: Experimental/Deprecated Features
 
 This appendix describes features which are experimental and/or deprecated.
@@ -1073,7 +1078,7 @@ This appendix describes features which are experimental and/or deprecated.
 
 The `succeeds_if` condition expresses when a function is expected to terminate with no abort.
 In the presence of `pragma aborts_if_is_partial = true` is true, it might help
-to minimize the risk of this model as discussed in the [note](#risk-aborts-if-is-partial) above.
+to minimize the risk of this model.
 
 If there are multiple `succeeds_if` conditions, they are or-ed into a combined terminates condition. That is,
 each individual `succeeds_if` is a condition under which the function should always succeed.
@@ -1092,19 +1097,6 @@ termination conditions are in fact redundant if `aborts_if_is_partial = false`.
 
 > Note that mixing `aborts_if` and `succeeds_if` conditions can cause unsound (contradicting) specifications,
 > as illustrated above, and should be done with care.
-
-## Requires Module Condition (deprecated)
-
-The `requires module` condition is a form of requires which is used to model module level invariants. It is
-usually not explicitly used, but automatically derived from [`invariant module`](#invariant-condition-on-functions).
-
-This condition is similar to the `requires` condition except that it is *assumed* to hold when a function is called
-instead of being verified. That is justified by that every function call to the module [ensures](#ensures-condition)
-on exit that the same condition holds as well.
-
-> Note that maintaining the soundness of `requires module` is the responsibility of the specifier. We are looking
-> at potentially automating the check for soundness in the future.
-
 
 ## Invariant Condition on Functions (deprecated)
 
