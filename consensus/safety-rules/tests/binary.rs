@@ -39,4 +39,6 @@ fn test_consensus_state() {
     let safety_rules_manager = SafetyRulesManager::new(&config);
     let mut safety_rules = safety_rules_manager.client();
     safety_rules.consensus_state().unwrap();
+
+    assert_eq!(1,2);
 }
