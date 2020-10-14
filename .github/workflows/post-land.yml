@@ -48,14 +48,16 @@ jobs:
       - name: Run Cluster Test
         run: |
           date
+          BASE_GIT_REV=$(git rev-parse $HEAD_GIT_REV^)
           ./scripts/cti --tag $IMAGE_TAG --timeout-secs 7200 \
             --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_CHANGELOG }} \
+            --changelog $BASE_GIT_REV $HEAD_GIT_REV \
             --suite pre_release
       - name: Push alert
         if: ${{ failure() }}
         run: |
           jq -n \
-            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with ${{ steps.set_env.outputs.image_tag }}." \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed with $IMAGE_TAG." \
             --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
             '{
               "attachments": [
