@@ -38,6 +38,9 @@ upstream:
   - private: "vfn"
   - public
 
+mempool:
+  default_failovers: 0
+
 metrics:
   enabled: false
 

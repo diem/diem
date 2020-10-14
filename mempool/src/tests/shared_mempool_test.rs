@@ -814,14 +814,18 @@ fn test_fn_failover() {
     let v0_config = NodeConfig::default();
     let mut fn_0_config = NodeConfig::default();
     fn_0_config.base.role = RoleType::FullNode;
+    fn_0_config.mempool.default_failovers = 0;
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config.upstream.networks = vec![NetworkId::vfn_network(), NetworkId::Public];
     let mut fn_1_config = NodeConfig::default();
     fn_1_config.base.role = RoleType::FullNode;
+    fn_1_config.mempool.default_failovers = 0;
     let mut fn_2_config = NodeConfig::default();
     fn_2_config.base.role = RoleType::FullNode;
+    fn_2_config.mempool.default_failovers = 0;
     let mut fn_3_config = NodeConfig::default();
     fn_3_config.base.role = RoleType::FullNode;
+    fn_3_config.mempool.default_failovers = 0;
 
     let mut smp = SharedMempoolNetwork::default();
     init_single_shared_mempool(&mut smp, v_0, NetworkId::Validator, v0_config);
