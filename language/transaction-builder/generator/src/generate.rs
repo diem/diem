@@ -137,7 +137,7 @@ fn main() {
         let content =
             std::fs::read_to_string(registry_file).expect("registry file must be readable");
         let registry = serde_yaml::from_str::<Registry>(content.as_str()).unwrap();
-        let name = match options.language {
+        let libra_package_name = match options.language {
             Language::Rust => {
                 if options.libra_version_number == "0.1.0" {
                     "libra-types".to_string()
@@ -149,8 +149,20 @@ fn main() {
             Language::Go => "libratypes".to_string(),
             _ => "libra_types".to_string(),
         };
-        let config =
-            serdegen::CodeGeneratorConfig::new(name).with_encodings(vec![serdegen::Encoding::Lcs]);
+        let mut config = serdegen::CodeGeneratorConfig::new(libra_package_name.clone())
+            .with_encodings(vec![serdegen::Encoding::Lcs]);
+        match options.language {
+            Language::Python3 => {
+                config = config.with_custom_code(buildgen::python3::get_custom_libra_code(
+                    &libra_package_name,
+                ));
+            }
+            Language::Java => {
+                let package: Vec<_> = libra_package_name.split('.').map(String::from).collect();
+                config = config.with_custom_code(buildgen::java::get_custom_libra_code(&package));
+            }
+            _ => (),
+        }
         installer.install_module(&config, &registry).unwrap();
     }
 

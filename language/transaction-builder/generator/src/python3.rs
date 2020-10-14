@@ -7,7 +7,7 @@ use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
-    python3, CodeGeneratorConfig,
+    python3, CodeGeneratorConfig, CustomCode,
 };
 
 use std::{
@@ -50,6 +50,42 @@ pub fn output(
     emitter.output_decoding_helpers(abis)?;
 
     Ok(())
+}
+
+pub fn get_custom_libra_code(package_name: &str) -> CustomCode {
+    let mut map = BTreeMap::new();
+    let custom_code = vec![(
+        "AccountAddress",
+        r#"LENGTH = 16  # type: int
+
+def to_bytes(self) -> bytes:
+    """Convert account address to bytes."""
+    return bytes(typing.cast(typing.Iterable[int], self.value))
+
+@staticmethod
+def from_bytes(addr: bytes) -> "AccountAddress":
+    """Create an account address from bytes."""
+    if len(addr) != AccountAddress.LENGTH:
+        raise ValueError("Incorrect length for an account address")
+    return AccountAddress(value=tuple(st.uint8(x) for x in addr))  # pyre-ignore
+
+def to_hex(self) -> str:
+    """Convert account address to an hexadecimal string."""
+    return self.to_bytes().hex()
+
+@staticmethod
+def from_hex(addr: str) -> "AccountAddress":
+    """Create an account address from an hexadecimal string."""
+    return AccountAddress.from_bytes(bytes.fromhex(addr))
+"#,
+    )];
+    for (name, code) in &custom_code {
+        map.insert(
+            vec![package_name.to_string(), name.to_string()],
+            code.to_string(),
+        );
+    }
+    map
 }
 
 /// Shared state for the Python code generator.

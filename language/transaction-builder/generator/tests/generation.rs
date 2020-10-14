@@ -35,7 +35,8 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let installer =
         serdegen::python3::Installer::new(src_dir_path.clone(), /* package */ None);
     let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string())
-        .with_encodings(vec![serdegen::Encoding::Lcs]);
+        .with_encodings(vec![serdegen::Encoding::Lcs])
+        .with_custom_code(buildgen::python3::get_custom_libra_code("libra_types"));
     installer.install_module(&config, &registry).unwrap();
     installer.install_serde_runtime().unwrap();
     installer.install_lcs_runtime().unwrap();
@@ -237,7 +238,13 @@ fn test_that_java_code_compiles_and_demo_runs() {
     let dir = tempdir().unwrap();
 
     let config = serdegen::CodeGeneratorConfig::new("org.libra.types".to_string())
-        .with_encodings(vec![serdegen::Encoding::Lcs]);
+        .with_encodings(vec![serdegen::Encoding::Lcs])
+        .with_custom_code(buildgen::java::get_custom_libra_code(
+            &"org.libra.types"
+                .split('.')
+                .map(String::from)
+                .collect::<Vec<_>>(),
+        ));
     let lcs_installer = serdegen::java::Installer::new(dir.path().to_path_buf());
     lcs_installer.install_module(&config, &registry).unwrap();
     lcs_installer.install_serde_runtime().unwrap();

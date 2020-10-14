@@ -16,18 +16,9 @@ import org.libra.types.TypeTag;
 
 public class StdlibDemo {
 
-    static AccountAddress make_address(byte[] values) {
-        assert values.length == 16;
-        Byte[] address = new Byte[16];
-        for (int i = 0; i < 16; i++) {
-            address[i] = Byte.valueOf(values[i]);
-        }
-        return new AccountAddress(address);
-    }
-
     public static void main(String[] args) throws Exception {
         StructTag.Builder builder = new StructTag.Builder();
-        builder.address = make_address(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
+        builder.address = AccountAddress.valueOf(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1});
         builder.module = new Identifier("LBR");
         builder.name = new Identifier("LBR");
         builder.type_params = new ArrayList<org.libra.types.TypeTag>();
@@ -35,7 +26,7 @@ public class StdlibDemo {
 
         TypeTag token = new TypeTag.Struct(tag);
 
-        AccountAddress payee = make_address(
+        AccountAddress payee = AccountAddress.valueOf(
             new byte[]{0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22});
 
         @Unsigned Long amount = Long.valueOf(1234567);
