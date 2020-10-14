@@ -10,28 +10,23 @@ use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
 use libra_trace::trace::trace_node;
 use libra_types::{
-    account_address::AccountAddress, account_config::testnet_dd_account_address,
-    ledger_info::LedgerInfo, waypoint::Waypoint,
+    account_config::{libra_root_address, testnet_dd_account_address},
+    ledger_info::LedgerInfo,
+    waypoint::Waypoint,
 };
 
 #[test]
-fn test_create_mint_transfer() {
-    let (_env, client) = setup_swarm_and_client_proxy(1, 0);
-    check_create_mint_transfer(client);
-}
-
-// Test if we commit not only user transactions but also block metadata transactions,
-// assert committed version > # of user transactions
-#[test]
 fn test_create_mint_transfer_block_metadata() {
-    let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
+    let (env, client) = setup_swarm_and_client_proxy(1, 0);
 
     // This script does 4 transactions
-    check_create_mint_transfer(env.get_validator_client(0, None));
+    check_create_mint_transfer(client);
 
-    let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
-    let (_account, version) = client
-        .get_latest_account(&["q", &address.to_string()])
+    // Test if we commit not only user transactions but also block metadata transactions,
+    // assert committed version > # of user transactions
+    let (_account, version) = env
+        .get_validator_client(0, None)
+        .get_latest_account(&["q", &libra_root_address().to_string()])
         .unwrap();
     assert!(
         version > 4,
