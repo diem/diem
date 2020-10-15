@@ -37,6 +37,9 @@ module DiemConfig {
     /// Accounts with this privilege can modify DiemConfig<TypeName> under Diem root address.
     resource struct ModifyConfigCapability<TypeName> {}
 
+    /// Reconfiguration disabled if this resource occurs under LibraRoot.
+    resource struct DisableReconfiguration {}
+
     /// The `Configuration` resource is in an invalid state
     const ECONFIGURATION: u64 = 0;
     /// A `DiemConfig` resource is in an invalid state
@@ -165,6 +168,35 @@ module DiemConfig {
         include SetEnsures<Config>;
     }
 
+    /// Private function to temporarily halt reconfiguration.
+    /// This function should only be used for offline WriteSet generation purpose and should never be invoked on chain.
+    fun disable_reconfiguration(dr_account: &signer) {
+        assert(
+            Signer::address_of(dr_account) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Errors::requires_address(EDIEM_CONFIG)
+        );
+        Roles::assert_diem_root(dr_account);
+        assert(reconfiguration_enabled(), Errors::invalid_state(ECONFIGURATION));
+        move_to(dr_account, DisableReconfiguration {} )
+    }
+
+    /// Private function to resume reconfiguration.
+    /// This function should only be used for offline WriteSet generation purpose and should never be invoked on chain.
+    fun enable_reconfiguration(dr_account: &signer) acquires DisableReconfiguration {
+        assert(
+            Signer::address_of(dr_account) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Errors::requires_address(EDIEM_CONFIG)
+        );
+        Roles::assert_diem_root(dr_account);
+
+        assert(!reconfiguration_enabled(), Errors::invalid_state(ECONFIGURATION));
+        DisableReconfiguration {} = move_from<DisableReconfiguration>(Signer::address_of(dr_account));
+    }
+
+    fun reconfiguration_enabled(): bool {
+        !exists<DisableReconfiguration>(CoreAddresses::DIEM_ROOT_ADDRESS())
+    }
+
     /// Publishes a new config.
     /// The caller will use the returned ModifyConfigCapability to specify the access control
     /// policy for who can modify the config.
@@ -247,7 +279,7 @@ module DiemConfig {
     /// `Configuration` and emits a `NewEpochEvent`
     fun reconfigure_() acquires Configuration {
         // Do not do anything if genesis has not finished.
-        if (DiemTimestamp::is_genesis() || DiemTimestamp::now_microseconds() == 0) {
+        if (DiemTimestamp::is_genesis() || DiemTimestamp::now_microseconds() == 0 || !reconfiguration_enabled()) {
             return ()
         };
 
@@ -282,7 +314,7 @@ module DiemConfig {
         );
     }
     spec define spec_reconfigure_omitted(): bool {
-       DiemTimestamp::is_genesis() || DiemTimestamp::spec_now_microseconds() == 0
+       DiemTimestamp::is_genesis() || DiemTimestamp::spec_now_microseconds() == 0 || !reconfiguration_enabled()
     }
     spec fun reconfigure_ {
         pragma opaque;
@@ -320,6 +352,7 @@ module DiemConfig {
         let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         let current_time = DiemTimestamp::spec_now_microseconds();
         aborts_if DiemTimestamp::is_operating()
+            && reconfiguration_enabled()
             && DiemTimestamp::spec_now_microseconds() > 0
             && config.epoch < MAX_U64
             && current_time < config.last_reconfiguration_time

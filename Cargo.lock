@@ -2281,16 +2281,27 @@ name = "diem-writeset-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "compiled-stdlib",
+ "diem-state-view",
  "diem-types",
+ "diem-validator-interface",
+ "diem-vm",
  "diem-workspace-hack",
+ "diemdb",
  "handlebars",
  "libra-canonical-serialization",
+ "move-core-types",
  "move-lang",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+ "once_cell",
  "serde",
  "serde_json",
  "stdlib",
  "structopt 0.3.21",
  "tempfile",
+ "vm",
 ]
 
 [[package]]

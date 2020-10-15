@@ -11,11 +11,15 @@ to synchronize configuration changes for the validators.
 -  [Struct `NewEpochEvent`](#0x1_DiemConfig_NewEpochEvent)
 -  [Resource `Configuration`](#0x1_DiemConfig_Configuration)
 -  [Resource `ModifyConfigCapability`](#0x1_DiemConfig_ModifyConfigCapability)
+-  [Resource `DisableReconfiguration`](#0x1_DiemConfig_DisableReconfiguration)
 -  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_DiemConfig_initialize)
 -  [Function `get`](#0x1_DiemConfig_get)
 -  [Function `set`](#0x1_DiemConfig_set)
 -  [Function `set_with_capability_and_reconfigure`](#0x1_DiemConfig_set_with_capability_and_reconfigure)
+-  [Function `disable_reconfiguration`](#0x1_DiemConfig_disable_reconfiguration)
+-  [Function `enable_reconfiguration`](#0x1_DiemConfig_enable_reconfiguration)
+-  [Function `reconfiguration_enabled`](#0x1_DiemConfig_reconfiguration_enabled)
 -  [Function `publish_new_config_and_get_capability`](#0x1_DiemConfig_publish_new_config_and_get_capability)
 -  [Function `publish_new_config`](#0x1_DiemConfig_publish_new_config)
 -  [Function `reconfigure`](#0x1_DiemConfig_reconfigure)
@@ -163,6 +167,34 @@ Accounts with this privilege can modify DiemConfig<TypeName> under Diem root add
 
 </details>
 
+<a name="0x1_DiemConfig_DisableReconfiguration"></a>
+
+## Resource `DisableReconfiguration`
+
+Reconfiguration disabled if this resource occurs under LibraRoot.
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
 <a name="@Constants_0"></a>
 
 ## Constants
@@ -288,7 +320,7 @@ Publishes <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configurati
 
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_InitializeEnsures">InitializeEnsures</a> {
     <b>ensures</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
-    <a name="0x1_DiemConfig_new_config$13"></a>
+    <a name="0x1_DiemConfig_new_config$16"></a>
     <b>let</b> new_config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
     <b>ensures</b> new_config.epoch == 0;
     <b>ensures</b> new_config.last_reconfiguration_time == 0;
@@ -493,6 +525,95 @@ a Diem root signer.
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetEnsures">SetEnsures</a>&lt;Config&gt;;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemConfig_disable_reconfiguration"></a>
+
+## Function `disable_reconfiguration`
+
+Private function to temporarily halt reconfiguration.
+This function should only be used for offline WriteSet generation purpose and should never be invoked on chain.
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_disable_reconfiguration">disable_reconfiguration</a>(dr_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_disable_reconfiguration">disable_reconfiguration</a>(dr_account: &signer) {
+    <b>assert</b>(
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>(),
+        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="DiemConfig.md#0x1_DiemConfig_EDIEM_CONFIG">EDIEM_CONFIG</a>)
+    );
+    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
+    <b>assert</b>(<a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="DiemConfig.md#0x1_DiemConfig_ECONFIGURATION">ECONFIGURATION</a>));
+    move_to(dr_account, <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a> {} )
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemConfig_enable_reconfiguration"></a>
+
+## Function `enable_reconfiguration`
+
+Private function to resume reconfiguration.
+This function should only be used for offline WriteSet generation purpose and should never be invoked on chain.
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_enable_reconfiguration">enable_reconfiguration</a>(dr_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_enable_reconfiguration">enable_reconfiguration</a>(dr_account: &signer) <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a> {
+    <b>assert</b>(
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>(),
+        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="DiemConfig.md#0x1_DiemConfig_EDIEM_CONFIG">EDIEM_CONFIG</a>)
+    );
+    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
+
+    <b>assert</b>(!<a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="DiemConfig.md#0x1_DiemConfig_ECONFIGURATION">ECONFIGURATION</a>));
+    <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a> {} = move_from&lt;<a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account));
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DiemConfig_reconfiguration_enabled"></a>
+
+## Function `reconfiguration_enabled`
+
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>(): bool {
+    !<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>())
+}
 </code></pre>
 
 
@@ -707,7 +828,7 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 
 <pre><code><b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_reconfigure_">reconfigure_</a>() <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a> {
     // Do not do anything <b>if</b> genesis has not finished.
-    <b>if</b> (<a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>() || <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>() == 0) {
+    <b>if</b> (<a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>() || <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>() == 0 || !<a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>()) {
         <b>return</b> ()
     };
 
@@ -755,11 +876,11 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 <pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>ensures</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>()) == <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
-<a name="0x1_DiemConfig_config$18"></a>
+<a name="0x1_DiemConfig_config$21"></a>
 <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-<a name="0x1_DiemConfig_now$19"></a>
+<a name="0x1_DiemConfig_now$22"></a>
 <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
-<a name="0x1_DiemConfig_epoch$20"></a>
+<a name="0x1_DiemConfig_epoch$23"></a>
 <b>let</b> epoch = config.epoch;
 <b>include</b> !<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now)
     ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> && <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
@@ -782,12 +903,12 @@ These conditions are unlikely to happen in reality, and excluding them avoids fo
 <a name="0x1_DiemConfig_InternalReconfigureAbortsIf"></a>
 
 
-<a name="0x1_DiemConfig_config$16"></a>
+<a name="0x1_DiemConfig_config$19"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> {
     <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <a name="0x1_DiemConfig_current_time$17"></a>
+    <a name="0x1_DiemConfig_current_time$20"></a>
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
     <b>aborts_if</b> [concrete] current_time &lt; config.last_reconfiguration_time <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> [concrete] config.epoch == <a href="DiemConfig.md#0x1_DiemConfig_MAX_U64">MAX_U64</a>
@@ -802,14 +923,15 @@ This schema is to be used by callers of <code>reconfigure</code>
 <a name="0x1_DiemConfig_ReconfigureAbortsIf"></a>
 
 
-<a name="0x1_DiemConfig_config$14"></a>
+<a name="0x1_DiemConfig_config$17"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a> {
     <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-    <a name="0x1_DiemConfig_current_time$15"></a>
+    <a name="0x1_DiemConfig_current_time$18"></a>
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
     <b>aborts_if</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>()
+        && <a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>()
         && <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() &gt; 0
         && config.epoch &lt; <a href="DiemConfig.md#0x1_DiemConfig_MAX_U64">MAX_U64</a>
         && current_time &lt; config.last_reconfiguration_time
@@ -867,7 +989,7 @@ reconfiguration event.
 
 
 <pre><code><b>define</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>(): bool {
-  <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>() || <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() == 0
+  <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>() || <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() == 0 || !<a href="DiemConfig.md#0x1_DiemConfig_reconfiguration_enabled">reconfiguration_enabled</a>()
 }
 </code></pre>
 
