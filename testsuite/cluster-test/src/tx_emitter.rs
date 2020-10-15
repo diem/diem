@@ -488,7 +488,7 @@ impl TxEmitter {
             .enumerate()
             .map(|(i, seed_account)| {
                 // Spawn new threads
-                let index = i / req.instances.len();
+                let index = i % req.instances.len();
                 let instance = req.instances[index].clone();
                 let client = instance.json_rpc_client();
                 create_new_accounts(
