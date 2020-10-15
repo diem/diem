@@ -30,7 +30,7 @@ pub enum Command {
     #[structopt(about = "Extract a public key from the validator storage")]
     ExtractPublicKey(crate::keys::ExtractPublicKey),
     #[structopt(about = "Set the waypoint in the validator storage")]
-    InsertWaypoint(crate::waypoint::InsertWaypoint),
+    InsertWaypoint(libra_management::waypoint::InsertWaypoint),
     #[structopt(about = "Prints an account from the validator storage")]
     PrintAccount(crate::account::PrintAccount),
     #[structopt(about = "Remove a validator from ValidatorSet")]

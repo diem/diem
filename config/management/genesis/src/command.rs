@@ -13,7 +13,7 @@ pub enum Command {
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
     #[structopt(about = "Set the waypoint in the validator storage")]
-    InsertWaypoint(crate::waypoint::InsertWaypoint),
+    InsertWaypoint(libra_management::waypoint::InsertWaypoint),
     #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
     LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]

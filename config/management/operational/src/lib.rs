@@ -13,7 +13,6 @@ mod owner;
 mod validate_transaction;
 mod validator_config;
 mod validator_set;
-mod waypoint;
 
 mod network_checker;
 #[cfg(any(test, feature = "testing"))]

@@ -9,6 +9,7 @@ pub mod secure_backend;
 pub mod storage;
 pub mod transaction;
 pub mod validator_config;
+pub mod waypoint;
 
 pub mod constants {
     use libra_types::account_config::COIN1_NAME;

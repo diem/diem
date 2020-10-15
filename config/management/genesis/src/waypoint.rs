@@ -2,12 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use executor::db_bootstrapper;
-use libra_global_constants::{GENESIS_WAYPOINT, WAYPOINT};
-use libra_management::{
-    config::ConfigPath,
-    error::Error,
-    secure_backend::{SharedBackend, ValidatorBackend},
-};
+use libra_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use libra_vm::LibraVM;
@@ -45,28 +40,5 @@ impl CreateWaypoint {
 
         db_bootstrapper::generate_waypoint::<LibraVM>(&db_rw, &genesis)
             .map_err(|e| Error::UnexpectedError(e.to_string()))
-    }
-}
-
-#[derive(Debug, StructOpt)]
-pub struct InsertWaypoint {
-    #[structopt(flatten)]
-    pub config: ConfigPath,
-    #[structopt(flatten)]
-    validator_backend: ValidatorBackend,
-    #[structopt(long)]
-    waypoint: Waypoint,
-}
-
-impl InsertWaypoint {
-    pub fn execute(self) -> Result<(), Error> {
-        let config = self
-            .config
-            .load()?
-            .override_validator_backend(&self.validator_backend.validator_backend)?;
-        let mut validator_storage = config.validator_backend();
-        validator_storage.set(WAYPOINT, self.waypoint)?;
-        validator_storage.set(GENESIS_WAYPOINT, self.waypoint)?;
-        Ok(())
     }
 }
