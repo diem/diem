@@ -73,4 +73,8 @@ impl NodeDebugService {
 
         Self { runtime }
     }
+
+    pub fn runtime(&self) -> &Runtime {
+        &self.runtime
+    }
 }

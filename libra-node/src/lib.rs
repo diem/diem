@@ -220,6 +220,46 @@ fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> No
     NodeDebugService::new(addr, logger)
 }
 
+async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
+    use futures::stream::StreamExt;
+
+    let args: Vec<String> = ::std::env::args().collect();
+
+    // Once an hour
+    let mut config_interval = tokio::time::interval(std::time::Duration::from_secs(60 * 60)).fuse();
+    // Once a minute
+    let mut version_interval = tokio::time::interval(std::time::Duration::from_secs(60)).fuse();
+
+    info!("periodic_state_dump task started");
+
+    loop {
+        futures::select! {
+            _ = config_interval.select_next_some() => {
+                info!(config = node_config, args = args, "config and command line arguments");
+            }
+            _ = version_interval.select_next_some() => {
+                let chain_id = fetch_chain_id(&db);
+                let ledger_info = if let Ok(ledger_info) = db.reader.get_latest_ledger_info() {
+                    ledger_info
+                } else {
+                    warn!("unable to query latest ledger info");
+                    continue;
+                };
+
+                let latest_ledger_verion = ledger_info.ledger_info().version();
+                let root_hash = ledger_info.ledger_info().transaction_accumulator_hash();
+
+                info!(
+                    chain_id = chain_id,
+                    latest_ledger_verion = latest_ledger_verion,
+                    root_hash = root_hash,
+                    "latest ledger version and its corresponding root hash"
+                );
+            }
+        }
+    }
+}
+
 pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) -> LibraHandle {
     let debug_if = setup_debug_interface(&node_config, logger);
 
@@ -432,6 +472,12 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         ));
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
+
+    // Spawn a task which will periodically dump some interesting state
+    debug_if
+        .runtime()
+        .handle()
+        .spawn(periodic_state_dump(node_config.to_owned(), db_rw));
 
     LibraHandle {
         network_runtimes,
