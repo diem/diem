@@ -1,0 +1,12 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 534bddea5..2c17edb34 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -184,6 +184,7 @@ default-members = [
+
+ [profile.release]
+ debug = true
++overflow-checks = true
+
+ [profile.bench]
+ debug = true

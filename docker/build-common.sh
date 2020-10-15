@@ -14,16 +14,22 @@ export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
 export CARGOFLAGS=$(cat cargo-flags)
 export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO for release builds
 
-# Build release binaries
+# Build release binaries except TCB
 ${CARGO} ${CARGOFLAGS} build --release \
          -p libra-genesis-tool \
          -p libra-operational-tool \
          -p libra-node \
-         -p libra-key-manager \
-         -p safety-rules \
          -p db-bootstrapper \
          -p backup-cli \
          "$@"
+
+# Build release TCB binaries
+git apply docker/tcb_build.patch
+${CARGO} ${CARGOFLAGS} build --release \
+         -p libra-key-manager \
+         -p safety-rules \
+         "$@"
+git apply -R docker/tcb_build.patch
 
 # Build and overwrite the libra-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
 if [ "$ENABLE_FAILPOINTS" = "1" ]; then
