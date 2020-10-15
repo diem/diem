@@ -24,7 +24,7 @@ thiserror = "1.0.21"
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", versino = "0.1.0" }
+libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
