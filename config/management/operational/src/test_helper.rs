@@ -13,7 +13,7 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{account_address::AccountAddress, chain_id::ChainId};
+use libra_types::{account_address::AccountAddress, chain_id::ChainId, waypoint::Waypoint};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "libra-operational-tool";
@@ -173,6 +173,25 @@ impl OperationalTool {
             CommandName::ExtractPrivateKey,
             |cmd| cmd.extract_private_key(),
         )
+    }
+
+    pub fn insert_waypoint(
+        &self,
+        waypoint: Waypoint,
+        backend: &config::SecureBackend,
+    ) -> Result<(), Error> {
+        let args = format!(
+            "
+                {command}
+                --waypoint {waypoint}
+                --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::InsertWaypoint),
+            waypoint = waypoint,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.insert_waypoint()
     }
 
     pub fn print_account(

@@ -14,11 +14,11 @@ use crate::{
 use libra_config::config::SecureBackend;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey, Uniform,
+    HashValue, PrivateKey, Uniform,
 };
 use libra_global_constants::{
-    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
-    VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, GENESIS_WAYPOINT, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+    VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_key_manager::libra_interface::LibraInterface;
 use libra_management::storage::to_x25519;
@@ -26,7 +26,10 @@ use libra_network_address::NetworkAddress;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
+use libra_types::{
+    account_address::AccountAddress, block_info::BlockInfo, ledger_info::LedgerInfo,
+    transaction::authenticator::AuthenticationKey, waypoint::Waypoint,
+};
 use rand::rngs::OsRng;
 use std::{
     convert::{TryFrom, TryInto},
@@ -283,6 +286,29 @@ fn test_extract_public_key() {
     let key_from_file = lcs::from_bytes(&file_contents).unwrap();
     let key_from_storage = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
     assert_eq!(key_from_storage, key_from_file);
+}
+
+#[test]
+fn test_insert_waypoint() {
+    let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Get the current waypoint from storage
+    let current_waypoint: Waypoint = storage.get(WAYPOINT).unwrap().value;
+    storage.get::<Waypoint>(GENESIS_WAYPOINT).unwrap_err();
+
+    // Insert a new waypoint into storage
+    let inserted_waypoint =
+        Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::zero()));
+    assert_ne!(current_waypoint, inserted_waypoint);
+    op_tool
+        .insert_waypoint(inserted_waypoint, &backend)
+        .unwrap();
+
+    // Verify the waypoint has changed in storage and that genesis waypoint is now set
+    let new_waypoint = storage.get(WAYPOINT).unwrap().value;
+    let new_genesis_waypoint = storage.get(GENESIS_WAYPOINT).unwrap().value;
+    assert_eq!(inserted_waypoint, new_waypoint);
+    assert_eq!(inserted_waypoint, new_genesis_waypoint);
 }
 
 #[test]
