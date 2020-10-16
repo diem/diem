@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
+use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_global_constants::LIBRA_ROOT_KEY;
 use libra_management::{
     config::{Config, ConfigPath},
@@ -32,11 +32,13 @@ pub struct CreateAccount {
     chain_id: Option<ChainId>,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
+    #[structopt(flatten)]
+    auto_validate: AutoValidate,
 }
 
 impl CreateAccount {
     fn execute(
-        self,
+        &mut self,
         script_callback: fn(
             nonce: u64,
             account_address: AccountAddress,
@@ -51,6 +53,7 @@ impl CreateAccount {
             .override_chain_id(self.chain_id)
             .override_json_server(&self.json_server)
             .override_validator_backend(&self.validator_backend.validator_backend)?;
+
         let key = libra_management::read_key_from_file(&self.path_to_key)
             .map_err(|e| Error::UnableToReadFile(format!("{:?}", self.path_to_key), e))?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
@@ -64,8 +67,15 @@ impl CreateAccount {
             auth_key.prefix().to_vec(),
             self.name.as_bytes().to_vec(),
         );
-        build_and_submit_libra_root_transaction(&config, seq_num, script, action)
-            .map(|a| (a, account_address))
+        let mut transaction_context =
+            build_and_submit_libra_root_transaction(&config, seq_num, script, action)?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok((transaction_context, account_address))
     }
 }
 
@@ -76,7 +86,7 @@ pub struct CreateValidator {
 }
 
 impl CreateValidator {
-    pub fn execute(self) -> Result<(TransactionContext, AccountAddress), Error> {
+    pub fn execute(&mut self) -> Result<(TransactionContext, AccountAddress), Error> {
         self.input.execute(
             transaction_builder::encode_create_validator_account_script,
             "create-validator",
@@ -91,7 +101,7 @@ pub struct CreateValidatorOperator {
 }
 
 impl CreateValidatorOperator {
-    pub fn execute(self) -> Result<(TransactionContext, AccountAddress), Error> {
+    pub fn execute(&mut self) -> Result<(TransactionContext, AccountAddress), Error> {
         self.input.execute(
             transaction_builder::encode_create_validator_operator_account_script,
             "create-validator-operator",
@@ -108,6 +118,8 @@ struct RootValidatorOperation {
     json_server: Option<String>,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
+    #[structopt(flatten)]
+    auto_validate: AutoValidate,
 }
 
 impl RootValidatorOperation {
@@ -126,7 +138,7 @@ pub struct AddValidator {
 }
 
 impl AddValidator {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(&mut self) -> Result<TransactionContext, Error> {
         let config = self.input.config()?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
 
@@ -142,7 +154,16 @@ impl AddValidator {
             name,
             self.input.account_address,
         );
-        build_and_submit_libra_root_transaction(&config, seq_num, script, "add-validator")
+        let mut transaction_context =
+            build_and_submit_libra_root_transaction(&config, seq_num, script, "add-validator")?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .input
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok(transaction_context)
     }
 }
 
@@ -153,7 +174,7 @@ pub struct RemoveValidator {
 }
 
 impl RemoveValidator {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(&mut self) -> Result<TransactionContext, Error> {
         let config = self.input.config()?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
 
@@ -170,7 +191,16 @@ impl RemoveValidator {
             self.input.account_address,
         );
 
-        build_and_submit_libra_root_transaction(&config, seq_num, script, "remove-validator")
+        let mut transaction_context =
+            build_and_submit_libra_root_transaction(&config, seq_num, script, "remove-validator")?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .input
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok(transaction_context)
     }
 }
 

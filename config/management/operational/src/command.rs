@@ -7,7 +7,6 @@ use crate::{
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, execute_command};
-use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
 use structopt::StructOpt;
@@ -131,51 +130,81 @@ impl std::fmt::Display for CommandName {
     }
 }
 
+// TODO(joshlind): refactor the execute command macro to handle mut and non-mut.
+macro_rules! execute_command_mut {
+    ($obj:ident, $command:path, $expected_name:path) => {
+        if let $command(mut cmd) = $obj {
+            cmd.execute()
+        } else {
+            Err(Error::UnexpectedCommand(
+                $expected_name.to_string(),
+                CommandName::from(&$obj).to_string(),
+            ))
+        }
+    };
+}
+
 impl Command {
     pub fn execute(self) -> Result<String, Error> {
         match self {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
-            Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::AddValidator(mut cmd) => Self::print_transaction_context(cmd.execute()),
             Command::CheckEndpoint(cmd) => Self::pretty_print(cmd.execute()),
-            Command::CreateValidator(cmd) => Self::pretty_print(cmd.execute()),
-            Command::CreateValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CreateValidator(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
+            Command::CreateValidatorOperator(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
             Command::PrintAccount(cmd) => Self::pretty_print(cmd.execute()),
-            Command::RemoveValidator(cmd) => Self::pretty_print(cmd.execute()),
-            Command::RotateConsensusKey(cmd) => Self::print_transaction_context(cmd.execute()),
-            Command::RotateOperatorKey(cmd) => Self::print_transaction_context(cmd.execute()),
-            Command::RotateFullNodeNetworkKey(cmd) => {
+            Command::RemoveValidator(mut cmd) => Self::print_transaction_context(cmd.execute()),
+            Command::RotateConsensusKey(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
+            Command::RotateOperatorKey(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
+            Command::RotateFullNodeNetworkKey(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
+            Command::RotateValidatorNetworkKey(mut cmd) => {
+                Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
+            }
+            Command::SetValidatorConfig(mut cmd) => Self::print_transaction_context(cmd.execute()),
+            Command::SetValidatorOperator(mut cmd) => {
                 Self::print_transaction_context(cmd.execute())
             }
-            Command::RotateValidatorNetworkKey(cmd) => {
-                Self::print_transaction_context(cmd.execute())
-            }
-            Command::SetValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
-            Command::SetValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
-            Command::ValidateTransaction(cmd) => Self::print_transaction_status(cmd.execute()),
+            Command::ValidateTransaction(cmd) => Self::print_transaction_context(cmd.execute()),
             Command::ValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
             Command::ValidatorSet(cmd) => Self::pretty_print(cmd.execute()),
         }
     }
 
-    /// Show the transaction status in a friendly way
-    fn print_transaction_status(
-        result: Result<Option<VMStatusView>, Error>,
+    /// Show the transaction context and validation result in a friendly way
+    pub fn print_transaction_context(
+        result: Result<TransactionContext, Error>,
     ) -> Result<String, Error> {
-        Self::pretty_print(result.map(|maybe_status| {
-            maybe_status.map_or(String::from("Not yet executed"), |status| {
-                status.to_string()
-            })
-        }))
+        match &result {
+            Ok(txn_ctx) => match &txn_ctx.execution_result {
+                Some(status) => Self::pretty_print(Ok(status.to_string())),
+                None => Self::print_unvalidated_transaction_context(txn_ctx),
+            },
+            Err(_) => Self::pretty_print(result),
+        }
     }
 
-    /// Show the transaction context, dropping the related key
-    fn print_transaction_context<Key>(
-        result: Result<(TransactionContext, Key), Error>,
+    /// Show a transaction context without an execution result
+    fn print_unvalidated_transaction_context(
+        transaction_context: &TransactionContext,
     ) -> Result<String, Error> {
-        Self::pretty_print(result.map(|(transaction, _)| transaction))
+        Self::pretty_print(Ok(UnvalidatedTransactionContext {
+            address: transaction_context.address,
+            sequence_number: transaction_context.sequence_number,
+            execution_result: "Not yet validated.",
+        }))
     }
 
     /// Show success or the error result
@@ -193,7 +222,7 @@ impl Command {
     }
 
     pub fn add_validator(self) -> Result<TransactionContext, Error> {
-        execute_command!(self, Command::AddValidator, CommandName::AddValidator)
+        execute_command_mut!(self, Command::AddValidator, CommandName::AddValidator)
     }
 
     pub fn check_endpoint(self) -> Result<String, Error> {
@@ -201,11 +230,11 @@ impl Command {
     }
 
     pub fn create_validator(self) -> Result<(TransactionContext, AccountAddress), Error> {
-        execute_command!(self, Command::CreateValidator, CommandName::CreateValidator)
+        execute_command_mut!(self, Command::CreateValidator, CommandName::CreateValidator)
     }
 
     pub fn create_validator_operator(self) -> Result<(TransactionContext, AccountAddress), Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::CreateValidatorOperator,
             CommandName::CreateValidatorOperator
@@ -237,11 +266,11 @@ impl Command {
     }
 
     pub fn remove_validator(self) -> Result<TransactionContext, Error> {
-        execute_command!(self, Command::RemoveValidator, CommandName::RemoveValidator)
+        execute_command_mut!(self, Command::RemoveValidator, CommandName::RemoveValidator)
     }
 
     pub fn rotate_consensus_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::RotateConsensusKey,
             CommandName::RotateConsensusKey
@@ -249,7 +278,7 @@ impl Command {
     }
 
     pub fn rotate_operator_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::RotateOperatorKey,
             CommandName::RotateOperatorKey
@@ -259,7 +288,7 @@ impl Command {
     pub fn rotate_fullnode_network_key(
         self,
     ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::RotateFullNodeNetworkKey,
             CommandName::RotateFullNodeNetworkKey
@@ -269,7 +298,7 @@ impl Command {
     pub fn rotate_validator_network_key(
         self,
     ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::RotateValidatorNetworkKey,
             CommandName::RotateValidatorNetworkKey
@@ -277,7 +306,7 @@ impl Command {
     }
 
     pub fn set_validator_config(self) -> Result<TransactionContext, Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::SetValidatorConfig,
             CommandName::SetValidatorConfig
@@ -285,14 +314,14 @@ impl Command {
     }
 
     pub fn set_validator_operator(self) -> Result<TransactionContext, Error> {
-        execute_command!(
+        execute_command_mut!(
             self,
             Command::SetValidatorOperator,
             CommandName::SetValidatorOperator
         )
     }
 
-    pub fn validate_transaction(self) -> Result<Option<VMStatusView>, Error> {
+    pub fn validate_transaction(self) -> Result<TransactionContext, Error> {
         execute_command!(
             self,
             Command::ValidateTransaction,
@@ -309,8 +338,17 @@ impl Command {
     }
 }
 
+/// A result wrapper for displaying either a correct execution result or an error.
 #[derive(Serialize)]
 pub enum ResultWrapper<T> {
     Result(T),
     Error(String),
+}
+
+/// A struct wrapper for displaying unvalidated transaction contexts.
+#[derive(Serialize)]
+struct UnvalidatedTransactionContext<'a> {
+    address: AccountAddress,
+    sequence_number: u64,
+    execution_result: &'a str,
 }

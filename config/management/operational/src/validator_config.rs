@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
+use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
@@ -34,10 +34,12 @@ pub struct SetValidatorConfig {
         help = "Full Node Network Address"
     )]
     fullnode_address: Option<NetworkAddress>,
+    #[structopt(flatten)]
+    auto_validate: AutoValidate,
 }
 
 impl SetValidatorConfig {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(&mut self) -> Result<TransactionContext, Error> {
         let config = self
             .validator_config
             .config
@@ -52,7 +54,7 @@ impl SetValidatorConfig {
         let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
         let encryptor = config.validator_backend().encryptor();
-        let client = JsonRpcClientWrapper::new(config.json_server);
+        let client = JsonRpcClientWrapper::new(config.json_server.clone());
         let sequence_number = client.sequence_number(operator_account)?;
 
         // See if the validator is in the set
@@ -73,8 +75,8 @@ impl SetValidatorConfig {
             None
         };
 
-        let validator_address = if let Some(validator_address) = self.validator_address {
-            validator_address
+        let validator_address = if let Some(validator_address) = &self.validator_address {
+            validator_address.clone()
         } else if let Some(vc) = &validator_config {
             strip_address(&vc.validator_network_address)
         } else {
@@ -83,8 +85,8 @@ impl SetValidatorConfig {
             ));
         };
 
-        let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
-            fullnode_address
+        let fullnode_address = if let Some(fullnode_address) = &self.fullnode_address {
+            fullnode_address.clone()
         } else if let Some(vc) = &validator_config {
             strip_address(&vc.fullnode_network_address)
         } else {
@@ -99,7 +101,15 @@ impl SetValidatorConfig {
             validator_address,
             validator_config.is_some(),
         )?;
-        client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
+        let mut transaction_context =
+            client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok(transaction_context)
     }
 }
 
@@ -110,11 +120,13 @@ pub struct RotateKey {
     json_server: Option<String>,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
+    #[structopt(flatten)]
+    auto_validate: AutoValidate,
 }
 
 impl RotateKey {
     pub fn execute(
-        self,
+        &mut self,
         key_name: &'static str,
     ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
         // Load the config, storage backend and create a json rpc client.
@@ -124,7 +136,7 @@ impl RotateKey {
             .override_json_server(&self.json_server);
         let mut storage = config.validator_backend();
         let encryptor = config.validator_backend().encryptor();
-        let client = JsonRpcClientWrapper::new(config.json_server);
+        let client = JsonRpcClientWrapper::new(config.json_server.clone());
 
         // Fetch the current on-chain validator config for the node
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
@@ -160,15 +172,21 @@ impl RotateKey {
         }
 
         // Create and set the validator config state on the blockchain.
-        let set_validator_config = SetValidatorConfig {
-            json_server: self.json_server,
-            validator_config: self.validator_config,
+        let mut set_validator_config = SetValidatorConfig {
+            json_server: self.json_server.clone(),
+            validator_config: self.validator_config.clone(),
             validator_address: None,
             fullnode_address: None,
+            auto_validate: self.auto_validate.clone(),
         };
-        set_validator_config
-            .execute()
-            .map(|txn_ctx| (txn_ctx, storage_key))
+        let mut transaction_context = set_validator_config.execute()?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok((transaction_context, storage_key))
     }
 }
 
@@ -179,7 +197,7 @@ pub struct RotateConsensusKey {
 }
 
 impl RotateConsensusKey {
-    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    pub fn execute(&mut self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
         self.rotate_key.execute(CONSENSUS_KEY)
     }
 }
@@ -191,7 +209,7 @@ pub struct RotateValidatorNetworkKey {
 }
 
 impl RotateValidatorNetworkKey {
-    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    pub fn execute(&mut self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
         let (txn_ctx, key) = self.rotate_key.execute(VALIDATOR_NETWORK_KEY)?;
         Ok((txn_ctx, to_x25519(key)?))
     }
@@ -204,7 +222,7 @@ pub struct RotateFullNodeNetworkKey {
 }
 
 impl RotateFullNodeNetworkKey {
-    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    pub fn execute(&mut self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
         let (txn_ctx, key) = self.rotate_key.execute(FULLNODE_NETWORK_KEY)?;
         Ok((txn_ctx, to_x25519(key)?))
     }
