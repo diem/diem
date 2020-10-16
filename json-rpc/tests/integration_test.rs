@@ -9,9 +9,11 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::coin1_tmp_tag,
+    ledger_info::LedgerInfoWithSignatures,
     transaction::{ChangeSet, Transaction, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use std::ops::Deref;
 use transaction_builder_generated::stdlib;
 
 mod node;
@@ -89,6 +91,14 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(metadata["libra_version"], 1);
                 assert_ne!(resp.libra_ledger_timestampusec, 0);
                 assert_ne!(resp.libra_ledger_version, 0);
+
+                // prove the accumulator_root_hash
+                let sp_resp = env.send("get_state_proof", json!([resp.libra_ledger_version]));
+                let state_proof = sp_resp.result.unwrap();
+                let info_hex = state_proof["ledger_info_with_signatures"].as_str().unwrap();
+                let info:LedgerInfoWithSignatures = lcs::from_bytes(&hex::decode(&info_hex).unwrap()).unwrap();
+                let expected_hash = info.deref().ledger_info().transaction_accumulator_hash().to_hex();
+                assert_eq!(expected_hash, metadata["accumulator_root_hash"].as_str().unwrap());
             },
         },
         Test {

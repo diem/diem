@@ -10,6 +10,7 @@
 | script_hash_allow_list     | List<string>   | List of allowed scripts hex-encoded hash bytes, server may not return this field if the allow list not found in on chain configuration. |
 | module_publishing_allowed  | boolean        | True for allowing publishing customized script, server may not return this field if the flag not found in on chain configuration. |
 | libra_version              | unsigned int64 | Libra chain major version number              |
+| accumulator_root_hash      | string         | accumulator root hash of the block (ledger) version |
 
 Note: see [LibraTransactionPublishingOption](../../language/stdlib/modules/doc/LibraTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
 
@@ -34,8 +35,9 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
     "script_hash_allow_list": [
         <allowed scripts hex-encoded hash string>
     ],
-    "module_publishing_allowed": false
-    "libra_version": 1
+    "module_publishing_allowed": false,
+    "libra_version": 1,
+    "accumulator_root_hash": "<hash string>"
   }
 }
 ```
