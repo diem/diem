@@ -13,3 +13,7 @@ pub use client::{
 pub use libra_json_rpc_types::{errors, views};
 pub use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 pub use response::{JsonRpcResponse, ResponseAsView};
+
+// new implementation module
+
+pub mod async_client;

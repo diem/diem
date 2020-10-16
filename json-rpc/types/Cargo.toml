@@ -14,6 +14,7 @@ anyhow = "1.0.33"
 hex = "0.4.2"
 serde = { version = "1.0.116", default-features = false }
 serde_json = "1.0.58"
+prost = "0.6"
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -23,3 +24,6 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0"}
 move-explain = { path = "../../language/tools/move-explain", version = "0.1.0" }
+
+[build-dependencies]
+prost-build = "0.6"

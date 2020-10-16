@@ -45,6 +45,8 @@ This file is a checklist of requirement & technical details for a Libra client S
 - [ ] Decode transaction script bytes: it is possible we may add new transaction script without upgrading server, hence client decoding logic is important for client to recognize all transaction scripts.
     By upgrading client side move stdlib scripts (binary and generated type information code), we can decode latest move stdlib scripts executed on-chain.
 - [ ] Create transaction hash from signed transaction: hex-encode(sha3-256([]byte("LIBRA::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/libra-client-sdk-go/blob/master/libratypes/hash.go#L27))
+- [ ] Client interface should prefer to use AccountAddress type instead of string address.
+
 
 # [LIP-4][7] Transaction Metadata support
 

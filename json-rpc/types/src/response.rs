@@ -25,7 +25,7 @@ impl JsonRpcResponse {
         libra_ledger_version: u64,
         libra_ledger_timestampusec: u64,
     ) -> Self {
-        JsonRpcResponse {
+        Self {
             libra_chain_id: chain_id.id(),
             libra_ledger_version,
             libra_ledger_timestampusec,

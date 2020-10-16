@@ -15,11 +15,19 @@ hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking", "json"], default_features = false }
 serde = { version = "1.0.116", default-features = false }
 serde_json = "1.0.58"
+tokio = { version = "0.2.22", features = ["full"] }
 
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-json-rpc-types  = { path = "../../json-rpc/types" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+
+
+[dev-dependencies]
+warp = "0.2.5"
+libra-config = { path = "../../config", version = "0.1.0" }
+
 
 [features]
 default = ["tls"]

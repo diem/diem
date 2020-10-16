@@ -1,0 +1,349 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// This is the definition of json-rpc service response data structures for keeping
+// server and client in sync by generating code from this definition.
+//
+// Protobuf happens to be able to generate code that exactly match with json-rpc response
+// data structure defined by Rust implementation, which gives us chance to swap in
+// the code generated from this definition and reduce the cost of maintaining and syncing
+// json-rpc response data structure in different client languages.
+//
+// Thrift and open-api are not well fit, simply because we can't use them to define a schema
+// that can serialize & deserialize exactly same json data defined by Rust implementation.
+// JSON schema can be used to define our schema, but it has no high quality code generator
+// across languages that we need.
+//
+// == How to use ==
+//
+// 1. Generate code by protoc.
+// 2. The generated data types can be used to deserialize Libra JSON-RPC response#result
+//    object.
+// 3. Use protobuf json format parser deserialize response#result.
+// 4. As protobuf does not provide functions to deserialize list of objects, when
+//    response#result is an array, you need use the parser deserialize object in the
+//    array and then collect them as array.
+//
+// May checkout python implementation as example: https://github.com/libra/libra-client-sdk-python/blob/master/src/libra/jsonrpc/client.py#L474
+//
+// For each data type detail document, please checkout https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md.
+
+
+syntax = "proto3";
+
+package jsonrpc;
+option go_package = "github.com/libra/jsonrpc";
+option java_package = "org.libra.jsonrpc";
+option java_outer_classname = "JsonRpc";
+
+message Amount {
+  uint64 amount = 1;
+  string currency = 2;
+}
+
+message Account {
+  // hex-encoded bytes
+  string address = 1;
+  repeated Amount balances = 2;
+  uint64 sequence_number = 3 [json_name="sequence_number"];
+
+  // hex-encoded bytes
+  string authentication_key = 4 [json_name="authentication_key"];
+  // hex-encoded bytes
+  string sent_events_key = 5 [json_name="sent_events_key"];
+  // hex-encoded bytes
+  string received_events_key = 6 [json_name="received_events_key"];
+
+  bool delegated_key_rotation_capability = 7 [json_name="delegated_key_rotation_capability"];
+  bool delegated_withdrawal_capability = 8 [json_name="delegated_withdrawal_capability"];
+  bool is_frozen = 9 [json_name="delegated_withdrawal_capability"];
+
+  AccountRole role = 10;
+}
+
+message AccountRole {
+  string type = 1;
+  string parent_vasp_address = 2 [json_name="parent_vasp_address"];
+
+  string human_name = 3 [json_name="human_name"];
+  string base_url = 4 [json_name="base_url"];
+  uint64 expiration_time = 5 [json_name="expiration_time"];
+
+  // hex-encoded bytes
+  string compliance_key = 6 [json_name="compliance_key"];
+  // hex-encoded bytes
+  string compliance_key_rotation_events_key = 7 [json_name="compliance_key_rotation_events_key"];
+  // hex-encoded bytes
+  string base_url_rotation_events_key = 8 [json_name="base_url_rotation_events_key"];
+
+  uint64 num_children = 9 [json_name="num_children"];
+
+  // hex-encoded bytes
+  string received_mint_events_key = 10 [json_name="received_mint_events_key"];
+  repeated Amount preburn_balances = 11 [json_name="preburn_balances"];
+}
+
+message Event {
+  string key = 1;
+  uint64 sequence_number = 2 [json_name="sequence_number"];
+  uint64 transaction_version = 3 [json_name="transaction_version"];
+  EventData data = 4;
+}
+
+message EventData {
+  string type = 1;
+
+  // burn, cancelburn, mint, preburn, receivedpayment, sentpayment, receivedmint events
+  Amount amount = 2;
+
+  // burn, cancelburn, preburn events
+  // hex-encoded bytes
+  string preburn_address = 3 [json_name="preburn_address"];
+
+  // to_lbr_exchange_rate_update event only
+  string currency_code = 4 [json_name="currency_code"];
+  float new_to_lbr_exchange_rate = 5 [json_name="new_to_lbr_exchange_rate"];
+
+  // receivedpayment and sentpayment events
+  // hex-encoded bytes
+  string sender = 6;
+  // hex-encoded bytes
+  string receiver = 7;
+  // hex-encoded bytes
+  string metadata = 8;
+
+  // newepoch event only
+  uint64 epoch = 10;
+
+  // newblock event only
+  uint64 round = 11;
+  // hex-encoded bytes
+  string proposer = 12;
+  uint64 proposed_time = 13 [json_name="proposed_time"];
+
+  // receivedmint event only
+  // hex-encoded bytes
+  string destination_address = 14 [json_name="destination_address"];
+
+  // compliancekeyrotation event only
+  // hex-encoded bytes
+  string new_compliance_public_key = 15 [json_name="new_compliance_public_key"];
+
+  // baseurlrotation event only
+  string new_base_url = 16 [json_name="new_base_url"];
+
+  // compliancekeyrotation and baseurlrotation events
+  uint64 time_rotated_seconds = 17 [json_name="time_rotated_seconds"];
+
+  /**
+   * createaccount event field.
+   * Hex-encoded account address bytes of the created account.
+   */
+  string created_address = 18 [json_name="created_address"];
+  /**
+   * createaccount event field.
+   * Role id of the created account, see [LIP-2](https://lip.libra.org/lip-2/#move-implementation)
+   * for more details
+   */
+  uint64 role_id = 19 [json_name="role_id"];
+
+  /**
+   * admintransaction event field.
+   * The block time when this transaction is committed.
+   * It is created by validators.
+   */
+  uint64 committed_timestamp_secs = 20 [json_name="committed_timestamp_secs"];
+}
+
+message Metadata {
+  /**
+   * The block (ledger) version
+   */
+  uint64 version = 1;
+  /**
+   * The block (ledger) timestamp, unit is microsecond
+   */
+  uint64 timestamp = 2;
+  /**
+   * Chain ID of the Libra network
+   */
+  uint32 chain_id = 3 [json_name="chain_id"];
+
+  /**
+   * List of allowed scripts hex-encoded hash bytes, server may not return this field
+   * if the allow list not found in on chain configuration.
+   */
+  repeated string script_hash_allow_list = 4 [json_name="script_hash_allow_list"];
+
+  /**
+   * True for allowing publishing customized script, server may not return this field
+   * if the flag not found in on chain configuration.
+   */
+  bool module_publishing_allowed = 5 [json_name="module_publishing_allowed"];
+
+  /**
+   * Libra chain major version number.
+   */
+  uint64 libra_version = 6 [json_name="libra_version"];
+}
+
+message Transaction {
+  uint64 version = 1;
+  TransactionData transaction = 2;
+  string hash = 3;
+  // hex-encoded lcs bytes
+  string bytes = 4;
+  repeated Event events = 5;
+  VMStatus vm_status = 6 [json_name="vm_status"];
+  uint64 gas_used = 7 [json_name="gas_used"];
+}
+
+message MoveAbortExplaination {
+  string category = 1;
+  string category_description = 2 [json_name="category_description"];
+  string reason = 3;
+  string reason_description = 4 [json_name="reason_description"];
+}
+
+
+message VMStatus {
+  string type = 1;
+
+  // move_abort, execution_failure
+  string location = 2;
+  // move_abort only
+  uint64 abort_code = 3 [json_name="abort_code"];
+
+  // execution_failure only
+  uint32 function_index = 4 [json_name="function_index"];
+  uint32 code_offset = 5 [json_name="code_offset"];
+
+  // move_abort only
+  MoveAbortExplaination explanation = 6;
+}
+
+message TransactionData {
+  string type = 1;
+
+  // blockmetadata
+  uint64 timestamp_usecs = 2 [json_name="timestamp_usecs"];
+
+  // user
+  string sender = 3;
+  string signature_scheme = 4 [json_name="signature_scheme"];
+  string signature = 5;
+  // hex-encoded bytes
+  string public_key = 6 [json_name="public_key"];
+  uint64 sequence_number = 7 [json_name="sequence_number"];
+  uint32 chain_id = 8 [json_name="chain_id"];
+  uint64 max_gas_amount = 9 [json_name="max_gas_amount"];
+  uint64 gas_unit_price = 10 [json_name="gas_unit_price"];
+  string gas_currency = 11 [json_name="gas_currency"];
+  uint64 expiration_timestamp_secs = 12 [json_name="expiration_timestamp_secs"];
+  string script_hash = 13 [json_name="script_hash"];
+  // hex-encoded bytes
+  string script_bytes = 14 [json_name="script_bytes"];
+  Script script = 15;
+}
+
+message Script {
+  /**
+   * Name of the script code, see https://github.com/libra/libra/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
+   * Type is set as "unknown" if script code can't be recognized, or transaction payload is not a script.
+   * It is possible server side does not know the code and the code is valid.
+   */
+  string type = 1;
+
+  /**
+   * Hex-encoded compiled move script bytes.
+   */
+  string code = 2;
+  /**
+   * List of string value of the script arguments. Contains type information.
+   * Argument value to string formatting:
+   * - u8 value `12` => "{U8: 12}"
+   * - u64 value `12244` => "{U64: 12244}"
+   * - u128 value `12244` => "{U128: 12244}"
+   * - boolean value `true` => "{BOOL: true}"
+   * - Account address value => "{ADDRESS: <hex-encoded account address bytes>}"
+   * - List<u8> value => "{U8Vector:: 0x<hex-encoded bytes>}"
+   */
+  repeated string arguments = 3;
+  /**
+   * List of type arguments, converted into string.
+   */
+  repeated string type_arguments = 4 [json_name="type_arguments"];
+
+  /**
+   * The followings are legacy fields only for peer_to_peer_with_metadata script.
+   */
+
+  /**
+   * hex-encoded receiver account address bytes
+   */
+  string receiver = 5;
+
+  /**
+   * peer to peer transfer amount.
+   */
+  uint64 amount = 6;
+  /**
+   * peer to peer transfer currency code.
+   */
+  string currency = 7;
+
+  /**
+   * Metadata of the transaction, LCS serialized hex-encoded string.
+   * See [LIP-4](https://lip.libra.org/lip-4/) for more details.
+   */
+  string metadata = 8;
+  /**
+   * Hex-encoded metadata signature, use this to validate metadata.
+   * See [LIP-4](https://lip.libra.org/lip-4/) for more details.
+   */
+  string metadata_signature = 9 [json_name="metadata_signature"];
+}
+
+message CurrencyInfo {
+  string code = 1;
+  uint64 scaling_factor = 2 [json_name="scaling_factor"];
+  uint64 fractional_part = 3 [json_name="fractional_part"];
+  float to_lbr_exchange_rate = 4 [json_name="to_lbr_exchange_rate"];
+  // hex-encoded bytes
+  string mint_events_key = 5 [json_name="mint_events_key"];
+  // hex-encoded bytes
+  string burn_events_key = 6 [json_name="burn_events_key"];
+  // HEX-encoded bytes
+  string preburn_events_key = 7 [json_name="preburn_events_key"];
+  // hex-encoded bytes
+  string cancel_burn_events_key = 8 [json_name="cancel_burn_events_key"];
+  // hex-encoded bytes
+  string exchange_rate_update_events_key = 9 [json_name="exchange_rate_update_events_key"];
+}
+
+message StateProof {
+  // hex-encoded lcs bytes
+  string ledger_info_with_signatures = 1 [json_name="ledger_info_with_signatures"];
+  // hex-encoded lcs bytes
+  string epoch_change_proof = 2 [json_name="epoch_change_proof"];
+  // hex-encoded lcs bytes
+  string ledger_consistency_proof = 3 [json_name="ledger_consistency_proof"];
+}
+
+message AccountStateWithProof {
+  uint64 version = 1;
+  // hex-encoded lcs bytes
+  string blob = 2;
+  // hex-encoded lcs bytes
+  AccountStateProof proof = 3;
+}
+
+
+message AccountStateProof {
+  // hex-encoded lcs bytes
+  string ledger_info_to_transaction_info_proof = 1 [json_name="ledger_info_to_transaction_info_proof"];
+  // hex-encoded lcs bytes
+  string transaction_info = 2 [json_name="transaction_info"];
+  // hex-encoded lcs bytes
+  string transaction_info_to_account_proof = 3 [json_name="transaction_info_to_account_proof"];
+}
