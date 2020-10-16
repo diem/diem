@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::json_rpc::JsonRpcClientWrapper;
+use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_management::{config::ConfigPath, error::Error};
-use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use structopt::StructOpt;
 
@@ -22,9 +21,23 @@ pub struct ValidateTransaction {
 
 /// Returns `true` if we've passed by the expected sequence number
 impl ValidateTransaction {
-    pub fn execute(self) -> Result<Option<VMStatusView>, Error> {
+    pub fn new(json_server: String, account_address: AccountAddress, sequence_number: u64) -> Self {
+        Self {
+            config: Default::default(),
+            json_server: Some(json_server),
+            account_address,
+            sequence_number,
+        }
+    }
+
+    pub fn execute(&self) -> Result<TransactionContext, Error> {
         let config = self.config.load()?.override_json_server(&self.json_server);
-        JsonRpcClientWrapper::new(config.json_server)
-            .transaction_status(self.account_address, self.sequence_number)
+        let vm_status = JsonRpcClientWrapper::new(config.json_server)
+            .transaction_status(self.account_address, self.sequence_number)?;
+        Ok(TransactionContext::new_with_validation(
+            self.account_address,
+            self.sequence_number,
+            vm_status,
+        ))
     }
 }

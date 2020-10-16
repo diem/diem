@@ -400,7 +400,7 @@ fn test_operator_key_rotation() {
     let result = op_tool
         .validate_transaction(txn_ctx.address, txn_ctx.sequence_number)
         .unwrap();
-    let vm_status = result.unwrap();
+    let vm_status = result.execution_result.unwrap();
     assert_eq!(VMStatusView::Executed, vm_status);
 
     // Rotate the consensus key to verify the operator key has been updated
@@ -434,7 +434,7 @@ fn test_operator_key_rotation_recovery() {
     let result = op_tool
         .validate_transaction(txn_ctx.address, txn_ctx.sequence_number)
         .unwrap();
-    let vm_status = result.unwrap();
+    let vm_status = result.execution_result.unwrap();
     assert_eq!(VMStatusView::Executed, vm_status);
 
     // Verify that the operator key was updated on-chain
@@ -463,7 +463,7 @@ fn test_operator_key_rotation_recovery() {
     let result = op_tool
         .validate_transaction(txn_ctx.address, txn_ctx.sequence_number)
         .unwrap();
-    let vm_status = result.unwrap();
+    let vm_status = result.execution_result.unwrap();
     assert_eq!(VMStatusView::Executed, vm_status);
 
     // Verify that the operator key was updated on-chain
@@ -504,6 +504,7 @@ fn test_validate_transaction() {
         op_tool
             .validate_transaction(operator_account, 1000)
             .unwrap()
+            .execution_result
     );
 
     // Submit a transaction (rotate the operator key) and validate the transaction execution
@@ -515,7 +516,8 @@ fn test_validate_transaction() {
 
     let result = op_tool
         .validate_transaction(operator_account, txn_ctx.sequence_number)
-        .unwrap();
+        .unwrap()
+        .execution_result;
     assert_eq!(VMStatusView::Executed, result.unwrap());
 }
 
