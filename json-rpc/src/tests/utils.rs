@@ -293,4 +293,8 @@ impl DbReader for MockLibraDB {
             None => *self.timestamps.last().unwrap(),
         })
     }
+
+    fn get_accumulator_root_hash(&self, _version: Version) -> Result<HashValue> {
+        Ok(HashValue::zero())
+    }
 }

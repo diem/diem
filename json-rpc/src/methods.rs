@@ -322,6 +322,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     }
     Ok(MetadataView {
         version,
+        accumulator_root_hash: service.db.get_accumulator_root_hash(version)?.to_hex(),
         timestamp: service.db.get_block_timestamp(version)?,
         chain_id,
         script_hash_allow_list,

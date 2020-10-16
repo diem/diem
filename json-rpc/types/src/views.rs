@@ -346,6 +346,7 @@ impl TryFrom<(u64, ContractEvent)> for EventView {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MetadataView {
     pub version: u64,
+    pub accumulator_root_hash: String,
     pub timestamp: u64,
     pub chain_id: u8,
     pub script_hash_allow_list: Option<Vec<BytesView>>,
