@@ -761,6 +761,12 @@ impl DbReader for LibraDB {
             self.ledger_store.get_latest_transaction_info_option()
         })
     }
+
+    fn get_accumulator_root_hash(&self, version: Version) -> Result<HashValue> {
+        gauged_api("get_accumulator_root_hash", || {
+            self.ledger_store.get_root_hash(version)
+        })
+    }
 }
 
 impl DbWriter for LibraDB {

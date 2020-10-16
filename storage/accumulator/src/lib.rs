@@ -213,6 +213,11 @@ where
     pub fn get_frozen_subtree_hashes(reader: &R, num_leaves: LeafCount) -> Result<Vec<HashValue>> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_frozen_subtree_hashes()
     }
+
+    /// Get root hash at a specific version (hence num_leaves).
+    pub fn get_root_hash(reader: &R, num_leaves: LeafCount) -> Result<HashValue> {
+        MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_root_hash()
+    }
 }
 
 /// Actual implementation of Merkle Accumulator algorithms, which carries the `reader` and
@@ -344,6 +349,10 @@ where
 
     fn get_hashes(&self, positions: &[Position]) -> Result<Vec<HashValue>> {
         positions.iter().map(|p| self.get_hash(*p)).collect()
+    }
+
+    fn get_root_hash(&self) -> Result<HashValue> {
+        self.get_hash(Position::root_from_leaf_count(self.num_leaves))
     }
 
     /// implementation for pub interface `MerkleAccumulator::get_proof`

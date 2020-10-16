@@ -320,6 +320,10 @@ fn verify_committed_transactions(
 ) {
     let ledger_info = ledger_info_with_sigs.ledger_info();
     let ledger_version = ledger_info.version();
+    assert_eq!(
+        db.get_accumulator_root_hash(ledger_version).unwrap(),
+        ledger_info.transaction_accumulator_hash()
+    );
 
     let mut cur_ver = first_version;
     for txn_to_commit in txns_to_commit {
