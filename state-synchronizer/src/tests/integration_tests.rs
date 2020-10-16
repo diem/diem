@@ -690,14 +690,21 @@ fn catch_up_with_waypoints() {
         false,
         None,
     );
-    for epoch in 1..10 {
-        env.commit(0, epoch * 100);
+    let mut curr_version = 0;
+    for _two_epochs in 1..10 {
+        curr_version += 100;
+        env.commit(0, curr_version);
+        env.move_to_next_epoch();
+
+        curr_version += 400;
+        // this creates an epoch that spans >1 chunk (chunk_size = 250)
+        env.commit(0, curr_version);
         env.move_to_next_epoch();
     }
-    env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
+    env.commit(0, 5250); // At this point peer 0 is at epoch 19 and version 5250
 
-    // Create a waypoint based on LedgerInfo of peer 0 at version 700 (epoch 7)
-    let waypoint_li = env.get_epoch_ending_ledger_info(0, 700).unwrap();
+    // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
+    let waypoint_li = env.get_epoch_ending_ledger_info(0, 3500).unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
     env.start_next_synchronizer(
@@ -708,12 +715,12 @@ fn catch_up_with_waypoints() {
         None,
     );
     env.wait_until_initialized(1).unwrap();
-    assert!(env.latest_li(1).ledger_info().version() >= 700);
-    assert!(env.latest_li(1).ledger_info().epoch() >= 7);
+    assert!(env.latest_li(1).ledger_info().version() >= 3500);
+    assert!(env.latest_li(1).ledger_info().epoch() >= 14);
 
     // Once caught up with the waypoint peer 1 continues with the regular state sync
-    assert!(env.wait_for_version(1, 950, None));
-    assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
+    assert!(env.wait_for_version(1, 5250, None));
+    assert_eq!(env.latest_li(1).ledger_info().epoch(), 19);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
     env.start_next_synchronizer(
@@ -723,8 +730,8 @@ fn catch_up_with_waypoints() {
         false,
         None,
     );
-    assert!(env.wait_for_version(2, 950, None));
-    assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
+    assert!(env.wait_for_version(2, 5250, None));
+    assert_eq!(env.latest_li(2).ledger_info().epoch(), 19);
 }
 
 #[test]

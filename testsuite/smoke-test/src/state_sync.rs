@@ -4,11 +4,16 @@
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
     test_utils::{
-        compare_balances, libra_swarm_utils::load_node_config, setup_swarm_and_client_proxy,
+        compare_balances,
+        libra_swarm_utils::{insert_waypoint, load_node_config, save_node_config},
+        setup_swarm_and_client_proxy,
     },
+    workspace_builder,
 };
 use libra_config::config::NodeConfig;
-use std::fs;
+use libra_crypto::HashValue;
+use libra_types::waypoint::Waypoint;
+use std::{fs, path::PathBuf};
 
 #[test]
 fn test_basic_state_synchronization() {
@@ -240,4 +245,78 @@ fn test_startup_sync_state_with_empty_consensus_db() {
         vec![(30.0, "Coin1".to_string())],
         client_0.get_balances(&["b", "1"]).unwrap(),
     ));
+}
+
+#[test]
+fn test_state_sync_multichunk_epoch() {
+    let mut env = SmokeTestEnvironment::new_with_chunk_limit(4, 5);
+    env.validator_swarm.launch();
+    let mut client = env.get_validator_client(0, None);
+    // we bring this validator back up with waypoint s.t. the waypoint sync spans multiple epochs,
+    // and each epoch spanning multiple chunks
+    env.validator_swarm.kill_node(3);
+    client.create_next_account(false).unwrap();
+
+    client
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .unwrap();
+    assert!(compare_balances(
+        vec![(10.0, "Coin1".to_string())],
+        client.get_balances(&["b", "0"]).unwrap(),
+    ));
+
+    // submit more transactions to make the current epoch (=1) span > 1 chunk (= 5 versions)
+    for _ in 0..7 {
+        client
+            .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+            .unwrap();
+    }
+
+    let script_path = workspace_builder::workspace_root()
+        .join("testsuite/smoke-test/src/dev_modules/test_script.move");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
+    let mut script_compiled_paths = client.compile_program(script_params).unwrap();
+    let script_compiled_path = if script_compiled_paths.len() != 1 {
+        panic!("compiler output has more than one file")
+    } else {
+        script_compiled_paths.pop().unwrap()
+    };
+
+    // Initially publishing option was set to CustomScript, this transaction should be executed.
+    client
+        .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
+        .unwrap();
+
+    // Bump epoch by trigger a reconfig by modifying allow list for multiple epochs
+    for curr_epoch in 1..=2 {
+        // bumps epoch from curr_epoch -> curr_epoch + 1
+        let hash = hex::encode(&HashValue::random().to_vec());
+        client
+            .add_to_script_allow_list(&["add_to_script_allow_list", hash.as_str()], true)
+            .unwrap();
+        assert_eq!(
+            client
+                .latest_epoch_change_li()
+                .unwrap()
+                .ledger_info()
+                .epoch(),
+            curr_epoch
+        );
+    }
+
+    // bring back dead validator with waypoint
+    let waypoint_epoch_2 =
+        Waypoint::new_epoch_boundary(client.latest_epoch_change_li().unwrap().ledger_info())
+            .unwrap();
+    let (mut node_config, _) = load_node_config(&env.validator_swarm, 3);
+    node_config.execution.genesis = None;
+    node_config.execution.genesis_file_location = PathBuf::from("");
+    insert_waypoint(&mut node_config, waypoint_epoch_2);
+    save_node_config(&mut node_config, &env.validator_swarm, 3);
+    env.validator_swarm.add_node(3).unwrap();
+
+    assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 }
