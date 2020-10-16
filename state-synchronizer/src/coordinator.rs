@@ -731,6 +731,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             None
         };
         if let Some(li) = end_of_epoch_li.as_ref() {
+            ensure!(
+                li.ledger_info().version() >= request.known_version,
+                "waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
+                li.ledger_info().epoch(),
+                li.ledger_info().version(),
+                request.known_version,
+            );
             let num_txns_until_end_of_epoch = li.ledger_info().version() - request.known_version;
             limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
         }
@@ -826,6 +833,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::Received)
                 .chunk_resp(&response)
+                .peer(peer)
         );
         fail_point!("state_sync::apply_chunk", |_| {
             Err(anyhow::anyhow!("Injected error in apply_chunk"))
@@ -1043,12 +1051,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // Optimistically fetch the next chunk.
         let new_version =
             self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
-        // The epoch in the optimistic request should be the next epoch if the current chunk
+        // The epoch in the optimistic request (= new_epoch) should be the next epoch if the current chunk
         // is the last one in its epoch.
         let new_epoch = end_of_epoch_li
             .as_ref()
             .map_or(self.local_state.epoch(), |li| {
-                if li.ledger_info().version() == new_version {
+                if li.ledger_info().version() == new_version && li.ledger_info().ends_epoch() {
                     self.local_state.epoch() + 1
                 } else {
                     self.local_state.epoch()
@@ -1064,6 +1072,22 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
 
+        // verify the end-of-epoch LI for the following before passing it to execution:
+        // * verify end-of-epoch-li against local state
+        // * verify end-of-epoch-li's version corresponds to end-of-chunk version before
+        // passing it to execution
+        // * Executor expects that when it is passed an end-of-epoch LI, it is going to execute/commit
+        // transactions leading up to that end-of-epoch LI
+        // * verify end-of-epoch-li actually ends an epoch
+        let end_of_epoch_li = end_of_epoch_li
+            .map(|li| {
+                // verify end-of-epoch-li against local state
+                self.local_state.trusted_epoch.verify(&li).map(|_| li)
+            })
+            .transpose()?
+            .filter(|li| {
+                li.ledger_info().version() == new_version && li.ledger_info().ends_epoch()
+            });
         self.waypoint.verify(waypoint_li.ledger_info())?;
         self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li)
     }
