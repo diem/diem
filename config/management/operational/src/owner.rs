@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
+use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     transaction::build_raw_transaction,
@@ -23,6 +23,8 @@ pub struct SetValidatorOperator {
     chain_id: Option<ChainId>,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
+    #[structopt(flatten)]
+    auto_validate: AutoValidate,
 }
 
 impl SetValidatorOperator {
@@ -48,6 +50,13 @@ impl SetValidatorOperator {
         );
 
         let signed_txn = storage.sign(libra_global_constants::OWNER_KEY, "set-operator", txn)?;
-        client.submit_transaction(signed_txn)
+        let mut transaction_context = client.submit_transaction(signed_txn)?;
+
+        // Perform auto validation if required
+        transaction_context = self
+            .auto_validate
+            .execute(config.json_server, transaction_context)?;
+
+        Ok(transaction_context)
     }
 }
