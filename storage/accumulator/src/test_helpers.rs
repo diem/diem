@@ -310,7 +310,11 @@ pub fn test_append_many_impl(batches: Vec<Vec<HashValue>>) {
         num_leaves += hashes.len() as LeafCount;
         leaves.extend(hashes.iter());
         let expected_root_hash = store.verify(&leaves).unwrap();
-        assert_eq!(root_hash, expected_root_hash)
+        assert_eq!(root_hash, expected_root_hash);
+        assert_eq!(
+            TestAccumulator::get_root_hash(&store, num_leaves).unwrap(),
+            expected_root_hash
+        );
     }
 }
 

@@ -360,6 +360,10 @@ impl LedgerStore {
         cs.batch
             .put::<LedgerInfoSchema>(&ledger_info.epoch(), ledger_info_with_sigs)
     }
+
+    pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
+        Accumulator::get_root_hash(self, version + 1)
+    }
 }
 
 pub(crate) type Accumulator = MerkleAccumulator<LedgerStore, TransactionAccumulatorHasher>;

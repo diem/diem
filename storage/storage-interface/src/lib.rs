@@ -297,6 +297,12 @@ pub trait DbReader: Send + Sync {
     fn get_latest_transaction_info_option(&self) -> Result<Option<(Version, TransactionInfo)>> {
         unimplemented!()
     }
+
+    /// Gets the transaction accumulator root hash at specified version.
+    /// Caller must guarantee the version is not greater than the latest version.
+    fn get_accumulator_root_hash(&self, _version: Version) -> Result<HashValue> {
+        unimplemented!()
+    }
 }
 
 impl MoveStorage for &dyn DbReader {
