@@ -165,7 +165,10 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
         test_config.libra_root_key_path
     );
     println!("\tWaypoint: {}", test_config.waypoint);
-    let config = NodeConfig::load(&test_config.config_files[0]).unwrap();
+    let mut config = NodeConfig::load(&test_config.config_files[0]).unwrap();
+    config.json_rpc.address = format!("0.0.0.0:{}", config.json_rpc.address.port())
+        .parse()
+        .unwrap();
     println!("\tJSON-RPC endpoint: {}", config.json_rpc.address);
     println!(
         "\tFullNode network: {}",
