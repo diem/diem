@@ -1,0 +1,14 @@
+[package]
+name = "move-testing-base"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Base library for Move e2e testing"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1.0.32"
+difference = "2.0.0"

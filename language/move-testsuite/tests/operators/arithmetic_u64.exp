@@ -1,0 +1,66 @@
+Task 0
+Ok
+
+
+Task 1
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 2
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 3
+Ok
+
+
+Task 4
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 5
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 6
+Ok
+
+
+Task 7
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 8
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 9
+Ok
+
+
+Task 10
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 11
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 12
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 13
+Ok
+
+
+Task 14
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 15
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }
+
+
+Task 16
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: None, location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 2)] }

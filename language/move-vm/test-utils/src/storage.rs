@@ -191,6 +191,12 @@ impl InMemoryStorage {
         delta.publish_resource(addr, struct_tag, blob).unwrap();
         self.apply(delta).unwrap();
     }
+
+    pub fn modules(&self) -> impl Iterator<Item = &Vec<u8>> {
+        self.accounts
+            .iter()
+            .flat_map(|(_, account_storage)| account_storage.modules.values())
+    }
 }
 
 impl RemoteCache for InMemoryStorage {

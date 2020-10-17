@@ -25,12 +25,7 @@ macro_rules! push {
     }};
 }
 
-/// Generate the text for the "interface" file of a compiled module. This "interface" is the
-/// publically visible contents of the CompiledModule, represented in source language syntax
-/// Additionally, it returns the module id (address+name) of the module that was deserialized
 pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleId, String)> {
-    let mut out = String::new();
-
     let file_contents = fs::read(compiled_module_file_input_path)?;
     let module = CompiledModule::deserialize(&file_contents).map_err(|e| {
         anyhow!(
@@ -39,6 +34,15 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
             e
         )
     })?;
+
+    generate(&module)
+}
+
+/// Generate the text for the "interface" file of a compiled module. This "interface" is the
+/// publically visible contents of the CompiledModule, represented in source language syntax
+/// Additionally, it returns the module id (address+name) of the module that was deserialized
+pub fn generate(module: &CompiledModule) -> Result<(ModuleId, String)> {
+    let mut out = String::new();
 
     let id = module.self_id();
     push_line!(

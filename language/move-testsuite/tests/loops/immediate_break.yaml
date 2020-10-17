@@ -1,0 +1,10 @@
+config:
+  genesis: none
+
+---
+script: |
+  script {
+    fun main() {
+      loop break;
+    }
+  }

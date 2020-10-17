@@ -59,6 +59,13 @@ pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scr
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
     "../../client/transaction-builder/src/stdlib.rs";
 
+pub const MOVE_STDLIB_MODULES: [&str; 4] = [
+    "Signer.move",
+    "Vector.move",
+    "Option.move",
+    "FixedPoint32.move",
+];
+
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
         if path.extension()?.to_str()? == MOVE_EXTENSION {
@@ -95,6 +102,21 @@ pub fn stdlib_files() -> Vec<String> {
     let dirfiles = datatest_stable::utils::iterate_directory(&path);
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
+        .collect()
+}
+
+pub fn move_stdlib_files() -> Vec<String> {
+    let crate_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    MOVE_STDLIB_MODULES
+        .iter()
+        .map(|relative_path| {
+            crate_path
+                .join("modules")
+                .join(relative_path)
+                .into_os_string()
+                .into_string()
+                .unwrap()
+        })
         .collect()
 }
 
@@ -156,6 +178,24 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
                 modules.insert(format!("{:0>3}_{}", i, name), module);
             }
             CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+        }
+    }
+    modules
+}
+
+pub fn build_move_stdlib() -> Vec<CompiledModule> {
+    let (_, compiled_units) =
+        move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE), None).unwrap();
+    let mut modules = vec![];
+    for compiled_unit in compiled_units {
+        match compiled_unit {
+            CompiledUnit::Module { module, .. } => {
+                verify_module(&module).expect("move stdlib module failed to verify");
+                DependencyChecker::verify_module(&module, &modules)
+                    .expect("stdlib module dependency failed to verify");
+                modules.push(module);
+            }
+            CompiledUnit::Script { .. } => panic!("unexpected Script in move stdlib"),
         }
     }
     modules

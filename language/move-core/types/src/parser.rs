@@ -4,7 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
     transaction_argument::TransactionArgument,
 };
 use anyhow::{bail, Result};
@@ -296,6 +296,32 @@ impl<I: Iterator<Item = Token>> Parser<I> {
         })
     }
 
+    fn parse_module_id(&mut self) -> Result<ModuleId> {
+        let addr = match self.next()? {
+            Token::Address(addr) => addr,
+            tok => bail!("unexpected token {:?}, expected address", tok),
+        };
+        let addr = AccountAddress::from_hex_literal(&addr)?;
+        self.consume(Token::ColonColon)?;
+        let module_name = match self.next()? {
+            Token::Name(name) => name,
+            tok => bail!("unexpected token {:?}, expected name", tok),
+        };
+        let module_name = Identifier::new(module_name)?;
+        Ok(ModuleId::new(addr, module_name))
+    }
+
+    fn parse_function_name(&mut self) -> Result<(ModuleId, Identifier)> {
+        let module_id = self.parse_module_id()?;
+        self.consume(Token::ColonColon)?;
+        let func_name = match self.next()? {
+            Token::Name(name) => name,
+            tok => bail!("unexpected token {:?}, expected name", tok),
+        };
+        let func_name = Identifier::new(func_name)?;
+        Ok((module_id, func_name))
+    }
+
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
             Token::U8(s) => TransactionArgument::U8(s.parse()?),
@@ -349,6 +375,10 @@ pub fn parse_transaction_arguments(s: &str) -> Result<Vec<TransactionArgument>> 
 
 pub fn parse_transaction_argument(s: &str) -> Result<TransactionArgument> {
     parse(s, |parser| parser.parse_transaction_argument())
+}
+
+pub fn parse_function_name(s: &str) -> Result<(ModuleId, Identifier)> {
+    parse(s, |parser| parser.parse_function_name())
 }
 
 #[allow(clippy::unreadable_literal)]

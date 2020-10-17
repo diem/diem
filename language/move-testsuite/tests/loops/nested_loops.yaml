@@ -1,0 +1,36 @@
+config:
+  genesis: none
+
+---
+move-compile:
+  targets:
+    M: |
+      module M {
+          public fun foobar(cond: bool) {
+              loop {
+                  loop {
+                      if (cond) break
+                  };
+                  if (cond) break
+              }
+          }
+      }
+
+    S: |
+      script {
+          use 0x2000::M;
+
+          fun main() {
+              M::foobar(true)
+          }
+      }
+
+
+---
+module:
+  pre-compiled: M
+
+
+---
+script:
+  pre-compiled: S

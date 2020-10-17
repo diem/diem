@@ -1,0 +1,46 @@
+Task 0
+Ok
+
+
+Task 1
+Ok
+
+
+Task 2
+Ok
+
+
+Task 3
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u64(256) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 4
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u64(303) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 5
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(256) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 6
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(56432) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 7
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u64(18446744073709551615) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 8
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(340282366920938463463374607431768211455) to u8"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 9
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(18446744073709551616) to u64"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 10
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(18446744073709551647) to u64"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }
+
+
+Task 11
+Failed to execute script: VMError { major_status: ARITHMETIC_ERROR, sub_status: None, message: Some("Cannot cast u128(340282366920938463463374607431768211455) to u64"), location: Script, indices: [], offsets: [(FunctionDefinitionIndex(0), 1)] }

@@ -4170,6 +4170,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-testing-base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "difference",
+]
+
+[[package]]
+name = "move-testing-flow"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "difference",
+ "move-core-types",
+ "move-lang",
+ "move-testing-base",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+ "once_cell",
+ "regex",
+ "stdlib",
+ "tempfile",
+ "term_size",
+ "termcolor",
+ "vm",
+ "yaml-rust",
+]
+
+[[package]]
+name = "move-testsuite"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "datatest-stable",
+ "move-testing-flow",
+]
+
+[[package]]
 name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
