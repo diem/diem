@@ -123,6 +123,7 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 -  [`0x1::Signature`](Signature.md#0x1_Signature)
 -  [`0x1::Signer`](Signer.md#0x1_Signer)
 -  [`0x1::SlidingNonce`](SlidingNonce.md#0x1_SlidingNonce)
+-  [`0x1::TokenRegistry`](TokenRegistry.md#0x1_TokenRegistry)
 -  [`0x1::TransactionFee`](TransactionFee.md#0x1_TransactionFee)
 -  [`0x1::VASP`](VASP.md#0x1_VASP)
 -  [`0x1::ValidatorConfig`](ValidatorConfig.md#0x1_ValidatorConfig)
