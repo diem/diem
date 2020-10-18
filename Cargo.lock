@@ -4079,7 +4079,6 @@ name = "move-vm-natives"
 version = "0.1.0"
 dependencies = [
  "libra-crypto",
- "libra-types",
  "libra-workspace-hack",
  "mirai-annotations",
  "move-core-types",
@@ -4102,7 +4101,6 @@ dependencies = [
  "libra-infallible",
  "libra-logger",
  "libra-state-view",
- "libra-types",
  "libra-workspace-hack",
  "mirai-annotations",
  "move-core-types",

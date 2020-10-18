@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
-use libra_types::vm_status::StatusCode;
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
+    vm_status::StatusCode,
 };
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},

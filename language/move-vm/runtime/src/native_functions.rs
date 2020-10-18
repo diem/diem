@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
-use libra_types::account_config::CORE_CODE_ADDRESS;
 use move_core_types::{
-    account_address::AccountAddress, gas_schedule::CostTable, value::MoveTypeLayout,
-    vm_status::StatusType,
+    account_address::AccountAddress, gas_schedule::CostTable, language_storage::CORE_CODE_ADDRESS,
+    value::MoveTypeLayout, vm_status::StatusType,
 };
 use move_vm_natives::{account, debug, event, hash, lcs, signature, signer, vector};
 use move_vm_types::{
