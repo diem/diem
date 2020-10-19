@@ -123,6 +123,7 @@ fn main() {
         args.faucet_url.clone(),
         mnemonic_file,
         waypoint,
+        false,
     )
     .expect("Failed to construct client.");
 

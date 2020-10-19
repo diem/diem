@@ -145,7 +145,7 @@ fn test_genesis_transaction_flow() {
         .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy_1
-        .wait_for_transaction(treasury_compliance_account_address(), 1)
+        .wait_for_transaction(treasury_compliance_account_address(), 0)
         .unwrap();
 
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
@@ -157,7 +157,7 @@ fn test_genesis_transaction_flow() {
         )
         .unwrap();
     client_proxy_1
-        .wait_for_transaction(context.address, context.sequence_number + 1)
+        .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
     // setup the waypoint for node 0
     node_config.execution.genesis = None;

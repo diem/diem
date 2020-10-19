@@ -157,7 +157,7 @@ fn test_startup_sync_state() {
     let mut client_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
     client_0.set_accounts(accounts);
-    client_0.wait_for_transaction(sender_address, 1).unwrap();
+    client_0.wait_for_transaction(sender_address, 0).unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
         client_0.get_balances(&["b", "0"]).unwrap(),
@@ -169,7 +169,7 @@ fn test_startup_sync_state() {
     client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
-    client_0.wait_for_transaction(sender_address, 2).unwrap();
+    client_0.wait_for_transaction(sender_address, 1).unwrap();
     assert!(compare_balances(
         vec![(80.0, "Coin1".to_string())],
         client_0.get_balances(&["b", "0"]).unwrap(),
@@ -224,7 +224,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     let mut client_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
     client_0.set_accounts(accounts);
-    client_0.wait_for_transaction(sender_address, 1).unwrap();
+    client_0.wait_for_transaction(sender_address, 0).unwrap();
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
         client_0.get_balances(&["b", "0"]).unwrap(),
@@ -236,7 +236,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     client_1
         .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
-    client_0.wait_for_transaction(sender_address, 2).unwrap();
+    client_0.wait_for_transaction(sender_address, 1).unwrap();
     assert!(compare_balances(
         vec![(80.0, "Coin1".to_string())],
         client_0.get_balances(&["b", "0"]).unwrap(),

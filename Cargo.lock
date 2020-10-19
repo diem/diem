@@ -698,6 +698,7 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
+ "libra-infallible",
  "libra-json-rpc-client",
  "libra-logger",
  "libra-metrics",
@@ -715,6 +716,7 @@ dependencies = [
  "rustyline",
  "serde",
  "structopt 0.3.18",
+ "tokio",
  "transaction-builder",
  "walkdir",
 ]

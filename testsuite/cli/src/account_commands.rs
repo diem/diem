@@ -131,23 +131,16 @@ impl Command for AccountCommandMint {
         "<receiver_account_ref_id>|<receiver_account_address> <number_of_coins> <currency_code> [use_base_units (default=false)]"
     }
     fn get_description(&self) -> &'static str {
-        "Send currency of the given type from the faucet address to the given recipient address. Creates an account at the recipient address if one does not already exist. Suffix 'b' is for blocking"
+        "Send currency of the given type from the faucet address to the given recipient address. Creates an account at the recipient address if one does not already exist."
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() < 4 || params.len() > 5 {
             println!("Invalid number of arguments for mint");
             return;
         }
-        let is_blocking = blocking_cmd(params[0]);
-        match client.mint_coins(&params, is_blocking) {
+        match client.mint_coins(&params, true) {
             Ok(_) => {
-                if is_blocking {
-                    println!("Finished sending coins from faucet!");
-                } else {
-                    // If this value is updated, it must also be changed in
-                    // setup_scripts/docker/mint/server.py
-                    println!("Request submitted to faucet");
-                }
+                println!("Finished sending coins from faucet!");
             }
             Err(e) => report_error("Error transferring coins from faucet", e),
         }

@@ -51,7 +51,7 @@ fn test_full_node_basic_flow() {
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
     validator_client
-        .wait_for_transaction(sender_account, sequence)
+        .wait_for_transaction(sender_account, sequence - 1)
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
@@ -84,7 +84,7 @@ fn test_full_node_basic_flow() {
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
     vfn_client
-        .wait_for_transaction(sender_account, sequence)
+        .wait_for_transaction(sender_account, sequence - 1)
         .unwrap();
 
     assert!(compare_balances(
@@ -118,7 +118,9 @@ fn test_full_node_basic_flow() {
     let sequence = validator_client
         .get_sequence_number(&["sequence", &format!("{}", account), "true"])
         .unwrap();
-    pfn_client.wait_for_transaction(account, sequence).unwrap();
+    pfn_client
+        .wait_for_transaction(account, sequence - 1)
+        .unwrap();
     assert!(compare_balances(
         vec![(0.0, "Coin1".to_string())],
         pfn_client.get_balances(&["b", "0"]).unwrap(),
@@ -175,10 +177,10 @@ fn test_vfn_failover() {
 
     // wait for VFN 1 to catch up with creation and sender account
     vfn_1_client
-        .wait_for_transaction(creation_account, 1)
+        .wait_for_transaction(creation_account, 0)
         .unwrap();
     vfn_1_client
-        .wait_for_transaction(sender_account, 2)
+        .wait_for_transaction(sender_account, 1)
         .unwrap();
     vfn_1_client
         .get_sequence_number(&sequence_reset_command)
@@ -201,10 +203,10 @@ fn test_vfn_failover() {
     }
     // wait for PFN to catch up with creation and sender account
     pfn_0_client
-        .wait_for_transaction(creation_account, 3)
+        .wait_for_transaction(creation_account, 2)
         .unwrap();
     pfn_0_client
-        .wait_for_transaction(sender_account, 4)
+        .wait_for_transaction(sender_account, 3)
         .unwrap();
     pfn_0_client
         .get_sequence_number(&sequence_reset_command)
@@ -249,11 +251,11 @@ fn test_vfn_failover() {
     assert!(env.validator_swarm.add_node(0).is_ok());
     // check all txns submitted so far (even those submitted during overlapping validator downtime) are committed
     let vfn_0_acct_0 = vfn_0_client.copy_all_accounts().get(0).unwrap().address;
-    vfn_0_client.wait_for_transaction(vfn_0_acct_0, 14).unwrap();
+    vfn_0_client.wait_for_transaction(vfn_0_acct_0, 13).unwrap();
     let vfn_1_acct_0 = vfn_1_client.copy_all_accounts().get(2).unwrap().address;
-    vfn_1_client.wait_for_transaction(vfn_1_acct_0, 10).unwrap();
+    vfn_1_client.wait_for_transaction(vfn_1_acct_0, 9).unwrap();
     let pfn_acct_0 = pfn_0_client.copy_all_accounts().get(4).unwrap().address;
-    pfn_0_client.wait_for_transaction(pfn_acct_0, 7).unwrap();
+    pfn_0_client.wait_for_transaction(pfn_acct_0, 6).unwrap();
 
     // submit txns to vfn of dead V
     for _ in 0..5 {

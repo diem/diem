@@ -3,7 +3,6 @@
 
 use crate::test_utils::setup_swarm_and_client_proxy;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
-use libra_json_rpc::views::TransactionDataView;
 use libra_types::{account_config::COIN1_NAME, transaction::authenticator::AuthenticationKey};
 
 #[test]
@@ -88,28 +87,26 @@ fn test_external_transaction_signer() {
         .unwrap();
 
     match txn.transaction {
-        TransactionDataView::UserTransaction {
-            sender: p_sender,
-            sequence_number: p_sequence_number,
-            gas_unit_price: p_gas_unit_price,
-            gas_currency: p_gas_currency,
-            max_gas_amount: p_max_gas_amount,
-            script,
-            ..
-        } => {
-            assert_eq!(
-                p_sender.to_string(),
-                sender_address.to_string().to_lowercase()
-            );
+        Some(data) => {
+            assert_eq!("user", data.r#type);
+
+            let p_sender = data.sender;
+            let p_sequence_number = data.sequence_number;
+            let p_gas_unit_price = data.gas_unit_price;
+            let p_max_gas_amount = data.max_gas_amount;
+            let p_gas_currency = data.gas_currency;
+            let script = data.script.unwrap();
+
+            assert_eq!(p_sender, sender_address.to_string().to_lowercase());
             assert_eq!(p_sequence_number, sequence_number);
             assert_eq!(p_gas_unit_price, gas_unit_price);
             assert_eq!(p_gas_currency, currency_code.to_string());
             assert_eq!(p_max_gas_amount, max_gas_amount);
 
             assert_eq!(script.r#type, "peer_to_peer_with_metadata");
-            assert_eq!(script.type_arguments.unwrap(), vec!["Coin1"]);
+            assert_eq!(script.type_arguments, vec!["Coin1"]);
             assert_eq!(
-                script.arguments.unwrap(),
+                script.arguments,
                 vec![
                     format!("{{ADDRESS: {:?}}}", &receiver_address),
                     format!("{{U64: {}}}", amount),
@@ -118,28 +115,11 @@ fn test_external_transaction_signer() {
                 ]
             );
             // legacy fields
-            assert_eq!(
-                script.receiver.unwrap().to_string(),
-                receiver_address.to_string().to_lowercase(),
-            );
-            assert_eq!(script.amount.unwrap(), amount);
-            assert_eq!(script.currency.unwrap(), currency_code.to_string());
-            assert_eq!(
-                script
-                    .metadata
-                    .unwrap()
-                    .into_bytes()
-                    .expect("failed to turn metadata to bytes"),
-                b""
-            );
-            assert_eq!(
-                script
-                    .metadata_signature
-                    .unwrap()
-                    .into_bytes()
-                    .expect("failed to turn metadata_signature to bytes"),
-                b""
-            );
+            assert_eq!(script.receiver, receiver_address.to_string().to_lowercase());
+            assert_eq!(script.amount, amount);
+            assert_eq!(script.currency, currency_code.to_string());
+            assert_eq!(script.metadata, "");
+            assert_eq!(script.metadata_signature, "");
         }
         _ => panic!("Query should get user transaction"),
     }

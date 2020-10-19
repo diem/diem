@@ -10,9 +10,7 @@ use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
 use libra_trace::trace::trace_node;
 use libra_types::{
-    account_config::{libra_root_address, testnet_dd_account_address},
-    ledger_info::LedgerInfo,
-    waypoint::Waypoint,
+    account_config::testnet_dd_account_address, ledger_info::LedgerInfo, waypoint::Waypoint,
 };
 
 #[test]
@@ -24,10 +22,9 @@ fn test_create_mint_transfer_block_metadata() {
 
     // Test if we commit not only user transactions but also block metadata transactions,
     // assert committed version > # of user transactions
-    let (_account, version) = env
-        .get_validator_client(0, None)
-        .get_latest_account(&["q", &libra_root_address().to_string()])
-        .unwrap();
+    let mut vclient = env.get_validator_client(0, None);
+    vclient.test_trusted_connection().expect("success");
+    let version = vclient.get_latest_version();
     assert!(
         version > 4,
         "BlockMetadata txn not produced, current version: {}",
@@ -128,7 +125,7 @@ fn test_client_waypoints() {
     let libra_root = load_libra_root_storage(&env.validator_swarm, 0);
     let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client
-        .wait_for_transaction(context.address, context.sequence_number + 1)
+        .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
     // end ugly blob
 
