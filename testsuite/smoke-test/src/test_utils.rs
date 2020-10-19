@@ -202,10 +202,13 @@ fn fetch_backend_storage(
 }
 
 /// Writes a given public key to a file specified by the given path using hex encoding.
+/// Contents are written using utf-8 encoding and a newline is appended to ensure that
+/// whitespace can be handled by tests.
 pub fn write_key_to_file_hex_format(key: &Ed25519PublicKey, key_file_path: PathBuf) {
     let hex_encoded_key = hex::encode(key.to_bytes());
+    let key_and_newline = hex_encoded_key + "\n";
     let mut file = File::create(key_file_path).unwrap();
-    file.write_all(&hex_encoded_key.as_bytes()).unwrap();
+    file.write_all(&key_and_newline.as_bytes()).unwrap();
 }
 
 /// Writes a given public key to a file specified by the given path using lcs encoding.
