@@ -261,6 +261,7 @@ dependencies = [
  "libra-vm",
  "libra-workspace-hack",
  "libradb",
+ "num_cpus",
  "once_cell",
  "proptest",
  "rand 0.7.3",
