@@ -5,7 +5,7 @@ use crate::{
     backup_types::{
         epoch_ending::restore::EpochHistoryRestoreController,
         state_snapshot::restore::{StateSnapshotRestoreController, StateSnapshotRestoreOpt},
-        transaction::restore::{TransactionRestoreController, TransactionRestoreOpt},
+        transaction::restore::TransactionRestoreBatchController,
     },
     metadata,
     metadata::{cache::MetadataCacheOpt, TransactionBackupMeta},
@@ -124,24 +124,20 @@ impl RestoreCoordinator {
             .await?;
         }
 
-        for backup in transactions {
-            if backup.last_version < txn_resume_point {
-                info!("Skipping {} due to non-empty DB.", backup.manifest);
-                continue;
-            }
-
-            TransactionRestoreController::new(
-                TransactionRestoreOpt {
-                    manifest_handle: backup.manifest,
-                    replay_from_version: Some(replay_transactions_from_version),
-                },
-                self.global_opt.clone(),
-                Arc::clone(&self.storage),
-                Some(Arc::clone(&epoch_history)),
-            )
-            .run()
-            .await?;
-        }
+        let txn_manifests = transactions
+            .into_iter()
+            .skip_while(|b| b.last_version < txn_resume_point)
+            .map(|b| b.manifest)
+            .collect();
+        TransactionRestoreBatchController::new(
+            self.global_opt,
+            self.storage,
+            txn_manifests,
+            Some(replay_transactions_from_version),
+            Some(epoch_history),
+        )
+        .run()
+        .await?;
 
         Ok(())
     }
