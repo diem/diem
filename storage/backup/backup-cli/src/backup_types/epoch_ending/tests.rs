@@ -74,9 +74,8 @@ fn end_to_end() {
             .try_into()
             .unwrap(),
             store,
-            None,
         )
-        .run(),
+        .run(None),
     )
     .unwrap();
 
