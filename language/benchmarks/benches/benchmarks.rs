@@ -33,4 +33,4 @@ fn call(c: &mut Criterion) {
 
 criterion_group!(vm_benches, arith, call);
 
-criterion_main!(vm_benches);
+criterion_main!(vm_benches, txn_benches);

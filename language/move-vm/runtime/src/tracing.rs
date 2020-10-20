@@ -18,6 +18,7 @@ use ::{
     vm::file_format::Bytecode,
 };
 
+#[cfg(debug_assertions)]
 use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},

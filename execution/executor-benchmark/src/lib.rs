@@ -35,7 +35,6 @@ use std::{
     path::PathBuf,
     sync::{mpsc, Arc},
 };
-use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use transaction_builder::{
@@ -68,16 +67,15 @@ struct TransactionGenerator {
     /// For deterministic transaction generation.
     rng: StdRng,
 
-    /// Each generated block of transactions are sent to this channel. Using `SyncSender` to make
-    /// sure if execution is slow to consume the transactions, we do not run out of memory.
-    block_sender: Option<mpsc::SyncSender<Vec<Transaction>>>,
+    /// Each generated block of transactions are sent to this channel.
+    block_sender: Option<mpsc::Sender<Vec<Transaction>>>,
 }
 
 impl TransactionGenerator {
     fn new(
         genesis_key: Ed25519PrivateKey,
         num_accounts: usize,
-        block_sender: mpsc::SyncSender<Vec<Transaction>>,
+        block_sender: mpsc::Sender<Vec<Transaction>>,
     ) -> Self {
         let seed = [1u8; 32];
         let mut rng = StdRng::from_seed(seed);
@@ -316,9 +314,7 @@ fn create_storage_service_and_executor(
     maybe_bootstrap::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap(), waypoint).unwrap();
 
     let _handle = start_storage_service_with_db(config, db.clone());
-    let executor = Executor::new(
-        StorageClient::new(&config.storage.address, config.storage.timeout_ms).into(),
-    );
+    let executor = Executor::new(db_rw);
 
     (db, executor)
 }
@@ -339,9 +335,8 @@ pub fn run_benchmark(
     let (db, executor) = create_storage_service_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
-    let (block_sender, block_receiver) = mpsc::sync_channel(50 /* bound */);
+    let (block_sender, block_receiver) = mpsc::channel();
 
-    // Spawn two threads to run transaction generator and executor separately.
     let gen_thread = std::thread::Builder::new()
         .name("txn_generator".to_string())
         .spawn(move || {
@@ -350,6 +345,11 @@ pub fn run_benchmark(
             generator
         })
         .expect("Failed to spawn transaction generator thread.");
+    // Wait for generator to finish and get back the generator.
+    let mut generator = gen_thread.join().unwrap();
+    // Drop the sender so the executor thread can eventually exit.
+    generator.drop_sender();
+
     let exe_thread = std::thread::Builder::new()
         .name("txn_executor".to_string())
         .spawn(move || {
@@ -358,10 +358,6 @@ pub fn run_benchmark(
         })
         .expect("Failed to spawn transaction executor thread.");
 
-    // Wait for generator to finish and get back the generator.
-    let mut generator = gen_thread.join().unwrap();
-    // Drop the sender so the executor thread can eventually exit.
-    generator.drop_sender();
     // Wait until all transactions are committed.
     exe_thread.join().unwrap();
 
