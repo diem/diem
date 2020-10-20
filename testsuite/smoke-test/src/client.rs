@@ -113,8 +113,6 @@ fn test_client_waypoints() {
     );
 
     // Start next epoch
-
-    // This ugly blob is to remove a validator, we can do better...
     let peer_id = env
         .validator_swarm
         .get_validator(0)
@@ -123,11 +121,9 @@ fn test_client_waypoints() {
         .unwrap();
     let op_tool = get_op_tool(&env.validator_swarm, 1);
     let libra_root = load_libra_root_storage(&env.validator_swarm, 0);
-    let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
-    client
-        .wait_for_transaction(context.address, context.sequence_number)
+    let _ = op_tool
+        .remove_validator(peer_id, &libra_root, false)
         .unwrap();
-    // end ugly blob
 
     client
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)

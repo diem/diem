@@ -150,14 +150,12 @@ fn test_genesis_transaction_flow() {
 
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
     let op_tool = get_op_tool(&env.validator_swarm, 1);
-    let context = op_tool
+    let _ = op_tool
         .add_validator(
             validator_address,
             &load_libra_root_storage(&env.validator_swarm, 0),
+            false,
         )
-        .unwrap();
-    client_proxy_1
-        .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
     // setup the waypoint for node 0
     node_config.execution.genesis = None;
