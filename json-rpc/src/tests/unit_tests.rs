@@ -155,6 +155,7 @@ fn test_cors() {
     let request = client
         .request(reqwest::Method::OPTIONS, &url)
         .header("origin", origin)
+        .header("access-control-headers", "content-type")
         .header("access-control-request-method", "POST");
     let resp = request.send().unwrap();
     assert_eq!(resp.status(), 200);
