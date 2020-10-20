@@ -7,7 +7,7 @@ use crate::{
         restore::{EPOCH_ENDING_EPOCH, EPOCH_ENDING_VERSION},
         verify::{VERIFY_EPOCH_ENDING_EPOCH, VERIFY_EPOCH_ENDING_VERSION},
     },
-    storage::{BackupStorage, FileHandle},
+    storage::{BackupStorage, FileHandle, FileHandleRef},
     utils::{
         read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
         RestoreRunMode,
@@ -23,6 +23,8 @@ use libra_types::{
 };
 use std::sync::Arc;
 use structopt::StructOpt;
+use std::time::Instant;
+use futures::StreamExt;
 
 #[derive(StructOpt)]
 pub struct EpochEndingRestoreOpt {
@@ -35,7 +37,6 @@ pub struct EpochEndingRestoreController {
     run_mode: Arc<RestoreRunMode>,
     manifest_handle: FileHandle,
     target_version: Version,
-    previous_epoch_ending_ledger_info: Option<LedgerInfo>,
 }
 
 impl EpochEndingRestoreController {
@@ -43,26 +44,30 @@ impl EpochEndingRestoreController {
         opt: EpochEndingRestoreOpt,
         global_opt: GlobalRestoreOptions,
         storage: Arc<dyn BackupStorage>,
-        previous_epoch_ending_ledger_info: Option<LedgerInfo>,
     ) -> Self {
         Self {
             storage,
             run_mode: global_opt.run_mode,
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version,
-            previous_epoch_ending_ledger_info,
         }
     }
 
-    pub async fn run(self) -> Result<Vec<LedgerInfo>> {
-        let name = self.name();
-        info!("{} started. Manifest: {}", name, self.manifest_handle);
-        let res = self
-            .run_impl()
+    pub async fn preheat(self) -> PreheatedEpochEndingRestore {
+        PreheatedEpochEndingRestore {
+            preheat_result: self.preheat_impl().await,
+            controller: self,
+        }
+    }
+
+    pub async fn run(
+        self,
+        previous_epoch_ending_ledger_info: Option<&LedgerInfo>,
+    ) -> Result<Vec<LedgerInfo>> {
+        self.preheat()
             .await
-            .map_err(|e| anyhow!("{} failed: {}", name, e))?;
-        info!("{} succeeded.", name);
-        Ok(res)
+            .run(previous_epoch_ending_ledger_info)
+            .await
     }
 }
 
@@ -71,7 +76,7 @@ impl EpochEndingRestoreController {
         format!("epoch ending {}", self.run_mode.name())
     }
 
-    async fn run_impl(self) -> Result<Vec<LedgerInfo>> {
+    async fn preheat_impl(&self) -> Result<EpochEndingRestorePreheatData> {
         let manifest: EpochEndingBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
@@ -79,31 +84,31 @@ impl EpochEndingRestoreController {
         let mut next_epoch = manifest.first_epoch;
         let mut waypoint_iter = manifest.waypoints.iter();
 
-        let mut previous_li = self.previous_epoch_ending_ledger_info.clone();
-        if let Some(li) = &previous_li {
-            ensure!(
-                li.next_block_epoch() == next_epoch,
-                "Previous epoch ending LedgerInfo is not the one expected. \
-                My first epoch: {}, previous LedgerInfo next_block_epoch: {}",
-                next_epoch,
-                li.next_block_epoch(),
-            );
-        }
+        let mut previous_li: Option<&LedgerInfoWithSignatures> = None;
+        let mut ledger_infos = Vec::new();
 
-        let mut output_lis = Vec::new();
+        let mut past_target = false;
+        for chunk in &manifest.chunks {
+            if past_target {
+                break;
+            }
 
-        for chunk in manifest.chunks {
-            let mut lis = self.read_chunk(chunk.ledger_infos).await?;
+            let lis = self.read_chunk(&chunk.ledger_infos).await?;
             ensure!(
                 chunk.first_epoch + lis.len() as u64 == chunk.last_epoch + 1,
-                "Number of items in chunks doesn't match that in manifest. first_epoch: {}, last_epoch: {}, items in chunk: {}",
+                "Number of items in chunks doesn't match that in manifest. \
+                first_epoch: {}, last_epoch: {}, items in chunk: {}",
                 chunk.first_epoch,
                 chunk.last_epoch,
                 lis.len(),
             );
-            // verify
-            let mut previous_li_ref = previous_li.as_ref();
-            for li in lis.iter() {
+
+            for li in lis {
+                if li.ledger_info().version() > self.target_version {
+                    past_target = true;
+                    break;
+                }
+
                 ensure!(
                     li.ledger_info().epoch() == next_epoch,
                     "LedgerInfo epoch not expected. Expected: {}, actual: {}.",
@@ -120,66 +125,35 @@ impl EpochEndingRestoreController {
                     wp_manifest,
                     wp_li,
                 );
-                if let Some(pre_li) = &previous_li_ref {
+                if let Some(pre_li) = previous_li {
                     pre_li
+                        .ledger_info()
                         .next_epoch_state()
                         .ok_or_else(|| {
                             anyhow!(
                                 "Next epoch state not found from LI at epoch {}.",
-                                pre_li.epoch()
+                                pre_li.ledger_info().epoch()
                             )
                         })?
-                        .verify(li)?;
+                        .verify(&li)?;
                 }
-                previous_li_ref = Some(li.ledger_info());
+                ledger_infos.push(li);
+                previous_li = ledger_infos.last();
                 next_epoch += 1;
-            }
-            previous_li = previous_li_ref.cloned();
-
-            let mut end = lis.len(); // To apply: "[0, end)"
-            if let Some(_end) = lis
-                .iter()
-                .position(|li| li.ledger_info().version() > self.target_version)
-            {
-                info!(
-                    "Ignoring epoch ending info beyond target_version. Epoch {} ends at {}, target_version: {}.",
-                    lis[_end].ledger_info().epoch(),
-                    lis[_end].ledger_info().version(),
-                    self.target_version,
-                );
-                end = _end;
-            }
-            let should_skip_next = lis.drain(end..).count() > 0;
-
-            // write to db
-            if !lis.is_empty() {
-                let last_li = lis.last().expect("Verified not empty.").ledger_info();
-                match self.run_mode.as_ref() {
-                    RestoreRunMode::Restore { restore_handler } => {
-                        restore_handler.save_ledger_infos(&lis)?;
-
-                        EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
-                        EPOCH_ENDING_VERSION.set(last_li.version() as i64);
-                    }
-                    RestoreRunMode::Verify => {
-                        VERIFY_EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
-                        VERIFY_EPOCH_ENDING_VERSION.set(last_li.version() as i64);
-                    }
-                };
-                output_lis.extend(lis.into_iter().map(|x| x.ledger_info().clone()));
-            }
-
-            // skip remaining chunks if beyond target_version
-            if should_skip_next {
-                break;
             }
         }
 
-        Ok(output_lis)
+        Ok(EpochEndingRestorePreheatData {
+            manifest,
+            ledger_infos,
+        })
     }
 
-    async fn read_chunk(&self, file_handle: FileHandle) -> Result<Vec<LedgerInfoWithSignatures>> {
-        let mut file = self.storage.open_for_read(&file_handle).await?;
+    async fn read_chunk(
+        &self,
+        file_handle: &FileHandleRef,
+    ) -> Result<Vec<LedgerInfoWithSignatures>> {
+        let mut file = self.storage.open_for_read(file_handle).await?;
         let mut chunk = vec![];
 
         while let Some(record_bytes) = file.read_record_bytes().await? {
@@ -187,6 +161,88 @@ impl EpochEndingRestoreController {
         }
 
         Ok(chunk)
+    }
+}
+
+struct EpochEndingRestorePreheatData {
+    manifest: EpochEndingBackup,
+    ledger_infos: Vec<LedgerInfoWithSignatures>,
+}
+
+pub struct PreheatedEpochEndingRestore {
+    controller: EpochEndingRestoreController,
+    preheat_result: Result<EpochEndingRestorePreheatData>,
+}
+
+impl PreheatedEpochEndingRestore {
+    pub async fn run(
+        self,
+        previous_epoch_ending_ledger_info: Option<&LedgerInfo>,
+    ) -> Result<Vec<LedgerInfo>> {
+        let name = self.controller.name();
+        info!(
+            "{} started. Manifest: {}",
+            name, self.controller.manifest_handle
+        );
+        let res = self
+            .run_impl(previous_epoch_ending_ledger_info)
+            .await
+            .map_err(|e| anyhow!("{} failed: {}", name, e))?;
+        info!("{} succeeded.", name);
+        Ok(res)
+    }
+}
+
+impl PreheatedEpochEndingRestore {
+    async fn run_impl(
+        self,
+        previous_epoch_ending_ledger_info: Option<&LedgerInfo>,
+    ) -> Result<Vec<LedgerInfo>> {
+        let preheat_data = self
+            .preheat_result
+            .map_err(|e| anyhow!("Preheat failed: {}", e))?;
+
+        if let Some(li) = previous_epoch_ending_ledger_info {
+            ensure!(
+                li.next_block_epoch() == preheat_data.manifest.first_epoch,
+                "Previous epoch ending LedgerInfo is not the one expected. \
+                My first epoch: {}, previous LedgerInfo next_block_epoch: {}",
+                preheat_data.manifest.first_epoch,
+                li.next_block_epoch(),
+            );
+            li.next_epoch_state()
+                .ok_or_else(|| anyhow!("Previous epoch ending LedgerInfo doesn't end an epoch"))?
+                .verify(
+                    preheat_data
+                        .ledger_infos
+                        .first()
+                        .expect("Epoch ending backup can't be empty."),
+                )?;
+        }
+
+        let last_li = preheat_data
+            .ledger_infos
+            .last()
+            .expect("Verified not empty.")
+            .ledger_info();
+        match self.controller.run_mode.as_ref() {
+            RestoreRunMode::Restore { restore_handler } => {
+                restore_handler.save_ledger_infos(&preheat_data.ledger_infos)?;
+
+                EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
+                EPOCH_ENDING_VERSION.set(last_li.version() as i64);
+            }
+            RestoreRunMode::Verify => {
+                VERIFY_EPOCH_ENDING_EPOCH.set(last_li.epoch() as i64);
+                VERIFY_EPOCH_ENDING_VERSION.set(last_li.version() as i64);
+            }
+        };
+
+        Ok(preheat_data
+            .ledger_infos
+            .into_iter()
+            .map(|x| x.ledger_info().clone())
+            .collect())
     }
 }
 
@@ -262,28 +318,32 @@ impl EpochHistoryRestoreController {
     }
 
     async fn run_impl(self) -> Result<EpochHistory> {
+        let timer = Instant::now();
         if self.manifest_handles.is_empty() {
             return Ok(EpochHistory {
                 epoch_endings: Vec::new(),
             });
         }
 
+        let futs_iter = self.manifest_handles.iter().map(|hdl| {
+            EpochEndingRestoreController::new(
+                EpochEndingRestoreOpt {
+                    manifest_handle: hdl.clone(),
+                },
+                self.global_opt.clone(),
+                self.storage.clone(),
+            )
+            .preheat()
+        });
+        let mut futs_stream = futures::stream::iter(futs_iter).buffered(num_cpus::get());
+
         let mut next_epoch = 0u64;
         let mut previous_li = None;
         let mut epoch_endings = Vec::new();
 
-        for manifest_handle in &self.manifest_handles {
-            let lis = EpochEndingRestoreController::new(
-                EpochEndingRestoreOpt {
-                    manifest_handle: manifest_handle.clone(),
-                },
-                self.global_opt.clone(),
-                self.storage.clone(),
-                previous_li.clone(),
-            )
-            .run()
-            .await?;
-
+        while let Some(preheated_restore) = futs_stream.next().await {
+            let manifest_handle = preheated_restore.controller.manifest_handle.clone();
+            let lis = preheated_restore.run(previous_li).await?;
             ensure!(
                 !lis.is_empty(),
                 "No epochs restored from {}",
@@ -304,10 +364,14 @@ impl EpochHistoryRestoreController {
                 next_epoch += 1;
             }
 
-            previous_li = Some(lis.last().expect("Verified not empty.").clone());
             epoch_endings.extend(lis);
+            previous_li = epoch_endings.last();
         }
 
+        info!(
+            "Epoch history recovered in {:.2} seconds",
+            timer.elapsed().as_secs_f64()
+        );
         Ok(EpochHistory { epoch_endings })
     }
 }
