@@ -242,7 +242,6 @@ dependencies = [
  "backup-service",
  "byteorder",
  "bytes",
- "dirs 3.0.1",
  "executor",
  "executor-test-helpers",
  "executor-types",
