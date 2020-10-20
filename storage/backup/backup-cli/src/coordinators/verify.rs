@@ -5,7 +5,7 @@ use crate::{
     backup_types::{
         epoch_ending::restore::EpochHistoryRestoreController,
         state_snapshot::restore::{StateSnapshotRestoreController, StateSnapshotRestoreOpt},
-        transaction::restore::{TransactionRestoreController, TransactionRestoreOpt},
+        transaction::restore::TransactionRestoreBatchController,
     },
     metadata,
     metadata::cache::MetadataCacheOpt,
@@ -97,19 +97,16 @@ impl VerifyCoordinator {
             .await?;
         }
 
-        for backup in transactions {
-            TransactionRestoreController::new(
-                TransactionRestoreOpt {
-                    manifest_handle: backup.manifest,
-                    replay_from_version: None,
-                },
-                global_opt.clone(),
-                Arc::clone(&self.storage),
-                Some(Arc::clone(&epoch_history)),
-            )
-            .run()
-            .await?;
-        }
+        let txn_manifests = transactions.into_iter().map(|b| b.manifest).collect();
+        TransactionRestoreBatchController::new(
+            global_opt,
+            self.storage,
+            txn_manifests,
+            None, /* replay_from_version */
+            Some(epoch_history),
+        )
+        .run()
+        .await?;
 
         Ok(())
     }

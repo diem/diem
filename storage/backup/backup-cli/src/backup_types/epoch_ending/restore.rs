@@ -14,6 +14,7 @@ use crate::{
     },
 };
 use anyhow::{anyhow, ensure, Result};
+use futures::StreamExt;
 use libra_logger::prelude::*;
 use libra_types::{
     epoch_change::Verifier,
@@ -21,10 +22,8 @@ use libra_types::{
     transaction::Version,
     waypoint::Waypoint,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 use structopt::StructOpt;
-use std::time::Instant;
-use futures::StreamExt;
 
 #[derive(StructOpt)]
 pub struct EpochEndingRestoreOpt {
