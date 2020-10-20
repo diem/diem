@@ -71,8 +71,8 @@ async fn main_impl() -> Result<()> {
 
     match opt.restore_type {
         RestoreType::EpochEnding { opt, storage } => {
-            EpochEndingRestoreController::new(opt, global_opt, storage.init_storage().await?, None)
-                .run()
+            EpochEndingRestoreController::new(opt, global_opt, storage.init_storage().await?)
+                .run(None)
                 .await?;
         }
         RestoreType::StateSnapshot { opt, storage } => {
