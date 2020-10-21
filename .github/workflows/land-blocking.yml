@@ -79,20 +79,14 @@ jobs:
           fi;
       - name: Determine which cluster-test suite to run
         if: steps.check_ks.outputs.should_run == 'true'
-        # Runs land_blocking if KS activated or [breaking] in commit message heading.
-        # Runs land_blocking_compat otherwise. Compat needs to find an image with PREV_TAG
-        # to test against, otherwise will create one from BASE_GIT_REV in the next step,
-        # flagged by setting BUILD_PREV
+        # Runs land_blocking if KILL_SWITCH_LAND_BLOCKING_COMPAT activated.
+        # Runs land_blocking_compat otherwise.
+        # Compat needs to find an image with PREV_TAG to test against, otherwise will
+        # create one from BASE_GIT_REV in the next step, flagged by setting BUILD_PREV
         run: |
           set +e
-          commit_message=$(git log --pretty=oneline $BASE_GIT_REV..$HEAD_GIT_REV)
-          echo $commit_message | grep '\[breaking\]'
-          ret=$?
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
             echo "Compat killswitch activated! Will run land_blocking suite"
-            echo "::set-env name=TEST_COMPAT::0"
-          elif [ $ret -eq 0 ]; then
-            echo "Breaking change detected! Will run land_blocking suite"
             echo "::set-env name=TEST_COMPAT::0"
           else
             echo "Will run land_blocking_compat suite"
