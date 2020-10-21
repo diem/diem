@@ -1,18 +1,18 @@
 # Substribe to CI changes
-# /.circleci/ @libra/libra-oss-admin-team
-# /.github/ @libra/libra-oss-admin-team
+/.circleci/ @libra/libra-oss-admin-team
+/.github/ @libra/libra-oss-admin-team
 
 # Subscribe to crypto crate changing PRs
-# /crypto @kchalkias @huitseeker @valerini
+/crypto @kchalkias @huitseeker @valerini
 
 # Subscribe to potential JSON API changing PRs
-# /json-rpc/json-rpc-spec.md @thefallentree @xli
-# /json-rpc/types/ @thefallentree @xli
-# /json-rpc/src/methods.rs @thefallentree @xli
-# /client/ @thefallentree @xli
+/json-rpc/json-rpc-spec.md @thefallentree @xli
+/json-rpc/types/ @thefallentree @xli
+/json-rpc/src/methods.rs @thefallentree @xli
+/client/ @thefallentree @xli
 
 # Subscribe to LCS format changes
-# /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
+/testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
 
 # Code freeze
-* @libra/release-gatekeepers
+# * @libra/release-gatekeepers
