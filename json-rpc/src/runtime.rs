@@ -45,13 +45,13 @@ struct HttpRequestLog<'a> {
 
 #[derive(Schema)]
 struct RpcRequestLog {
-    trace_id: u64,
+    trace_id: String,
     request: Value,
 }
 
 #[derive(Schema)]
 struct RpcResponseLog<'a> {
-    trace_id: u64,
+    trace_id: String,
     is_batch: bool,
     response_error: bool,
     response: &'a JsonRpcResponse,
@@ -213,9 +213,9 @@ async fn rpc_endpoint_without_metrics(
         .map_err(|_| reject::custom(DatabaseError))?;
 
     let mut rng = OsRng;
-    let trace_id = rng.next_u64();
+    let trace_id = format!("{:x}", rng.next_u64());
     debug!(RpcRequestLog {
-        trace_id,
+        trace_id: trace_id.clone(),
         request: data.clone(),
     });
 
@@ -230,12 +230,12 @@ async fn rpc_endpoint_without_metrics(
                         Arc::clone(&registry),
                         ledger_info.clone(),
                         LABEL_BATCH,
-                        trace_id,
+                        trace_id.clone(),
                     )
                 });
                 let responses = join_all(futures).await;
                 for resp in &responses {
-                    log_response!(trace_id, &resp, true);
+                    log_response!(trace_id.clone(), &resp, true);
                 }
                 warp::reply::json(&responses)
             }
@@ -246,15 +246,22 @@ async fn rpc_endpoint_without_metrics(
                     ledger_info.ledger_info().timestamp_usecs(),
                 );
                 set_response_error(&mut resp, err, LABEL_BATCH, "unknown");
-                log_response!(trace_id, &resp, true);
+                log_response!(trace_id.clone(), &resp, true);
 
                 warp::reply::json(&resp)
             }
         }
     } else {
         // single API call
-        let resp =
-            rpc_request_handler(data, service, registry, ledger_info, LABEL_SINGLE, trace_id).await;
+        let resp = rpc_request_handler(
+            data,
+            service,
+            registry,
+            ledger_info,
+            LABEL_SINGLE,
+            trace_id.clone(),
+        )
+        .await;
         log_response!(trace_id, &resp, false);
 
         warp::reply::json(&resp)
@@ -271,7 +278,7 @@ async fn rpc_request_handler(
     registry: Arc<RpcRegistry>,
     ledger_info: LedgerInfoWithSignatures,
     request_type_label: &str,
-    trace_id: u64,
+    trace_id: String,
 ) -> JsonRpcResponse {
     let request: Map<String, Value>;
     let mut response = JsonRpcResponse::new(

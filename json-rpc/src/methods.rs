@@ -124,7 +124,7 @@ type RpcHandler =
 pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
 
 pub(crate) struct JsonRpcRequest {
-    pub trace_id: u64,
+    pub trace_id: String,
     pub params: Vec<Value>,
     pub ledger_info: LedgerInfoWithSignatures,
 }
