@@ -217,6 +217,21 @@ module LibraAccount {
         );
     }
 
+    spec fun initialize {
+        pragma opaque;
+        include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
+        include CreateLibraRootAccountAbortsIf{auth_key_prefix: dummy_auth_key_prefix};
+        include CreateTreasuryComplianceAccountAbortsIf{auth_key_prefix: dummy_auth_key_prefix};
+        aborts_if exists<AccountFreezing::FreezingBit>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+
+        // modifies and ensures needed to make this function opaque.
+        include CreateLibraRootAccountModifies;
+        include CreateLibraRootAccountEnsures;
+        include CreateTreasuryComplianceAccountModifies;
+        include CreateTreasuryComplianceAccountEnsures;
+    }
+
     /// Return `true` if `addr` has already published account limits for `Token`
     fun has_published_account_limits<Token>(addr: address): bool {
         if (VASP::is_vasp(addr)) {
@@ -949,11 +964,21 @@ module LibraAccount {
     }
 
     spec fun make_account {
+        pragma opaque;
         let new_account_addr = Signer::address_of(new_account);
+        modifies global<LibraAccount>(new_account_addr);
+        modifies global<AccountFreezing::FreezingBit>(new_account_addr);
+        modifies global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        ensures exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         // Next requires is needed to prove invariant
         requires exists<Roles::RoleId>(new_account_addr);
         include MakeAccountAbortsIf{addr: new_account_addr};
         ensures exists_at(new_account_addr);
+        ensures AccountFreezing::spec_account_is_not_frozen(new_account_addr);
+        let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
+        ensures spec_holds_own_key_rotation_cap(new_account_addr);
+        ensures spec_holds_own_withdraw_cap(new_account_addr);
     }
     spec schema MakeAccountAbortsIf {
         addr: address;
@@ -1040,6 +1065,48 @@ module LibraAccount {
         make_account(lr_account, auth_key_prefix)
     }
 
+    spec fun create_libra_root_account {
+        pragma opaque;
+        include CreateLibraRootAccountModifies;
+        include CreateLibraRootAccountAbortsIf;
+        include CreateLibraRootAccountEnsures;
+    }
+
+    spec schema CreateLibraRootAccountModifies {
+        let lr_addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
+        modifies global<LibraAccount>(lr_addr);
+        modifies global<AccountOperationsCapability>(lr_addr);
+        modifies global<LibraWriteSetManager>(lr_addr);
+        modifies global<SlidingNonce::SlidingNonce>(lr_addr);
+        modifies global<Roles::RoleId>(lr_addr);
+        modifies global<AccountFreezing::FreezingBit>(lr_addr);
+    }
+    spec schema CreateLibraRootAccountAbortsIf {
+        auth_key_prefix: vector<u8>;
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::GrantRole{addr: CoreAddresses::LIBRA_ROOT_ADDRESS(), role_id: Roles::LIBRA_ROOT_ROLE_ID};
+        aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<AccountFreezing::FreezingBit>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+        include CreateAuthenticationKeyAbortsIf;
+    }
+    spec schema CreateLibraRootAccountEnsures {
+        let lr_addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
+        ensures exists<AccountOperationsCapability>(lr_addr);
+        ensures exists<LibraWriteSetManager>(lr_addr);
+        ensures exists<SlidingNonce::SlidingNonce>(lr_addr);
+        ensures Roles::spec_has_libra_root_role_addr(lr_addr);
+        ensures exists_at(lr_addr);
+        ensures AccountFreezing::spec_account_is_not_frozen(lr_addr);
+        ensures spec_holds_own_key_rotation_cap(lr_addr);
+        ensures spec_holds_own_withdraw_cap(lr_addr);
+    }
+
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`.  Can only be called during genesis.
     /// Also, publishes the treasury compliance role, the SlidingNonce resource, and
@@ -1056,6 +1123,48 @@ module LibraAccount {
         SlidingNonce::publish_nonce_resource(lr_account, &new_account);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
+    }
+
+    spec fun create_treasury_compliance_account {
+        pragma opaque;
+        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        include CreateTreasuryComplianceAccountModifies;
+        include CreateTreasuryComplianceAccountAbortsIf;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include MakeAccountAbortsIf{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
+        include CreateTreasuryComplianceAccountEnsures;
+
+        let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
+    }
+
+    spec schema CreateTreasuryComplianceAccountModifies {
+        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        modifies global<LibraAccount>(tc_addr);
+        modifies global<SlidingNonce::SlidingNonce>(tc_addr);
+        modifies global<Roles::RoleId>(tc_addr);
+        modifies global<AccountFreezing::FreezingBit>(tc_addr);
+        modifies global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        ensures exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+    }
+
+    spec schema CreateTreasuryComplianceAccountAbortsIf {
+        lr_account: signer;
+        auth_key_prefix: vector<u8>;
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::GrantRole{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), role_id: Roles::TREASURY_COMPLIANCE_ROLE_ID};
+        aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
+            with Errors::ALREADY_PUBLISHED;
+    }
+
+    spec schema CreateTreasuryComplianceAccountEnsures {
+        let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        ensures Roles::spec_has_treasury_compliance_role_addr(tc_addr);
+        ensures exists_at(tc_addr);
+        ensures exists<SlidingNonce::SlidingNonce>(tc_addr);
+        ensures AccountFreezing::spec_account_is_not_frozen(tc_addr);
+        ensures spec_holds_own_key_rotation_cap(tc_addr);
+        ensures spec_holds_own_withdraw_cap(tc_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////
