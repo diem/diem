@@ -73,6 +73,7 @@ module AccountFreezing {
     }
     spec fun create {
         let addr = Signer::spec_address_of(account);
+        modifies global<FreezingBit>(addr);
         aborts_if exists<FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
         ensures spec_account_is_not_frozen(addr);
     }

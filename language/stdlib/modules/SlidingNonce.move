@@ -100,7 +100,7 @@ module SlidingNonce {
     /// Publishes nonce resource for `account`
     /// This is required before other functions in this module can be called for `account
     public fun publish(account: &signer) {
-        assert(!exists<SlidingNonce>(Signer::address_of(account)), Errors::invalid_argument(ENONCE_ALREADY_PUBLISHED));
+        assert(!exists<SlidingNonce>(Signer::address_of(account)), Errors::already_published(ENONCE_ALREADY_PUBLISHED));
         move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
 
@@ -116,8 +116,16 @@ module SlidingNonce {
             nonce_mask: 0,
         };
         assert(!exists<SlidingNonce>(Signer::address_of(account)),
-                Errors::invalid_argument(ENONCE_ALREADY_PUBLISHED));
+                Errors::already_published(ENONCE_ALREADY_PUBLISHED));
         move_to(account, new_resource);
+    }
+
+    spec fun publish_nonce_resource {
+        pragma opaque;
+        modifies global<SlidingNonce>(Signer::spec_address_of(account));
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        aborts_if exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
+        ensures exists<SlidingNonce>(Signer::spec_address_of(account));
     }
 
 }

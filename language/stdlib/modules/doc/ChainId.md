@@ -95,6 +95,25 @@ Publish the chain ID <code>id</code> of this Libra instance under the LibraRoot 
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<a name="0x1_ChainId_lr_addr$3"></a>
+<b>let</b> lr_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account);
+<b>modifies</b> <b>global</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(lr_addr);
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>aborts_if</b> <b>exists</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(lr_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>ensures</b> <b>exists</b>&lt;<a href="ChainId.md#0x1_ChainId">ChainId</a>&gt;(lr_addr);
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_ChainId_get"></a>
 
 ## Function `get`

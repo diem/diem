@@ -23,6 +23,16 @@ module ChainId {
         move_to(lr_account, ChainId { id })
     }
 
+    spec fun initialize {
+        pragma opaque;
+        let lr_addr = Signer::address_of(lr_account);
+        modifies global<ChainId>(lr_addr);
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
+        aborts_if exists<ChainId>(lr_addr) with Errors::ALREADY_PUBLISHED;
+        ensures exists<ChainId>(lr_addr);
+    }
+
     /// Return the chain ID of this Libra instance
     public fun get(): u8 acquires ChainId {
         LibraTimestamp::assert_operating();
