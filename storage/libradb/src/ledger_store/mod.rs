@@ -7,6 +7,7 @@
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
+    metrics::LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     schema::{
         epoch_by_version::EpochByVersionSchema, ledger_info::LedgerInfoSchema,
         transaction_accumulator::TransactionAccumulatorSchema,
@@ -332,11 +333,16 @@ impl LedgerStore {
 
         // write hash of txn_info into the accumulator
         let txn_hashes: Vec<HashValue> = txn_infos.iter().map(TransactionInfo::hash).collect();
-        let (root_hash, writes) = Accumulator::append(
-            self,
-            first_version, /* num_existing_leaves */
-            &txn_hashes,
-        )?;
+        let (root_hash, writes) = {
+            let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+                .with_label_values(&["txn_accumulator_append"])
+                .start_timer();
+            Accumulator::append(
+                self,
+                first_version, /* num_existing_leaves */
+                &txn_hashes,
+            )?
+        };
         writes
             .iter()
             .map(|(pos, hash)| cs.batch.put::<TransactionAccumulatorSchema>(pos, hash))

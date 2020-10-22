@@ -9,6 +9,7 @@ mod state_store_test;
 use crate::{
     change_set::ChangeSet,
     ledger_counters::LedgerCounter,
+    metrics::LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     schema::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
@@ -74,8 +75,12 @@ impl StateStore {
             })
             .collect::<Vec<_>>();
 
-        let (new_root_hash_vec, tree_update_batch) =
-            JellyfishMerkleTree::new(self).put_blob_sets(blob_sets, first_version)?;
+        let (new_root_hash_vec, tree_update_batch) = {
+            let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+                .with_label_values(&["jellyfish_put_blob_sets"])
+                .start_timer();
+            JellyfishMerkleTree::new(self).put_blob_sets(blob_sets, first_version)?
+        };
 
         cs.counter_bumps.bump(
             LedgerCounter::NewStateNodes,
