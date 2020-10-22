@@ -49,4 +49,5 @@ libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] 
 
 [features]
 default = []
+librarian = []
 fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-temppath", "libra-crypto/fuzzing", "libra-jellyfish-merkle/fuzzing", "libra-types/fuzzing"]

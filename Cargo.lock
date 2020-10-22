@@ -3686,6 +3686,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "librarian"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "libra-crypto",
+ "libra-types",
+ "libra-workspace-hack",
+ "libradb",
+ "storage-interface",
+ "structopt 0.3.18",
+]
+
+[[package]]
 name = "librocksdb-sys"
 version = "6.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -126,6 +126,7 @@ members = [
     "storage/inspector",
     "storage/jellyfish-merkle",
     "storage/libradb",
+    "storage/librarian",
     "storage/schemadb",
     "storage/scratchpad",
     "storage/state-view",
@@ -178,6 +179,7 @@ default-members = [
     "secure/key-manager",
     "storage/backup/backup-cli",
     "storage/inspector",
+    "storage/librarian",
 ]
 
 [profile.release]
