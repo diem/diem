@@ -139,7 +139,7 @@ script {
         ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"");
     }
 }
-// check: "Keep(ABORTED { code: 519"
+// check: "Keep(ABORTED { code: 7"
 
 //! new-transaction
 //! sender: bob

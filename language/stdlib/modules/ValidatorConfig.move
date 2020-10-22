@@ -157,7 +157,6 @@ module ValidatorConfig {
         include Roles::AbortsIfNotValidator{validator_addr: sender};
         include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(validator_account));
-        ensures get_operator(sender) == sender;
 
         /// The signer can only change its own operator account [[H15]][PERMISSION].
         ensures forall addr: address where addr != sender:
@@ -228,7 +227,9 @@ module ValidatorConfig {
     /// Returns true if all of the following is true:
     /// 1) there is a ValidatorConfig resource under the address, and
     /// 2) the config is set, and
-    /// NB! currently we do not require the the operator_account to be set
+    /// we do not require the operator_account to be set to make sure
+    /// that if the validator account becomes valid, it stays valid, e.g.
+    /// all validators in the Validator Set are valid
     public fun is_valid(addr: address): bool acquires ValidatorConfig {
         exists<ValidatorConfig>(addr) && Option::is_some(&borrow_global<ValidatorConfig>(addr).config)
     }
@@ -275,16 +276,18 @@ module ValidatorConfig {
     }
 
     /// Get operator's account
-    /// Aborts if there is no ValidatorConfig resource, if its operator_account is
-    /// empty, returns the input
+    /// Aborts if there is no ValidatorConfig resource or
+    /// if the operator_account is unset
     public fun get_operator(addr: address): address acquires ValidatorConfig {
         assert(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
-        *Option::borrow_with_default(&t_ref.operator_account, &addr)
+        assert(Option::is_some(&t_ref.operator_account), Errors::invalid_argument(EVALIDATOR_CONFIG));
+        *Option::borrow(&t_ref.operator_account)
     }
 
     spec fun get_operator {
         pragma opaque;
+        aborts_if !Option::is_some(global<ValidatorConfig>(addr).operator_account) with Errors::INVALID_ARGUMENT;
         include AbortsIfNoValidatorConfig;
         ensures result == get_operator(addr);
     }

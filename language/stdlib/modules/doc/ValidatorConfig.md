@@ -408,7 +408,6 @@ Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: sender};
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
 <b>ensures</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account));
-<b>ensures</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">get_operator</a>(sender) == sender;
 </code></pre>
 
 
@@ -518,7 +517,9 @@ of the LibraSystem's code.
 Returns true if all of the following is true:
 1) there is a ValidatorConfig resource under the address, and
 2) the config is set, and
-NB! currently we do not require the the operator_account to be set
+we do not require the operator_account to be set to make sure
+that if the validator account becomes valid, it stays valid, e.g.
+all validators in the Validator Set are valid
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">is_valid</a>(addr: address): bool
@@ -656,8 +657,8 @@ Aborts if there is no ValidatorConfig resource
 ## Function `get_operator`
 
 Get operator's account
-Aborts if there is no ValidatorConfig resource, if its operator_account is
-empty, returns the input
+Aborts if there is no ValidatorConfig resource or
+if the operator_account is unset
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">get_operator</a>(addr: address): address
@@ -672,7 +673,8 @@ empty, returns the input
 <pre><code><b>public</b> <b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a> {
     <b>assert</b>(<b>exists</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">EVALIDATOR_CONFIG</a>));
     <b>let</b> t_ref = borrow_global&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
-    *<a href="Option.md#0x1_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
+    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&t_ref.operator_account), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">EVALIDATOR_CONFIG</a>));
+    *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&t_ref.operator_account)
 }
 </code></pre>
 
@@ -686,6 +688,7 @@ empty, returns the input
 
 
 <pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> !<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<b>global</b>&lt;<a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>ensures</b> result == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">get_operator</a>(addr);
 </code></pre>

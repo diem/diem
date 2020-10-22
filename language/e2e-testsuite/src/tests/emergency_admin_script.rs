@@ -27,6 +27,7 @@ fn validator_batch_remove() {
     let libra_root_account = Account::new_libra_root();
     let validator_account_0 = executor.create_raw_account();
     let validator_account_1 = executor.create_raw_account();
+    let operator_account = executor.create_raw_account();
 
     // Add validator_0
     executor.execute_and_apply(
@@ -41,10 +42,36 @@ fn validator_batch_remove() {
             .sequence_number(1)
             .sign(),
     );
-    executor.new_block();
-
+    // Add operator
+    executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_operator_account_script(
+                0,
+                *operator_account.address(),
+                operator_account.auth_key_prefix(),
+                b"operator".to_vec(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+    // validator_0 sets operator
     executor.execute_and_apply(
         validator_account_0
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                b"operator".to_vec(),
+                *operator_account.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
+
+    executor.new_block();
+
+    // operator_accounts registers config
+    executor.execute_and_apply(
+        operator_account
             .transaction()
             .script(encode_register_validator_config_script(
                 *validator_account_0.address(),
@@ -61,6 +88,7 @@ fn validator_batch_remove() {
             .sign(),
     );
 
+    // libra_root adds validator
     executor.execute_and_apply(
         libra_root_account
             .transaction()
@@ -69,7 +97,7 @@ fn validator_batch_remove() {
                 b"validator_0".to_vec(),
                 *validator_account_0.address(),
             ))
-            .sequence_number(2)
+            .sequence_number(3)
             .sign(),
     );
 
@@ -84,13 +112,25 @@ fn validator_batch_remove() {
                 validator_account_1.auth_key_prefix(),
                 b"validator_1".to_vec(),
             ))
-            .sequence_number(3)
+            .sequence_number(4)
+            .sign(),
+    );
+    // validator_1 sets operator
+    executor.execute_and_apply(
+        validator_account_1
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                b"operator".to_vec(),
+                *operator_account.address(),
+            ))
+            .sequence_number(0)
             .sign(),
     );
     executor.new_block();
 
+    // operator sets the config for validator_account_1
     executor.execute_and_apply(
-        validator_account_1
+        operator_account
             .transaction()
             .script(encode_register_validator_config_script(
                 *validator_account_1.address(),
@@ -103,10 +143,11 @@ fn validator_batch_remove() {
                 vec![254; 32],
                 vec![253; 32],
             ))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
 
+    // libra_root adds validator
     executor.execute_and_apply(
         libra_root_account
             .transaction()
@@ -115,7 +156,7 @@ fn validator_batch_remove() {
                 b"validator_1".to_vec(),
                 *validator_account_1.address(),
             ))
-            .sequence_number(4)
+            .sequence_number(5)
             .sign(),
     );
 

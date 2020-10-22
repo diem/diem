@@ -16,6 +16,7 @@ fn validator_add() {
 
     let libra_root_account = Account::new_libra_root();
     let validator_account = executor.create_raw_account();
+    let operator_account = executor.create_raw_account();
 
     executor.execute_and_apply(
         libra_root_account
@@ -29,10 +30,33 @@ fn validator_add() {
             .sequence_number(1)
             .sign(),
     );
+    executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_operator_account_script(
+                0,
+                *operator_account.address(),
+                operator_account.auth_key_prefix(),
+                b"operator_0".to_vec(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+    // validator sets operator
+    executor.execute_and_apply(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                b"operator_0".to_vec(),
+                *operator_account.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     executor.new_block();
 
     executor.execute_and_apply(
-        validator_account
+        operator_account
             .transaction()
             .script(encode_register_validator_config_script(
                 *validator_account.address(),
@@ -57,7 +81,7 @@ fn validator_add() {
                 b"validator_0".to_vec(),
                 *validator_account.address(),
             ))
-            .sequence_number(2)
+            .sequence_number(3)
             .sign(),
     );
 
@@ -104,11 +128,22 @@ fn validator_rotate_key_and_reconfigure() {
             .sequence_number(2)
             .sign(),
     );
+    // validator_0 sets operator
+    executor.execute_and_apply(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                b"bobby".to_vec(),
+                *validator_operator.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     executor.new_block();
 
     let output = executor.execute_and_apply(
-        validator_account
+        validator_operator
             .transaction()
             .script(encode_register_validator_config_script(
                 *validator_account.address(),
@@ -152,17 +187,6 @@ fn validator_rotate_key_and_reconfigure() {
 
     executor.new_block_with_timestamp(300000010);
 
-    executor.execute_and_apply(
-        validator_account
-            .transaction()
-            .script(encode_set_validator_operator_script(
-                b"bobby".to_vec(),
-                *validator_operator.address(),
-            ))
-            .sequence_number(1)
-            .sign(),
-    );
-
     let output = executor.execute_and_apply(
         validator_operator
             .transaction()
@@ -177,7 +201,7 @@ fn validator_rotate_key_and_reconfigure() {
                 vec![254; 32],
                 vec![253; 32],
             ))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
 
