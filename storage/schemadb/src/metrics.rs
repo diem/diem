@@ -98,3 +98,15 @@ pub static LIBRA_SCHEMADB_DELETES: Lazy<IntCounterVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static LIBRA_SCHEMADB_SERIALIZE_LATENCY_SECONDS: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        // metric name
+        "libra_schemadb_serialize_latency_seconds",
+        // metric description
+        "Libra schemadb time spent encoding keys / values, in seconds.",
+        // metric labels (dimensions)
+        &["op", "cf_name"]
+    )
+    .unwrap()
+});

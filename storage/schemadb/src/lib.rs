@@ -22,6 +22,7 @@ use crate::{
         LIBRA_SCHEMADB_BATCH_COMMIT_BYTES, LIBRA_SCHEMADB_BATCH_COMMIT_LATENCY_SECONDS,
         LIBRA_SCHEMADB_DELETES, LIBRA_SCHEMADB_GET_BYTES, LIBRA_SCHEMADB_GET_LATENCY_SECONDS,
         LIBRA_SCHEMADB_ITER_BYTES, LIBRA_SCHEMADB_ITER_LATENCY_SECONDS, LIBRA_SCHEMADB_PUT_BYTES,
+        LIBRA_SCHEMADB_SERIALIZE_LATENCY_SECONDS,
     },
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
 };
@@ -64,12 +65,21 @@ impl SchemaBatch {
 
     /// Adds an insert/update operation to the batch.
     pub fn put<S: Schema>(&mut self, key: &S::Key, value: &S::Value) -> Result<()> {
-        let key = <S::Key as KeyCodec<S>>::encode_key(key)?;
-        let value = <S::Value as ValueCodec<S>>::encode_value(value)?;
+        let raw_key;
+        let raw_value;
+
+        {
+            let _timer = LIBRA_SCHEMADB_SERIALIZE_LATENCY_SECONDS
+                .with_label_values(&["put", S::COLUMN_FAMILY_NAME])
+                .start_timer();
+            raw_key = <S::Key as KeyCodec<S>>::encode_key(key)?;
+            raw_value = <S::Value as ValueCodec<S>>::encode_value(value)?;
+        }
+
         self.rows
             .entry(S::COLUMN_FAMILY_NAME)
             .or_insert_with(BTreeMap::new)
-            .insert(key, WriteOp::Value(value));
+            .insert(raw_key, WriteOp::Value(raw_value));
 
         Ok(())
     }
