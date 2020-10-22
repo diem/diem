@@ -68,6 +68,7 @@ impl VerifyCoordinator {
         let global_opt = GlobalRestoreOptions {
             target_version: ver_max,
             run_mode: Arc::new(RestoreRunMode::Verify),
+            concurrency_factor: 1.0,
         };
 
         let epoch_history = Arc::new(

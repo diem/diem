@@ -7,7 +7,7 @@ use crate::{
         transaction::manifest::{TransactionBackup, TransactionChunk},
     },
     metrics::{
-        restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
+        restore::{TIMERS, TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
         verify::VERIFY_TRANSACTION_VERSION,
     },
     storage::{BackupStorage, FileHandle},
@@ -35,6 +35,8 @@ use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
 use tokio::io::BufReader;
 use crate::utils::stream::StreamX;
+use std::time::Instant;
+use std::cmp::Ordering;
 
 #[derive(StructOpt)]
 pub struct TransactionRestoreOpt {
@@ -147,9 +149,11 @@ impl TransactionRestoreController {
     }
 
     pub async fn preheat(mut self) -> PreheatedTransactionRestore {
+        let preheat_result = self.preheat_impl().await;
         PreheatedTransactionRestore {
-            preheat_result: self.preheat_impl().await,
+            preheat_result,
             controller: self,
+            ready: Instant::now(),
         }
     }
 
@@ -300,6 +304,7 @@ struct TransactionRestorePreheatData {
 pub struct PreheatedTransactionRestore {
     controller: TransactionRestoreController,
     preheat_result: Result<TransactionRestorePreheatData>,
+    pub ready: Instant,
 }
 
 impl PreheatedTransactionRestore {
@@ -415,13 +420,24 @@ impl TransactionRestoreBatchController {
         });
 
         let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(
-            num_cpus::get() * 2,
-            num_cpus::get(),
+            num_cpus::get() * 3,
+            (num_cpus::get() as f64 * self.global_opt.concurrency_factor) as usize,
         );
-        while let Some(preheated_txn_restore) = futs_stream.next().await {
+        while let Some(preheated_txn_restore) = {
+            let _timer = TIMERS
+                .with_label_values(&["preheat_txn_restore_stream_next"])
+                .start_timer();
+            let res = futs_stream.next().await;
+            info!("waited for {:.2} seconds", _timer.stop_and_discard());
+            res
+        } {
+            info!("in queue for {:.2} seconds", preheated_txn_restore.ready.elapsed().as_secs_f64());
+            let _timer = TIMERS
+                .with_label_values(&["preheated_txn_restore_run"])
+                .start_timer();
             let v = preheated_txn_restore.get_last_version();
             preheated_txn_restore.run().await?;
-            debug!(
+            info!(
                 "Accumulative TPS: {:.0}",
                 (v? + 1) as f64 / timer.elapsed().as_secs_f64()
             );
