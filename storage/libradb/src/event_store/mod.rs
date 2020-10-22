@@ -10,6 +10,7 @@ use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
     ledger_counters::LedgerCounter,
+    metrics::LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     schema::{
         event::EventSchema, event_accumulator::EventAccumulatorSchema,
         event_by_key::EventByKeySchema,
@@ -209,7 +210,12 @@ impl EventStore {
 
         // EventAccumulatorSchema updates
         let event_hashes: Vec<HashValue> = events.iter().map(ContractEvent::hash).collect();
-        let (root_hash, writes) = EmptyAccumulator::append(&EmptyReader, 0, &event_hashes)?;
+        let (root_hash, writes) = {
+            let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+                .with_label_values(&["event_accumulator_append"])
+                .start_timer();
+            EmptyAccumulator::append(&EmptyReader, 0, &event_hashes)?
+        };
         writes
             .into_iter()
             .map(|(pos, hash)| {
