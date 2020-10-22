@@ -81,6 +81,7 @@ fn end_to_end() {
                 dry_run: false,
                 db_dir: Some(tgt_db_dir.path().to_path_buf()),
                 target_version: Some(target_version),
+                concurrency_factor: None,
             }
             .try_into()
             .unwrap(),

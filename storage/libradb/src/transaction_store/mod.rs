@@ -6,6 +6,7 @@
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
+    metrics::LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     schema::{transaction::TransactionSchema, transaction_by_account::TransactionByAccountSchema},
 };
 use anyhow::{ensure, format_err, Result};
@@ -102,6 +103,9 @@ impl TransactionStore {
         transaction: &Transaction,
         cs: &mut ChangeSet,
     ) -> Result<()> {
+        let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["transaction_store_put_txns"])
+            .start_timer();
         if let Transaction::UserTransaction(txn) = transaction {
             cs.batch.put::<TransactionByAccountSchema>(
                 &(txn.sender(), txn.sequence_number()),

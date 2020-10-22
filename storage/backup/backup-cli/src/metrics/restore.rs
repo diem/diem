@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_secure_push_metrics::{register_int_gauge, IntGauge};
+use libra_secure_push_metrics::{
+    register_histogram_vec, register_int_gauge, HistogramVec, IntGauge,
+};
 use once_cell::sync::Lazy;
 
 pub static COORDINATOR_TARGET_VERSION: Lazy<IntGauge> = Lazy::new(|| {
@@ -88,6 +90,15 @@ pub static COORDINATOR_FAIL_TS: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_db_restore_coordinator_fail_timestamp_s",
         "Timestamp when the verify coordinator fails."
+    )
+    .unwrap()
+});
+
+pub static TIMERS: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_db_restore_timers_seconds",
+        "Various timers below public API level.",
+        &["name"]
     )
     .unwrap()
 });

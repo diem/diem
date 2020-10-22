@@ -325,6 +325,9 @@ impl LedgerStore {
         txn_infos: &[TransactionInfo],
         cs: &mut ChangeSet,
     ) -> Result<HashValue> {
+        let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["ledger_store_put_txn_infos"])
+            .start_timer();
         // write txn_info
         (first_version..first_version + txn_infos.len() as u64)
             .zip_eq(txn_infos.iter())

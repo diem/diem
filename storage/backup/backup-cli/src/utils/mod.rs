@@ -50,6 +50,8 @@ pub struct GlobalRestoreOpt {
         defaulting to the largest version possible, meaning recover everything in the backups."
     )]
     pub target_version: Option<Version>,
+    #[structopt(long)]
+    pub concurrency_factor: Option<f64>,
 }
 
 pub enum RestoreRunMode {
@@ -102,6 +104,7 @@ impl RestoreRunMode {
 pub struct GlobalRestoreOptions {
     pub target_version: Version,
     pub run_mode: Arc<RestoreRunMode>,
+    pub concurrency_factor: f64,
 }
 
 impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
@@ -122,6 +125,7 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
         Ok(Self {
             target_version,
             run_mode: Arc::new(run_mode),
+            concurrency_factor: opt.concurrency_factor.unwrap_or(1.0),
         })
     }
 }

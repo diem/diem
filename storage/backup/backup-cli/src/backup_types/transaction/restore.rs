@@ -7,7 +7,7 @@ use crate::{
         transaction::manifest::{TransactionBackup, TransactionChunk},
     },
     metrics::{
-        restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
+        restore::{TIMERS, TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
         verify::VERIFY_TRANSACTION_VERSION,
     },
     storage::{BackupStorage, FileHandle},
@@ -413,8 +413,17 @@ impl TransactionRestoreBatchController {
             }
         });
 
-        let mut futs_stream = futures::stream::iter(futs_iter).buffered(num_cpus::get());
-        while let Some(preheated_txn_restore) = futs_stream.next().await {
+        let mut futs_stream = futures::stream::iter(futs_iter)
+            .buffered((num_cpus::get() as f64 * self.global_opt.concurrency_factor) as usize);
+        while let Some(preheated_txn_restore) = {
+            let _timer = TIMERS
+                .with_label_values(&["preheat_txn_restore_stream_next"])
+                .start_timer();
+            futs_stream.next().await
+        } {
+            let _timer = TIMERS
+                .with_label_values(&["preheated_txn_restore_run"])
+                .start_timer();
             let v = preheated_txn_restore.get_last_version();
             preheated_txn_restore.run().await?;
             debug!(

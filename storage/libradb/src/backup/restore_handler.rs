@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    change_set::ChangeSet, ledger_store::LedgerStore,
+    change_set::ChangeSet, ledger_store::LedgerStore, metrics::LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     schema::transaction_accumulator::TransactionAccumulatorSchema, state_store::StateStore,
     transaction_store::TransactionStore, LibraDB,
 };
@@ -120,6 +120,9 @@ impl RestoreHandler {
         txns: &[Transaction],
         txn_infos: &[TransactionInfo],
     ) -> Result<()> {
+        let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["restore_handler_save_transactions"])
+            .start_timer();
         let mut cs = ChangeSet::new();
         for (idx, txn) in txns.iter().enumerate() {
             self.transaction_store

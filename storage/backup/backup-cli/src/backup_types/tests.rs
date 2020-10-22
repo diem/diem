@@ -109,6 +109,7 @@ fn test_end_to_end_impl(d: TestData) {
         dry_run: false,
         db_dir: Some(tgt_db_dir.path().to_path_buf()),
         target_version: Some(d.target_ver),
+        concurrency_factor: None,
     }
     .try_into()
     .unwrap();
