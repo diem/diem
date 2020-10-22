@@ -489,6 +489,16 @@ impl RoundManager {
         let author = proposal
             .author()
             .expect("Proposal should be verified having an author");
+
+        info!(
+            self.new_log(LogEvent::ReceiveProposal).remote_peer(author),
+            proposal = %proposal,
+            block_epoch = proposal.epoch(),
+            block_round = proposal.round(),
+            block_hash = proposal.id(),
+            block_parent_hash = proposal.quorum_cert().certified_block().id(),
+        );
+
         ensure!(
             self.proposer_election.is_valid_proposal(&proposal),
             "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
@@ -507,11 +517,6 @@ impl RoundManager {
         );
 
         let proposal_round = proposal.round();
-
-        debug!(
-            self.new_log(LogEvent::ReceiveProposal).remote_peer(author),
-            "{}", proposal
-        );
 
         if let Some(time_to_receival) = duration_since_epoch().checked_sub(block_time_since_epoch) {
             counters::CREATION_TO_RECEIVAL_S.observe_duration(time_to_receival);
