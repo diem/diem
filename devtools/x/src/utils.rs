@@ -122,7 +122,9 @@ pub fn apply_sccache_if_possible<'a>(
                 } else {
                     None
                 };
-                if (access_key_id.is_none() || access_key_secret.is_some())
+                // if either the access or secret key is not set, attempt to perform a public read.
+                // do not set this flag if attempting to write, as it will prevent the use of the aws creds.
+                if (access_key_id.is_none() || access_key_secret.is_none())
                     && sccach_config.public.unwrap_or(true)
                 {
                     envs.push(("SCCACHE_S3_PUBLIC", Some("true".to_owned())))
