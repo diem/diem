@@ -3337,23 +3337,23 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | Error Category             | Error Reason                                   | Description                                                                                           |
 | ----------------           | --------------                                 | -------------                                                                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>           | <code>validator_address</code> does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it.   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>     | </code>Roles::EVALIDATOR_OPERATOR<code>                   | </code>validator_operator_account<code> does not have a Validator Operator role.                                 |
-| </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_TRANSACTION_SENDER<code> | </code>validator_operator_account<code> is not the registered operator for the validator at </code>validator_address<code>. |
-| </code>Errors::INVALID_ARGUMENT<code> | </code>ValidatorConfig::EINVALID_CONSENSUS_KEY<code>      | </code>consensus_pubkey<code> is not a valid ed25519 <b>public</b> key.                                                 |
-| </code>Errors::INVALID_STATE<code>    | </code>LibraConfig::EINVALID_BLOCK_TIME<code>             | An invalid time value was encountered in reconfiguration. Unlikely <b>to</b> occur.                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EVALIDATOR_OPERATOR">Roles::EVALIDATOR_OPERATOR</a></code>                   | <code>validator_operator_account</code> does not have a Validator Operator role.                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">ValidatorConfig::EINVALID_TRANSACTION_SENDER</a></code> | <code>validator_operator_account</code> is not the registered operator for the validator at <code>validator_address</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 
 
 <a name="@Related_Scripts_155"></a>
 
 ##### Related Scripts
 
-* </code>Script::create_validator_account<code>
-* </code>Script::create_validator_operator_account<code>
-* </code>Script::add_validator_and_reconfigure<code>
-* </code>Script::remove_validator_and_reconfigure<code>
-* </code>Script::set_validator_operator<code>
-* </code>Script::set_validator_operator_with_nonce_admin<code>
-* </code>Script::register_validator_config`
+* <code><a href="transaction_script_documentation.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="transaction_script_documentation.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
