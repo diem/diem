@@ -122,8 +122,8 @@ impl PendingLedgerInfos {
         let highest_committed_li = sync_state.highest_local_li.ledger_info().version();
         let highest_synced = sync_state.highest_version_in_local_storage();
 
-        // prune any pending LIs that were successfully committed
-        self.pending_li_queue = self.pending_li_queue.split_off(&(highest_committed_li + 1));
+        // prune any pending LIs that are older than the latest local synced version
+        self.pending_li_queue = self.pending_li_queue.split_off(&(highest_synced + 1));
 
         // pick target LI to use for sending ProgressiveTargetType requests.
         self.target_li = if highest_committed_li == highest_synced {
