@@ -3,8 +3,9 @@
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use language_e2e_tests::{
-    account::{self, Account, AccountData},
+    account::{self, Account},
     common_transactions::peer_to_peer_txn,
+    current_function_name,
     executor::FakeExecutor,
     transaction_status_eq,
 };
@@ -24,9 +25,10 @@ fn single_peer_to_peer_with_event() {
     ::libra_logger::Logger::init_for_testing();
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -81,10 +83,11 @@ fn single_peer_to_peer_with_padding() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -158,9 +161,11 @@ fn single_peer_to_peer_with_padding() {
 fn few_peer_to_peer_with_event() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     // create and publish a sender with 3_000_000 coins and a receiver with 3_000_000 coins
-    let sender = AccountData::new(3_000_000, 10);
-    let receiver = AccountData::new(3_000_000, 10);
+    let sender = executor.create_raw_account_data(3_000_000, 10);
+    let receiver = executor.create_raw_account_data(3_000_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -230,9 +235,10 @@ fn few_peer_to_peer_with_event() {
 #[test]
 fn zero_amount_peer_to_peer() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let sequence_number = 10;
-    let sender = AccountData::new(1_000_000, sequence_number);
-    let receiver = AccountData::new(100_000, sequence_number);
+    let sender = executor.create_raw_account_data(1_000_000, sequence_number);
+    let receiver = executor.create_raw_account_data(100_000, sequence_number);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 

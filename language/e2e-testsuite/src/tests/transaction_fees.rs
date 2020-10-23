@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
-use language_e2e_tests::{account::Account, executor::FakeExecutor};
+use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, BurnEvent, COIN1_NAME},
@@ -19,7 +19,9 @@ use transaction_builder::*;
 #[test]
 fn burn_txn_fees() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = Account::new();
+    executor.set_golden_file(current_function_name!());
+
+    let sender = executor.create_raw_account();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let blessed = Account::new_blessed_tc();
 

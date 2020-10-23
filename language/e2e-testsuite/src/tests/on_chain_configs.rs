@@ -3,9 +3,10 @@
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use language_e2e_tests::{
-    account::{self, Account, AccountData},
+    account::{self, Account},
     assert_prologue_parity,
     common_transactions::peer_to_peer_txn,
+    current_function_name,
     executor::FakeExecutor,
     transaction_status_eq,
 };
@@ -23,6 +24,8 @@ use transaction_builder::{
 #[test]
 fn initial_libra_version() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let vm = LibraVM::new(executor.get_state_view());
 
     assert_eq!(
@@ -53,6 +56,7 @@ fn initial_libra_version() {
 #[test]
 fn drop_txn_after_reconfiguration() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let vm = LibraVM::new(executor.get_state_view());
 
     assert_eq!(
@@ -72,8 +76,8 @@ fn drop_txn_after_reconfiguration() {
         .sign();
     executor.new_block();
 
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     let txn2 = peer_to_peer_txn(&sender.account(), &receiver.account(), 11, 1000);
 
     let mut output = executor.execute_block(vec![txn, txn2]).unwrap();
@@ -84,10 +88,11 @@ fn drop_txn_after_reconfiguration() {
 fn updated_limit_allows_txn() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let blessed = Account::new_blessed_tc();
     // create and publish a sender with 5_000_000 coins and a receiver with 0 coins
-    let sender = AccountData::new(5_000_000, 10);
-    let receiver = AccountData::new(0, 10);
+    let sender = executor.create_raw_account_data(5_000_000, 10);
+    let receiver = executor.create_raw_account_data(0, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -131,9 +136,10 @@ fn updated_limit_allows_txn() {
 fn update_script_allow_list() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
     let lr = Account::new_libra_root();
     // create and publish a sender with 5_000_000 coins and a receiver with 0 coins
-    let sender = AccountData::new(5_000_000, 10);
+    let sender = executor.create_raw_account_data(5_000_000, 10);
     executor.add_account_data(&sender);
 
     // Regular accounts cannot send arbitrary txn to the network.

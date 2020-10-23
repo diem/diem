@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::{Account, AccountData},
-    common_transactions::peer_to_peer_txn,
+    account::Account, common_transactions::peer_to_peer_txn, current_function_name,
     executor::FakeExecutor,
 };
 use libra_crypto::HashValue;
@@ -24,9 +23,10 @@ use transaction_builder::*;
 #[test]
 fn validator_batch_remove() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let libra_root_account = Account::new_libra_root();
-    let validator_account_0 = Account::new();
-    let validator_account_1 = Account::new();
+    let validator_account_0 = executor.create_raw_account();
+    let validator_account_1 = executor.create_raw_account();
 
     // Add validator_0
     executor.execute_and_apply(
@@ -178,9 +178,10 @@ fn validator_batch_remove() {
 #[test]
 fn halt_network() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let libra_root_account = Account::new_libra_root();
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 

@@ -47,7 +47,7 @@ proptest! {
         let coins = vec![account::coin1_tmp_currency_code()];
         // Create a number of accounts
         for i in 0..10 {
-            let account = Account::new();
+            let account = executor.create_raw_account();
             executor.execute_and_apply(
                 libra_root
                 .transaction()

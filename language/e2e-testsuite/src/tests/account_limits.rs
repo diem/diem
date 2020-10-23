@@ -6,6 +6,7 @@
 use compiler::Compiler;
 use language_e2e_tests::{
     account::{self, Account},
+    current_function_name,
     executor::FakeExecutor,
 };
 use libra_types::{
@@ -158,11 +159,12 @@ fn encode_update_account_limit_window_info_script(
 #[test]
 fn account_limits() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-    let vasp_a = Account::new();
-    let vasp_b = Account::new();
-    let vasp_a_child = Account::new();
-    let vasp_b_child = Account::new();
+    let vasp_a = executor.create_raw_account();
+    let vasp_b = executor.create_raw_account();
+    let vasp_a_child = executor.create_raw_account();
+    let vasp_b_child = executor.create_raw_account();
     let libra_root = Account::new_libra_root();
     let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());

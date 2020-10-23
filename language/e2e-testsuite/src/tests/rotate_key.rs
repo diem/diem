@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::{self, AccountData},
+    account,
     common_transactions::{raw_rotate_key_txn, rotate_key_txn},
+    current_function_name,
     executor::FakeExecutor,
     keygen::KeyGen,
 };
@@ -21,8 +22,10 @@ use libra_types::{
 fn rotate_ed25519_key() {
     let balance = 1_000_000;
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     // create and publish sender
-    let mut sender = AccountData::new(balance, 10);
+    let mut sender = executor.create_raw_account_data(balance, 10);
     executor.add_account_data(&sender);
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -70,9 +73,11 @@ fn rotate_ed25519_key() {
 #[test]
 fn rotate_ed25519_multisig_key() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let mut seq_number = 10;
     // create and publish sender
-    let sender = AccountData::new(1_000_000, seq_number);
+    let sender = executor.create_raw_account_data(1_000_000, seq_number);
     executor.add_account_data(&sender);
     let _sender_address = sender.address();
 

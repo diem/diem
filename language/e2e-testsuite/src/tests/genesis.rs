@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::AccountData, common_transactions::peer_to_peer_txn, data_store::GENESIS_CHANGE_SET,
+    common_transactions::peer_to_peer_txn, current_function_name, data_store::GENESIS_CHANGE_SET,
     executor::FakeExecutor,
 };
 use libra_types::transaction::{Transaction, TransactionStatus, WriteSetPayload};
@@ -26,11 +26,12 @@ fn execute_genesis_write_set() {
 
 #[test]
 fn execute_genesis_and_drop_other_transaction() {
-    let executor = FakeExecutor::no_genesis();
+    let mut executor = FakeExecutor::no_genesis();
+    executor.set_golden_file(current_function_name!());
     let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(GENESIS_CHANGE_SET.clone()));
 
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     let txn2 = peer_to_peer_txn(&sender.account(), &receiver.account(), 11, 1000);
 
     let mut output = executor

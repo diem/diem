@@ -68,6 +68,12 @@ impl Account {
         Self::with_keypair(privkey, pubkey)
     }
 
+    /// Creates a new account in memory given a random seed.
+    pub fn new_from_seed(seed: &mut KeyGen) -> Self {
+        let (privkey, pubkey) = seed.generate_keypair();
+        Self::with_keypair(privkey, pubkey)
+    }
+
     /// Creates a new account with the given keypair.
     ///
     /// Like with [`Account::new`], the account returned by this constructor is a purely logical
@@ -475,7 +481,7 @@ fn new_event_handle(count: u64, address: AccountAddress) -> EventHandle {
 impl AccountData {
     /// Creates a new `AccountData` with a new account.
     ///
-    /// Most tests will want to use this constructor.
+    /// This constructor is non-deterministic and should not be used against golden file.
     pub fn new(balance: u64, sequence_number: u64) -> Self {
         Self::with_account(
             Account::new(),
@@ -486,13 +492,16 @@ impl AccountData {
         )
     }
 
-    pub fn new_libra_root() -> Self {
+    /// Creates a new `AccountData` with a new account.
+    ///
+    /// Most tests will want to use this constructor.
+    pub fn new_from_seed(seed: &mut KeyGen, balance: u64, sequence_number: u64) -> Self {
         Self::with_account(
-            Account::new(),
-            0,
+            Account::new_from_seed(seed),
+            balance,
             coin1_tmp_currency_code(),
-            0,
-            AccountRoleSpecifier::LibraRoot,
+            sequence_number,
+            AccountRoleSpecifier::ParentVASP,
         )
     }
 

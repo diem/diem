@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::{self, Account, AccountData},
-    common_transactions::peer_to_peer_txn,
-    executor::FakeExecutor,
+    account, common_transactions::peer_to_peer_txn, current_function_name, executor::FakeExecutor,
 };
 use libra_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
@@ -14,13 +12,14 @@ use move_vm_types::gas_schedule::zero_cost_schedule;
 
 #[test]
 fn failed_transaction_cleanup_test() {
-    let mut fake_executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(1_000_000, 10);
-    fake_executor.add_account_data(&sender);
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    executor.add_account_data(&sender);
 
     let log_context = NoContextLog::new();
-    let libra_vm = LibraVM::new(fake_executor.get_state_view());
-    let data_cache = StateViewCache::new(fake_executor.get_state_view());
+    let libra_vm = LibraVM::new(executor.get_state_view());
+    let data_cache = StateViewCache::new(executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = *sender.address();
@@ -72,9 +71,10 @@ fn failed_transaction_cleanup_test() {
 #[test]
 fn non_existent_sender() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let sequence_number = 0;
-    let sender = Account::new();
-    let receiver = AccountData::new(100_000, sequence_number);
+    let sender = executor.create_raw_account();
+    let receiver = executor.create_raw_account_data(100_000, sequence_number);
     executor.add_account_data(&receiver);
 
     let transfer_amount = 10;

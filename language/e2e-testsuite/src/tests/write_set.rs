@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::{self, Account, AccountData},
+    account::{self, Account},
     common_transactions::rotate_key_txn,
+    current_function_name,
     executor::FakeExecutor,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -28,13 +29,14 @@ use move_core_types::{
 fn invalid_write_set_sender() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     executor.new_block();
 
     // (1) Create a WriteSet that adds an account on a new address
-    let sender_account = AccountData::new(1000, 10);
+    let sender_account = executor.create_raw_account_data(1000, 10);
     executor.add_account_data(&sender_account);
 
-    let new_account_data = AccountData::new(1000, 10);
+    let new_account_data = executor.create_raw_account_data(1000, 10);
     let write_set = new_account_data.to_writeset();
 
     let writeset_txn = sender_account
@@ -54,11 +56,12 @@ fn invalid_write_set_sender() {
 fn invalid_write_set_signer() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     executor.new_block();
 
     // (1) Create a WriteSet that adds an account on a new address
-    let new_account_data = AccountData::new(0, 10);
+    let new_account_data = executor.create_raw_account_data(0, 10);
     let write_set = new_account_data.to_writeset();
 
     let writeset_txn = genesis_account
@@ -87,11 +90,12 @@ fn invalid_write_set_signer() {
 fn verify_and_execute_writeset() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     executor.new_block();
 
     // (1) Create a WriteSet that adds an account on a new address
-    let new_account_data = AccountData::new(0, 10);
+    let new_account_data = executor.create_raw_account_data(0, 10);
     let write_set = new_account_data.to_writeset();
 
     let writeset_txn = genesis_account
@@ -163,11 +167,12 @@ fn verify_and_execute_writeset() {
 fn bad_writesets() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     executor.new_block();
 
     // Create a WriteSet that adds an account on a new address
-    let new_account_data = AccountData::new(1000, 10);
+    let new_account_data = executor.create_raw_account_data(1000, 10);
     let write_set = new_account_data.to_writeset();
 
     // (1) This WriteSet is signed by an arbitrary account rather than the libra root account. Should be
@@ -292,11 +297,12 @@ fn bad_writesets() {
 fn transfer_and_execute_writeset() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     let blessed_account = Account::new_blessed_tc();
     executor.new_block();
 
-    let receiver = AccountData::new(100_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     executor.add_account_data(&receiver);
 
     // (1) Association mint some coin
@@ -307,7 +313,7 @@ fn transfer_and_execute_writeset() {
     executor.execute_and_apply(rotate_key_txn(&blessed_account, new_key_hash, 0));
 
     // (2) Create a WriteSet that adds an account on a new address
-    let new_account_data = AccountData::new(0, 10);
+    let new_account_data = executor.create_raw_account_data(0, 10);
     let write_set = new_account_data.to_writeset();
 
     let writeset_txn = genesis_account

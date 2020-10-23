@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use language_e2e_tests::{account::Account, executor::FakeExecutor};
+use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use libra_types::{account_config, vm_status::KeptVMStatus};
 use move_core_types::vm_status::VMStatus;
 use move_vm_types::values::Value;
@@ -12,8 +12,9 @@ use transaction_builder::*;
 #[test]
 fn valid_creator_already_vasp() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-    let account = Account::new();
+    let account = executor.create_raw_account();
 
     let treasury_compliance = Account::new_blessed_tc();
 
@@ -56,8 +57,9 @@ fn max_child_accounts_for_vasp() {
     let max_num_child_accounts = 256;
 
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-    let account = Account::new();
+    let account = executor.create_raw_account();
 
     let treasury_compliance = Account::new_blessed_tc();
 
@@ -77,7 +79,7 @@ fn max_child_accounts_for_vasp() {
     );
 
     for i in 0..max_num_child_accounts {
-        let child = Account::new();
+        let child = executor.create_raw_account();
         executor.execute_and_apply(
             account
                 .transaction()
@@ -93,7 +95,7 @@ fn max_child_accounts_for_vasp() {
         );
     }
 
-    let child = Account::new();
+    let child = executor.create_raw_account();
     let output = executor.execute_transaction(
         account
             .transaction()

@@ -4,11 +4,9 @@
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use language_e2e_tests::{
-    account::{Account, AccountData},
-    assert_prologue_disparity, assert_prologue_parity,
-    compile::compile_module_with_address,
-    executor::FakeExecutor,
-    gas_costs, transaction_status_eq,
+    account::Account, assert_prologue_disparity, assert_prologue_parity,
+    compile::compile_module_with_address, current_function_name, executor::FakeExecutor, gas_costs,
+    transaction_status_eq,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -31,7 +29,8 @@ use vm::file_format::CompiledModule;
 #[test]
 fn verify_signature() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 10);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 10);
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
@@ -60,7 +59,8 @@ fn verify_signature() {
 #[test]
 fn verify_reserved_sender() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 10);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 10);
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
@@ -90,9 +90,10 @@ fn verify_reserved_sender() {
 fn verify_simple_payment() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
-    let sender = AccountData::new(900_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    let sender = executor.create_raw_account_data(900_000, 10);
+    let receiver = executor.create_raw_account_data(100_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -198,7 +199,7 @@ fn verify_simple_payment() {
     );
 
     // Create a new transaction from a bogus account that doesn't exist
-    let bogus_account = AccountData::new(100_000, 10);
+    let bogus_account = executor.create_raw_account_data(100_000, 10);
     let txn = bogus_account
         .account()
         .transaction()
@@ -358,8 +359,9 @@ fn verify_simple_payment() {
 pub fn test_allowlist() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
     // create an empty transaction
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     // When CustomScripts is off, a garbage script should be rejected with Keep(UnknownScript)
@@ -384,9 +386,10 @@ pub fn test_arbitrary_script_execution() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create an empty transaction
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     // If CustomScripts is on, result should be Keep(DeserializationError). If it's off, the
@@ -415,9 +418,10 @@ pub fn test_publish_from_libra_root() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let module = String::from(
@@ -460,7 +464,8 @@ pub fn test_publish_from_libra_root() {
 #[test]
 fn verify_expiration_time() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 0);
     executor.add_account_data(&sender);
     let private_key = &sender.account().privkey;
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -503,7 +508,8 @@ fn verify_expiration_time() {
 #[test]
 fn verify_chain_id() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 0);
     executor.add_account_data(&sender);
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let txn = transaction_test_helpers::get_test_txn_with_chain_id(
@@ -524,7 +530,8 @@ fn verify_chain_id() {
 #[test]
 fn verify_gas_currency_with_bad_identifier() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 0);
     executor.add_account_data(&sender);
     let private_key = &sender.account().privkey;
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -550,7 +557,8 @@ fn verify_gas_currency_with_bad_identifier() {
 #[test]
 fn verify_gas_currency_code() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, 0);
     executor.add_account_data(&sender);
     let private_key = &sender.account().privkey;
     let txn = transaction_test_helpers::get_test_signed_transaction(
@@ -574,7 +582,9 @@ fn verify_gas_currency_code() {
 #[test]
 pub fn test_no_publishing_libra_root_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    let mut executor =
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_libra_root();
@@ -619,10 +629,11 @@ pub fn test_no_publishing_libra_root_sender() {
 pub fn test_open_publishing_invalid_address() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
+    let receiver = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -678,9 +689,10 @@ pub fn test_open_publishing_invalid_address() {
 pub fn test_open_publishing() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let program = String::from(
@@ -771,13 +783,14 @@ fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> Com
 #[test]
 fn test_script_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let module = bad_module();
     executor.add_module(&module.self_id(), &module);
 
     // Create a module that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let code = "
@@ -821,13 +834,14 @@ fn test_script_dependency_fails_verification() {
 #[test]
 fn test_module_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let bad_module = bad_module();
     executor.add_module(&bad_module.self_id(), &bad_module);
 
     // Create a transaction that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
     let good_module = {
         let m = good_module_uses_bad(*sender.address(), bad_module);
@@ -858,13 +872,14 @@ fn test_module_dependency_fails_verification() {
 #[test]
 fn test_type_tag_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let module = bad_module();
     executor.add_module(&module.self_id(), &module);
 
     // Create a transaction that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let code = "
@@ -913,6 +928,7 @@ fn test_type_tag_dependency_fails_verification() {
 #[test]
 fn test_script_transitive_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let bad_module = bad_module();
@@ -923,7 +939,7 @@ fn test_script_transitive_dependency_fails_verification() {
     executor.add_module(&good_module.self_id(), &good_module);
 
     // Create a transaction that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let code = "
@@ -966,6 +982,7 @@ fn test_script_transitive_dependency_fails_verification() {
 #[test]
 fn test_module_transitive_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let bad_module = bad_module();
@@ -976,7 +993,7 @@ fn test_module_transitive_dependency_fails_verification() {
     executor.add_module(&good_module.self_id(), &good_module);
 
     // Create a transaction that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let module_code = "
@@ -1023,6 +1040,7 @@ fn test_module_transitive_dependency_fails_verification() {
 #[test]
 fn test_type_tag_transitive_dependency_fails_verification() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
     let bad_module = bad_module();
@@ -1033,7 +1051,7 @@ fn test_type_tag_transitive_dependency_fails_verification() {
     executor.add_module(&good_module.self_id(), &good_module);
 
     // Create a transaction that tries to use that module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let code = "
@@ -1081,9 +1099,10 @@ fn test_type_tag_transitive_dependency_fails_verification() {
 
 #[test]
 fn charge_gas_invalid_args() {
-    let mut fake_executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(1_000_000, 0);
-    fake_executor.add_account_data(&sender);
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(1_000_000, 0);
+    executor.add_account_data(&sender);
 
     // get a SignedTransaction
     let txn = sender
@@ -1101,7 +1120,7 @@ fn charge_gas_invalid_args() {
         .max_gas_amount(gas_costs::TXN_RESERVED)
         .sign();
 
-    let output = fake_executor.execute_transaction(txn);
+    let output = executor.execute_transaction(txn);
     assert!(!output.status().is_discarded());
     assert!(output.gas_used() > 0);
 }

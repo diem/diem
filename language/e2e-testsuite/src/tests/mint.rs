@@ -3,6 +3,7 @@
 
 use language_e2e_tests::{
     account::{self, Account},
+    current_function_name,
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
     transaction_status_eq,
@@ -17,10 +18,12 @@ use transaction_builder::*;
 #[test]
 fn tiered_mint_designated_dealer() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
 
     // account to represent designated dealer
-    let dd = Account::new();
+    let dd = executor.create_raw_account();
     executor.execute_and_apply(
         blessed
             .transaction()
@@ -110,10 +113,12 @@ fn mint_to_existing_not_dd() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
 
     // create and publish a sender with 1_000_000 coins
-    let receiver = Account::new();
+    let receiver = executor.create_raw_account();
 
     executor.execute_and_apply(
         blessed
@@ -159,11 +164,13 @@ fn mint_to_new_account() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
 
-    let executor = FakeExecutor::from_genesis_file();
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let tc = Account::new_blessed_tc();
 
     // create and publish a sender with TXN_RESERVED coins
-    let new_account = Account::new();
+    let new_account = executor.create_raw_account();
 
     let mint_amount = TXN_RESERVED;
     let output = executor.execute_transaction(
@@ -191,6 +198,8 @@ fn mint_to_new_account() {
 #[test]
 fn tiered_update_exchange_rate() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
 
     // set coin1_tmp rate to 1.23 Coin1

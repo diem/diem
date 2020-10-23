@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{
-    account::{Account, AccountData},
-    assert_prologue_parity,
-    compile::compile_module_with_address,
-    executor::FakeExecutor,
-    transaction_status_eq,
+    account::Account, assert_prologue_parity, compile::compile_module_with_address,
+    current_function_name, executor::FakeExecutor, transaction_status_eq,
 };
 use libra_types::{
     account_config::{self},
@@ -19,10 +16,11 @@ use libra_types::{
 #[test]
 fn bad_module_address() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let account1 = AccountData::new(1_000_000, 10);
-    let account2 = AccountData::new(1_000_000, 10);
+    let account1 = executor.create_raw_account_data(1_000_000, 10);
+    let account2 = executor.create_raw_account_data(1_000_000, 10);
 
     executor.add_account_data(&account1);
     executor.add_account_data(&account2);
@@ -67,9 +65,10 @@ fn bad_module_address() {
 #[test]
 fn duplicate_module() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     let sequence_number = 2;
-    let account = AccountData::new(1_000_000, sequence_number);
+    let account = executor.create_raw_account_data(1_000_000, sequence_number);
     executor.add_account_data(&account);
 
     let program = String::from(
@@ -116,9 +115,10 @@ pub fn test_publishing_no_modules_non_allowlist_script() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let program = String::from(
@@ -147,7 +147,9 @@ pub fn test_publishing_no_modules_non_allowlist_script() {
 #[test]
 pub fn test_publishing_no_modules_non_allowlist_script_proper_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    let mut executor =
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_libra_root();
@@ -176,7 +178,8 @@ pub fn test_publishing_no_modules_non_allowlist_script_proper_sender() {
 #[test]
 pub fn test_publishing_no_modules_proper_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::allowlist_genesis();
+    let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_libra_root();
@@ -205,7 +208,8 @@ pub fn test_publishing_no_modules_proper_sender() {
 #[test]
 pub fn test_publishing_no_modules_core_code_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::allowlist_genesis();
+    let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_genesis_account(account_config::CORE_CODE_ADDRESS);
@@ -236,9 +240,10 @@ pub fn test_publishing_no_modules_core_code_sender() {
 pub fn test_publishing_no_modules_invalid_sender() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let program = String::from(
@@ -266,9 +271,10 @@ pub fn test_publishing_no_modules_invalid_sender() {
 pub fn test_publishing_allow_modules() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = AccountData::new(1_000_000, 10);
+    let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
 
     let program = String::from(

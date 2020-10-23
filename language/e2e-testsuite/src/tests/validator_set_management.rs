@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use language_e2e_tests::{account::Account, executor::FakeExecutor};
+use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use libra_types::{
     on_chain_config::new_epoch_event_key,
     transaction::{TransactionStatus, WriteSetPayload},
@@ -12,8 +12,10 @@ use transaction_builder::*;
 #[test]
 fn validator_add() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let libra_root_account = Account::new_libra_root();
-    let validator_account = Account::new();
+    let validator_account = executor.create_raw_account();
 
     executor.execute_and_apply(
         libra_root_account
@@ -72,9 +74,10 @@ fn validator_add() {
 #[test]
 fn validator_rotate_key_and_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let libra_root_account = Account::new_libra_root();
-    let validator_account = Account::new();
-    let validator_operator = Account::new();
+    let validator_account = executor.create_raw_account();
+    let validator_operator = executor.create_raw_account();
 
     executor.execute_and_apply(
         libra_root_account
@@ -191,10 +194,11 @@ fn validator_rotate_key_and_reconfigure() {
 #[test]
 fn validator_set_operator_set_key_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     let libra_root_account = Account::new_libra_root();
-    let validator_account = Account::new();
-    let operator_account_0 = Account::new();
-    let operator_account_1 = Account::new();
+    let validator_account = executor.create_raw_account();
+    let operator_account_0 = executor.create_raw_account();
+    let operator_account_1 = executor.create_raw_account();
 
     // Create operator 0
     let output = executor.execute_and_apply(

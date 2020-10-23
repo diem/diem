@@ -9,9 +9,9 @@
 #![forbid(unsafe_code)]
 
 use language_e2e_tests::{
-    account::{self, Account, AccountData},
+    account::{self, Account},
     common_transactions::rotate_key_txn,
-    currencies,
+    currencies, current_function_name,
     executor::FakeExecutor,
     gas_costs,
     keygen::KeyGen,
@@ -35,8 +35,9 @@ const PAYEE_COMPLIANCE_KEY_NOT_SET_ERROR_CODE: u64 = 1281;
 fn freeze_unfreeze_account() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-    let account = Account::new();
+    let account = executor.create_raw_account();
 
     let blessed = Account::new_blessed_tc();
 
@@ -95,9 +96,11 @@ fn freeze_unfreeze_account() {
 #[test]
 fn create_parent_and_child_vasp() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
-    let parent = Account::new();
-    let child = Account::new();
+    let parent = executor.create_raw_account();
+    let child = executor.create_raw_account();
 
     let mut keygen = KeyGen::from_seed([9u8; 32]);
 
@@ -158,10 +161,12 @@ fn create_parent_and_child_vasp() {
 #[test]
 fn create_child_vasp_all_currencies() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
-    let parent = Account::new();
-    let child = Account::new();
+    let parent = executor.create_raw_account();
+    let child = executor.create_raw_account();
 
     // create a parent VASP
     let add_all_currencies = true;
@@ -223,10 +228,12 @@ fn create_child_vasp_all_currencies() {
 #[test]
 fn create_child_vasp_with_balance() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
-    let parent = Account::new();
-    let child = Account::new();
+    let parent = executor.create_raw_account();
+    let child = executor.create_raw_account();
 
     // create a parent VASP
     let add_all_currencies = true;
@@ -297,11 +304,13 @@ fn create_child_vasp_with_balance() {
 #[test]
 fn dual_attestation_payment() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     // account that will receive the dual attestation payment
-    let payment_receiver = Account::new();
-    let payment_sender = Account::new();
-    let sender_child = Account::new();
-    let payee_child = Account::new();
+    let payment_receiver = executor.create_raw_account();
+    let payment_sender = executor.create_raw_account();
+    let sender_child = executor.create_raw_account();
+    let payee_child = executor.create_raw_account();
     let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
@@ -670,10 +679,12 @@ fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
 #[test]
 fn dd_dual_attestation_payments() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     // account that will receive the dual attestation payment
-    let parent_vasp = Account::new();
-    let dd1 = Account::new();
-    let dd2 = Account::new();
+    let parent_vasp = executor.create_raw_account();
+    let dd1 = executor.create_raw_account();
+    let dd2 = executor.create_raw_account();
     let blessed = Account::new_blessed_tc();
     let mint_dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
@@ -896,8 +907,10 @@ fn dd_dual_attestation_payments() {
 #[test]
 fn publish_rotate_shared_ed25519_public_key() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let mut publisher = {
-        let data = AccountData::new(1_000_000, 0);
+        let data = executor.create_raw_account_data(1_000_000, 0);
         executor.add_account_data(&data);
         data.into_account()
     };
@@ -945,11 +958,13 @@ fn publish_rotate_shared_ed25519_public_key() {
 #[test]
 fn recovery_address() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
     let blessed = Account::new_blessed_tc();
 
-    let parent = Account::new();
-    let mut child = Account::new();
-    let other_vasp = Account::new();
+    let parent = executor.create_raw_account();
+    let mut child = executor.create_raw_account();
+    let other_vasp = executor.create_raw_account();
 
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (_vasp_compliance_private_key, _) = keygen.generate_keypair();
@@ -1092,12 +1107,13 @@ fn recovery_address() {
 #[test]
 fn add_child_currencies() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
 
-    let vasp_a = Account::new();
-    let vasp_a_child1 = Account::new();
-    let vasp_b = Account::new();
-    let vasp_b_child1 = Account::new();
-    let vasp_b_child2 = Account::new();
+    let vasp_a = executor.create_raw_account();
+    let vasp_a_child1 = executor.create_raw_account();
+    let vasp_b = executor.create_raw_account();
+    let vasp_b_child1 = executor.create_raw_account();
+    let vasp_b_child2 = executor.create_raw_account();
     let blessed = Account::new_blessed_tc();
 
     currencies::add_currency_to_system(&mut executor, "COIN", 1);

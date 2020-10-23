@@ -4,6 +4,7 @@
 use language_e2e_tests::{
     account::{self, Account},
     common_transactions::create_account_txn,
+    current_function_name,
     executor::FakeExecutor,
 };
 use libra_types::{account_config, transaction::TransactionStatus, vm_status::KeptVMStatus};
@@ -11,9 +12,10 @@ use libra_types::{account_config, transaction::TransactionStatus, vm_status::Kep
 #[test]
 fn create_account() {
     let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
     // create and publish a sender with 1_000_000 coins
     let sender = Account::new_blessed_tc();
-    let new_account = Account::new();
+    let new_account = executor.create_raw_account();
 
     // define the arguments to the create account transaction
     let initial_amount = 0;

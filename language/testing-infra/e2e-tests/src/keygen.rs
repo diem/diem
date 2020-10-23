@@ -11,6 +11,7 @@ use rand::{
 };
 
 /// Ed25519 key generator.
+#[derive(Debug)]
 pub struct KeyGen(StdRng);
 
 impl KeyGen {

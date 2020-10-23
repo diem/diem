@@ -1999,6 +1999,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
+name = "goldenfile"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f46e6a4d70c06f0b9a70d36dd8eef4fdeaa1ab657e4f1eaff290f69e48145f2"
+dependencies = [
+ "difference",
+ "tempfile",
+]
+
+[[package]]
 name = "guppy"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2551,6 +2561,7 @@ dependencies = [
  "anyhow",
  "compiled-stdlib",
  "compiler",
+ "goldenfile",
  "hex",
  "libra-canonical-serialization",
  "libra-config",

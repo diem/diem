@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use language_e2e_tests::{
-    account::{Account, AccountData},
-    executor::FakeExecutor,
-};
+use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -19,7 +16,8 @@ use libra_types::transaction::WriteSetPayload;
 #[test]
 fn admin_script_rotate_key_single_signer_no_epoch() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let new_account = AccountData::new(100_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let new_account = executor.create_raw_account_data(100_000, 0);
     executor.add_account_data(&new_account);
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -82,7 +80,8 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
 #[test]
 fn admin_script_rotate_key_single_signer_new_epoch() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let new_account = AccountData::new(100_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let new_account = executor.create_raw_account_data(100_000, 0);
     executor.add_account_data(&new_account);
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -147,7 +146,8 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
 #[test]
 fn admin_script_rotate_key_multi_signer() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let new_account = AccountData::new(100_000, 0);
+    executor.set_golden_file(current_function_name!());
+    let new_account = executor.create_raw_account_data(100_000, 0);
     executor.add_account_data(&new_account);
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
