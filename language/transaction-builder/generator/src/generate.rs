@@ -65,6 +65,11 @@ struct Options {
     /// Optional package name (Python) or module path (Go) of the `libra_types` dependency.
     #[structopt(long)]
     libra_package_name: Option<String>,
+
+    /// Read custom code for Libra containers from the given file paths. Containers will be matched with file stems.
+    /// (e.g. `AddressAccount` <- `path/to/AddressAccount.py`)
+    #[structopt(long)]
+    with_custom_libra_code: Vec<PathBuf>,
 }
 
 fn main() {
@@ -137,32 +142,26 @@ fn main() {
         let content =
             std::fs::read_to_string(registry_file).expect("registry file must be readable");
         let registry = serde_yaml::from_str::<Registry>(content.as_str()).unwrap();
-        let libra_package_name = match options.language {
-            Language::Rust => {
+        let (libra_package_name, libra_package_path) = match options.language {
+            Language::Rust => (
                 if options.libra_version_number == "0.1.0" {
                     "libra-types".to_string()
                 } else {
                     format!("libra-types:{}", options.libra_version_number)
-                }
-            }
-            Language::Java => "org.libra.types".to_string(),
-            Language::Go => "libratypes".to_string(),
-            _ => "libra_types".to_string(),
+                },
+                vec!["libra-types"],
+            ),
+            Language::Java => ("org.libra.types".to_string(), vec!["org", "libra", "types"]),
+            Language::Go => ("libratypes".to_string(), vec!["libratypes"]),
+            _ => ("libra_types".to_string(), vec!["libra_types"]),
         };
-        let mut config = serdegen::CodeGeneratorConfig::new(libra_package_name.clone())
-            .with_encodings(vec![serdegen::Encoding::Lcs]);
-        match options.language {
-            Language::Python3 => {
-                config = config.with_custom_code(buildgen::python3::get_custom_libra_code(
-                    &libra_package_name,
-                ));
-            }
-            Language::Java => {
-                let package: Vec<_> = libra_package_name.split('.').map(String::from).collect();
-                config = config.with_custom_code(buildgen::java::get_custom_libra_code(&package));
-            }
-            _ => (),
-        }
+        let custom_libra_code = buildgen::read_custom_code_from_paths(
+            &libra_package_path,
+            options.with_custom_libra_code.into_iter(),
+        );
+        let config = serdegen::CodeGeneratorConfig::new(libra_package_name)
+            .with_encodings(vec![serdegen::Encoding::Lcs])
+            .with_custom_code(custom_libra_code);
         installer.install_module(&config, &registry).unwrap();
     }
 

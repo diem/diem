@@ -6,7 +6,7 @@ use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
-    java, CodeGeneratorConfig, CustomCode,
+    java, CodeGeneratorConfig,
 };
 
 use heck::{CamelCase, ShoutySnakeCase};
@@ -26,40 +26,6 @@ pub fn write_source_files(
 ) -> Result<()> {
     write_script_call_files(install_dir.clone(), package_name, abis)?;
     write_helper_file(install_dir, package_name, abis)
-}
-
-pub fn get_custom_libra_code(package: &[String]) -> CustomCode {
-    let mut map = BTreeMap::new();
-    let custom_code = vec![(
-        "AccountAddress",
-        r#"static final int LENGTH = 16;
-
-public static AccountAddress valueOf(byte[] values) {
-    if (values.length != LENGTH) {
-        throw new java.lang.IllegalArgumentException("Invalid length for AccountAddress");
-    }
-    Byte[] address = new Byte[LENGTH];
-    for (int i = 0; i < LENGTH; i++) {
-        address[i] = Byte.valueOf(values[i]);
-    }
-    return new AccountAddress(address);
-}
-
-public byte[] toBytes() {
-    byte[] bytes = new byte[LENGTH];
-    for (int i = 0; i < LENGTH; i++) {
-        bytes[i] = value[i].byteValue();
-    }
-    return bytes;
-}
-"#,
-    )];
-    for (name, code) in &custom_code {
-        let mut path = package.to_vec();
-        path.push(name.to_string());
-        map.insert(path, code.to_string());
-    }
-    map
 }
 
 /// Output transaction helper functions for the given ABIs.

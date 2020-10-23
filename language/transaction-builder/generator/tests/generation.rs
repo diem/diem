@@ -34,9 +34,15 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let src_dir_path = dir.path().join("src");
     let installer =
         serdegen::python3::Installer::new(src_dir_path.clone(), /* package */ None);
+    let paths = std::fs::read_dir("examples/python3/custom_libra_code")
+        .unwrap()
+        .map(|e| e.unwrap().path());
     let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string())
         .with_encodings(vec![serdegen::Encoding::Lcs])
-        .with_custom_code(buildgen::python3::get_custom_libra_code("libra_types"));
+        .with_custom_code(buildgen::read_custom_code_from_paths(
+            &["libra_types"],
+            paths,
+        ));
     installer.install_module(&config, &registry).unwrap();
     installer.install_serde_runtime().unwrap();
     installer.install_lcs_runtime().unwrap();
@@ -237,13 +243,14 @@ fn test_that_java_code_compiles_and_demo_runs() {
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
+    let paths = std::fs::read_dir("examples/java/custom_libra_code")
+        .unwrap()
+        .map(|e| e.unwrap().path());
     let config = serdegen::CodeGeneratorConfig::new("org.libra.types".to_string())
         .with_encodings(vec![serdegen::Encoding::Lcs])
-        .with_custom_code(buildgen::java::get_custom_libra_code(
-            &"org.libra.types"
-                .split('.')
-                .map(String::from)
-                .collect::<Vec<_>>(),
+        .with_custom_code(buildgen::read_custom_code_from_paths(
+            &["org", "libra", "types"],
+            paths,
         ));
     let lcs_installer = serdegen::java::Installer::new(dir.path().to_path_buf());
     lcs_installer.install_module(&config, &registry).unwrap();

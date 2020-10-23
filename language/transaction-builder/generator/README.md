@@ -57,6 +57,7 @@ target/debug/generate-transaction-builders \
     --module-name libra_stdlib \
     --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
     --target-source-dir "$DEST" \
+    --with-custom-libra-code language/transaction-builder/generator/examples/python3/custom_libra_code/*.py -- \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Python demo file](examples/python3/stdlib_demo.py) with:
@@ -92,6 +93,7 @@ target/debug/generate-transaction-builders \
     --module-name org.libra.stdlib \
     --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
     --target-source-dir "$DEST" \
+    --with-custom-libra-code language/transaction-builder/generator/examples/java/custom_libra_code/*.java -- \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.java) with:
