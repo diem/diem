@@ -4,7 +4,7 @@
 
 function usage {
   echo "Usage:"
-  echo "build and properly tags images for deployment to docker hub"
+  echo "build and properly tags images for deployment to docker hub and/or ecr"
   echo "build_push.sh [-p] -g <GITHASH> -b <TARGET_BRANCH> -n <image name> [-u]"
   echo "-p indicates this a prebuild, where images are built and pushed to dockerhub with an prefix of 'pre_', should be run on the 'auto' branch, trigger by bors."
   echo "-b the branch we're building on, or the branch we're targeting if a prebuild"
@@ -76,6 +76,8 @@ if [ $PREBUILD != "true" ]; then
   export PULLED=$?
 fi
 
+success=-1;
+
 #if a prebuild, always -1, else if "docker pull" failed build the image.
 if [ "$PULLED" != "0" ]; then
   docker/$DIR/build.sh
@@ -87,6 +89,10 @@ if [ "$PULLED" != "0" ]; then
       echo pushing "$PRE_NAME"
       docker trust sign "$PRE_NAME"
       docker push --disable-content-trust=false "$PRE_NAME"
+      pushed="$?"
+      if [[ "$pushed" == "0" ]]; then
+         success=0
+      fi
     else
       echo Dry run, Not pushing "$PRE_NAME"
     fi
@@ -102,7 +108,15 @@ if [ $PREBUILD != "true" ]; then
     docker trust sign "$PUB_NAME"
     echo pushing "$PUB_NAME"
     docker push --disable-content-trust=false "$PUB_NAME"
+      pushed="$?"
+      if [[ "$pushed" == "0" ]]; then
+        success=0
+      else
+        success=-1
+      fi
   else
     echo Dry run, Not pushing "$PUB_NAME"
   fi
 fi
+
+exit $success

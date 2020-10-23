@@ -746,13 +746,15 @@ jobs:
           name: pre-release docker images
           command: |
             BRANCH=${CIRCLE_BRANCH}
-            docker/build_push.sh -u -p -b ${BRANCH} -n client
-            docker/build_push.sh -u -p -b ${BRANCH} -n init
-            docker/build_push.sh -u -p -b ${BRANCH} -n faucet
-            docker/build_push.sh -u -p -b ${BRANCH} -n tools
-            docker/build_push.sh -u -p -b ${BRANCH} -n validator
-            docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb
-            docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test
+            success=0
+            docker/build_push.sh -u -p -b ${BRANCH} -n client || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n init || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n faucet || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=-1
+            docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test || success=-1
+            exit $success
 
   ######################################################################################################
   # Docker Builds:                                                                                     #
@@ -778,19 +780,22 @@ jobs:
           command: |
             set -x
             BRANCH=${CIRCLE_BRANCH}
-            docker/build_push.sh -u -b ${BRANCH} -n client
-            docker/build_push.sh -u -b ${BRANCH} -n init
-            docker/build_push.sh -u -b ${BRANCH} -n faucet
-            docker/build_push.sh -u -b ${BRANCH} -n tools
-            docker/build_push.sh -u -b ${BRANCH} -n validator
-            docker/build_push.sh -u -b ${BRANCH} -n validator-tcb
-            docker/build_push.sh -u -b ${BRANCH} -n cluster-test
+            success=0
+            docker/build_push.sh -u -b ${BRANCH} -n client || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n init || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n faucet || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n tools || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n validator || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n validator-tcb || success=-1
+            docker/build_push.sh -u -b ${BRANCH} -n cluster-test || success=-1
+            exit $success
       - run:
           name: docker image pruning.
           command: |
             scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}" -p "${DOCKERHUB_PASSWORD}" -x
       - run:
           name: push to novi ecr
+          when: always
           command: |
             #push to novi ecr with standard names
             BRANCH=${CIRCLE_BRANCH}
