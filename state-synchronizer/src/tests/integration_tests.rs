@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    network::{StateSynchronizerEvents, StateSynchronizerSender},
+    network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     tests::{
         helpers::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
         mock_storage::MockStorage,
@@ -33,7 +33,10 @@ use network::{
         ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
         PeerManagerRequestSender,
     },
-    protocols::network::{NewNetworkEvents, NewNetworkSender},
+    protocols::{
+        direct_send::Message,
+        network::{NewNetworkEvents, NewNetworkSender},
+    },
     DisconnectReason, ProtocolId,
 };
 use network_builder::builder::NetworkBuilder;
@@ -364,7 +367,7 @@ impl SynchronizerEnv {
 
     /// Delivers next message from peer with index `sender` in this SynchronizerEnv
     /// Returns the recipient of the msg
-    fn deliver_msg(&mut self, sender: (usize, usize)) -> PeerId {
+    fn deliver_msg(&mut self, sender: (usize, usize)) -> (PeerId, Message) {
         let sender_id = self.get_peer_network_id(sender);
         let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_id).unwrap();
         let network_req = block_on(network_reqs_rx.next()).unwrap();
@@ -375,10 +378,10 @@ impl SynchronizerEnv {
             receiver_network_notif_tx
                 .push(
                     (sender_id, ProtocolId::StateSynchronizerDirectSend),
-                    PeerManagerNotification::RecvMessage(sender_id, msg),
+                    PeerManagerNotification::RecvMessage(sender_id, msg.clone()),
                 )
                 .unwrap();
-            receiver_id
+            (receiver_id, msg)
         } else {
             panic!("received network request other than PeerManagerRequest");
         }
@@ -442,6 +445,39 @@ impl SynchronizerEnv {
         };
 
         self.send_connection_event(receiver, sender_id, notif);
+    }
+}
+
+fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_version: Option<u64>) {
+    match msg {
+        StateSynchronizerMsg::GetChunkRequest(req) => {
+            assert_eq!(req.known_version, known_version);
+            assert_eq!(req.target().version(), target_version);
+        }
+        StateSynchronizerMsg::GetChunkResponse(_) => {
+            panic!("received chunk response when expecting chunk request");
+        }
+    }
+}
+
+fn check_chunk_response(
+    msg: StateSynchronizerMsg,
+    response_li_version: u64,
+    chunk_start_version: u64,
+    chunk_length: usize,
+) {
+    match msg {
+        StateSynchronizerMsg::GetChunkRequest(_) => {
+            panic!("received chunk response when expecting chunk request");
+        }
+        StateSynchronizerMsg::GetChunkResponse(resp) => {
+            assert_eq!(resp.response_li.version(), response_li_version);
+            assert_eq!(
+                resp.txn_list_with_proof.first_transaction_version.unwrap(),
+                chunk_start_version
+            );
+            assert_eq!(resp.txn_list_with_proof.transactions.len(), chunk_length)
+        }
     }
 }
 
@@ -691,6 +727,130 @@ fn catch_up_with_waypoints() {
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
 }
 
+#[test]
+fn test_lagging_upstream_long_poll() {
+    let mut env = SynchronizerEnv::new(4);
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        true,
+        None,
+    );
+    env.setup_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        10_000,
+        1_000_000,
+        true,
+        Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
+    );
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        true,
+        Some(vec![NetworkId::vfn_network()]),
+    );
+    // we treat this a standalone node whose local state we use as the baseline
+    // to clone state to the other nodes
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        true,
+        None,
+    );
+
+    // network handles for each node
+    let validator = (0, 0);
+    let full_node_vfn_network = (1, 0);
+    let full_node_failover_network = (1, 2);
+    let failover_fn_vfn_network = (2, 0);
+    let failover_fn = (2, 2);
+
+    env.commit(0, 400);
+
+    // validator discovers FN
+    env.send_peer_event(full_node_vfn_network, validator, true, Inbound);
+    // fn discovers validator
+    env.send_peer_event(validator, full_node_vfn_network, true, Outbound);
+
+    // FN discovers failover upstream
+    env.send_peer_event(full_node_failover_network, failover_fn, true, Inbound);
+    env.send_peer_event(failover_fn, full_node_failover_network, true, Outbound);
+
+    let (_, msg) = env.deliver_msg(full_node_vfn_network);
+    // expected: known_version 0, epoch 1, no target LI version
+    let req: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_request(req, 0, None);
+
+    let (_, msg) = env.deliver_msg(validator);
+    let resp: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_response(resp, 400, 1, 250);
+    env.wait_for_version(1, 250, None);
+
+    // validator loses FN
+    env.send_peer_event(full_node_vfn_network, validator, false, Inbound);
+    // fn loses validator
+    env.send_peer_event(validator, full_node_vfn_network, false, Outbound);
+
+    // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
+    let (_, msg) = env.deliver_msg(full_node_failover_network);
+    let msg: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_request(msg, 250, Some(400));
+
+    // update failover VFN from lagging state to updated state
+    // so it can deliver full_node's long-poll subscription
+    env.commit(0, 500);
+    // we directly sync up the storage of the failover upstream with this validator's for ease of testing
+    env.clone_storage(0, 2);
+    env.wait_for_version(2, 500, Some(500));
+
+    // connect the validator and the failover vfn so FN can sync to validator
+    // validator discovers FN
+    env.send_peer_event(failover_fn_vfn_network, validator, true, Inbound);
+    // fn discovers validator
+    env.send_peer_event(validator, failover_fn_vfn_network, true, Outbound);
+
+    // trigger another commit so that the failover fn's commit will trigger subscription delivery
+    env.commit(0, 600);
+    // failover fn sends chunk request to validator
+    let (_, msg) = env.deliver_msg(failover_fn_vfn_network);
+    let msg: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_request(msg, 500, None);
+    let (_, msg) = env.deliver_msg(validator);
+    let resp: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_response(resp, 600, 501, 100);
+
+    // failover sends long-poll subscription to fullnode
+    let (_, msg) = env.deliver_msg(failover_fn);
+    let resp: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_response(resp, 600, 251, 250);
+
+    // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
+    let (_, msg) = env.deliver_msg(full_node_failover_network);
+    let msg: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    // here we check that the next requested version is not the older target LI 400 - that should be
+    // pruned out from PendingLedgerInfos since it becomes outdated after the known_version advances to 500
+    check_chunk_request(msg, 500, None);
+
+    // check that fullnode successfully finishes sync to 600
+    let (_, msg) = env.deliver_msg(failover_fn);
+    let resp: StateSynchronizerMsg =
+        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+    check_chunk_response(resp, 600, 501, 100);
+    env.wait_for_version(1, 600, Some(600));
+}
+
 // test full node catching up to validator that is also making progress
 #[test]
 fn test_sync_pending_ledger_infos() {
@@ -831,7 +991,7 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_vfn);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(recipient, env.get_peer_network_id(validator));
         env.assert_no_message_sent(fn_0_public);
         // deliver validator's chunk response
@@ -860,12 +1020,12 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_public);
+        let (recipient, _) = env.deliver_msg(fn_0_public);
         assert!(upstream_peer_ids.contains(&recipient));
         env.assert_no_message_sent(fn_0_vfn);
         // deliver validator's chunk response
         if num_commit < 10 {
-            let chunk_response_recipient = env.deliver_msg((env.get_env_idx(&recipient), 2));
+            let (chunk_response_recipient, _) = env.deliver_msg((env.get_env_idx(&recipient), 2));
             assert_eq!(
                 chunk_response_recipient,
                 env.get_peer_network_id(fn_0_public)
@@ -886,7 +1046,7 @@ fn test_fn_failover() {
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let chunk_response_recipient =
+    let (chunk_response_recipient, _) =
         env.deliver_msg((env.get_env_idx(&last_fallback_recipient.unwrap()), 2));
     assert_eq!(
         chunk_response_recipient,
@@ -900,12 +1060,12 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_public);
+        let (recipient, _) = env.deliver_msg(fn_0_public);
         assert_eq!(recipient, env.get_peer_network_id(fn_3));
         env.assert_no_message_sent(fn_0_vfn);
         // deliver validator's chunk response
         if num_commit < 15 {
-            let chunk_response_recipient = env.deliver_msg(fn_3);
+            let (chunk_response_recipient, _) = env.deliver_msg(fn_3);
             assert_eq!(
                 chunk_response_recipient,
                 env.get_peer_network_id(fn_0_public)
@@ -920,7 +1080,7 @@ fn test_fn_failover() {
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let chunk_response_recipient = env.deliver_msg(fn_3);
+    let (chunk_response_recipient, _) = env.deliver_msg(fn_3);
     assert_eq!(
         chunk_response_recipient,
         env.get_peer_network_id(fn_0_public)
@@ -941,12 +1101,12 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_public);
+        let (recipient, _) = env.deliver_msg(fn_0_public);
         assert_eq!(recipient, env.get_peer_network_id(fn_2));
         env.assert_no_message_sent(fn_0_vfn);
         // deliver validator's chunk response
         if num_commit < 20 {
-            let chunk_response_recipient = env.deliver_msg(fn_2);
+            let (chunk_response_recipient, _) = env.deliver_msg(fn_2);
             assert_eq!(
                 chunk_response_recipient,
                 env.get_peer_network_id(fn_0_public)
@@ -958,7 +1118,7 @@ fn test_fn_failover() {
     env.send_peer_event(fn_0_vfn, validator, true, Inbound);
     env.send_peer_event(validator, fn_0_vfn, true, Outbound);
 
-    let chunk_response_recipient = env.deliver_msg(fn_2);
+    let (chunk_response_recipient, _) = env.deliver_msg(fn_2);
     assert_eq!(
         chunk_response_recipient,
         env.get_peer_network_id(fn_0_public)
@@ -971,7 +1131,7 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_vfn);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(recipient, env.get_peer_network_id(validator));
         env.assert_no_message_sent(fn_0_public);
         if num_commit < 25 {
@@ -998,7 +1158,7 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_vfn);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(recipient, env.get_peer_network_id(validator));
         env.assert_no_message_sent(fn_0_public);
         // deliver validator's chunk response
@@ -1075,7 +1235,7 @@ fn test_multicast_failover() {
     for num_commit in 1..=3 {
         env.commit(0, num_commit * 5);
         // deliver fn_0's chunk request
-        let recipient = env.deliver_msg(fn_0_vfn);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(recipient, env.get_peer_network_id(validator));
         env.assert_no_message_sent(fn_0_second);
         env.assert_no_message_sent(fn_0_public);
@@ -1098,9 +1258,9 @@ fn test_multicast_failover() {
         }
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let primary = env.deliver_msg(fn_0_vfn);
+        let (primary, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(primary, env.get_peer_network_id(validator));
-        let secondary = env.deliver_msg(fn_0_second);
+        let (secondary, _) = env.deliver_msg(fn_0_second);
         assert_eq!(secondary, env.get_peer_network_id(fn_1));
         env.assert_no_message_sent(fn_0_public);
 
@@ -1122,11 +1282,11 @@ fn test_multicast_failover() {
         }
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let primary = env.deliver_msg(fn_0_vfn);
+        let (primary, _) = env.deliver_msg(fn_0_vfn);
         assert_eq!(primary, env.get_peer_network_id(validator));
-        let secondary = env.deliver_msg(fn_0_second);
+        let (secondary, _) = env.deliver_msg(fn_0_second);
         assert_eq!(secondary, env.get_peer_network_id(fn_1));
-        let public = env.deliver_msg(fn_0_public);
+        let (public, _) = env.deliver_msg(fn_0_public);
         assert_eq!(public, env.get_peer_network_id(fn_2));
 
         // deliver third fallback's chunk response
@@ -1145,12 +1305,12 @@ fn test_multicast_failover() {
         env.wait_for_version(fn_0_upstream, num_commit * 5, None);
     }
 
-    let primary = env.deliver_msg(fn_0_vfn);
+    let (primary, _) = env.deliver_msg(fn_0_vfn);
     assert_eq!(primary, env.get_peer_network_id(validator));
     env.assert_no_message_sent(fn_0_vfn);
-    let secondary = env.deliver_msg(fn_0_second);
+    let (secondary, _) = env.deliver_msg(fn_0_second);
     assert_eq!(secondary, env.get_peer_network_id(fn_1));
-    let public = env.deliver_msg(fn_0_public);
+    let (public, _) = env.deliver_msg(fn_0_public);
     assert_eq!(public, env.get_peer_network_id(fn_2));
 
     // Test case: deliver chunks from all upstream with secondary fallback as first responder
@@ -1166,11 +1326,11 @@ fn test_multicast_failover() {
         env.wait_for_version(fn_0_upstream, num_commit * 5, None);
     }
 
-    let primary = env.deliver_msg(fn_0_vfn);
+    let (primary, _) = env.deliver_msg(fn_0_vfn);
     assert_eq!(primary, env.get_peer_network_id(validator));
-    let secondary = env.deliver_msg(fn_0_second);
+    let (secondary, _) = env.deliver_msg(fn_0_second);
     assert_eq!(secondary, env.get_peer_network_id(fn_1));
-    let public = env.deliver_msg(fn_0_public);
+    let (public, _) = env.deliver_msg(fn_0_public);
     assert_eq!(public, env.get_peer_network_id(fn_2));
 
     // Test case: deliver chunks from all upstream with primary as first responder
@@ -1187,11 +1347,11 @@ fn test_multicast_failover() {
     }
 
     // because of optimistic chunk requesting, request will still be multicasted to all failover
-    let primary = env.deliver_msg(fn_0_vfn);
+    let (primary, _) = env.deliver_msg(fn_0_vfn);
     assert_eq!(primary, env.get_peer_network_id(validator));
-    let secondary = env.deliver_msg(fn_0_second);
+    let (secondary, _) = env.deliver_msg(fn_0_second);
     assert_eq!(secondary, env.get_peer_network_id(fn_1));
-    let public = env.deliver_msg(fn_0_public);
+    let (public, _) = env.deliver_msg(fn_0_public);
     assert_eq!(public, env.get_peer_network_id(fn_2));
 
     // check that next chunk request is only be sent to primary network, i.e.
@@ -1200,7 +1360,7 @@ fn test_multicast_failover() {
     env.deliver_msg(fn_1);
     env.deliver_msg(fn_2);
 
-    let primary = env.deliver_msg(fn_0_vfn);
+    let (primary, _) = env.deliver_msg(fn_0_vfn);
     assert_eq!(primary, env.get_peer_network_id(validator));
     env.assert_no_message_sent(fn_0_second);
     env.assert_no_message_sent(fn_0_public);
