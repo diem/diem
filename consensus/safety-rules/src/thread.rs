@@ -29,6 +29,7 @@ impl ThreadService {
     pub fn new(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
+        export_consensus_key: bool,
         timeout: u64,
     ) -> Self {
         let listen_port = utils::get_available_port();
@@ -40,6 +41,7 @@ impl ThreadService {
                 storage,
                 listen_addr,
                 verify_vote_proposal_signature,
+                export_consensus_key,
                 timeout,
             )
         });

@@ -59,12 +59,22 @@ impl Vote {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
-        let li_sig = validator_signer.sign(&ledger_info_placeholder);
+        let signature = validator_signer.sign(&ledger_info_placeholder);
+        Self::new_with_signature(vote_data, author, ledger_info_placeholder, signature)
+    }
+
+    /// Generates a new Vote using a signature over the specified ledger_info
+    pub fn new_with_signature(
+        vote_data: VoteData,
+        author: Author,
+        ledger_info: LedgerInfo,
+        signature: Ed25519Signature,
+    ) -> Self {
         Self {
             vote_data,
             author,
-            ledger_info: ledger_info_placeholder,
-            signature: li_sig,
+            ledger_info,
+            signature,
             timeout_signature: None,
         }
     }

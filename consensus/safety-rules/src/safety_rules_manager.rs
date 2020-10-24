@@ -68,14 +68,22 @@ impl SafetyRulesManager {
 
         let storage = storage(config);
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
+        let export_consensus_key = config.export_consensus_key;
         match config.service {
-            SafetyRulesService::Local => Self::new_local(storage, verify_vote_proposal_signature),
-            SafetyRulesService::Serializer => {
-                Self::new_serializer(storage, verify_vote_proposal_signature)
-            }
+            SafetyRulesService::Local => Self::new_local(
+                storage,
+                verify_vote_proposal_signature,
+                export_consensus_key,
+            ),
+            SafetyRulesService::Serializer => Self::new_serializer(
+                storage,
+                verify_vote_proposal_signature,
+                export_consensus_key,
+            ),
             SafetyRulesService::Thread => Self::new_thread(
                 storage,
                 verify_vote_proposal_signature,
+                export_consensus_key,
                 config.network_timeout_ms,
             ),
             _ => panic!("Unimplemented SafetyRulesService: {:?}", config.service),
@@ -85,8 +93,13 @@ impl SafetyRulesManager {
     pub fn new_local(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
+        export_consensus_key: bool,
     ) -> Self {
-        let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
+        let safety_rules = SafetyRules::new(
+            storage,
+            verify_vote_proposal_signature,
+            export_consensus_key,
+        );
         Self {
             internal_safety_rules: SafetyRulesWrapper::Local(Arc::new(RwLock::new(safety_rules))),
         }
@@ -102,8 +115,13 @@ impl SafetyRulesManager {
     pub fn new_serializer(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
+        export_consensus_key: bool,
     ) -> Self {
-        let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
+        let safety_rules = SafetyRules::new(
+            storage,
+            verify_vote_proposal_signature,
+            export_consensus_key,
+        );
         let serializer_service = SerializerService::new(safety_rules);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Serializer(Arc::new(RwLock::new(
@@ -115,9 +133,15 @@ impl SafetyRulesManager {
     pub fn new_thread(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
+        export_consensus_key: bool,
         timeout_ms: u64,
     ) -> Self {
-        let thread = ThreadService::new(storage, verify_vote_proposal_signature, timeout_ms);
+        let thread = ThreadService::new(
+            storage,
+            verify_vote_proposal_signature,
+            export_consensus_key,
+            timeout_ms,
+        );
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),
         }

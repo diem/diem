@@ -19,6 +19,7 @@ impl Process {
         let storage = safety_rules_manager::storage(&config);
 
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
+        let export_consensus_key = config.export_consensus_key;
         let service = match &config.service {
             SafetyRulesService::Process(service) => service,
             _ => panic!("Unexpected SafetyRules service: {:?}", config.service),
@@ -30,6 +31,7 @@ impl Process {
                 server_addr,
                 storage,
                 verify_vote_proposal_signature,
+                export_consensus_key,
                 network_timeout: config.network_timeout_ms,
             }),
         }
@@ -41,6 +43,7 @@ impl Process {
             data.storage,
             data.server_addr,
             data.verify_vote_proposal_signature,
+            data.export_consensus_key,
             data.network_timeout,
         );
     }
@@ -50,6 +53,7 @@ struct ProcessData {
     server_addr: SocketAddr,
     storage: PersistentSafetyStorage,
     verify_vote_proposal_signature: bool,
+    export_consensus_key: bool,
     // Timeout in Seconds for network operations
     network_timeout: u64,
 }

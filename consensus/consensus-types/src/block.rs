@@ -197,11 +197,16 @@ impl Block {
         block_data: BlockData,
         validator_signer: &ValidatorSigner,
     ) -> Self {
-        let id = block_data.hash();
         let signature = validator_signer.sign(&block_data);
+        Self::new_proposal_from_block_data_and_signature(block_data, signature)
+    }
 
+    pub fn new_proposal_from_block_data_and_signature(
+        block_data: BlockData,
+        signature: Ed25519Signature,
+    ) -> Self {
         Block {
-            id,
+            id: block_data.hash(),
             block_data,
             signature: Some(signature),
         }

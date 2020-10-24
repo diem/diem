@@ -31,9 +31,14 @@ pub fn execute(
     storage: PersistentSafetyStorage,
     listen_addr: SocketAddr,
     verify_vote_proposal_signature: bool,
+    export_consensus_key: bool,
     network_timeout_ms: u64,
 ) {
-    let mut safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
+    let mut safety_rules = SafetyRules::new(
+        storage,
+        verify_vote_proposal_signature,
+        export_consensus_key,
+    );
     if let Err(e) = safety_rules.consensus_state() {
         warn!("Unable to print consensus state: {}", e);
     }
