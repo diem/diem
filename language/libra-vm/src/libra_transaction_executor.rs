@@ -622,6 +622,9 @@ impl LibraVM {
 
         let signature_verified_block: Vec<Result<PreprocessedTransaction, VMStatus>>;
         {
+            // Verify the signatures of all the transactions in parallel.
+            // This is time consuming so don't wait and do the checking
+            // sequentially while executing the transactions.
             signature_verified_block = transactions
                 .into_par_iter()
                 .map(preprocess_transaction)
@@ -731,6 +734,10 @@ impl LibraVM {
     }
 }
 
+/// Check the signature (if any) of a transaction. If the signature is OK, the result
+/// is a PreprocessedTransaction, where a user transaction is translated to a
+/// SignatureCheckedTransaction and also categorized into either a UserTransaction
+/// or a WriteSet transaction.
 fn preprocess_transaction(txn: Transaction) -> Result<PreprocessedTransaction, VMStatus> {
     Ok(match txn {
         Transaction::BlockMetadata(b) => PreprocessedTransaction::BlockPrologue(b),
@@ -756,8 +763,9 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
         .any(|event| *event.key() == new_epoch_event_key)
 }
 
-/// Transactions divided by transaction flow.
-/// Transaction flows are different across different types of transactions.
+/// Transactions after signature checking:
+/// Waypoints and BlockPrologues are not signed and are unaffected by signature checking,
+/// but a user transaction or writeset transaction is transformed to a SignatureCheckedTransaction.
 #[derive(Debug)]
 enum PreprocessedTransaction {
     UserTransaction(Box<SignatureCheckedTransaction>),

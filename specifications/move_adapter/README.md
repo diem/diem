@@ -29,7 +29,7 @@ We will describe the Move Adapter and the Move VM architecture in Libra and how 
 
 ## Validation
 
-Validation operates on a transaction with a given state (`StateView`). The state is read-only: validation does
+Validation operates on a transaction (`SignedTransaction`) with a given state (`StateView`). The state is read-only: validation does
 not execute the transaction and so it does not compute side effects.
 If a transaction is malformed the adapter returns a result (`VMValidatorResult`) indicating that the transaction must be discarded. If the transaction is successfully validated, the result also includes information to rank the transaction priority.
 
@@ -141,6 +141,18 @@ pub struct ChangeSet {
     write_set: WriteSet,
     events: Vec<ContractEvent>,
 }
+
+/// A transaction script runs code with a specified set of arguments.
+pub struct Script {
+    code: Vec<u8>,
+    ty_args: Vec<TypeTag>,
+    args: Vec<TransactionArgument>,
+}
+
+/// A module publishing transaction contains the code to be published.
+pub struct Module {
+    code: Vec<u8>,
+}
 ```
 
 There are several different kinds of transactions that can be stored in the transaction payload: executing a script, publishing a module, and applying a WriteSet for system maintenance or updates. The payload is stored inside a `RawTransaction` structure that includes the various fields that are common to all of these transactions, and the `RawTransaction` is signed and wrapped inside a `SignedTransaction` structure that includes the signature and public key.
@@ -224,8 +236,6 @@ require a restart of the adapter. Failure to do so can lead to incorrect validat
 
 We have both positive and negative end-to-end tests. All tests that successfully execute transactions will naturally exercise the path through the validation logic. Each of the conditions checked in validation has a corresponding test that fails with the expected status code.
 
-Versioning: FIXME -- not sure what was intended here
-
 ### Threats
 
 Validation has an important role in the system. A bad policy can stall the system either by depriving it
@@ -246,8 +256,6 @@ Can administrative accounts (e.g., LibraRoot) be locked out of the system?
 
 * Monitoring:
     - `libra_vm_transactions_validated`: Number of transactions processed by the validator, with either "success" or "failure" labels
-    - FIXME -- add this? certain error type (invariant violation)
-    - FIXME -- add this? adapter restarts
     - `libra_vm_txn_validation_seconds`: Histogram of validation time (in seconds) per transaction
     - `libra_vm_critical_errors`: Counter for critical internal errors; intended to trigger alerts, not for display on a dashboard
 
@@ -260,6 +268,8 @@ Can administrative accounts (e.g., LibraRoot) be locked out of the system?
 * Common/known problems
 
 ## Execution
+
+Execution takes a vector of transactions (`Transaction`) and an initial state (`StateView`) and produces a corresponding vector of side effects (`TransactionOutput`) for each transaction. The transactions are executed in the order of their position in the input vector. The side effects for each transaction are computed, cached, and accounted for in subsequent transaction execution. Each `TransactionOutput` entry in the output vector contains the results of the transaction at the corresponding position in the input vector. Clients are responsible to apply the side effects in the transaction output.
 
 ```rust
 pub trait VMExecutor: Send {
@@ -279,6 +289,15 @@ pub enum Transaction {
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
+}
+
+pub struct BlockMetadata {
+    id: HashValue,
+    round: u64,
+    timestamp_usecs: u64,
+    // The vector has to be sorted to ensure consistent result among all nodes
+    previous_block_votes: Vec<AccountAddress>,
+    proposer: AccountAddress,
 }
 
 /// The output of executing a transaction.
@@ -308,86 +327,94 @@ pub enum WriteOp {
     Deletion,
     Value(Vec<u8>),
 }
-```
 
-The contract of execution is that the block of transactions in input (`transactions: Vec<Transaction>`)
-gets executed in the given order (position in the vector), side effects are computed, cached, and accounted
-for in subsequent transaction runs.
-Execution returns a list of `TransactionOutput` in the same order (position in the vector) as the transactions in input.
-Part of the output is to provide the side effects that each transaction computed. Clients are responsible to apply
-the side effects (`WriteSet`).
+/// The status of executing a transaction. The wrapped `VMStatus` value
+/// provides more detail on the final execution state of the VM.
+pub enum TransactionStatus {
+    /// Discard the transaction output
+    Discard(DiscardedVMStatus),
 
-Execution is a static entry point in the adapter. The adapter is created on the stack, and has
-the lifetime of the `execute_block` call. The adapter lifetime is bound to the `StateView` in input.
-The adapter provides a data cache to keep track of the side effects computed, so subsequent transactions can execute
-on a consistent state. Remember that the `StateView` in input is a read only view of storage. The responsibility
-of the adapter is to compute side effects of each transaction when executed sequentially in the given order.
-As a consequence, the adapter must have a cache that tracks side effects. In fact, the output of `execute_block`
-is the updates to the cache over the transactions executed (`WriteSet`).
+    /// Keep the transaction output
+    Keep(KeptVMStatus),
 
-As described in Validation there are transactions that can alter the expected behavior of the adapter or the Move VM.
-A `Transaction::WaypointWriteSet` or a transaction with a `TransactionPayload::WriteSet` must reload the config and
-restart the VM. Moreover, a transaction that alters configuration also has to "reset" the adapter.
-The adapter has knowledge of all those events (it even produces them in some scenario) and can take
-proper action.
-
-The Move Adapter considers any transaction that may produce a configuration change as the last executable
-transaction in a block. All subsequent transactions are marked `Retry` and later resubmitted by a client.
-
-## Implementation
-
-The first step in execution is to chunk transactions in multiple block types (`Vec<TransactionBlock>`)
-
-```rust
-pub enum TransactionBlock {
-    UserTransaction(Vec<SignedTransaction>),
-    WaypointWriteSet(ChangeSet),
-    BlockPrologue(BlockMetadata),
-    WriteSet(Box<SignedTransaction>),
+    /// Retry the transaction, e.g., after a reconfiguration
+    Retry,
 }
 ```
 
-the order of execution is maintained.
+The `Transaction` type has three variants:
 
-Then for each block the flow of execution is the following:
+* `UserTransaction`: This variant is for all transactions that are signed by a user (possibly a system administrator) and submitted to the system. This uses the `SignedTransaction` type described in the [Validation section](#Validation).
 
-* **TransactionBlock::WaypointWriteSet**
+* `GenesisTransaction`: This is for a transaction that resets the blockchain to the original genesis state or to a fixed waypoint. `WriteSetPayload` is the same type used for WriteSet transactions submitted by a user, but this variant is needed to allow resetting the system when the consensus system is not operational.
 
-  * push write set to data cache. _Describe errors_
-  * reload configuration _(is this needed if we mark all transactions Retry?)_
-  * on return the adapter marks all transactions not executed yet as `Retry`
+* `BlockMetadata`: Each block on the blockchain begins with a `BlockMetadata` transaction that records things like a timestamp and round number. This kind of transaction may not always be at the beginning of the vector of transactions given to `execute_block` because the input vector does not necessarily correspond to a block on the blockchain (e.g., when replaying transactions).
 
-* **TransactionBlock::BlockPrologue**
+Because user transactions originate from outside the system, they must go through validation before they are executed. The other transaction variants do not go through validation.
 
-  * Sender of the transaction set to `account_config::reserved_vm_address()`
-  * Set gas to `GasUnits::new(std::u64::MAX)` _(is this needed?)_
-  * [execute](#Function-Execution) `LibraBlock::block_prologue` with gas. _Explain semantics and error returned_
+The `TransactionOutput` has four components:
 
-* **TransactionBlock::WriteSet**
-    - check sender signature
-    * [execute](#Function-Execution) `LibraWriteSetManager::prologue` with free gas policy (Move VM).
-    _Explain semantics and error returned_
-    * [execute](#Function-Execution) `LibraAccount::bump_sequence_number` with free gas policy (Move VM).
-    _Explain semantics and error returned_
-    * [execute](#Function-Execution) `LibraWriteSetManager::epilogue` with free gas policy (Move VM).
-    _Explain semantics and error returned_
-    - check write set consistency. _Explain semantics and error returned_
-    - on return the adapter marks all transactions not executed yet as `Retry`
-* **TransactionBlock::UserTransaction**
-    - check sender signature for all transactions
-    - normalize gas price: _Explain semantics and error returned_
-    - check gas: performs basic checks that the gas provided is within a given range and a proper currency
-    - TransactionPaylod::Script
-        - checks that scripts execution is allowed, and if whitelisted,
-        that the script is in the known whitelist (check against configuration)
-        * [execute](#Function-Execution) `LibraAccount::prologue` (Move VM)
-        * [execute](#Script-Execution) script (Move VM)
-        - check the set of events returned and if a configuration change event is published,
-        on return, the adapter marks all transactions not executed yet as `Retry`
-    - TransactionPaylod::Module
-        - checks that module publishing is allowed
-        * [execute](#Function-Execution) `LibraAccount::prologue` (Move VM)
-        - publish module (Move VM)
+* `write_set`: This `WriteSet` value contains a vector of the write operations performed by the transaction. Each write operation is associated with a resource at a particular access path in the blockchain state. The operation may either delete that resource or set it to a new value, specified as a vector of bytes. No access path should be included more than once in a single `WriteSet`, and a non-existent access path should never be deleted.
+
+* `events`: This is a vector of `ContractEvent` values describing the events emitted while executing the transaction. Events in Libra are stored separately from the blockchain state, so these events are not part of the transaction `WriteSet`.
+
+* `gas_used`: This is the number of gas units consumed while executing the transaction.
+
+* `status`: The status of the transaction execution typically falls into either the `Discard` or `Keep` categories, indicating whether the transaction should be discarded or recorded on the blockchain. In both cases, there is an associated value that records a more detailed status code from the Move VM. There is also a third category of `Retry` that indicates that the client should resubmit the transaction following a configuration change. Note that a transaction with a `Keep` status may not have completed successfully, but it still needs to be written to the blockchain, for example, to record the transaction fee.
+
+Execution is a static entry point in the adapter. The adapter creates its implementation on the stack and its
+lifetime is limited to the `execute_block` call.
+The Move Adapter considers any transaction that may produce a configuration change as the end of a block. All subsequent transactions in the input vector are marked `Retry` so that the client will add them to a later block after the configuration change. Thus, beyond checking for transactions to retry, the execution client need not do anything special to reconfigure the adapter.
+
+## Implementation
+
+The adapter uses a data cache to keep track of the side effects computed, so subsequent transactions can execute
+on a consistent state. (The `StateView` input is a read-only view of the blockchain state.) The state changes in the `WriteSet` for each transaction are recorded in this cache. When reading a value from the state, the adapter checks first in the cache and uses any value there before falling back to retrieve the original value from the input state.
+
+The `execute_block` function processes each transaction in its input vector according to the kind of transaction:
+
+* `GenesisTransaction`: The `WriteSetPayload` from the transaction may contain either a `Direct` value or a `Script` value.
+
+  - A `Direct` value specifies a `ChangeSet` holding both the `WriteSet` of state changes and a vector of events. These are simply copied to the transaction output.
+  - For a `Script` value, the Move transaction script is run via the Move VM. The script runs with the `execute_as` address passed into the vector of senders given to the VM session's `execute_script` function. Gas metering is disabled while running the script. A failure from executing the script is reported with the `INVALID_WRITE_SET` status code.
+
+  For both kinds of payload, each access path from the output `WriteSet` is read from the state. This is done to to maintain a read-before-write invariant for states. If one of those reads fails, the transaction will fail with a `STORAGE_ERROR` status code.
+
+* `BlockMetadata`: This transaction is handled by running the `block_prologue` function from the `LibraBlock` module in the Libra Framework to record the metadata at the start of a new block. The sender of the transaction is set to  the reserved VM address (zero), and the `round`, `timestamp_usecs`, `previous_block_votes` and `proposer` fields are extracted from the transaction and passed as arguments to the function. Gas metering is disabled when running this in the Move VM, and any error is reported with the `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION` status code.
+
+* `UserTransaction`: The first step here is to repeat the transaction validation process in case things have changed since the initial validation. See the [Validation section](#Validation) for details. Invalid transactions are discarded. The signature verification step of validation is computationally expensive, so for performance reasons, it is a good idea for the adapter implementation to do that checking in parallel for all the input transactions, instead of waiting to do it as the transactions are executed sequentially. After successful validation, the `TransactionPayload` is processed as described in the following sections for different kinds of payloads.
+
+Whenever the Move VM is used in this transaction processing, the adapter must translate the `TransactionEffects` from the VM's `Session` into both a `WriteSet` and a set of events. That translation can fail with either an `UNKNOWN_INVARIANT_VIOLATION_ERROR` or an `EVENT_KEY_MISMATCH` status code.
+
+Regardless of the kind of transaction, the `WriteSet` changes that it produces are stored in the adapter's data cache, so they will be seen when processing subsequent transactions.
+
+The adapter needs to check if a transaction reconfigures the blockchain. It does that by checking the generated events to see if a `NewEpochEvent` was emitted. If so, the `execute_block` function returns after marking the `TransactionStatus` of all subsequent transactions as `Retry`.
+
+Errors for user transactions, either running scripts or publishing modules, do not stop the execution. A failed user transaction may be kept on-chain to charge for gas, or it may be discarded, but it will not cause the `execute_block` function to return an error. However, if an error occurs for a `WriteSet` transaction or other system transaction, the error is immediately propagated to the result of the `execute_block` function, so that none of the input transactions are executed.
+
+### Script and Module Transactions
+
+After revalidating a user transaction, the adapter processes the payload, depending on its contents. In the common case, the payload is either a script or a module:
+
+  * `Script`: The Move VM is used to [execute](#Script-Execution) the script with the types and arguments specified in the transaction.
+
+  * `Module`: The Move VM is used to [publish](#Publishing) the code module from the transaction.
+
+The Move VM operations used here consume gas according to the gas schedule that is stored in an on-chain configuration. The adapter loads that gas schedule before invoking the VM.
+
+If the script or module payload is processed successfully, the Move VM is next used to [execute](#Function-Execution) the `epilogue` function from the `LibraAccount` module. The epilogue increments the sender's `sequence_number` and deducts the transaction fee based on the gas price and the amount of gas consumed. This function execution is done using the same VM `Session` that was used when processing the payload, so that all the side effects are combined. The epilogue function is run with gas metering disabled.
+
+If an error occurs when processing the payload or when running the epilogue, the adapter will discard all the side effects from the transaction, but it still needs to charge the transaction fee for gas consumption to the sender's account. It does that by creating a new VM `Session` to run the epilogue function. Note that the epilogue function may be run twice. For example, the transaction may make a payment that drops the account balance so that the first attempt to run the epilogue fails because of insufficient funds to pay the transaction fee. After dropping the side effects of the payment, however, the second attempt to run the epilogue should always succeed, because the validation process ensures that the account balance can cover the maximum transaction fee. If the second "failure" epilogue execution somehow fails (due to an internal inconsistency in the system), execution fails with a `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION` status, and the transaction is discarded
+
+### WriteSet Transactions
+
+The third possible kind of user transaction is a `WriteSet`, and there are some differences in handling those compared to other user transactions. For the most part, the `WriteSetPayload` is processed just like a `GenesisTransaction`, but there are two differences. First, for a `Script` payload, the vector of senders passed to the VM has the transaction sender as the first value followed by the `execute_as` value from the transaction. Second, if there is an error reading the states touched by the `WriteSet`, the error status code is reported as `INVALID_WRITE_SET` instead of `STORAGE_ERROR`. There are no gas charges for `WriteSet` transactions.
+
+Instead of the standard epilogue function, for `WriteSet` transactions the adapter executes the special `writeset_epilogue` function from the `LibraAccount` module. The `writeset_epilogue` calls the standard epilogue to increment the `sequence_number`, emits an `AdminTransactionEvent`, and if the `WriteSetPayload` is a `Direct` value, it also emits a `NewEpochEvent` to trigger reconfiguration. For a `Script` value in the `WriteSetPayload`, it is the responsibility of the code in the script to determine whether a reconfiguration is necessary, and if so, to emit the appropriate `NewEpochEvent`. If the epilogue does not execute successfully, the status code is set to `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`.
+
+The epilogue is run with a new VM `Session`. (If the `WriteSetPayload` was `Direct` then there is no other `Session` to use.) Because of that, the side effects of the epilogue function, both the state changes and the events, need to be merged with those from the payload. If those changes conflict, i.e., if they modify the same access paths or events, the transaction fails with an `INVALID_WRITE_SET` status.
+
+If errors occur while processing either the payload or the epilogue, the transaction fails and the `execute_block` function returns an error.
 
 ## Tests
 
@@ -405,6 +432,13 @@ Unit test: e2e tests
 * Panics
 
 * Transaction executed, transaction executed by the VM, success vs fail, certain error type.
+
+* Monitoring:
+    - `libra_vm_user_transactions_executed`: Number of user transactions executed, with either "success" or "failure" labels
+    - `libra_vm_system_transactions_executed`: Number of system transactions executed, with either "success" or "failure" labels
+    - `libra_vm_txn_total_seconds`: Histogram of execution time (in seconds) per user transaction
+    - `libra_vm_num_txns_per_block`: Histogram of number of transactions per block
+    - `libra_vm_critical_errors`: Counter for critical internal errors; intended to trigger alerts, not for display on a dashboard
 
 * Logging on catastrophic events must report enough info to debug.
 
@@ -428,6 +462,7 @@ that a given invocation will not fail loading/linking because of different code 
 invocation is guaranteed before execution starts. Obviously runtime errors are still possible and "expected".
 
 This model fits well Libra requirements:
+
 * Validation uses only few functions published at genesis. Once loaded, code is always fetched from the cache and
 immediately available.
 * Execution is in the context of a given data view, a stable and immutable view. As such code is stable too, and it
@@ -466,7 +501,7 @@ impl MoveVM {
 
 impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
     // Execute a function. The function identity is the `ModuleId` and the function name.
-    pub fn execute_function<F: FnOnce(VMStatus) -> VMStatus>(
+    pub fn execute_function(
         &mut self,
         // instantiated function
         module: &ModuleId,
@@ -478,9 +513,8 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         sender: AccountAddress,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
-        // error manager to properly transform specific errors according to client's semantics
-        error_specializer: F,
-    ) -> Result<(), VMStatus>;
+        log_context: &impl LogContext,
+    ) -> VMResult<()>;
 
     // Execute a client script.
     pub fn execute_script(
@@ -490,10 +524,11 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         ty_args: Vec<TypeTag>,
         // arguments
         args: Vec<Value>,
-        // sender
+        // senders
         senders: Vec<AccountAddress>,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()>;
 
     // Publish a Module.
@@ -505,6 +540,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         sender: AccountAddress,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()>;
 
     pub fn finish(self) -> VMResult<TransactionEffects>;
@@ -542,6 +578,7 @@ impl Runtime {
         data_store: &mut dyn DataStore,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()>;
 
     // Execute a function. The function identity is the `ModuleId` and the function name.
@@ -559,6 +596,7 @@ impl Runtime {
         data_store: &mut dyn DataStore,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()>;
 
     // Execute a client script.
@@ -575,23 +613,25 @@ impl Runtime {
         data_store: &mut dyn DataStore,
         // amount of computation allowed
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()>;
 }
 ```
 
 All entry points take the following 3 arguments:
-`sender: AccountAddress, data_store: &mut dyn DataStore, cost_strategy: &mut CostStrategy`
+`sender: AccountAddress, data_store: &mut dyn DataStore, cost_strategy: &mut CostStrategy, log_context: &impl LogContext`
 
 * **sender: AccountAddress**. This is the address that originated the call. In a sense the address that takes
 responsibility of the call. The `sender` is a special address in the Adapter as it represents either VM authority
 (for special calls) or the [signer of the transaction](#Script-Execution).
-* **data_store: DataStore**. The `DataStore` is the read/write API over the data for the VM. Remember that
+* **data\_store: DataStore**. The `DataStore` is the read/write API over the data for the VM. Remember that
 an adapter takes a `StateView` which is a read only view of the data. The Adapter is expected to wrap that
 view and provide the VM with a read/write API. The adapter uses that cache to track side effects and write set,
 and it forwards request to the `StateView` for loading data that is not in the cache yet.
-* **cost_strategy: CostStrategy**. `CostStrategy` is a protocol to meter the VM. Metering allows a client
+* **cost\_strategy: CostStrategy**. `CostStrategy` is a protocol to meter the VM. Metering allows a client
 to limit the amount of computation a call into the VM can perform. It is also the mechanism by which a
 transaction is charged. At the end of execution, `CostStrategy` will carry the transaction charges.
+* **log\_context: LogContext**. This is a trait used by the VM to trigger alerts for critical errors.
 
 #### Code Cache
 
@@ -601,10 +641,10 @@ Once loaded, a Module is never requested again for the lifetime of that VM insta
 Code is an immutable resource in the system.
 
 The process of loading can be summarized through the following steps:
-1. a binary - Module in a serialized form, `Vec<u8>` - is fetched from the data store. This may require a network
-access
+
+1. a binary—Module in a serialized form, `Vec<u8>`—is fetched from the data store. This may require a network access
 2. the binary is deserialized and verified
-3. dependencies of the module are loaded (repeat 1.-4. for each dependency)
+3. dependencies of the module are loaded (repeat 1.–4. for each dependency)
 4. the module is linked to its dependencies (transformed in a representation suitable for runtime)
 and cached by the loader.
 
@@ -787,7 +827,8 @@ Integers, when used with no compression are in [little-endian](https://en.wikipe
 Vectors are serialized with the size first, in ULEB128 form, followed by the elements contiguously.
 
 ##### Binary Header
-Every binary starts with a header that has the following format
+Every binary starts with a header that has the following format:
+
 * **Magic**: 4 bytes - constant 0xA11CEB0B (aka AliceBob)
 * **Version**: U32, 4 bytes, in little-endian form
 * **Table count**: number of tables in ULEB128 form. The current maximum number of tables is contained in 1 byte,
@@ -798,6 +839,7 @@ order.
 ##### Table Headers
 Following the binary header are the table headers. There are as many tables as defined in "table count".
 Each table header is a tuple of 3 elements and it has the following format:
+
 * **Table Kind**: 1 byte - the [kind of table](#Tables) that is serialized at the location defined by the next 2 entries
 * **Table Offset**: ULEB128 - offset from the end of the table headers where the table content starts
 * **Table Length**: ULEB128 - byte count of the table content
@@ -807,27 +849,29 @@ between the content of the tables. Table content must not overlap.
 
 ##### Tables
 A **Table Kind** is 1 byte, and it is one of:
-* `0x1`: MODULE_HANDLES - for both Modules and Scripts
-* `0x2`: STRUCT_HANDLES - for both Modules and Scripts
-* `0x3`: FUNCTION_HANDLES - for both Modules and Scriptss
-* `0x4`: FUNCTION_INSTANTIATIONS - for both Modules and Scripts
+
+* `0x1`: MODULE\_HANDLES - for both Modules and Scripts
+* `0x2`: STRUCT\_HANDLES - for both Modules and Scripts
+* `0x3`: FUNCTION\_HANDLES - for both Modules and Scriptss
+* `0x4`: FUNCTION\_INSTANTIATIONS - for both Modules and Scripts
 * `0x5`: SIGNATURES - for both Modules and Scripts
-* `0x6`: CONSTANT_POOL - for both Modules and Scripts
+* `0x6`: CONSTANT\_POOL - for both Modules and Scripts
 * `0x7`: IDENTIFIERS - for both Modules and Scripts
-* `0x8`: ADDRESS_IDENTIFIERS - for both Modules and Scripts
-* `0x9`: STRUCT_DEFINITIONS - only for Modules
-* `0xA`: STRUCT_DEF_INSTANTIATIONS - only for Modules
-* `0xB`: FUNCTION_DEFINITIONS - only for Modules
-* `0xC`: FIELD_HANDLES - only for Modules
-* `0xD`: FIELD_INSTANTIATIONS - only for Modules
+* `0x8`: ADDRESS\_IDENTIFIERS - for both Modules and Scripts
+* `0x9`: STRUCT\_DEFINITIONS - only for Modules
+* `0xA`: STRUCT\_DEF\_INSTANTIATIONS - only for Modules
+* `0xB`: FUNCTION\_DEFINITIONS - only for Modules
+* `0xC`: FIELD\_HANDLES - only for Modules
+* `0xD`: FIELD\_INSTANTIATIONS - only for Modules
 
 following is the format of each table:
-* **_MODULE_HANDLES_** - A Module Handle is a pair of indices that identify the location of a module
-    * **_address_**: ULEB128 - index into the ADDRESS_IDENTIFIERS table of the account under
+
+* **_MODULE\_HANDLES_** - A Module Handle is a pair of indices that identify the location of a module
+    * **_address_**: ULEB128 - index into the ADDRESS\_IDENTIFIERS table of the account under
     which the module is published
     * **_name_**: ULEB128 - index into the IDENTIFIERS table of the name of the module
-* **_STRUCT_HANDLES_** - A Struct Handle contains all the information to uniquely identify a user type
-    * **_module_**: ULEB128 - index in the MODULE_HANDLES table of the module where the struct is defined
+* **_STRUCT\_HANDLES_** - A Struct Handle contains all the information to uniquely identify a user type
+    * **_module_**: ULEB128 - index in the MODULE\_HANDLES table of the module where the struct is defined
     * **_name_**: ULEB128 - index into the IDENTIFIERS table of the name of the struct
     * **_nominal resource_**: U8 - a bool (0: false, 1: true) defining whether the struct is a resource (true/1) or
     not (false/0)
@@ -836,27 +880,27 @@ following is the format of each table:
         * **_length_**: ULEB128 - length of the vector, effectively the number of type parameters for the generic
         struct
         * **_kinds_**: kind (U8) * length - contiguous kinds, not present if length is 0
-* **_FUNCTION_HANDLES_** - A Function Handle contains all the information to uniquely identify a function
-    * **_module_**: ULEB128 - index in the MODULE_HANDLES table of the module where the function is defined
+* **_FUNCTION\_HANDLES_** - A Function Handle contains all the information to uniquely identify a function
+    * **_module_**: ULEB128 - index in the MODULE\_HANDLES table of the module where the function is defined
     * **_name_**: ULEB128 - index into the IDENTIFIERS table of the name of the function
     * **_parameters_**: ULEB128 - index into the SIGNATURES table for the argument types of the function
-    * **_return__**: ULEB128 - index into the SIGNATURES table for the return types of the function
+    * **_return_**: ULEB128 - index into the SIGNATURES table for the return types of the function
     * **_type parameters_**: vector of [type parameter kinds](#Kinds) if the function is generic,
     an empty vector otherwise:
         * **_length_**: ULEB128 - length of the vector, effectively the number of type parameters for the generic
         function
         * **_kinds_**: kind (U8) * length - contiguous kinds, not present if length is 0
-* **_FUNCTION_INSTANTIATIONS_** - A Function Instantiation describes the instantation of a generic function.
+* **_FUNCTION\_INSTANTIATIONS_** - A Function Instantiation describes the instantation of a generic function.
 Function Instantiation can be full or partial. E.g. given a generic function `f<K, V>()` a full instantiation
 would be `f<U8, Bool>()` whereas a partial instantiation would be `f<U8, Z>()` where `Z` is a type parameter in
 a given context (typically another function `g<Z>()`)
-    * **_function handle_**: ULEB128 - index into the FUNCTION_HANDLES table of the generic function for
+    * **_function handle_**: ULEB128 - index into the FUNCTION\_HANDLES table of the generic function for
     this instantiation (e.g. `f<K, W>()`)
     * **_instantiation_**: ULEB128 - index into the SIGNATURES table for the instantiation of the function
 * **_SIGNATURES_** - The set of signatures in this binary. A signature is a vector of
 [Signature Tokens](#SignatureTokens), so every signature will carry the length (in ULEB128 form)
 followed by the Signature Tokens
-* **_CONSTANT_POOL_** - The set of constants in the binary. A constant is a copyable primitive value or
+* **_CONSTANT\_POOL_** - The set of constants in the binary. A constant is a copyable primitive value or
 a vector of vectors of primitives. Constants cannot be user types. Constants are serialized according to the
 rule defined in [Move Values](#Move-Values) and stored in the table in serialized form. A constant in the constant pool
 has the following entries:
@@ -866,12 +910,12 @@ has the following entries:
 * **_IDENTIFIERS_** - The set of identifiers in this binary. Identifiers are vectors of chars. Their format
 is the length of the vector in ULEB128 form followed by the chars. An identifier can only have characters in the
 ASCII set and specifically: must start with a letter or '\_', followed by a letter, '\_' or digit
-* **_ADDRESS_IDENTIFIERS_** - The set of addresses used in ModuleHandles. Addresses are fixed size so they are
+* **_ADDRESS\_IDENTIFIERS_** - The set of addresses used in ModuleHandles. Addresses are fixed size so they are
 stored contiguously in this table
-* **_STRUCT_DEFINITIONS_** - The structs or user types defined in the binary. A struct definition contains
+* **_STRUCT\_DEFINITIONS_** - The structs or user types defined in the binary. A struct definition contains
 the following fields:
-    * **_struct_handle_**: ULEB128 - index in the STRUCT_HANDLES table for the handle of this definition
-    * **_field_information_**: Field Information provides information about the fields of the struct or
+    * **_struct\_handle_**: ULEB128 - index in the STRUCT\_HANDLES table for the handle of this definition
+    * **_field\_information_**: Field Information provides information about the fields of the struct or
     whether the struct is native
         * **_tag_**: 1 byte - `0x1` if the struct is native, `0x2` if the struct contains fields, in which
         case it is followed by
@@ -879,122 +923,126 @@ the following fields:
         * **_fields_**: a field count of
             * **_name_**: ULEB128 - index in the IDENTIFIERS table containing the name of the field
             * **_field type_**: [SignatureToken](#SignatureTokens) - the type of the field
-* **_STRUCT_DEF_INSTANTIATIONS_** - the set of instantiation for any given generic struct. It contains the following
+* **_STRUCT\_DEF\_INSTANTIATIONS_** - the set of instantiation for any given generic struct. It contains the following
 fields:
-    * **_struct handle_**: ULEB128 - index into the STRUCT_HANDLES table of the generic struct for
+    * **_struct handle_**: ULEB128 - index into the STRUCT\_HANDLES table of the generic struct for
     this instantiation (e.g. `struct X<T>`)
     * **_instantiation_**: ULEB128 - index into the SIGNATURES table for the instantiation of the struct
     The instantiation can be either partial or complete (e.g. `X<U64>` or `X<Z>` when inside another generic
     function or generic struct with type parameter `Z`)
-* **_FUNCTION_DEFINITIONS_** - the set of functions defined in this binary. A function definition contains the
+* **_FUNCTION\_DEFINITIONS_** - the set of functions defined in this binary. A function definition contains the
 following fields:
-    * **_function_handle_**: ULEB128 - index in the FUNCTION_HANDLES table for the handle of this definition
+    * **_function\_handle_**: ULEB128 - index in the FUNCTION\_HANDLES table for the handle of this definition
     * **_flags_**: 1 byte -
         * `0x0` if the function is private to the Module
         * `0x1` if the function is public and thus visible outside this module
         * `0x2` if the function is native, not implemented in Move
-    * **_acquires_global_resources_**: resources accessed by this function
+    * **_acquires\_global\_resources_**: resources accessed by this function
         * **_length_**: ULEB128 - length of the vector, number of resources acquired by this function
-        * **_resources_**: ULEB128 * length indices into the STRUCT_DEFS table, for the resources acquired
+        * **_resources_**: ULEB128 * length indices into the STRUCT\_DEFS table, for the resources acquired
         by this function
-    * **_code_unit_**: if the function is not native, the code unit follows:
+    * **_code\_unit_**: if the function is not native, the code unit follows:
         * **_locals_**: ULEB128 - index into the SIGNATURES table for the types of the locals of the function
         * **_code_**: vector of [Bytecodes](#Bytecodes), the body of this function
             * **_length_**: the count of bytecodes the follows
             * **_bytecodes_**: Bytecodes, they are variable size
-* **_FIELD_HANDLES_** - the set of fields accessed in code. A field handle is composed by the following fields:
-    * owner: ULEB128 - an index into the STRUCT_DEFS table of the type that owns the field
+* **_FIELD\_HANDLES_** - the set of fields accessed in code. A field handle is composed by the following fields:
+    * owner: ULEB128 - an index into the STRUCT\_DEFS table of the type that owns the field
     * index: ULEB128 - the position of the field in the vector of fields of the "owner"
-* **_FIELD_INSTANTIATIONS_** - the set of generic fields accessed in code. A field instantiation is a pair of indices:
-    * field handle: ULEB128 - an index into the FIELD_HANDLE table for the generic field
+* **_FIELD\_INSTANTIATIONS_** - the set of generic fields accessed in code. A field instantiation is a pair of indices:
+    * field handle: ULEB128 - an index into the FIELD\_HANDLES table for the generic field
     * instantiation: ULEB128 - index into the SIGNATURES table for the instantiation of the type that owns the field
 
 ##### Kinds
 A "Type Parameter Kind" is 1 byte, and it is one of:
+
 * `0x1`: **ALL** - the type parameter can be substituted by either a resource, or a copyable type
 * `0x2`: **COPYABLE** - the type parameter must be substituted by a copyable type
 * `0x3`: **RESOURCE** - the type parameter must be substituted by a resource type
 
 ##### SignatureTokens
 A SignatureToken is 1 byte, and it is one of:
+
 * `0x1`: **BOOL** - a boolean
 * `0x2`: **U8** - a U8 (byte)
-* `0x3`: **U64** - a 64bit unsigned integer
-* `0x4`: **U128** - a 128bit unsigned integer
-* `0x5`: **ADDRESS** - an `AccountAddress` in Libra, which is a 128bit unsigned integer
+* `0x3`: **U64** - a 64-bit unsigned integer
+* `0x4`: **U128** - a 128-bit unsigned integer
+* `0x5`: **ADDRESS** - an `AccountAddress` in Libra, which is a 128-bit unsigned integer
 * `0x6`: **REFERENCE** - a reference; must be followed by another SignatureToken representing the type referenced
-* `0x7`: **MUTABLE_REFERENCE** - a mutable reference; must be followed by another SignatureToken representing
+* `0x7`: **MUTABLE\_REFERENCE** - a mutable reference; must be followed by another SignatureToken representing
 the type referenced
-* `0x8`: **STRUCT** - a structure; must be followed by the index into the STRUCT_HANDLES table describing the
+* `0x8`: **STRUCT** - a structure; must be followed by the index into the STRUCT\_HANDLES table describing the
 type. That index is in ULEB128 form
-* `0x9`: **TYPE_PARAMETER** - a type parameter of a generic struct or a generic function; must be followed by the
+* `0x9`: **TYPE\_PARAMETER** - a type parameter of a generic struct or a generic function; must be followed by the
 index into the type parameters vector of its container. The index is in ULEB128 form
 * `0xA`: **VECTOR** - a vector - must be followed by another SignatureToken representing the type of the vector
-* `0xB`: **STRUCT_INST** - a struct instantiation; must be followed by an index into the STRUCT_HANDLES table
+* `0xB`: **STRUCT\_INST** - a struct instantiation; must be followed by an index into the STRUCT\_HANDLES table
 for the generic type of the instantiation, and a vector describing the substitution types, that is, a vector
 of SignatureTokens
 * `0xC`: **SIGNER** - a signer type, which is a special type for the VM representing the "entity" that signed
 the transaction. Signer is a resource type
 
 Signature tokens examples:
+
 * `u8, u128` -> `0x2 0x2 0x4` - size(`0x2`), U8(`0x2`), u128(`0x4`)
 * `u8, u128, A` where A is a struct -> `0x3 0x2 0x4 0x8 0x10` - size(`0x3`), U8(`0x2`), u128(`0x4`), Struct::A
-(`0x8 0x10` assuming the struct is in the STRUCT_HANDLES table at position `0x10`)
+(`0x8 0x10` assuming the struct is in the STRUCT\_HANDLES table at position `0x10`)
 * `vector<address>, &A` where A is a struct -> `0x2 0xA 0x5 0x8 0x10` - size(`0x2`), vector<address>(`0xA 0x5`), &Struct::A
-(`0x6 0x8 0x10` assuming the struct is in the STRUCT_HANDLES table at position `0x10`)
+(`0x6 0x8 0x10` assuming the struct is in the STRUCT\_HANDLES table at position `0x10`)
 * `vector<A>, &A<B>` where A and B are a struct -> `0x2 0xA 0x8 0x10 0x6 0xB 0x10 0x1 0x8 0x11` -
-size(`0x2`), vector<A>(`0xA 0x8 0x10`), &Struct::A\<Struct::B\> (`0x6` &, `0xB 0x10` A<\_>, `0x1 0x8 0x11` B type
-instantiation; assuming the struct are in the STRUCT_HANDLES table at position `0x10` and `0x11` respectively)
+size(`0x2`), vector\<A\>(`0xA 0x8 0x10`), &Struct::A\<Struct::B\> (`0x6` &, `0xB 0x10` A<\_>, `0x1 0x8 0x11` B type
+instantiation; assuming the struct are in the STRUCT\_HANDLES table at position `0x10` and `0x11` respectively)
 
 ##### Bytecodes
 Bytecodes are variable size instructions for the Move VM. Bytecodes are composed by opcodes (1 byte) followed
 by a possible payload which depends on the specific opcode and specified in "()" below:
+
 * `0x01`: **POP**
 * `0x02`: **RET**
-* `0x03`: **BR_TRUE(offset)** - offset is in ULEB128 form, and it is the target offset in the code stream from
+* `0x03`: **BR\_TRUE(offset)** - offset is in ULEB128 form, and it is the target offset in the code stream from
 the beginning of the code stream
-* `0x04`: **BR_FALSE(offset)** - offset is in ULEB128 form, and it is the target offset in the code stream from
+* `0x04`: **BR\_FALSE(offset)** - offset is in ULEB128 form, and it is the target offset in the code stream from
 the beginning of the code stream
 * `0x05`: **BRANCH(offset)** - offset is in ULEB128 form, and it is the target offset in the code stream from
 the beginning of the code stream
-* `0x06`: **LD_U64(value)** - value is a U64 in little-endian form
-* `0x07`: **LD_CONST(index)** - index is in ULEB128 form, and it is an index in the CONSTANT_POOL table
-* `0x08`: **LD_TRUE**
-* `0x09`: **LD_FALSE**
-* `0x0A`: **COPY_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
+* `0x06`: **LD\_U64(value)** - value is a U64 in little-endian form
+* `0x07`: **LD\_CONST(index)** - index is in ULEB128 form, and it is an index in the CONSTANT\_POOL table
+* `0x08`: **LD\_TRUE**
+* `0x09`: **LD\_FALSE**
+* `0x0A`: **COPY\_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
 of the function. From a bytecode perspective arguments and locals lengths are added and the index must be in that
 range. If index is less than the length of arguments it refers to one of the arguments otherwise it refers to one of
 the locals
-* `0x0B`: **MOVE_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
+* `0x0B`: **MOVE\_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
 of the function. From a bytecode perspective arguments and locals lengths are added and the index must be in that
 range. If index is less than the length of arguments it refers to one of the arguments otherwise it refers to one of
 the locals
-* `0x0C`: **ST_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
+* `0x0C`: **ST\_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a local
 of the function. From a bytecode perspective arguments and locals lengths are added and the index must be in that
 range. If index is less than the length of arguments it refers to one of the arguments otherwise it refers to one of
 the locals
-* `0x0D`: **MUT_BORROW_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a
+* `0x0D`: **MUT\_BORROW\_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a
 local of the function. From a bytecode perspective arguments and locals lengths are added and the index must be in that
 range. If index is less than the length of arguments it refers to one of the arguments otherwise it refers to one of
 the locals
-* `0x0E`: **IMM_BORROW_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a
+* `0x0E`: **IMM\_BORROW\_LOC(index)** - index is in ULEB128 form, and it is an index referring to either an argument or a
 local of the function. From a bytecode perspective arguments and locals lengths are added and the index must be in that
 range. If index is less than the length of arguments it refers to one of the arguments otherwise it refers to one of
 the locals
-* `0x0F`: **MUT_BORROW_FIELD(index)** - index is in ULEB128 form, and it is an index in the FIELD_HANDLES table
-* `0x10`: **IMM_BORROW_FIELD(index)** - index is in ULEB128 form, and it is an index in the FIELD_HANDLES table
-* `0x11`: **CALL(index)** - index is in ULEB128 form, and it is an index in the FUNCTION_HANDLES table
-* `0x12`: **PACK(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x13`: **UNPACK(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x14`: **READ_REF**
-* `0x15`: **WRITE_REF**
+* `0x0F`: **MUT\_BORROW\_FIELD(index)** - index is in ULEB128 form, and it is an index in the FIELD\_HANDLES table
+* `0x10`: **IMM\_BORROW\_FIELD(index)** - index is in ULEB128 form, and it is an index in the FIELD\_HANDLES table
+* `0x11`: **CALL(index)** - index is in ULEB128 form, and it is an index in the FUNCTION\_HANDLES table
+* `0x12`: **PACK(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x13`: **UNPACK(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x14`: **READ\_REF**
+* `0x15`: **WRITE\_REF**
 * `0x16`: **ADD**
 * `0x17`: **SUB**
 * `0x18`: **MUL**
 * `0x19`: **MOD**
 * `0x1A`: **DIV**
-* `0x1B`: **BIT_OR**
-* `0x1C`: **BIT_AND**
+* `0x1B`: **BIT\_OR**
+* `0x1C`: **BIT\_AND**
 * `0x1D`: **XOR**
 * `0x1E`: **OR**
 * `0x1F`: **AND**
@@ -1007,46 +1055,47 @@ the locals
 * `0x26`: **GE**
 * `0x27`: **ABORT**
 * `0x28`: **NOP**
-* `0x29`: **EXISTS(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x2A`: **MUT_BORROW_GLOBAL(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x2B`: **IMM_BORROW_GLOBAL(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x2C`: **MOVE_FROM(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x2D`: **MOVE_TO(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEFINITIONS table
-* `0x2E`: **FREEZE_REF**
+* `0x29`: **EXISTS(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x2A`: **MUT\_BORROW\_GLOBAL(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x2B`: **IMM\_BORROW\_GLOBAL(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x2C`: **MOVE\_FROM(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x2D`: **MOVE\_TO(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEFINITIONS table
+* `0x2E`: **FREEZE\_REF**
 * `0x2F`: **SHL**
 * `0x30`: **SHR**
-* `0x31`: **LD_U8(value)** - value is a U8
-* `0x32`: **LD_U128(value)** - value is a U128 in little-endian form
-* `0x33`: **CAST_U8**
-* `0x34`: **CAST_U64**
-* `0x35`: **CAST_U128**
-* `0x36`: **MUT_BORROW_FIELD_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-FIELD_INSTANTIATIONS table
-* `0x37`: **IMM_BORROW_FIELD_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-FIELD_INSTANTIATIONS table
-* `0x38`: **CALL_GENERIC(index)** - index is in ULEB128 form, and it is an index in the FUNCTION_INSTANTIATIONS table
-* `0x39`: **PACK_GENERIC(index)** - index is in ULEB128 form, and it is an index in the STRUCT_DEF_INSTANTIATIONS table
-* `0x3A`: **UNPACK_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
-* `0x3B`: **EXISTS_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
-* `0x3C`: **MUT_BORROW_GLOBAL_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
-* `0x3D`: **IMM_BORROW_GLOBAL_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
-* `0x3E`: **MOVE_FROM_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
-* `0x3F`: **MOVE_TO_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
-STRUCT_DEF_INSTANTIATIONS table
+* `0x31`: **LD\_U8(value)** - value is a U8
+* `0x32`: **LD\_U128(value)** - value is a U128 in little-endian form
+* `0x33`: **CAST\_U8**
+* `0x34`: **CAST\_U64**
+* `0x35`: **CAST\_U128**
+* `0x36`: **MUT\_BORROW\_FIELD\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+FIELD\_INSTANTIATIONS table
+* `0x37`: **IMM\_BORROW\_FIELD\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+FIELD\_INSTANTIATIONS table
+* `0x38`: **CALL\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the FUNCTION\_INSTANTIATIONS table
+* `0x39`: **PACK\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3A`: **UNPACK\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3B`: **EXISTS\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3C`: **MUT\_BORROW\_GLOBAL\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3D`: **IMM\_BORROW\_GLOBAL\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3E`: **MOVE\_FROM\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
+* `0x3F`: **MOVE\_TO\_GENERIC(index)** - index is in ULEB128 form, and it is an index in the
+STRUCT\_DEF\_INSTANTIATIONS table
 
 ##### Module Specific Data
 A binary for a Module contains an index in ULEB128 form as its last entry. That is after all tables.
 That index points to the ModuleHandle table and it is the self module. It is where the module is stored, and
-a specification of which one of the Modules in the MODULE_HANDLES tables is the self one.
+a specification of which one of the Modules in the MODULE\_HANDLES tables is the self one.
 
 ##### Script Specific Data
-A Script does not have a FUNCTION_DEFINITIONS table, and the entry point is explicitly described in the
+A Script does not have a FUNCTION\_DEFINITIONS table, and the entry point is explicitly described in the
 following 3 entries, at the end of a Script Binary, in the order below:
+
 * **_type parameters_**: if the script entry point is generic, the number and kind of the type parameters is
 in this vector.
     * **_length_**: ULEB128 - length of the vector, effectively the number of type parameters for the generic

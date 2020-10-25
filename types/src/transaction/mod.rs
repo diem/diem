@@ -584,7 +584,7 @@ pub enum TransactionStatus {
     /// Keep the transaction output
     Keep(KeptVMStatus),
 
-    /// Retry the transaction because it is after a ValidatorSetChange txn
+    /// Retry the transaction, e.g., after a reconfiguration
     Retry,
 }
 
