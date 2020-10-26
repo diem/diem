@@ -9,6 +9,7 @@ aliases:
       only:
         - auto
         - canary
+  - &image libra/build_environment:circleci-1
 
 version: 2.1
 
@@ -20,27 +21,27 @@ orbs:
 executors:
   build-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: 2xlarge
   unittest-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: 2xlarge+
   test-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: xlarge
   premainnet-cluster-test-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: xlarge
   audit-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: medium
   small-executor:
     docker:
-      - image: docker.io/libra/build_environment:circleci-latest
+      - image: *image
     resource_class: small
   vm-2xlarge-executor:
     machine:
@@ -695,6 +696,12 @@ jobs:
         description: Should we push to dockerhub/novi aws ecr.
         type: boolean
         default: false
+      version:
+        description: |
+          increment this number if you make a backwards breaking change in the dev_setup.sh
+          You must also bump &image at the start of this file.
+        type: integer
+        default: 0
     steps:
       - checkout
       - run:
@@ -708,18 +715,18 @@ jobs:
           cache_key_part: "dockerbuild"
           file_of_relevant_git_files: "/tmp/ci_docker_files"
       - run:
-          name: Build/test << parameters.target-image >> docker image file
+          name: Build/test << parameters.target-image >>-<< parameters.version >> docker image file
           command: |
-            docker build -f docker/ci/<< parameters.target-image >>/Dockerfile -t libra/build_environment:<< parameters.target-image >>-latest .
+            docker build -f docker/ci/<< parameters.target-image >>/Dockerfile -t libra/build_environment:<< parameters.target-image >>-<< parameters.version >> .
       - when:
           condition: << parameters.release >>
           steps:
             - setup_docker_signing
             - run:
-                name: push libra/build_environment:<< parameters.target-image >>-latest docker image
+                name: push libra/build_environment:<< parameters.target-image >>-<< parameters.version >> docker image
                 command: |
                   #signs the pushed image
-                  docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-latest
+                  docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-<< parameters.version >>
 
   docker-update-base-images:
     executor: vm-medium-executor
@@ -908,6 +915,7 @@ workflows:
           context: docker
           release: true
           target-image: circleci
+          version: 1
           filters:
             branches:
               only:
