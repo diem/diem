@@ -5,6 +5,14 @@
 //! block-time: 100000000
 
 //! new-transaction
+//! expiration-time: 99
+script{
+fun main() {
+}
+}
+// check: TRANSACTION_EXPIRED
+
+//! new-transaction
 //! expiration-time: 100
 script{
 fun main() {
@@ -47,3 +55,11 @@ fun main() {
 }
 }
 // check: TRANSACTION_EXPIRED
+
+//! new-transaction
+//! expiration-time: 18446744073710
+script{
+fun main() {
+}
+}
+// check: "Keep(EXECUTED)"

@@ -111,6 +111,10 @@ enum Command {
         /// a directory path in which all the tests will be executed
         #[structopt(name = "path")]
         path: String,
+        /// Show coverage information after tests are done.
+        /// By default, coverage will not be tracked nor shown.
+        #[structopt(long = "track-cov")]
+        track_cov: bool,
     },
     /// View Move resources, events files, and modules stored on disk
     #[structopt(name = "view")]
@@ -606,7 +610,11 @@ fn main() -> Result<()> {
             *gas_budget,
             *dry_run,
         ),
-        Command::Test { path } => test::run_all(path, &std::env::current_exe()?.to_string_lossy()),
+        Command::Test { path, track_cov } => test::run_all(
+            path,
+            &std::env::current_exe()?.to_string_lossy(),
+            *track_cov,
+        ),
         Command::View { file } => view(&move_args, file),
         Command::Clean {} => {
             // delete move_data
