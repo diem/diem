@@ -1214,7 +1214,7 @@ fn test_get_transactions() {
             match tx {
                 Transaction::BlockMetadata(t) => match view.transaction {
                     TransactionDataView::BlockMetadata { timestamp_usecs } => {
-                        assert_eq!(t.clone().into_inner().unwrap().1, timestamp_usecs);
+                        assert_eq!(t.clone().into_inner().1, timestamp_usecs);
                     }
                     _ => panic!("Returned value doesn't match!"),
                 },

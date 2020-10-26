@@ -447,30 +447,27 @@ impl LibraVM {
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         let mut session = self.0.new_session(remote_cache);
 
-        if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
-            let args = vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(round),
-                Value::u64(timestamp),
-                Value::vector_address(previous_vote),
-                Value::address(proposer),
-            ];
-            session
-                .execute_function(
-                    &LIBRA_BLOCK_MODULE,
-                    &BLOCK_PROLOGUE,
-                    vec![],
-                    args,
-                    txn_data.sender,
-                    &mut cost_strategy,
-                    log_context,
-                )
-                .or_else(|e| {
-                    expect_only_successful_execution(e, BLOCK_PROLOGUE.as_str(), log_context)
-                })?
-        } else {
-            return Err(VMStatus::Error(StatusCode::MALFORMED));
-        };
+        let (round, timestamp, previous_vote, proposer) = block_metadata.into_inner();
+        let args = vec![
+            Value::transaction_argument_signer_reference(txn_data.sender),
+            Value::u64(round),
+            Value::u64(timestamp),
+            Value::vector_address(previous_vote),
+            Value::address(proposer),
+        ];
+        session
+            .execute_function(
+                &LIBRA_BLOCK_MODULE,
+                &BLOCK_PROLOGUE,
+                vec![],
+                args,
+                txn_data.sender,
+                &mut cost_strategy,
+                log_context,
+            )
+            .or_else(|e| {
+                expect_only_successful_execution(e, BLOCK_PROLOGUE.as_str(), log_context)
+            })?;
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
         let output = get_transaction_output(

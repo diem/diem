@@ -6,7 +6,6 @@ use crate::{
     account_config::libra_root_address,
     event::{EventHandle, EventKey},
 };
-use anyhow::Result;
 use libra_crypto::HashValue;
 use move_core_types::move_resource::MoveResource;
 use once_cell::sync::Lazy;
@@ -54,13 +53,13 @@ impl BlockMetadata {
         self.id
     }
 
-    pub fn into_inner(self) -> Result<(u64, u64, Vec<AccountAddress>, AccountAddress)> {
-        Ok((
+    pub fn into_inner(self) -> (u64, u64, Vec<AccountAddress>, AccountAddress) {
+        (
             self.round,
             self.timestamp_usecs,
             self.previous_block_votes.clone(),
             self.proposer,
-        ))
+        )
     }
 
     pub fn timestamp_usec(&self) -> u64 {
