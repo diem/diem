@@ -12,7 +12,10 @@
 | libra_version              | unsigned int64 | Libra chain major version number              |
 | accumulator_root_hash      | string         | accumulator root hash of the block (ledger) version |
 
-Note: see [LibraTransactionPublishingOption](../../language/stdlib/modules/doc/LibraTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
+Note:
+1. see [LibraTransactionPublishingOption](../../language/stdlib/modules/doc/LibraTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
+2. Fields `script_hash_allow_list`, `module_publishing_allowed` and `libra_version` are only returned when requesting latest version by [get_metadata](method_get_metadata.md) method call.
+
 
 ### Example
 

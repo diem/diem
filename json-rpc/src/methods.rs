@@ -304,20 +304,22 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     let mut script_hash_allow_list: Option<Vec<BytesView>> = None;
     let mut module_publishing_allowed: Option<bool> = None;
     let mut libra_version: Option<u64> = None;
-    if let Some(account) = service.get_account_state(libra_root_address(), version)? {
-        if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
-            script_hash_allow_list = Some(
-                vm_publishing_option
-                    .script_allow_list
-                    .iter()
-                    .map(|v| BytesView::from(v.to_vec()))
-                    .collect(),
-            );
+    if version == request.version() {
+        if let Some(account) = service.get_account_state(libra_root_address(), version)? {
+            if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
+                script_hash_allow_list = Some(
+                    vm_publishing_option
+                        .script_allow_list
+                        .iter()
+                        .map(|v| BytesView::from(v.to_vec()))
+                        .collect(),
+                );
 
-            module_publishing_allowed = Some(vm_publishing_option.is_open_module);
-        }
-        if let Some(v) = account.get_libra_version()? {
-            libra_version = Some(v.major)
+                module_publishing_allowed = Some(vm_publishing_option.is_open_module);
+            }
+            if let Some(v) = account.get_libra_version()? {
+                libra_version = Some(v.major)
+            }
         }
     }
     Ok(MetadataView {
