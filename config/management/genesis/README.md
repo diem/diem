@@ -1,8 +1,8 @@
 # Libra Config Manager
 
-The `libra-genesis-tool` provides a tool for the genesis ceremony of the Libra blockchain as well as adding new validators to an existing blockchain. The functionality of the tool is dictated by the organization of nodes within the system:
+The `libra-genesis-tool` provides a tool for the genesis ceremony of the Libra blockchain. The functionality of the tool is dictated by the organization of nodes within the system:
 
-* A libra root account that maintains the set of validator owners and validator operators.
+* A libra root account that maintains the set of validator owners, validator operators, and the active validator set.
 * A treasury compliance account that maintains VASPs, DDs, and other related topics.
 * Validator owners (OW) that have accounts on the blockchain. These accounts contain a validator configuration and specify a validator operator.
 * Validator operators (OP) that have accounts on the blockchain. These accounts have the ability to manipulate validator configuration.
