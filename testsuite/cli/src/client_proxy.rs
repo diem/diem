@@ -1214,12 +1214,14 @@ impl ClientProxy {
         let wallet_addresses = self.wallet.get_addresses()?;
         let mut account_data = Vec::new();
         for address in wallet_addresses {
+            let auth_key = self.wallet.get_authentication_key(&address)?;
+
             account_data.push(Self::get_account_data_from_address(
                 &self.client,
                 address,
                 self.sync_on_wallet_recovery,
                 None,
-                None,
+                Some(auth_key.to_vec()),
             )?);
         }
         // Clear current cached AccountData as we always swap the entire wallet completely.

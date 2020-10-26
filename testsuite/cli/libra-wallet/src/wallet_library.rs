@@ -183,6 +183,18 @@ impl WalletLibrary {
             Err(WalletError::LibraWalletGeneric("missing address".to_string()).into())
         }
     }
+
+    /// Return authentication key (AuthenticationKey) for an address in the wallet
+    pub fn get_authentication_key(&self, address: &AccountAddress) -> Result<AuthenticationKey> {
+        if let Some(child) = self.addr_map.get(&address) {
+            Ok(self
+                .key_factory
+                .private_child(*child)?
+                .get_authentication_key())
+        } else {
+            Err(WalletError::LibraWalletGeneric("missing address".to_string()).into())
+        }
+    }
 }
 
 /// WalletLibrary naturally support TransactionSigner trait.
