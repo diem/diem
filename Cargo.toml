@@ -26,7 +26,6 @@ members = [
     "common/proptest-helpers",
     "common/retrier",
     "common/short-hex-str",
-    "common/stream-ratelimiter",
     "common/subscription-service",
     "common/temppath",
     "common/trace",

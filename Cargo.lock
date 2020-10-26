@@ -4258,7 +4258,6 @@ dependencies = [
  "serial_test",
  "short-hex-str",
  "socket-bench-server",
- "stream-ratelimiter",
  "thiserror",
  "tokio",
  "tokio-retry",
@@ -6326,17 +6325,6 @@ dependencies = [
  "rand 0.7.3",
  "storage-client",
  "storage-interface",
- "tokio",
-]
-
-[[package]]
-name = "stream-ratelimiter"
-version = "0.1.0"
-dependencies = [
- "futures 0.3.6",
- "futures-semaphore",
- "libra-workspace-hack",
- "pin-project",
  "tokio",
 ]
 
