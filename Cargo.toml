@@ -13,7 +13,6 @@ members = [
     "common/crash-handler",
     "common/datatest-stable",
     "common/debug-interface",
-    "common/futures-semaphore",
     "common/infallible",
     "common/lcs",
     "common/libradoc",

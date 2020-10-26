@@ -8,12 +8,16 @@
 //! `capacity`.
 
 use futures::future::{Future, FutureExt};
-use futures_semaphore::{Permit, Semaphore};
-use tokio::{runtime::Handle, task::JoinHandle};
+use std::sync::Arc;
+use tokio::{
+    runtime::Handle,
+    sync::{OwnedSemaphorePermit, Semaphore},
+    task::JoinHandle,
+};
 
 #[derive(Clone, Debug)]
 pub struct BoundedExecutor {
-    semaphore: Semaphore,
+    semaphore: Arc<Semaphore>,
     executor: Handle,
 }
 
@@ -21,7 +25,7 @@ impl BoundedExecutor {
     /// Create a new `BoundedExecutor` from an existing tokio [`Handle`]
     /// with a maximum concurrent task capacity of `capacity`.
     pub fn new(capacity: usize, executor: Handle) -> Self {
-        let semaphore = Semaphore::new(capacity);
+        let semaphore = Arc::new(Semaphore::new(capacity));
         Self {
             semaphore,
             executor,
@@ -37,7 +41,7 @@ impl BoundedExecutor {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let permit = self.semaphore.acquire().await;
+        let permit = self.semaphore.clone().acquire_owned().await;
         self.spawn_with_permit(f, permit)
     }
 
@@ -51,13 +55,17 @@ impl BoundedExecutor {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        match self.semaphore.try_acquire() {
+        match self.semaphore.clone().try_acquire_owned().ok() {
             Some(permit) => Ok(self.spawn_with_permit(f, permit)),
             None => Err(f),
         }
     }
 
-    fn spawn_with_permit<F>(&self, f: F, spawn_permit: Permit) -> JoinHandle<F::Output>
+    fn spawn_with_permit<F>(
+        &self,
+        f: F,
+        spawn_permit: OwnedSemaphorePermit,
+    ) -> JoinHandle<F::Output>
     where
         F: Future + Send + 'static,
         F::Output: Send + 'static,
