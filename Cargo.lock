@@ -263,6 +263,7 @@ dependencies = [
  "libradb",
  "num_cpus",
  "once_cell",
+ "pin-project",
  "proptest",
  "rand 0.7.3",
  "regex",
