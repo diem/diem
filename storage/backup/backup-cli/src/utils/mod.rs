@@ -4,6 +4,7 @@
 pub mod backup_service_client;
 pub mod read_record_bytes;
 pub mod storage_ext;
+mod stream;
 
 #[cfg(test)]
 pub mod test_utils;
