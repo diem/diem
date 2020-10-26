@@ -15,6 +15,8 @@ Get the blockchain / ledger metadata.
 
 [Metadata](type_metadata.md)
 
+Note: fields `script_hash_allow_list`, `module_publishing_allowed` and `libra_version` are only returned when no version argument provided.
+
 ### Example
 
 ```
