@@ -184,7 +184,7 @@ pub enum EventDataView {
     },
     #[serde(rename = "compliancekeyrotation")]
     ComplianceKeyRotation {
-        new_compliance_public_key: String,
+        new_compliance_public_key: BytesView,
         time_rotated_seconds: u64,
     },
     #[serde(rename = "baseurlrotation")]
@@ -286,7 +286,7 @@ impl TryFrom<ContractEvent> for EventDataView {
         } else if event.type_tag() == &TypeTag::Struct(ComplianceKeyRotationEvent::struct_tag()) {
             let rotation_event = ComplianceKeyRotationEvent::try_from(&event)?;
             EventDataView::ComplianceKeyRotation {
-                new_compliance_public_key: hex::encode(rotation_event.new_compliance_public_key()),
+                new_compliance_public_key: rotation_event.new_compliance_public_key().into(),
                 time_rotated_seconds: rotation_event.time_rotated_seconds(),
             }
         } else if event.type_tag() == &TypeTag::Struct(BaseUrlRotationEvent::struct_tag()) {
@@ -346,7 +346,7 @@ impl TryFrom<(u64, ContractEvent)> for EventView {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MetadataView {
     pub version: u64,
-    pub accumulator_root_hash: String,
+    pub accumulator_root_hash: BytesView,
     pub timestamp: u64,
     pub chain_id: u8,
     pub script_hash_allow_list: Option<Vec<BytesView>>,
@@ -360,6 +360,12 @@ pub struct BytesView(pub String);
 impl BytesView {
     pub fn into_bytes(self) -> Result<Vec<u8>, Error> {
         Ok(hex::decode(self.0)?)
+    }
+}
+
+impl std::fmt::Display for BytesView {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -378,6 +384,24 @@ impl From<&Vec<u8>> for BytesView {
 impl From<Vec<u8>> for BytesView {
     fn from(bytes: Vec<u8>) -> Self {
         Self(hex::encode(bytes))
+    }
+}
+
+impl From<AccountAddress> for BytesView {
+    fn from(address: AccountAddress) -> Self {
+        address.to_vec().into()
+    }
+}
+
+impl From<&AccountAddress> for BytesView {
+    fn from(address: &AccountAddress) -> Self {
+        address.to_vec().into()
+    }
+}
+
+impl From<HashValue> for BytesView {
+    fn from(hash: HashValue) -> Self {
+        hash.to_vec().into()
     }
 }
 
@@ -460,7 +484,7 @@ impl From<&KeptVMStatus> for VMStatusView {
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
-    pub hash: String,
+    pub hash: BytesView,
     pub bytes: BytesView,
     pub events: Vec<EventView>,
     pub vm_status: VMStatusView,
@@ -477,17 +501,17 @@ pub enum TransactionDataView {
     WriteSet {},
     #[serde(rename = "user")]
     UserTransaction {
-        sender: String,
+        sender: BytesView,
         signature_scheme: String,
-        signature: String,
-        public_key: String,
+        signature: BytesView,
+        public_key: BytesView,
         sequence_number: u64,
         chain_id: u8,
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency: String,
         expiration_timestamp_secs: u64,
-        script_hash: String,
+        script_hash: BytesView,
         script_bytes: BytesView,
         script: ScriptView,
     },
@@ -519,7 +543,7 @@ pub struct ScriptView {
 
     // peer_to_peer_transaction
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub receiver: Option<String>,
+    pub receiver: Option<BytesView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -550,8 +574,7 @@ impl From<Transaction> for TransactionDataView {
                 let script_hash = match t.payload() {
                     TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
                     _ => HashValue::zero(),
-                }
-                .to_hex();
+                };
 
                 let script_bytes: BytesView = match t.payload() {
                     TransactionPayload::Script(s) => lcs::to_bytes(s).unwrap_or_default(),
@@ -565,17 +588,17 @@ impl From<Transaction> for TransactionDataView {
                 };
 
                 TransactionDataView::UserTransaction {
-                    sender: t.sender().to_string(),
+                    sender: t.sender().into(),
                     signature_scheme: t.authenticator().scheme().to_string(),
-                    signature: hex::encode(t.authenticator().signature_bytes()),
-                    public_key: hex::encode(t.authenticator().public_key_bytes()),
+                    signature: t.authenticator().signature_bytes().into(),
+                    public_key: t.authenticator().public_key_bytes().into(),
                     sequence_number: t.sequence_number(),
                     chain_id: t.chain_id().id(),
                     max_gas_amount: t.max_gas_amount(),
                     gas_unit_price: t.gas_unit_price(),
                     gas_currency: t.gas_currency_code().to_string(),
                     expiration_timestamp_secs: t.expiration_timestamp_secs(),
-                    script_hash,
+                    script_hash: script_hash.into(),
                     script_bytes,
                     script,
                 }
@@ -667,7 +690,7 @@ impl From<&Script> for ScriptView {
             if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
                 &script.args()[..]
             {
-                view.receiver = Some(receiver.to_string());
+                view.receiver = Some(receiver.into());
                 view.amount = Some(*amount);
                 view.currency = Some(
                     ty_args

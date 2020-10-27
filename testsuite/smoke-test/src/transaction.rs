@@ -97,7 +97,10 @@ fn test_external_transaction_signer() {
             script,
             ..
         } => {
-            assert_eq!(p_sender, sender_address.to_string());
+            assert_eq!(
+                p_sender.to_string(),
+                sender_address.to_string().to_lowercase()
+            );
             assert_eq!(p_sequence_number, sequence_number);
             assert_eq!(p_gas_unit_price, gas_unit_price);
             assert_eq!(p_gas_currency, currency_code.to_string());
@@ -115,7 +118,10 @@ fn test_external_transaction_signer() {
                 ]
             );
             // legacy fields
-            assert_eq!(script.receiver.unwrap(), receiver_address.to_string());
+            assert_eq!(
+                script.receiver.unwrap().to_string(),
+                receiver_address.to_string().to_lowercase(),
+            );
             assert_eq!(script.amount.unwrap(), amount);
             assert_eq!(script.currency.unwrap(), currency_code.to_string());
             assert_eq!(
