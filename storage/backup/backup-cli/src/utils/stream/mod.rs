@@ -8,7 +8,7 @@ mod futures_unordered_x;
 use crate::utils::stream::buffered_x::BufferedX;
 use futures::{Future, Stream};
 
-trait StreamX: Stream {
+pub(crate) trait StreamX: Stream {
     fn buffered_x(self, n: usize, max_in_progress: usize) -> BufferedX<Self>
     where
         Self::Item: Future,

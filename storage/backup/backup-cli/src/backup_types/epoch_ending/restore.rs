@@ -11,6 +11,7 @@ use crate::{
     utils::{
         read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
         RestoreRunMode,
+        stream::StreamX,
     },
 };
 use anyhow::{anyhow, ensure, Result};
@@ -334,7 +335,7 @@ impl EpochHistoryRestoreController {
             )
             .preheat()
         });
-        let mut futs_stream = futures::stream::iter(futs_iter).buffered(num_cpus::get());
+        let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(num_cpus::get() * 2, num_cpus::get());
 
         let mut next_epoch = 0u64;
         let mut previous_li = None;

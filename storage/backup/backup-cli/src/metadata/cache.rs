@@ -21,6 +21,7 @@ use tokio::{
     io::{AsyncRead, AsyncReadExt},
     stream::StreamExt,
 };
+use crate::utils::stream::StreamX;
 
 #[derive(StructOpt)]
 pub struct MetadataCacheOpt {
@@ -113,7 +114,10 @@ pub async fn sync_and_load(
             Ok(())
         }
     });
-    futures::StreamExt::buffered(futures::stream::iter(futs), num_cpus::get())
+    futures::stream::iter(futs).buffered_x(
+        num_cpus::get() * 2,
+        num_cpus::get(),
+    )
         .collect::<Result<Vec<_>>>()
         .await?;
 

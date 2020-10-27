@@ -34,6 +34,7 @@ use std::{
 use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
 use tokio::io::BufReader;
+use crate::utils::stream::StreamX;
 
 #[derive(StructOpt)]
 pub struct TransactionRestoreOpt {
@@ -413,7 +414,10 @@ impl TransactionRestoreBatchController {
             }
         });
 
-        let mut futs_stream = futures::stream::iter(futs_iter).buffered(num_cpus::get());
+        let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(
+            num_cpus::get() * 2,
+            num_cpus::get(),
+        );
         while let Some(preheated_txn_restore) = futs_stream.next().await {
             let v = preheated_txn_restore.get_last_version();
             preheated_txn_restore.run().await?;
