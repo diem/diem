@@ -26,14 +26,9 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, io, sync::Arc, time::Duration};
-use stream_ratelimiter::*;
+use std::{fmt::Debug, io, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-
-// Rate-limit configuration for inbound messages. Allows 100 messages for every 10ms window.
-pub const MESSAGE_RATE_LIMIT_WINDOW: Duration = Duration::from_millis(10);
-pub const MESSAGE_RATE_LIMIT_COUNT: usize = 100;
 
 #[cfg(test)]
 mod test;
@@ -155,16 +150,13 @@ where
             .max_frame_length(self.max_frame_size)
             .length_field_length(4)
             .big_endian();
-        // Convert ReadHalf to Stream of length-delimited messages.
 
-        let reader = FramedRead::new(reader, codec_builder.new_codec()).fuse();
-        // Create a rate-limited stream of inbound messages.
-        let mut reader = reader
-            .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
-            .fuse();
+        // Convert ReadHalf to Stream of length-delimited messages.
+        let mut reader = FramedRead::new(reader, codec_builder.new_codec()).fuse();
 
         // Convert WriteHalf to Sink of length-delimited messages.
         let writer = FramedWrite::new(writer, codec_builder.new_codec());
+
         // Start writer "process" as a separate task. We receive two handles to communicate with
         // the task:
         // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.
