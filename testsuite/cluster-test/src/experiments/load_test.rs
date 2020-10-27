@@ -29,6 +29,8 @@ use std::{
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
 
+const EXPERIMENT_BUFFER_SECS: u64 = 10;
+
 #[derive(StructOpt, Debug)]
 pub struct LoadTestParams {
     #[structopt(long, help = "run load test on mempool")]
@@ -135,12 +137,20 @@ impl Experiment for LoadTest {
             let _ = t.await.expect("failed state sync load test task");
         }
 
+        // create blocking context to drop stubbed node's runtime in
+        // We cannot drop a runtime in an async context where blocking is not allowed - otherwise,
+        // this thread will panic.
+        tokio::task::spawn_blocking(move || {
+            drop(stubbed_node);
+        })
+        .await?;
+
         // TODO log per-component experiment results
 
         Ok(())
     }
     fn deadline(&self) -> Duration {
-        Duration::from_secs(self.duration)
+        Duration::from_secs(self.duration + EXPERIMENT_BUFFER_SECS)
     }
 }
 
