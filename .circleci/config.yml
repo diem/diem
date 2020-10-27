@@ -10,7 +10,7 @@ aliases:
         - auto
         - canary
   - &working_directory /opt/git/libra
-  - &image libra/build_environment:circleci-1
+  - &image libra/build_environment:circleci-2
 
 version: 2.1
 
@@ -896,7 +896,7 @@ workflows:
           context: docker
           release: true
           target-image: circleci
-          version: 1
+          version: 2
           filters:
             branches:
               only:
