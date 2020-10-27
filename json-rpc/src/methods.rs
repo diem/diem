@@ -324,7 +324,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     }
     Ok(MetadataView {
         version,
-        accumulator_root_hash: service.db.get_accumulator_root_hash(version)?.to_hex(),
+        accumulator_root_hash: service.db.get_accumulator_root_hash(version)?.into(),
         timestamp: service.db.get_block_timestamp(version)?,
         chain_id,
         script_hash_allow_list,
@@ -382,7 +382,7 @@ async fn get_transactions(
 
         result.push(TransactionView {
             version: start_version + v as u64,
-            hash: tx.hash().to_hex(),
+            hash: tx.hash().into(),
             bytes: lcs::to_bytes(&tx)?.into(),
             transaction: tx.into(),
             events,
@@ -424,7 +424,7 @@ async fn get_account_transaction(
 
         Ok(Some(TransactionView {
             version: tx_version,
-            hash: tx.transaction.hash().to_hex(),
+            hash: tx.transaction.hash().into(),
             bytes: lcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
@@ -534,7 +534,7 @@ async fn get_account_transactions(
 
         all_txs.push(TransactionView {
             version: tx.version,
-            hash: tx.transaction.hash().to_hex(),
+            hash: tx.transaction.hash().into(),
             bytes: lcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
