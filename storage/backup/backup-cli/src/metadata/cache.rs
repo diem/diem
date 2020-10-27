@@ -5,6 +5,7 @@ use crate::{
     metadata::{view::MetadataView, Metadata},
     metrics::metadata::{NUM_META_DOWNLOAD, NUM_META_FILES, NUM_META_MISS},
     storage::{BackupStorage, FileHandle},
+    utils::stream::StreamX,
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -113,7 +114,11 @@ pub async fn sync_and_load(
             Ok(())
         }
     });
-    futures::StreamExt::buffered(futures::stream::iter(futs), num_cpus::get())
+    futures::stream::iter(futs)
+        .buffered_x(
+            num_cpus::get() * 2, /* buffer size */
+            num_cpus::get(),     /* concurrency */
+        )
         .collect::<Result<Vec<_>>>()
         .await?;
 

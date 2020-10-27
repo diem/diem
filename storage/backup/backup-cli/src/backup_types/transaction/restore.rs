@@ -12,8 +12,8 @@ use crate::{
     },
     storage::{BackupStorage, FileHandle},
     utils::{
-        read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
-        RestoreRunMode,
+        read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, stream::StreamX,
+        GlobalRestoreOptions, RestoreRunMode,
     },
 };
 use anyhow::{anyhow, bail, ensure, Result};
@@ -413,7 +413,10 @@ impl TransactionRestoreBatchController {
             }
         });
 
-        let mut futs_stream = futures::stream::iter(futs_iter).buffered(num_cpus::get());
+        let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(
+            num_cpus::get() * 3, /* more buffer here because the preheat of txns is heavy and variates more in execution time. */
+            num_cpus::get(), /* concurrency */
+        );
         while let Some(preheated_txn_restore) = futs_stream.next().await {
             let v = preheated_txn_restore.get_last_version();
             preheated_txn_restore.run().await?;
