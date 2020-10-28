@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 
 #[cfg(test)]
 mod executor_test;
@@ -60,8 +60,11 @@ use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
+    // fs::OpenOptions,
+    // io::Write,
     marker::PhantomData,
     sync::Arc,
+    // time::Instant,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
@@ -71,6 +74,8 @@ pub struct Executor<V> {
     cache: SpeculationCache,
     phantom: PhantomData<V>,
 }
+
+static mut NUM_TXN_BENCH: usize = 0;
 
 impl<V> Executor<V>
 where
@@ -258,6 +263,8 @@ where
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
+        let start_func = std::time::Instant::now();
+        
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -374,8 +381,35 @@ where
             }
         }
 
+        let start_txn_acc = std::time::Instant::now();
         let current_transaction_accumulator =
             parent_trees.txn_accumulator().append(&txn_info_hashes);
+        let txn_acc_dur = start_txn_acc.elapsed();
+        let func_dur = start_func.elapsed();
+        
+        // let mut file = OpenOptions::new()
+        //     .write(true)
+        //     .append(true)
+        //     .open("/Users/ratig//Code/stats.txt")
+        //     .unwrap();
+
+        unsafe{
+            NUM_TXN_BENCH += txn_info_hashes.len();
+
+            // if let Err(e) = writeln!(
+            //     file,
+            //     "num_txn {}, txn accumulator append {:?}, function total {:?}",
+            //     NUM_TXN_BENCH,
+            //     txn_acc_dur,
+            //     func_dur) {
+            //     eprintln!("Couldn't write to file: {}", e);
+            // }
+
+            info!(" AAA total txn so far {}", NUM_TXN_BENCH);
+            info!(" AAA elapsed  {:?}", txn_acc_dur);
+            info!(" AAA elapsed whole {:?}", func_dur);
+        }
+        
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees::new_copy(
