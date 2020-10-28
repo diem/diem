@@ -15,7 +15,7 @@ async-trait = "0.1.41"
 byteorder = { version = "1.3.4", default-features = false }
 bytes = "0.5.6"
 fail = "0.4.0"
-futures = "0.3.6"
+futures = "0.3.7"
 itertools = { version = "0.9.0", default-features = false }
 mirai-annotations = { version = "1.10.1", default-features = false }
 num-derive = { version = "0.3.2", default-features = false }
@@ -23,8 +23,8 @@ num-traits = { version = "0.2.12", default-features = false }
 once_cell = "1.4.1"
 proptest = { version = "0.10.1", optional = true }
 rand = { version = "0.7.3", default-features = false }
-serde = { version = "1.0.116", default-features = false }
-serde_json = "1.0.58"
+serde = { version = "1.0.117", default-features = false }
+serde_json = "1.0.59"
 termion = { version = "1.5.5", default-features = false }
 thiserror = "1.0.21"
 tokio = { version = "0.2.22", features = ["full"] }

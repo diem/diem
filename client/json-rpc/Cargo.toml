@@ -13,8 +13,8 @@ edition = "2018"
 anyhow = "1.0.33"
 hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking", "json"], default_features = false }
-serde = { version = "1.0.116", default-features = false }
-serde_json = "1.0.58"
+serde = { version = "1.0.117", default-features = false }
+serde_json = "1.0.59"
 tokio = { version = "0.2.22", features = ["full"] }
 
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

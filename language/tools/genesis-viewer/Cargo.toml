@@ -18,4 +18,4 @@ resource-viewer = { path = "../resource-viewer", version = "0.1.0"}
 vm-genesis = { path = "../vm-genesis", version = "0.1.0" }
 compiled-stdlib = { path = "../../stdlib/compiled",  version = "0.1.0" }
 
-structopt = "0.3.18"
+structopt = "0.3.20"

@@ -13,9 +13,9 @@ edition = "2018"
 anyhow = "1.0.33"
 hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking"], default-features = false }
-serde = "1.0.116"
-serde_derive = "1.0.115"
-structopt = "0.3.18"
+serde = "1.0.117"
+serde_derive = "1.0.117"
+structopt = "0.3.20"
 tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.5"
 
@@ -31,7 +31,7 @@ move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 transaction-builder-generated = { path = "../transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-serde_json = "1.0.58"
+serde_json = "1.0.59"
 tempfile = "3.1.0"
 
 libra-config = { path = "../../config", version = "0.1.0" }

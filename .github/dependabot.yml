@@ -7,7 +7,6 @@ updates:
     labels:
       - "docker"
       - "dependencies"
-    open-pull-requests-limit: 0
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -28,4 +27,3 @@ updates:
       - dependency-name: "codespan*"
       - dependency-name: "libfuzzer-sys"
       - dependency-name: "bindgen"
-    open-pull-requests-limit: 0

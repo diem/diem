@@ -15,4 +15,4 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 
 # external dependencies
 anyhow = "1.0.33"
-regex = "1.3.9"
+regex = "1.4.1"
