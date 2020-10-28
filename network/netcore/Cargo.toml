@@ -12,9 +12,9 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.41"
 bytes = "0.5.6"
-futures = "0.3.6"
+futures = "0.3.7"
 pin-project = "0.4.26"
-serde = { version = "1.0.116", default-features = false }
+serde = { version = "1.0.117", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

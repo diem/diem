@@ -12,11 +12,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.33"
 hex = "0.4.2"
-serde = { version = "1.0.116", features = ["rc"], default-features = false }
-serde_json = "1.0.58"
-structopt = "0.3.18"
+serde = { version = "1.0.117", features = ["rc"], default-features = false }
+serde_json = "1.0.59"
+structopt = "0.3.20"
 thiserror = "1.0.21"
-toml = { version = "0.5.6", default-features = false }
+toml = { version = "0.5.7", default-features = false }
 
 executor = { path = "../../../execution/executor", version = "0.1.0" }
 generate-key = { path = "../../../config/generate-key", version = "0.1.0" }

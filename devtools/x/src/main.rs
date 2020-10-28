@@ -73,7 +73,7 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    env_logger::from_env(env_logger::Env::default().default_filter_or("info"))
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format(|buf, record| {
             let color = match record.level() {
                 Level::Warn => Color::Yellow,

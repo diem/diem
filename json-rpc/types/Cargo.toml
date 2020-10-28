@@ -12,8 +12,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.33"
 hex = "0.4.2"
-serde = { version = "1.0.116", default-features = false }
-serde_json = "1.0.58"
+serde = { version = "1.0.117", default-features = false }
+serde_json = "1.0.59"
 prost = "0.6"
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }

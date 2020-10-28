@@ -12,10 +12,10 @@ edition = "2018"
 [dependencies]
 base64 = "0.13.0"
 chrono = "0.4.19"
-enum_dispatch = "0.3.3"
+enum_dispatch = "0.3.4"
 rand = "0.7.3"
-serde = { version = "1.0.116", features = ["rc"], default-features = false }
-serde_json = "1.0.58"
+serde = { version = "1.0.117", features = ["rc"], default-features = false }
+serde_json = "1.0.59"
 thiserror = "1.0.21"
 
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
