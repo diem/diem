@@ -390,7 +390,7 @@ where
         // let mut file = OpenOptions::new()
         //     .write(true)
         //     .append(true)
-        //     .open("/Users/ratig//Code/stats.txt")
+        //     .open("~/Code/stats.txt")
         //     .unwrap();
 
         unsafe{
