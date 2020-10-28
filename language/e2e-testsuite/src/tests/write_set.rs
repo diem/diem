@@ -266,8 +266,9 @@ fn bad_writesets() {
         .sequence_number(1)
         .gas_currency_code("Bad_ID")
         .sign();
-    assert_eq!(
-        executor.verify_transaction(writeset_txn).status().unwrap(),
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
         StatusCode::INVALID_GAS_SPECIFIER
     );
 
@@ -282,8 +283,9 @@ fn bad_writesets() {
         .sequence_number(1)
         .gas_currency_code("INVALID")
         .sign();
-    assert_eq!(
-        executor.verify_transaction(writeset_txn).status().unwrap(),
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
         StatusCode::CURRENCY_INFO_DOES_NOT_EXIST
     );
 }
