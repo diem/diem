@@ -2,18 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    counters::*,
-    create_access_path,
-    data_cache::StateViewCache,
-    diem_vm::{get_currency_info, DiemVMImpl},
-    transaction_metadata::TransactionMetadata,
-    VMValidator,
+    counters::*, create_access_path, data_cache::StateViewCache, diem_vm::DiemVMImpl,
+    transaction_metadata::TransactionMetadata, VMValidator,
 };
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
-    account_config::{self, RoleId},
+    account_config::{self, CurrencyInfoResource, RoleId},
     on_chain_config::{DiemVersion, VMConfig, VMPublishingOption},
     transaction::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
@@ -23,7 +19,7 @@ use diem_types::{
 };
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
-    identifier::IdentStr,
+    identifier::{IdentStr, Identifier},
     move_resource::MoveResource,
 };
 
@@ -54,45 +50,6 @@ impl DiemVMValidator {
             publishing_option,
         ))
     }
-
-    fn verify_transaction_impl(
-        &self,
-        transaction: &SignatureCheckedTransaction,
-        remote_cache: &StateViewCache,
-        account_currency_symbol: &IdentStr,
-    ) -> Result<(), VMStatus> {
-        let txn_data = TransactionMetadata::new(transaction);
-        let mut session = self.0.new_session(remote_cache);
-        let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
-        let mut cost_strategy =
-            CostStrategy::system(self.0.get_gas_schedule(&log_context)?, GasUnits::new(0));
-        match transaction.payload() {
-            TransactionPayload::Script(_script) => {
-                self.0.check_gas(&txn_data, &log_context)?;
-                self.0.run_script_prologue(
-                    &mut session,
-                    &mut cost_strategy,
-                    &txn_data,
-                    account_currency_symbol,
-                    &log_context,
-                )
-            }
-            TransactionPayload::Module(_module) => {
-                self.0.check_gas(&txn_data, &log_context)?;
-                self.0.run_module_prologue(
-                    &mut session,
-                    &mut cost_strategy,
-                    &txn_data,
-                    account_currency_symbol,
-                    &log_context,
-                )
-            }
-            TransactionPayload::WriteSet(_cs) => {
-                self.0
-                    .run_writeset_prologue(&mut session, &txn_data, &log_context)
-            }
-        }
-    }
 }
 
 // VMValidator external API
@@ -113,61 +70,30 @@ impl VMValidator for DiemVMValidator {
         transaction: SignedTransaction,
         state_view: &dyn StateView,
     ) -> VMValidatorResult {
-        let data_cache = StateViewCache::new(state_view);
         let _timer = TXN_VALIDATION_SECONDS.start_timer();
-        let gas_price = transaction.gas_unit_price();
-        let currency_code =
-            match account_config::from_currency_code_string(transaction.gas_currency_code()) {
-                Ok(code) => code,
-                Err(_) => {
-                    return VMValidatorResult::new(
-                        Some(StatusCode::INVALID_GAS_SPECIFIER),
-                        gas_price,
-                        GovernanceRole::NonGovernanceRole,
-                    )
-                }
-            };
-
         let txn_sender = transaction.sender();
-        let signature_verified_txn = if let Ok(t) = transaction.check_signature() {
+
+        let txn = if let Ok(t) = transaction.check_signature() {
             t
         } else {
             return VMValidatorResult::new(
                 Some(StatusCode::INVALID_SIGNATURE),
-                gas_price,
+                0,
                 GovernanceRole::NonGovernanceRole,
             );
         };
 
-        let account_role = get_account_role(txn_sender, &data_cache);
-        let normalized_gas_price = match get_currency_info(&currency_code, &data_cache) {
-            Ok(info) => info.convert_to_xdx(gas_price),
-            Err(err) => {
-                return VMValidatorResult::new(
-                    Some(err.status_code()),
-                    gas_price,
-                    GovernanceRole::NonGovernanceRole,
-                )
-            }
-        };
+        let remote_cache = StateViewCache::new(state_view);
+        let account_role = get_account_role(txn_sender, &remote_cache);
 
-        let res = match self.verify_transaction_impl(
-            &signature_verified_txn,
-            &data_cache,
-            &currency_code,
-        ) {
-            Ok(_) => None,
-            Err(err) => {
-                if err.status_code() == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
-                    None
-                } else {
-                    Some(err)
-                }
-            }
-        };
+        let (status, normalized_gas_price) =
+            match validate_signature_checked_transaction(&self.0, &txn, &remote_cache, true) {
+                Ok((price, _)) => (None, price),
+                Err(err) => (Some(err.status_code()), 0),
+            };
 
         // Increment the counter for transactions verified.
-        let counter_label = match res {
+        let counter_label = match status {
             None => "success",
             Some(_) => "failure",
         };
@@ -175,11 +101,7 @@ impl VMValidator for DiemVMValidator {
             .with_label_values(&[counter_label])
             .inc();
 
-        VMValidatorResult::new(
-            res.map(|s| s.status_code()),
-            normalized_gas_price,
-            account_role,
-        )
+        VMValidatorResult::new(status, normalized_gas_price, account_role)
     }
 }
 
@@ -191,4 +113,81 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
             .unwrap_or(GovernanceRole::NonGovernanceRole);
     }
     GovernanceRole::NonGovernanceRole
+}
+
+pub(crate) fn validate_signature_checked_transaction(
+    vm: &DiemVMImpl,
+    transaction: &SignatureCheckedTransaction,
+    remote_cache: &StateViewCache<'_>,
+    allow_too_new: bool,
+) -> Result<(u64, Identifier), VMStatus> {
+    let gas_price = transaction.gas_unit_price();
+    let currency_code_string = transaction.gas_currency_code();
+    let currency_code = match account_config::from_currency_code_string(currency_code_string) {
+        Ok(code) => code,
+        Err(_) => {
+            return Err(VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER));
+        }
+    };
+
+    let normalized_gas_price = match get_currency_info(&currency_code, &remote_cache) {
+        Ok(info) => info.convert_to_xdx(gas_price),
+        Err(err) => {
+            return Err(err);
+        }
+    };
+
+    let txn_data = TransactionMetadata::new(transaction);
+    let mut session = vm.new_session(remote_cache);
+    let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
+    let mut cost_strategy =
+        CostStrategy::system(vm.get_gas_schedule(&log_context)?, GasUnits::new(0));
+    let prologue_status = match transaction.payload() {
+        TransactionPayload::Script(_script) => {
+            vm.check_gas(&txn_data, &log_context)?;
+            vm.run_script_prologue(
+                &mut session,
+                &mut cost_strategy,
+                &txn_data,
+                &currency_code,
+                &log_context,
+            )
+        }
+        TransactionPayload::Module(_module) => {
+            vm.check_gas(&txn_data, &log_context)?;
+            vm.run_module_prologue(
+                &mut session,
+                &mut cost_strategy,
+                &txn_data,
+                &currency_code,
+                &log_context,
+            )
+        }
+        TransactionPayload::WriteSet(_cs) => {
+            vm.run_writeset_prologue(&mut session, &txn_data, &log_context)
+        }
+    };
+
+    if let Err(err) = prologue_status {
+        // Accept "future" sequence numbers during the validation phase so that multiple
+        // transactions from the same account can be in mempool together.
+        if !allow_too_new || err.status_code() != StatusCode::SEQUENCE_NUMBER_TOO_NEW {
+            return Err(err);
+        }
+    }
+    Ok((normalized_gas_price, currency_code))
+}
+
+fn get_currency_info(
+    currency_code: &IdentStr,
+    remote_cache: &StateViewCache,
+) -> Result<CurrencyInfoResource, VMStatus> {
+    let currency_info_path = CurrencyInfoResource::resource_path_for(currency_code.to_owned());
+    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
+        let x = bcs::from_bytes::<CurrencyInfoResource>(&blob)
+            .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
+        Ok(x)
+    } else {
+        Err(VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))
+    }
 }

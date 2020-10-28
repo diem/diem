@@ -4,7 +4,7 @@
 use crate::{
     access_path_cache::AccessPathCache,
     counters::*,
-    data_cache::{RemoteStorage, StateViewCache},
+    data_cache::RemoteStorage,
     errors::{convert_epilogue_error, convert_prologue_error, expect_only_successful_execution},
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
@@ -12,7 +12,7 @@ use crate::{
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::{
-    account_config::{self, CurrencyInfoResource},
+    account_config,
     contract_event::ContractEvent,
     event::EventKey,
     on_chain_config::{ConfigStorage, DiemVersion, OnChainConfig, VMConfig, VMPublishingOption},
@@ -566,20 +566,6 @@ pub fn txn_effects_to_writeset_and_events(
     effects: TransactionEffects,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     txn_effects_to_writeset_and_events_cached(&mut (), effects)
-}
-
-pub(crate) fn get_currency_info(
-    currency_code: &IdentStr,
-    remote_cache: &StateViewCache,
-) -> Result<CurrencyInfoResource, VMStatus> {
-    let currency_info_path = CurrencyInfoResource::resource_path_for(currency_code.to_owned());
-    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
-        let x = bcs::from_bytes::<CurrencyInfoResource>(&blob)
-            .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
-        Ok(x)
-    } else {
-        Err(VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))
-    }
 }
 
 #[test]

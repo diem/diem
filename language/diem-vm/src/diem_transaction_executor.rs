@@ -4,8 +4,9 @@
 use crate::{
     counters::*,
     data_cache::StateViewCache,
+    diem_transaction_validator::validate_signature_checked_transaction,
     diem_vm::{
-        charge_global_write_gas_usage, get_currency_info, get_transaction_output,
+        charge_global_write_gas_usage, get_transaction_output,
         txn_effects_to_writeset_and_events_cached, DiemVMImpl, DiemVMInternals,
     },
     errors::expect_only_successful_execution,
@@ -168,22 +169,8 @@ impl DiemVM {
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
         let mut session = self.0.new_session(remote_cache);
 
-        // Run the validation logic
-        {
-            cost_strategy.disable_metering();
-            self.0.check_gas(txn_data, log_context)?;
-            self.0.run_script_prologue(
-                &mut session,
-                cost_strategy,
-                &txn_data,
-                account_currency_symbol,
-                log_context,
-            )?;
-        }
-
         // Run the execution logic
         {
-            cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
                 .map_err(|e| e.into_vm_status())?;
@@ -230,17 +217,6 @@ impl DiemVM {
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
         let mut session = self.0.new_session(remote_cache);
 
-        // Run validation logic
-        cost_strategy.disable_metering();
-        self.0.check_gas(txn_data, log_context)?;
-        self.0.run_module_prologue(
-            &mut session,
-            cost_strategy,
-            txn_data,
-            account_currency_symbol,
-            log_context,
-        )?;
-
         // Publish the module
         let module_address = if self.0.publishing_option(log_context)?.is_open_module() {
             txn_data.sender()
@@ -248,7 +224,6 @@ impl DiemVM {
             account_config::CORE_CODE_ADDRESS
         };
 
-        cost_strategy.enable_metering();
         cost_strategy
             .charge_intrinsic_gas(txn_data.transaction_size())
             .map_err(|e| e.into_vm_status())?;
@@ -288,25 +263,26 @@ impl DiemVM {
             };
         }
 
+        // Revalidate the transaction.
+        let account_currency_symbol =
+            match validate_signature_checked_transaction(&self.0, txn, remote_cache, false) {
+                Ok((_, currency_code)) => currency_code,
+                Err(err) => {
+                    return discard_error_vm_status(err);
+                }
+            };
+
         let gas_schedule = unwrap_or_discard!(self.0.get_gas_schedule(log_context));
         let txn_data = TransactionMetadata::new(txn);
-        let mut cost_strategy = CostStrategy::system(gas_schedule, txn_data.max_gas_amount());
-        let account_currency_symbol = unwrap_or_discard!(
-            account_config::from_currency_code_string(txn.gas_currency_code())
-                .map_err(|_| VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER))
-        );
-        // Check that the gas currency is valid. It is not used directly here but the
-        // results should be consistent with the checks performed for validation.
-        if let Err(err) = get_currency_info(&account_currency_symbol, remote_cache) {
-            return discard_error_vm_status(err);
-        }
+        let mut cost_strategy = CostStrategy::transaction(gas_schedule, txn_data.max_gas_amount());
+
         let result = match txn.payload() {
             TransactionPayload::Script(s) => self.execute_script(
                 remote_cache,
                 &mut cost_strategy,
                 &txn_data,
                 s,
-                account_currency_symbol.as_ident_str(),
+                &account_currency_symbol,
                 log_context,
             ),
             TransactionPayload::Module(m) => self.execute_module(
@@ -314,7 +290,7 @@ impl DiemVM {
                 &mut cost_strategy,
                 &txn_data,
                 m,
-                account_currency_symbol.as_ident_str(),
+                &account_currency_symbol,
                 log_context,
             ),
             TransactionPayload::WriteSet(_) => {
@@ -341,7 +317,7 @@ impl DiemVM {
                         cost_strategy.remaining_gas(),
                         &txn_data,
                         remote_cache,
-                        account_currency_symbol.as_ident_str(),
+                        &account_currency_symbol,
                         log_context,
                     )
                 }
@@ -492,14 +468,8 @@ impl DiemVM {
             ))
         });
 
-        let txn_data = TransactionMetadata::new(&txn);
-
-        let mut session = self.0.new_session(remote_cache);
-
-        if let Err(e) = self
-            .0
-            .run_writeset_prologue(&mut session, &txn_data, log_context)
-        {
+        // Revalidate the transaction.
+        if let Err(e) = validate_signature_checked_transaction(&self.0, &txn, remote_cache, false) {
             return Ok(discard_error_vm_status(e));
         };
 
@@ -508,7 +478,7 @@ impl DiemVM {
                 match self.execute_writeset(
                     remote_cache,
                     writeset_payload,
-                    Some(txn_data.sender()),
+                    Some(txn.sender()),
                     log_context,
                 ) {
                     Ok(change_set) => change_set,
@@ -524,7 +494,9 @@ impl DiemVM {
             }
         };
 
-        // Emit the reconfiguration event
+        // Run the epilogue function.
+        let mut session = self.0.new_session(remote_cache);
+        let txn_data = TransactionMetadata::new(&txn);
         self.0.run_writeset_epilogue(
             &mut session,
             &txn_data,
