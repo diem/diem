@@ -5,8 +5,9 @@ use crate::{
     counters::*,
     data_cache::StateViewCache,
     errors::expect_only_successful_execution,
+    libra_transaction_validator::validate_signature_checked_transaction,
     libra_vm::{
-        charge_global_write_gas_usage, get_currency_info, get_transaction_output,
+        charge_global_write_gas_usage, get_transaction_output,
         txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
     },
     logging::AdapterLogSchema,
@@ -150,9 +151,9 @@ impl LibraVM {
         ))
     }
 
-    fn execute_script(
+    fn execute_script<R: RemoteCache>(
         &self,
-        remote_cache: &StateViewCache<'_>,
+        mut session: Session<R>,
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         script: &Script,
@@ -166,24 +167,9 @@ impl LibraVM {
         });
 
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
-        let mut session = self.0.new_session(remote_cache);
-
-        // Run the validation logic
-        {
-            cost_strategy.disable_metering();
-            self.0.check_gas(txn_data, log_context)?;
-            self.0.run_script_prologue(
-                &mut session,
-                cost_strategy,
-                &txn_data,
-                account_currency_symbol,
-                log_context,
-            )?;
-        }
 
         // Run the execution logic
         {
-            cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
                 .map_err(|e| e.into_vm_status())?;
@@ -212,9 +198,9 @@ impl LibraVM {
         }
     }
 
-    fn execute_module(
+    fn execute_module<R: RemoteCache>(
         &self,
-        remote_cache: &StateViewCache<'_>,
+        mut session: Session<R>,
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         module: &Module,
@@ -228,18 +214,6 @@ impl LibraVM {
         });
 
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
-        let mut session = self.0.new_session(remote_cache);
-
-        // Run validation logic
-        cost_strategy.disable_metering();
-        self.0.check_gas(txn_data, log_context)?;
-        self.0.run_module_prologue(
-            &mut session,
-            cost_strategy,
-            txn_data,
-            account_currency_symbol,
-            log_context,
-        )?;
 
         // Publish the module
         let module_address = if self.0.publishing_option(log_context)?.is_open_module() {
@@ -248,7 +222,6 @@ impl LibraVM {
             account_config::CORE_CODE_ADDRESS
         };
 
-        cost_strategy.enable_metering();
         cost_strategy
             .charge_intrinsic_gas(txn_data.transaction_size())
             .map_err(|e| e.into_vm_status())?;
@@ -288,33 +261,40 @@ impl LibraVM {
             };
         }
 
+        // Revalidate the transaction.
+        let mut session = self.0.new_session(remote_cache);
+        let account_currency_symbol = match validate_signature_checked_transaction(
+            &self.0,
+            txn,
+            &mut session,
+            remote_cache,
+            false,
+        ) {
+            Ok((_, currency_code)) => currency_code,
+            Err(err) => {
+                return discard_error_vm_status(err);
+            }
+        };
+
         let gas_schedule = unwrap_or_discard!(self.0.get_gas_schedule(log_context));
         let txn_data = TransactionMetadata::new(txn);
-        let mut cost_strategy = CostStrategy::system(gas_schedule, txn_data.max_gas_amount());
-        let account_currency_symbol = unwrap_or_discard!(
-            account_config::from_currency_code_string(txn.gas_currency_code())
-                .map_err(|_| VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER))
-        );
-        // Check that the gas currency is valid. It is not used directly here but the
-        // results should be consistent with the checks performed for validation.
-        if let Err(err) = get_currency_info(&account_currency_symbol, remote_cache) {
-            return discard_error_vm_status(err);
-        }
+        let mut cost_strategy = CostStrategy::transaction(gas_schedule, txn_data.max_gas_amount());
+
         let result = match txn.payload() {
             TransactionPayload::Script(s) => self.execute_script(
-                remote_cache,
+                session,
                 &mut cost_strategy,
                 &txn_data,
                 s,
-                account_currency_symbol.as_ident_str(),
+                &account_currency_symbol,
                 log_context,
             ),
             TransactionPayload::Module(m) => self.execute_module(
-                remote_cache,
+                session,
                 &mut cost_strategy,
                 &txn_data,
                 m,
-                account_currency_symbol.as_ident_str(),
+                &account_currency_symbol,
                 log_context,
             ),
             TransactionPayload::WriteSet(_) => {
@@ -341,7 +321,7 @@ impl LibraVM {
                         cost_strategy.remaining_gas(),
                         &txn_data,
                         remote_cache,
-                        account_currency_symbol.as_ident_str(),
+                        &account_currency_symbol,
                         log_context,
                     )
                 }
@@ -349,9 +329,9 @@ impl LibraVM {
         }
     }
 
-    fn execute_writeset(
+    fn execute_writeset<R: RemoteCache>(
         &self,
-        remote_cache: &StateViewCache<'_>,
+        mut session: Session<R>,
         writeset_payload: &WriteSetPayload,
         txn_sender: Option<AccountAddress>,
         log_context: &impl LogContext,
@@ -362,13 +342,12 @@ impl LibraVM {
         Ok(match writeset_payload {
             WriteSetPayload::Direct(change_set) => change_set.clone(),
             WriteSetPayload::Script { script, execute_as } => {
-                let mut tmp_session = self.0.new_session(remote_cache);
                 let args = convert_txn_args(script.args());
                 let senders = match txn_sender {
                     None => vec![*execute_as],
                     Some(sender) => vec![sender, *execute_as],
                 };
-                let execution_result = tmp_session
+                let execution_result = session
                     .execute_script(
                         script.code().to_vec(),
                         script.ty_args().to_vec(),
@@ -377,7 +356,7 @@ impl LibraVM {
                         &mut cost_strategy,
                         log_context,
                     )
-                    .and_then(|_| tmp_session.finish())
+                    .and_then(|_| session.finish())
                     .map_err(|e| e.into_vm_status());
                 match execution_result {
                     Ok(effect) => {
@@ -414,11 +393,12 @@ impl LibraVM {
         writeset_payload: WriteSetPayload,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-        let change_set =
-            match self.execute_writeset(remote_cache, &writeset_payload, None, log_context) {
-                Ok(cs) => cs,
-                Err(e) => return e,
-            };
+        let session = self.0.new_session(remote_cache);
+        let change_set = match self.execute_writeset(session, &writeset_payload, None, log_context)
+        {
+            Ok(cs) => cs,
+            Err(e) => return e,
+        };
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
@@ -492,13 +472,10 @@ impl LibraVM {
             ))
         });
 
-        let txn_data = TransactionMetadata::new(&txn);
-
+        // Revalidate the transaction.
         let mut session = self.0.new_session(remote_cache);
-
-        if let Err(e) = self
-            .0
-            .run_writeset_prologue(&mut session, &txn_data, log_context)
+        if let Err(e) =
+            validate_signature_checked_transaction(&self.0, &txn, &mut session, remote_cache, false)
         {
             return Ok(discard_error_vm_status(e));
         };
@@ -506,9 +483,9 @@ impl LibraVM {
         let change_set = match txn.payload() {
             TransactionPayload::WriteSet(writeset_payload) => {
                 match self.execute_writeset(
-                    remote_cache,
+                    session,
                     writeset_payload,
-                    Some(txn_data.sender()),
+                    Some(txn.sender()),
                     log_context,
                 ) {
                     Ok(change_set) => change_set,
@@ -524,7 +501,9 @@ impl LibraVM {
             }
         };
 
-        // Emit the reconfiguration event
+        // Run the epilogue function.
+        let mut session = self.0.new_session(remote_cache);
+        let txn_data = TransactionMetadata::new(&txn);
         self.0.run_writeset_epilogue(
             &mut session,
             &txn_data,
