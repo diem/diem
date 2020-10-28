@@ -254,6 +254,7 @@ fn twins_proposer_test() {
 }
 
 #[test]
+#[ignore] // TODO: https://github.com/libra/libra/issues/6615
 /// This test checks that when a node and its twin are both leaders
 /// for a round, only one of the two proposals gets committed
 ///
