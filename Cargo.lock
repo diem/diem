@@ -1161,6 +1161,19 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "3.0.0"
+source = "git+https://github.com/calibra/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2"
+dependencies = [
+ "byteorder",
+ "digest 0.9.0",
+ "fiat-crypto",
+ "rand_core 0.5.1",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "curve25519-dalek"
+version = "3.0.0"
 source = "git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2"
 dependencies = [
  "byteorder",
@@ -1394,22 +1407,23 @@ dependencies = [
 
 [[package]]
 name = "ed25519-dalek"
-version = "1.0.0"
-source = "git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat4#44d1191bb2aedf18418071992848fd8028e89b35"
+version = "1.0.1"
+source = "git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat5#88603ebf0196015e9b4106844f9f47ed6c01e951"
 dependencies = [
  "curve25519-dalek 3.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3)",
  "ed25519",
  "rand 0.7.3",
  "serde",
+ "serde_bytes",
  "sha2",
  "zeroize",
 ]
 
 [[package]]
 name = "ed25519-dalek"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53d2e93f837d749c16d118e7ddf7a4dfd0ac8f452cf51e46e9348824e5ef6851"
+checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519",
@@ -2700,8 +2714,8 @@ dependencies = [
  "curve25519-dalek 3.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3)",
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.9.0",
- "ed25519-dalek 1.0.0 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat4)",
- "ed25519-dalek 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ed25519-dalek 1.0.1 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat5)",
+ "ed25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "hkdf",
  "libra-canonical-serialization",
@@ -2726,8 +2740,8 @@ dependencies = [
  "thiserror",
  "tiny-keccak",
  "trybuild",
- "x25519-dalek 1.0.1 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat3)",
- "x25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x25519-dalek 1.1.0 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat4)",
+ "x25519-dalek 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3580,8 +3594,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
- "ed25519-dalek 1.0.0 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat4)",
- "ed25519-dalek 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ed25519-dalek 1.0.1 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat5)",
+ "ed25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "hmac 0.9.0",
  "libra-crypto",
@@ -7413,19 +7427,19 @@ dependencies = [
 
 [[package]]
 name = "x25519-dalek"
-version = "1.0.1"
-source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat3#494bf274940818b1896d0492fcf2c66a2ee50736"
+version = "1.1.0"
+source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat4#dc82145d8d25529d8aecab93d3ddf7062a74c719"
 dependencies = [
- "curve25519-dalek 3.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3)",
+ "curve25519-dalek 3.0.0 (git+https://github.com/calibra/curve25519-dalek.git?branch=fiat3)",
  "rand_core 0.5.1",
  "zeroize",
 ]
 
 [[package]]
 name = "x25519-dalek"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00ffb05621d7d051df0f020edf3e5db20797a4e522bf1f9c5dfa20603f1c85f6"
+checksum = "bc614d95359fd7afc321b66d2107ede58b246b844cf5d8a0adcca413e439f088"
 dependencies = [
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1",
