@@ -30,7 +30,6 @@ nav {
   height: 120px;
 }
 .navPusher {
-  height: calc(100vh - 120px);
   min-height: calc(100vh - 120px);
   overflow-y: scroll;
   padding-top: 0;
@@ -474,7 +473,6 @@ article p img.download {
     height: 80px;
   }
   .navPusher {
-    height: calc(100vh - 120px);
     min-height: calc(100vh - 120px);
     padding-top: 40px;
   }
