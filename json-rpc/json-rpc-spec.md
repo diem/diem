@@ -22,6 +22,7 @@ List of released stable methods (unless specifically mentioned, all parameters a
 
 * [Go] (https://github.com/libra/libra-client-sdk-go)
 * [Java] (https://github.com/libra/libra-client-sdk-java)
+* [Python] (https://github.com/libra/libra-client-sdk-python)
 
 
 ## JSON-RPC specification
@@ -83,3 +84,12 @@ Unless specifically mentioned below, Libra JSON-RPC will return the default erro
 We use URI versioning to version our API, current version is v1.
 For example, to hit testnet, the server url is: https://testnet.libra.org/v1.
 You may check [API-CHANGELOG.md](API-CHANGELOG.md) and learn more about our API changes.
+
+## CORS support
+
+[CORS](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing) support is embeded.
+
+Allows:
+* Origin: any
+* Request-Method: POST
+* Request-Headers: content-type

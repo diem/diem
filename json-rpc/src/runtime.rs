@@ -130,6 +130,10 @@ pub fn bootstrap(
                     .and_then(|v| v.to_str().ok())
             })
         }))
+        // CORS is required for full node server to accept requests from different domain web pages.
+        // It needs to be configured for the json-rpc request accepting method and headers.
+        // Technically it's fine for any headers, but for simplicity we only set must have header
+        // content-type.
         .with(
             warp::cors()
                 .allow_any_origin()
