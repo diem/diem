@@ -85,6 +85,16 @@ impl<H: CryptoHasher> CryptoHash for MerkleTreeInternalNode<H> {
         let mut state = Self::Hasher::default();
         state.update(self.left_child.as_ref());
         state.update(self.right_child.as_ref());
+        state.finish();
+
+        let mut state = Self::Hasher::default();
+        state.update(self.left_child.as_ref());
+        state.update(self.right_child.as_ref());
+        state.finish();
+
+        let mut state = Self::Hasher::default();
+        state.update(self.left_child.as_ref());
+        state.update(self.right_child.as_ref());
         state.finish()
     }
 }

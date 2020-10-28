@@ -405,9 +405,13 @@ where
             //     eprintln!("Couldn't write to file: {}", e);
             // }
 
-            info!(" AAA total txn so far {}", NUM_TXN_BENCH);
-            info!(" AAA elapsed  {:?}", txn_acc_dur);
-            info!(" AAA elapsed whole {:?}", func_dur);
+            info!(" AAA num_txn = {}, txn acc time = {:?}, func time = {:?}",
+                  NUM_TXN_BENCH,
+                  txn_acc_dur,
+                  func_dur,
+            );
+            // info!(" AAA elapsed  {:?}", txn_acc_dur);
+            // info!(" AAA elapsed whole {:?}", func_dur);
         }
         
         Ok(ProcessedVMOutput::new(
