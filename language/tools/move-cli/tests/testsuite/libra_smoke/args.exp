@@ -6,7 +6,7 @@ Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000B1E55ED), U64(1)] }))) as the 1th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
   Changed 28 resource(s) under address 0000000000000000000000000A550C18:
-    Added type 0x1::Event::EventHandleGenerator: [U64(18), Address(00000000)]
+    Added type 0x1::Event::EventHandleGenerator: [U64(18), Address(a550c18)]
     Added type 0x1::LibraTimestamp::CurrentTimeMicroseconds: [U64(0)]
     Added type 0x1::Roles::RoleId: [U64(0)]
     Added type 0x1::AccountFreezing::FreezeEventsHolder: [[U64(0), [15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
@@ -17,7 +17,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::DualAttestation::Limit: [U64(1000000000)]
     Added type 0x1::SlidingNonce::SlidingNonce: [U64(0), U128(0)]
     Added type 0x1::LibraAccount::AccountOperationsCapability: [[false], [U64(2), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], U64(0)]
+    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(a550c18)]]], [[[Address(a550c18)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], U64(0)]
     Added type 0x1::LibraAccount::LibraWriteSetManager: [[U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 0x1::LibraSystem::CapabilityHolder: [[false]]
     Added type 0x1::LibraBlock::BlockMetadata: [U64(0), [U64(0), [17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
@@ -35,11 +35,11 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::Libra::CurrencyInfo<0x1::Coin1::Coin1>: [U128(0), U64(0), [U64(4294967296)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(0), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 0x1::Libra::CurrencyInfo<0x1::LBR::LBR>: [U128(0), U64(0), [U64(4294967296)], true, U64(1000000), U64(1000), [76, 66, 82], false, [U64(0), [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
   Changed 8 resource(s) under address 0000000000000000000000000B1E55ED:
-    Added type 0x1::Event::EventHandleGenerator: [U64(2), Address(00000000)]
+    Added type 0x1::Event::EventHandleGenerator: [U64(2), Address(b1e55ed)]
     Added type 0x1::Roles::RoleId: [U64(1)]
     Added type 0x1::AccountFreezing::FreezingBit: [false]
     Added type 0x1::SlidingNonce::SlidingNonce: [U64(0), U128(0)]
-    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237]], [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237]], U64(0)]
+    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(b1e55ed)]]], [[[Address(b1e55ed)]]], [U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237]], [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 30, 85, 237]], U64(0)]
     Added type 0x1::Libra::BurnCapability<0x1::Coin1::Coin1>: [false]
     Added type 0x1::Libra::MintCapability<0x1::Coin1::Coin1>: [false]
     Added type 0x1::TransactionFee::TransactionFee<0x1::Coin1::Coin1>: [[U64(0)], [[U64(0)]]]
@@ -49,12 +49,12 @@ Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(000000000000000000000000000000DD), U64(2)] }))) as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
   Changed 10 resource(s) under address 000000000000000000000000000000DD:
-    Added type 0x1::Event::EventHandleGenerator: [U64(5), Address(00000000)]
+    Added type 0x1::Event::EventHandleGenerator: [U64(5), Address(dd)]
     Added type 0x1::Roles::RoleId: [U64(2)]
     Added type 0x1::AccountFreezing::FreezingBit: [false]
     Added type 0x1::DesignatedDealer::Dealer: [[U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]]]
     Added type 0x1::DualAttestation::Credential: [[68, 68], [], [], U64(18446744073709551615), [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]]]
-    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
+    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(dd)]]], [[[Address(dd)]]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
     Added type 0x1::Libra::Preburn<0x1::Coin1::Coin1>: [[U64(0)]]
     Added type 0x1::DesignatedDealer::TierInfo<0x1::Coin1::Coin1>: [U64(0), U64(0), [500000000000, 5000000000000, 50000000000000, 500000000000000]]
     Added type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(0)]]
@@ -67,12 +67,12 @@ Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000A), U64(5)] }))) as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
   Changed 8 resource(s) under address 0000000000000000000000000000000A:
-    Added type 0x1::Event::EventHandleGenerator: [U64(4), Address(00000000)]
+    Added type 0x1::Event::EventHandleGenerator: [U64(4), Address(a)]
     Added type 0x1::Roles::RoleId: [U64(5)]
     Added type 0x1::AccountFreezing::FreezingBit: [false]
     Added type 0x1::VASP::ParentVASP: [U64(0)]
     Added type 0x1::DualAttestation::Credential: [[86, 65, 83, 80, 95, 65], [], [], U64(18446744073709551615), [U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]]]
-    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
+    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(a)]]], [[[Address(a)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
     Added type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(0)]]
     Added type 0x1::LibraAccount::Balance<0x1::LBR::LBR>: [[U64(0)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
@@ -83,12 +83,12 @@ Emitted 1 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000B), U64(5)] }))) as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
   Changed 8 resource(s) under address 0000000000000000000000000000000B:
-    Added type 0x1::Event::EventHandleGenerator: [U64(4), Address(00000000)]
+    Added type 0x1::Event::EventHandleGenerator: [U64(4), Address(b)]
     Added type 0x1::Roles::RoleId: [U64(5)]
     Added type 0x1::AccountFreezing::FreezingBit: [false]
     Added type 0x1::VASP::ParentVASP: [U64(0)]
     Added type 0x1::DualAttestation::Credential: [[86, 65, 83, 80, 95, 66], [], [], U64(18446744073709551615), [U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]]]
-    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], U64(0)]
+    Added type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11], [[[Address(b)]]], [[[Address(b)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], U64(0)]
     Added type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(0)]]
     Added type 0x1::LibraAccount::Balance<0x1::LBR::LBR>: [[U64(0)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
@@ -102,7 +102,7 @@ Emitted Value(Container(StructC(RefCell { value: [U64(1000), Container(VecU8(Ref
 Changed resource(s) under 2 address(es):
   Changed 4 resource(s) under address 000000000000000000000000000000DD:
     Changed type 0x1::DesignatedDealer::Dealer: [[U64(1), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]]]
-    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
+    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(dd)]]], [[[Address(dd)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
     Changed type 0x1::DesignatedDealer::TierInfo<0x1::Coin1::Coin1>: [U64(0), U64(1000), [500000000000, 5000000000000, 50000000000000, 500000000000000]]
     Changed type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(1000)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
@@ -114,10 +114,10 @@ Emitted Value(Container(StructC(RefCell { value: [U64(700), Container(VecU8(RefC
 Emitted Value(Container(StructC(RefCell { value: [U64(700), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(000000000000000000000000000000DD), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
 Changed resource(s) under 2 address(es):
   Changed 2 resource(s) under address 0000000000000000000000000000000A:
-    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
+    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(a)]]], [[[Address(a)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
     Changed type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(700)]]
   Changed 2 resource(s) under address 000000000000000000000000000000DD:
-    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(1), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
+    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(dd)]]], [[[Address(dd)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(1), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
     Changed type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(300)]]
 Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xA --args 0xB 500 x"" x"" -v`:
 Compiling transaction script...
@@ -126,8 +126,8 @@ Emitted Value(Container(StructC(RefCell { value: [U64(500), Container(VecU8(RefC
 Emitted Value(Container(StructC(RefCell { value: [U64(500), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(0000000000000000000000000000000A), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]
 Changed resource(s) under 2 address(es):
   Changed 2 resource(s) under address 0000000000000000000000000000000A:
-    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
+    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10], [[[Address(a)]]], [[[Address(a)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]], U64(0)]
     Changed type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(200)]]
   Changed 2 resource(s) under address 0000000000000000000000000000000B:
-    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], U64(0)]
+    Changed type 0x1::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11], [[[Address(b)]]], [[[Address(b)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], U64(0)]
     Changed type 0x1::LibraAccount::Balance<0x1::Coin1::Coin1>: [[U64(500)]]

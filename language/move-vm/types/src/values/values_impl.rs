@@ -2348,7 +2348,7 @@ impl Display for ValueImpl {
             Self::U64(x) => write!(f, "U64({})", x),
             Self::U128(x) => write!(f, "U128({})", x),
             Self::Bool(x) => write!(f, "{}", x),
-            Self::Address(addr) => write!(f, "Address({})", addr.short_str()),
+            Self::Address(addr) => write!(f, "Address({})", addr.short_str_lossless()),
 
             Self::Container(r) => write!(f, "{}", r),
 

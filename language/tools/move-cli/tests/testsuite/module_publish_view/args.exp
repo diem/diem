@@ -3,7 +3,7 @@ Command `publish move_src -v`:
 Compiling Move modules...
 Found and compiled 1 modules
 Command `view move_data/0x00000000000000000000000000000042/modules/Module.mv`:
-module 00000000.Module {
+module 42.Module {
 resource S {
 	i: u64
 }

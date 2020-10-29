@@ -207,7 +207,7 @@ fn pretty_print_value(
         AnnotatedMoveValue::U8(v) => write!(f, "{}u8", v),
         AnnotatedMoveValue::U64(v) => write!(f, "{}", v),
         AnnotatedMoveValue::U128(v) => write!(f, "{}u128", v),
-        AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str()),
+        AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str_lossless()),
         AnnotatedMoveValue::Vector(v) => {
             writeln!(f, "[")?;
             for value in v.iter() {
