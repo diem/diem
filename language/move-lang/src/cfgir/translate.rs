@@ -93,6 +93,10 @@ impl Context {
             .map(|(lbl, ordering)| (lbl, Label(ordering)))
             .collect();
         let (start, blocks) = G::remap_labels(&remapping, start.unwrap(), blocks);
+        let infinite_loop_starts = infinite_loop_starts
+            .into_iter()
+            .map(|orig| remapping[&orig])
+            .collect();
         (start, blocks, infinite_loop_starts)
     }
 }
