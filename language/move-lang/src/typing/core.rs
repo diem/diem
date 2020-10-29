@@ -1103,7 +1103,7 @@ fn instantiate_apply(
     loc: Loc,
     kind_opt: Option<Kind>,
     n: TypeName,
-    mut ty_args: Vec<Type>,
+    ty_args: Vec<Type>,
 ) -> Type_ {
     let tparam_constraints: Vec<Kind> = match &n {
         sp!(nloc, N::TypeName_::Builtin(b)) => b.value.tparam_constraints(*nloc),
@@ -1115,13 +1115,6 @@ fn instantiate_apply(
             tps.iter().map(|tp| tp.kind.clone()).collect()
         }
     };
-    ty_args = check_type_argument_arity(
-        context,
-        loc,
-        || format!("{}", &n),
-        ty_args,
-        &tparam_constraints,
-    );
 
     let tys = instantiate_type_args(context, loc, Some(&n.value), ty_args, tparam_constraints);
     Type_::Apply(kind_opt, n, tys)
@@ -1185,7 +1178,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
         context.error(vec![(
             loc,
             format!(
-                "Invalid instantiation of '{}'. Expected {} type arguments but got {}",
+                "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
                 name_f(),
                 arity,
                 args_len

@@ -6,7 +6,7 @@ error:
    │         ^^^^^^^^^^^^^ Invalid call to builtin function: 'borrow_global'
    ·
  8 │         borrow_global<R1, R2>(0x1);
-   │         -------------------------- Expected 1 type arguments but got 2
+   │         -------------------------- Expected 1 type argument(s) but got 2
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │         ^^^^^^ Invalid call to builtin function: 'exists'
    ·
  9 │         exists<R1, R2, R3>(0x1);
-   │         ----------------------- Expected 1 type arguments but got 3
+   │         ----------------------- Expected 1 type argument(s) but got 3
    │
 
 error: 
@@ -28,7 +28,7 @@ error:
     │                 ^^^^^^^^^ Invalid call to builtin function: 'move_from'
     ·
  10 │         R1 {} = move_from<R1, R2, R3, R4>(0x1);
-    │                 ------------------------------ Expected 1 type arguments but got 4
+    │                 ------------------------------ Expected 1 type argument(s) but got 4
     │
 
 error: 
@@ -39,6 +39,6 @@ error:
     │         ^^^^^^^ Invalid call to builtin function: 'move_to'
     ·
  11 │         move_to<R1, R2, R3, R4, R5>(account, R1{});
-    │         ------------------------------------------ Expected 1 type arguments but got 5
+    │         ------------------------------------------ Expected 1 type argument(s) but got 5
     │
 

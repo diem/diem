@@ -37,7 +37,7 @@ impl ResolvedType {
 struct Context {
     errors: Errors,
     current_module: Option<ModuleIdent>,
-    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>)>>,
+    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>, usize)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
     unscoped_constants: BTreeMap<String, Loc>,
@@ -56,7 +56,9 @@ impl Context {
                     .iter()
                     .map(|(s, sdef)| {
                         let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
-                        (s.value().to_string(), (s.loc(), mident.clone(), kopt))
+                        let arity = sdef.type_parameters.len();
+                        let sname = s.value().to_string();
+                        (sname, (s.loc(), mident.clone(), kopt, arity))
                     })
                     .collect();
                 (mident, mems)
@@ -119,7 +121,7 @@ impl Context {
         loc: Loc,
         m: &ModuleIdent,
         n: &Name,
-    ) -> Option<(Loc, StructName, Option<Kind>)> {
+    ) -> Option<(Loc, StructName, Option<Kind>, usize)> {
         let types = match self.scoped_types.get(m) {
             None => {
                 self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
@@ -138,7 +140,9 @@ impl Context {
                 )]);
                 None
             }
-            Some((decl_loc, _, rloc)) => Some((decl_loc, StructName(n.clone()), rloc)),
+            Some((decl_loc, _, rloc, arity)) => {
+                Some((decl_loc, StructName(n.clone()), rloc, arity))
+            }
         }
     }
 
@@ -452,7 +456,7 @@ fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Optio
             None
         }
         EN::ModuleAccess(m, n) => {
-            let (decl_loc, _, resource_opt) = context.resolve_module_type(loc, &m, &n)?;
+            let (decl_loc, _, resource_opt, _) = context.resolve_module_type(loc, &m, &n)?;
             acquires_type_struct(context, loc, decl_loc, m, StructName(n), resource_opt)
         }
     }
@@ -636,9 +640,12 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
                 NT::UnresolvedError
             }
             Some(RT::BuiltinType) => {
-                let ty_args = types(context, tys);
                 let bn_ = N::BuiltinTypeName_::resolve(&n.value).unwrap();
-                NT::builtin_(sp(loc, bn_), ty_args)
+                let name_f = || format!("{}", &bn_);
+                let arity = bn_.tparam_constraints(loc).len();
+                let tys = types(context, tys);
+                let tys = check_type_argument_arity(context, loc, name_f, tys, arity);
+                NT::builtin_(sp(loc, bn_), tys)
             }
             Some(RT::TParam(_, tp)) => {
                 if !tys.is_empty() {
@@ -652,21 +659,55 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
                 }
             }
         },
-        ET::Apply(sp!(loc, EN::ModuleAccess(m, n)), tys) => {
-            match context.resolve_module_type(loc, &m, &n) {
+        ET::Apply(sp!(nloc, EN::ModuleAccess(m, n)), tys) => {
+            match context.resolve_module_type(nloc, &m, &n) {
                 None => {
                     assert!(context.has_errors());
                     NT::UnresolvedError
                 }
-                Some((_, _, resource_opt)) => {
-                    let tn = sp(loc, NN::ModuleType(m, StructName(n)));
-                    NT::Apply(resource_opt, tn, types(context, tys))
+                Some((_, _, resource_opt, arity)) => {
+                    let tn = sp(nloc, NN::ModuleType(m, StructName(n)));
+                    let tys = types(context, tys);
+                    let name_f = || format!("{}", tn);
+                    let tys = check_type_argument_arity(context, loc, name_f, tys, arity);
+                    NT::Apply(resource_opt, tn, tys)
                 }
             }
         }
         ET::Fun(_, _) => panic!("ICE only allowed in spec context"),
     };
     sp(loc, ty_)
+}
+
+fn check_type_argument_arity<F: FnOnce() -> String>(
+    context: &mut Context,
+    loc: Loc,
+    name_f: F,
+    mut ty_args: Vec<N::Type>,
+    arity: usize,
+) -> Vec<N::Type> {
+    let args_len = ty_args.len();
+    if args_len != arity {
+        context.error(vec![(
+            loc,
+            format!(
+                "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",
+                name_f(),
+                arity,
+                args_len
+            ),
+        )])
+    }
+
+    while ty_args.len() > arity {
+        ty_args.pop();
+    }
+
+    while ty_args.len() < arity {
+        ty_args.push(sp(loc, N::Type_::UnresolvedError))
+    }
+
+    ty_args
 }
 
 //**************************************************************************************************
@@ -1014,7 +1055,7 @@ fn check_builtin_ty_args(
                 (b.loc, format!("Invalid call to builtin function: '{}'", b)),
                 (
                     loc,
-                    format!("Expected {} type arguments but got {}", arity, len),
+                    format!("Expected {} type argument(s) but got {}", arity, len),
                 ),
             ]);
         }

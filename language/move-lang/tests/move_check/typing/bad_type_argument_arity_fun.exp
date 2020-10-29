@@ -1,0 +1,35 @@
+error: 
+
+    ┌── tests/move_check/typing/bad_type_argument_arity_fun.move:11:17 ───
+    │
+ 11 │         let x = foo<>(0);
+    │                 ^^^^^^^^ Invalid instantiation of '0x42::M::foo'. Expected 1 type argument(s) but got 0
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bad_type_argument_arity_fun.move:12:17 ───
+    │
+ 12 │         let b = foo<bool, u64>(false);
+    │                 ^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::foo'. Expected 1 type argument(s) but got 2
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bad_type_argument_arity_fun.move:14:17 ───
+    │
+ 14 │         let r = foo<&mut u64, bool>(&mut 0);
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::foo'. Expected 1 type argument(s) but got 2
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/bad_type_argument_arity_fun.move:14:17 ───
+    │
+ 14 │         let r = foo<&mut u64, bool>(&mut 0);
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
+    ·
+ 14 │         let r = foo<&mut u64, bool>(&mut 0);
+    │                     -------- Expected a single non-reference type, but found: '&mut u64'
+    │
+
