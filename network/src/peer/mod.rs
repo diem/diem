@@ -148,7 +148,7 @@ where
 
     pub async fn start(mut self) {
         let remote_peer_id = self.remote_peer_id();
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context)
                 .connection_metadata(&self.connection_metadata),
             "{} Starting Peer actor for peer: {:?}",
@@ -213,7 +213,7 @@ where
                                         remote_peer_id.short_str(),
                                         err
                                     );
-                                    self.close_connection(DisconnectReason::ConnectionLost).await;
+                                    self.close_connection(DisconnectReason::ConnectionLost);
                                 }
                                 None => {
                                     info!(
@@ -223,7 +223,7 @@ where
                                         self.network_context,
                                         remote_peer_id.short_str()
                                     );
-                                    self.close_connection(DisconnectReason::ConnectionLost).await;
+                                    self.close_connection(DisconnectReason::ConnectionLost);
                                 }
                             }
                         },
@@ -266,7 +266,7 @@ where
             }
         }
 
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context)
                 .connection_metadata(&self.connection_metadata),
             "{} Peer actor '{}' for terminated",
@@ -491,13 +491,11 @@ where
                     );
                 }
             }
-            PeerRequest::CloseConnection => {
-                self.close_connection(DisconnectReason::Requested).await;
-            }
+            PeerRequest::CloseConnection => self.close_connection(DisconnectReason::Requested),
         }
     }
 
-    async fn close_connection(&mut self, reason: DisconnectReason) {
+    fn close_connection(&mut self, reason: DisconnectReason) {
         // Set the state of the actor to `State::ShuttingDown` to true ensures that the peer actor
         // will terminate and close the connection.
         self.state = State::ShuttingDown(reason);

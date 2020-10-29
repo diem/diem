@@ -105,7 +105,7 @@ impl DirectSend {
 
     pub async fn start(mut self) {
         let peer_id = self.peer_handle.peer_id();
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Starting direct send actor for peer: {}",
             self.network_context,
@@ -131,7 +131,7 @@ impl DirectSend {
                 }
             }
         }
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Direct send actor for '{}' terminated",
             self.network_context,

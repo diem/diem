@@ -236,7 +236,7 @@ impl Rpc {
         let mut inbound_rpc_tasks = InboundRpcTasks::new();
         let mut outbound_rpc_tasks = OutboundRpcTasks::new();
 
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Rpc actor for '{}' started",
             self.network_context,
@@ -265,7 +265,7 @@ impl Rpc {
                 }
             }
         }
-        info!(
+        trace!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Rpc actor for '{}' terminated",
             self.network_context,
