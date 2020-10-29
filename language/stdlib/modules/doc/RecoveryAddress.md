@@ -456,6 +456,14 @@ A RecoveryAddress has its own <code>KeyRotationCapability</code>.
 ### Persistence of KeyRotationCapability
 
 
+<code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> persists
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr)):
+    <b>exists</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr);
+</code></pre>
+
+
 If <code>recovery_addr</code> holds the <code>KeyRotationCapability</code> of <code>to_recovery_addr</code>
 in the previous state, then it continues to hold the capability after the update.
 

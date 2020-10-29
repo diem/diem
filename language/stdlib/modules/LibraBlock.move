@@ -111,6 +111,8 @@ module LibraBlock {
     spec module { } // Switch documentation context to module level.
 
     /// # Initialization
+    /// This implies that `BlockMetadata` is published after initialization and stays published
+    /// ever after
     spec module {
         invariant [global] LibraTimestamp::is_operating() ==> is_initialized();
     }

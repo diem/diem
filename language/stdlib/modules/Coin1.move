@@ -51,8 +51,21 @@ module Coin1 {
 
     /// # Persistence of Resources
     spec module {
+        use 0x1::CoreAddresses;
+
         /// After genesis, Coin1 is registered.
         invariant [global] LibraTimestamp::is_operating() ==> Libra::is_currency<Coin1>();
+
+        /// After genesis, `LimitsDefinition<Coin1>` is published at Libra root. It's published by
+        /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
+        /// it does not hold for all types (but does hold for Coin1).
+        invariant [global] LibraTimestamp::is_operating()
+            ==> exists<AccountLimits::LimitsDefinition<Coin1>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// `LimitsDefinition<Coin1>` is not published at any other address
+        invariant [global] forall addr: address where exists<AccountLimits::LimitsDefinition<Coin1>>(addr):
+            addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
+
     }
 }
 }

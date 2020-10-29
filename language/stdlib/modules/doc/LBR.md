@@ -343,6 +343,32 @@ Returns true if CoinType is LBR.
 </code></pre>
 
 
+After genesis, <code>LimitsDefinition&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;</code> is published at Libra root. It's published by
+AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
+it does not hold for all types (but does hold for LBR).
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>()
+    ==&gt; <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+<code>LimitsDefinition&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;</code> is not published at any other address
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(addr):
+    addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+</code></pre>
+
+
+<code><a href="LBR.md#0x1_LBR_Reserve">Reserve</a></code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>old</b>(<b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>()))
+    ==&gt; <b>exists</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="LBR.md#0x1_LBR_reserve_address">reserve_address</a>());
+</code></pre>
+
+
 [//]: # ("File containing references which can be used from documentation")
 [ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
 [ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles

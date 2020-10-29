@@ -184,6 +184,12 @@ module AccountFreezing {
         invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
+        /// resource struct FreezingBit persists
+        invariant update [global] forall addr: address where old(exists<FreezingBit>(addr)): exists<FreezingBit>(addr);
+
+        /// resource struct FreezeEventsHolder is there forever after initialization
+        invariant update [global] LibraTimestamp::is_operating() ==> exists<FreezeEventsHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
         /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H7]][PERMISSION].
         apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
 
@@ -192,8 +198,8 @@ module AccountFreezing {
     }
 
     spec schema FreezingBitRemainsSame {
-        ensures forall a: address where old(exists<FreezingBit>(a)):
-            global<FreezingBit>(a).is_frozen == old(global<FreezingBit>(a).is_frozen);
+        ensures forall addr: address where old(exists<FreezingBit>(addr)):
+            global<FreezingBit>(addr).is_frozen == old(global<FreezingBit>(addr).is_frozen);
     }
 
     /// # Helper Functions

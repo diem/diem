@@ -1285,6 +1285,25 @@ Checks whether the limits definition is unrestricted.
 ## Module Specification
 
 
+
+<code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;</code> persists after publication.
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    <b>forall</b> addr: address, coin_type: type <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(addr)):
+        <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(addr);
+</code></pre>
+
+
+<code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> persists after publication
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr)):
+        <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr);
+</code></pre>
+
+
 Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> exists if a <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code> exists.
 
 

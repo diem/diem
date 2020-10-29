@@ -1280,7 +1280,7 @@ TreasuryCompliance role.
 </code></pre>
 
 
-ParentVASP roles are only granted by LibraRoot [[A6]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>()</code> is only
+ParentVASP roles are only granted by TreasuryCompliance [[A6]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>()</code> is only
 published through <code>new_parent_vasp_role</code> which aborts if <code>creating_account</code> does not have the TreasuryCompliance role.
 
 

@@ -138,6 +138,20 @@ module LBR {
         define spec_is_lbr<CoinType>(): bool {
             type<CoinType>() == type<LBR>()
         }
+
+        /// After genesis, `LimitsDefinition<LBR>` is published at Libra root. It's published by
+        /// AccountLimits::publish_unrestricted_limits, but we can't prove the condition there because
+        /// it does not hold for all types (but does hold for LBR).
+        invariant [global] LibraTimestamp::is_operating()
+            ==> exists<AccountLimits::LimitsDefinition<LBR>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// `LimitsDefinition<LBR>` is not published at any other address
+        invariant [global] forall addr: address where exists<AccountLimits::LimitsDefinition<LBR>>(addr):
+            addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
+
+        /// `Reserve` is persistent
+        invariant update [global] old(exists<Reserve>(reserve_address()))
+            ==> exists<Reserve>(reserve_address());
     }
 
 }

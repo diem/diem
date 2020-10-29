@@ -482,6 +482,13 @@ Helper schema to specify that a function aborts if not operating.
 
 
 
+After genesis, <code><a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a></code> is published forever
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">is_operating</a>() ==&gt; <b>exists</b>&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
 After genesis, time progresses monotonically.
 
 

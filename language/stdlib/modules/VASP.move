@@ -197,7 +197,8 @@ module VASP {
     }
 
 
-    /// Return the number of child accounts for this VASP.
+    /// If `addr` is the address of a `ParentVASP`, return the number of children.
+    /// If it is the address of a ChildVASP, return the number of children of the parent.
     /// The total number of accounts for this VASP is num_children() + 1
     /// Aborts if `addr` is not a ParentVASP or ChildVASP account
     public fun num_children(addr: address): u64  acquires ChildVASP, ParentVASP {
@@ -215,6 +216,15 @@ module VASP {
     // **************** SPECIFICATIONS ****************
     spec module {} // switch documentation context back to module level
 
+    /// # Persistence of parent and child VASPs
+    spec module {
+        invariant update [global] forall addr: address where old(is_parent(addr)):
+            is_parent(addr);
+
+        invariant update [global] forall addr: address where old(is_child(addr)):
+            is_child(addr);
+    }
+
     /// # Existence of Parents
     spec module {
         invariant [global]
@@ -222,11 +232,10 @@ module VASP {
                 is_parent(global<ChildVASP>(child_addr).parent_vasp_addr);
     }
 
-
     /// # Creation of Child VASPs
 
     spec module {
-        /// Only a parent VASP calling `Self::publish_child_vast_credential` can create
+        /// Only a parent VASP calling `Self::publish_child_vasp_credential` can create
         /// child VASPs.
         apply ChildVASPsDontChange to *<T>, * except publish_child_vasp_credential;
 

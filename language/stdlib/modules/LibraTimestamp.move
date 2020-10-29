@@ -158,6 +158,9 @@ module LibraTimestamp {
     spec module {} // switch documentation context to module level
 
     spec module {
+        /// After genesis, `CurrentTimeMicroseconds` is published forever
+        invariant [global] is_operating() ==> exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
         /// After genesis, time progresses monotonically.
         invariant update [global]
             old(is_operating()) ==> old(spec_now_microseconds()) <= spec_now_microseconds();
@@ -171,5 +174,4 @@ module LibraTimestamp {
 
 
 }
-
 }

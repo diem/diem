@@ -128,5 +128,27 @@ module SlidingNonce {
         ensures exists<SlidingNonce>(Signer::spec_address_of(account));
     }
 
+    // =================================================================
+    // Module Specification
+
+    spec module {} // Switch to module documentation context
+
+    spec module {
+        use 0x1::CoreAddresses;
+        use 0x1::LibraTimestamp;
+
+        /// Sliding nonces are initialized at Libra root and treasury compliance addresses
+        invariant [global] LibraTimestamp::is_operating()
+            ==> exists<SlidingNonce>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        invariant [global] LibraTimestamp::is_operating()
+            ==> exists<SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
+
+        // In the current code, only Libra root and Treasury compliance have sliding nonces.
+        // That is a difficult cross-module invariant to prove (it depends on Genesis and
+        // LibraAccount). Additional modules could be added that call the publish functions
+        // in this module to publish sliding nonces on other accounts.  Anyway, this property
+        // is probably not very important.
+    }
 }
 }

@@ -1976,10 +1976,6 @@ module LibraAccount {
     /// # Persistence of Resources
 
     spec module {
-
-        /// Every address that has a published RoleId also has a published Account.
-        invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
-
         /// Accounts are never deleted.
         invariant update [global] forall addr: address where old(exists_at(addr)): exists_at(addr);
 
@@ -1991,21 +1987,45 @@ module LibraAccount {
         invariant [global]
             LibraTimestamp::is_operating() ==> exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
+        /// resource struct `Balance<CoinType>` is persistent
+        invariant update [global] forall coin_type: type, addr: address
+            where old(exists<Balance<coin_type>>(addr)):
+                exists<Balance<coin_type>>(addr);
+
+        /// resource struct `AccountOperationsCapability` is persistent
+        invariant update [global] old(exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()))
+                ==> exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        /// resource struct `AccountOperationsCapability` is persistent
+        invariant update [global]
+            old(exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS()))
+                ==> exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+    }
+
+    /// # Other invariants
+    spec module {
+
         /// Every address that has a published account has a published RoleId
         invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
 
-        /// Every address that has a published account has a published FreezingBit
-        invariant [global] forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);
-
-    }
-
-    /// # Consistency Between Resources and Roles
-
-    /// If an account has a balance, the role of the account is compatible with having a balance.
-    /// ref: Only reasonable accounts have currencies.
-    spec module {
+        /// If an account has a balance, the role of the account is compatible with having a balance.
         invariant [global] forall token: type: forall addr: address where exists<Balance<token>>(addr):
             Roles::spec_can_hold_balance_addr(addr);
+
+        /// If there is a `DesignatedDealer::Dealer resource published at addr, the addr has a
+        /// DesignatedDealer role.
+        // Verified with additional target DesignatedDealer.move
+        invariant [global] forall addr: address where exists<DesignatedDealer::Dealer>(addr):
+            Roles::spec_has_designated_dealer_role_addr(addr);
+
+        /// If there is a DualAttestation credential, account has designated dealer role
+        // Verified with additional target "VASP.move"
+        invariant [global] forall addr: address where exists<DualAttestation::Credential>(addr):
+            Roles::spec_has_designated_dealer_role_addr(addr)
+            || Roles::spec_has_parent_VASP_role_addr(addr);
+
+        /// Every address that has a published account has a published FreezingBit
+        invariant [global] forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);
     }
 
     /// # Helper Functions and Schemas

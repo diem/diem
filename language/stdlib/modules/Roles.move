@@ -398,7 +398,7 @@ module Roles {
             except new_designated_dealer_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_designated_dealer_role;
 
-        /// ParentVASP roles are only granted by LibraRoot [[A6]][ROLE]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
+        /// ParentVASP roles are only granted by TreasuryCompliance [[A6]][ROLE]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
         /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: PARENT_VASP_ROLE_ID} to * except new_parent_vasp_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_parent_vasp_role;

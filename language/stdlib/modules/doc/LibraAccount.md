@@ -74,7 +74,7 @@ before and after every transaction.
         -  [Authentication Key](#@Authentication_Key_8)
         -  [Balance](#@Balance_9)
     -  [Persistence of Resources](#@Persistence_of_Resources_10)
-    -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_11)
+    -  [Other invariants](#@Other_invariants_11)
     -  [Helper Functions and Schemas](#@Helper_Functions_and_Schemas_12)
         -  [Capabilities](#@Capabilities_13)
         -  [Prologue](#@Prologue_14)
@@ -4476,13 +4476,6 @@ only <code><a href="LibraAccount.md#0x1_LibraAccount_withdraw_from">Self::withdr
 ### Persistence of Resources
 
 
-Every address that has a published RoleId also has a published Account.
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr): <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr);
-</code></pre>
-
-
 Accounts are never deleted.
 
 
@@ -4506,6 +4499,38 @@ After genesis, the <code><a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSet
 </code></pre>
 
 
+resource struct <code><a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;CoinType&gt;</code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> coin_type: type, addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;coin_type&gt;&gt;(addr)):
+        <b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;coin_type&gt;&gt;(addr);
+</code></pre>
+
+
+resource struct <code><a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a></code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()))
+        ==&gt; <b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+resource struct <code><a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a></code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    <b>old</b>(<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()))
+        ==&gt; <b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+
+<a name="@Other_invariants_11"></a>
+
+### Other invariants
+
+
 Every address that has a published account has a published RoleId
 
 
@@ -4513,24 +4538,36 @@ Every address that has a published account has a published RoleId
 </code></pre>
 
 
-Every address that has a published account has a published FreezingBit
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr): <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">AccountFreezing::FreezingBit</a>&gt;(addr);
-</code></pre>
-
-
-
-<a name="@Consistency_Between_Resources_and_Roles_11"></a>
-
-### Consistency Between Resources and Roles
-
 If an account has a balance, the role of the account is compatible with having a balance.
-ref: Only reasonable accounts have currencies.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> token: type: <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a>&lt;token&gt;&gt;(addr):
     <a href="Roles.md#0x1_Roles_spec_can_hold_balance_addr">Roles::spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+If there is a `DesignatedDealer::Dealer resource published at addr, the addr has a
+DesignatedDealer role.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;(addr):
+    <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr);
+</code></pre>
+
+
+If there is a DualAttestation credential, account has designated dealer role
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a>&gt;(addr):
+    <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr)
+    || <a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(addr);
+</code></pre>
+
+
+Every address that has a published account has a published FreezingBit
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr): <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">AccountFreezing::FreezingBit</a>&gt;(addr);
 </code></pre>
 
 

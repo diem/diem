@@ -917,6 +917,15 @@ Published configurations are persistent.
 </code></pre>
 
 
+If <code><a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;</code> is published, it is persistent.
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> config_type: type
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())):
+        <b>exists</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
 
 <a name="@Helper_Functions_4"></a>
 

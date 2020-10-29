@@ -383,5 +383,21 @@ module DesignatedDealer {
             else
                 tier_info == old(tier_info);
     }
+
+    // =================================================================
+    // Module Specification
+
+    spec module {} // Switch to module documentation context
+
+    spec module {
+        /// resource struct Dealer persists after publication
+        invariant update [global] forall addr: address where old(exists<Dealer>(addr)): exists<Dealer>(addr);
+
+        /// TierInfo persists
+        invariant update [global] forall addr: address, coin_type: type where old(exists<TierInfo<coin_type>>(addr)):
+            exists<TierInfo<coin_type>>(addr);
+
+    }
+
 }
 }

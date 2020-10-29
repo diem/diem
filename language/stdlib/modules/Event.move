@@ -80,7 +80,7 @@ module Event {
 
     spec module {
         /// > NOTE: specification and verification of event related functionality is currently not happening.
-        /// > Since events cannot be observed from Move programs, this does not effect the verification of
+        /// > Since events cannot be observed from Move programs, this does not affect the verification of
         /// > other functionality; however, this should be completed at a later point to ensure the framework
         /// > generates events as expected.
         ///

@@ -207,6 +207,10 @@ module RecoveryAddress {
     /// # Persistence of KeyRotationCapability
 
     spec module {
+        /// `RecoveryAddress` persists
+        invariant update [global] forall addr: address where old(exists<RecoveryAddress>(addr)):
+            exists<RecoveryAddress>(addr);
+
         /// If `recovery_addr` holds the `KeyRotationCapability` of `to_recovery_addr`
         /// in the previous state, then it continues to hold the capability after the update.
         invariant update [global]

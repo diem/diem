@@ -13,6 +13,7 @@ Stores the string name of a ValidatorOperator account.
 -  [Function `has_validator_operator_config`](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
 -  [Module Specification](#@Module_Specification_1)
     -  [Consistency Between Resources and Roles](#@Consistency_Between_Resources_and_Roles_2)
+    -  [Persistence](#@Persistence_3)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -227,6 +228,18 @@ If an address has a ValidatorOperatorConfig resource, it has a validator operato
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr):
     <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr);
+</code></pre>
+
+
+
+<a name="@Persistence_3"></a>
+
+### Persistence
+
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(addr)):
+    <b>exists</b>&lt;<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(addr);
 </code></pre>
 
 

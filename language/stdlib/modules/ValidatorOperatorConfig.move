@@ -78,5 +78,11 @@ module ValidatorOperatorConfig {
             Roles::spec_has_validator_operator_role_addr(addr);
     }
 
+    /// # Persistence
+    spec module {
+        invariant update [global] forall addr: address where old(exists<ValidatorOperatorConfig>(addr)):
+            exists<ValidatorOperatorConfig>(addr);
+    }
+
 }
 }

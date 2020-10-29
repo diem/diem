@@ -18,6 +18,7 @@ Module providing functionality for designated dealers.
 -  [Function `exists_at`](#0x1_DesignatedDealer_exists_at)
 -  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_validate_and_record_mint)
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
+-  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code><b>use</b> <a href="Coin1.md#0x1_Coin1">0x1::Coin1</a>;
@@ -834,6 +835,26 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 
 
 </details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+resource struct Dealer persists after publication
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr)): <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
+</code></pre>
+
+
+TierInfo persists
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address, coin_type: type <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;coin_type&gt;&gt;(addr)):
+    <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;coin_type&gt;&gt;(addr);
+</code></pre>
 
 
 [//]: # ("File containing references which can be used from documentation")

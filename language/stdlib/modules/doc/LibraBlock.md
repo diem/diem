@@ -320,6 +320,8 @@ Get the current block height
 
 ### Initialization
 
+This implies that <code><a href="LibraBlock.md#0x1_LibraBlock_BlockMetadata">BlockMetadata</a></code> is published after initialization and stays published
+ever after
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraBlock.md#0x1_LibraBlock_is_initialized">is_initialized</a>();

@@ -3308,6 +3308,33 @@ Preburn is not transferrable [[J4]][PERMISSION].
 </code></pre>
 
 
+resource struct <code><a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> coin_type: type, lr_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;coin_type&gt;&gt;(lr_addr)):
+        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;coin_type&gt;&gt;(lr_addr);
+</code></pre>
+
+
+resource struct <code><a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> coin_type: type, tc_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(tc_addr)):
+        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(tc_addr);
+</code></pre>
+
+
+resource struct <code><a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> is persistent
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> coin_type: type, tc_addr: address
+    <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(tc_addr)):
+        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(tc_addr);
+</code></pre>
+
+
 
 <a name="@Update_Exchange_Rates_6"></a>
 

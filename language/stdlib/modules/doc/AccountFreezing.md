@@ -558,6 +558,20 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
+resource struct FreezingBit persists
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr)): <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr);
+</code></pre>
+
+
+resource struct FreezeEventsHolder is there forever after initialization
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
 The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance only [[H7]][PERMISSION].
 
 
@@ -578,8 +592,8 @@ Only (un)freeze functions can change the freezing bits of accounts [[H7]][PERMIS
 
 
 <pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> a: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a)):
-        <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen == <b>old</b>(<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen);
+    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr)):
+        <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen == <b>old</b>(<b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen);
 }
 </code></pre>
 

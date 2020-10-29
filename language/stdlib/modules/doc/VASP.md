@@ -21,9 +21,10 @@ This module provides functions to manage VASP accounts.
 -  [Function `is_same_vasp`](#0x1_VASP_is_same_vasp)
 -  [Function `num_children`](#0x1_VASP_num_children)
 -  [Module Specification](#@Module_Specification_1)
-    -  [Existence of Parents](#@Existence_of_Parents_2)
-    -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_3)
-    -  [Immutability of Parent Address](#@Immutability_of_Parent_Address_4)
+    -  [Persistence of parent and child VASPs](#@Persistence_of_parent_and_child_VASPs_2)
+    -  [Existence of Parents](#@Existence_of_Parents_3)
+    -  [Creation of Child VASPs](#@Creation_of_Child_VASPs_4)
+    -  [Immutability of Parent Address](#@Immutability_of_Parent_Address_5)
 
 
 <pre><code><b>use</b> <a href="AccountLimits.md#0x1_AccountLimits">0x1::AccountLimits</a>;
@@ -577,7 +578,8 @@ Spec version of <code><a href="VASP.md#0x1_VASP_is_same_vasp">Self::is_same_vasp
 
 ## Function `num_children`
 
-Return the number of child accounts for this VASP.
+If <code>addr</code> is the address of a <code><a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a></code>, return the number of children.
+If it is the address of a ChildVASP, return the number of children of the parent.
 The total number of accounts for this VASP is num_children() + 1
 Aborts if <code>addr</code> is not a ParentVASP or ChildVASP account
 
@@ -631,7 +633,21 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 
 
-<a name="@Existence_of_Parents_2"></a>
+<a name="@Persistence_of_parent_and_child_VASPs_2"></a>
+
+### Persistence of parent and child VASPs
+
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr)):
+    <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(addr);
+<b>invariant</b> <b>update</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr)):
+    <a href="VASP.md#0x1_VASP_is_child">is_child</a>(addr);
+</code></pre>
+
+
+
+<a name="@Existence_of_Parents_3"></a>
 
 ### Existence of Parents
 
@@ -644,12 +660,12 @@ Spec version of <code><a href="VASP.md#0x1_VASP_num_children">Self::num_children
 
 
 
-<a name="@Creation_of_Child_VASPs_3"></a>
+<a name="@Creation_of_Child_VASPs_4"></a>
 
 ### Creation of Child VASPs
 
 
-Only a parent VASP calling <code>Self::publish_child_vast_credential</code> can create
+Only a parent VASP calling <code><a href="VASP.md#0x1_VASP_publish_child_vasp_credential">Self::publish_child_vasp_credential</a></code> can create
 child VASPs.
 
 
@@ -693,7 +709,7 @@ previous state.
 
 
 
-<a name="@Immutability_of_Parent_Address_4"></a>
+<a name="@Immutability_of_Parent_Address_5"></a>
 
 ### Immutability of Parent Address
 

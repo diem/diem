@@ -150,6 +150,7 @@ Return the chain ID of this Libra instance
 
 ### Initialization
 
+
 When Libra is operating, the chain id is always available.
 
 

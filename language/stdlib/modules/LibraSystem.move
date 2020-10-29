@@ -563,8 +563,6 @@ module LibraSystem {
                initialize_validator_set, set_libra_system_config;
     }
 
-
-
     /// # Helper Functions
     spec module {
         /// Fetches the currently published validator set from the published LibraConfig<LibraSystem>

@@ -519,8 +519,18 @@ module AccountLimits {
 
     spec module {} // Switch to module documentation context
 
-    /// Invariant that `LimitsDefinition` exists if a `Window` exists.
     spec module {
+        /// `LimitsDefinition<CoinType>` persists after publication.
+        invariant update [global]
+            forall addr: address, coin_type: type where old(exists<LimitsDefinition<coin_type>>(addr)):
+                exists<LimitsDefinition<coin_type>>(addr);
+
+        /// `Window<CoinType>` persists after publication
+        invariant update [global]
+            forall window_addr: address, coin_type: type where old(exists<Window<coin_type>>(window_addr)):
+                exists<Window<coin_type>>(window_addr);
+
+        /// Invariant that `LimitsDefinition` exists if a `Window` exists.
         invariant [global]
            forall window_addr: address, coin_type: type where exists<Window<coin_type>>(window_addr):
                 exists<LimitsDefinition<coin_type>>(global<Window<coin_type>>(window_addr).limit_address);

@@ -46,9 +46,11 @@ module ChainId {
 
     /// # Initialization
 
-    /// When Libra is operating, the chain id is always available.
     spec module {
+        /// When Libra is operating, the chain id is always available.
         invariant [global] LibraTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        // Could also specify that ChainId is not stored on any other address, but it doesn't matter.
     }
 
     /// # Helper Functions

@@ -137,5 +137,16 @@ module SharedEd25519PublicKey {
         exists<SharedEd25519PublicKey>(addr)
     }
 
+    // =================================================================
+    // Module Specification
+
+    spec module {} // Switch to module documentation context
+
+    /// # Persistence
+    spec module {
+        invariant update [global] forall addr: address where old(exists<SharedEd25519PublicKey>(addr)):
+            exists<SharedEd25519PublicKey>(addr);
+    }
+
 }
 }

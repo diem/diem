@@ -1183,6 +1183,7 @@ module Libra {
                      where exists<MintCapability<coin_type>>(mint_cap_owner1)
                                 && exists<MintCapability<coin_type>>(mint_cap_owner2):
                           mint_cap_owner1 == mint_cap_owner2;
+
         /// If an address has a mint capability, it is an SCS currency.
         invariant [global]
             forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
@@ -1190,6 +1191,7 @@ module Libra {
     }
 
     /// ## Minting
+    // > TODO These can be simplified using global invariants
 
     spec schema TotalValueNotIncrease<CoinType> {
         /// The total amount of currency does not increase.
@@ -1312,6 +1314,21 @@ module Libra {
 
         /// Preburn is not transferrable [[J4]][PERMISSION].
         apply PreservePreburnExistence<CoinType> to *<CoinType>;
+
+        /// resource struct `CurrencyInfo` is persistent
+        invariant update [global] forall coin_type: type, lr_addr: address
+            where old(exists<CurrencyInfo<coin_type>>(lr_addr)):
+                exists<CurrencyInfo<coin_type>>(lr_addr);
+
+        /// resource struct `Preburn<CoinType>` is persistent
+        invariant update [global] forall coin_type: type, tc_addr: address
+            where old(exists<Preburn<coin_type>>(tc_addr)):
+                exists<Preburn<coin_type>>(tc_addr);
+
+        /// resource struct `MintCapability<CoinType>` is persistent
+        invariant update [global] forall coin_type: type, tc_addr: address
+            where old(exists<MintCapability<coin_type>>(tc_addr)):
+                exists<MintCapability<coin_type>>(tc_addr);
     }
 
 

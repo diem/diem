@@ -367,6 +367,11 @@ module LibraConfig {
         /// Published configurations are persistent.
         invariant update [global]
             (forall config_type: type where old(spec_is_published<config_type>()): spec_is_published<config_type>());
+
+        /// If `ModifyConfigCapability<Config>` is published, it is persistent.
+        invariant update [global] forall config_type: type
+            where old(exists<ModifyConfigCapability<config_type>>(CoreAddresses::LIBRA_ROOT_ADDRESS())):
+                exists<ModifyConfigCapability<config_type>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
 
     /// # Helper Functions

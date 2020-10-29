@@ -16,6 +16,7 @@ When nonce X is recorded, all transactions with nonces lower then X-128 will abo
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
+-  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
@@ -338,6 +339,21 @@ Only the Libra root account can create this resource for different accounts
 
 
 </details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+Sliding nonces are initialized at Libra root and treasury compliance addresses
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>()
+    ==&gt; <b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+<b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>()
+    ==&gt; <b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>());
+</code></pre>
 
 
 [//]: # ("File containing references which can be used from documentation")
