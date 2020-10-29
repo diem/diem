@@ -1,6 +1,6 @@
 publish ../../../../../stdlib/modules
-publish -v
-run emit.move --signers 0xA --args 5 -v
-view move_data/0x0000000000000000000000000000000A/events/0.lcs
-run emit.move --signers 0xA --args 6 -v
-view move_data/0x0000000000000000000000000000000A/events/0.lcs
+publish src/modules -v
+run src/scripts/emit.move --signers 0xA --args 5 -v
+view storage/0x0000000000000000000000000000000A/events/0.lcs
+run src/scripts/emit.move --signers 0xA --args 6 -v
+view storage/0x0000000000000000000000000000000A/events/0.lcs

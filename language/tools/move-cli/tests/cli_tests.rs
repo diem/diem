@@ -5,7 +5,7 @@ use move_cli::test;
 
 use std::path::PathBuf;
 
-pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "debug", "move-cli"];
+pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "debug", "move"];
 pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
 
 fn get_cli_binary_path() -> String {

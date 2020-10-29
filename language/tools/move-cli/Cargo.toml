@@ -34,6 +34,10 @@ vm-genesis = { path = "../vm-genesis", version = "0.1.0" }
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
+[[bin]]
+name = "move"
+path = "src/main.rs"
+
 [[test]]
 name = "cli_testsuite"
 harness = false

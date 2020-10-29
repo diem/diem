@@ -1,2 +1,2 @@
-publish
-run script.move --signers 0xA
+publish src/modules
+run src/scripts/script.move --signers 0xA

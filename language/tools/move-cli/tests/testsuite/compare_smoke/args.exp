@@ -1,6 +1,6 @@
 Command `publish ../../../../../stdlib/modules`:
 Command `publish ../../../../../stdlib/nursery`:
-Command `publish move_src/modules`:
-Command `run move_src/scripts/compare.move --dry-run`:
-Command `run move_src/scripts/set.move --dry-run`:
+Command `publish src/modules`:
+Command `run src/scripts/compare.move --dry-run`:
+Command `run src/scripts/set.move --dry-run`:
 Execution aborted with code 999 in module 00000000000000000000000000000002::Set.

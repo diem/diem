@@ -4,9 +4,11 @@ This is a tool for experimenting with Move without validators, a blockchain, or 
 
 ## Installation
 ```
-λ cargo build --release
-λ export LIBRA_HOME=<path_to_your_libra_repo>
-λ alias move="$LIBRA_HOME/target/release/move-cli $@"
+λ cargo install --path libra/language/tools/move-cli
+```
+or
+```
+λ cargo install --git https://github.com/libra/libra move-cli
 ```
 
 ## Compiling and running scripts
@@ -30,11 +32,11 @@ Place this in a file named `script.move` and try
 
 The `--signers 0xf` part indicates which account address(es) have signed off on the script. Omitting `--signers` or passing multiple signers to this single-`signer` script will trigger a type error.
 
-## Adding new modules via `move_src`
+## Adding new modules via `src`
 
-By default, the CLI compiles and includes all files from the Move standard library and Libra Framework. New modules can be added to the `move_src` directory (or a directory of your choosing specified via `--move-src`. The `move run` command will compile and publish each module source file in this directory before running the given script.
+By default, the CLI compiles and includes all files from the Move standard library and Libra Framework. New modules can be added to the `src` directory (or a directory of your choosing specified via `--source-dir`. The `move run` command will compile and publish each module source file in this directory before running the given script.
 
-Try saving this code in `move_src/Test.move`:
+Try saving this code in `src/modules/Test.move`:
 
 ```
 module Test {
@@ -64,7 +66,7 @@ Compiling 1 user module(s)
 Discarding changes; re-run with --commit if you would like to keep them.
 ```
 
-The CLI has successfully compiled the module, but by default it chooses not to publish the module bytecode under `move_data`. Re-running the command with `--commit` (`-c` for short) will produce
+The CLI has successfully compiled the module, but by default it chooses not to publish the module bytecode under `storage`. Re-running the command with `--commit` (`-c` for short) will produce
 
 ```
 λ move compile -c
@@ -72,17 +74,17 @@ Compiling 1 user module(s)
 Committed changes.
 ```
 
-If we take a look under `move_data`, we will now see the published bytecodes for our test module:
+If we take a look under `storage`, we will now see the published bytecodes for our test module:
 
 ```
-λ ls move_data/0x00000000000000000000000000000002/modules
+λ ls storage/0x00000000000000000000000000000002/modules
 Test
 ```
 
 We can also inspect the compiled bytecode using `move view`:
 
 ```
-λ move view move_data/0x00000000000000000000000000000002/modules/Test
+λ move view storage/0x00000000000000000000000000000002/modules/Test
 module 00000000.Test {
 resource Resource {
 	i: u64
@@ -142,7 +144,7 @@ Committed changes.
 We can also inspect this newly published resource using `move view`:
 
 ```
-λ move view move_data/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002\:\:Test\:\:Resource
+λ move view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002\:\:Test\:\:Resource
 resource 00000000::Test::Resource {
     i: 10
 }
@@ -157,4 +159,4 @@ Take a look at `tests/testsuite/liba_smoke/args.txt`. This test uses the CLI to 
 λ NO_MOVE_CLEAN=1 cargo xtest libra_smoke
 ```
 
-will execute each command in this file and leave you the resulting `move_data` to experiment with.
+will execute each command in this file and leave you the resulting `storage` to experiment with.

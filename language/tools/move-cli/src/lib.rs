@@ -33,13 +33,13 @@ use std::{
 pub mod test;
 
 /// Default directory where saved Move resources live
-pub const MOVE_DATA: &str = "move_data";
+pub const DEFAULT_STORAGE_DIR: &str = "storage";
 
 /// Default directory where Move modules live
-pub const MOVE_SRC: &str = "move_src";
+pub const DEFAULT_SOURCE_DIR: &str = "src";
 
 /// Default directory for build output
-pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_OUTPUT_DIR;
+pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_DIR;
 
 /// Extension for resource and event files, which are in LCS format
 const LCS_EXTENSION: &str = "lcs";
@@ -55,17 +55,17 @@ const EVENTS_DIR: &str = "events";
 pub struct OnDiskStateView {
     modules: HashMap<ModuleId, Vec<u8>>,
     resources: HashMap<(AccountAddress, StructTag), Vec<u8>>,
-    move_data_dir: PathBuf,
+    storage_dir: PathBuf,
 }
 
 impl OnDiskStateView {
-    /// Create an `OnDiskStateView` that reads/writes resource data in `move_data_dir` and can
+    /// Create an `OnDiskStateView` that reads/writes resource data in `storage_dir` and can
     /// execute code in `compiled_modules`.
-    pub fn create(move_data_dir: PathBuf, compiled_modules: &[CompiledModule]) -> Result<Self> {
-        if !move_data_dir.exists() || !move_data_dir.is_dir() {
+    pub fn create(storage_dir: PathBuf, compiled_modules: &[CompiledModule]) -> Result<Self> {
+        if !storage_dir.exists() || !storage_dir.is_dir() {
             bail!(
                 "Attempting to create OnDiskStateView from bad data directory {:?}",
-                move_data_dir
+                storage_dir
             )
         }
 
@@ -79,7 +79,7 @@ impl OnDiskStateView {
         Ok(Self {
             modules,
             resources,
-            move_data_dir,
+            storage_dir,
         })
     }
 
@@ -88,7 +88,7 @@ impl OnDiskStateView {
             return false;
         }
         let p = p.canonicalize().unwrap();
-        p.starts_with(&self.move_data_dir)
+        p.starts_with(&self.storage_dir)
             && match p.parent() {
                 Some(parent) => parent.ends_with(parent_dir),
                 None => false,
@@ -108,7 +108,7 @@ impl OnDiskStateView {
     }
 
     fn get_addr_path(&self, addr: &AccountAddress) -> PathBuf {
-        let mut path = self.move_data_dir.clone();
+        let mut path = self.storage_dir.clone();
         path.push(format!("0x{}", addr.to_string()));
         path
     }

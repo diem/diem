@@ -1,2 +1,2 @@
 -v check
--v publish move_src/modules
+-v publish src/modules

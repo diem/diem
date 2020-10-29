@@ -43,7 +43,7 @@ language/tools/vm-genesis/genesis/vm_config.toml
 .terraform/
 
 # Move Build Output
-move_build_output/
+build/
 
 # Docker incremental build temporary files and directories
 target-out-docker

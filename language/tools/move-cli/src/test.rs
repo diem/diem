@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DEFAULT_BUILD_OUTPUT_DIR, MOVE_DATA};
+use crate::{DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
 use move_coverage::{coverage_map::CoverageMap, summary::summarize_inst_cov};
 use move_lang::test_utils::*;
 use std::{
@@ -22,7 +22,7 @@ use vm::file_format::CompiledModule;
 const EXP_EXT: &str = "exp";
 
 /// If this env var is set, `move clean` will not be run after each test.
-/// this is useful if you want to look at the `move_data` or `move_events`
+/// this is useful if you want to look at the `storage` or `move_events`
 /// produced by a test. However, you'll have to manually run `move clean`
 /// before re-running the test.
 const NO_MOVE_CLEAN: &str = "NO_MOVE_CLEAN";
@@ -71,10 +71,10 @@ fn format_diff(expected: String, actual: String) -> String {
     ret
 }
 
-fn show_coverage(trace_file: &Path, move_data: &Path) -> anyhow::Result<()> {
+fn show_coverage(trace_file: &Path, storage_dir: &Path) -> anyhow::Result<()> {
     // collect modules
     let mut modules: Vec<CompiledModule> = Vec::new();
-    for entry in move_lang::find_filenames(&[move_data.to_str().unwrap().to_owned()], |fpath| {
+    for entry in move_lang::find_filenames(&[storage_dir.to_str().unwrap().to_owned()], |fpath| {
         fpath.extension().map_or(false, |e| e == "mv")
     })? {
         let bytecode_bytes = fs::read(entry).unwrap();
@@ -101,9 +101,9 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
     // path where we will run the binary
     let exe_dir = args_path.parent().unwrap();
     let cli_binary_path = Path::new(cli_binary).canonicalize()?;
-    let move_data = Path::new(exe_dir).join(MOVE_DATA);
-    let build_output = Path::new(exe_dir).join(DEFAULT_BUILD_OUTPUT_DIR);
-    if move_data.exists() || build_output.exists() {
+    let storage_dir = Path::new(exe_dir).join(DEFAULT_STORAGE_DIR);
+    let build_output = Path::new(exe_dir).join(DEFAULT_BUILD_DIR);
+    if storage_dir.exists() || build_output.exists() {
         // need to clean before testing
         Command::new(cli_binary_path.clone())
             .current_dir(exe_dir)
@@ -127,7 +127,7 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
         // for tracing file path: always use the absolute path so we do not need
         // to worry about where the VM is executed.
         let mut trace_file = env::current_dir()?;
-        trace_file.push(&move_data);
+        trace_file.push(&storage_dir);
         trace_file.push(DEFAULT_TRACE_FILE);
         if track_cov {
             env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, trace_file.as_os_str());
@@ -154,13 +154,13 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
                 eprintln!("Trace file {} not found", trace_file.to_string_lossy());
                 eprintln!("Coverage is only applicable to the RUN command in args.txt");
             } else {
-                show_coverage(Path::new(&trace_file), Path::new(&move_data))?;
+                show_coverage(Path::new(&trace_file), Path::new(&storage_dir))?;
             }
         }
     }
 
     // post-test cleanup and cleanup checks
-    // check that the test command didn't create a move_src dir
+    // check that the test command didn't create a src dir
 
     let run_move_clean = !read_bool_var(NO_MOVE_CLEAN);
     if run_move_clean {
@@ -169,16 +169,16 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
             .current_dir(exe_dir)
             .arg("clean")
             .output()?;
-        // check that move_data was deleted
+        // check that storage was deleted
         assert!(
-            !move_data.exists(),
+            !storage_dir.exists(),
             "`move clean` failed to eliminate {} directory",
-            MOVE_DATA
+            DEFAULT_STORAGE_DIR
         );
         assert!(
-            !move_data.exists(),
+            !storage_dir.exists(),
             "`move clean` failed to eliminate {} directory",
-            DEFAULT_BUILD_OUTPUT_DIR
+            DEFAULT_BUILD_DIR
         );
     }
 

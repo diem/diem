@@ -8,7 +8,7 @@ use std::path::Path;
 fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
     Ok(test::run_one(
         args_path,
-        "../../../target/debug/move-cli",
+        "../../../target/debug/move",
         false,
     )?)
 }

@@ -29,21 +29,20 @@ use std::{
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
-#[structopt(name = "Move", about = "CLI frontend for Move compiler and VM")]
+#[structopt(
+    name = "move",
+    about = "CLI frontend for Move compiler and VM",
+    rename_all = "kebab-case"
+)]
 struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
-    #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA, global = true)]
-    move_data: String,
+    #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
+    storage_dir: String,
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
-    #[structopt(
-        name = "move-build-output",
-        long = "build-output",
-        default_value = DEFAULT_BUILD_OUTPUT_DIR,
-        global = true,
-    )]
-    build_output: String,
+    #[structopt(long, default_value = DEFAULT_BUILD_DIR, global = true)]
+    build_dir: String,
     /// Print additional diagnostics
-    #[structopt(name = "verbose", short = "v", global = true)]
+    #[structopt(short = "v", global = true)]
     verbose: bool,
     #[structopt(subcommand)]
     cmd: Command,
@@ -51,13 +50,13 @@ struct Move {
 
 #[derive(StructOpt)]
 enum Command {
-    /// Type check and verify the specified script and modules against the modules in `move_data`
+    /// Type check and verify the specified script and modules against the modules in `storage`
     #[structopt(name = "check")]
     Check {
         /// The source files to check
         #[structopt(
             name = "PATH_TO_SOURCE_FILE",
-            default_value = MOVE_SRC,
+            default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
     },
@@ -66,7 +65,7 @@ enum Command {
         /// The source files containing modules to publish
         #[structopt(
             name = "PATH_TO_SOURCE_FILE",
-            default_value = MOVE_SRC,
+            default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
         /// If set, the effects of executing `script_file` (i.e., published, updated, and
@@ -74,8 +73,8 @@ enum Command {
         #[structopt(long = "dry-run", short = "n")]
         dry_run: bool,
     },
-    /// Compile/run a Move script that reads/writes resources stored on disk in `move_data`.
-    /// This command compiles each each module stored in `move_src` and loads it into the VM
+    /// Compile/run a Move script that reads/writes resources stored on disk in `storage`.
+    /// This command compiles each each module stored in `src` and loads it into the VM
     /// before running the script.
     #[structopt(name = "run")]
     Run {
@@ -123,8 +122,8 @@ enum Command {
         #[structopt(name = "file")]
         file: String,
     },
-    /// Delete all resources, events, and modules stored on disk under `move_data`.
-    /// Does *not* delete anything in `move_src`.
+    /// Delete all resources, events, and modules stored on disk under `storage`.
+    /// Does *not* delete anything in `src`.
     Clean {},
 }
 
@@ -140,8 +139,8 @@ fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
 /// Generate interface files for published files
 fn generate_interface_files(args: &Move) -> Result<()> {
     move_lang::generate_interface_files(
-        &[args.move_data.clone()],
-        Some(args.build_output.clone()),
+        &[args.storage_dir.clone()],
+        Some(args.build_dir.clone()),
         false,
     )?;
     Ok(())
@@ -155,23 +154,23 @@ fn interface_files_dir(build_dir: &str) -> Result<String> {
     Ok(dir)
 }
 
-/// Compile the user modules in `move_src` and the script in `script_file`
+/// Compile the user modules in `src` and the script in `script_file`
 fn check(args: &Move, files: &[String]) -> Result<()> {
     if args.verbose {
         println!("Checking Move files...");
     }
-    let interface_dir = interface_files_dir(&args.build_output)?;
+    let interface_dir = interface_files_dir(&args.build_dir)?;
     move_lang::move_check(files, &[interface_dir], None, None)?;
     Ok(())
 }
 
 fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
-    let move_data = maybe_create_dir(&args.move_data)?;
+    let storage_dir = maybe_create_dir(&args.storage_dir)?;
 
     if args.verbose {
         println!("Compiling Move modules...")
     }
-    let interface_dir = interface_files_dir(&args.build_output)?;
+    let interface_dir = interface_files_dir(&args.build_dir)?;
     let (_, compiled_units) = move_lang::move_compile(files, &[interface_dir], None, None)?;
 
     let num_modules = compiled_units
@@ -197,7 +196,10 @@ fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
     }
-    Ok(OnDiskStateView::create(move_data.to_path_buf(), &modules)?)
+    Ok(OnDiskStateView::create(
+        storage_dir.to_path_buf(),
+        &modules,
+    )?)
 }
 
 fn run(
@@ -213,12 +215,12 @@ fn run(
         args: &Move,
         script_file: &str,
     ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
-        let move_data = maybe_create_dir(&args.move_data)?;
+        let storage_dir = maybe_create_dir(&args.storage_dir)?;
 
         if args.verbose {
             println!("Compiling transaction script...")
         }
-        let interface_dir = interface_files_dir(&args.build_output)?;
+        let interface_dir = interface_files_dir(&args.build_dir)?;
         let (_, compiled_units) = move_lang::move_compile(
             &[script_file.to_string()],
             &[interface_dir.clone()],
@@ -247,7 +249,7 @@ fn run(
             }
         }
         Ok((
-            OnDiskStateView::create(move_data.to_path_buf(), &[])?,
+            OnDiskStateView::create(storage_dir.to_path_buf(), &[])?,
             script_opt,
         ))
     }
@@ -535,7 +537,7 @@ fn explain_error(
         VMStatus::Error(TYPE_MISMATCH) => explain_type_error(script, signers, txn_args),
         VMStatus::Error(LINKER_ERROR) => {
             // TODO: is this the only reason we can see LINKER_ERROR?
-            // Can we also see it if someone manually deletes modules in move_data?
+            // Can we also see it if someone manually deletes modules in storage?
             println!(
                 "Execution failed due to unresolved type argument(s) (i.e., `--type-args \
                  0x1::M:T` when there is no module named M at 0x1 or no type named T in module \
@@ -552,9 +554,9 @@ fn explain_error(
 
 /// Print a module or resource stored in `file`
 fn view(args: &Move, file: &str) -> Result<()> {
-    let move_data = maybe_create_dir(&args.move_data)?.canonicalize()?;
+    let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
     let stdlib_modules = vec![]; // ok to use empty dir here since we're not compiling
-    let state = OnDiskStateView::create(move_data, &stdlib_modules)?;
+    let state = OnDiskStateView::create(storage_dir, &stdlib_modules)?;
 
     let path = Path::new(&file);
     if state.is_resource_path(path) {
@@ -577,7 +579,7 @@ fn view(args: &Move, file: &str) -> Result<()> {
             None => println!("Module not found."),
         }
     } else {
-        bail!("`move view <file>` must point to a valid file under move_data")
+        bail!("`move view <file>` must point to a valid file under storage")
     }
     Ok(())
 }
@@ -617,16 +619,16 @@ fn main() -> Result<()> {
         ),
         Command::View { file } => view(&move_args, file),
         Command::Clean {} => {
-            // delete move_data
-            let move_data = Path::new(&move_args.move_data);
-            if move_data.exists() {
-                fs::remove_dir_all(&move_data)?;
+            // delete storage
+            let storage_dir = Path::new(&move_args.storage_dir);
+            if storage_dir.exists() {
+                fs::remove_dir_all(&storage_dir)?;
             }
 
-            // delete build_output
-            let build_output = Path::new(&move_args.build_output);
-            if build_output.exists() {
-                fs::remove_dir_all(&build_output)?;
+            // delete build
+            let build_dir = Path::new(&move_args.build_dir);
+            if build_dir.exists() {
+                fs::remove_dir_all(&build_dir)?;
             }
             Ok(())
         }

@@ -1,2 +1,2 @@
-publish
-run script.move
+publish src/modules
+run src/scripts/script.move
