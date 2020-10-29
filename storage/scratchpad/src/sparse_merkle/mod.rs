@@ -340,6 +340,10 @@ impl SparseMerkleTree {
         leaf: Arc<SparseMerkleNode>,
     ) -> Arc<SparseMerkleNode> {
         itertools::zip_eq(bits, siblings).fold(leaf, |previous_node, (bit, sibling)| {
+            // Simulate the slowdown that happened when hashing was slowed down, but only here.
+            // for _x in 0..10000 {
+            // }
+            
             Arc::new(if bit {
                 SparseMerkleNode::new_internal(sibling, previous_node)
             } else {

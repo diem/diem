@@ -87,9 +87,17 @@ where
                 |(hash, index), sibling_hash| {
                     (
                         if index % 2 == 0 {
+                            // Slow down here instead of in hash call.
+                            // for _x in 0..10000 {
+                            // }
+                            
                             // the current node is a left child.
                             MerkleTreeInternalNode::<H>::new(hash, *sibling_hash).hash()
                         } else {
+                            // Slow down here instead of in hash call.
+                            // for _x in 0..10000 {
+                            // }
+                            
                             // the current node is a right child.
                             MerkleTreeInternalNode::<H>::new(*sibling_hash, hash).hash()
                         },
@@ -240,8 +248,16 @@ impl SparseMerkleProof {
             )
             .fold(current_hash, |hash, (sibling_hash, bit)| {
                 if bit {
+                    // Slow down here instead of in hash call.
+                    // for _x in 0..10000 {
+                    // }
+
                     SparseMerkleInternalNode::new(*sibling_hash, hash).hash()
                 } else {
+                    // Slow down here instead of in hash call.
+                    // for _x in 0..10000 {
+                    // }
+
                     SparseMerkleInternalNode::new(hash, *sibling_hash).hash()
                 }
             });
@@ -403,6 +419,11 @@ where
                     format_err!("First child is a right child, but missing sibling on the left.")
                 })?;
                 let right_hash = *children_iter.next().expect("The first leaf must exist.");
+
+                // Slow down here instead of in hash call.
+                // for _x in 0..10000 {
+                // }
+
                 parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
             }
 
@@ -411,6 +432,11 @@ where
             while let Some(chunk) = children_iter.next() {
                 let left_hash = chunk[0];
                 let right_hash = chunk[1];
+
+                // Slow down here instead of in hash call.
+                // for _x in 0..10000 {
+                // }
+
                 parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
             }
 
@@ -423,6 +449,11 @@ where
                 let right_hash = *right_sibling_iter.next().ok_or_else(|| {
                     format_err!("Last child is a left child, but missing sibling on the right.")
                 })?;
+
+                // Slow down here instead of in hash call.
+                // for _x in 0..10000 {
+                // }
+
                 parent_hashes.push(MerkleTreeInternalNode::<H>::new(left_hash, right_hash).hash());
             }
 

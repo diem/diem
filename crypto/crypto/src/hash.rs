@@ -635,7 +635,7 @@ define_hasher! {
     )
 }
 
-define_slow_hasher! {
+define_hasher! {
     /// The hasher used to compute the hash of an internal node in the Sparse Merkle Tree.
     (
         SparseMerkleInternalHasher,

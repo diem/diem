@@ -164,6 +164,10 @@ impl InternalNode {
             _ => (),
         }
 
+        // Simulate the slowed down hashing behavior, only here.
+        // for _x in 0..10000 {
+        // }
+
         let hash = SparseMerkleInternalNode::new(
             left_child.read_lock().hash(),
             right_child.read_lock().hash(),
@@ -219,6 +223,12 @@ impl LeafNode {
             LeafValue::Blob(ref val) => val.hash(),
             LeafValue::BlobHash(ref val_hash) => *val_hash,
         };
+
+        // Simulate the slowed down hashing behavior, only here. even tho
+        // Leaf seems like a different hasher.
+        // for _x in 0..10000 {
+        // }
+
         let hash = SparseMerkleLeafNode::new(key, value_hash).hash();
         LeafNode { key, value, hash }
     }

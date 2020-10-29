@@ -583,6 +583,11 @@ impl JellyfishMerkleRestore {
                         .ok_or_else(|| format_err!("Missing right sibling."))?,
                 )
             };
+            
+            // Simulate the slowed down hashing behavior, only here.
+            // for _x in 0..10000 {
+            // }
+            
             current_hash = SparseMerkleInternalNode::new(left_hash, right_hash).hash();
         }
 
@@ -630,6 +635,10 @@ impl JellyfishMerkleRestore {
             } else if left_is_leaf && right_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH {
                 (left_hash, true)
             } else {
+                // Simulate the slowed down hashing behavior, only here.
+                // for _x in 0..10000 {
+                // }
+                
                 (
                     SparseMerkleInternalNode::new(left_hash, right_hash).hash(),
                     false,
