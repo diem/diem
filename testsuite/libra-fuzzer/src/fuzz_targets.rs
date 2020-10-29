@@ -61,6 +61,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network::NetworkNoiseStream::default()),
         Box::new(network::NetworkHandshakeExchange::default()),
         Box::new(network::NetworkHandshakeNegotiation::default()),
+        Box::new(network::PeerNetworkMessagesReceive::default()),
         // Safety Rules Server (LSR)
         Box::new(safety_rules::SafetyRulesConstructAndSignVote::default()),
         Box::new(safety_rules::SafetyRulesInitialize::default()),

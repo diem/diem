@@ -124,3 +124,25 @@ impl FuzzTargetImpl for NetworkHandshakeNegotiation {
         fuzz_network_handshake_protocol_negotiation(&own_handshake, &their_handshake);
     }
 }
+
+//
+// Peer NetworkMessages Receive
+//
+
+use network::peer;
+
+#[derive(Clone, Debug, Default)]
+pub struct PeerNetworkMessagesReceive;
+impl FuzzTargetImpl for PeerNetworkMessagesReceive {
+    fn description(&self) -> &'static str {
+        "network peer actor reading and deserializing multiple inbound NetworkMessages"
+    }
+
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(peer::fuzzing::generate_corpus(gen))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        peer::fuzzing::fuzz(data);
+    }
+}

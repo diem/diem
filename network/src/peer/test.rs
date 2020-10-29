@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants,
-    peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
+    constants::MAX_FRAME_SIZE,
+    peer::{message_codec, DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
         messaging::v1::{DirectSendMsg, NetworkMessage},
@@ -22,7 +22,7 @@ use tokio::{
     runtime::{Handle, Runtime},
     time::timeout,
 };
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::codec::Framed;
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
@@ -64,7 +64,7 @@ fn build_test_peer(
         peer_notifs_tx,
         peer_rpc_notifs_tx,
         peer_direct_send_notifs_tx,
-        constants::MAX_FRAME_SIZE,
+        MAX_FRAME_SIZE,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 
@@ -182,7 +182,7 @@ fn peer_send_message() {
 
     let server = async move {
         // The client should then send the network message.
-        let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
+        let mut connection = Framed::new(IoCompat::new(connection), message_codec(MAX_FRAME_SIZE));
         let msg = connection.next().await.unwrap();
         let msg: NetworkMessage = lcs::from_bytes(&msg.unwrap().freeze()).unwrap();
         assert_eq!(msg, recv_msg);
@@ -218,7 +218,7 @@ fn peer_recv_message() {
     let recv_msg = send_msg.clone();
 
     let server = async move {
-        let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
+        let mut connection = Framed::new(IoCompat::new(connection), message_codec(MAX_FRAME_SIZE));
         for _ in 0..30 {
             // The client should then send the network message.
             connection

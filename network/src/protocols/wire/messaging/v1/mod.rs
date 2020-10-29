@@ -5,6 +5,8 @@
 //! These should serialize as per the [specification](https://github.com/libra/libra/blob/master/specifications/network/messaging-v1.md)
 
 use crate::protocols::wire::handshake::v1::ProtocolId;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -12,6 +14,7 @@ mod test;
 
 /// Most primitive message type set on the network.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum NetworkMessage {
     Error(ErrorCode),
     RpcRequest(RpcRequest),
@@ -20,6 +23,7 @@ pub enum NetworkMessage {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum ErrorCode {
     /// Failed to parse NetworkMessage when interpreting according to provided protocol version.
     ParsingError(ParsingErrorType),
@@ -36,6 +40,7 @@ impl ErrorCode {
 /// Flags an invalid network message with as much header information as possible. This is a message
 /// that this peer cannot even parse its header information.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ParsingErrorType {
     message: u8,
     protocol: u8,
@@ -44,6 +49,7 @@ pub struct ParsingErrorType {
 /// Flags an unsupported network message.  This is a message that a peer can parse its header
 /// information but does not have a handler.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum NotSupportedType {
     RpcRequest(ProtocolId),
     DirectSendMsg(ProtocolId),
@@ -56,6 +62,7 @@ pub type RequestId = u32;
 pub type Priority = u8;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct RpcRequest {
     /// `protocol_id` is a variant of the ProtocolId enum.
     pub protocol_id: ProtocolId,
@@ -69,6 +76,7 @@ pub struct RpcRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct RpcResponse {
     /// RequestId for corresponding request. This is copied as is from the RpcRequest.
     pub request_id: RequestId,
@@ -81,6 +89,7 @@ pub struct RpcResponse {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct DirectSendMsg {
     /// `protocol_id` is a variant of the ProtocolId enum.
     pub protocol_id: ProtocolId,

@@ -29,6 +29,7 @@ mod test;
 /// Unique identifier associated with each application protocol.
 #[repr(u8)]
 #[derive(Clone, Copy, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,

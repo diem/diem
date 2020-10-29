@@ -26,17 +26,15 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, io, sync::Arc, time::Duration};
-use stream_ratelimiter::*;
+use std::{fmt::Debug, io, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
-// Rate-limit configuration for inbound messages. Allows 100 messages for every 10ms window.
-pub const MESSAGE_RATE_LIMIT_WINDOW: Duration = Duration::from_millis(10);
-pub const MESSAGE_RATE_LIMIT_COUNT: usize = 100;
-
 #[cfg(test)]
 mod test;
+
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod fuzzing;
 
 #[derive(Debug)]
 pub enum PeerRequest {
@@ -76,6 +74,16 @@ pub enum PeerNotification {
 enum State {
     Connected,
     ShuttingDown(DisconnectReason),
+}
+
+/// Returns a fully configured length-delimited codec for writing and reading
+/// [`NetworkMessage`]es to a socket.
+pub fn message_codec(max_frame_size: usize) -> LengthDelimitedCodec {
+    LengthDelimitedCodec::builder()
+        .max_frame_length(max_frame_size)
+        .length_field_length(4)
+        .big_endian()
+        .new_codec()
 }
 
 pub struct Peer<TSocket> {
@@ -150,21 +158,12 @@ where
 
         // Split the connection into a ReadHalf and a WriteHalf.
         let (reader, writer) = tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
-        let mut codec_builder = LengthDelimitedCodec::builder();
-        codec_builder
-            .max_frame_length(self.max_frame_size)
-            .length_field_length(4)
-            .big_endian();
-        // Convert ReadHalf to Stream of length-delimited messages.
 
-        let reader = FramedRead::new(reader, codec_builder.new_codec()).fuse();
-        // Create a rate-limited stream of inbound messages.
-        let mut reader = reader
-            .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
-            .fuse();
+        // Convert ReadHalf to Stream of length-delimited messages.
+        let mut reader = FramedRead::new(reader, message_codec(self.max_frame_size)).fuse();
 
         // Convert WriteHalf to Sink of length-delimited messages.
-        let writer = FramedWrite::new(writer, codec_builder.new_codec());
+        let writer = FramedWrite::new(writer, message_codec(self.max_frame_size));
         // Start writer "process" as a separate task. We receive two handles to communicate with
         // the task:
         // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.

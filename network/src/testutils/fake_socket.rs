@@ -40,13 +40,11 @@ impl<'a> ReadOnlyTestSocket<'a> {
     }
 
     /// reads will have to be done byte by byte
-    #[allow(dead_code)]
     pub fn set_fragmented_read(&mut self) {
         self.fragmented = true;
     }
 
     /// reads will never return pending, but 0s
-    #[allow(dead_code)]
     pub fn set_trailing(&mut self) {
         self.trailing = true;
     }
