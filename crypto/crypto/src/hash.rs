@@ -507,6 +507,61 @@ impl fmt::Debug for DefaultHasher {
     }
 }
 
+macro_rules! define_slow_hasher {
+    (
+        $(#[$attr:meta])*
+        ($hasher_type: ident, $hasher_name: ident, $seed_name: ident, $salt: expr)
+    ) => {
+
+        #[derive(Clone, Debug)]
+        $(#[$attr])*
+        pub struct $hasher_type(DefaultHasher);
+
+        impl $hasher_type {
+            fn new() -> Self {
+                $hasher_type(DefaultHasher::new($salt))
+            }
+        }
+
+        static $hasher_name: Lazy<$hasher_type> = Lazy::new(|| { $hasher_type::new() });
+        static $seed_name: OnceCell<[u8; 32]> = OnceCell::new();
+
+        impl Default for $hasher_type {
+            fn default() -> Self {
+                $hasher_name.clone()
+            }
+        }
+
+        impl CryptoHasher for $hasher_type {
+            fn seed() -> &'static [u8;32] {
+                $seed_name.get_or_init(|| {
+                    DefaultHasher::prefixed_hash($salt)
+                })
+            }
+
+            fn update(&mut self, bytes: &[u8]) {
+                self.0.update(bytes);
+            }
+
+            fn finish(self) -> HashValue {
+                for _x in 0..10000 {
+                }
+                self.0.finish()
+            }
+        }
+
+        impl std::io::Write for $hasher_type {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0.update(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+    };
+}
+
 macro_rules! define_hasher {
     (
         $(#[$attr:meta])*
@@ -580,7 +635,7 @@ define_hasher! {
     )
 }
 
-define_hasher! {
+define_slow_hasher! {
     /// The hasher used to compute the hash of an internal node in the Sparse Merkle Tree.
     (
         SparseMerkleInternalHasher,

@@ -385,6 +385,9 @@ where
         let current_transaction_accumulator =
             parent_trees.txn_accumulator().append(&txn_info_hashes);
         let txn_acc_dur = start_txn_acc.elapsed();
+
+        // Add a sleep here to measure the effect hashing slowdown had.
+        
         let func_dur = start_func.elapsed();
         
         // let mut file = OpenOptions::new()

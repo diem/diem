@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// #![feature(specialization)]
+
 pub mod accumulator;
 pub mod definition;
 pub mod position;
@@ -78,26 +80,94 @@ impl<H: CryptoHasher> MerkleTreeInternalNode<H> {
     }
 }
 
+// impl<H: CryptoHasher> CryptoHash for MerkleTreeInternalNode<H> {
+//     type Hasher = H;
+
+//     fn hash(&self) -> HashValue {
+//         // This is used for both txn accumulators and act merkle tree.
+//         // Does slow down w. more hashing.
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish();
+
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish();
+
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish();
+
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish();
+        
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish()
+//     }
+// }
+
 impl<H: CryptoHasher> CryptoHash for MerkleTreeInternalNode<H> {
     type Hasher = H;
 
-    fn hash(&self) -> HashValue {
-        let mut state = Self::Hasher::default();
-        state.update(self.left_child.as_ref());
-        state.update(self.right_child.as_ref());
-        state.finish();
-
-        let mut state = Self::Hasher::default();
-        state.update(self.left_child.as_ref());
-        state.update(self.right_child.as_ref());
-        state.finish();
-
+    // default
+    fn hash(&self) -> HashValue {        
         let mut state = Self::Hasher::default();
         state.update(self.left_child.as_ref());
         state.update(self.right_child.as_ref());
         state.finish()
     }
 }
+
+// impl CryptoHash for MerkleTreeInternalNode<SparseMerkleInternalHasher> {
+//     type Hasher = SparseMerkleInternalHasher;
+
+//     fn hash(&self) -> HashValue {
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish()
+//     }
+// }
+
+// impl CryptoHash for MerkleTreeInternalNode<TransactionAccumulatorHasher> {
+//     type Hasher = SparseMerkleInternalHasher;
+
+//     fn hash(&self) -> HashValue {
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish()
+//     }
+// }
+
+// impl CryptoHash for MerkleTreeInternalNode<EventAccumulatorHasher> {
+//     type Hasher = SparseMerkleInternalHasher;
+
+//     fn hash(&self) -> HashValue {
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish()
+//     }
+// }
+
+// impl CryptoHash for MerkleTreeInternalNode<TestOnlyHasher> {
+//     type Hasher = SparseMerkleInternalHasher;
+
+//     fn hash(&self) -> HashValue {
+//         let mut state = Self::Hasher::default();
+//         state.update(self.left_child.as_ref());
+//         state.update(self.right_child.as_ref());
+//         state.finish()
+//     }
+// }
 
 pub type SparseMerkleInternalNode = MerkleTreeInternalNode<SparseMerkleInternalHasher>;
 pub type TransactionAccumulatorInternalNode = MerkleTreeInternalNode<TransactionAccumulatorHasher>;
