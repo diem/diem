@@ -225,6 +225,7 @@ impl OperationalTool {
         fullnode_address: Option<NetworkAddress>,
         backend: &config::SecureBackend,
         disable_validate: bool,
+        disable_address_validation: bool,
     ) -> Result<TransactionContext, Error> {
         let args = format!(
             "
@@ -235,6 +236,7 @@ impl OperationalTool {
                 --json-server {host}
                 --validator-backend {backend_args}
                 {disable_validate}
+                {disable_address_validation}
             ",
             command = command(TOOL_NAME, CommandName::SetValidatorConfig),
             host = self.host,
@@ -243,6 +245,8 @@ impl OperationalTool {
             validator_address = optional_arg("validator-address", validator_address),
             backend_args = backend_args(backend)?,
             disable_validate = optional_flag("disable-validate", disable_validate),
+            disable_address_validation =
+                optional_flag("disable-address-validation", disable_address_validation),
         );
 
         let command = Command::from_iter(args.split_whitespace());
