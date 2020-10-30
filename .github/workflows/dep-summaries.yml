@@ -19,9 +19,10 @@ jobs:
     name: Calculate dependency summary changes
     if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
     outputs:
-      lsr-summary-diff: ${{ steps.verify-lsr.diff }}
-      lec-summary-diff: ${{ steps.verify-lec.diff }}
-      release-summary-diff: ${{ steps.verify-release.diff }}
+      lsr-summary-diff: ${{ steps.verify-lsr.outputs.diff }}
+      lec-summary-diff: ${{ steps.verify-lec.outputs.diff }}
+      release-summary-diff: ${{ steps.verify-release.outputs.diff }}
+      dep-auditors-list: ${{ steps.dep-auditors.outputs.list }}
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -90,19 +91,24 @@ jobs:
           output="${output//$'\n'/'%0A'}"
           output="${output//$'\r'/'%0D'}"
           echo "::set-output name=diff::${output}"
-
       - name: read dep-auditors list
         id: dep-auditors
-        if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
         run: |
           output=$(cat ./.github/dep-auditors.json | jq -r 'join(",")')
           echo "::set-output name=list::${output}"
+
+  requires-dep-audit-review:
+    runs-on: ubuntu-latest
+    name: Require review for TCB dep summary changes.
+    if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
+    needs: calc-summaries
+    steps:
       - name: require dep-audit review if TCB deps changed
-        if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
+        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.lec-summary-diff }}
         uses: libra/actions/require-review@a9c5709
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          users: ${{ steps.dep-auditors.outputs.list }}
+          users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
 
   annotate-pr:
     runs-on: ubuntu-latest
@@ -117,7 +123,7 @@ jobs:
           comment: |
             **LSR dependency change summary**:
             ```
-            ${{ steps.verify-lsr.outputs.diff }}
+            ${{ needs.calc-summaries.outputs.lsr-summary-diff }}
             ```
           tag: lsr-summary
           delete-older: true
@@ -128,7 +134,7 @@ jobs:
           comment: |
             **LEC dependency change summary**:
             ```
-            ${{ steps.verify-lec.outputs.diff }}
+            ${{ needs.calc-summaries.outputs.lec-summary-diff }}
             ```
           tag: lec-summary
           delete-older: true
@@ -139,11 +145,10 @@ jobs:
           comment: |
             **release binaries dependency change summary**:
             ```
-            ${{ steps.verify-release.outputs.diff }}
+            ${{ needs.calc-summaries.outputs.release-summary-diff }}
             ```
           tag: release-summary
           delete-older: true
-
       - name: label PR if TCB changed
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
         uses: libra/actions/labels@a9c5709
@@ -154,7 +159,6 @@ jobs:
         uses: libra/actions/labels@a9c5709
         with:
           add: deps-changed
-
       - name: unlabel PR if TCB changed
         if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff }}
         uses: libra/actions/labels@a9c5709
@@ -165,9 +169,8 @@ jobs:
         uses: libra/actions/labels@a9c5709
         with:
           remove: deps-changed
-
       - name: request dep-audit review if TCB deps changed
         uses: libra/actions/request-review@a9c5709
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
         with:
-          users: ${{ steps.dep-auditors.outputs.list }}
+          users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
