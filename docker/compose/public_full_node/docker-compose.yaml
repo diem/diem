@@ -31,8 +31,7 @@
 version: "3.8"
 services:
     fullnode:
-        # @TODO, this must be manually updated on testnet releases.
-        image: libra/validator:release-0.21_0102f6f8
+        image: libra/validator:testnet
         volumes:
             - type: volume
               source: db
