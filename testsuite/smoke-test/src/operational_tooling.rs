@@ -366,6 +366,41 @@ fn test_insert_waypoint() {
 }
 
 #[test]
+fn test_fullnode_network_key_rotation() {
+    let num_nodes = 1;
+    let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
+
+    // Rotate the full node network key
+    let (txn_ctx, new_network_key) = op_tool.rotate_fullnode_network_key(&backend, true).unwrap();
+    assert!(txn_ctx.execution_result.is_none());
+
+    // Wait for transaction execution
+    let client = env.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that the config has been loaded correctly with new key
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let config_network_key = op_tool
+        .validator_config(validator_account, &backend)
+        .unwrap()
+        .fullnode_network_address
+        .find_noise_proto()
+        .unwrap();
+    assert_eq!(new_network_key, config_network_key);
+
+    // Verify that the validator set info contains the new network key
+    let info_network_key = op_tool
+        .validator_set(Some(validator_account), &backend)
+        .unwrap()[0]
+        .fullnode_network_address
+        .find_noise_proto()
+        .unwrap();
+    assert_eq!(new_network_key, info_network_key);
+}
+
+#[test]
 fn test_network_key_rotation() {
     let num_nodes = 4;
     let (mut env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
