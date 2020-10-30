@@ -11,7 +11,7 @@ use libra_network_address::{NetworkAddress, Protocol};
 use libra_network_address_encryption::Encryptor;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 use structopt::StructOpt;
 
 // TODO: Load all chain IDs from the host
@@ -316,7 +316,13 @@ impl DecryptedValidatorConfig {
 
         let validator_network_addresses = encryptor
             .decrypt(&config.validator_network_addresses, account_address)
-            .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
+            .unwrap_or_else(|e| {
+                println!(
+                    "Unable to decode network address {}, using a dummy validator network address!",
+                    e,
+                );
+                vec![NetworkAddress::from_str("/dns4/could-not-decrypt").unwrap()]
+            });
 
         Ok(DecryptedValidatorConfig {
             name: "".to_string(),
