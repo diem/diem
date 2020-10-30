@@ -615,7 +615,7 @@ macro_rules! define_hasher {
     };
 }
 
-define_hasher! {
+define_slow_hasher! {
     /// The hasher used to compute the hash of an internal node in the transaction accumulator.
     (
         TransactionAccumulatorHasher,
@@ -635,7 +635,7 @@ define_hasher! {
     )
 }
 
-define_hasher! {
+define_slow_hasher! {
     /// The hasher used to compute the hash of an internal node in the Sparse Merkle Tree.
     (
         SparseMerkleInternalHasher,

@@ -398,8 +398,8 @@ impl InternalNode {
             );
 
             // Simulate the slowed down hashing behavior, only here.
-            for _x in 0..10000 {
-            }
+            // for _x in 0..10000 {
+            // }
             
             SparseMerkleInternalNode::new(left_child, right_child).hash()
         }
