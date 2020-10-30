@@ -3,3 +3,6 @@ test dummy/test_2
 test dummy
 test cov
 test cov --track-cov
+test cov --track-cov --use-path-cov
+test cov-inst-vs-path --track-cov
+test cov-inst-vs-path --track-cov --use-path-cov

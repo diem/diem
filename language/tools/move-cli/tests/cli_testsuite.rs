@@ -10,6 +10,7 @@ fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
         args_path,
         "../../../target/debug/move-cli",
         false,
+        false,
     )?)
 }
 

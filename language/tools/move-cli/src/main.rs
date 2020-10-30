@@ -115,6 +115,9 @@ enum Command {
         /// By default, coverage will not be tracked nor shown.
         #[structopt(long = "track-cov")]
         track_cov: bool,
+        /// Show path coverage instead of instruction coverage.
+        #[structopt(long = "use-path-cov")]
+        use_path_cov: bool,
     },
     /// View Move resources, events files, and modules stored on disk
     #[structopt(name = "view")]
@@ -610,10 +613,15 @@ fn main() -> Result<()> {
             *gas_budget,
             *dry_run,
         ),
-        Command::Test { path, track_cov } => test::run_all(
+        Command::Test {
+            path,
+            track_cov,
+            use_path_cov,
+        } => test::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
             *track_cov,
+            *use_path_cov,
         ),
         Command::View { file } => view(&move_args, file),
         Command::Clean {} => {

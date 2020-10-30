@@ -14,3 +14,27 @@ Module 00000000000000000000000000000042::M
 		% coverage: 100.00
 >>> % Module coverage: 100.00
 1 / 1 test(s) passed.
+Command `test cov --track-cov --use-path-cov`:
+Module 00000000000000000000000000000042::M
+	fun test
+		total: 1
+		covered: 1
+		% coverage: 100.00
+>>> % Module coverage: 100.00
+1 / 1 test(s) passed.
+Command `test cov-inst-vs-path --track-cov`:
+Module 00000000000000000000000000000042::M
+	fun test
+		total: 32
+		covered: 32
+		% coverage: 100.00
+>>> % Module coverage: 100.00
+1 / 1 test(s) passed.
+Command `test cov-inst-vs-path --track-cov --use-path-cov`:
+Module 00000000000000000000000000000042::M
+	fun test
+		total: 4
+		covered: 2
+		% coverage: 50.00
+>>> % Module coverage: 50.00
+1 / 1 test(s) passed.
