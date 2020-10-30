@@ -158,6 +158,8 @@ impl SynchronizerEnv {
         config.base.role = role;
         config.state_sync.sync_request_timeout_ms = timeout_ms;
         config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
+        // Too many tests expect this, so we overwrite the value
+        config.state_sync.chunk_limit = 250;
 
         let network = config.validator_network.unwrap();
         let network_id = if role.is_validator() {
