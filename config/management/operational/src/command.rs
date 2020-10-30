@@ -118,7 +118,7 @@ impl std::fmt::Display for CommandName {
             CommandName::RemoveValidator => "remove-validator",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
             CommandName::RotateOperatorKey => "rotate-operator-key",
-            CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
+            CommandName::RotateFullNodeNetworkKey => "rotate-full-node-network-key",
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
             CommandName::SetValidatorConfig => "set-validator-config",
             CommandName::SetValidatorOperator => "set-validator-operator",
