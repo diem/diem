@@ -72,6 +72,12 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut v = lcs::to_bytes(&self.private_key).unwrap();
         v.extend(&lcs::to_bytes(&self.public_key).unwrap());
+        let y = [0, 1, 2, 3];
+
+        // Bad
+        &y[10..100];
+        &y[10..];
+        &y[..100];
         write!(f, "{}", hex::encode(&v[..]))
     }
 }
