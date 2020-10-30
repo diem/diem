@@ -3694,6 +3694,8 @@ dependencies = [
  "libra-types",
  "libra-workspace-hack",
  "libradb",
+ "serde",
+ "serde_json",
  "storage-interface",
  "structopt 0.3.18",
 ]
