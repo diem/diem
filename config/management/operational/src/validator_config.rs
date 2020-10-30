@@ -36,6 +36,8 @@ pub struct SetValidatorConfig {
     fullnode_address: Option<NetworkAddress>,
     #[structopt(flatten)]
     auto_validate: AutoValidate,
+    #[structopt(long, help = "Disables network address validation")]
+    disable_address_validation: bool,
 }
 
 impl SetValidatorConfig {
@@ -100,6 +102,7 @@ impl SetValidatorConfig {
             fullnode_address,
             validator_address,
             validator_config.is_some(),
+            self.disable_address_validation,
         )?;
         let mut transaction_context =
             client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())?;
@@ -178,6 +181,7 @@ impl RotateKey {
             validator_address: None,
             fullnode_address: None,
             auto_validate: self.auto_validate.clone(),
+            disable_address_validation: true,
         };
         let mut transaction_context = set_validator_config.execute()?;
 

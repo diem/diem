@@ -19,6 +19,8 @@ pub struct ValidatorConfig {
     fullnode_address: NetworkAddress,
     #[structopt(flatten)]
     shared_backend: SharedBackend,
+    #[structopt(long, help = "Disables network address validation")]
+    disable_address_validation: bool,
 }
 
 impl ValidatorConfig {
@@ -39,6 +41,7 @@ impl ValidatorConfig {
             self.fullnode_address,
             self.validator_address,
             false,
+            self.disable_address_validation,
         )?;
 
         // Upload the validator config to shared storage
