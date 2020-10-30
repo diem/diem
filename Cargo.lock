@@ -2792,6 +2792,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-events-fetcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures 0.3.6",
+ "hex",
+ "libra-canonical-serialization",
+ "libra-json-rpc-client",
+ "libra-types",
+ "libra-validator-interface",
+ "libra-workspace-hack",
+ "reqwest",
+ "structopt 0.3.18",
+ "tokio",
+]
+
+[[package]]
 name = "libra-faucet"
 version = "0.1.0"
 dependencies = [
@@ -6119,6 +6136,7 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
+ "libra-events-fetcher",
  "libra-genesis-tool",
  "libra-global-constants",
  "libra-infallible",
@@ -6145,6 +6163,7 @@ dependencies = [
  "regex",
  "rust_decimal",
  "statistical",
+ "tokio",
  "transaction-builder",
 ]
 

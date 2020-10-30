@@ -65,6 +65,7 @@ pub mod libra_swarm_utils {
     use crate::test_utils::fetch_backend_storage;
     use cli::client_proxy::ClientProxy;
     use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
+    use libra_events_fetcher::LibraEventsFetcher;
     use libra_key_manager::libra_interface::JsonRpcLibraInterface;
     use libra_operational_tool::test_helper::OperationalTool;
     use libra_secure_storage::{KVStorage, Storage};
@@ -122,6 +123,14 @@ pub mod libra_swarm_utils {
         let swarm_rpc_endpoint =
             format!("http://localhost:{}", node_config.json_rpc.address.port());
         LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap()
+    }
+
+    /// Returns a Libra Event Fetcher pointing to a node at the given node index.
+    pub fn get_libra_event_fetcher(swarm: &LibraSwarm, node_index: usize) -> LibraEventsFetcher {
+        let (node_config, _) = load_node_config(swarm, node_index);
+        let swarm_rpc_endpoint =
+            format!("http://localhost:{}", node_config.json_rpc.address.port());
+        LibraEventsFetcher::new(swarm_rpc_endpoint.as_str()).unwrap()
     }
 
     /// Returns an operational tool pointing to a validator node at the given node index.
