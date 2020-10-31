@@ -185,16 +185,19 @@ impl OperationalTool {
         &self,
         waypoint: Waypoint,
         backend: &config::SecureBackend,
+        set_genesis: bool,
     ) -> Result<(), Error> {
         let args = format!(
             "
                 {command}
                 --waypoint {waypoint}
                 --validator-backend {backend_args}
+                {set_genesis}
             ",
             command = command(TOOL_NAME, CommandName::InsertWaypoint),
             waypoint = waypoint,
             backend_args = backend_args(backend)?,
+            set_genesis = optional_flag("set-genesis", set_genesis),
         );
         let command = Command::from_iter(args.split_whitespace());
         command.insert_waypoint()
