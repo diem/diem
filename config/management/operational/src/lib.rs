@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-mod account;
 mod account_resource;
 mod auto_validate;
 pub mod command;
@@ -11,6 +10,7 @@ mod governance;
 pub mod json_rpc;
 mod keys;
 mod owner;
+mod print;
 mod validate_transaction;
 mod validator_config;
 mod validator_set;
