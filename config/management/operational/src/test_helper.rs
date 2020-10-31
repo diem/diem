@@ -222,6 +222,25 @@ impl OperationalTool {
         command.print_account()
     }
 
+    pub fn print_waypoint(
+        &self,
+        waypoint_name: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<Waypoint, Error> {
+        let args = format!(
+            "
+                {command}
+                --waypoint-name {waypoint_name}
+                --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::PrintWaypoint),
+            waypoint_name = waypoint_name,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.print_waypoint()
+    }
+
     pub fn set_validator_config(
         &self,
         validator_address: Option<NetworkAddress>,

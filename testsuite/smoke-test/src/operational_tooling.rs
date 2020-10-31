@@ -652,6 +652,26 @@ fn test_print_account() {
 }
 
 #[test]
+fn test_print_waypoints() {
+    let (_env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Insert a new waypoint and genesis waypoint into storage
+    let inserted_waypoint =
+        Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::zero()));
+    op_tool
+        .insert_waypoint(inserted_waypoint, &backend, true)
+        .unwrap();
+
+    // Print the waypoint
+    let waypoint = op_tool.print_waypoint(WAYPOINT, &backend).unwrap();
+    assert_eq!(inserted_waypoint, waypoint);
+
+    // Print the gensis waypoint
+    let genesis_waypoint = op_tool.print_waypoint(GENESIS_WAYPOINT, &backend).unwrap();
+    assert_eq!(inserted_waypoint, genesis_waypoint);
+}
+
+#[test]
 fn test_validate_transaction() {
     let (env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
