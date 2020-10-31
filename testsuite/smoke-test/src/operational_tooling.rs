@@ -652,6 +652,21 @@ fn test_print_account() {
 }
 
 #[test]
+fn test_print_key() {
+    let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Print the operator key
+    let op_tool_operator_key = op_tool.print_key(OPERATOR_KEY, &backend).unwrap();
+    let storage_operator_key = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
+    assert_eq!(storage_operator_key, op_tool_operator_key);
+
+    // Print the consensus key
+    let op_tool_consensus_key = op_tool.print_key(CONSENSUS_KEY, &backend).unwrap();
+    let storage_consensus_key = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
+    assert_eq!(storage_consensus_key, op_tool_consensus_key);
+}
+
+#[test]
 fn test_print_waypoints() {
     let (_env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
