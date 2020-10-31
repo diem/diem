@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, execute_command};
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, waypoint::Waypoint};
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -31,7 +31,9 @@ pub enum Command {
     #[structopt(about = "Set the waypoint in the validator storage")]
     InsertWaypoint(libra_management::waypoint::InsertWaypoint),
     #[structopt(about = "Prints an account from the validator storage")]
-    PrintAccount(crate::account::PrintAccount),
+    PrintAccount(crate::print::PrintAccount),
+    #[structopt(about = "Prints a waypoint from the validator storage")]
+    PrintWaypoint(crate::print::PrintWaypoint),
     #[structopt(about = "Remove a validator from ValidatorSet")]
     RemoveValidator(crate::governance::RemoveValidator),
     #[structopt(about = "Rotates the consensus key for a validator")]
@@ -65,6 +67,7 @@ pub enum CommandName {
     ExtractPublicKey,
     InsertWaypoint,
     PrintAccount,
+    PrintWaypoint,
     RemoveValidator,
     RotateConsensusKey,
     RotateOperatorKey,
@@ -89,6 +92,7 @@ impl From<&Command> for CommandName {
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::PrintAccount(_) => CommandName::PrintAccount,
+            Command::PrintWaypoint(_) => CommandName::PrintWaypoint,
             Command::RemoveValidator(_) => CommandName::RemoveValidator,
             Command::RotateConsensusKey(_) => CommandName::RotateConsensusKey,
             Command::RotateOperatorKey(_) => CommandName::RotateOperatorKey,
@@ -115,6 +119,7 @@ impl std::fmt::Display for CommandName {
             CommandName::ExtractPublicKey => "extract-public-key",
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::PrintAccount => "print-account",
+            CommandName::PrintWaypoint => "print-waypoint",
             CommandName::RemoveValidator => "remove-validator",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
             CommandName::RotateOperatorKey => "rotate-operator-key",
@@ -146,6 +151,7 @@ impl Command {
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
             Command::PrintAccount(cmd) => Self::pretty_print(cmd.execute()),
+            Command::PrintWaypoint(cmd) => Self::pretty_print(cmd.execute()),
             Command::RemoveValidator(cmd) => Self::print_transaction_context(cmd.execute()),
             Command::RotateConsensusKey(cmd) => {
                 Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
@@ -247,6 +253,10 @@ impl Command {
 
     pub fn print_account(self) -> Result<AccountAddress, Error> {
         execute_command!(self, Command::PrintAccount, CommandName::PrintAccount)
+    }
+
+    pub fn print_waypoint(self) -> Result<Waypoint, Error> {
+        execute_command!(self, Command::PrintWaypoint, CommandName::PrintWaypoint)
     }
 
     pub fn remove_validator(self) -> Result<TransactionContext, Error> {
