@@ -72,15 +72,25 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut v = lcs::to_bytes(&self.private_key).unwrap();
         v.extend(&lcs::to_bytes(&self.public_key).unwrap());
-        let y = [0, 1, 2, 3];
-
-        // Bad
-        &y[10..100];
-        &y[10..];
-        &y[..100];
+        test_func();
         write!(f, "{}", hex::encode(&v[..]))
     }
 }
+
+
+
+fn test_func() {
+    let x = [1, 2, 3, 4];
+    let index: usize = 1;
+    x[index];
+    let y = &x;
+    y[0];
+    let v = vec![0; 5];
+    v[0];
+    v[10];
+    v[1 << 3];
+}
+
 
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
