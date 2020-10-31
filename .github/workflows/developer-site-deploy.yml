@@ -39,6 +39,6 @@ jobs:
         git config --global user.name "Libra Website Deployment Script"
         echo "machine github.com login libra-doc-bot password ${{ secrets.PUBLISH_AND_DEPLOY_TOKEN }}" > ~/.netrc
         cd developers.libra.org
-        ./scripts/build_docs.sh -b -r
+        ./scripts/build_docs.sh -b -r -p
         cd website
         GIT_USER=libra-doc-bot USE_SSH=false CUSTOM_COMMIT_MESSAGE="[skip ci] Deploy website" yarn run publish-gh-pages

@@ -27,7 +27,7 @@ Rustdoc and Protogen). To generate these pages, you can run the following:
 
 To generate a static build of the website in the `website/build` directory, run
 ```bash
-./scripts/build_docs.sh -b
+./scripts/build_docs.sh -b -r -p
 ```
 
 #### Deploying for wider testing

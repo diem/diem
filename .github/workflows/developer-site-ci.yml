@@ -34,4 +34,4 @@ jobs:
     - name: Build Site
       run: |
         cd developers.libra.org
-        ./scripts/build_docs.sh -b -r
+        ./scripts/build_docs.sh -b -r -p
