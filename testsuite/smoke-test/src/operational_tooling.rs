@@ -751,6 +751,43 @@ fn test_validator_config() {
 }
 
 #[test]
+fn test_validator_decryption() {
+    let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
+
+    // Fetch the validator config and validator info for this operator's owner
+    let owner_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let validator_set_infos = op_tool
+        .validator_set(Some(owner_account), &backend)
+        .unwrap();
+    assert_eq!(1, validator_set_infos.len());
+
+    // Ensure the validator network addresses were decrypted successfully
+    let failed_decryption_address = NetworkAddress::from_str("/dns4/could-not-decrypt").unwrap();
+    let config_network_address = validator_config.validator_network_address;
+    let info_network_address = validator_set_infos[0].validator_network_address.clone();
+    assert_eq!(config_network_address, info_network_address,);
+    assert_ne!(failed_decryption_address, config_network_address);
+
+    // Corrupt the network address encryption key in storage
+    storage
+        .set(VALIDATOR_NETWORK_ADDRESS_KEYS, "INVALID KEY")
+        .unwrap();
+
+    // Fetch the validator config and validator info for this operator's owner again
+    let validator_config = op_tool.validator_config(owner_account, &backend).unwrap();
+    let validator_set_infos = op_tool
+        .validator_set(Some(owner_account), &backend)
+        .unwrap();
+
+    // Ensure the validator network addresses failed to decrypt, but everything else was fetched
+    let config_network_address = validator_config.validator_network_address;
+    let info_network_address = validator_set_infos[0].validator_network_address.clone();
+    assert_eq!(config_network_address, info_network_address,);
+    assert_eq!(failed_decryption_address, config_network_address);
+}
+
+#[test]
 fn test_validator_set() {
     let num_nodes = 4;
     let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
