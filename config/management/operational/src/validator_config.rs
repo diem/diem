@@ -320,10 +320,10 @@ impl DecryptedValidatorConfig {
 
         let validator_network_addresses = encryptor
             .decrypt(&config.validator_network_addresses, account_address)
-            .unwrap_or_else(|e| {
+            .unwrap_or_else(|error| {
                 println!(
-                    "Unable to decode network address {}, using a dummy validator network address!",
-                    e,
+                    "Unable to decode network address for account {}: {}. Using a dummy validator network address!",
+                    account_address, error
                 );
                 vec![NetworkAddress::from_str("/dns4/could-not-decrypt").unwrap()]
             });
