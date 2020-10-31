@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use libra_types::{account_address::AccountAddress, waypoint::Waypoint};
 use structopt::StructOpt;
@@ -26,6 +27,30 @@ impl PrintAccount {
         let storage = config.validator_backend();
         let account_name = Box::leak(self.account_name.into_boxed_str());
         storage.account_address(account_name)
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub struct PrintKey {
+    #[structopt(flatten)]
+    config: ConfigPath,
+    /// The key name in storage
+    #[structopt(long)]
+    key_name: String,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
+}
+
+impl PrintKey {
+    pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
+        let config = self
+            .config
+            .load()?
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
+
+        let storage = config.validator_backend();
+        let key_name = Box::leak(self.key_name.into_boxed_str());
+        storage.ed25519_public_from_private(key_name)
     }
 }
 

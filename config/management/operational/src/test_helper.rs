@@ -222,6 +222,25 @@ impl OperationalTool {
         command.print_account()
     }
 
+    pub fn print_key(
+        &self,
+        key_name: &str,
+        backend: &config::SecureBackend,
+    ) -> Result<Ed25519PublicKey, Error> {
+        let args = format!(
+            "
+                {command}
+                --key-name {key_name}
+                --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::PrintKey),
+            key_name = key_name,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.print_key()
+    }
+
     pub fn print_waypoint(
         &self,
         waypoint_name: &str,
