@@ -62,6 +62,7 @@ const siteConfig = {
     { href: 'https://libra.org/developers/', label: 'Overview' },
     { doc: 'welcome-to-libra', label: 'Libra Docs' },
     { href: '/docs/rustdocs/', label: 'Libra Rust Crates' },
+    { href: '/docs/python-client-sdk-docs/libra/', label: 'Libra Python Client SDK' },
     { href: 'https://lip.libra.org', label: 'Governance' },
     { href: 'https://community.libra.org', label: 'Community' },
     { href: 'https://github.com/libra/libra', label: 'GitHub', external: true },

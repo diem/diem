@@ -3,6 +3,7 @@
 
 # OSX
 *.DS_Store
+venv
 
 # Installer logs
 
@@ -18,3 +19,4 @@ docs/crates/*
 docs/community/coding-guidelines.md
 docs/community/contributing.md
 website/static/docs/rustdocs/
+website/static/docs/python-client-sdk-docs/

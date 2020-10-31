@@ -6,13 +6,15 @@
 # run this script from the project root using `./scripts/build_docs.sh`
 
 function usage() {
-  echo "Usage: $0 [-b] [-r]"
+  echo "Usage: $0 [-b] [-r] [-p]"
   echo ""
   echo "Build Libra documentation."
   echo ""
   echo "  -b   Build static version of documentation (otherwise start server)"
   echo ""
   echo "  -r   Build Libra Rust crate documentation"
+  echo ""
+  echo "  -p   Build Libra Python Client SDK documentation"
   echo ""
 }
 
@@ -26,8 +28,19 @@ function install_rustup {
   fi
 }
 
+function install_python {
+  echo "Installing Python 3......"
+  if python3 --version &>/dev/null; then
+    echo "Python 3 is already installed"
+  else
+    echo "Install Python 3 from https://www.python.org/"
+    exit 1
+  fi
+}
+
 BUILD_STATIC=false
 BUILD_RUSTDOCS=false
+BUILD_PYTORCH_SDK_DOCS=false
 
 if [[ "$(basename $PWD)" != "developers.libra.org" ]]; then
   echo "Didn't pass directory check."
@@ -40,7 +53,7 @@ if [[ "$(basename $PWD)" != "developers.libra.org" ]]; then
   exit 1
 fi
 
-while getopts 'hbr' flag; do
+while getopts 'hbrp' flag; do
   case "${flag}" in
     h)
       usage;
@@ -51,6 +64,9 @@ while getopts 'hbr' flag; do
       ;;
     r)
       BUILD_RUSTDOCS=true
+      ;;
+    p)
+      BUILD_PYTORCH_SDK_DOCS=true
       ;;
     *)
       usage;
@@ -115,6 +131,30 @@ if [[ $BUILD_RUSTDOCS == true ]]; then
 
   mkdir -p $DOCUSAURUS_RUSTDOC_DIR
   cp -r $RUSTDOC_DIR $DOCUSAURUS_RUSTDOC_DIR
+fi
+
+if [[ $BUILD_PYTORCH_SDK_DOCS == true ]]; then
+  echo "-----------------------------------"
+  echo "Generating PyTorch Client SDK Docs"
+  echo "-----------------------------------"
+
+  echo "Checking for Python"
+  install_python
+
+  echo "Installing libra-client-sdk"
+  python3 -m venv ./venv
+
+  ./venv/bin/pip install --upgrade pip
+  ./venv/bin/pip install libra-client-sdk pdoc3
+
+  echo "Create directory for docs"
+  rm -rf website/static/docs/python-client-sdk-docs/
+  mkdir -p website/static/docs/python-client-sdk-docs/
+
+  echo "Generating doc from libra-client-sdk"
+  source ./venv/bin/activate && pdoc3 libra --html -o website/static/docs/python-client-sdk-docs/
+
+  rm -rf venv
 fi
 
 echo "-----------------------------------"
