@@ -299,6 +299,7 @@ impl GenesisHelper {
                     token={token_path};\
                     namespace={validator_ns}
                 --waypoint {waypoint}
+                --set-genesis
             ",
             validator_backend = validator_backend,
             server = server,

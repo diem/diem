@@ -127,6 +127,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={validator_ns}
                 --waypoint {waypoint}
+                --set-genesis
             ",
             backend = DISK,
             path = self.path_string(),

@@ -402,19 +402,30 @@ fn test_insert_waypoint() {
     let current_waypoint: Waypoint = storage.get(WAYPOINT).unwrap().value;
     storage.get::<Waypoint>(GENESIS_WAYPOINT).unwrap_err();
 
-    // Insert a new waypoint into storage
+    // Insert a new waypoint and genesis waypoint into storage
     let inserted_waypoint =
         Waypoint::new_any(&LedgerInfo::new(BlockInfo::empty(), HashValue::zero()));
     assert_ne!(current_waypoint, inserted_waypoint);
     op_tool
-        .insert_waypoint(inserted_waypoint, &backend)
+        .insert_waypoint(inserted_waypoint, &backend, true)
         .unwrap();
 
     // Verify the waypoint has changed in storage and that genesis waypoint is now set
-    let new_waypoint = storage.get(WAYPOINT).unwrap().value;
-    let new_genesis_waypoint = storage.get(GENESIS_WAYPOINT).unwrap().value;
-    assert_eq!(inserted_waypoint, new_waypoint);
-    assert_eq!(inserted_waypoint, new_genesis_waypoint);
+    assert_eq!(inserted_waypoint, storage.get(WAYPOINT).unwrap().value);
+    assert_eq!(
+        inserted_waypoint,
+        storage.get(GENESIS_WAYPOINT).unwrap().value
+    );
+
+    // Insert the old waypoint into storage, but skip the genesis waypoint
+    op_tool
+        .insert_waypoint(current_waypoint, &backend, false)
+        .unwrap();
+    assert_eq!(current_waypoint, storage.get(WAYPOINT).unwrap().value);
+    assert_eq!(
+        inserted_waypoint,
+        storage.get(GENESIS_WAYPOINT).unwrap().value
+    );
 }
 
 #[test]
