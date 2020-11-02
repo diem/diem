@@ -31,6 +31,24 @@ impl Error {
     pub fn unexpected_lcs_error(e: lcs::Error) -> Self {
         Error::UnexpectedError(UnexpectedError::LCSError(e))
     }
+    pub fn unexpected_invalid_response_id(resp: JsonRpcResponse) -> Self {
+        Error::UnexpectedError(UnexpectedError::InvalidResponseId(resp))
+    }
+    pub fn unexpected_invalid_response_id_type(resp: JsonRpcResponse) -> Self {
+        Error::UnexpectedError(UnexpectedError::InvalidResponseIdType(resp))
+    }
+    pub fn unexpected_response_id_not_found(resp: JsonRpcResponse) -> Self {
+        Error::UnexpectedError(UnexpectedError::ResponseIdNotFound(resp))
+    }
+    pub fn unexpected_invalid_batch_response(resps: Vec<JsonRpcResponse>) -> Self {
+        Error::UnexpectedError(UnexpectedError::InvalidBatchResponse(resps))
+    }
+    pub fn unexpected_duplicated_response_id(resp: JsonRpcResponse) -> Self {
+        Error::UnexpectedError(UnexpectedError::DuplicatedResponseId(resp))
+    }
+    pub fn unexpected_no_response(req: serde_json::Value) -> Self {
+        Error::UnexpectedError(UnexpectedError::NoResponse(req))
+    }
 }
 
 impl std::fmt::Display for Error {
@@ -55,6 +73,12 @@ impl std::error::Error for Error {
 #[derive(Debug)]
 pub enum UnexpectedError {
     LCSError(lcs::Error),
+    InvalidResponseId(JsonRpcResponse),
+    InvalidResponseIdType(JsonRpcResponse),
+    ResponseIdNotFound(JsonRpcResponse),
+    InvalidBatchResponse(Vec<JsonRpcResponse>),
+    DuplicatedResponseId(JsonRpcResponse),
+    NoResponse(serde_json::Value),
 }
 
 impl std::fmt::Display for UnexpectedError {
@@ -67,6 +91,7 @@ impl std::error::Error for UnexpectedError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             UnexpectedError::LCSError(e) => Some(e),
+            _ => None,
         }
     }
 }

@@ -7,7 +7,7 @@ mod retry;
 mod state;
 
 pub mod defaults;
-pub use client::{Client, Response};
+pub use client::{Client, Request, Response};
 pub use error::{Error, UnexpectedError, WaitForTransactionError};
 pub use libra_json_rpc_types::{errors::JsonRpcError, proto::types, response::JsonRpcResponse};
 pub use retry::{Retry, RetryStrategy};

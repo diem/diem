@@ -12,7 +12,96 @@ use libra_types::{
 };
 use serde::de::DeserializeOwned;
 use serde_json::json;
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    time::Duration,
+};
+
+#[derive(Debug)]
+pub struct Request {
+    pub method: &'static str,
+    pub params: serde_json::Value,
+}
+
+impl Request {
+    pub fn new(method: &'static str, params: serde_json::Value) -> Self {
+        Request { method, params }
+    }
+
+    pub fn submit(txn: &SignedTransaction) -> Result<Self, lcs::Error> {
+        let txn_payload = hex::encode(lcs::to_bytes(txn)?);
+        Ok(Self::new("submit", json!([txn_payload])))
+    }
+
+    pub fn get_account_state_with_proof(
+        address: &AccountAddress,
+        from_version: Option<u64>,
+        to_version: Option<u64>,
+    ) -> Self {
+        Self::new(
+            "get_account_state_with_proof",
+            json!([address, from_version, to_version]),
+        )
+    }
+
+    pub fn get_state_proof(from_version: u64) -> Self {
+        Self::new("get_state_proof", json!([from_version]))
+    }
+
+    pub fn get_currencies() -> Self {
+        Self::new("get_currencies", json!([]))
+    }
+
+    pub fn get_events(key: &str, start_seq: u64, limit: u64) -> Self {
+        Self::new("get_events", json!([key, start_seq, limit]))
+    }
+
+    pub fn get_transactions(start_seq: u64, limit: u64, include_events: bool) -> Self {
+        Self::new(
+            "get_transactions",
+            json!([start_seq, limit, include_events]),
+        )
+    }
+
+    pub fn get_account_transactions(
+        address: &AccountAddress,
+        start_seq: u64,
+        limit: u64,
+        include_events: bool,
+    ) -> Self {
+        Self::new(
+            "get_account_transactions",
+            json!([address, start_seq, limit, include_events]),
+        )
+    }
+
+    pub fn get_account_transaction(
+        address: &AccountAddress,
+        seq: u64,
+        include_events: bool,
+    ) -> Self {
+        Self::new(
+            "get_account_transaction",
+            json!([address, seq, include_events]),
+        )
+    }
+
+    pub fn get_account(address: &AccountAddress) -> Self {
+        Self::new("get_account", json!([address]))
+    }
+    pub fn get_metadata_by_version(version: u64) -> Self {
+        Self::new("get_metadata", json!([version]))
+    }
+
+    pub fn get_metadata() -> Self {
+        Self::new("get_metadata", json!([]))
+    }
+
+    pub fn to_json(&self, id: usize) -> serde_json::Value {
+        json!({"jsonrpc": "2.0", "id": id, "method": self.method, "params": self.params})
+    }
+}
 
 #[derive(Debug)]
 pub struct Response<R> {
@@ -25,6 +114,22 @@ impl<R> std::ops::Deref for Response<R> {
 
     fn deref(&self) -> &Self::Target {
         &self.result
+    }
+}
+
+impl<R: for<'de> serde::Deserialize<'de>> TryFrom<JsonRpcResponse> for Response<R> {
+    type Error = Error;
+
+    fn try_from(resp: JsonRpcResponse) -> Result<Self, Error> {
+        let state = State::from_response(&resp);
+        match resp.result {
+            Some(ret) => Ok(Self {
+                result: serde_json::from_value::<R>(ret)
+                    .map_err(Error::DeserializeResponseJsonError)?,
+                state,
+            }),
+            None => Err(Error::ResultNotFound(resp)),
+        }
     }
 }
 
@@ -113,22 +218,33 @@ impl<R: RetryStrategy> Client<R> {
         data.clone()
     }
 
+    pub fn update_state(&self, resp_state: State) -> bool {
+        let mut state_writer = self.last_known_state.write().unwrap();
+        if let Some(state) = &*state_writer {
+            if &resp_state < state {
+                return false;
+            }
+        }
+        *state_writer = Some(resp_state);
+        true
+    }
+
     pub async fn get_metadata(&self) -> Result<Response<jsonrpc::Metadata>, Error> {
-        self.send("get_metadata", json!([])).await
+        self.send(Request::get_metadata()).await
     }
 
     pub async fn get_metadata_by_version(
         &self,
         version: u64,
     ) -> Result<Response<jsonrpc::Metadata>, Error> {
-        self.send("get_metadata", json!([version])).await
+        self.send(Request::get_metadata_by_version(version)).await
     }
 
     pub async fn get_account(
         &self,
         address: &AccountAddress,
     ) -> Result<Response<Option<jsonrpc::Account>>, Error> {
-        self.send_opt("get_account", json!([address])).await
+        self.send_opt(Request::get_account(address)).await
     }
 
     pub async fn get_account_transaction(
@@ -137,10 +253,11 @@ impl<R: RetryStrategy> Client<R> {
         seq: u64,
         include_events: bool,
     ) -> Result<Response<Option<jsonrpc::Transaction>>, Error> {
-        self.send_opt(
-            "get_account_transaction",
-            json!([address, seq, include_events]),
-        )
+        self.send_opt(Request::get_account_transaction(
+            address,
+            seq,
+            include_events,
+        ))
         .await
     }
 
@@ -151,10 +268,12 @@ impl<R: RetryStrategy> Client<R> {
         limit: u64,
         include_events: bool,
     ) -> Result<Response<Vec<jsonrpc::Transaction>>, Error> {
-        self.send(
-            "get_account_transactions",
-            json!([address, start_seq, limit, include_events]),
-        )
+        self.send(Request::get_account_transactions(
+            address,
+            start_seq,
+            limit,
+            include_events,
+        ))
         .await
     }
 
@@ -164,11 +283,8 @@ impl<R: RetryStrategy> Client<R> {
         limit: u64,
         include_events: bool,
     ) -> Result<Response<Vec<jsonrpc::Transaction>>, Error> {
-        self.send(
-            "get_transactions",
-            json!([start_seq, limit, include_events]),
-        )
-        .await
+        self.send(Request::get_transactions(start_seq, limit, include_events))
+            .await
     }
 
     pub async fn get_events(
@@ -177,19 +293,18 @@ impl<R: RetryStrategy> Client<R> {
         start_seq: u64,
         limit: u64,
     ) -> Result<Response<Vec<jsonrpc::Event>>, Error> {
-        self.send("get_events", json!([key, start_seq, limit]))
-            .await
+        self.send(Request::get_events(key, start_seq, limit)).await
     }
 
     pub async fn get_currencies(&self) -> Result<Response<Vec<jsonrpc::CurrencyInfo>>, Error> {
-        self.send("get_currencies", json!([])).await
+        self.send(Request::get_currencies()).await
     }
 
     pub async fn get_state_proof(
         &self,
         from_version: u64,
     ) -> Result<Response<jsonrpc::StateProof>, Error> {
-        self.send("get_state_proof", json!([from_version])).await
+        self.send(Request::get_state_proof(from_version)).await
     }
 
     pub async fn get_account_state_with_proof(
@@ -198,46 +313,32 @@ impl<R: RetryStrategy> Client<R> {
         from_version: Option<u64>,
         to_version: Option<u64>,
     ) -> Result<Response<jsonrpc::AccountStateWithProof>, Error> {
-        self.send(
-            "get_account_state_with_proof",
-            json!([address, from_version, to_version]),
-        )
+        self.send(Request::get_account_state_with_proof(
+            address,
+            from_version,
+            to_version,
+        ))
         .await
     }
 
     pub async fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>, Error> {
-        let txn_payload = hex::encode(lcs::to_bytes(&txn).map_err(Error::unexpected_lcs_error)?);
-        let resp = self
-            .send_without_retry("submit", &json!([txn_payload]))
-            .await?;
+        let req = Request::submit(txn).map_err(Error::unexpected_lcs_error)?;
+        let resp = self.send_without_retry(&req).await?;
         Ok(Response {
             result: (),
             state: State::from_response(&resp),
         })
     }
 
-    pub async fn send<T: DeserializeOwned>(
-        &self,
-        method: &str,
-        params: serde_json::Value,
-    ) -> Result<Response<T>, Error> {
-        let resp = self.send_with_retry(method, params).await?;
-        let state = State::from_response(&resp);
-        match resp.result {
-            Some(ret) => Ok(Response {
-                result: serde_json::from_value(ret).map_err(Error::DeserializeResponseJsonError)?,
-                state,
-            }),
-            None => Err(Error::ResultNotFound(resp)),
-        }
+    pub async fn send<T: DeserializeOwned>(&self, request: Request) -> Result<Response<T>, Error> {
+        self.send_with_retry(&request).await?.try_into()
     }
 
     pub async fn send_opt<T: DeserializeOwned>(
         &self,
-        method: &str,
-        params: serde_json::Value,
+        request: Request,
     ) -> Result<Response<Option<T>>, Error> {
-        let resp = self.send_with_retry(method, params).await?;
+        let resp = self.send_with_retry(&request).await?;
         let state = State::from_response(&resp);
         let result = match resp.result {
             Some(ret) => {
@@ -248,14 +349,10 @@ impl<R: RetryStrategy> Client<R> {
         Ok(Response { result, state })
     }
 
-    pub async fn send_with_retry(
-        &self,
-        method: &str,
-        params: serde_json::Value,
-    ) -> Result<JsonRpcResponse, Error> {
+    pub async fn send_with_retry(&self, request: &Request) -> Result<JsonRpcResponse, Error> {
         let mut retries: u32 = 0;
         loop {
-            let ret = self.send_without_retry(method, &params).await;
+            let ret = self.send_without_retry(request).await;
             match ret {
                 Ok(r) => {
                     return Ok(r);
@@ -280,53 +377,141 @@ impl<R: RetryStrategy> Client<R> {
         }
     }
 
-    pub async fn send_without_retry(
+    pub async fn send_without_retry(&self, request: &Request) -> Result<JsonRpcResponse, Error> {
+        let id = 1;
+        let rpc_resp: JsonRpcResponse = self.send_json_request(request.to_json(id)).await?;
+        self.validate(&rpc_resp, id, id)?;
+        Ok(rpc_resp)
+    }
+
+    /// Batch requests into one JSON-RPC batch request.
+    /// To keep interface simple, this method returns error when any error occurs.
+    /// When batch responses contain partial success response, we will return the first
+    /// error it hit.
+    ///
+    /// Caller can convert `JsonRpcResponse` into `Response<T>`
+    /// in order of given requests:
+    ///
+    /// ```rust
+    /// use libra_json_rpc_client::async_client::{
+    ///     types as jsonrpc, Client, Error, Request, Response, Retry,
+    /// };
+    /// use std::convert::{TryInto};
+    ///
+    /// # async fn doc() -> Result<(), Error> {
+    /// let client = Client::from_url("http://testnet.libra.org/v1", Retry::default()).unwrap();
+    /// let mut res = client
+    ///     .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+    ///     .await?;
+    ///
+    /// let metadata: Response<jsonrpc::Metadata> = res
+    ///     .remove(0)
+    ///     .try_into()?;
+    ///
+    /// let currencies: Response<jsonrpc::CurrencyInfo> = res
+    ///     .remove(0)
+    ///     .try_into()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// For get_account and get_account_transaction request, the above convert will return
+    /// result not found error instead of None.
+    ///
+    pub async fn batch_send(&self, requests: Vec<Request>) -> Result<Vec<JsonRpcResponse>, Error> {
+        self.batch_send_without_retry(&requests).await
+    }
+
+    pub async fn batch_send_without_retry(
         &self,
-        method: &str,
-        params: &serde_json::Value,
-    ) -> Result<JsonRpcResponse, Error> {
+        requests: &[Request],
+    ) -> Result<Vec<JsonRpcResponse>, Error> {
+        let json_requests: Vec<serde_json::Value> = requests
+            .iter()
+            .enumerate()
+            .map(|(i, r)| r.to_json(i))
+            .collect();
+
+        let rpc_resps: Vec<JsonRpcResponse> = self.send_json_request(json![&json_requests]).await?;
+        if rpc_resps.len() != requests.len() {
+            return Err(Error::unexpected_invalid_batch_response(rpc_resps));
+        }
+
+        let mut resp_maps: HashMap<usize, JsonRpcResponse> = HashMap::new();
+        for resp in rpc_resps {
+            let id = self.validate(&resp, 0, requests.len() - 1)?;
+            if resp_maps.contains_key(&id) {
+                return Err(Error::unexpected_duplicated_response_id(resp));
+            }
+
+            resp_maps.insert(id, resp);
+        }
+
+        json_requests
+            .iter()
+            .enumerate()
+            .map(|(i, req)| {
+                resp_maps
+                    .remove(&i)
+                    .ok_or_else(|| Error::unexpected_no_response(req.clone()))
+            })
+            .collect()
+    }
+
+    async fn send_json_request<T: for<'de> serde::Deserialize<'de>>(
+        &self,
+        req: serde_json::Value,
+    ) -> Result<T, Error> {
         let resp = self
             .http_client
             .post(self.server_url.clone())
-            .json(&json!({"jsonrpc": "2.0", "method": method, "params": params, "id": 1}))
+            .json(&req)
             .send()
             .await
             .map_err(Error::NetworkError)?;
         if resp.status() != 200 {
             return Err(Error::InvalidHTTPStatus(format!("{:#?}", resp)));
         }
-        let rpc_resp: JsonRpcResponse = resp.json().await.map_err(Error::InvalidHTTPResponse)?;
-
-        if rpc_resp.jsonrpc != "2.0" {
-            return Err(Error::InvalidRpcResponse(rpc_resp));
-        }
-
-        if let Some(state) = self.last_known_state() {
-            if rpc_resp.libra_chain_id != state.chain_id {
-                return Err(Error::ChainIdMismatch(rpc_resp));
-            }
-        }
-
-        let resp_state = State::from_response(&rpc_resp);
-        if !self.update_state(resp_state) {
-            return Err(Error::StaleResponseError(rpc_resp));
-        }
-
-        if let Some(err) = rpc_resp.error {
-            return Err(Error::JsonRpcError(err));
-        }
-
-        Ok(rpc_resp)
+        resp.json().await.map_err(Error::InvalidHTTPResponse)
     }
 
-    pub fn update_state(&self, resp_state: State) -> bool {
-        let mut state_writer = self.last_known_state.write().unwrap();
-        if let Some(state) = &*state_writer {
-            if &resp_state < state {
-                return false;
+    fn validate(
+        &self,
+        resp: &JsonRpcResponse,
+        min_id: usize,
+        max_id: usize,
+    ) -> Result<usize, Error> {
+        if resp.jsonrpc != "2.0" {
+            return Err(Error::InvalidRpcResponse(resp.clone()));
+        }
+
+        let id = if let Some(ref id) = resp.id {
+            if let Ok(index) = serde_json::from_value::<usize>(id.clone()) {
+                if index > max_id || index < min_id {
+                    return Err(Error::unexpected_invalid_response_id(resp.clone()));
+                }
+                index
+            } else {
+                return Err(Error::unexpected_invalid_response_id_type(resp.clone()));
+            }
+        } else {
+            return Err(Error::unexpected_response_id_not_found(resp.clone()));
+        };
+
+        if let Some(state) = self.last_known_state() {
+            if resp.libra_chain_id != state.chain_id {
+                return Err(Error::ChainIdMismatch(resp.clone()));
             }
         }
-        *state_writer = Some(resp_state);
-        true
+
+        let resp_state = State::from_response(resp);
+        if !self.update_state(resp_state) {
+            return Err(Error::StaleResponseError(resp.clone()));
+        }
+
+        if let Some(ref err) = resp.error {
+            return Err(Error::JsonRpcError(err.clone()));
+        }
+        Ok(id)
     }
 }
