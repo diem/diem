@@ -477,6 +477,66 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_transactions_with_proofs: invalid start_version param",
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": ["helloworld", 1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param start_version(params[0]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions_with_proofs: start_version is too big, returns empty array",
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [version+1, 1], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": null
+            }),
+        ),
+        (
+            "get_transactions_with_proofs: invalid limit param",
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param limit(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions_with_proofs: limit is too big",
+            json!({"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": [1, 1001], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid Request: page size = 1001, exceed limit 1000",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
             "get_events: invalid event_key type",
             json!({"jsonrpc": "2.0", "method": "get_events", "params": [false, 1, 10], "id": 1}),
             json!({

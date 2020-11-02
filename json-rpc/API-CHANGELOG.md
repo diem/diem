@@ -12,6 +12,10 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+# 2020-11-09 Add a `get_transactions_with_proofs` API
+
+This allows to create verifying clients that do not need to blindly trust the fullnode they connect to.
+
 
 ## 2020-10-15 Add `accumulator_root_hash` to `get_metadata` method response
 

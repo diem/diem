@@ -490,6 +490,17 @@ pub struct TransactionView {
     pub vm_status: VMStatusView,
     pub gas_used: u64,
 }
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct TransactionsWithProofsView {
+    pub serialized_transactions: Vec<BytesView>,
+    pub proofs: TransactionsProofsView,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct TransactionsProofsView {
+    pub ledger_info_to_transaction_infos_proof: BytesView,
+    pub transaction_infos: BytesView,
+}
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

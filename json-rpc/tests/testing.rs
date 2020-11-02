@@ -248,6 +248,18 @@ impl Env {
         serde_json::from_value(json).expect("should be valid JsonRpcResponse")
     }
 
+    pub fn send_request(&self, request: Value) -> Value {
+        let resp = self
+            .client
+            .post(self.url.as_str())
+            .json(&request)
+            .send()
+            .expect("request success");
+        assert_eq!(resp.status(), 200);
+
+        resp.json().unwrap()
+    }
+
     pub fn get_account(&self, vasp_id: usize, child_id: usize) -> &Account {
         &self.vasps[vasp_id].children[child_id]
     }
