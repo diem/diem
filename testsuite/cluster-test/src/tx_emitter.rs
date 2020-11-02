@@ -824,7 +824,7 @@ fn gen_mint_request(
     )
 }
 
-fn gen_transfer_txn_request(
+pub fn gen_transfer_txn_request(
     sender: &mut AccountData,
     receiver: &AccountAddress,
     num_coins: u64,

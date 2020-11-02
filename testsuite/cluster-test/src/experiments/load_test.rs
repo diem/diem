@@ -6,16 +6,17 @@
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
-    tx_emitter::EmitJobRequest,
+    tx_emitter::{gen_transfer_txn_request, EmitJobRequest},
 };
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::{sink::SinkExt, StreamExt};
 use libra_config::{config::NodeConfig, network_id::NetworkId};
 use libra_crypto::x25519;
+use libra_logger::info;
 use libra_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
 use libra_network_address::NetworkAddress;
-use libra_types::chain_id::ChainId;
+use libra_types::{account_config::libra_root_address, chain_id::ChainId};
 use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
@@ -29,7 +30,7 @@ use std::{
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
 
-const EXPERIMENT_BUFFER_SECS: u64 = 10;
+const EXPERIMENT_BUFFER_SECS: u64 = 900;
 
 #[derive(StructOpt, Debug)]
 pub struct LoadTestParams {
@@ -70,6 +71,7 @@ impl Experiment for LoadTest {
     fn affected_validators(&self) -> HashSet<String> {
         HashSet::new()
     }
+
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         // spin up StubbedNode
         let vfn = context.cluster.random_fullnode_instance();
@@ -126,15 +128,40 @@ impl Experiment for LoadTest {
         // await on all spawned tasks
         tokio::time::delay_for(Duration::from_secs(self.duration)).await;
         if let Some(j) = emit_job {
-            let _ = context.tx_emitter.stop_job(j).await;
+            let stats = context.tx_emitter.stop_job(j).await;
+            let full_node = context.cluster.random_fullnode_instance();
+            let full_node_client = full_node.json_rpc_client();
+            let mut sender = context
+                .tx_emitter
+                .load_libra_root_account(&full_node_client)
+                .await?;
+            let receiver = libra_root_address();
+            let dummy_tx = gen_transfer_txn_request(&mut sender, &receiver, 0, ChainId::test(), 0);
+            let total_byte = dummy_tx.raw_txn_bytes_len() as u64 * stats.submitted;
+            info!("Total tx emitter stats: {}, bytes: {}", stats, total_byte);
+            info!(
+                "Average rate: {}, {} bytes/s",
+                stats.rate(Duration::from_secs(self.duration)),
+                total_byte / Duration::from_secs(self.duration).as_secs()
+            );
         }
 
         if let Some(t) = mempool_task {
-            let _ = t.await.expect("failed mempool load test task");
+            let stats = t.await?.expect("failed mempool load test task");
+            info!("Total mempool stats: {}", stats);
+            info!(
+                "Average rate: {}",
+                stats.rate(Duration::from_secs(self.duration))
+            );
         }
 
         if let Some(t) = state_sync_task {
-            let _ = t.await.expect("failed state sync load test task");
+            let stats = t.await?.expect("failed state sync load test task");
+            info!("Total state sync stats: {}", stats);
+            info!(
+                "Average rate: {}",
+                stats.rate(Duration::from_secs(self.duration))
+            );
         }
 
         // create blocking context to drop stubbed node's runtime in
@@ -256,7 +283,7 @@ async fn mempool_load_test(
     duration: Duration,
     mut sender: MempoolNetworkSender,
     mut events: MempoolNetworkEvents,
-) -> Result<MempoolResult> {
+) -> Result<MempoolStats> {
     let new_peer_event = events.select_next_some().await;
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
@@ -266,6 +293,8 @@ async fn mempool_load_test(
         ));
     };
 
+    let mut bytes = 0_u64;
+    let mut msg_num = 0_u64;
     let task_start = Instant::now();
     while Instant::now().duration_since(task_start) < duration {
         let msg = libra_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
@@ -273,23 +302,70 @@ async fn mempool_load_test(
             transactions: vec![], // TODO submit actual txns
         };
         // TODO log stats for bandwidth sent to remote peer to MempoolResult
+        bytes += lcs::to_bytes(&msg)?.len() as u64;
+        msg_num += 1;
         sender.send_to(vfn, msg)?;
 
         // await ACK from remote peer
         let _response = events.select_next_some().await;
     }
 
-    Ok(MempoolResult)
+    Ok(MempoolStats {
+        bytes,
+        tx_num: 0,
+        msg_num,
+    })
 }
 
-// TODO store more stats
-struct MempoolResult;
+#[derive(Debug, Default)]
+struct MempoolStats {
+    bytes: u64,
+    tx_num: u64, // TODO
+    msg_num: u64,
+}
+
+#[derive(Debug, Default)]
+pub struct MempoolStatsRate {
+    pub bytes: u64,
+    pub tx_num: u64,
+    pub msg_num: u64,
+}
+
+impl MempoolStats {
+    pub fn rate(&self, window: Duration) -> MempoolStatsRate {
+        MempoolStatsRate {
+            bytes: self.bytes / window.as_secs(),
+            tx_num: self.tx_num / window.as_secs(),
+            msg_num: self.msg_num / window.as_secs(),
+        }
+    }
+}
+
+impl fmt::Display for MempoolStats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "exchanged {} messages, {} bytes",
+            self.msg_num, self.bytes,
+        )
+    }
+}
+
+impl fmt::Display for MempoolStatsRate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "exchanged {} messages/s, {} bytes/s",
+            self.msg_num, self.bytes,
+        )
+    }
+}
 
 async fn state_sync_load_test(
     duration: Duration,
     mut sender: StateSynchronizerSender,
     mut events: StateSynchronizerEvents,
-) -> Result<StateSyncResult> {
+) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
@@ -301,7 +377,7 @@ async fn state_sync_load_test(
 
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
-        0,
+        1,
         250,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
@@ -310,11 +386,15 @@ async fn state_sync_load_test(
     );
 
     let task_start = Instant::now();
-    let mut served_txns = 0;
+    let mut served_txns = 0_u64;
+    let mut bytes = 0_u64;
+    let mut msg_num = 0_u64;
     while Instant::now().duration_since(task_start) < duration {
         let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
+        bytes += lcs::to_bytes(&msg)?.len() as u64;
+        msg_num += 1;
         sender.send_to(vfn, msg)?;
 
         // await response from remote peer
@@ -325,14 +405,57 @@ async fn state_sync_load_test(
             ) = payload
             {
                 // TODO analyze response and update StateSyncResult with stats accordingly
-                served_txns += chunk_response.txn_list_with_proof.transactions.len();
+                served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;
             }
         }
     }
-    Ok(StateSyncResult { served_txns })
+    Ok(StateSyncStats {
+        served_txns,
+        bytes,
+        msg_num,
+    })
 }
 
-// TODO store more stats here
-struct StateSyncResult {
-    pub served_txns: usize,
+#[derive(Debug, Default)]
+struct StateSyncStats {
+    served_txns: u64,
+    bytes: u64,
+    msg_num: u64,
+}
+
+#[derive(Debug, Default)]
+pub struct StateSyncStatsRate {
+    pub served_txns: u64,
+    pub bytes: u64,
+    pub msg_num: u64,
+}
+
+impl StateSyncStats {
+    pub fn rate(&self, window: Duration) -> StateSyncStatsRate {
+        StateSyncStatsRate {
+            served_txns: self.served_txns / window.as_secs(),
+            bytes: self.bytes / window.as_secs(),
+            msg_num: self.msg_num / window.as_secs(),
+        }
+    }
+}
+
+impl fmt::Display for StateSyncStats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "received {} txs, exchanged {} messages, {} bytes, ",
+            self.served_txns, self.msg_num, self.bytes
+        )
+    }
+}
+
+impl fmt::Display for StateSyncStatsRate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "received {} txs/s, exchanged {} msg/s, {} bytes/s, ",
+            self.served_txns, self.msg_num, self.bytes,
+        )
+    }
 }
