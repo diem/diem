@@ -61,7 +61,7 @@ If you enter only the major command, it will show the help information for that 
 
  #### `account | a` &mdash;  Account related operations. Subcommands include:
 
-  `create | c` &mdash;  Create a random account with private/public key pair. Account information will be held in memory only. The created account will not be saved to the chain.
+  `create | c` &mdash;  Create a random account with private/public key pair. Account information will be held in memory only. The created account will not be saved to the chain. Returns reference ID to use in other operations.
 
        Usage:
         create|c
@@ -71,25 +71,24 @@ If you enter only the major command, it will show the help information for that 
      Usage:
         list|la
 
-  `recover | r <file_path>` &mdash; Recover all accounts that were written to a file via the `account write` command.
+  `recover | r` &mdash; Recover all accounts that were written to a file via the `account write` command.
 
      Usage:
         recover|r <file_path>
      Arguments:
-         file_path - File path from which to load mnemonic recover seed.  Must have been written via `account write`
+         file_path - File path from which to load mnemonic recover seed.  Must have been written via `account write`.
 
-  `write | w <file path>` &mdash; Save Diem wallet mnemonic recovery seed to disk.  This will allow accounts to be recovered via `account recover`.
+  `write | w` &mdash; Save Diem wallet mnemonic recovery seed to disk.  This will allow accounts to be recovered via `account recover`.
 
      Usage:
         write|w <file_path>
      Arguments:
          file_path - File path at which to save the mnemonic recovery seed to disk.
 
-
-  `<mint | m> | <mintb| mb>` &mdash; Mint coins to the account. Suffix 'b' is for blocking. If blocking is specified (using suffix 'b'), CLI will query chain until the transaction is finalized/available. Same is true for other sub "blocking" commands.
+  `<mint | m> | <mintb | mb>` &mdash; Mint coins to the account. Creates an account at the recipient address if one does not already exist. Suffix 'b' is for blocking. If blocking is specified (using suffix 'b'), CLI will query chain until the transaction is finalized/available. Same is true for other sub "blocking" commands.
 
       Usage:
-        mint|mint|m|b <receiver_account_ref_id>|<receiver_account_address> <number_of_coins>
+        mint|mint|m|b <receiver_account_ref_id>|<receiver_account_address> <number_of_coins> <currency_code> [use_base_units (default=false)]
       Arguments:
           receiver_account_ref_id | receiver_account_address - The receiver account to mint the coins to.
                 If the receiver account does not exist, it will be created first.
@@ -98,13 +97,21 @@ If you enter only the major command, it will show the help information for that 
                 other commands). If gas is being charged, the account that sent this mint transaction
                 (currently preloaded genesis account) pays for the gas.
           number_of_coins - The number of coins to be minted to the receiver account.
+          currency_code - Which currency to mint. For example, `Coin1`.
 
+`<addc | ac> | <addcb | acb>` &mdash; Add specified currency to the account. Suffix 'b' is for blocking.
+
+      Usage:
+        addc | addcb | ac | acb <account_address> <currency_code>
+      Arguments:
+          account_address - The account to add the currency to.
+          currency_code - Which currency to add. For example, `Coin2`.
 ---
 
-#### `transfer | transferb | t | tb` &mdash; Transfer coins from one account to another. Suffix 'b' is for blocking.
+#### `<transfer | t> | <transferb | tb>` &mdash; Transfer coins from one account to another. Suffix 'b' is for blocking.
 
     Usage:
-        transfer|transferb|t|tb <sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> [gas_unit_price (default=0)] [max_gas_amount (default 10000)]
+        transfer|transferb|t|tb <sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 10000)]
     Arguments:
         sender_account_address | sender_account_ref_id - The account from which this transfer transaction
             is sent. The sender account pays for the gas.
@@ -112,8 +119,9 @@ If you enter only the major command, it will show the help information for that 
             If the receiver account does not exist, it will be created first. The sender will pay for
             gas required for both account creation and coin transfer.
         number_of_coins - The number of coins transferred to receiver account.
-        gas_unit_price - The unit price to pay for gas.
-        max_gas_amount - Max units of gas user is willing to pay for this transaction.
+        currency_code - Which currency to transfer. For example, `Coin1`.
+        gas_unit_price_in_micro_libras - The unit price to pay for gas.
+        max_gas_amount_in_micro_libras - Max units of gas user is willing to pay for this transaction.
 
 ---
 
@@ -126,7 +134,7 @@ If you enter only the major command, it will show the help information for that 
      Arguments:
          account_ref_id | account_address - The account to query balance for.
 
-`sequence | s` &mdash; Get the current sequence number for an account.
+`sequence | s` &mdash; Get the current sequence number for an account, and reset current sequence number in CLI (optional, default is false).
 
       Usage:
         sequence | s <account_ref_id>|<account_address> [reset_sequence_number=true|false]
@@ -152,7 +160,7 @@ If you enter only the major command, it will show the help information for that 
           sequence_number - The sequence number of committed transaction.
           fetch_events - Set to true to fetch events emitted by this transaction.
 
-`txn_range | tr` &mdash; Get the committed transaction by range
+`txn_range | tr` &mdash; Get the committed transactions by version range. Optionally also fetch events emitted by these transactions.
 
       Usage:
         txn_range | tr <start_version> <limit> <fetch_events=true|false>
@@ -161,18 +169,25 @@ If you enter only the major command, it will show the help information for that 
           limit - The maximum number of transactions to query.
           fetch_events - Set to true to fetch events emitted by each transaction.
 
-`event | ev` &mdash; Get event by account and path.
+`event | ev` &mdash; Get events by account and event type (sent|received).
 
       Usage:
-        event | ev <account_ref_id>|<account_address> <sent|received> <start_sequence_number> <ascending=true|false> <limit>
+        event | ev <account_ref_id>|<account_address> <sent|received> <start_sequence_number> <limit>
       Arguments:
           account_ref_id | account_address - The account to query events from.
           sent | received - Fetch sent or received events for this account.
                 Note that this will later evolve into selecting any event path.
           start_sequence_number - The sequence number of events to query starting from.
-          ascending - The direction of query from start_sequence_number.
           limit - The maximum number of events to query.
-          ---
+
+`account_resources | ar` &mdash; Get the latest annotated resources in an account.
+
+      Usage:
+        account_resources | ar <account_ref_id>|<account_address>
+      Arguments:
+          account_ref_id | account_address - The account to query resources from.
+
+---
 #### dev | d &mdash; Operations related to Move transaction scripts and modules.
 
 <blockquote className="block_note">
@@ -200,14 +215,48 @@ Subcommands include:
       sender_account_address|sender_account_ref_id - Address of the sender account|Local index of the sender account
       compiled_module_path - Path to the compiled module.
 
-`execute | e` &mdash; Execute Move transaction script.
+`execute | e` &mdash; Execute custom Move transaction script.
 
     Usage:
-      execute|e <sender_account_address>|<sender_account_ref_id> <compiled_module_path> [script args]
+      execute|e <sender_account_address>|<sender_account_ref_id> <compiled_module_path> [parameters]
     Arguments:
       sender_account_address|sender_account_ref_id - Address of sender account|Local index of the sender account.
       compiled_module_path -  Path to the compiled transaction script.
-      script args - Arguments expected by the transaction script.
+      parameters - Arguments expected by the transaction script.
+
+`upgrade_stdlib | u` &mdash; Upgrade the move stdlib used for the blockchain.
+
+    Usage:
+      upgrade_stdlib | u
+
+`gen_waypoint | g` &mdash; Generate a waypoint for the latest epoch change LedgerInfo.
+
+    Usage:
+      gen_waypoint | g
+
+`change_libra_version | v` &mdash; Change the libra_version stored on chain.
+
+    Usage:
+      change_libra_version | v <new_libra_version>
+    Arguments:
+      new_libra_version - New libra version, must be strictly incrementing.
+
+`enable_custom_script | s` &mdash; Allow executing arbitrary script in the network. This disables script hash verification.
+
+    Usage:
+      enable_custom_script | s
+
+`add_to_script_allow_list | a` &mdash; Add a script hash to the allow list. This enables script hash verification.
+
+    Usage:
+      add_to_script_allow_list | a <hash>
+    Arguments:
+      hash - Hash of the custom script to allow.
+
+---
+
+**`info | i` &mdash; Print CLI config and client internal information.**
+
 ---
 
 **`quit | q!` &mdash; Exits the CLI. No subcommand is required.**
