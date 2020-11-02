@@ -29,10 +29,7 @@ You can run a local test validator network in two ways: using the Diem Core sour
     ```
 2. Run the process: `cargo run -p diem-node -- --test`. Note, after starting this process, the config path: `/distinct/tmp/path/0/node.yaml`.
 
-The local test validator network ledger state can be persisted by copying ``/distinct/tmp/path/`` to a persistent directory and running the process:
-
-`cargo run -p diem-node -- --test --config /persistent/path
-`
+> You can later restore the ledger state by running `diem-node` with a previously used configuration path: `cargo run -p diem-node -- --test --config /distinct/tmp/path`.
 
 
 ### Using Docker
