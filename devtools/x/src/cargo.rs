@@ -240,7 +240,7 @@ impl Cargo {
             self.env_additions.iter().for_each(|t| {
                 if let Some(env_val) = t.1 {
                     if SECRET_ENVS.contains(&t.0.to_str().unwrap_or_default()) && t.1.is_some() {
-                        info!("export {:?}=********", env_val);
+                        info!("export {:?}=********", t.0);
                     } else {
                         info!("export {:?}={:?}", t.0, env_val);
                     }
