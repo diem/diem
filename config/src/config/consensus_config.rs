@@ -27,7 +27,7 @@ impl Default for ConsensusConfig {
         ConsensusConfig {
             contiguous_rounds: 2,
             max_block_size: 1000,
-            max_pruned_blocks_in_mem: 10000,
+            max_pruned_blocks_in_mem: 100,
             round_initial_timeout_ms: 1000,
             proposer_type: ConsensusProposerType::LeaderReputation(LeaderReputationConfig {
                 active_weights: 99,
