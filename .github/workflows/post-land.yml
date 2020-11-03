@@ -18,10 +18,10 @@ jobs:
         id: set_env
         run: |
           HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
-          echo "::set-env name=HEAD_GIT_REV::$HEAD_GIT_REV"
+          echo "HEAD_GIT_REV=$HEAD_GIT_REV" >> $GITHUB_ENV
           IMAGE_TAG=$(echo ${GITHUB_REF#refs/heads/})_$HEAD_GIT_REV
           echo $IMAGE_TAG
-          echo "::set-env name=IMAGE_TAG::$IMAGE_TAG"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
       - name: poll_images
         # Poll until images are ready
         env:
