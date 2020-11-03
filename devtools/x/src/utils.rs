@@ -56,20 +56,20 @@ pub fn apply_sccache_if_possible<'a>(
     let mut envs = vec![];
 
     if var_os("SKIP_SCCACHE").is_none() && cargo_config.sccache.is_some() {
-        if let Some(sccach_config) = &cargo_config.sccache {
+        if let Some(sccache_config) = &cargo_config.sccache {
             // Are we work on items in the right location:
             // See: https://github.com/mozilla/sccache#known-caveats
             let correct_location = var_os("CARGO_HOME")
                 .unwrap_or_default()
                 .to_str()
                 .unwrap_or_default()
-                == sccach_config.required_cargo_home
-                && sccach_config.required_git_home == project_root().to_str().unwrap_or_default();
+                == sccache_config.required_cargo_home
+                && sccache_config.required_git_home == project_root().to_str().unwrap_or_default();
             if !correct_location {
                 warn!("You will not benefit from sccache in this build!!!");
                 warn!(
                     "To get the best experience, please move your libra source code to {} and your set your CARGO_HOME to be {}, simply export it in your .profile or .bash_rc",
-                    &sccach_config.required_git_home, &sccach_config.required_cargo_home
+                    &sccache_config.required_git_home, &sccache_config.required_cargo_home
                 );
                 warn!(
                     "Current libra root is '{}',  and current CARGO_HOME is '{}'",
@@ -77,14 +77,14 @@ pub fn apply_sccache_if_possible<'a>(
                     var_os("CARGO_HOME").unwrap_or_default().to_string_lossy()
                 );
             } else {
-                if !install_if_needed(cargo_config, "sccache", &sccach_config.installer) {
+                if !install_if_needed(cargo_config, "sccache", &sccache_config.installer) {
                     return Err(anyhow!("Failed to install sccache, bailing"));
                 }
                 stop_sccache_server();
                 envs.push(("RUSTC_WRAPPER", Some("sccache".to_owned())));
                 envs.push(("CARGO_INCREMENTAL", Some("false".to_owned())));
-                envs.push(("SCCACHE_BUCKET", Some(sccach_config.bucket.to_owned())));
-                if let Some(ssl) = &sccach_config.ssl {
+                envs.push(("SCCACHE_BUCKET", Some(sccache_config.bucket.to_owned())));
+                if let Some(ssl) = &sccache_config.ssl {
                     envs.push((
                         "SCCACHE_S3_USE_SSL",
                         if *ssl {
@@ -95,21 +95,21 @@ pub fn apply_sccache_if_possible<'a>(
                     ));
                 }
 
-                if let Some(url) = &sccach_config.endpoint {
+                if let Some(url) = &sccache_config.endpoint {
                     envs.push(("SCCACHE_ENDPOINT", Some(url.to_owned())));
                 }
 
-                if let Some(extra_envs) = &sccach_config.envs {
+                if let Some(extra_envs) = &sccache_config.envs {
                     for (key, value) in extra_envs {
                         envs.push((key, Some(value.to_owned())));
                     }
                 }
 
-                if let Some(region) = &sccach_config.region {
+                if let Some(region) = &sccache_config.region {
                     envs.push(("SCCACHE_REGION", Some(region.to_owned())));
                 }
 
-                if let Some(prefix) = &sccach_config.prefix {
+                if let Some(prefix) = &sccache_config.prefix {
                     envs.push(("SCCACHE_S3_KEY_PREFIX", Some(prefix.to_owned())));
                 }
                 let access_key_id = if let Some(val) = var_os("SCCACHE_AWS_ACCESS_KEY_ID") {
@@ -125,10 +125,11 @@ pub fn apply_sccache_if_possible<'a>(
                 // if either the access or secret key is not set, attempt to perform a public read.
                 // do not set this flag if attempting to write, as it will prevent the use of the aws creds.
                 if (access_key_id.is_none() || access_key_secret.is_none())
-                    && sccach_config.public.unwrap_or(true)
+                    && sccache_config.public.unwrap_or(true)
                 {
-                    envs.push(("SCCACHE_S3_PUBLIC", Some("true".to_owned())))
+                    envs.push(("SCCACHE_S3_PUBLIC", Some("true".to_owned())));
                 }
+
                 //Note: that this is also used to _unset_ AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY
                 envs.push(("AWS_ACCESS_KEY_ID", access_key_id));
                 envs.push(("AWS_SECRET_ACCESS_KEY", access_key_secret));

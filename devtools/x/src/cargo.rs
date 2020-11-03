@@ -237,15 +237,15 @@ impl Cargo {
 
         // once all the arguments are added to the command we can log it.
         if log {
-            self.env_additions.iter().for_each(|t| {
-                if let Some(env_val) = t.1 {
-                    if SECRET_ENVS.contains(&t.0.to_str().unwrap_or_default()) && t.1.is_some() {
-                        info!("export {:?}=********", t.0);
+            self.env_additions.iter().for_each(|(name, value_option)| {
+                if let Some(env_val) = value_option {
+                    if SECRET_ENVS.contains(&name.to_str().unwrap_or_default()) {
+                        info!("export {:?}=********", name);
                     } else {
-                        info!("export {:?}={:?}", t.0, env_val);
+                        info!("export {:?}={:?}", name, env_val);
                     }
                 } else {
-                    info!("unset {:?}", t.0);
+                    info!("unset {:?}", name);
                 }
             });
             info!("Executing: {:?}", &self.inner);

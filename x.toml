@@ -12,12 +12,14 @@ flags = "-Zfeatures=all"
 bucket = "ci-artifacts.libra.org"
 prefix = "sccache/libra/"
 public = true
+region = "us-west-2"
+endpoint = "https://s3-us-west-2.amazonaws.com"
 required-cargo-home = "/opt/cargo"
 required-git-home = "/opt/git/libra"
 envs = [
    #To debug sccache uncomment the two lines below.
    #["SCCACHE_ERROR_LOG","/tmp/sccache_log"],
-   #["SCCACHE_LOG", "sccache::compiler::compiler=trace"],
+   #["SCCACHE_LOG", "sccache::compiler::compiler=trace,rusoto_core::request=trace"],
 ]
 
 [cargo.sccache.installer]
