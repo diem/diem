@@ -852,6 +852,43 @@ async fn test_batch_send_requests_return_not_found_error_if_no_result() {
     assert_err!(not_found_err, Error::ResultNotFound { .. }, false);
 }
 
+#[tokio::test]
+async fn batch_test_retry_stale_response_on_get_methods() {
+    let client = setup_with_server(vec![
+        (
+            json!([
+                {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
+            ]),
+            json!([new_response_with_version_and_id(metadata_sample(), 2, 0)]),
+        ),
+        (
+            json!([
+                {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
+            ]),
+            json!([new_response_with_version_and_id(metadata_sample(), 1, 0)]),
+        ),
+        (
+            json!([
+                {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
+            ]),
+            json!([new_response_with_version_and_id(metadata_sample(), 3, 0)]),
+        ),
+    ]);
+
+    client
+        .batch_send(vec![Request::get_metadata()])
+        .await
+        .expect("some");
+    let now = std::time::Instant::now();
+    client
+        .batch_send(vec![Request::get_metadata()])
+        .await
+        .expect("some");
+    assert!(now.elapsed() > Duration::from_millis(10));
+
+    assert_eq!(client.last_known_state().unwrap(), state_for_version(3))
+}
+
 fn currencies_sample() -> Value {
     json!([
         {

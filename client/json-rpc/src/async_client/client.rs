@@ -354,25 +354,8 @@ impl<R: RetryStrategy> Client<R> {
         loop {
             let ret = self.send_without_retry(request).await;
             match ret {
-                Ok(r) => {
-                    return Ok(r);
-                }
-                Err(err) => {
-                    if !self.retry.is_retriable(&err) {
-                        return Err(err);
-                    }
-                    if retries < self.retry.max_retries(&err) {
-                        match retries.checked_add(1) {
-                            Some(i) if i < self.retry.max_retries(&err) => {
-                                retries = i;
-                            }
-                            _ => return Err(err),
-                        };
-                        tokio::time::delay_for(self.retry.delay(&err, retries)).await;
-                        continue;
-                    }
-                    return Err(err);
-                }
+                Ok(r) => return Ok(r),
+                Err(err) => retries = self.handle_retry_error(retries, err).await?,
             }
         }
     }
@@ -418,8 +401,25 @@ impl<R: RetryStrategy> Client<R> {
     /// For get_account and get_account_transaction request, the above convert will return
     /// result not found error instead of None.
     ///
+    /// This function calls to batch_send_with_retry, when you batch submit transactions,
+    /// to avoid re-submit errors, it is better to use batch_send_without_retry and handle errors
+    /// by yourself.
     pub async fn batch_send(&self, requests: Vec<Request>) -> Result<Vec<JsonRpcResponse>, Error> {
-        self.batch_send_without_retry(&requests).await
+        self.batch_send_with_retry(&requests).await
+    }
+
+    pub async fn batch_send_with_retry(
+        &self,
+        requests: &[Request],
+    ) -> Result<Vec<JsonRpcResponse>, Error> {
+        let mut retries: u32 = 0;
+        loop {
+            let ret = self.batch_send_without_retry(requests).await;
+            match ret {
+                Ok(r) => return Ok(r),
+                Err(err) => retries = self.handle_retry_error(retries, err).await?,
+            }
+        }
     }
 
     pub async fn batch_send_without_retry(
@@ -513,5 +513,23 @@ impl<R: RetryStrategy> Client<R> {
             return Err(Error::JsonRpcError(err.clone()));
         }
         Ok(id)
+    }
+
+    async fn handle_retry_error(&self, mut retries: u32, err: Error) -> Result<u32, Error> {
+        if !self.retry.is_retriable(&err) {
+            return Err(err);
+        }
+        if retries < self.retry.max_retries(&err) {
+            match retries.checked_add(1) {
+                Some(i) if i < self.retry.max_retries(&err) => {
+                    retries = i;
+                }
+                _ => return Err(err),
+            };
+            tokio::time::delay_for(self.retry.delay(&err, retries)).await;
+            Ok(retries)
+        } else {
+            Err(err)
+        }
     }
 }
