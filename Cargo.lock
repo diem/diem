@@ -1165,19 +1165,6 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "3.0.0"
-source = "git+https://github.com/calibra/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2"
-dependencies = [
- "byteorder",
- "digest 0.9.0",
- "fiat-crypto",
- "rand_core 0.5.1",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "curve25519-dalek"
-version = "3.0.0"
 source = "git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2"
 dependencies = [
  "byteorder",
@@ -7531,9 +7518,9 @@ dependencies = [
 [[package]]
 name = "x25519-dalek"
 version = "1.1.0"
-source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat4#dc82145d8d25529d8aecab93d3ddf7062a74c719"
+source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat4#4d6e37cee0a2ae0d3df522b3c6286fab6ce607b6"
 dependencies = [
- "curve25519-dalek 3.0.0 (git+https://github.com/calibra/curve25519-dalek.git?branch=fiat3)",
+ "curve25519-dalek 3.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3)",
  "rand_core 0.5.1",
  "zeroize",
 ]
