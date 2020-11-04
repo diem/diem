@@ -569,7 +569,7 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
                     value: e.value,
                 });
             } else {
-                seq.push(item);
+                return Err(unexpected_token_error(tokens, "';'"));
             }
             break;
         }
