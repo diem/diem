@@ -174,7 +174,7 @@ module DesignatedDealer {
         include LibraTimestamp::AbortsIfNotOperating;
     }
 
-    public fun add_tier<CoinType>(
+    fun add_tier<CoinType>(
         tc_account: &signer,
         dd_addr: address,
         tier_upperbound: u64
