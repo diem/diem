@@ -29,7 +29,8 @@ const MAX_UVI_PREFIX_BYTES: usize = 19;
 const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
-const MOCK_PEER_ID: PeerId = PeerId::ZERO;
+const MOCK_PEER_ID_1: PeerId = PeerId::new([1u8; PeerId::LENGTH]);
+const MOCK_PEER_ID_2: PeerId = PeerId::new([2u8; PeerId::LENGTH]);
 const MOCK_PROTOCOL_ID: ProtocolId = ProtocolId::ConsensusRpc;
 
 #[test]
@@ -63,8 +64,8 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
 // Fuzz the inbound rpc protocol.
 pub fn fuzzer(data: &[u8]) {
-    let network_context = NetworkContext::mock();
-    let connection_metadata = ConnectionMetadata::mock(MOCK_PEER_ID);
+    let network_context = NetworkContext::mock_with_peer_id(MOCK_PEER_ID_1);
+    let connection_metadata = ConnectionMetadata::mock(MOCK_PEER_ID_2);
     let (notification_tx, mut notification_rx) = channel::new_test(8);
     let (peer_reqs_tx, mut peer_reqs_rx) = channel::new_test(8);
     let raw_request = Vec::from(data);
