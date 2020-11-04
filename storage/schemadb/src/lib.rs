@@ -216,6 +216,7 @@ impl DB {
         let mut db_opts = rocksdb::Options::default();
         db_opts.create_if_missing(true);
         db_opts.create_missing_column_families(true);
+        db_opts.set_max_open_files(1000);
 
         // For now we set the max total WAL size to be 1G. This config can be useful when column
         // families are updated at non-uniform frequencies.
