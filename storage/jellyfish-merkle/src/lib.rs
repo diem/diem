@@ -555,16 +555,16 @@ where
 
         // TODO: try custom thread pool so we can also spawn merkle_hash for subtrees in parallel.
         // TODO: decide when to do parallel and when sequential
-        let mut siblings: Vec<HashValue> = internal_nodes
-            .into_par_iter()
-            .flat_map(|(internal_node, child_index)|
-                      internal_node.get_sibling_hashes(child_index))
-            .collect();
+        // let mut siblings: Vec<HashValue> = internal_nodes
+        //     .into_par_iter()
+        //     .flat_map(|(internal_node, child_index)|
+        //               internal_node.get_sibling_hashes(child_index))
+        //     .collect();
         
-        // let mut siblings = vec![];
-        // for (internal_node, child_index) in node_path {
-        //     siblings.append(&mut internal_node.get_sibling_hashes(child_index));
-        // }
+        let mut siblings = vec![];
+        for (internal_node, child_index) in internal_nodes {
+            siblings.append(&mut internal_node.get_sibling_hashes(child_index));
+        }
 
         Ok((ret_option,
             SparseMerkleProof::new(proof_option, {
