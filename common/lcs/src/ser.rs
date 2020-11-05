@@ -50,7 +50,8 @@ pub fn to_bytes<T>(value: &T) -> Result<Vec<u8>>
 where
     T: ?Sized + Serialize,
 {
-    let mut output = Vec::new();
+    let output_size = serialized_size(value)?;
+    let mut output = Vec::with_capacity(output_size);
     serialize_into(&mut output, value)?;
     Ok(output)
 }
