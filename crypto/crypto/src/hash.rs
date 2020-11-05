@@ -99,6 +99,8 @@
 //! let hash_value = hasher.finish();
 //! ```
 
+extern crate criterion;
+
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_nibble::Nibble;
@@ -544,7 +546,8 @@ macro_rules! define_slow_hasher {
             }
 
             fn finish(self) -> HashValue {
-                for _x in 0..10000 {
+                for _x in criterion::black_box(0)..criterion::black_box(30000) {
+                    let _y = criterion::black_box(_x);
                 }
                 self.0.finish()
             }
@@ -615,7 +618,7 @@ macro_rules! define_hasher {
     };
 }
 
-define_slow_hasher! {
+define_hasher! {
     /// The hasher used to compute the hash of an internal node in the transaction accumulator.
     (
         TransactionAccumulatorHasher,
@@ -635,7 +638,7 @@ define_hasher! {
     )
 }
 
-define_slow_hasher! {
+define_hasher! {
     /// The hasher used to compute the hash of an internal node in the Sparse Merkle Tree.
     (
         SparseMerkleInternalHasher,

@@ -91,6 +91,7 @@ use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use rayon::prelude::*;
 use std::collections::{BTreeMap, BTreeSet};
 use tree_cache::TreeCache;
 
@@ -496,7 +497,7 @@ where
         tree_cache.put_node(node_key.clone(), new_leaf_node.clone())?;
         Ok((node_key, new_leaf_node))
     }
-
+   
     /// Returns the account state blob (if applicable) and the corresponding merkle proof.
     pub fn get_with_proof(
         &self,
@@ -505,9 +506,13 @@ where
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         // Empty tree just returns proof with no sibling hash.
         let mut next_node_key = NodeKey::new_empty_path(version);
-        let mut siblings = vec![];
         let nibble_path = NibblePath::new(key.to_vec());
         let mut nibble_iter = nibble_path.nibbles();
+
+        let mut internal_nodes = vec![];
+        
+        let mut ret_option: Option<AccountStateBlob> = None;
+        let mut proof_option = None;
 
         // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
         // in the tree structure.
@@ -518,34 +523,22 @@ where
                     let queried_child_index = nibble_iter
                         .next()
                         .ok_or_else(|| format_err!("ran out of nibbles"))?;
-                    let (child_node_key, mut siblings_in_internal) =
-                        internal_node.get_child_with_siblings(&next_node_key, queried_child_index);
-                    siblings.append(&mut siblings_in_internal);
+                    let child_node_key = internal_node.get_child_key(&next_node_key, queried_child_index);
+
+                    internal_nodes.push((internal_node, queried_child_index));
                     next_node_key = match child_node_key {
                         Some(node_key) => node_key,
                         None => {
-                            return Ok((
-                                None,
-                                SparseMerkleProof::new(None, {
-                                    siblings.reverse();
-                                    siblings
-                                }),
-                            ))
+                            break;
                         }
                     };
                 }
                 Node::Leaf(leaf_node) => {
-                    return Ok((
-                        if leaf_node.account_key() == key {
-                            Some(leaf_node.blob().clone())
-                        } else {
-                            None
-                        },
-                        SparseMerkleProof::new(Some(leaf_node.into()), {
-                            siblings.reverse();
-                            siblings
-                        }),
-                    ));
+                    if leaf_node.account_key() == key {
+                        ret_option = Some(leaf_node.blob().clone());
+                    }
+                    proof_option = Some(leaf_node.into());
+                    break;
                 }
                 Node::Null => {
                     if nibble_depth == 0 {
@@ -559,7 +552,26 @@ where
                 }
             }
         }
-        bail!("Jellyfish Merkle tree has cyclic graph inside.");
+
+        // TODO: try custom thread pool so we can also spawn merkle_hash for subtrees in parallel.
+        // TODO: decide when to do parallel and when sequential
+        let mut siblings: Vec<HashValue> = internal_nodes
+            .into_par_iter()
+            .flat_map(|(internal_node, child_index)|
+                      internal_node.get_sibling_hashes(child_index))
+            .collect();
+        
+        // let mut siblings = vec![];
+        // for (internal_node, child_index) in node_path {
+        //     siblings.append(&mut internal_node.get_sibling_hashes(child_index));
+        // }
+
+        Ok((ret_option,
+            SparseMerkleProof::new(proof_option, {
+                siblings.reverse();
+                siblings
+            })
+        ))
     }
 
     /// Gets the proof that shows a list of keys up to `rightmost_key_to_prove` exist at `version`.

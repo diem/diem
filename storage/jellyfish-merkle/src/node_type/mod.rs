@@ -10,6 +10,10 @@
 //! chidren at the lowest level. [`LeafNode`] stores the full key and the account blob data
 //! associated.
 
+extern crate criterion;
+// extern crate scoped_threadpool;
+// extern crate crossbeam;
+
 #[cfg(test)]
 mod node_type_test;
 
@@ -37,8 +41,11 @@ use std::{
     collections::hash_map::HashMap,
     io::{prelude::*, Cursor, Read, SeekFrom, Write},
     mem::size_of,
+    // thread,
 };
 use thiserror::Error;
+// use scoped_threadpool::Pool;
+// use tokio::runtime::Handle;
 
 /// The unique key of each node.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -260,7 +267,7 @@ impl InternalNode {
     }
 
     pub fn hash(&self) -> HashValue {
-        self.merkle_hash(
+        self.merkle_full_hash(
             0,  /* start index */
             16, /* the number of leaves in the subtree of which we want the hash of root */
             self.generate_bitmaps(),
@@ -352,7 +359,9 @@ impl InternalNode {
 
     /// Given a range [start, start + width), returns the sub-bitmap of that range.
     fn range_bitmaps(start: u8, width: u8, bitmaps: (u16, u16)) -> (u16, u16) {
-        assert!(start < 16 && width.count_ones() == 1 && start % width == 0);
+        assert!(start < 16 && width.count_ones() == 1 && start % width == 0,
+                "start = {}, width = {}", start, width,
+        );
         // A range with `start == 8` and `width == 4` will generate a mask 0b0000111100000000.
         let mask = if width == 16 {
             0xffff
@@ -364,6 +373,90 @@ impl InternalNode {
     }
 
     fn merkle_hash(
+        &self,
+        start: u8,
+        width: u8,
+        (existence_bitmap, leaf_bitmap): (u16, u16),
+    ) -> HashValue {
+        if existence_bitmap == 0 {
+            // No child under this subtree
+            *SPARSE_MERKLE_PLACEHOLDER_HASH
+        } else if existence_bitmap.count_ones() == 1 && (leaf_bitmap != 0 || width == 1)
+        {
+            // Only 1 leaf child under this subtree or reach the lowest level
+            let only_child_index = Nibble::from(existence_bitmap.trailing_zeros() as u8);
+            self.child(only_child_index)
+                .with_context(|| {
+                    format!(
+                        "Corrupted internal node: existence_bitmap indicates \
+                         the existence of a non-exist child at index {:x}",
+                        only_child_index
+                    )
+                })
+                .unwrap()
+                .hash
+        } else {
+            // let _tokio_handle = Handle::current();
+
+            // let left_computation = thread::scope(|scope| {
+            //     scope.spawn(move |_| { self.merkle_hash(
+            //         start,
+            //         width / 2,
+            //         (existence_bitmap, leaf_bitmap)
+            //     )})
+            // });
+
+            let (left_existence_bitmap, left_leaf_bitmap) =
+                Self::range_bitmaps(start, width / 2, (existence_bitmap, leaf_bitmap));
+            
+            let left_child = self.merkle_hash(
+                start,
+                width / 2,
+                (left_existence_bitmap, left_leaf_bitmap)
+            );
+            
+            let right_child = self.merkle_hash(
+                start + width / 2,
+                width / 2,
+                (existence_bitmap - left_existence_bitmap, leaf_bitmap - left_leaf_bitmap),
+            );
+
+            // let left_child = left_computation.join().unwrap();
+            
+            // Simulate the slowed down hashing behavior, only here.
+            // for _x in criterion::black_box(0)..criterion::black_box(30000) {
+            //     let _y = criterion::black_box(_x);
+            // }
+            
+            SparseMerkleInternalNode::new(left_child, right_child).hash()
+
+            // crossbeam::scope(|s| {
+            //     let thread_l = s.spawn(|_| self.merkle_hash(
+            //         start,
+            //         width / 2,
+            //         (existence_bitmap, leaf_bitmap)
+            //     ));
+                // let thread_r = s.spawn(|_| self.merkle_hash(
+                //     start + width / 2,
+                //     width / 2,
+                //     (existence_bitmap, leaf_bitmap),
+                // ));
+                
+            //     let hash_right =
+            //     // thread_r.join().unwrap();
+            //         self.merkle_hash(
+            //             start + width / 2,
+            //             width / 2,
+            //             (existence_bitmap, leaf_bitmap),
+            //         );
+            //     let hash_left = thread_l.join().unwrap();
+
+            //     SparseMerkleInternalNode::new(hash_left, hash_right).hash()
+            // }).unwrap()
+        }
+    }
+
+    fn merkle_full_hash(
         &self,
         start: u8,
         width: u8,
@@ -390,21 +483,68 @@ impl InternalNode {
                 .unwrap()
                 .hash
         } else {
-            let left_child = self.merkle_hash(start, width / 2, (existence_bitmap, leaf_bitmap));
-            let right_child = self.merkle_hash(
+            let left_child = self.merkle_full_hash(
+                start,
+                width / 2,
+                (existence_bitmap, leaf_bitmap)
+            );
+            
+            let right_child = self.merkle_full_hash(
                 start + width / 2,
                 width / 2,
                 (existence_bitmap, leaf_bitmap),
             );
 
-            // Simulate the slowed down hashing behavior, only here.
-            // for _x in 0..10000 {
-            // }
-            
             SparseMerkleInternalNode::new(left_child, right_child).hash()
         }
     }
 
+    pub fn get_child_key(
+        &self,
+        node_key: &NodeKey,
+        n: Nibble,
+    ) -> Option<NodeKey> {
+        let (existence_bitmap, leaf_bitmap) = self.generate_bitmaps();
+
+        for h in (0..4).rev() {
+            // Get the number of children of the internal node that each subtree at this height
+            // covers.
+            let width = 1 << h;
+            let child_half_start = get_child_half_start(n, h);
+
+            let (range_existence_bitmap, range_leaf_bitmap) =
+                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
+
+            if range_existence_bitmap == 0 {
+                // No child in this range.
+                return None;
+            } else if range_existence_bitmap.count_ones() == 1
+                && (range_leaf_bitmap.count_ones() == 1 || width == 1)
+            {
+                // Return the only 1 leaf child under this subtree or reach the lowest level
+                // Even this leaf child is not the n-th child, it should be returned instead of
+                // `None` because it's existence indirectly proves the n-th child doesn't exist.
+                // Please read proof format for details.
+                let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
+                let only_child_version = self
+                    .child(only_child_index)
+                // Should be guaranteed by the self invariants, but these are not easy to express
+                // at the moment
+                    .with_context(|| {
+                        format!(
+                            "Corrupted internal node: child_bitmap indicates \
+                             the existence of a non-exist child at index {:x}",
+                            only_child_index
+                        )
+                    })
+                    .unwrap()
+                    .version;
+                return Some(node_key.gen_child_node_key(only_child_version, only_child_index));
+            }
+        }
+        unreachable!("Impossible to get here without returning even at the lowest level.")
+    }
+    
     /// Gets the child and its corresponding siblings that are necessary to generate the proof for
     /// the `n`-th child. If it is an existence proof, the returned child must be the `n`-th
     /// child; otherwise, the returned child may be another child. See inline explanation for
@@ -425,13 +565,12 @@ impl InternalNode {
     ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
     ///  height    chs: `child_half_start`         shs: `sibling_half_start`
     /// ```
-    pub fn get_child_with_siblings(
+    pub fn get_sibling_hashes(
         &self,
-        node_key: &NodeKey,
         n: Nibble,
-    ) -> (Option<NodeKey>, Vec<HashValue>) {
+    ) -> Vec<HashValue> {
         let mut siblings = vec![];
-        let (existence_bitmap, leaf_bitmap) = self.generate_bitmaps();
+        let (mut existence_bitmap, mut leaf_bitmap) = self.generate_bitmaps();
 
         // Nibble height from 3 to 0.
         for h in (0..4).rev() {
@@ -439,58 +578,46 @@ impl InternalNode {
             // covers.
             let width = 1 << h;
             let (child_half_start, sibling_half_start) = get_child_and_sibling_half_start(n, h);
+
+            let (range_existence_bitmap, range_leaf_bitmap) =
+                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
+            
             // Compute the root hash of the subtree rooted at the sibling of `r`.
             siblings.push(self.merkle_hash(
                 sibling_half_start,
                 width,
-                (existence_bitmap, leaf_bitmap),
+                // (existence_bitmap, leaf_bitmap),
+                (existence_bitmap - range_existence_bitmap, leaf_bitmap - range_leaf_bitmap),
             ));
 
-            let (range_existence_bitmap, range_leaf_bitmap) =
-                Self::range_bitmaps(child_half_start, width, (existence_bitmap, leaf_bitmap));
+            existence_bitmap = range_existence_bitmap;
+            leaf_bitmap = range_leaf_bitmap;
 
             if range_existence_bitmap == 0 {
                 // No child in this range.
-                return (None, siblings);
+                return siblings;
             } else if range_existence_bitmap.count_ones() == 1
                 && (range_leaf_bitmap.count_ones() == 1 || width == 1)
             {
                 // Return the only 1 leaf child under this subtree or reach the lowest level
-                // Even this leaf child is not the n-th child, it should be returned instead of
-                // `None` because it's existence indirectly proves the n-th child doesn't exist.
-                // Please read proof format for details.
-                let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
-                return (
-                    {
-                        let only_child_version = self
-                            .child(only_child_index)
-                            // Should be guaranteed by the self invariants, but these are not easy to express at the moment
-                            .with_context(|| {
-                                format!(
-                                    "Corrupted internal node: child_bitmap indicates \
-                                     the existence of a non-exist child at index {:x}",
-                                    only_child_index
-                                )
-                            })
-                            .unwrap()
-                            .version;
-                        Some(node_key.gen_child_node_key(only_child_version, only_child_index))
-                    },
-                    siblings,
-                );
+                return siblings;
             }
         }
         unreachable!("Impossible to get here without returning even at the lowest level.")
     }
 }
 
-/// Given a nibble, computes the start position of its `child_half_start` and `sibling_half_start`
-/// at `height` level.
-pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8) {
+fn get_child_half_start(n: Nibble, height: u8) -> u8 {
     // Get the index of the first child belonging to the same subtree whose root, let's say `r` is
     // at `height` that the n-th child belongs to.
     // Note: `child_half_start` will be always equal to `n` at height 0.
-    let child_half_start = (0xff << height) & u8::from(n);
+    (0xff << height) & u8::from(n)
+}
+
+/// Given a nibble, computes the start position of its `child_half_start` and `sibling_half_start`
+/// at `height` level.
+pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8) {
+    let child_half_start = get_child_half_start(n, height);
 
     // Get the index of the first child belonging to the subtree whose root is the sibling of `r`
     // at `height`.
