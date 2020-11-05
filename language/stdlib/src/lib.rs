@@ -190,7 +190,7 @@ pub fn save_binary(path: &Path, binary: &[u8]) -> bool {
     true
 }
 
-pub fn build_stdlib_doc() {
+pub fn build_stdlib_doc(with_diagram: bool) {
     build_doc(
         STD_LIB_DOC_DIR,
         "",
@@ -204,10 +204,11 @@ pub fn build_stdlib_doc() {
         ),
         stdlib_files().as_slice(),
         "",
+        with_diagram,
     )
 }
 
-pub fn build_transaction_script_doc(script_files: &[String]) {
+pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool) {
     build_doc(
         TRANSACTION_SCRIPTS_DOC_DIR,
         STD_LIB_DOC_DIR,
@@ -226,6 +227,7 @@ pub fn build_transaction_script_doc(script_files: &[String]) {
         ),
         script_files,
         STD_LIB_DIR,
+        with_diagram,
     )
 }
 
@@ -254,6 +256,7 @@ fn build_doc(
     references_file: Option<String>,
     sources: &[String],
     dep_path: &str,
+    with_diagram: bool,
 ) {
     let mut options = move_prover::cli::Options::default();
     options.move_sources = sources.to_vec();
@@ -273,6 +276,8 @@ fn build_doc(
     }
     options.docgen.output_directory = output_path.to_string();
     options.setup_logging_for_test();
+    options.docgen.include_dep_diagrams = with_diagram;
+    options.docgen.include_call_diagrams = with_diagram;
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
@@ -450,7 +455,7 @@ impl Compatibility {
         // (1) Verify new_module (TODO)
         // (2) Link new_module against new_module dependencies. (TODO)
         //     Note: this will *NOT* prevent cylic deps. We need to think about a different scheme
-        //     if we care about this (wich we almost certainly do). One (probably too restrictive)
+        //     if we care about this (which we almost certainly do). One (probably too restrictive)
         //     solution would be: insist that deps(new_module) are a subset of deps(old_module).
         //     That would not only prevent cyclic deps, but also preclude the need for linking
         //     entirely.

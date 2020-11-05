@@ -7,8 +7,6 @@
 #[allow(unused_imports)]
 use log::{info, warn};
 
-use std::cell::RefCell;
-
 use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span, SpanOutOfBoundsError};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, Severity},
@@ -45,8 +43,10 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     ffi::OsStr,
+    rc::Rc,
 };
 use vm::{file_format::Bytecode, CompiledModule};
 
@@ -719,6 +719,20 @@ impl GlobalEnv {
         self.source_files.source_slice(loc.file_id, loc.span)
     }
 
+    /// Return the source file names.
+    pub fn get_source_file_names(&self) -> Vec<String> {
+        self.file_name_map
+            .iter()
+            .filter_map(|(k, _)| {
+                if k.eq("<internal>") || k.eq("<unknown>") {
+                    None
+                } else {
+                    Some(k.clone())
+                }
+            })
+            .collect()
+    }
+
     // Gets the number of source files in this environment.
     pub fn get_file_count(&self) -> usize {
         self.file_name_map.len()
@@ -1301,6 +1315,23 @@ impl<'env> ModuleEnv<'env> {
             .collect()
     }
 
+    /// Returns the set of modules that use this one (including itself).
+    pub fn get_using_modules(&self, include_specs: bool) -> BTreeSet<ModuleId> {
+        self.env
+            .get_modules()
+            .filter_map(|module_env| {
+                if module_env
+                    .get_used_modules(include_specs)
+                    .contains(&self.data.id)
+                {
+                    Some(module_env.data.id)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Returns the set of modules this one uses (including itself).
     pub fn get_used_modules(&self, include_specs: bool) -> BTreeSet<ModuleId> {
         // Determine modules used in bytecode from the compiled module.
@@ -1461,10 +1492,9 @@ impl<'env> ModuleEnv<'env> {
                 data,
             })
     }
-
-    /// Get FunctionEnv for a function used in this module, via the FunctionHandleIndex. The
+    /// Gets FunctionEnv for a function used in this module, via the FunctionHandleIndex. The
     /// returned function might be from this or another module.
-    pub fn get_called_function(&self, idx: FunctionHandleIndex) -> FunctionEnv<'_> {
+    pub fn get_used_function(&self, idx: FunctionHandleIndex) -> FunctionEnv<'_> {
         let view =
             FunctionHandleView::new(&self.data.module, self.data.module.function_handle_at(idx));
         let module_name = self.env.to_module_name(&view.module_id());
@@ -2478,6 +2508,70 @@ impl<'env> FunctionEnv<'env> {
             VerificationScope::None => false,
         };
         self.is_pragma_true(VERIFY_PRAGMA, default)
+    }
+
+    /// Get the functions that call this one
+    pub fn get_calling_functions(&self) -> BTreeSet<QualifiedId<FunId>> {
+        let mut set: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
+        for module_env in self.module_env.env.get_modules() {
+            for fun_env in module_env.get_functions() {
+                if fun_env
+                    .get_called_functions()
+                    .contains(&self.get_qualified_id())
+                {
+                    set.insert(fun_env.get_qualified_id());
+                }
+            }
+        }
+        set
+    }
+
+    /// Get the functions that this one calls
+    pub fn get_called_functions(&self) -> BTreeSet<QualifiedId<FunId>> {
+        self.get_bytecode()
+            .iter()
+            .filter_map(|c| {
+                if let Bytecode::Call(i) = c {
+                    Some(self.module_env.get_used_function(*i).get_qualified_id())
+                } else if let Bytecode::CallGeneric(i) = c {
+                    let handle_idx = self
+                        .module_env
+                        .data
+                        .module
+                        .function_instantiation_at(*i)
+                        .handle;
+                    Some(
+                        self.module_env
+                            .get_used_function(handle_idx)
+                            .get_qualified_id(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Returns the function name excluding the address and the module name
+    pub fn get_simple_name_string(&self) -> Rc<String> {
+        self.symbol_pool().string(self.get_name())
+    }
+
+    /// Returns the function name with the module name excluding the address
+    pub fn get_name_string(&self) -> Rc<String> {
+        if self.module_env.is_script_module() {
+            Rc::from(format!("Script::{}", self.get_simple_name_string()))
+        } else {
+            let module_name = self
+                .module_env
+                .get_name()
+                .display(self.module_env.symbol_pool());
+            Rc::from(format!(
+                "{}::{}",
+                module_name,
+                self.get_simple_name_string()
+            ))
+        }
     }
 
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {

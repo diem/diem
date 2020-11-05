@@ -15,18 +15,19 @@ use spec_lang::{
     code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
     env::{
-        FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter, StructEnv,
-        TypeConstraint, TypeParameter,
+        FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter,
+        QualifiedId, StructEnv, TypeConstraint, TypeParameter,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
 };
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
-    fs::File,
-    io::Read,
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fs::{self, File},
+    io::{Read, Write},
     path::PathBuf,
+    process::{Command, Stdio},
     rc::Rc,
 };
 
@@ -139,6 +140,10 @@ pub struct DocgenOptions {
     /// An optional file containing reference definitions. The content of this file will
     /// be added to each generated markdown doc.
     pub references_file: Option<String>,
+    /// Whether to include dependency diagrams in the generated docs.
+    pub include_dep_diagrams: bool,
+    /// Whether to include call diagrams in the generated docs.
+    pub include_call_diagrams: bool,
 }
 
 impl Default for DocgenOptions {
@@ -155,6 +160,8 @@ impl Default for DocgenOptions {
             doc_path: vec!["doc".to_string()],
             root_doc_templates: vec![],
             references_file: None,
+            include_dep_diagrams: false,
+            include_call_diagrams: false,
         }
     }
 }
@@ -236,8 +243,7 @@ impl<'env> Docgen<'env> {
         }
     }
 
-    /// Generate documentation, returning a pair of output file names and generated content per
-    /// file.
+    /// Generate document contents, returning pairs of output file names and generated contents.
     pub fn gen(mut self) -> Vec<(String, String)> {
         // Compute missing information about schemas.
         self.compute_declared_schemas();
@@ -612,6 +618,27 @@ impl<'env> Docgen<'env> {
         }
         self.end_code();
 
+        if self.options.include_dep_diagrams {
+            let module_name = module_env.get_name().display(module_env.symbol_pool());
+            self.gen_dependency_diagram(module_env.get_id(), true);
+            self.begin_collapsed(&format!(
+                "Show all the modules that \"{}\" depends on directly or indirectly",
+                module_name
+            ));
+            self.image(&format!("img/{}_forward_dep.svg", module_name));
+            self.end_collapsed();
+
+            if !module_env.is_script_module() {
+                self.gen_dependency_diagram(module_env.get_id(), false);
+                self.begin_collapsed(&format!(
+                    "Show all the modules that depend on \"{}\" directly or indirectly",
+                    module_name
+                ));
+                self.image(&format!("img/{}_backward_dep.svg", module_name));
+                self.end_collapsed();
+            }
+        }
+
         let spec_block_map = self.organize_spec_blocks(module_env);
 
         if !module_env.get_structs().count() > 0 {
@@ -664,7 +691,176 @@ impl<'env> Docgen<'env> {
         }
     }
 
-    /// Gen header for TOC, returning label where we can later insert the content after
+    /// Generate a static call diagram (.svg) starting from the given function.
+    fn gen_call_diagram(&self, fun_id: QualifiedId<FunId>) {
+        let fun_env = self.env.get_function(fun_id);
+        let name_of = |env: &FunctionEnv| {
+            if fun_env.module_env.get_id() == env.module_env.get_id() {
+                env.get_simple_name_string()
+            } else {
+                Rc::from(format!("\"{}\"", env.get_name_string()))
+            }
+        };
+
+        let mut dot_src_lines: Vec<String> = vec!["digraph G {".to_string()];
+        let mut visited: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
+        let mut queue: VecDeque<QualifiedId<FunId>> = VecDeque::new();
+
+        visited.insert(fun_id);
+        queue.push_back(fun_id);
+
+        while let Some(id) = queue.pop_front() {
+            let caller_env = self.env.get_function(id);
+            let caller_name = name_of(&caller_env);
+            let callee_list = caller_env.get_called_functions();
+
+            if fun_env.module_env.get_id() == caller_env.module_env.get_id() {
+                dot_src_lines.push(format!("\t{}", caller_name));
+            } else {
+                let module_name = caller_env
+                    .module_env
+                    .get_name()
+                    .display(caller_env.module_env.symbol_pool());
+                dot_src_lines.push(format!("\tsubgraph cluster_{} {{", module_name));
+                dot_src_lines.push(format!("\t\tlabel = \"{}\";", module_name));
+                dot_src_lines.push(format!(
+                    "\t\t{}[label=\"{}\"]",
+                    caller_name,
+                    caller_env.get_simple_name_string()
+                ));
+                dot_src_lines.push("\t}".to_string());
+            }
+
+            for callee_id in callee_list.iter() {
+                let callee_env = self.env.get_function(*callee_id);
+                let callee_name = name_of(&callee_env);
+                dot_src_lines.push(format!("\t{} -> {}", caller_name, callee_name));
+                if !visited.contains(callee_id) {
+                    visited.insert(*callee_id);
+                    queue.push_back(*callee_id);
+                }
+            }
+        }
+        dot_src_lines.push("}".to_string());
+
+        let out_file_path = PathBuf::from(&self.options.output_directory)
+            .join("img")
+            .join(format!(
+                "{}_call_graph.svg",
+                fun_env.get_name_string().to_string().replace("::", "_")
+            ));
+
+        self.gen_svg_file(&out_file_path, &dot_src_lines.join("\n"));
+    }
+
+    /// Generate a forward (or backward) dependency diagram (.svg) for the given module.
+    fn gen_dependency_diagram(&self, module_id: ModuleId, is_forward: bool) {
+        let module_env = self.env.get_module(module_id);
+        let module_name = module_env.get_name().display(module_env.symbol_pool());
+
+        let mut dot_src_lines: Vec<String> = vec!["digraph G {".to_string()];
+        let mut visited: BTreeSet<ModuleId> = BTreeSet::new();
+        let mut queue: VecDeque<ModuleId> = VecDeque::new();
+
+        visited.insert(module_id);
+        queue.push_back(module_id);
+
+        while let Some(id) = queue.pop_front() {
+            let mod_env = self.env.get_module(id);
+            let mod_name = mod_env.get_name().display(mod_env.symbol_pool());
+            let dep_list = if is_forward {
+                mod_env.get_used_modules(false)
+            } else {
+                mod_env.get_using_modules(false)
+            };
+            dot_src_lines.push(format!("\t{}", mod_name));
+            for dep_id in dep_list.iter().filter(|dep_id| **dep_id != id) {
+                let dep_env = self.env.get_module(*dep_id);
+                let dep_name = dep_env.get_name().display(dep_env.symbol_pool());
+                if is_forward {
+                    dot_src_lines.push(format!("\t{} -> {}", mod_name, dep_name));
+                } else {
+                    dot_src_lines.push(format!("\t{} -> {}", dep_name, mod_name));
+                }
+                if !visited.contains(dep_id) {
+                    visited.insert(*dep_id);
+                    queue.push_back(*dep_id);
+                }
+            }
+        }
+        dot_src_lines.push("}".to_string());
+
+        let out_file_path = PathBuf::from(&self.options.output_directory)
+            .join("img")
+            .join(format!(
+                "{}_{}_dep.svg",
+                module_name,
+                (if is_forward { "forward" } else { "backward" }).to_string()
+            ));
+
+        self.gen_svg_file(&out_file_path, &dot_src_lines.join("\n"));
+    }
+
+    /// Execute the external tool "dot" with doc_src as input to generate a .svg image file.
+    fn gen_svg_file(&self, out_file_path: &PathBuf, dot_src: &str) {
+        if let Err(e) = fs::create_dir_all(out_file_path.parent().unwrap()) {
+            self.env.error(
+                &self.env.unknown_loc(),
+                &format!("cannot create a directory for images ({})", e),
+            );
+            return;
+        }
+
+        let mut child = match Command::new("dot")
+            .arg("-Tsvg")
+            .args(&["-o", out_file_path.to_str().unwrap()])
+            .stdin(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                self.env.error(
+                    &self.env.unknown_loc(),
+                    &format!("The Graphviz tool \"dot\" is not available. {}", e),
+                );
+                return;
+            }
+        };
+
+        if let Err(e) = child
+            .stdin
+            .as_mut()
+            .ok_or("Child process stdin has not been captured!")
+            .unwrap()
+            .write_all(dot_src.as_bytes())
+        {
+            self.env.error(&self.env.unknown_loc(), &format!("{}", e));
+            return;
+        }
+
+        match child.wait_with_output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    self.env.error(
+                        &self.env.unknown_loc(),
+                        &format!(
+                            "dot failed to generate {}\n{}",
+                            out_file_path.to_str().unwrap(),
+                            dot_src
+                        ),
+                    );
+                    return;
+                }
+            }
+            Err(e) => {
+                self.env.error(&self.env.unknown_loc(), &format!("{}", e));
+            }
+        }
+    }
+
+    /// Generate header for TOC, returning label where we can later insert the content after
     /// file generation is done.
     fn gen_toc_header(&mut self) -> CodeWriterLabel {
         // Create label where we later can insert the TOC
@@ -863,6 +1059,19 @@ impl<'env> Docgen<'env> {
                 &SpecBlockTarget::Function(func_env.module_env.get_id(), func_env.get_id()),
                 spec_block_map,
             )
+        }
+        if self.options.include_call_diagrams {
+            let func_name = func_env.get_simple_name_string();
+            self.gen_call_diagram(func_env.get_qualified_id());
+            self.begin_collapsed(&format!(
+                "Show all the functions that \"{}\" calls",
+                &func_name
+            ));
+            self.image(&format!(
+                "img/{}_call_graph.svg",
+                func_env.get_name_string().to_string().replace("::", "_")
+            ));
+            self.end_collapsed();
         }
         if !is_script {
             self.decrement_section_nest();
@@ -1158,6 +1367,13 @@ impl<'env> Docgen<'env> {
             self.repeat_str("#", self.options.section_level_start + level),
             s,
         );
+        emitln!(self.writer);
+    }
+
+    /// Includes the image in the given path.
+    fn image(&self, path: &str) {
+        emitln!(self.writer);
+        emitln!(self.writer, "![]({})", path);
         emitln!(self.writer);
     }
 

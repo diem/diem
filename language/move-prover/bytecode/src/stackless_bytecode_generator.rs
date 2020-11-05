@@ -465,7 +465,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     self.temp_count += 1;
                 }
                 arg_temp_indices.reverse();
-                let callee_env = self.func_env.module_env.get_called_function(*idx);
+                let callee_env = self.func_env.module_env.get_used_function(*idx);
                 self.code.push(mk_call(
                     Operation::Function(
                         callee_env.module_env.get_id(),
@@ -506,7 +506,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let callee_env = self
                     .func_env
                     .module_env
-                    .get_called_function(func_instantiation.handle);
+                    .get_used_function(func_instantiation.handle);
                 self.code.push(mk_call(
                     Operation::Function(
                         callee_env.module_env.get_id(),
