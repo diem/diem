@@ -172,6 +172,12 @@ impl RecoveryManager {
     }
 }
 
+//Should we implement a Asychronous Round Manager that is triggered if we have not committed a block in $X$ number of rounds?
+//Main Question: When is the fallback triggered? We no longer have a view-change to remove and put the fall-back instead.
+//Proposal: We broadcast partial TCs instead of sending to the next leader, upon a complete TC we enter the fallback
+
+
+
 /// Consensus SMR is working in an event based fashion: RoundManager is responsible for
 /// processing the individual events (e.g., process_new_round, process_proposal, process_vote,
 /// etc.). It is exposing the async processing functions for each event type.
@@ -236,6 +242,7 @@ impl RoundManager {
     /// Replica:
     ///
     /// Do nothing
+    //We need to extend this so that if the fallback is triggered all replicas enter a proposal phase
     async fn process_new_round_event(
         &mut self,
         new_round_event: NewRoundEvent,
@@ -254,6 +261,7 @@ impl RoundManager {
             self.new_log(LogEvent::NewRound),
             reason = new_round_event.reason
         );
+        //extend the is_valid_proposer
         if self
             .proposer_election
             .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
