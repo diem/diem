@@ -1,0 +1,5541 @@
+[
+  {
+    "name": "Signer::address_of",
+    "calls": [
+      "Signer::borrow_address"
+    ],
+    "called_by": [
+      "CoreAddresses::assert_currency_info",
+      "CoreAddresses::assert_libra_root",
+      "CoreAddresses::assert_treasury_compliance",
+      "CoreAddresses::assert_vm",
+      "Roles::assert_libra_root",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_designated_dealer",
+      "Roles::assert_parent_vasp_or_child_vasp",
+      "Roles::assert_parent_vasp_or_designated_dealer",
+      "Roles::assert_parent_vasp_role",
+      "Roles::assert_validator",
+      "Roles::assert_validator_operator",
+      "Roles::grant_role",
+      "Roles::has_role",
+      "Event::new_event_handle",
+      "Event::publish_generator",
+      "AccountFreezing::create",
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::initialize",
+      "AccountFreezing::unfreeze_account",
+      "AccountLimits::publish_unrestricted_limits",
+      "AccountLimits::publish_window",
+      "ChainId::initialize",
+      "LibraConfig::publish_new_config",
+      "LibraConfig::publish_new_config_and_get_capability",
+      "LibraConfig::set",
+      "Libra::burn",
+      "Libra::cancel_burn",
+      "Libra::mint",
+      "Libra::preburn_to",
+      "Libra::publish_burn_capability",
+      "Libra::publish_preburn_to_account",
+      "Libra::register_SCS_currency",
+      "Libra::register_currency",
+      "Libra::remove_burn_capability",
+      "DesignatedDealer::add_currency",
+      "DesignatedDealer::publish_designated_dealer_credential",
+      "VASP::publish_child_vasp_credential",
+      "VASP::publish_parent_vasp_credential",
+      "DualAttestation::publish_credential",
+      "DualAttestation::rotate_base_url",
+      "DualAttestation::rotate_compliance_public_key",
+      "ValidatorOperatorConfig::publish",
+      "ValidatorConfig::publish",
+      "ValidatorConfig::remove_operator",
+      "ValidatorConfig::set_config",
+      "ValidatorConfig::set_operator",
+      "LibraSystem::update_config_and_reconfigure",
+      "SlidingNonce::publish",
+      "SlidingNonce::publish_nonce_resource",
+      "SlidingNonce::try_record_nonce",
+      "LibraAccount::preburn",
+      "LibraAccount::add_currency",
+      "LibraAccount::add_currencies_for_account",
+      "LibraAccount::epilogue",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::make_account",
+      "LibraAccount::prologue_common",
+      "LibraAccount::writeset_prologue",
+      "Offer::create",
+      "Offer::redeem",
+      "RecoveryAddress::publish",
+      "RecoveryAddress::rotate_authentication_key",
+      "SharedEd25519PublicKey::publish",
+      "SharedEd25519PublicKey::rotate_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Signer::borrow_address",
+    "calls": [],
+    "called_by": [
+      "Signer::address_of",
+      "LibraAccount::create_authentication_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Errors::already_published",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "Roles::grant_role",
+      "AccountFreezing::create",
+      "AccountFreezing::initialize",
+      "AccountLimits::publish_unrestricted_limits",
+      "AccountLimits::publish_window",
+      "ChainId::initialize",
+      "LibraConfig::initialize",
+      "LibraConfig::publish_new_config",
+      "LibraConfig::publish_new_config_and_get_capability",
+      "Libra::publish_burn_capability",
+      "Libra::publish_preburn_to_account",
+      "Libra::register_SCS_currency",
+      "Libra::register_currency",
+      "DesignatedDealer::add_currency",
+      "DesignatedDealer::publish_designated_dealer_credential",
+      "VASP::publish_child_vasp_credential",
+      "VASP::publish_parent_vasp_credential",
+      "LBR::initialize",
+      "DualAttestation::initialize",
+      "DualAttestation::publish_credential",
+      "TransactionFee::add_txn_fee_currency",
+      "ValidatorOperatorConfig::publish",
+      "ValidatorConfig::publish",
+      "LibraSystem::initialize_validator_set",
+      "LibraBlock::initialize_block_metadata",
+      "SlidingNonce::publish",
+      "SlidingNonce::publish_nonce_resource",
+      "LibraAccount::add_currency",
+      "LibraAccount::create_libra_root_account",
+      "Offer::create",
+      "RecoveryAddress::publish",
+      "SharedEd25519PublicKey::publish"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::custom",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::internal",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::invalid_argument",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "LibraTimestamp::update_global_time",
+      "AccountFreezing::freeze_account",
+      "Authenticator::create_multi_ed25519",
+      "RegisteredCurrencies::add_currency_code",
+      "FixedPoint32::create_from_rational",
+      "FixedPoint32::divide_u64",
+      "Libra::burn_now",
+      "Libra::destroy_zero",
+      "Libra::publish_preburn_to_account",
+      "Libra::register_currency",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::tiered_mint",
+      "DesignatedDealer::update_tier",
+      "DesignatedDealer::validate_and_record_mint",
+      "VASP::parent_address",
+      "VASP::publish_child_vasp_credential",
+      "DualAttestation::assert_signature_is_valid",
+      "DualAttestation::rotate_compliance_public_key",
+      "LibraVersion::set",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "Option::borrow",
+      "Option::borrow_mut",
+      "Option::swap",
+      "Option::destroy_none",
+      "Option::destroy_some",
+      "Option::extract",
+      "Option::fill",
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::set_config",
+      "ValidatorConfig::set_operator",
+      "LibraSystem::add_validator",
+      "LibraSystem::get_ith_validator_address",
+      "LibraSystem::get_validator_config",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure",
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::deposit",
+      "LibraAccount::add_currency",
+      "LibraAccount::create_authentication_key",
+      "LibraAccount::epilogue",
+      "LibraAccount::make_account",
+      "LibraAccount::prologue_common",
+      "LibraAccount::rotate_authentication_key",
+      "LibraAccount::writeset_prologue",
+      "Offer::redeem",
+      "RecoveryAddress::publish",
+      "RecoveryAddress::rotate_authentication_key",
+      "RecoveryAddress::add_rotation_capability",
+      "SharedEd25519PublicKey::rotate_key_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::invalid_state",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "LibraTimestamp::assert_genesis",
+      "LibraTimestamp::assert_operating",
+      "AccountFreezing::assert_not_frozen",
+      "LibraConfig::emit_genesis_reconfiguration_event",
+      "LibraConfig::reconfigure_",
+      "Libra::assert_is_SCS_currency",
+      "Libra::burn_with_resource_cap",
+      "Libra::mint_with_capability",
+      "Libra::preburn_with_resource",
+      "DualAttestation::assert_signature_is_valid",
+      "TransactionFee::burn_fees",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::module_prologue",
+      "LibraAccount::prologue_common",
+      "LibraAccount::restore_withdraw_capability",
+      "LibraAccount::script_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::limit_exceeded",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "AccountLimits::can_receive",
+      "AccountLimits::can_withdraw",
+      "AccountLimits::reset_window",
+      "FixedPoint32::create_from_rational",
+      "FixedPoint32::divide_u64",
+      "FixedPoint32::multiply_u64",
+      "Libra::burn_with_resource_cap",
+      "Libra::cancel_burn_with_capability",
+      "Libra::deposit",
+      "Libra::mint_with_capability",
+      "Libra::preburn_with_resource",
+      "Libra::withdraw",
+      "VASP::publish_child_vasp_credential",
+      "DualAttestation::initialize",
+      "LibraAccount::deposit",
+      "LibraAccount::epilogue",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::make",
+    "calls": [],
+    "called_by": [
+      "Errors::already_published",
+      "Errors::custom",
+      "Errors::internal",
+      "Errors::invalid_argument",
+      "Errors::invalid_state",
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "Errors::requires_address",
+      "Errors::requires_capability",
+      "Errors::requires_role"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::not_published",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "Roles::assert_libra_root",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_designated_dealer",
+      "Roles::assert_parent_vasp_or_child_vasp",
+      "Roles::assert_parent_vasp_or_designated_dealer",
+      "Roles::assert_parent_vasp_role",
+      "Roles::assert_validator",
+      "Roles::assert_validator_operator",
+      "Roles::get_role_id",
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::unfreeze_account",
+      "AccountLimits::can_receive",
+      "AccountLimits::can_withdraw",
+      "AccountLimits::publish_window",
+      "AccountLimits::update_deposit_limits",
+      "AccountLimits::update_limits_definition",
+      "AccountLimits::update_window_info",
+      "AccountLimits::update_withdrawal_limits",
+      "LibraConfig::get",
+      "LibraConfig::emit_genesis_reconfiguration_event",
+      "LibraConfig::set",
+      "LibraConfig::set_with_capability_and_reconfigure",
+      "Libra::assert_is_currency",
+      "Libra::burn_with_capability",
+      "Libra::cancel_burn_with_capability",
+      "Libra::preburn_to",
+      "DesignatedDealer::add_currency",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::tiered_mint",
+      "DesignatedDealer::update_tier",
+      "DualAttestation::base_url",
+      "DualAttestation::compliance_public_key",
+      "DualAttestation::expiration_date",
+      "DualAttestation::get_cur_microlibra_limit",
+      "DualAttestation::human_name",
+      "DualAttestation::rotate_base_url",
+      "DualAttestation::rotate_compliance_public_key",
+      "DualAttestation::set_microlibra_limit",
+      "TransactionFee::burn_fees",
+      "TransactionFee::pay_fee",
+      "ValidatorOperatorConfig::get_human_name",
+      "ValidatorConfig::get_human_name",
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::get_operator",
+      "ValidatorConfig::remove_operator",
+      "ValidatorConfig::set_config",
+      "ValidatorConfig::set_operator",
+      "LibraSystem::set_libra_system_config",
+      "LibraBlock::get_current_block_height",
+      "SlidingNonce::try_record_nonce",
+      "LibraAccount::deposit",
+      "LibraAccount::balance",
+      "LibraAccount::authentication_key",
+      "LibraAccount::delegated_key_rotation_capability",
+      "LibraAccount::delegated_withdraw_capability",
+      "LibraAccount::epilogue",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::make_account",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::restore_withdraw_capability",
+      "LibraAccount::rotate_authentication_key",
+      "LibraAccount::sequence_number",
+      "LibraAccount::withdraw_from",
+      "Offer::address_of",
+      "Offer::redeem",
+      "RecoveryAddress::rotate_authentication_key",
+      "RecoveryAddress::add_rotation_capability",
+      "SharedEd25519PublicKey::key",
+      "SharedEd25519PublicKey::rotate_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::requires_address",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "CoreAddresses::assert_currency_info",
+      "CoreAddresses::assert_libra_root",
+      "CoreAddresses::assert_treasury_compliance",
+      "CoreAddresses::assert_vm",
+      "LibraBlock::block_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::requires_capability",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "LibraConfig::set",
+      "Libra::burn",
+      "Libra::cancel_burn",
+      "Libra::mint",
+      "Libra::remove_burn_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Errors::requires_role",
+    "calls": [
+      "Errors::make"
+    ],
+    "called_by": [
+      "Roles::assert_libra_root",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_designated_dealer",
+      "Roles::assert_parent_vasp_or_child_vasp",
+      "Roles::assert_parent_vasp_or_designated_dealer",
+      "Roles::assert_parent_vasp_role",
+      "Roles::assert_validator",
+      "Roles::assert_validator_operator"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::CORE_CODE_ADDRESS",
+    "calls": [],
+    "called_by": [
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::CURRENCY_INFO_ADDRESS",
+    "calls": [],
+    "called_by": [
+      "CoreAddresses::assert_currency_info",
+      "Libra::currency_code",
+      "Libra::burn_with_resource_cap",
+      "Libra::cancel_burn_with_capability",
+      "Libra::fractional_part",
+      "Libra::is_SCS_currency",
+      "Libra::is_currency",
+      "Libra::is_synthetic_currency",
+      "Libra::lbr_exchange_rate",
+      "Libra::market_cap",
+      "Libra::mint_with_capability",
+      "Libra::preburn_value",
+      "Libra::preburn_with_resource",
+      "Libra::scaling_factor",
+      "Libra::update_lbr_exchange_rate",
+      "Libra::update_minting_ability",
+      "LBR::reserve_address"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::LIBRA_ROOT_ADDRESS",
+    "calls": [],
+    "called_by": [
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::is_genesis",
+      "LibraTimestamp::is_operating",
+      "LibraTimestamp::now_microseconds",
+      "LibraTimestamp::update_global_time",
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::unfreeze_account",
+      "ChainId::get",
+      "LibraConfig::initialize",
+      "LibraConfig::get",
+      "LibraConfig::emit_genesis_reconfiguration_event",
+      "LibraConfig::reconfigure_",
+      "LibraConfig::set",
+      "LibraConfig::set_with_capability_and_reconfigure",
+      "LBR::initialize",
+      "DualAttestation::initialize",
+      "DualAttestation::get_cur_microlibra_limit",
+      "DualAttestation::set_microlibra_limit",
+      "LibraSystem::initialize_validator_set",
+      "LibraSystem::set_libra_system_config",
+      "LibraBlock::is_initialized",
+      "LibraBlock::block_prologue",
+      "LibraBlock::get_current_block_height",
+      "LibraAccount::deposit",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::make_account",
+      "LibraAccount::withdraw_from_balance",
+      "LibraAccount::writeset_epilogue",
+      "LibraAccount::writeset_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+    "calls": [],
+    "called_by": [
+      "CoreAddresses::assert_treasury_compliance",
+      "AccountFreezing::freeze_account",
+      "TransactionFee::add_txn_fee_currency",
+      "TransactionFee::burn_fees",
+      "TransactionFee::is_coin_initialized",
+      "TransactionFee::pay_fee",
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::VM_RESERVED_ADDRESS",
+    "calls": [],
+    "called_by": [
+      "CoreAddresses::assert_vm",
+      "LibraTimestamp::update_global_time",
+      "LibraBlock::block_prologue",
+      "LibraAccount::tiered_mint",
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::assert_currency_info",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_address",
+      "CoreAddresses::CURRENCY_INFO_ADDRESS"
+    ],
+    "called_by": [
+      "Libra::register_currency",
+      "LBR::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::assert_libra_root",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_address",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "LibraTimestamp::set_time_has_started",
+      "Roles::assert_libra_root",
+      "Roles::grant_libra_root_role",
+      "AccountFreezing::initialize",
+      "ChainId::initialize",
+      "LibraConfig::initialize",
+      "Libra::initialize",
+      "DualAttestation::initialize",
+      "LibraBlock::initialize_block_metadata",
+      "LibraAccount::initialize",
+      "LibraAccount::create_libra_root_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::assert_treasury_compliance",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_address",
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS"
+    ],
+    "called_by": [
+      "Roles::assert_treasury_compliance",
+      "Roles::grant_treasury_compliance_role"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "CoreAddresses::assert_vm",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_address",
+      "CoreAddresses::VM_RESERVED_ADDRESS"
+    ],
+    "called_by": [
+      "LibraTimestamp::update_global_time",
+      "LibraBlock::block_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::assert_genesis",
+    "calls": [
+      "Errors::invalid_state",
+      "LibraTimestamp::is_genesis"
+    ],
+    "called_by": [
+      "LibraTimestamp::set_time_has_started",
+      "Roles::grant_libra_root_role",
+      "Roles::grant_treasury_compliance_role",
+      "AccountFreezing::initialize",
+      "AccountLimits::grant_mutation_capability",
+      "ChainId::initialize",
+      "LibraConfig::initialize",
+      "LibraConfig::publish_new_config_and_get_capability",
+      "RegisteredCurrencies::initialize",
+      "Libra::initialize",
+      "Coin1::initialize",
+      "LBR::initialize",
+      "DualAttestation::initialize",
+      "TransactionFee::initialize",
+      "LibraVersion::initialize",
+      "LibraVMConfig::initialize",
+      "LibraTransactionPublishingOption::initialize",
+      "LibraSystem::initialize_validator_set",
+      "LibraBlock::initialize_block_metadata",
+      "LibraAccount::initialize",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::assert_operating",
+    "calls": [
+      "Errors::invalid_state",
+      "LibraTimestamp::is_operating"
+    ],
+    "called_by": [
+      "LibraTimestamp::now_microseconds",
+      "LibraTimestamp::update_global_time",
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::unfreeze_account",
+      "ChainId::get",
+      "VASP::publish_parent_vasp_credential",
+      "TransactionFee::burn_fees",
+      "TransactionFee::pay_fee",
+      "LibraVersion::set",
+      "ValidatorOperatorConfig::publish",
+      "ValidatorConfig::publish",
+      "LibraSystem::add_validator",
+      "LibraSystem::remove_validator",
+      "LibraSystem::set_libra_system_config",
+      "LibraSystem::update_config_and_reconfigure",
+      "LibraBlock::block_prologue",
+      "LibraAccount::preburn",
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::is_genesis",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "LibraTimestamp::assert_genesis",
+      "AccountLimits::current_time",
+      "LibraConfig::reconfigure_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::is_operating",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "LibraTimestamp::assert_operating"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::now_microseconds",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating"
+    ],
+    "called_by": [
+      "LibraTimestamp::now_seconds",
+      "AccountLimits::current_time",
+      "AccountLimits::reset_window",
+      "LibraConfig::reconfigure_",
+      "DesignatedDealer::reset_window",
+      "DesignatedDealer::add_currency",
+      "LibraSystem::add_validator",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::now_seconds",
+    "calls": [
+      "LibraTimestamp::now_microseconds"
+    ],
+    "called_by": [
+      "DualAttestation::rotate_base_url",
+      "DualAttestation::rotate_compliance_public_key",
+      "LibraAccount::prologue_common",
+      "LibraAccount::writeset_epilogue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::set_time_has_started",
+    "calls": [
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTimestamp::update_global_time",
+    "calls": [
+      "Errors::invalid_argument",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::VM_RESERVED_ADDRESS",
+      "CoreAddresses::assert_vm",
+      "LibraTimestamp::assert_operating"
+    ],
+    "called_by": [
+      "LibraBlock::block_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_libra_root",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role",
+      "CoreAddresses::assert_libra_root"
+    ],
+    "called_by": [
+      "Roles::grant_treasury_compliance_role",
+      "Roles::new_validator_operator_role",
+      "Roles::new_validator_role",
+      "AccountLimits::grant_mutation_capability",
+      "AccountLimits::publish_window",
+      "LibraConfig::publish_new_config_and_get_capability",
+      "LibraConfig::reconfigure",
+      "RegisteredCurrencies::initialize",
+      "Libra::register_currency",
+      "LibraVersion::initialize",
+      "LibraVersion::set",
+      "LibraVMConfig::initialize",
+      "LibraTransactionPublishingOption::initialize",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "LibraTransactionPublishingOption::set_open_module",
+      "LibraTransactionPublishingOption::set_open_script",
+      "ValidatorOperatorConfig::publish",
+      "ValidatorConfig::publish",
+      "LibraSystem::add_validator",
+      "LibraSystem::initialize_validator_set",
+      "LibraSystem::remove_validator",
+      "SlidingNonce::publish_nonce_resource",
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_treasury_compliance",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role",
+      "CoreAddresses::assert_treasury_compliance"
+    ],
+    "called_by": [
+      "Roles::new_designated_dealer_role",
+      "Roles::new_parent_vasp_role",
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::unfreeze_account",
+      "AccountLimits::update_limits_definition",
+      "AccountLimits::update_window_info",
+      "Libra::create_preburn",
+      "Libra::publish_burn_capability",
+      "Libra::publish_preburn_to_account",
+      "Libra::register_SCS_currency",
+      "Libra::update_lbr_exchange_rate",
+      "Libra::update_minting_ability",
+      "DesignatedDealer::add_currency",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::publish_designated_dealer_credential",
+      "DesignatedDealer::tiered_mint",
+      "DesignatedDealer::update_tier",
+      "VASP::publish_parent_vasp_credential",
+      "DualAttestation::publish_credential",
+      "DualAttestation::set_microlibra_limit",
+      "TransactionFee::initialize",
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_designated_dealer",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "Libra::publish_preburn_to_account",
+      "DesignatedDealer::publish_designated_dealer_credential"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_parent_vasp_or_child_vasp",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "AccountLimits::publish_window"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_parent_vasp_or_designated_dealer",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "DualAttestation::publish_credential"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_parent_vasp_role",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "Roles::new_child_vasp_role",
+      "VASP::publish_child_vasp_credential",
+      "VASP::publish_parent_vasp_credential"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_validator",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "ValidatorConfig::publish",
+      "ValidatorConfig::remove_operator",
+      "ValidatorConfig::set_operator"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::assert_validator_operator",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_role"
+    ],
+    "called_by": [
+      "ValidatorOperatorConfig::publish",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::can_hold_balance",
+    "calls": [
+      "Roles::has_child_VASP_role",
+      "Roles::has_designated_dealer_role",
+      "Roles::has_parent_VASP_role"
+    ],
+    "called_by": [
+      "LibraAccount::add_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::get_role_id",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::grant_libra_root_role",
+    "calls": [
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_libra_root_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::grant_role",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published"
+    ],
+    "called_by": [
+      "Roles::grant_libra_root_role",
+      "Roles::grant_treasury_compliance_role",
+      "Roles::new_child_vasp_role",
+      "Roles::new_designated_dealer_role",
+      "Roles::new_parent_vasp_role",
+      "Roles::new_validator_operator_role",
+      "Roles::new_validator_role"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::grant_treasury_compliance_role",
+    "calls": [
+      "CoreAddresses::assert_treasury_compliance",
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_child_VASP_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [
+      "Roles::can_hold_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_designated_dealer_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [
+      "Roles::can_hold_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_libra_root_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [
+      "LibraTransactionPublishingOption::is_module_allowed",
+      "LibraTransactionPublishingOption::is_script_allowed",
+      "LibraAccount::writeset_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_parent_VASP_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [
+      "Roles::can_hold_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_role",
+    "calls": [
+      "Signer::address_of"
+    ],
+    "called_by": [
+      "Roles::has_child_VASP_role",
+      "Roles::has_designated_dealer_role",
+      "Roles::has_libra_root_role",
+      "Roles::has_parent_VASP_role",
+      "Roles::has_treasury_compliance_role",
+      "Roles::has_validator_operator_role",
+      "Roles::has_validator_role"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_treasury_compliance_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_validator_operator_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::has_validator_role",
+    "calls": [
+      "Roles::has_role"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::new_child_vasp_role",
+    "calls": [
+      "Roles::assert_parent_vasp_role",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::new_designated_dealer_role",
+    "calls": [
+      "Roles::assert_treasury_compliance",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_designated_dealer"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::new_parent_vasp_role",
+    "calls": [
+      "Roles::assert_treasury_compliance",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_parent_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::new_validator_operator_role",
+    "calls": [
+      "Roles::assert_libra_root",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Roles::new_validator_role",
+    "calls": [
+      "Roles::assert_libra_root",
+      "Roles::grant_role"
+    ],
+    "called_by": [
+      "LibraAccount::create_validator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Vector::append",
+    "calls": [
+      "Vector::destroy_empty",
+      "Vector::is_empty",
+      "Vector::pop_back",
+      "Vector::push_back",
+      "Vector::reverse"
+    ],
+    "called_by": [
+      "Event::fresh_guid",
+      "Authenticator::multi_ed25519_authentication_key",
+      "DualAttestation::dual_attestation_message",
+      "LibraAccount::create_authentication_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::borrow",
+    "calls": [],
+    "called_by": [
+      "Vector::contains",
+      "Vector::index_of",
+      "Authenticator::multi_ed25519_authentication_key",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::update_tier",
+      "DesignatedDealer::validate_and_record_mint",
+      "Option::borrow",
+      "Option::borrow_with_default",
+      "Option::get_with_default",
+      "LibraSystem::get_ith_validator_address",
+      "LibraSystem::get_validator_config",
+      "LibraSystem::get_validator_index_",
+      "RecoveryAddress::rotate_authentication_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::borrow_mut",
+    "calls": [],
+    "called_by": [
+      "DesignatedDealer::update_tier",
+      "Option::borrow_mut",
+      "LibraSystem::update_config_and_reconfigure",
+      "LibraSystem::update_ith_validator_info_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::contains",
+    "calls": [
+      "Vector::borrow",
+      "Vector::length"
+    ],
+    "called_by": [
+      "RegisteredCurrencies::add_currency_code",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "LibraTransactionPublishingOption::is_script_allowed",
+      "Option::contains"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::destroy_empty",
+    "calls": [],
+    "called_by": [
+      "Vector::append",
+      "Option::destroy_none",
+      "Option::destroy_some"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::empty",
+    "calls": [],
+    "called_by": [
+      "Vector::singleton",
+      "Authenticator::multi_ed25519_authentication_key",
+      "RegisteredCurrencies::initialize",
+      "DesignatedDealer::add_currency",
+      "DualAttestation::publish_credential",
+      "LibraTransactionPublishingOption::set_open_script",
+      "Option::none",
+      "LibraSystem::initialize_validator_set"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::index_of",
+    "calls": [
+      "Vector::borrow",
+      "Vector::length"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::is_empty",
+    "calls": [
+      "Vector::length"
+    ],
+    "called_by": [
+      "Vector::append",
+      "DualAttestation::assert_payment_ok",
+      "DualAttestation::assert_signature_is_valid",
+      "LibraTransactionPublishingOption::is_script_allowed",
+      "Option::borrow_with_default",
+      "Option::destroy_with_default",
+      "Option::fill",
+      "Option::get_with_default",
+      "Option::is_none",
+      "Option::is_some"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::length",
+    "calls": [],
+    "called_by": [
+      "Vector::contains",
+      "Vector::index_of",
+      "Vector::is_empty",
+      "Vector::remove",
+      "Vector::reverse",
+      "Vector::swap_remove",
+      "Authenticator::create_multi_ed25519",
+      "Authenticator::multi_ed25519_authentication_key",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::update_tier",
+      "DesignatedDealer::validate_and_record_mint",
+      "DualAttestation::assert_signature_is_valid",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "LibraSystem::get_validator_index_",
+      "LibraSystem::update_ith_validator_info_",
+      "LibraSystem::validator_set_size",
+      "LibraAccount::create_authentication_key",
+      "LibraAccount::rotate_authentication_key",
+      "RecoveryAddress::rotate_authentication_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::pop_back",
+    "calls": [],
+    "called_by": [
+      "Vector::append",
+      "Vector::remove",
+      "Vector::swap_remove",
+      "Option::swap",
+      "Option::destroy_some",
+      "Option::destroy_with_default",
+      "Option::extract"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::push_back",
+    "calls": [],
+    "called_by": [
+      "Vector::append",
+      "Vector::singleton",
+      "Authenticator::ed25519_authentication_key",
+      "Authenticator::multi_ed25519_authentication_key",
+      "RegisteredCurrencies::add_currency_code",
+      "DesignatedDealer::add_tier",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "Option::swap",
+      "Option::fill",
+      "LibraSystem::add_validator",
+      "RecoveryAddress::add_rotation_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::remove",
+    "calls": [
+      "Vector::length",
+      "Vector::pop_back",
+      "Vector::swap"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::reverse",
+    "calls": [
+      "Vector::length",
+      "Vector::swap"
+    ],
+    "called_by": [
+      "Vector::append"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::singleton",
+    "calls": [
+      "Vector::empty",
+      "Vector::push_back"
+    ],
+    "called_by": [
+      "Option::some",
+      "RecoveryAddress::publish"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Vector::swap",
+    "calls": [],
+    "called_by": [
+      "Vector::remove",
+      "Vector::reverse",
+      "Vector::swap_remove"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Vector::swap_remove",
+    "calls": [
+      "Vector::length",
+      "Vector::pop_back",
+      "Vector::swap"
+    ],
+    "called_by": [
+      "LibraSystem::remove_validator"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "LCS::to_bytes",
+    "calls": [],
+    "called_by": [
+      "Event::fresh_guid",
+      "Authenticator::multi_ed25519_authentication_key",
+      "DualAttestation::dual_attestation_message",
+      "LibraAccount::create_authentication_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::destroy_handle",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::emit_event",
+    "calls": [
+      "Event::write_to_event_store"
+    ],
+    "called_by": [
+      "AccountFreezing::freeze_account",
+      "AccountFreezing::unfreeze_account",
+      "LibraConfig::emit_genesis_reconfiguration_event",
+      "LibraConfig::reconfigure_",
+      "Libra::burn_with_resource_cap",
+      "Libra::cancel_burn_with_capability",
+      "Libra::mint_with_capability",
+      "Libra::preburn_with_resource",
+      "Libra::update_lbr_exchange_rate",
+      "DesignatedDealer::tiered_mint",
+      "DualAttestation::rotate_base_url",
+      "DualAttestation::rotate_compliance_public_key",
+      "LibraBlock::block_prologue",
+      "LibraAccount::deposit",
+      "LibraAccount::make_account",
+      "LibraAccount::withdraw_from",
+      "LibraAccount::writeset_epilogue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::fresh_guid",
+    "calls": [
+      "Vector::append",
+      "LCS::to_bytes"
+    ],
+    "called_by": [
+      "Event::new_event_handle"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::new_event_handle",
+    "calls": [
+      "Signer::address_of",
+      "Event::fresh_guid"
+    ],
+    "called_by": [
+      "AccountFreezing::initialize",
+      "LibraConfig::initialize",
+      "Libra::register_currency",
+      "DesignatedDealer::publish_designated_dealer_credential",
+      "DualAttestation::publish_credential",
+      "LibraBlock::initialize_block_metadata",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::publish_generator",
+    "calls": [
+      "Signer::address_of"
+    ],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account",
+      "LibraAccount::create_designated_dealer",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_parent_vasp_account",
+      "LibraAccount::create_treasury_compliance_account",
+      "LibraAccount::create_validator_account",
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Event::write_to_event_store",
+    "calls": [],
+    "called_by": [
+      "Event::emit_event"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "AccountFreezing::account_is_frozen",
+    "calls": [],
+    "called_by": [
+      "AccountFreezing::assert_not_frozen",
+      "LibraAccount::prologue_common"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountFreezing::assert_not_frozen",
+    "calls": [
+      "Errors::invalid_state",
+      "AccountFreezing::account_is_frozen"
+    ],
+    "called_by": [
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountFreezing::create",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published"
+    ],
+    "called_by": [
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountFreezing::freeze_account",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_treasury_compliance",
+      "Event::emit_event"
+    ],
+    "called_by": [
+      "Script::freeze_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "AccountFreezing::initialize",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Event::new_event_handle"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountFreezing::unfreeze_account",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_treasury_compliance",
+      "Event::emit_event"
+    ],
+    "called_by": [
+      "Script::unfreeze_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::can_receive",
+    "calls": [
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "AccountLimits::is_unrestricted",
+      "AccountLimits::reset_window"
+    ],
+    "called_by": [
+      "AccountLimits::update_deposit_limits"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::can_withdraw",
+    "calls": [
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "AccountLimits::is_unrestricted",
+      "AccountLimits::reset_window"
+    ],
+    "called_by": [
+      "AccountLimits::update_withdrawal_limits"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::current_time",
+    "calls": [
+      "LibraTimestamp::is_genesis",
+      "LibraTimestamp::now_microseconds"
+    ],
+    "called_by": [
+      "AccountLimits::publish_window"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::grant_mutation_capability",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root"
+    ],
+    "called_by": [
+      "LibraAccount::create_libra_root_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::has_limits_published",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::has_window_published",
+    "calls": [],
+    "called_by": [
+      "VASP::has_account_limits",
+      "LibraAccount::has_published_account_limits"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::is_unrestricted",
+    "calls": [],
+    "called_by": [
+      "AccountLimits::can_receive",
+      "AccountLimits::can_withdraw"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::limits_definition_address",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::publish_unrestricted_limits",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published"
+    ],
+    "called_by": [
+      "Coin1::initialize",
+      "LBR::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::publish_window",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::not_published",
+      "Roles::assert_libra_root",
+      "Roles::assert_parent_vasp_or_child_vasp",
+      "AccountLimits::current_time"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::reset_window",
+    "calls": [
+      "Errors::limit_exceeded",
+      "LibraTimestamp::now_microseconds"
+    ],
+    "called_by": [
+      "AccountLimits::can_receive",
+      "AccountLimits::can_withdraw"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::update_deposit_limits",
+    "calls": [
+      "Errors::not_published",
+      "AccountLimits::can_receive"
+    ],
+    "called_by": [
+      "LibraAccount::deposit"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::update_limits_definition",
+    "calls": [
+      "Errors::not_published",
+      "Roles::assert_treasury_compliance"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::update_window_info",
+    "calls": [
+      "Errors::not_published",
+      "Roles::assert_treasury_compliance"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "AccountLimits::update_withdrawal_limits",
+    "calls": [
+      "Errors::not_published",
+      "AccountLimits::can_withdraw"
+    ],
+    "called_by": [
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Hash::sha2_256",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Hash::sha3_256",
+    "calls": [],
+    "called_by": [
+      "Authenticator::ed25519_authentication_key",
+      "Authenticator::multi_ed25519_authentication_key",
+      "LibraAccount::prologue_common"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Authenticator::create_multi_ed25519",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::length"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Authenticator::public_keys",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Authenticator::threshold",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Authenticator::ed25519_authentication_key",
+    "calls": [
+      "Vector::push_back",
+      "Hash::sha3_256"
+    ],
+    "called_by": [
+      "SharedEd25519PublicKey::rotate_key_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Authenticator::multi_ed25519_authentication_key",
+    "calls": [
+      "Vector::append",
+      "Vector::borrow",
+      "Vector::empty",
+      "Vector::length",
+      "Vector::push_back",
+      "LCS::to_bytes",
+      "Hash::sha3_256"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ChainId::initialize",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ChainId::get",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating"
+    ],
+    "called_by": [
+      "LibraAccount::prologue_common"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::initialize",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Event::new_event_handle"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::get",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "RegisteredCurrencies::add_currency_code",
+      "LibraVersion::set",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "LibraTransactionPublishingOption::is_module_allowed",
+      "LibraTransactionPublishingOption::is_script_allowed",
+      "LibraTransactionPublishingOption::set_open_module",
+      "LibraTransactionPublishingOption::set_open_script",
+      "LibraSystem::get_libra_system_config"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::emit_genesis_reconfiguration_event",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "Event::emit_event"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::publish_new_config",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraConfig::publish_new_config_and_get_capability"
+    ],
+    "called_by": [
+      "RegisteredCurrencies::initialize",
+      "LibraVersion::initialize",
+      "LibraVMConfig::initialize",
+      "LibraTransactionPublishingOption::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::publish_new_config_and_get_capability",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root"
+    ],
+    "called_by": [
+      "LibraConfig::publish_new_config",
+      "LibraSystem::initialize_validator_set"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::reconfigure",
+    "calls": [
+      "Roles::assert_libra_root",
+      "LibraConfig::reconfigure_"
+    ],
+    "called_by": [
+      "LibraAccount::writeset_epilogue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::reconfigure_",
+    "calls": [
+      "Errors::invalid_state",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::is_genesis",
+      "LibraTimestamp::now_microseconds",
+      "Event::emit_event"
+    ],
+    "called_by": [
+      "LibraConfig::reconfigure",
+      "LibraConfig::set",
+      "LibraConfig::set_with_capability_and_reconfigure"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::set",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Errors::requires_capability",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraConfig::reconfigure_"
+    ],
+    "called_by": [
+      "RegisteredCurrencies::add_currency_code",
+      "LibraVersion::set",
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "LibraTransactionPublishingOption::set_open_module",
+      "LibraTransactionPublishingOption::set_open_script"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraConfig::set_with_capability_and_reconfigure",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraConfig::reconfigure_"
+    ],
+    "called_by": [
+      "LibraSystem::set_libra_system_config"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "RegisteredCurrencies::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "Vector::empty",
+      "LibraConfig::publish_new_config"
+    ],
+    "called_by": [
+      "Libra::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "RegisteredCurrencies::add_currency_code",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::contains",
+      "Vector::push_back",
+      "LibraConfig::get",
+      "LibraConfig::set"
+    ],
+    "called_by": [
+      "Libra::register_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::create_from_rational",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::limit_exceeded"
+    ],
+    "called_by": [
+      "Coin1::initialize",
+      "LBR::initialize",
+      "Script::update_exchange_rate"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::create_from_raw_value",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::divide_u64",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::limit_exceeded"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::get_raw_value",
+    "calls": [],
+    "called_by": [
+      "Libra::update_lbr_exchange_rate"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::is_zero",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "FixedPoint32::multiply_u64",
+    "calls": [
+      "Errors::limit_exceeded"
+    ],
+    "called_by": [
+      "Libra::approx_lbr_for_value"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::initialize",
+    "calls": [
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "RegisteredCurrencies::initialize"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::currency_code",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::burn_with_resource_cap",
+      "Libra::cancel_burn_with_capability",
+      "Libra::mint_with_capability",
+      "Libra::preburn_with_resource",
+      "DesignatedDealer::tiered_mint",
+      "LBR::is_lbr",
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::value",
+    "calls": [],
+    "called_by": [
+      "Libra::approx_lbr_for_coin",
+      "Libra::cancel_burn_with_capability",
+      "Libra::preburn_with_resource",
+      "LibraAccount::deposit",
+      "LibraAccount::balance_for",
+      "LibraAccount::epilogue",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::approx_lbr_for_coin",
+    "calls": [
+      "Libra::value",
+      "Libra::approx_lbr_for_value"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::approx_lbr_for_value",
+    "calls": [
+      "FixedPoint32::multiply_u64",
+      "Libra::lbr_exchange_rate"
+    ],
+    "called_by": [
+      "Libra::approx_lbr_for_coin",
+      "DualAttestation::dual_attestation_required"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::assert_is_SCS_currency",
+    "calls": [
+      "Errors::invalid_state",
+      "Libra::assert_is_currency",
+      "Libra::is_SCS_currency"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::assert_is_currency",
+    "calls": [
+      "Errors::not_published",
+      "Libra::is_currency"
+    ],
+    "called_by": [
+      "Libra::currency_code",
+      "Libra::assert_is_SCS_currency",
+      "Libra::burn_with_resource_cap",
+      "Libra::create_preburn",
+      "Libra::fractional_part",
+      "Libra::is_SCS_currency",
+      "Libra::lbr_exchange_rate",
+      "Libra::market_cap",
+      "Libra::mint_with_capability",
+      "Libra::preburn_value",
+      "Libra::publish_burn_capability",
+      "Libra::scaling_factor",
+      "Libra::update_lbr_exchange_rate",
+      "Libra::update_minting_ability",
+      "Libra::zero",
+      "TransactionFee::add_txn_fee_currency",
+      "LibraAccount::add_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::burn",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_capability",
+      "Libra::burn_with_capability"
+    ],
+    "called_by": [
+      "Script::burn"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "Libra::burn_now",
+    "calls": [
+      "Errors::invalid_argument",
+      "Libra::burn_with_resource_cap",
+      "Libra::preburn_with_resource"
+    ],
+    "called_by": [
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::burn_with_capability",
+    "calls": [
+      "Errors::not_published",
+      "Libra::burn_with_resource_cap"
+    ],
+    "called_by": [
+      "Libra::burn"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::burn_with_resource_cap",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::limit_exceeded",
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "Libra::assert_is_currency",
+      "Libra::withdraw_all"
+    ],
+    "called_by": [
+      "Libra::burn_now",
+      "Libra::burn_with_capability"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::cancel_burn",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_capability",
+      "Libra::cancel_burn_with_capability"
+    ],
+    "called_by": [
+      "LibraAccount::cancel_burn"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::cancel_burn_with_capability",
+    "calls": [
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "Libra::value",
+      "Libra::withdraw_all"
+    ],
+    "called_by": [
+      "Libra::cancel_burn"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::create_preburn",
+    "calls": [
+      "Roles::assert_treasury_compliance",
+      "Libra::assert_is_currency",
+      "Libra::zero"
+    ],
+    "called_by": [
+      "Libra::publish_preburn_to_account",
+      "LBR::initialize",
+      "TransactionFee::add_txn_fee_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::deposit",
+    "calls": [
+      "Errors::limit_exceeded"
+    ],
+    "called_by": [
+      "Libra::join",
+      "Libra::preburn_with_resource",
+      "TransactionFee::pay_fee",
+      "LibraAccount::deposit"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::destroy_zero",
+    "calls": [
+      "Errors::invalid_argument"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::fractional_part",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::is_SCS_currency",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::assert_is_SCS_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::is_currency",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS"
+    ],
+    "called_by": [
+      "Libra::assert_is_currency",
+      "LBR::is_lbr"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::is_synthetic_currency",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS"
+    ],
+    "called_by": [
+      "Libra::publish_preburn_to_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::join",
+    "calls": [
+      "Libra::deposit"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::lbr_exchange_rate",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::approx_lbr_for_value"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::market_cap",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::mint",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_capability",
+      "Libra::mint_with_capability"
+    ],
+    "called_by": [
+      "DesignatedDealer::tiered_mint"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::mint_with_capability",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::limit_exceeded",
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::mint"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::preburn_to",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Libra::preburn_with_resource"
+    ],
+    "called_by": [
+      "LibraAccount::preburn"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::preburn_value",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::preburn_with_resource",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::limit_exceeded",
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "Libra::value",
+      "Libra::deposit"
+    ],
+    "called_by": [
+      "Libra::burn_now",
+      "Libra::preburn_to"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::publish_burn_capability",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Roles::assert_treasury_compliance",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::register_SCS_currency",
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::publish_preburn_to_account",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::invalid_argument",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_designated_dealer",
+      "Libra::create_preburn",
+      "Libra::is_synthetic_currency"
+    ],
+    "called_by": [
+      "DesignatedDealer::add_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::register_SCS_currency",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Roles::assert_treasury_compliance",
+      "Libra::publish_burn_capability",
+      "Libra::register_currency"
+    ],
+    "called_by": [
+      "Coin1::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::scaling_factor",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "DesignatedDealer::add_currency",
+      "DualAttestation::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::register_currency",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::invalid_argument",
+      "CoreAddresses::assert_currency_info",
+      "Roles::assert_libra_root",
+      "Event::new_event_handle",
+      "RegisteredCurrencies::add_currency_code"
+    ],
+    "called_by": [
+      "Libra::register_SCS_currency",
+      "LBR::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::remove_burn_capability",
+    "calls": [
+      "Signer::address_of",
+      "Errors::requires_capability"
+    ],
+    "called_by": [
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::split",
+    "calls": [
+      "Libra::withdraw"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::update_lbr_exchange_rate",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Roles::assert_treasury_compliance",
+      "Event::emit_event",
+      "FixedPoint32::get_raw_value",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Script::update_exchange_rate"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "Libra::update_minting_ability",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS",
+      "Roles::assert_treasury_compliance",
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "LBR::initialize",
+      "Script::update_minting_ability"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "Libra::withdraw",
+    "calls": [
+      "Errors::limit_exceeded"
+    ],
+    "called_by": [
+      "Libra::split",
+      "Libra::withdraw_all",
+      "LibraAccount::epilogue",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::withdraw_all",
+    "calls": [
+      "Libra::withdraw"
+    ],
+    "called_by": [
+      "Libra::burn_with_resource_cap",
+      "Libra::cancel_burn_with_capability",
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Libra::zero",
+    "calls": [
+      "Libra::assert_is_currency"
+    ],
+    "called_by": [
+      "Libra::create_preburn",
+      "TransactionFee::add_txn_fee_currency",
+      "LibraAccount::add_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Coin1::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "AccountLimits::publish_unrestricted_limits",
+      "FixedPoint32::create_from_rational",
+      "Libra::register_SCS_currency"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::reset_window",
+    "calls": [
+      "LibraTimestamp::now_microseconds"
+    ],
+    "called_by": [
+      "DesignatedDealer::validate_and_record_mint"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::add_currency",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::not_published",
+      "LibraTimestamp::now_microseconds",
+      "Roles::assert_treasury_compliance",
+      "Vector::empty",
+      "Libra::publish_preburn_to_account",
+      "Libra::scaling_factor",
+      "DesignatedDealer::add_tier",
+      "DesignatedDealer::exists_at"
+    ],
+    "called_by": [
+      "DesignatedDealer::publish_designated_dealer_credential"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::add_tier",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Roles::assert_treasury_compliance",
+      "Vector::borrow",
+      "Vector::length",
+      "Vector::push_back"
+    ],
+    "called_by": [
+      "DesignatedDealer::add_currency"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::exists_at",
+    "calls": [],
+    "called_by": [
+      "DesignatedDealer::add_currency",
+      "DesignatedDealer::tiered_mint"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::publish_designated_dealer_credential",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_designated_dealer",
+      "Event::new_event_handle",
+      "DesignatedDealer::add_currency"
+    ],
+    "called_by": [
+      "LibraAccount::create_designated_dealer"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::tiered_mint",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Roles::assert_treasury_compliance",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "Libra::mint",
+      "DesignatedDealer::exists_at",
+      "DesignatedDealer::validate_and_record_mint"
+    ],
+    "called_by": [
+      "LibraAccount::tiered_mint"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::update_tier",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Roles::assert_treasury_compliance",
+      "Vector::borrow",
+      "Vector::borrow_mut",
+      "Vector::length"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DesignatedDealer::validate_and_record_mint",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::borrow",
+      "Vector::length",
+      "DesignatedDealer::reset_window"
+    ],
+    "called_by": [
+      "DesignatedDealer::tiered_mint"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::has_account_limits",
+    "calls": [
+      "AccountLimits::has_window_published",
+      "VASP::parent_address"
+    ],
+    "called_by": [
+      "LibraAccount::has_published_account_limits"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::is_child",
+    "calls": [],
+    "called_by": [
+      "VASP::is_vasp",
+      "VASP::parent_address",
+      "DualAttestation::credential_address"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::is_parent",
+    "calls": [],
+    "called_by": [
+      "VASP::is_vasp",
+      "VASP::parent_address",
+      "VASP::publish_child_vasp_credential"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::is_same_vasp",
+    "calls": [
+      "VASP::is_vasp",
+      "VASP::parent_address"
+    ],
+    "called_by": [
+      "LibraAccount::should_track_limits_for_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::is_vasp",
+    "calls": [
+      "VASP::is_child",
+      "VASP::is_parent"
+    ],
+    "called_by": [
+      "VASP::is_same_vasp",
+      "VASP::publish_child_vasp_credential",
+      "VASP::publish_parent_vasp_credential",
+      "DualAttestation::dual_attestation_required",
+      "LibraAccount::has_published_account_limits",
+      "LibraAccount::should_track_limits_for_account",
+      "RecoveryAddress::publish"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::num_children",
+    "calls": [
+      "VASP::parent_address"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::parent_address",
+    "calls": [
+      "Errors::invalid_argument",
+      "VASP::is_child",
+      "VASP::is_parent"
+    ],
+    "called_by": [
+      "VASP::has_account_limits",
+      "VASP::is_same_vasp",
+      "VASP::num_children",
+      "DualAttestation::credential_address",
+      "DualAttestation::dual_attestation_required",
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from_balance",
+      "RecoveryAddress::add_rotation_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::publish_child_vasp_credential",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::invalid_argument",
+      "Errors::limit_exceeded",
+      "Roles::assert_parent_vasp_role",
+      "VASP::is_parent",
+      "VASP::is_vasp"
+    ],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "VASP::publish_parent_vasp_credential",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_parent_vasp_role",
+      "VASP::is_vasp"
+    ],
+    "called_by": [
+      "LibraAccount::create_parent_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Signature::ed25519_validate_pubkey",
+    "calls": [],
+    "called_by": [
+      "DualAttestation::rotate_compliance_public_key",
+      "ValidatorConfig::set_config",
+      "SharedEd25519PublicKey::rotate_key_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "Signature::ed25519_verify",
+    "calls": [],
+    "called_by": [
+      "DualAttestation::assert_signature_is_valid"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "LBR::initialize",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::assert_currency_info",
+      "LibraTimestamp::assert_genesis",
+      "AccountLimits::publish_unrestricted_limits",
+      "FixedPoint32::create_from_rational",
+      "Libra::create_preburn",
+      "Libra::register_currency",
+      "Libra::update_minting_ability"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LBR::is_lbr",
+    "calls": [
+      "Libra::currency_code",
+      "Libra::is_currency"
+    ],
+    "called_by": [
+      "TransactionFee::burn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LBR::reserve_address",
+    "calls": [
+      "CoreAddresses::CURRENCY_INFO_ADDRESS"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::initialize",
+    "calls": [
+      "Errors::already_published",
+      "Errors::limit_exceeded",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Libra::scaling_factor"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::assert_payment_ok",
+    "calls": [
+      "Vector::is_empty",
+      "DualAttestation::assert_signature_is_valid",
+      "DualAttestation::dual_attestation_required"
+    ],
+    "called_by": [
+      "LibraAccount::deposit"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::assert_signature_is_valid",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::invalid_state",
+      "Vector::is_empty",
+      "Vector::length",
+      "Signature::ed25519_verify",
+      "DualAttestation::compliance_public_key",
+      "DualAttestation::credential_address",
+      "DualAttestation::dual_attestation_message"
+    ],
+    "called_by": [
+      "DualAttestation::assert_payment_ok"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::base_url",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::compliance_public_key",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [
+      "DualAttestation::assert_signature_is_valid"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::credential_address",
+    "calls": [
+      "VASP::is_child",
+      "VASP::parent_address"
+    ],
+    "called_by": [
+      "DualAttestation::assert_signature_is_valid"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::dual_attestation_message",
+    "calls": [
+      "Vector::append",
+      "LCS::to_bytes"
+    ],
+    "called_by": [
+      "DualAttestation::assert_signature_is_valid"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::dual_attestation_required",
+    "calls": [
+      "Libra::approx_lbr_for_value",
+      "VASP::is_vasp",
+      "VASP::parent_address",
+      "DualAttestation::get_cur_microlibra_limit"
+    ],
+    "called_by": [
+      "DualAttestation::assert_payment_ok"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::expiration_date",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::get_cur_microlibra_limit",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "DualAttestation::dual_attestation_required"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::human_name",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::publish_credential",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Roles::assert_treasury_compliance",
+      "Roles::assert_parent_vasp_or_designated_dealer",
+      "Vector::empty",
+      "Event::new_event_handle"
+    ],
+    "called_by": [
+      "LibraAccount::create_designated_dealer",
+      "LibraAccount::create_parent_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::rotate_base_url",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "LibraTimestamp::now_seconds",
+      "Event::emit_event"
+    ],
+    "called_by": [
+      "Script::rotate_dual_attestation_info"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::rotate_compliance_public_key",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "LibraTimestamp::now_seconds",
+      "Event::emit_event",
+      "Signature::ed25519_validate_pubkey"
+    ],
+    "called_by": [
+      "Script::rotate_dual_attestation_info"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "DualAttestation::set_microlibra_limit",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "Roles::assert_treasury_compliance"
+    ],
+    "called_by": [
+      "Script::update_dual_attestation_limit"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_treasury_compliance",
+      "TransactionFee::add_txn_fee_currency"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::add_txn_fee_currency",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+      "Libra::assert_is_currency",
+      "Libra::create_preburn",
+      "Libra::zero"
+    ],
+    "called_by": [
+      "TransactionFee::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::burn_fees",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::not_published",
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_treasury_compliance",
+      "Libra::burn_now",
+      "Libra::publish_burn_capability",
+      "Libra::remove_burn_capability",
+      "Libra::withdraw_all",
+      "LBR::is_lbr",
+      "TransactionFee::is_coin_initialized"
+    ],
+    "called_by": [
+      "Script::burn_txn_fees"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::is_coin_initialized",
+    "calls": [
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS"
+    ],
+    "called_by": [
+      "TransactionFee::burn_fees",
+      "TransactionFee::is_initialized",
+      "TransactionFee::pay_fee"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::is_initialized",
+    "calls": [
+      "TransactionFee::is_coin_initialized"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "TransactionFee::pay_fee",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "Libra::deposit",
+      "TransactionFee::is_coin_initialized"
+    ],
+    "called_by": [
+      "LibraAccount::epilogue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraVersion::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "LibraConfig::publish_new_config"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraVersion::set",
+    "calls": [
+      "Errors::invalid_argument",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_libra_root",
+      "LibraConfig::get",
+      "LibraConfig::set"
+    ],
+    "called_by": [
+      "Script::update_libra_version"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraVMConfig::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "LibraConfig::publish_new_config"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::initialize",
+    "calls": [
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "LibraConfig::publish_new_config"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::add_to_script_allow_list",
+    "calls": [
+      "Errors::invalid_argument",
+      "Roles::assert_libra_root",
+      "Vector::contains",
+      "Vector::length",
+      "Vector::push_back",
+      "LibraConfig::get",
+      "LibraConfig::set"
+    ],
+    "called_by": [
+      "Script::add_to_script_allow_list"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::is_module_allowed",
+    "calls": [
+      "Roles::has_libra_root_role",
+      "LibraConfig::get"
+    ],
+    "called_by": [
+      "LibraAccount::module_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::is_script_allowed",
+    "calls": [
+      "Roles::has_libra_root_role",
+      "Vector::contains",
+      "Vector::is_empty",
+      "LibraConfig::get"
+    ],
+    "called_by": [
+      "LibraAccount::script_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::set_open_module",
+    "calls": [
+      "Roles::assert_libra_root",
+      "LibraConfig::get",
+      "LibraConfig::set"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraTransactionPublishingOption::set_open_script",
+    "calls": [
+      "Roles::assert_libra_root",
+      "Vector::empty",
+      "LibraConfig::get",
+      "LibraConfig::set"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorOperatorConfig::get_human_name",
+    "calls": [
+      "Errors::not_published",
+      "ValidatorOperatorConfig::has_validator_operator_config"
+    ],
+    "called_by": [
+      "Script::set_validator_operator",
+      "Script::set_validator_operator_with_nonce_admin"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorOperatorConfig::has_validator_operator_config",
+    "calls": [],
+    "called_by": [
+      "ValidatorOperatorConfig::get_human_name",
+      "ValidatorOperatorConfig::publish",
+      "ValidatorConfig::set_operator"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorOperatorConfig::publish",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_libra_root",
+      "Roles::assert_validator_operator",
+      "ValidatorOperatorConfig::has_validator_operator_config"
+    ],
+    "called_by": [
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::borrow",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::borrow",
+      "Option::is_some"
+    ],
+    "called_by": [
+      "ValidatorConfig::get_config",
+      "LibraSystem::get_validator_config",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::borrow_mut",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::borrow_mut",
+      "Option::is_some"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::contains",
+    "calls": [
+      "Vector::contains"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::swap",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::pop_back",
+      "Vector::push_back",
+      "Option::is_some"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::borrow_with_default",
+    "calls": [
+      "Vector::borrow",
+      "Vector::is_empty"
+    ],
+    "called_by": [
+      "ValidatorConfig::get_operator"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::destroy_none",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::destroy_empty",
+      "Option::is_none"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::destroy_some",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::destroy_empty",
+      "Vector::pop_back",
+      "Option::is_some"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::destroy_with_default",
+    "calls": [
+      "Vector::is_empty",
+      "Vector::pop_back"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::extract",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::pop_back",
+      "Option::is_some"
+    ],
+    "called_by": [
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::extract_withdraw_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::fill",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::is_empty",
+      "Vector::push_back"
+    ],
+    "called_by": [
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::restore_withdraw_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::get_with_default",
+    "calls": [
+      "Vector::borrow",
+      "Vector::is_empty"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::is_none",
+    "calls": [
+      "Vector::is_empty"
+    ],
+    "called_by": [
+      "Option::destroy_none",
+      "LibraAccount::delegated_key_rotation_capability",
+      "LibraAccount::delegated_withdraw_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::is_some",
+    "calls": [
+      "Vector::is_empty"
+    ],
+    "called_by": [
+      "Option::borrow",
+      "Option::borrow_mut",
+      "Option::swap",
+      "Option::destroy_some",
+      "Option::extract",
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::is_valid",
+      "LibraSystem::get_validator_config",
+      "LibraSystem::is_validator_",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::none",
+    "calls": [
+      "Vector::empty"
+    ],
+    "called_by": [
+      "ValidatorConfig::publish",
+      "ValidatorConfig::remove_operator",
+      "LibraSystem::get_validator_index_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Option::some",
+    "calls": [
+      "Vector::singleton"
+    ],
+    "called_by": [
+      "ValidatorConfig::set_config",
+      "ValidatorConfig::set_operator",
+      "LibraSystem::get_validator_index_",
+      "LibraAccount::make_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::get_human_name",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [
+      "Script::add_validator_and_reconfigure",
+      "Script::remove_validator_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::publish",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_libra_root",
+      "Roles::assert_validator",
+      "Option::none"
+    ],
+    "called_by": [
+      "LibraAccount::create_validator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::exists_config",
+    "calls": [],
+    "called_by": [
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::remove_operator",
+      "ValidatorConfig::set_config",
+      "ValidatorConfig::set_operator"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::get_config",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Option::borrow",
+      "Option::is_some",
+      "ValidatorConfig::exists_config"
+    ],
+    "called_by": [
+      "LibraSystem::add_validator",
+      "LibraSystem::update_ith_validator_info_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::get_consensus_pubkey",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::get_operator",
+    "calls": [
+      "Errors::not_published",
+      "Option::borrow_with_default"
+    ],
+    "called_by": [
+      "ValidatorConfig::set_config",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::get_validator_network_addresses",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::is_valid",
+    "calls": [
+      "Option::is_some"
+    ],
+    "called_by": [
+      "LibraSystem::add_validator",
+      "LibraSystem::update_ith_validator_info_"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::remove_operator",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "Roles::assert_validator",
+      "Option::none",
+      "ValidatorConfig::exists_config"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::set_config",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Signature::ed25519_validate_pubkey",
+      "Option::some",
+      "ValidatorConfig::exists_config",
+      "ValidatorConfig::get_operator"
+    ],
+    "called_by": [
+      "Script::register_validator_config",
+      "Script::set_validator_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "ValidatorConfig::set_operator",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Roles::assert_validator",
+      "ValidatorOperatorConfig::has_validator_operator_config",
+      "Option::some",
+      "ValidatorConfig::exists_config"
+    ],
+    "called_by": [
+      "Script::set_validator_operator",
+      "Script::set_validator_operator_with_nonce_admin"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::add_validator",
+    "calls": [
+      "Errors::invalid_argument",
+      "LibraTimestamp::assert_operating",
+      "LibraTimestamp::now_microseconds",
+      "Roles::assert_libra_root",
+      "Vector::push_back",
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::is_valid",
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::is_validator_",
+      "LibraSystem::set_libra_system_config"
+    ],
+    "called_by": [
+      "Script::add_validator_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::get_ith_validator_address",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::borrow",
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::validator_set_size"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::get_libra_system_config",
+    "calls": [
+      "LibraConfig::get"
+    ],
+    "called_by": [
+      "LibraSystem::add_validator",
+      "LibraSystem::get_ith_validator_address",
+      "LibraSystem::get_validator_config",
+      "LibraSystem::is_validator",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure",
+      "LibraSystem::validator_set_size"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::get_validator_config",
+    "calls": [
+      "Errors::invalid_argument",
+      "Vector::borrow",
+      "Option::borrow",
+      "Option::is_some",
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::get_validator_index_"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::get_validator_index_",
+    "calls": [
+      "Vector::borrow",
+      "Vector::length",
+      "Option::none",
+      "Option::some"
+    ],
+    "called_by": [
+      "LibraSystem::get_validator_config",
+      "LibraSystem::is_validator_",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::initialize_validator_set",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "Vector::empty",
+      "LibraConfig::publish_new_config_and_get_capability"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::is_validator",
+    "calls": [
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::is_validator_"
+    ],
+    "called_by": [
+      "LibraBlock::block_prologue"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::is_validator_",
+    "calls": [
+      "Option::is_some",
+      "LibraSystem::get_validator_index_"
+    ],
+    "called_by": [
+      "LibraSystem::add_validator",
+      "LibraSystem::is_validator"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::remove_validator",
+    "calls": [
+      "Errors::invalid_argument",
+      "LibraTimestamp::assert_operating",
+      "Roles::assert_libra_root",
+      "Vector::swap_remove",
+      "Option::borrow",
+      "Option::is_some",
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::get_validator_index_",
+      "LibraSystem::set_libra_system_config"
+    ],
+    "called_by": [
+      "Script::remove_validator_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::set_libra_system_config",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "LibraConfig::set_with_capability_and_reconfigure"
+    ],
+    "called_by": [
+      "LibraSystem::add_validator",
+      "LibraSystem::remove_validator",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::update_config_and_reconfigure",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "LibraTimestamp::assert_operating",
+      "LibraTimestamp::now_microseconds",
+      "Roles::assert_validator_operator",
+      "Vector::borrow_mut",
+      "Option::borrow",
+      "Option::is_some",
+      "ValidatorConfig::get_operator",
+      "LibraSystem::get_libra_system_config",
+      "LibraSystem::get_validator_index_",
+      "LibraSystem::set_libra_system_config",
+      "LibraSystem::update_ith_validator_info_"
+    ],
+    "called_by": [
+      "Script::set_validator_config_and_reconfigure"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::update_ith_validator_info_",
+    "calls": [
+      "Vector::borrow_mut",
+      "Vector::length",
+      "ValidatorConfig::get_config",
+      "ValidatorConfig::is_valid"
+    ],
+    "called_by": [
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraSystem::validator_set_size",
+    "calls": [
+      "Vector::length",
+      "LibraSystem::get_libra_system_config"
+    ],
+    "called_by": [
+      "LibraSystem::get_ith_validator_address"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraBlock::is_initialized",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS"
+    ],
+    "called_by": [
+      "LibraBlock::get_current_block_height",
+      "LibraBlock::initialize_block_metadata"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraBlock::block_prologue",
+    "calls": [
+      "Errors::requires_address",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::VM_RESERVED_ADDRESS",
+      "CoreAddresses::assert_vm",
+      "LibraTimestamp::assert_operating",
+      "LibraTimestamp::update_global_time",
+      "Event::emit_event",
+      "LibraSystem::is_validator"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraBlock::get_current_block_height",
+    "calls": [
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraBlock::is_initialized"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraBlock::initialize_block_metadata",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Event::new_event_handle",
+      "LibraBlock::is_initialized"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "SlidingNonce::publish",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "SlidingNonce::publish_nonce_resource",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Roles::assert_libra_root"
+    ],
+    "called_by": [
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "SlidingNonce::record_nonce_or_abort",
+    "calls": [
+      "Errors::invalid_argument",
+      "SlidingNonce::try_record_nonce"
+    ],
+    "called_by": [
+      "Script::add_to_script_allow_list",
+      "Script::add_validator_and_reconfigure",
+      "Script::burn",
+      "Script::create_designated_dealer",
+      "Script::create_parent_vasp_account",
+      "Script::create_validator_account",
+      "Script::create_validator_operator_account",
+      "Script::freeze_account",
+      "Script::remove_validator_and_reconfigure",
+      "Script::rotate_authentication_key_with_nonce",
+      "Script::rotate_authentication_key_with_nonce_admin",
+      "Script::set_validator_operator_with_nonce_admin",
+      "Script::tiered_mint",
+      "Script::unfreeze_account",
+      "Script::update_dual_attestation_limit",
+      "Script::update_exchange_rate",
+      "Script::update_libra_version"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "SlidingNonce::try_record_nonce",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published"
+    ],
+    "called_by": [
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::initialize",
+    "calls": [
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_treasury_compliance_account"
+    ],
+    "called_by": [
+      "Genesis::initialize"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::preburn",
+    "calls": [
+      "Signer::address_of",
+      "LibraTimestamp::assert_operating",
+      "Libra::preburn_to",
+      "LibraAccount::withdraw_from"
+    ],
+    "called_by": [
+      "Script::preburn"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::cancel_burn",
+    "calls": [
+      "Libra::cancel_burn",
+      "LibraAccount::deposit"
+    ],
+    "called_by": [
+      "Script::cancel_burn"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::deposit",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "Event::emit_event",
+      "AccountFreezing::assert_not_frozen",
+      "AccountLimits::update_deposit_limits",
+      "Libra::currency_code",
+      "Libra::value",
+      "Libra::deposit",
+      "VASP::parent_address",
+      "DualAttestation::assert_payment_ok",
+      "LibraAccount::exists_at",
+      "LibraAccount::should_track_limits_for_account"
+    ],
+    "called_by": [
+      "LibraAccount::cancel_burn",
+      "LibraAccount::tiered_mint",
+      "LibraAccount::pay_from"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::add_currency",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::invalid_argument",
+      "Roles::can_hold_balance",
+      "Libra::assert_is_currency",
+      "Libra::zero"
+    ],
+    "called_by": [
+      "LibraAccount::add_currencies_for_account",
+      "Script::add_currency_to_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::exists_at",
+    "calls": [],
+    "called_by": [
+      "LibraAccount::deposit",
+      "LibraAccount::authentication_key",
+      "LibraAccount::delegated_key_rotation_capability",
+      "LibraAccount::delegated_withdraw_capability",
+      "LibraAccount::epilogue",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::prologue_common",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::restore_withdraw_capability",
+      "LibraAccount::rotate_authentication_key",
+      "LibraAccount::sequence_number",
+      "LibraAccount::withdraw_from"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::tiered_mint",
+    "calls": [
+      "CoreAddresses::VM_RESERVED_ADDRESS",
+      "DesignatedDealer::tiered_mint",
+      "LibraAccount::deposit"
+    ],
+    "called_by": [
+      "Script::tiered_mint"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::balance",
+    "calls": [
+      "Errors::not_published",
+      "LibraAccount::balance_for"
+    ],
+    "called_by": [
+      "LibraAccount::prologue_common"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::accepts_currency",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::add_currencies_for_account",
+    "calls": [
+      "Signer::address_of",
+      "LibraAccount::add_currency"
+    ],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account",
+      "LibraAccount::create_designated_dealer",
+      "LibraAccount::create_parent_vasp_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::authentication_key",
+    "calls": [
+      "Errors::not_published",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::balance_for",
+    "calls": [
+      "Libra::value"
+    ],
+    "called_by": [
+      "LibraAccount::balance"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_authentication_key",
+    "calls": [
+      "Signer::borrow_address",
+      "Errors::invalid_argument",
+      "Vector::append",
+      "Vector::length",
+      "LCS::to_bytes"
+    ],
+    "called_by": [
+      "LibraAccount::make_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_child_vasp_account",
+    "calls": [
+      "Roles::new_child_vasp_role",
+      "Event::publish_generator",
+      "VASP::publish_child_vasp_credential",
+      "LibraAccount::add_currencies_for_account",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "Script::create_child_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_designated_dealer",
+    "calls": [
+      "Roles::new_designated_dealer_role",
+      "Event::publish_generator",
+      "DesignatedDealer::publish_designated_dealer_credential",
+      "DualAttestation::publish_credential",
+      "LibraAccount::add_currencies_for_account",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "Script::create_designated_dealer"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_libra_root_account",
+    "calls": [
+      "Errors::already_published",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::assert_libra_root",
+      "LibraTimestamp::assert_genesis",
+      "Roles::grant_libra_root_role",
+      "Event::new_event_handle",
+      "Event::publish_generator",
+      "AccountLimits::grant_mutation_capability",
+      "SlidingNonce::publish_nonce_resource",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "LibraAccount::initialize"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_parent_vasp_account",
+    "calls": [
+      "Roles::new_parent_vasp_role",
+      "Event::publish_generator",
+      "VASP::publish_parent_vasp_credential",
+      "DualAttestation::publish_credential",
+      "LibraAccount::add_currencies_for_account",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "Script::create_parent_vasp_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_signer",
+    "calls": [],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account",
+      "LibraAccount::create_designated_dealer",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_parent_vasp_account",
+      "LibraAccount::create_treasury_compliance_account",
+      "LibraAccount::create_validator_account",
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "LibraAccount::create_treasury_compliance_account",
+    "calls": [
+      "CoreAddresses::TREASURY_COMPLIANCE_ADDRESS",
+      "LibraTimestamp::assert_genesis",
+      "Roles::assert_libra_root",
+      "Roles::grant_treasury_compliance_role",
+      "Event::publish_generator",
+      "SlidingNonce::publish_nonce_resource",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "LibraAccount::initialize"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_validator_account",
+    "calls": [
+      "Roles::new_validator_role",
+      "Event::publish_generator",
+      "ValidatorConfig::publish",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "Script::create_validator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::create_validator_operator_account",
+    "calls": [
+      "Roles::new_validator_operator_role",
+      "Event::publish_generator",
+      "ValidatorOperatorConfig::publish",
+      "LibraAccount::create_signer",
+      "LibraAccount::make_account"
+    ],
+    "called_by": [
+      "Script::create_validator_operator_account"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::delegated_key_rotation_capability",
+    "calls": [
+      "Errors::not_published",
+      "Option::is_none",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [
+      "LibraAccount::extract_key_rotation_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::delegated_withdraw_capability",
+    "calls": [
+      "Errors::not_published",
+      "Option::is_none",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::restore_withdraw_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::destroy_signer",
+    "calls": [],
+    "called_by": [
+      "LibraAccount::make_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": true
+  },
+  {
+    "name": "LibraAccount::epilogue",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::limit_exceeded",
+      "Errors::not_published",
+      "Libra::value",
+      "Libra::withdraw",
+      "TransactionFee::pay_fee",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [
+      "LibraAccount::writeset_epilogue"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::extract_key_rotation_capability",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_state",
+      "Errors::not_published",
+      "Option::extract",
+      "LibraAccount::exists_at",
+      "LibraAccount::delegated_key_rotation_capability"
+    ],
+    "called_by": [
+      "Genesis::initialize",
+      "SharedEd25519PublicKey::publish",
+      "Script::add_recovery_rotation_capability",
+      "Script::create_recovery_address",
+      "Script::rotate_authentication_key",
+      "Script::rotate_authentication_key_with_nonce",
+      "Script::rotate_authentication_key_with_nonce_admin"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::extract_withdraw_capability",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_state",
+      "Errors::not_published",
+      "Option::extract",
+      "LibraAccount::exists_at",
+      "LibraAccount::delegated_withdraw_capability"
+    ],
+    "called_by": [
+      "Script::create_child_vasp_account",
+      "Script::peer_to_peer_with_metadata",
+      "Script::preburn"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::has_published_account_limits",
+    "calls": [
+      "AccountLimits::has_window_published",
+      "VASP::has_account_limits",
+      "VASP::is_vasp"
+    ],
+    "called_by": [
+      "LibraAccount::should_track_limits_for_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::key_rotation_capability_address",
+    "calls": [],
+    "called_by": [
+      "RecoveryAddress::publish",
+      "RecoveryAddress::rotate_authentication_key",
+      "RecoveryAddress::add_rotation_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::make_account",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "CoreAddresses::CORE_CODE_ADDRESS",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "CoreAddresses::VM_RESERVED_ADDRESS",
+      "Roles::get_role_id",
+      "Event::emit_event",
+      "Event::new_event_handle",
+      "AccountFreezing::create",
+      "Option::some",
+      "LibraAccount::create_authentication_key",
+      "LibraAccount::destroy_signer"
+    ],
+    "called_by": [
+      "LibraAccount::create_child_vasp_account",
+      "LibraAccount::create_designated_dealer",
+      "LibraAccount::create_libra_root_account",
+      "LibraAccount::create_parent_vasp_account",
+      "LibraAccount::create_treasury_compliance_account",
+      "LibraAccount::create_validator_account",
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::module_prologue",
+    "calls": [
+      "Errors::invalid_state",
+      "LibraTransactionPublishingOption::is_module_allowed",
+      "LibraAccount::prologue_common"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::pay_from",
+    "calls": [
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from"
+    ],
+    "called_by": [
+      "Script::create_child_vasp_account",
+      "Script::peer_to_peer_with_metadata"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::prologue_common",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::invalid_state",
+      "LibraTimestamp::now_seconds",
+      "AccountFreezing::account_is_frozen",
+      "Hash::sha3_256",
+      "ChainId::get",
+      "LibraAccount::exists_at",
+      "LibraAccount::balance"
+    ],
+    "called_by": [
+      "LibraAccount::module_prologue",
+      "LibraAccount::script_prologue",
+      "LibraAccount::writeset_prologue"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::restore_key_rotation_capability",
+    "calls": [
+      "Errors::not_published",
+      "Option::fill",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [
+      "Genesis::initialize",
+      "Script::rotate_authentication_key",
+      "Script::rotate_authentication_key_with_nonce",
+      "Script::rotate_authentication_key_with_nonce_admin"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::restore_withdraw_capability",
+    "calls": [
+      "Errors::invalid_state",
+      "Errors::not_published",
+      "Option::fill",
+      "LibraAccount::exists_at",
+      "LibraAccount::delegated_withdraw_capability"
+    ],
+    "called_by": [
+      "Script::create_child_vasp_account",
+      "Script::peer_to_peer_with_metadata",
+      "Script::preburn"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::rotate_authentication_key",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Vector::length",
+      "LibraAccount::exists_at"
+    ],
+    "called_by": [
+      "Genesis::initialize",
+      "RecoveryAddress::rotate_authentication_key",
+      "SharedEd25519PublicKey::rotate_key_",
+      "Script::rotate_authentication_key",
+      "Script::rotate_authentication_key_with_nonce",
+      "Script::rotate_authentication_key_with_nonce_admin"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::script_prologue",
+    "calls": [
+      "Errors::invalid_state",
+      "LibraTransactionPublishingOption::is_script_allowed",
+      "LibraAccount::prologue_common"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::sequence_number",
+    "calls": [
+      "Errors::not_published",
+      "LibraAccount::exists_at",
+      "LibraAccount::sequence_number_for_account"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::sequence_number_for_account",
+    "calls": [],
+    "called_by": [
+      "LibraAccount::sequence_number"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::should_track_limits_for_account",
+    "calls": [
+      "VASP::is_same_vasp",
+      "VASP::is_vasp",
+      "LibraAccount::has_published_account_limits"
+    ],
+    "called_by": [
+      "LibraAccount::deposit",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::withdraw_capability_address",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::withdraw_from",
+    "calls": [
+      "Errors::not_published",
+      "LibraTimestamp::assert_operating",
+      "Event::emit_event",
+      "Libra::currency_code",
+      "LibraAccount::exists_at",
+      "LibraAccount::withdraw_from_balance"
+    ],
+    "called_by": [
+      "LibraAccount::preburn",
+      "LibraAccount::pay_from"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::withdraw_from_balance",
+    "calls": [
+      "Errors::limit_exceeded",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::assert_operating",
+      "AccountFreezing::assert_not_frozen",
+      "AccountLimits::update_withdrawal_limits",
+      "Libra::value",
+      "Libra::withdraw",
+      "VASP::parent_address",
+      "LibraAccount::should_track_limits_for_account"
+    ],
+    "called_by": [
+      "LibraAccount::withdraw_from"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::writeset_epilogue",
+    "calls": [
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "LibraTimestamp::now_seconds",
+      "Event::emit_event",
+      "LibraConfig::reconfigure",
+      "LibraAccount::epilogue"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "LibraAccount::writeset_prologue",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "CoreAddresses::LIBRA_ROOT_ADDRESS",
+      "Roles::has_libra_root_role",
+      "LibraAccount::prologue_common"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Genesis::initialize",
+    "calls": [
+      "LibraTimestamp::set_time_has_started",
+      "AccountFreezing::initialize",
+      "ChainId::initialize",
+      "LibraConfig::initialize",
+      "Libra::initialize",
+      "Coin1::initialize",
+      "LBR::initialize",
+      "DualAttestation::initialize",
+      "TransactionFee::initialize",
+      "LibraVersion::initialize",
+      "LibraVMConfig::initialize",
+      "LibraTransactionPublishingOption::initialize",
+      "LibraSystem::initialize_validator_set",
+      "LibraBlock::initialize_block_metadata",
+      "LibraAccount::initialize",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Offer::address_of",
+    "calls": [
+      "Errors::not_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Offer::create",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Offer::exists_at",
+    "calls": [],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Offer::redeem",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "RecoveryAddress::publish",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "Errors::invalid_argument",
+      "Vector::singleton",
+      "VASP::is_vasp",
+      "LibraAccount::key_rotation_capability_address"
+    ],
+    "called_by": [
+      "Script::create_recovery_address"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "RecoveryAddress::rotate_authentication_key",
+    "calls": [
+      "Signer::address_of",
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Vector::borrow",
+      "Vector::length",
+      "LibraAccount::key_rotation_capability_address",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [
+      "Script::rotate_authentication_key_with_recovery_address"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "RecoveryAddress::add_rotation_capability",
+    "calls": [
+      "Errors::invalid_argument",
+      "Errors::not_published",
+      "Vector::push_back",
+      "VASP::parent_address",
+      "LibraAccount::key_rotation_capability_address"
+    ],
+    "called_by": [
+      "Script::add_recovery_rotation_capability"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "SharedEd25519PublicKey::exists_at",
+    "calls": [],
+    "called_by": [
+      "SharedEd25519PublicKey::publish",
+      "SharedEd25519PublicKey::key",
+      "SharedEd25519PublicKey::rotate_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "SharedEd25519PublicKey::publish",
+    "calls": [
+      "Signer::address_of",
+      "Errors::already_published",
+      "LibraAccount::extract_key_rotation_capability",
+      "SharedEd25519PublicKey::exists_at",
+      "SharedEd25519PublicKey::rotate_key_"
+    ],
+    "called_by": [
+      "Script::publish_shared_ed25519_public_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "SharedEd25519PublicKey::key",
+    "calls": [
+      "Errors::not_published",
+      "SharedEd25519PublicKey::exists_at"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "SharedEd25519PublicKey::rotate_key",
+    "calls": [
+      "Signer::address_of",
+      "Errors::not_published",
+      "SharedEd25519PublicKey::exists_at",
+      "SharedEd25519PublicKey::rotate_key_"
+    ],
+    "called_by": [
+      "Script::rotate_shared_ed25519_public_key"
+    ],
+    "is_public": true,
+    "is_called_by_script": true,
+    "is_native": false
+  },
+  {
+    "name": "SharedEd25519PublicKey::rotate_key_",
+    "calls": [
+      "Errors::invalid_argument",
+      "Authenticator::ed25519_authentication_key",
+      "Signature::ed25519_validate_pubkey",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [
+      "SharedEd25519PublicKey::publish",
+      "SharedEd25519PublicKey::rotate_key"
+    ],
+    "is_public": false,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::add_currency_to_account",
+    "calls": [
+      "LibraAccount::add_currency"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::add_recovery_rotation_capability",
+    "calls": [
+      "LibraAccount::extract_key_rotation_capability",
+      "RecoveryAddress::add_rotation_capability"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::add_to_script_allow_list",
+    "calls": [
+      "LibraTransactionPublishingOption::add_to_script_allow_list",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::add_validator_and_reconfigure",
+    "calls": [
+      "ValidatorConfig::get_human_name",
+      "LibraSystem::add_validator",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::burn",
+    "calls": [
+      "Libra::burn",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::burn_txn_fees",
+    "calls": [
+      "TransactionFee::burn_fees"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::cancel_burn",
+    "calls": [
+      "LibraAccount::cancel_burn"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_child_vasp_account",
+    "calls": [
+      "LibraAccount::create_child_vasp_account",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::pay_from",
+      "LibraAccount::restore_withdraw_capability"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_designated_dealer",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::create_designated_dealer"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_parent_vasp_account",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::create_parent_vasp_account"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_recovery_address",
+    "calls": [
+      "LibraAccount::extract_key_rotation_capability",
+      "RecoveryAddress::publish"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_validator_account",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::create_validator_account"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::create_validator_operator_account",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::create_validator_operator_account"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::freeze_account",
+    "calls": [
+      "AccountFreezing::freeze_account",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::peer_to_peer_with_metadata",
+    "calls": [
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::pay_from",
+      "LibraAccount::restore_withdraw_capability"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::preburn",
+    "calls": [
+      "LibraAccount::preburn",
+      "LibraAccount::extract_withdraw_capability",
+      "LibraAccount::restore_withdraw_capability"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::publish_shared_ed25519_public_key",
+    "calls": [
+      "SharedEd25519PublicKey::publish"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::register_validator_config",
+    "calls": [
+      "ValidatorConfig::set_config"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::remove_validator_and_reconfigure",
+    "calls": [
+      "ValidatorConfig::get_human_name",
+      "LibraSystem::remove_validator",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_authentication_key",
+    "calls": [
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_authentication_key_with_nonce",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_authentication_key_with_nonce_admin",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::extract_key_rotation_capability",
+      "LibraAccount::restore_key_rotation_capability",
+      "LibraAccount::rotate_authentication_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_authentication_key_with_recovery_address",
+    "calls": [
+      "RecoveryAddress::rotate_authentication_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_dual_attestation_info",
+    "calls": [
+      "DualAttestation::rotate_base_url",
+      "DualAttestation::rotate_compliance_public_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::rotate_shared_ed25519_public_key",
+    "calls": [
+      "SharedEd25519PublicKey::rotate_key"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::set_validator_config_and_reconfigure",
+    "calls": [
+      "ValidatorConfig::set_config",
+      "LibraSystem::update_config_and_reconfigure"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::set_validator_operator",
+    "calls": [
+      "ValidatorOperatorConfig::get_human_name",
+      "ValidatorConfig::set_operator"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::set_validator_operator_with_nonce_admin",
+    "calls": [
+      "ValidatorOperatorConfig::get_human_name",
+      "ValidatorConfig::set_operator",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::tiered_mint",
+    "calls": [
+      "SlidingNonce::record_nonce_or_abort",
+      "LibraAccount::tiered_mint"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::unfreeze_account",
+    "calls": [
+      "AccountFreezing::unfreeze_account",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::update_dual_attestation_limit",
+    "calls": [
+      "DualAttestation::set_microlibra_limit",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::update_exchange_rate",
+    "calls": [
+      "FixedPoint32::create_from_rational",
+      "Libra::update_lbr_exchange_rate",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::update_libra_version",
+    "calls": [
+      "LibraVersion::set",
+      "SlidingNonce::record_nonce_or_abort"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  },
+  {
+    "name": "Script::update_minting_ability",
+    "calls": [
+      "Libra::update_minting_ability"
+    ],
+    "called_by": [],
+    "is_public": true,
+    "is_called_by_script": false,
+    "is_native": false
+  }
+]
