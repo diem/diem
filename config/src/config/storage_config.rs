@@ -31,9 +31,8 @@ impl Default for StorageConfig {
             backup_service_address: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 6186),
             dir: PathBuf::from("db"),
             grpc_max_receive_len: Some(100_000_000),
-            // At 100 tps on avg, we keep 4~5 days of history.
-            // n.b. Validators have more aggressive override in the config builder.
-            prune_window: Some(40_000_000),
+            // ~50GB state tree history (about 1 day at 100 tps)
+            prune_window: Some(10_000_000),
             data_dir: PathBuf::from("/opt/libra/data"),
             // Default read/write/connection timeout, in milliseconds
             timeout_ms: 30_000,
