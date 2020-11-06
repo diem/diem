@@ -492,9 +492,6 @@ impl RoundManager {
 
         info!(
             self.new_log(LogEvent::ReceiveProposal).remote_peer(author),
-            proposal = %proposal,
-            block_epoch = proposal.epoch(),
-            block_round = proposal.round(),
             block_hash = proposal.id(),
             block_parent_hash = proposal.quorum_cert().certified_block().id(),
         );
