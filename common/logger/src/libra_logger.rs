@@ -401,7 +401,7 @@ pub struct FileWriter {
 impl FileWriter {
     pub fn new(log_file: std::path::PathBuf) -> Self {
         let file = std::fs::OpenOptions::new()
-            .write(true)
+            .append(true)
             .create(true)
             .open(log_file)
             .expect("Unable to open log file");
