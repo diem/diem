@@ -28,11 +28,14 @@ function install_rustup {
   fi
 }
 
-function install_python {
-  echo "Installing Python 3......"
-  if python3 --version &>/dev/null; then
-    echo "Python 3 is already installed"
+function check_for_python {
+  echo "Check for at least Python 3.7....."
+  if python -c 'import sys; assert sys.version_info >= (3,7)' &>/dev/null; then
+    echo "Python 3 is already installed with version: "
+    python -c 'import sys; print(sys.version_info[:])'
   else
+    echo "This requires at least Python 3.7. You have: "
+    python -c 'import sys; print(sys.version_info[:])'
     echo "Install Python 3 from https://www.python.org/"
     exit 1
   fi
@@ -40,7 +43,7 @@ function install_python {
 
 BUILD_STATIC=false
 BUILD_RUSTDOCS=false
-BUILD_PYTORCH_SDK_DOCS=false
+BUILD_PYTHON_SDK_DOCS=false
 
 if [[ "$(basename $PWD)" != "developers.libra.org" ]]; then
   echo "Didn't pass directory check."
@@ -66,7 +69,7 @@ while getopts 'hbrp' flag; do
       BUILD_RUSTDOCS=true
       ;;
     p)
-      BUILD_PYTORCH_SDK_DOCS=true
+      BUILD_PYTHON_SDK_DOCS=true
       ;;
     *)
       usage;
@@ -133,27 +136,32 @@ if [[ $BUILD_RUSTDOCS == true ]]; then
   cp -r $RUSTDOC_DIR $DOCUSAURUS_RUSTDOC_DIR
 fi
 
-if [[ $BUILD_PYTORCH_SDK_DOCS == true ]]; then
+if [[ $BUILD_PYTHON_SDK_DOCS == true ]]; then
   echo "-----------------------------------"
-  echo "Generating PyTorch Client SDK Docs"
+  echo "Generating Python Client SDK Docs"
   echo "-----------------------------------"
 
   echo "Checking for Python"
-  install_python
-
-  echo "Installing libra-client-sdk"
-  python3 -m venv ./venv
-
-  ./venv/bin/pip install --upgrade pip
-  ./venv/bin/pip install libra-client-sdk pdoc3
+  check_for_python
 
   echo "Create directory for docs"
   rm -rf website/static/docs/python-client-sdk-docs/
   mkdir -p website/static/docs/python-client-sdk-docs/
 
-  echo "Generating doc from libra-client-sdk"
-  source ./venv/bin/activate && pdoc3 libra --html -o website/static/docs/python-client-sdk-docs/
+  echo "Setting up Python virtual environment"
+  python3 -m venv ./venv
+  source ./venv/bin/activate
 
+  echo "Installing pip, libra-client-sdk, pdoc3"
+  ./venv/bin/pip install --upgrade pip
+  ./venv/bin/pip install --pre libra-client-sdk
+  ./venv/bin/pip install pdoc3
+
+  echo "Generating doc from libra-client-sdk"
+  ./venv/bin/pdoc3 libra --html -o website/static/docs/python-client-sdk-docs/
+
+  echo "Shutdown virtual environment"
+  deactivate
   rm -rf venv
 fi
 

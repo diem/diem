@@ -30,6 +30,11 @@ jobs:
       run: |
         sudo apt --assume-yes update
         sudo apt --assume-yes install git
+    # Install Python 3.8
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
     # Test that building the site is successful
     - name: Build Site
       run: |

@@ -26,6 +26,11 @@ jobs:
       run: |
         sudo apt --assume-yes update
         sudo apt --assume-yes install git
+    # Install Python 3.8
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
     # Install prerequisites for building the rustdocs
     - name: Install prerequisites for building the rustdocs
       run: |
