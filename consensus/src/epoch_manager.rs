@@ -304,9 +304,13 @@ impl EpochManager {
 
         let mut safety_rules =
             MetricsSafetyRules::new(self.safety_rules_manager.client(), self.storage.clone());
-        safety_rules
-            .perform_initialize()
-            .expect("Unable to initialize SafetyRules");
+        if let Err(error) = safety_rules.perform_initialize() {
+            error!(
+                epoch = epoch,
+                error = error,
+                "Unable to initialize safety rules.",
+            );
+        }
 
         info!(epoch = epoch, "Create ProposalGenerator");
         // txn manager is required both by proposal generator (to pull the proposers)

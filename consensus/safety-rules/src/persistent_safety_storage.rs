@@ -143,7 +143,7 @@ impl PersistentSafetyStorage {
             }
             Err(error) => {
                 self.cached_safety_data = None;
-                Err(Error::SecureStorageError(error.to_string()))
+                Err(Error::SecureStorageUnexpectedError(error.to_string()))
             }
         }
     }
