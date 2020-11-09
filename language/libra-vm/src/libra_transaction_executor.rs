@@ -43,6 +43,7 @@ use std::{
     collections::HashSet,
     convert::{AsMut, AsRef},
 };
+use libra_types::access_path::AccessPath;
 
 pub struct LibraVM(LibraVMImpl);
 
@@ -603,6 +604,41 @@ impl LibraVM {
         ))
     }
 
+    fn preload_cache(
+        &mut self,
+        signature_verified_block: &Vec<Result<PreprocessedTransaction, VMStatus>>,
+    ) -> Result<(), VMStatus> {
+        // generates a collection of access paths for preloading into the cache
+        let mut to_cache = Vec::new();
+        signature_verified_block
+            .into_iter()
+            .map(|txn| match txn {
+                Ok(PreprocessedTransaction::UserTransaction(txn)) => {
+                    match txn.payload() {
+                        TransactionPayload::Script(script) => {
+                            // load sender to cache
+                            to_cache.push(AccessPath::new(txn.sender(), vec![]));
+                            // extract arguments of type Address and load to cache
+                            Some(script.args()
+                                .into_iter()
+                                .map(|arg| match arg {
+                                    TransactionArgument::Address(address) => to_cache.push(AccessPath::new(*address, vec![])),
+                                    _ => {},
+                            }));
+                            {}
+                        },
+                        _ => {}
+                    }
+                },
+                _ => {}
+            });
+
+        // loading the cache with the list of access paths
+        // TODO: the data_cache.rs::StateView::multi_get needs an implementation
+
+        Ok(())
+    }
+
     fn execute_block_impl(
         &mut self,
         transactions: Vec<Transaction>,
@@ -630,6 +666,9 @@ impl LibraVM {
                 .map(preprocess_transaction)
                 .collect();
         }
+
+        // preloading the cache
+        self.preload_cache(&signature_verified_block);
 
         for (idx, txn) in signature_verified_block.into_iter().enumerate() {
             let log_context = AdapterLogSchema::new(data_cache.id(), idx);
