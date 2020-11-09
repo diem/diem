@@ -233,7 +233,7 @@ where
                     match self.sample_random_peer() {
                         Some(peer_id) => {
                             let nonce = self.sample_nonce();
-                            debug!(
+                            trace!(
                                 NetworkSchema::new(&self.network_context),
                                 round = self.round,
                                 "{} Will ping: {} for round: {} nonce: {}",
@@ -252,7 +252,7 @@ where
                                     self.ping_timeout.clone()));
                         }
                         None => {
-                            debug!(
+                            trace!(
                                 NetworkSchema::new(&self.network_context),
                                 round = self.round,
                                 "{} No connected peer to ping round: {}",
@@ -294,7 +294,7 @@ where
                 return;
             }
         };
-        debug!(
+        trace!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Sending Pong response to peer: {} with nonce: {}",
             self.network_context,
@@ -314,7 +314,7 @@ where
         match ping_result {
             Ok(pong) => {
                 if pong.0 == req_nonce {
-                    debug!(
+                    trace!(
                         NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
                         rount = round,
                         "{} Ping successful for peer: {} round: {}",
@@ -404,7 +404,7 @@ where
         nonce: u32,
         ping_timeout: Duration,
     ) -> (PeerId, u64, u32, Result<Pong, RpcError>) {
-        debug!(
+        trace!(
             NetworkSchema::new(&network_context).remote_peer(&peer_id),
             round = round,
             "{} Sending Ping request to peer: {} for round: {} nonce: {}",
