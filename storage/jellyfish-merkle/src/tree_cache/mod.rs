@@ -71,7 +71,7 @@ mod tree_cache_test;
 
 use crate::{
     node_type::{Node, NodeKey},
-    StaleNodeIndex, TreeReader, TreeUpdateBatch,
+    NodeStats, StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
 use anyhow::{bail, Result};
 use libra_crypto::HashValue;
@@ -90,14 +90,11 @@ struct FrozenTreeCache {
     /// Immutable node_cache.
     node_cache: BTreeMap<NodeKey, Node>,
 
-    /// # of leaves in the `node_cache`,
-    num_new_leaves: usize,
-
     /// Immutable stale_node_index_cache.
     stale_node_index_cache: BTreeSet<StaleNodeIndex>,
 
-    /// # of leaves in the `stale_node_index_cache`,
-    num_stale_leaves: usize,
+    /// the stats vector including the number of new nodes, new leaves, stale nodes and stale leaves.
+    node_stats: Vec<NodeStats>,
 
     /// Frozen root hashes after each earlier transaction.
     root_hashes: Vec<HashValue>,
@@ -230,8 +227,14 @@ where
             .unwrap_or_else(|_| unreachable!("Root node with key {:?} must exist", root_node_key))
             .hash();
         self.frozen_cache.root_hashes.push(root_hash);
+        let node_stats = NodeStats {
+            new_nodes: self.node_cache.len(),
+            new_leaves: self.num_new_leaves,
+            stale_nodes: self.stale_node_index_cache.len(),
+            stale_leaves: self.num_stale_leaves,
+        };
+        self.frozen_cache.node_stats.push(node_stats);
         self.frozen_cache.node_cache.extend(self.node_cache.drain());
-
         let stale_since_version = self.next_version;
         self.frozen_cache
             .stale_node_index_cache
@@ -243,11 +246,12 @@ where
                         node_key,
                     }),
             );
-        self.frozen_cache.num_stale_leaves += self.num_stale_leaves;
+
+        // Clean up
         self.num_stale_leaves = 0;
-        self.frozen_cache.num_new_leaves += self.num_new_leaves;
         self.num_new_leaves = 0;
 
+        // Prepare for the next version after freezing
         self.next_version += 1;
     }
 }
@@ -262,8 +266,7 @@ where
             TreeUpdateBatch {
                 node_batch: self.frozen_cache.node_cache,
                 stale_node_index_batch: self.frozen_cache.stale_node_index_cache,
-                num_new_leaves: self.frozen_cache.num_new_leaves,
-                num_stale_leaves: self.frozen_cache.num_stale_leaves,
+                node_stats: self.frozen_cache.node_stats,
             },
         )
     }

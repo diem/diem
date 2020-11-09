@@ -14,7 +14,7 @@ fn test_ledger_counters() {
     bumps
         .bump(LedgerCounter::NewStateLeaves, 1)
         .bump(LedgerCounter::StaleStateLeaves, 1);
-    counters.bump(bumps);
+    counters.bump(&bumps);
     assert_eq!(counters.get(LedgerCounter::NewStateLeaves), 1);
     assert_eq!(counters.get(LedgerCounter::StaleStateLeaves), 1);
 
@@ -23,7 +23,7 @@ fn test_ledger_counters() {
     bumps
         .bump(LedgerCounter::EventsCreated, 1)
         .bump(LedgerCounter::NewStateLeaves, 1);
-    counters.bump(bumps);
+    counters.bump(&bumps);
     assert_eq!(counters.get(LedgerCounter::EventsCreated), 1);
     assert_eq!(counters.get(LedgerCounter::NewStateLeaves), 2);
     assert_eq!(counters.get(LedgerCounter::StaleStateLeaves), 1);

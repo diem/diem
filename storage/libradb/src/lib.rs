@@ -382,8 +382,7 @@ impl LibraDB {
             Some(self.system_store.bump_ledger_counters(
                 first_version,
                 first_version + num_txns - 1,
-                cs.counter_bumps,
-                &mut cs.batch,
+                &mut cs,
             )?)
         } else {
             None

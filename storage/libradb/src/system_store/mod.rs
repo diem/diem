@@ -5,13 +5,13 @@
 //! structures but information with regard to system running status, statistics, etc.
 
 use crate::{
-    ledger_counters::{LedgerCounterBumps, LedgerCounters},
+    change_set::ChangeSet, ledger_counters::LedgerCounters,
     schema::ledger_counters::LedgerCountersSchema,
 };
 use anyhow::Result;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
-use schemadb::{SchemaBatch, DB};
+use schemadb::DB;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -32,8 +32,7 @@ impl SystemStore {
         &self,
         first_version: Version,
         last_version: Version,
-        bumps: LedgerCounterBumps,
-        batch: &mut SchemaBatch,
+        cs: &mut ChangeSet,
     ) -> Result<LedgerCounters> {
         assert!(first_version <= last_version);
 
@@ -52,8 +51,13 @@ impl SystemStore {
             LedgerCounters::new()
         };
 
-        counters.bump(bumps);
-        batch.put::<LedgerCountersSchema>(&last_version, &counters)?;
+        (first_version..=last_version)
+            .map(|v| {
+                let bumps = cs.counter_bumps(v);
+                counters.bump(bumps);
+                cs.batch.put::<LedgerCountersSchema>(&v, &counters)
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(counters)
     }

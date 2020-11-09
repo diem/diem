@@ -9,7 +9,7 @@ use super::LibraDB;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
-    ledger_counters::LedgerCounter,
+    ledger_counters::{LedgerCounter, LedgerCounterBumps},
     schema::{
         event::EventSchema, event_accumulator::EventAccumulatorSchema,
         event_by_key::EventByKeySchema,
@@ -190,7 +190,7 @@ impl EventStore {
         events: &[ContractEvent],
         cs: &mut ChangeSet,
     ) -> Result<HashValue> {
-        cs.counter_bumps
+        cs.counter_bumps(version)
             .bump(LedgerCounter::EventsCreated, events.len());
 
         // EventSchema and EventByKeySchema updates

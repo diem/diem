@@ -126,6 +126,14 @@ pub type NodeBatch = BTreeMap<NodeKey, Node>;
 /// with other batches.
 pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct NodeStats {
+    pub new_nodes: usize,
+    pub new_leaves: usize,
+    pub stale_nodes: usize,
+    pub stale_leaves: usize,
+}
+
 /// Indicates a node becomes stale since `stale_since_version`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -145,8 +153,7 @@ pub struct StaleNodeIndex {
 pub struct TreeUpdateBatch {
     pub node_batch: NodeBatch,
     pub stale_node_index_batch: StaleNodeIndexBatch,
-    pub num_new_leaves: usize,
-    pub num_stale_leaves: usize,
+    pub node_stats: Vec<NodeStats>,
 }
 
 /// The Jellyfish Merkle tree data structure. See [`crate`] for description.

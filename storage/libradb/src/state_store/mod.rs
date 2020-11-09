@@ -77,24 +77,22 @@ impl StateStore {
         let (new_root_hash_vec, tree_update_batch) =
             JellyfishMerkleTree::new(self).put_blob_sets(blob_sets, first_version)?;
 
-        cs.counter_bumps.bump(
-            LedgerCounter::NewStateNodes,
-            tree_update_batch.node_batch.len(),
-        );
-        cs.counter_bumps.bump(
-            LedgerCounter::NewStateLeaves,
-            tree_update_batch.num_new_leaves,
-        );
+        let num_versions = new_root_hash_vec.len();
+        assert_eq!(num_versions, tree_update_batch.node_stats.len());
+
+        tree_update_batch
+            .node_stats
+            .iter()
+            .enumerate()
+            .for_each(|(i, stats)| {
+                let counter_bumps = cs.counter_bumps(first_version + i as u64);
+                counter_bumps.bump(LedgerCounter::NewStateNodes, stats.new_nodes);
+                counter_bumps.bump(LedgerCounter::NewStateLeaves, stats.new_leaves);
+                counter_bumps.bump(LedgerCounter::StaleStateNodes, stats.stale_nodes);
+                counter_bumps.bump(LedgerCounter::StaleStateLeaves, stats.stale_leaves);
+            });
         add_node_batch(&mut cs.batch, &tree_update_batch.node_batch)?;
 
-        cs.counter_bumps.bump(
-            LedgerCounter::StaleStateNodes,
-            tree_update_batch.stale_node_index_batch.len(),
-        );
-        cs.counter_bumps.bump(
-            LedgerCounter::StaleStateLeaves,
-            tree_update_batch.num_stale_leaves,
-        );
         tree_update_batch
             .stale_node_index_batch
             .iter()

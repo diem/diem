@@ -504,8 +504,7 @@ fn test_put_blob_sets() {
             batch_one_by_one
                 .stale_node_index_batch
                 .extend(batch.stale_node_index_batch);
-            batch_one_by_one.num_new_leaves += batch.num_new_leaves;
-            batch_one_by_one.num_stale_leaves += batch.num_stale_leaves;
+            batch_one_by_one.node_stats.extend(batch.node_stats);
         }
     }
     {

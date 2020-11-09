@@ -114,7 +114,7 @@ impl LedgerCounterBumps {
     ///
     /// Defaults to 0.
     #[cfg(test)]
-    pub fn get(&mut self, counter: LedgerCounter) -> usize {
+    pub fn get(&self, counter: LedgerCounter) -> usize {
         self.bumps.get(counter)
     }
 }
@@ -134,9 +134,9 @@ impl LedgerCounters {
     }
 
     /// Bump each counter in `bumps` with the value in `bumps`.
-    pub fn bump(&mut self, bumps: LedgerCounterBumps) -> &mut Self {
-        for (key, value) in bumps.bumps.counters.into_iter() {
-            self.counters.raw_inc(key, value);
+    pub fn bump(&mut self, bumps: &LedgerCounterBumps) -> &mut Self {
+        for (key, value) in bumps.bumps.counters.iter() {
+            self.counters.raw_inc(*key, *value);
         }
 
         self

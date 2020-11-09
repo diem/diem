@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ledger_counters::LedgerCounterBumps;
+use libra_types::transaction::Version;
 use schemadb::SchemaBatch;
+use std::collections::HashMap;
 
 /// Structure that collects changes to be made to the DB in one transaction.
 ///
@@ -13,7 +15,7 @@ pub(crate) struct ChangeSet {
     /// A batch of db alternations.
     pub batch: SchemaBatch,
     /// Counter bumps to be made on commit.
-    pub counter_bumps: LedgerCounterBumps,
+    counter_bumps: HashMap<Version, LedgerCounterBumps>,
 }
 
 impl ChangeSet {
@@ -21,7 +23,21 @@ impl ChangeSet {
     pub fn new() -> Self {
         Self {
             batch: SchemaBatch::new(),
-            counter_bumps: LedgerCounterBumps::new(),
+            counter_bumps: HashMap::new(),
+        }
+    }
+
+    pub fn counter_bumps(&mut self, version: Version) -> &mut LedgerCounterBumps {
+        self.counter_bumps
+            .entry(version)
+            .or_insert_with(LedgerCounterBumps::new)
+    }
+
+    #[cfg(test)]
+    pub fn new_with_bumps(counter_bumps: HashMap<Version, LedgerCounterBumps>) -> Self {
+        Self {
+            batch: SchemaBatch::new(),
+            counter_bumps,
         }
     }
 }

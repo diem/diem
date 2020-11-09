@@ -26,24 +26,22 @@ fn put_account_state_set(
             &mut cs,
         )
         .unwrap()[0];
-    store.db.write_schemas(cs.batch).unwrap();
+    let bumps = cs.counter_bumps(version);
+    assert_eq!(bumps.get(LedgerCounter::NewStateNodes), expected_new_nodes);
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::NewStateNodes),
-        expected_new_nodes
-    );
-    assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StaleStateNodes),
+        bumps.get(LedgerCounter::StaleStateNodes),
         expected_stale_nodes
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::NewStateLeaves),
+        bumps.get(LedgerCounter::NewStateLeaves),
         expected_new_leaves
     );
     assert_eq!(
-        cs.counter_bumps.get(LedgerCounter::StaleStateLeaves),
+        bumps.get(LedgerCounter::StaleStateLeaves),
         expected_stale_leaves
     );
 
+    store.db.write_schemas(cs.batch).unwrap();
     root
 }
 
