@@ -27,6 +27,7 @@ use libra_types::{
     transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
 };
+use rayon::prelude::*;
 use std::{
     cmp,
     collections::HashSet,
@@ -220,7 +221,7 @@ where
     let start_storage_read = Instant::now();
     // track latency: fetching seq number
     let seq_numbers = transactions
-        .iter()
+        .par_iter()
         .map(|t| {
             get_account_sequence_number(smp.db.as_ref(), t.sender()).map_err(|e| {
                 error!(LogSchema::new(LogEntry::DBError).error(&e));
@@ -270,7 +271,7 @@ where
         .with_label_values(&[counters::VM_VALIDATION_LABEL])
         .start_timer();
     let validation_results = transactions
-        .iter()
+        .par_iter()
         .map(|t| smp.validator.read().validate_transaction(t.0.clone()))
         .collect::<Vec<_>>();
     vm_validation_timer.stop_and_record();

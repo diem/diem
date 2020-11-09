@@ -3237,6 +3237,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "rand 0.7.3",
+ "rayon",
  "serde",
  "serde_json",
  "storage-interface",
