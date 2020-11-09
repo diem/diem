@@ -13,6 +13,7 @@ use libra_logger::prelude::*;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
+    tracer::get_trace_block_gen,
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
     vm_status::{StatusCode, StatusType},
 };
@@ -445,6 +446,7 @@ impl Loader {
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+        let _block_trace = get_trace_block_gen("loader::load_script");
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
         let opt_main = self.scripts.lock().get(&hash_value);
@@ -558,6 +560,7 @@ impl Loader {
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+        let _block_trace = get_trace_block_gen("loader::load_function");
         self.load_module_expect_no_missing_dependencies(module_id, data_store, log_context)?;
         let idx = self
             .module_cache

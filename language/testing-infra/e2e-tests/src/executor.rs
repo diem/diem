@@ -32,6 +32,7 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
+    tracer::print_tracer,
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{
@@ -223,13 +224,15 @@ impl FakeExecutor {
         &self,
         txn_block: Vec<SignedTransaction>,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-        LibraVM::execute_block_and_keep_vm_status(
+        let res = LibraVM::execute_block_and_keep_vm_status(
             txn_block
                 .into_iter()
                 .map(Transaction::UserTransaction)
                 .collect(),
             &self.data_store,
-        )
+        );
+        print_tracer();
+        res
     }
 
     /// Executes the transaction as a singleton block and applies the resulting write set to the
@@ -258,6 +261,7 @@ impl FakeExecutor {
         txn_block: Vec<Transaction>,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
         let output = LibraVM::execute_block(txn_block, &self.data_store);
+        print_tracer();
         if let Some(logger) = &self.executed_output {
             logger.log(format!("{:?}\n", output).as_str());
         }

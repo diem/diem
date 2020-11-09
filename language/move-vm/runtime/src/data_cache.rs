@@ -6,6 +6,7 @@ use crate::loader::Loader;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag, TypeTag},
+    tracer::get_trace_block_gen,
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
@@ -189,18 +190,26 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         });
 
         if !account_cache.data_map.contains_key(ty) {
-            let ty_tag = match self.loader.type_to_type_tag(ty)? {
-                TypeTag::Struct(s_tag) => s_tag,
-                _ =>
-                // non-struct top-level value; can't happen
-                {
-                    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
+            let _block_trace = get_trace_block_gen("data_cache::load_resource");
+            let ty_tag = {
+                let _block_trace = get_trace_block_gen("loader::type_to_type_tag");
+                match self.loader.type_to_type_tag(ty)? {
+                    TypeTag::Struct(s_tag) => s_tag,
+                    _ =>
+                    // non-struct top-level value; can't happen
+                    {
+                        return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
+                    }
                 }
             };
-            let ty_layout = self.loader.type_to_type_layout(ty)?;
+            let ty_layout = {
+                let _block_trace = get_trace_block_gen("loader::type_to_type_layout");
+                self.loader.type_to_type_layout(ty)?
+            };
 
             let gv = match self.remote.get_resource(&addr, &ty_tag) {
                 Ok(Some(blob)) => {
+                    let _block_trace = get_trace_block_gen("loader::make_global_value");
                     let ty_kind_info = self.loader.type_to_kind_info(ty)?;
                     let val = match Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout) {
                         Some(val) => val,

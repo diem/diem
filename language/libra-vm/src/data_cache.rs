@@ -17,6 +17,7 @@ use libra_types::{
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    tracer::get_trace_block_gen,
 };
 use move_vm_runtime::data_cache::RemoteCache;
 use std::collections::btree_map::BTreeMap;
@@ -158,7 +159,11 @@ impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
         address: &AccountAddress,
         struct_tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        let ap = create_access_path(*address, struct_tag.clone());
+        let ap = {
+            let _block_trace = get_trace_block_gen("data_cache::create_access_path");
+            create_access_path(*address, struct_tag.clone())
+        };
+        let _block_trace = get_trace_block_gen("data_view::get_resource");
         self.get(&ap)
     }
 }

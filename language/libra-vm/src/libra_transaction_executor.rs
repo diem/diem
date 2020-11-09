@@ -32,6 +32,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
+    tracer::get_trace_block_gen,
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::LogContext, session::Session};
 use move_vm_types::{
@@ -170,6 +171,7 @@ impl LibraVM {
 
         // Run the validation logic
         {
+            let _block_trace = get_trace_block_gen("adapter::script_prologue");
             cost_strategy.disable_metering();
             self.0.check_gas(txn_data, log_context)?;
             self.0.run_script_prologue(
@@ -183,23 +185,27 @@ impl LibraVM {
 
         // Run the execution logic
         {
-            cost_strategy.enable_metering();
-            cost_strategy
-                .charge_intrinsic_gas(txn_data.transaction_size())
-                .map_err(|e| e.into_vm_status())?;
-            session
-                .execute_script(
-                    script.code().to_vec(),
-                    script.ty_args().to_vec(),
-                    convert_txn_args(script.args()),
-                    vec![txn_data.sender()],
-                    cost_strategy,
-                    log_context,
-                )
-                .map_err(|e| e.into_vm_status())?;
+            {
+                let _block_trace = get_trace_block_gen("adapter::execute_script");
+                cost_strategy.enable_metering();
+                cost_strategy
+                    .charge_intrinsic_gas(txn_data.transaction_size())
+                    .map_err(|e| e.into_vm_status())?;
+                session
+                    .execute_script(
+                        script.code().to_vec(),
+                        script.ty_args().to_vec(),
+                        convert_txn_args(script.args()),
+                        vec![txn_data.sender()],
+                        cost_strategy,
+                        log_context,
+                    )
+                    .map_err(|e| e.into_vm_status())?;
 
-            charge_global_write_gas_usage(cost_strategy, &session)?;
+                charge_global_write_gas_usage(cost_strategy, &session)?;
+            }
 
+            let _block_trace = get_trace_block_gen("adapter::script_epilogue");
             cost_strategy.disable_metering();
             self.success_transaction_cleanup(
                 session,
@@ -620,18 +626,19 @@ impl LibraVM {
             transactions.len()
         );
 
-        let signature_verified_block: Vec<Result<PreprocessedTransaction, VMStatus>>;
-        {
+        let signature_verified_block: Vec<Result<PreprocessedTransaction, VMStatus>> = {
+            let _block_trace = get_trace_block_gen("adapter::verify_signature_block");
             // Verify the signatures of all the transactions in parallel.
             // This is time consuming so don't wait and do the checking
             // sequentially while executing the transactions.
-            signature_verified_block = transactions
+            transactions
                 .into_par_iter()
                 .map(preprocess_transaction)
-                .collect();
-        }
+                .collect()
+        };
 
         for (idx, txn) in signature_verified_block.into_iter().enumerate() {
+            let _block_trace = get_trace_block_gen("adapter::process_transaction");
             let log_context = AdapterLogSchema::new(data_cache.id(), idx);
             if should_restart {
                 let txn_output = TransactionOutput::new(
@@ -646,6 +653,7 @@ impl LibraVM {
             };
             let (vm_status, output, sender) = match txn {
                 Ok(PreprocessedTransaction::BlockPrologue(block_metadata)) => {
+                    let _block_trace = get_trace_block_gen("adapter::block_prologue");
                     execute_block_trace_guard.clear();
                     current_block_id = block_metadata.id();
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
@@ -662,6 +670,7 @@ impl LibraVM {
                     (vm_status, output, Some("waypoint_write_set".to_string()))
                 }
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
+                    let _block_trace = get_trace_block_gen("adapter::user_transaction");
                     let sender = txn.sender().to_string();
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
                     let (vm_status, output) =
@@ -728,6 +737,7 @@ impl LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
+        let _block_trace = get_trace_block_gen("adapter::execute_block");
         let mut state_view_cache = StateViewCache::new(state_view);
         let mut vm = LibraVM::new(&state_view_cache);
         vm.execute_block_impl(transactions, &mut state_view_cache)

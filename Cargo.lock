@@ -3996,6 +3996,7 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-crypto",
  "libra-crypto-derive",
+ "libra-logger",
  "libra-workspace-hack",
  "mirai-annotations",
  "once_cell",

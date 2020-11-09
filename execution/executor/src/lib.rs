@@ -56,6 +56,7 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use libra_vm::VMExecutor;
+use move_core_types::tracer::{get_trace_block_gen, log_tracer};
 use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -258,6 +259,7 @@ where
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
+        let _block_trace = get_trace_block_gen("executor::process_vm_output");
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -718,56 +720,67 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             (output, state_compute_result)
         } else {
-            info!(
-                LogSchema::new(LogEntry::BlockExecutor).block_id(block_id),
-                "execute_block"
-            );
+            let (output, state_compute_result) = {
+                info!(
+                    LogSchema::new(LogEntry::BlockExecutor).block_id(block_id),
+                    "execute_block"
+                );
 
-            let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
+                let _block_trace = get_trace_block_gen("executor::execute_block");
 
-            let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
+                let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
-            let state_view = self.get_executed_state_view(
-                StateViewId::BlockExecution { block_id },
-                &parent_block_executed_trees,
-            );
+                let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
 
-            let vm_outputs = {
-                trace_code_block!("executor::execute_block", {"block", block_id});
-                let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
-                fail_point!("executor::vm_execute_block", |_| {
-                    Err(Error::from(anyhow::anyhow!(
-                        "Injected error in vm_execute_block"
-                    )))
-                });
-                V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
+                let state_view = self.get_executed_state_view(
+                    StateViewId::BlockExecution { block_id },
+                    &parent_block_executed_trees,
+                );
+
+                let vm_outputs = {
+                    trace_code_block!("executor::execute_block", {"block", block_id});
+                    let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
+                    fail_point!("executor::vm_execute_block", |_| {
+                        Err(Error::from(anyhow::anyhow!(
+                            "Injected error in vm_execute_block"
+                        )))
+                    });
+                    V::execute_block(transactions.clone(), &state_view)
+                        .map_err(anyhow::Error::from)?
+                };
+
+                trace_code_block!("executor::process_vm_outputs", {"block", block_id});
+                let status: Vec<_> = vm_outputs
+                    .iter()
+                    .map(TransactionOutput::status)
+                    .cloned()
+                    .collect();
+                if !status.is_empty() {
+                    trace!("Execution status: {:?}", status);
+                }
+
+                let (account_to_state, account_to_proof) = state_view.into();
+                let output = Self::process_vm_outputs(
+                    account_to_state,
+                    account_to_proof,
+                    &transactions,
+                    vm_outputs,
+                    &parent_block_executed_trees,
+                )
+                .map_err(|err| format_err!("Failed to execute block: {}", err))?;
+
+                let parent_accu = parent_block_executed_trees.txn_accumulator();
+
+                let state_compute_result = output.compute_result(
+                    parent_accu.frozen_subtree_roots().clone(),
+                    parent_accu.num_leaves(),
+                );
+                (output, state_compute_result)
             };
-
-            trace_code_block!("executor::process_vm_outputs", {"block", block_id});
-            let status: Vec<_> = vm_outputs
-                .iter()
-                .map(TransactionOutput::status)
-                .cloned()
-                .collect();
-            if !status.is_empty() {
-                trace!("Execution status: {:?}", status);
-            }
-
-            let (account_to_state, account_to_proof) = state_view.into();
-            let output = Self::process_vm_outputs(
-                account_to_state,
-                account_to_proof,
-                &transactions,
-                vm_outputs,
-                &parent_block_executed_trees,
-            )
-            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
-
-            let parent_accu = parent_block_executed_trees.txn_accumulator();
-
-            let state_compute_result = output.compute_result(
-                parent_accu.frozen_subtree_roots().clone(),
-                parent_accu.num_leaves(),
+            error!(
+                LogSchema::new(LogEntry::BlockExecutor).block_id(block_id),
+                trace = log_tracer().as_str(),
+                txn_count = transactions.len(),
             );
             (output, state_compute_result)
         };

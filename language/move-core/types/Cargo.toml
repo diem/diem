@@ -27,6 +27,7 @@ lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canoni
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0", default-features = false }
 libra-crypto-derive = { path = "../../../crypto/crypto-derive", version = "0.1.0" }
+libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 short-hex-str = { path = "../../../common/short-hex-str", version = "0.1.0" }
 
 [dev-dependencies]
