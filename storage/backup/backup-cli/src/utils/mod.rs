@@ -9,6 +9,7 @@ pub mod storage_ext;
 pub mod test_utils;
 
 use anyhow::{anyhow, Result};
+use libra_config::config::RocksdbConfig;
 use libra_crypto::HashValue;
 use libra_infallible::duration_since_epoch;
 use libra_jellyfish_merkle::{restore::JellyfishMerkleRestore, NodeBatch, TreeWriter};
@@ -112,8 +113,10 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
         let target_version = opt.target_version.unwrap_or(Version::max_value());
         let run_mode = if let Some(db_dir) = &opt.db_dir {
             let restore_handler = Arc::new(LibraDB::open(
-                db_dir, false, /* read_only */
+                db_dir,
+                false, /* read_only */
                 None,  /* pruner */
+                RocksdbConfig::default(),
             )?)
             .get_restore_handler();
             RestoreRunMode::Restore { restore_handler }

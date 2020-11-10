@@ -33,6 +33,7 @@ executor-test-helpers = { path = "../../../execution/executor-test-helpers", ver
 executor-types = { path = "../../../execution/executor-types", version = "0.1.0" }
 libra-jellyfish-merkle = { path = "../../jellyfish-merkle", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization", version = "0.1.0" }
+libra-config = { path = "../../../config", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-infallible = { path = "../../../common/infallible", version = "0.1.0" }
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }

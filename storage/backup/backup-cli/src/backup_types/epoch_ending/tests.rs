@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use backup_service::start_backup_service;
-use libra_config::utils::get_available_port;
+use libra_config::{config::RocksdbConfig, utils::get_available_port};
 use libra_temppath::TempPath;
 use libradb::LibraDB;
 use std::{
@@ -94,6 +94,7 @@ fn end_to_end() {
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */
+        RocksdbConfig::default(),
     )
     .unwrap();
     assert_eq!(

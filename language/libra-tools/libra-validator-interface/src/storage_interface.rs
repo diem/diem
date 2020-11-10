@@ -3,6 +3,7 @@
 
 use crate::LibraValidatorInterface;
 use anyhow::{anyhow, Result};
+use libra_config::config::RocksdbConfig;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -16,7 +17,12 @@ pub struct DBDebuggerInterface(Arc<dyn DbReader>);
 
 impl DBDebuggerInterface {
     pub fn open<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
-        Ok(Self(Arc::new(LibraDB::open(db_root_path, true, None)?)))
+        Ok(Self(Arc::new(LibraDB::open(
+            db_root_path,
+            true,
+            None,
+            RocksdbConfig::default(),
+        )?)))
     }
 }
 

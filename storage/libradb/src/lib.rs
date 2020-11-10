@@ -55,6 +55,7 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
+use libra_config::config::RocksdbConfig;
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
 use libra_types::{
@@ -73,7 +74,7 @@ use libra_types::{
         Version, PRE_GENESIS_VERSION,
     },
 };
-use schemadb::{ColumnFamilyName, DB, DEFAULT_CF_NAME};
+use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 
@@ -89,6 +90,13 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
     } else {
         Ok(())
     }
+}
+
+fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
+    let mut db_opts = Options::default();
+    db_opts.set_max_open_files(config.max_open_files);
+    db_opts.set_max_total_wal_size(config.max_total_wal_size);
+    db_opts
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -140,6 +148,7 @@ impl LibraDB {
         db_root_path: P,
         readonly: bool,
         prune_window: Option<u64>,
+        rocksdb_config: RocksdbConfig,
     ) -> Result<Self> {
         ensure!(
             prune_window.is_none() || !readonly,
@@ -149,10 +158,24 @@ impl LibraDB {
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
 
+        let mut rocksdb_opts = gen_rocksdb_options(&rocksdb_config);
+
         let db = if readonly {
-            DB::open_readonly(path.clone(), "libradb_ro", Self::column_families())?
+            DB::open_readonly(
+                path.clone(),
+                "libradb_ro",
+                Self::column_families(),
+                &rocksdb_opts,
+            )?
         } else {
-            DB::open(path.clone(), "libradb", Self::column_families())?
+            rocksdb_opts.create_if_missing(true);
+            rocksdb_opts.create_missing_column_families(true);
+            DB::open(
+                path.clone(),
+                "libradb",
+                Self::column_families(),
+                &rocksdb_opts,
+            )?
         };
 
         info!(
@@ -167,9 +190,13 @@ impl LibraDB {
     pub fn open_as_secondary<P: AsRef<Path> + Clone>(
         db_root_path: P,
         secondary_path: P,
+        mut rocksdb_config: RocksdbConfig,
     ) -> Result<Self> {
         let primary_path = db_root_path.as_ref().join("libradb");
         let secondary_path = secondary_path.as_ref().to_path_buf();
+        // Secondary needs `max_open_files = -1` per https://github.com/facebook/rocksdb/wiki/Secondary-instance
+        rocksdb_config.max_open_files = -1;
+        let rocksdb_opts = gen_rocksdb_options(&rocksdb_config);
 
         Ok(Self::new_with_db(
             DB::open_as_secondary(
@@ -177,6 +204,7 @@ impl LibraDB {
                 secondary_path,
                 "libradb_sec",
                 Self::column_families(),
+                &rocksdb_opts,
             )?,
             None, // prune_window
         ))
@@ -189,6 +217,7 @@ impl LibraDB {
             db_root_path,
             false, /* readonly */
             None,  /* pruner */
+            RocksdbConfig::default(),
         )
         .expect("Unable to open LibraDB")
     }
