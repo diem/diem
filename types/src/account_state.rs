@@ -6,10 +6,9 @@ use crate::{
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChainIdResource,
         ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer, FreezingBit, ParentVASP,
-        PreburnResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        PreburnResource,
     },
-    block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
-    event::EventHandle,
+    block_metadata::LibraBlockResource,
     libra_timestamp::LibraTimestampResource,
     on_chain_config::{
         ConfigurationResource, LibraVersion, OnChainConfig, RegisteredCurrencies,
@@ -17,7 +16,7 @@ use crate::{
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{format_err, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
@@ -33,7 +32,7 @@ impl AccountState {
     }
 
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
-        self.get_resource(&AccountResource::resource_path())
+        self.get_resource::<AccountResource>()
     }
 
     pub fn get_balance_resources(
@@ -46,7 +45,7 @@ impl AccountState {
                 let currency_type_tag = type_tag_for_currency_code(currency_code.to_owned());
                 // TODO: update this to use BalanceResource::resource_path once that takes type
                 // parameters
-                self.get_resource(&BalanceResource::access_path_for(currency_type_tag))
+                self.get_resource_impl(&BalanceResource::access_path_for(currency_type_tag))
                     .transpose()
                     .map(|balance| balance.map(|b| (currency_code.to_owned(), b)))
             })
@@ -63,7 +62,7 @@ impl AccountState {
                 let currency_type_tag = type_tag_for_currency_code(currency_code.to_owned());
                 // TODO: update this to use PreburnResource::resource_path once that takes type
                 // parameters
-                self.get_resource(&PreburnResource::access_path_for(currency_type_tag))
+                self.get_resource_impl(&PreburnResource::access_path_for(currency_type_tag))
                     .transpose()
                     .map(|preburn_balance| preburn_balance.map(|b| (currency_code.to_owned(), b)))
             })
@@ -71,36 +70,36 @@ impl AccountState {
     }
 
     pub fn get_chain_id_resource(&self) -> Result<Option<ChainIdResource>> {
-        self.get_resource(&ChainIdResource::resource_path())
+        self.get_resource::<ChainIdResource>()
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
-        self.get_resource(&ConfigurationResource::resource_path())
+        self.get_resource::<ConfigurationResource>()
     }
 
     pub fn get_libra_timestamp_resource(&self) -> Result<Option<LibraTimestampResource>> {
-        self.get_resource(&LibraTimestampResource::resource_path())
+        self.get_resource::<LibraTimestampResource>()
     }
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
-        self.get_resource(&ValidatorConfigResource::resource_path())
+        self.get_resource::<ValidatorConfigResource>()
     }
 
     pub fn get_validator_operator_config_resource(
         &self,
     ) -> Result<Option<ValidatorOperatorConfigResource>> {
-        self.get_resource(&ValidatorOperatorConfigResource::resource_path())
+        self.get_resource::<ValidatorOperatorConfigResource>()
     }
 
     pub fn get_freezing_bit(&self) -> Result<Option<FreezingBit>> {
-        self.get_resource(&FreezingBit::resource_path())
+        self.get_resource::<FreezingBit>()
     }
 
     pub fn get_account_role(&self, currency_codes: &[Identifier]) -> Result<Option<AccountRole>> {
         if self.0.contains_key(&ParentVASP::resource_path()) {
             match (
-                self.get_resource(&ParentVASP::resource_path()),
-                self.get_resource(&Credential::resource_path()),
+                self.get_resource::<ParentVASP>(),
+                self.get_resource::<Credential>(),
             ) {
                 (Ok(Some(vasp)), Ok(Some(credential))) => {
                     Ok(Some(AccountRole::ParentVASP { vasp, credential }))
@@ -108,13 +107,13 @@ impl AccountState {
                 _ => Ok(None),
             }
         } else if self.0.contains_key(&ChildVASP::resource_path()) {
-            self.get_resource(&ChildVASP::resource_path())
+            self.get_resource::<ChildVASP>()
                 .map(|r_opt| r_opt.map(AccountRole::ChildVASP))
         } else if self.0.contains_key(&DesignatedDealer::resource_path()) {
             match (
-                self.get_resource(&Credential::resource_path()),
+                self.get_resource::<Credential>(),
                 self.get_preburn_balances(&currency_codes),
-                self.get_resource(&DesignatedDealer::resource_path()),
+                self.get_resource::<DesignatedDealer>(),
             ) {
                 (Ok(Some(dd_credential)), Ok(preburn_balances), Ok(Some(designated_dealer))) => {
                     Ok(Some(AccountRole::DesignatedDealer {
@@ -132,11 +131,11 @@ impl AccountState {
     }
 
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
-        self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
+        self.get_config::<ValidatorSet>()
     }
 
     pub fn get_libra_version(&self) -> Result<Option<LibraVersion>> {
-        self.get_resource(&LibraVersion::CONFIG_ID.access_path().path)
+        self.get_config::<LibraVersion>()
     }
 
     pub fn get_vm_publishing_option(&self) -> Result<Option<VMPublishingOption>> {
@@ -148,8 +147,7 @@ impl AccountState {
     }
 
     pub fn get_registered_currency_info_resources(&self) -> Result<Vec<CurrencyInfoResource>> {
-        let path = RegisteredCurrencies::CONFIG_ID.access_path().path;
-        let currencies: Option<RegisteredCurrencies> = self.get_resource(&path)?;
+        let currencies: Option<RegisteredCurrencies> = self.get_config()?;
         match currencies {
             Some(currencies) => {
                 let codes = currencies.currency_codes();
@@ -157,7 +155,7 @@ impl AccountState {
                 for code in codes {
                     let access_path = CurrencyInfoResource::resource_path_for(code.clone());
                     let info: CurrencyInfoResource = self
-                        .get_resource(&access_path.path)?
+                        .get_resource_impl(&access_path.path)?
                         .ok_or_else(|| format_err!("currency info resource not found: {}", code))?;
                     resources.push(info);
                 }
@@ -168,31 +166,14 @@ impl AccountState {
     }
 
     pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {
-        self.get_resource(&LibraBlockResource::resource_path())
-    }
-
-    pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
-        let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
-            self.get_account_resource()?
-                .map(|account_resource| account_resource.received_events().clone())
-        } else if *ACCOUNT_SENT_EVENT_PATH == query_path {
-            self.get_account_resource()?
-                .map(|account_resource| account_resource.sent_events().clone())
-        } else if *NEW_BLOCK_EVENT_PATH == query_path {
-            self.get_libra_block_resource()?
-                .map(|libra_block_resource| libra_block_resource.new_block_events().clone())
-        } else {
-            bail!("Unrecognized query path: {:?}", query_path);
-        };
-
-        Ok(event_handle)
+        self.get_resource::<LibraBlockResource>()
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         self.0.get(key)
     }
 
-    pub fn get_resource<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
+    fn get_resource_impl<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
         self.0
             .get(key)
             .map(|bytes| lcs::from_bytes(bytes))
@@ -210,6 +191,14 @@ impl AccountState {
 
     pub fn iter(&self) -> impl std::iter::Iterator<Item = (&Vec<u8>, &Vec<u8>)> {
         self.0.iter()
+    }
+
+    pub fn get_config<T: OnChainConfig>(&self) -> Result<Option<T>> {
+        self.get_resource_impl(&T::CONFIG_ID.access_path().path)
+    }
+
+    pub fn get_resource<T: MoveResource + DeserializeOwned>(&self) -> Result<Option<T>> {
+        self.get_resource_impl(&T::struct_tag().access_vector())
     }
 }
 
