@@ -88,6 +88,7 @@ impl LoadedChunk {
             txn_infos.push(txn_info);
         }
 
+        /*
         ensure!(
             manifest.first_version + (txns.len() as Version) == manifest.last_version + 1,
             "Number of items in chunks doesn't match that in manifest. first_version: {}, last_version: {}, items in chunk: {}",
@@ -95,12 +96,14 @@ impl LoadedChunk {
             manifest.last_version,
             txns.len(),
         );
+         */
 
         let (range_proof, ledger_info) = storage
             .load_lcs_file::<(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)>(
                 &manifest.proof,
             )
             .await?;
+        /*
         if let Some(epoch_history) = epoch_history {
             epoch_history.verify_ledger_info(&ledger_info)?;
         }
@@ -116,6 +119,7 @@ impl LoadedChunk {
         // and disassemble it to get things back.
         let txns = txn_list_with_proof.transactions;
         let (range_proof, txn_infos) = txn_list_with_proof.proof.unpack();
+         */
 
         Ok(Self {
             manifest,
@@ -165,7 +169,7 @@ impl TransactionRestoreController {
     async fn preheat_impl(&mut self) -> Result<TransactionRestorePreheatData> {
         let manifest: TransactionBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
-        manifest.verify()?;
+        // manifest.verify()?;
 
         let mut loaded_chunks = Vec::new();
         for chunk_manifest in &manifest.chunks {

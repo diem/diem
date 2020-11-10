@@ -113,7 +113,8 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
         let run_mode = if let Some(db_dir) = &opt.db_dir {
             let restore_handler = Arc::new(LibraDB::open(
                 db_dir, false, /* read_only */
-                None,  /* pruner */
+                // None,  /* pruner */
+                Some(1000000),
             )?)
             .get_restore_handler();
             RestoreRunMode::Restore { restore_handler }

@@ -20,6 +20,7 @@ use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use std::sync::Arc;
 use structopt::StructOpt;
+use crate::metadata::StateSnapshotBackupMeta;
 
 #[derive(StructOpt)]
 pub struct RestoreCoordinatorOpt {
@@ -74,7 +75,9 @@ impl RestoreCoordinator {
         let transactions = metadata_view.select_transaction_backups(self.target_version())?;
         let actual_target_version = self.get_actual_target_version(&transactions)?;
         let epoch_endings = metadata_view.select_epoch_ending_backups(actual_target_version)?;
-        let state_snapshot = metadata_view.select_state_snapshot(actual_target_version)?;
+        // FIXME(aldenhu): remove
+        // let state_snapshot = metadata_view.select_state_snapshot(actual_target_version)?;
+        let state_snapshot = Option::<StateSnapshotBackupMeta>::None;
         let replay_transactions_from_version = match &state_snapshot {
             Some(b) => b.version + 1,
             None => 0,
