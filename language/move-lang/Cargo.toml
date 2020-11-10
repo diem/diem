@@ -7,11 +7,11 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 hex = "0.4.2"
-regex = "1.4.1"
+regex = "1.4.2"
 structopt = "0.3.20"
 difference = "2.0.0"
 petgraph = "0.5.1"

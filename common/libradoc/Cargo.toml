@@ -9,11 +9,11 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-serde_yaml = "0.8.13"
+serde_yaml = "0.8.14"
 serde-reflection = "0.3.2"
 serde-generate = "0.15.2"
-anyhow = "1.0.33"
-regex = "1.4.1"
+anyhow = "1.0.34"
+regex = "1.4.2"
 structopt = "0.3.20"
 once_cell = "1.4.1"
 

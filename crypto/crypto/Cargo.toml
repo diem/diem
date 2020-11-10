@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 bytes = "0.5.6"
 vanilla-curve25519-dalek = { version = "3", package = 'curve25519-dalek', default-features = false, features = ["std"], optional = true }
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat3", version = "3", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }
@@ -28,14 +28,14 @@ rand_core = { version = "0.5.1", default-features = false }
 serde = { version = "1.0.117", features = ["derive"] }
 serde_bytes = "0.11.5"
 serde-name = "0.1.1"
-sha2 = "0.9.1"
+sha2 = "0.9.2"
 short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 static_assertions = "1.1.0"
-thiserror = "1.0.21"
+thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 vanilla-x25519-dalek = { version = "1.1.0", package = 'x25519-dalek', default-features = false, features = ["std"], optional = true }
 x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat4", version = "1.1.0", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
-aes-gcm = "0.7.0"
+aes-gcm = "0.8.0"
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }

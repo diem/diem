@@ -11,12 +11,12 @@ edition = "2018"
 
 [dependencies]
 bytes = { version = "0.5.6", features = ["serde", "std"] }
-cc = { version = "1.0.61", features = ["jobserver", "parallel"] }
+cc = { version = "1.0.62", features = ["jobserver", "parallel"] }
 log = { version = "0.4.11", features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["std", "use_std"] }
-num-traits = { version = "0.2.12", features = ["std"] }
+num-traits = { version = "0.2.14", features = ["std"] }
 petgraph = { version = "0.5.1", features = ["graphmap", "matrix_graph", "stable_graph"] }
 serde = { version = "1.0.117", features = ["derive", "rc"] }
-sha-1 = { version = "0.9.1", features = ["std"] }
+sha-1 = { version = "0.9.2", features = ["std"] }
 subtle = { version = "2.3.0", features = ["i128", "std"] }
 syn = { version = "1.0.48", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }

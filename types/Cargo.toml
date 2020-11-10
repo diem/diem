@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 bytes = "0.5.6"
 chrono = { version = "0.4.19", default-features = false, features = ["clock"] }
 hex = "0.4.2"
@@ -24,7 +24,7 @@ rand = "0.7.3"
 serde = { version = "1.0.117", default-features = false }
 serde_json = "1.0.59"
 serde_bytes = "0.11.5"
-thiserror = "1.0.21"
+thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -37,7 +37,7 @@ libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
-regex = "1.4.1"
+regex = "1.4.2"
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
 serde_json = "1.0.59"

@@ -10,11 +10,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 hex = "0.4.2"
 serde = { version = "1.0.117", default-features = false }
 serde_json = "1.0.59"
-prost = "0.6"
+prost = "0.6.1"
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -26,4 +26,4 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 move-explain = { path = "../../language/tools/move-explain", version = "0.1.0" }
 
 [build-dependencies]
-prost-build = "0.6"
+prost-build = "0.6.1"

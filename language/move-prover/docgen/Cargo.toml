@@ -18,8 +18,8 @@ codespan-reporting = "0.8.0"
 itertools = "0.9.0"
 log = "0.4.11"
 num = "0.3.0"
-regex = "1.4.1"
-anyhow = "1.0.33"
+regex = "1.4.2"
+anyhow = "1.0.34"
 serde = { version = "1.0.117", features = ["derive"] }
 once_cell = "1.4.1"
 

@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 ir-to-bytecode-syntax = { path = "syntax", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
@@ -21,7 +21,7 @@ bytecode-source-map = { path = "../bytecode-source-map", version = "0.1.0" }
 log = "0.4.11"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
-thiserror = "1.0.21"
+thiserror = "1.0.22"
 
 [features]
 default = []

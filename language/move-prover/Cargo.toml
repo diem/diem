@@ -23,7 +23,7 @@ move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 
 # external dependencies
 async-trait = "0.1.41"
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 clap = "2.33.3"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
@@ -35,7 +35,7 @@ log = "0.4.11"
 num = "0.3.0"
 pretty = "0.10.0"
 rand = "0.7.3"
-regex = "1.4.1"
+regex = "1.4.2"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
 simplelog = "0.8.0"
