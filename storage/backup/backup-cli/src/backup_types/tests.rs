@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use executor_test_helpers::integration_test_impl::test_execution_with_storage_impl;
+use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
 use libradb::LibraDB;
@@ -148,6 +149,7 @@ fn test_end_to_end_impl(d: TestData) {
         &tgt_db_dir,
         false, /* read_only */
         None,  /* pruner */
+        RocksdbConfig::default(),
     )
     .unwrap();
     assert_eq!(

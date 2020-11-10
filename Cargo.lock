@@ -1238,6 +1238,7 @@ dependencies = [
  "anyhow",
  "executor",
  "libra-canonical-serialization",
+ "libra-config",
  "libra-crypto",
  "libra-temppath",
  "libra-types",
@@ -3469,6 +3470,7 @@ name = "libra-storage-inspector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "libra-config",
  "libra-crypto",
  "libra-logger",
  "libra-types",
@@ -3586,6 +3588,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "libra-canonical-serialization",
+ "libra-config",
  "libra-json-rpc-client",
  "libra-state-view",
  "libra-types",
@@ -3706,6 +3709,7 @@ dependencies = [
  "byteorder",
  "itertools 0.9.0",
  "libra-canonical-serialization",
+ "libra-config",
  "libra-crypto",
  "libra-infallible",
  "libra-jellyfish-merkle",
@@ -5756,6 +5760,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
+ "libra-config",
  "libra-metrics",
  "libra-temppath",
  "libra-workspace-hack",

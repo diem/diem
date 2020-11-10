@@ -281,6 +281,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             &node_config.storage.dir(),
             false, /* readonly */
             node_config.storage.prune_window,
+            node_config.storage.rocksdb_config,
         )
         .expect("DB should open."),
     );

@@ -36,6 +36,9 @@ use std::{
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
 
+/// Type alias to `rocksdb::Options`.
+pub type Options = rocksdb::Options;
+
 /// Type alias to improve readability.
 pub type ColumnFamilyName = &'static str;
 
@@ -200,6 +203,7 @@ impl DB {
         path: impl AsRef<Path>,
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
+        db_opts: &rocksdb::Options,
     ) -> Result<Self> {
         {
             let cfs_set: HashSet<_> = column_families.iter().collect();
@@ -213,15 +217,7 @@ impl DB {
             );
         }
 
-        let mut db_opts = rocksdb::Options::default();
-        db_opts.create_if_missing(true);
-        db_opts.create_missing_column_families(true);
-
-        // For now we set the max total WAL size to be 1G. This config can be useful when column
-        // families are updated at non-uniform frequencies.
-        db_opts.set_max_total_wal_size(1 << 30);
-
-        let db = DB::open_cf(&db_opts, path, name, column_families)?;
+        let db = DB::open_cf(db_opts, path, name, column_families)?;
         Ok(db)
     }
 
@@ -232,9 +228,9 @@ impl DB {
         path: impl AsRef<Path>,
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
+        db_opts: &rocksdb::Options,
     ) -> Result<Self> {
-        let db_opts = rocksdb::Options::default();
-        DB::open_cf_readonly(&db_opts, path, name, column_families)
+        DB::open_cf_readonly(db_opts, path, name, column_families)
     }
 
     /// Open db as secondary.
@@ -246,25 +242,19 @@ impl DB {
         secondary_path: P,
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
+        db_opts: &rocksdb::Options,
     ) -> Result<Self> {
-        let db_opts = rocksdb::Options::default();
-        DB::open_cf_as_secondary(
-            &db_opts,
-            primary_path,
-            secondary_path,
-            name,
-            column_families,
-        )
+        DB::open_cf_as_secondary(db_opts, primary_path, secondary_path, name, column_families)
     }
 
     fn open_cf(
-        opts: &rocksdb::Options,
+        db_opts: &rocksdb::Options,
         path: impl AsRef<Path>,
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<DB> {
         let inner = rocksdb::DB::open_cf_descriptors(
-            opts,
+            db_opts,
             path,
             column_families.iter().map(|cf_name| {
                 let mut cf_opts = rocksdb::Options::default();

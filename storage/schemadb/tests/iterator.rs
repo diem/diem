@@ -79,7 +79,10 @@ impl TestDB {
     fn new() -> Self {
         let tmpdir = libra_temppath::TempPath::new();
         let column_families = vec![DEFAULT_CF_NAME, TestSchema::COLUMN_FAMILY_NAME];
-        let db = DB::open(&tmpdir.path(), "test", column_families).unwrap();
+        let mut db_opts = rocksdb::Options::default();
+        db_opts.create_if_missing(true);
+        db_opts.create_missing_column_families(true);
+        let db = DB::open(&tmpdir.path(), "test", column_families, &db_opts).unwrap();
 
         db.put::<TestSchema>(&TestKey(1, 0, 0), &TestValue(100))
             .unwrap();

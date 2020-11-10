@@ -3,6 +3,7 @@
 
 use anyhow::{ensure, format_err, Context, Result};
 use executor::db_bootstrapper::calculate_genesis;
+use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use libra_vm::LibraVM;
@@ -41,13 +42,23 @@ fn main() -> Result<()> {
     );
 
     let tmpdir;
+
     let db = if opt.commit {
-        LibraDB::open(&opt.db_dir, false, None /* pruner */)
+        LibraDB::open(
+            &opt.db_dir,
+            false,
+            None, /* pruner */
+            RocksdbConfig::default(),
+        )
     } else {
         // When not committing, we open the DB as secondary so the tool is usable along side a
         // running node on the same DB. Using a TempPath since it won't run for long.
         tmpdir = TempPath::new();
-        LibraDB::open_as_secondary(opt.db_dir.as_path(), tmpdir.path())
+        LibraDB::open_as_secondary(
+            opt.db_dir.as_path(),
+            tmpdir.path(),
+            RocksdbConfig::default(),
+        )
     }
     .with_context(|| format_err!("Failed to open DB."))?;
     let db = DbReaderWriter::new(db);

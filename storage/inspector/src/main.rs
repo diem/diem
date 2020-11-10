@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
+use libra_config::config::RocksdbConfig;
 use libra_logger::info;
 use libradb::LibraDB;
 use std::path::PathBuf;
@@ -166,8 +167,13 @@ fn main() {
     let log_dir = tempfile::tempdir().expect("Unable to get temp dir");
     info!("Opening DB at: {:?}, log at {:?}", p, log_dir.path());
 
-    let db =
-        LibraDB::open(p, true /* readonly */, None /* pruner */).expect("Unable to open LibraDB");
+    let db = LibraDB::open(
+        p,
+        true, /* readonly */
+        None, /* pruner */
+        RocksdbConfig::default(),
+    )
+    .expect("Unable to open LibraDB");
     info!("DB opened successfully.");
 
     if let Some(cmd) = opt.cmd {

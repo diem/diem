@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use executor::db_bootstrapper;
+use libra_config::config::RocksdbConfig;
 use libra_management::{config::ConfigPath, error::Error, secure_backend::SharedBackend};
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
@@ -34,8 +35,8 @@ impl CreateWaypoint {
         let genesis = genesis_helper.execute()?;
 
         let path = TempPath::new();
-        let libradb =
-            LibraDB::open(&path, false, None).map_err(|e| Error::UnexpectedError(e.to_string()))?;
+        let libradb = LibraDB::open(&path, false, None, RocksdbConfig::default())
+            .map_err(|e| Error::UnexpectedError(e.to_string()))?;
         let db_rw = DbReaderWriter::new(libradb);
 
         db_bootstrapper::generate_waypoint::<LibraVM>(&db_rw, &genesis)

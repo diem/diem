@@ -6,7 +6,10 @@ use executor::{
     Executor,
 };
 use executor_types::BlockExecutor;
-use libra_config::{config::NodeConfig, utils::get_genesis_txn};
+use libra_config::{
+    config::{NodeConfig, RocksdbConfig},
+    utils::get_genesis_txn,
+};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::HashValue,
@@ -309,6 +312,7 @@ fn create_storage_service_and_executor(
             &config.storage.dir(),
             false, /* readonly */
             None,  /* pruner */
+            RocksdbConfig::default(),
         )
         .expect("DB should open."),
     );

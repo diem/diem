@@ -13,6 +13,7 @@ use crate::{
         GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
+use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::transaction::PRE_GENESIS_VERSION;
 use libradb::LibraDB;
@@ -77,6 +78,7 @@ fn end_to_end() {
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */
+        RocksdbConfig::default(),
     )
     .unwrap();
     assert_eq!(

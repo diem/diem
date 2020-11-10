@@ -80,16 +80,31 @@ fn get_column_families() -> Vec<ColumnFamilyName> {
 }
 
 fn open_db(dir: &libra_temppath::TempPath) -> DB {
-    DB::open(&dir.path(), "test", get_column_families()).expect("Failed to open DB.")
+    let mut db_opts = rocksdb::Options::default();
+    db_opts.create_if_missing(true);
+    db_opts.create_missing_column_families(true);
+    DB::open(&dir.path(), "test", get_column_families(), &db_opts).expect("Failed to open DB.")
 }
 
 fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
-    DB::open_readonly(&dir.path(), "test", get_column_families()).expect("Failed to open DB.")
+    DB::open_readonly(
+        &dir.path(),
+        "test",
+        get_column_families(),
+        &rocksdb::Options::default(),
+    )
+    .expect("Failed to open DB.")
 }
 
 fn open_db_as_secondary(dir: &libra_temppath::TempPath, dir_sec: &libra_temppath::TempPath) -> DB {
-    DB::open_as_secondary(&dir.path(), &dir_sec.path(), "test", get_column_families())
-        .expect("Failed to open DB.")
+    DB::open_as_secondary(
+        &dir.path(),
+        &dir_sec.path(),
+        "test",
+        get_column_families(),
+        &rocksdb::Options::default(),
+    )
+    .expect("Failed to open DB.")
 }
 
 struct TestDB {

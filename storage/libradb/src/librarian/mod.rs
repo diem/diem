@@ -3,6 +3,7 @@
 
 use crate::{LedgerStore, LibraDB, StateStore, TransactionStore};
 use anyhow::{ensure, format_err, Result};
+use libra_config::config::RocksdbConfig;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -23,6 +24,7 @@ impl Librarian {
             db_root_path,
             true, /* read only */
             None, /* no prune_window */
+            RocksdbConfig::default(),
         )?;
         Ok(Librarian {
             ledger_store: Arc::clone(&db.ledger_store),
