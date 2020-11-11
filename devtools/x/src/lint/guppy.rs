@@ -361,12 +361,10 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
 
         let package_graph = ctx.package_graph();
 
-        let package_query = package_graph
-            .query_forward(iter::once(package.id()))
-            .expect("valid package ID");
         let feature_query = package_graph
-            .feature_graph()
-            .query_packages(&package_query, filter);
+            .query_forward(iter::once(package.id()))
+            .expect("valid package ID")
+            .to_feature_query(filter);
 
         let mut overlays: Vec<(Option<&str>, &str, Option<&str>)> = vec![];
 

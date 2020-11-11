@@ -31,11 +31,10 @@ impl<'g> WorkspaceSubset<'g> {
         feature_filter: impl FeatureFilter<'g>,
         cargo_opts: &CargoOptions<'_>,
     ) -> Result<Self, guppy::Error> {
-        let package_query = package_graph.query_workspace_paths(paths)?;
         // Use the Cargo resolver to figure out which packages will be included.
         let build_set = package_graph
-            .feature_graph()
-            .query_packages(&package_query, feature_filter)
+            .query_workspace_paths(paths)?
+            .to_feature_query(feature_filter)
             .resolve_cargo(cargo_opts)?;
         let unified_set = build_set.host_features().union(build_set.target_features());
 

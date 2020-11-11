@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::context::XContext;
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use guppy::graph::{
     cargo::CargoOptions,
     feature::{all_filter, default_filter, FeatureQuery},
@@ -29,7 +29,6 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let summaries_config = config.summaries_config();
     let workspace_config = config.workspace_config();
     let pkg_graph = xctx.core().package_graph()?;
-    let feature_graph = pkg_graph.feature_graph();
     let default_members = xctx.core().default_members()?;
 
     let default_opts = summaries_config.default.to_cargo_options(pkg_graph)?;
@@ -58,18 +57,17 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     // * subsets (default features)
     for (name, subset_config) in &workspace_config.subsets {
         // TODO: cache these next to PackageGraph?
-        let package_query = pkg_graph
+        let feature_query = pkg_graph
             .query_workspace_paths(subset_config.members.iter().map(|path| path.as_path()))
-            .with_context(|| anyhow!("error while querying workspace paths for {}", name))?;
-        let feature_query = feature_graph.query_packages(&package_query, default_filter());
+            .with_context(|| format!("error while querying workspace paths for {}", name))?
+            .to_feature_query(default_filter());
         write_summary(name, feature_query, &default_opts, &out_dir)?;
 
         summary_count += 1;
     }
 
     // * full workspace set (all features)
-    let package_query = pkg_graph.query_workspace();
-    let feature_query = feature_graph.query_packages(&package_query, all_filter());
+    let feature_query = pkg_graph.query_workspace().to_feature_query(all_filter());
     write_summary("full", feature_query, &full_opts, &out_dir)?;
 
     summary_count += 1;
@@ -95,12 +93,12 @@ fn write_summary(
     build_set
         .to_summary(cargo_opts)?
         .write_to_string(&mut out)
-        .with_context(|| anyhow!("error while generating summary for '{}'", name))?;
+        .with_context(|| format!("error while generating summary for '{}'", name))?;
 
     let summary_path = out_dir.join(format!("summary-{}.toml", name));
 
     fs::write(&summary_path, &out).with_context(|| {
-        anyhow!(
+        format!(
             "error while writing summary file {}",
             summary_path.display()
         )

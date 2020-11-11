@@ -188,3 +188,9 @@ debug = true
 
 [profile.bench]
 debug = true
+
+# (sunshowers) temporary override to guppy to use a newer version, will be removed once determinator is released to
+# crates.io
+[patch.crates-io]
+guppy = { git = "https://github.com/facebookincubator/cargo-guppy", rev = "37351774bae259d76bead19e87415e64f85673f7" }
+guppy-summaries = { git = "https://github.com/facebookincubator/cargo-guppy", rev = "37351774bae259d76bead19e87415e64f85673f7" }

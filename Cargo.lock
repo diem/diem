@@ -578,13 +578,12 @@ checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
 name = "cargo_metadata"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8de60b887edf6d74370fc8eb177040da4847d971d6234c7b13a6da324ef0caf"
+checksum = "d5a5f7b42f606b7f23674f6f4d877628350682bc40687d3fae65679a58d55345"
 dependencies = [
- "semver",
+ "semver 0.11.0",
  "serde",
- "serde_derive",
  "serde_json",
 ]
 
@@ -617,9 +616,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c2be76f06820200669a77ae59a8328c6b8fe4496e8fb7fed02f2806a442c5ff"
+checksum = "cd0c100231f8a29c84a357798453c739519cd6b34c0b3f574f8701eec39b6572"
 dependencies = [
  "smallvec",
 ]
@@ -2081,8 +2080,7 @@ dependencies = [
 [[package]]
 name = "guppy"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b59f0f3681219f7e2b91319819bd0ec0ec4a6a24e6bf0f4567ce27bea9ae2a4"
+source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
 dependencies = [
  "cargo_metadata",
  "fixedbitset",
@@ -2093,7 +2091,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "petgraph",
- "semver",
+ "semver 0.11.0",
  "serde",
  "serde_json",
  "supercow",
@@ -2103,11 +2101,10 @@ dependencies = [
 [[package]]
 name = "guppy-summaries"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b906089a120dfba06ee51877d29b2219c112d07ff299e1462b2af205f4daa91"
+source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
 dependencies = [
  "diffus",
- "semver",
+ "semver 0.11.0",
  "serde",
  "toml",
 ]
@@ -4608,9 +4605,9 @@ checksum = "8d3b63360ec3cb337817c2dbd47ab4a0f170d285d8e5a2064600f3def1402397"
 
 [[package]]
 name = "once_cell"
-version = "1.4.1"
+version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
+checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
 
 [[package]]
 name = "oorandom"
@@ -5685,7 +5682,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
- "semver",
+ "semver 0.9.0",
 ]
 
 [[package]]
@@ -5870,7 +5867,16 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 dependencies = [
- "semver-parser",
+ "semver-parser 0.7.0",
+]
+
+[[package]]
+name = "semver"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
+dependencies = [
+ "semver-parser 0.10.1",
  "serde",
 ]
 
@@ -5879,6 +5885,15 @@ name = "semver-parser"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
+
+[[package]]
+name = "semver-parser"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42ef146c2ad5e5f4b037cd6ce2ebb775401729b19a82040c1beac9d36c7d1428"
+dependencies = [
+ "pest",
+]
 
 [[package]]
 name = "serde"
@@ -6598,8 +6613,7 @@ checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
 [[package]]
 name = "target-spec"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57947f86499434720da2a3ecaa6d1d88c44088a3985358fb7f4e8f7e0a8120d8"
+source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
 dependencies = [
  "cfg-expr",
  "serde",
