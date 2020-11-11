@@ -15,6 +15,7 @@ pub enum SystemError {
         cmd: &'static str,
         status: ExitStatus,
     },
+    GitRoot(Cow<'static, str>),
     Guppy(guppy::Error),
     Io {
         context: Cow<'static, str>,
@@ -32,6 +33,10 @@ impl SystemError {
             context: context.into(),
             err,
         }
+    }
+
+    pub fn git_root(msg: impl Into<Cow<'static, str>>) -> Self {
+        SystemError::GitRoot(msg.into())
     }
 
     pub fn de(
@@ -62,6 +67,7 @@ impl fmt::Display for SystemError {
                 Some(code) => write!(f, "'{}' failed with exit code {}", cmd, code),
                 None => write!(f, "'{}' terminated by signal", cmd),
             },
+            SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
             SystemError::Io { context, .. } | SystemError::Serde { context, .. } => {
                 write!(f, "while {}", context)
             }
@@ -73,7 +79,7 @@ impl fmt::Display for SystemError {
 impl error::Error for SystemError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            SystemError::Exec { .. } => None,
+            SystemError::Exec { .. } | SystemError::GitRoot(_) => None,
             SystemError::Io { err, .. } => Some(err),
             SystemError::Guppy(err) => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),

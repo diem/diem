@@ -10,9 +10,11 @@ use std::path::Path;
 
 mod debug_ignore;
 mod errors;
+mod git;
 mod graph;
 mod workspace_subset;
 
+use crate::git::GitCli;
 pub use debug_ignore::*;
 pub use errors::*;
 use graph::PackageGraphPlus;
@@ -22,23 +24,30 @@ pub use workspace_subset::*;
 #[derive(Debug)]
 pub struct XCoreContext {
     project_root: &'static Path,
+    git_cli: GitCli,
     package_graph_plus: DebugIgnore<OnceCell<PackageGraphPlus>>,
 }
 
 impl XCoreContext {
     /// Creates a new XCoreContext.
-    pub fn new(project_root: &'static Path) -> Self {
+    pub fn new(project_root: &'static Path) -> Result<Self> {
         // TODO: The project root should be managed by this struct, not by the global project_root
         // function.
-        Self {
+        Ok(Self {
             project_root,
+            git_cli: GitCli::new(project_root)?,
             package_graph_plus: DebugIgnore(OnceCell::new()),
-        }
+        })
     }
 
     /// Returns the project root for this workspace.
     pub fn project_root(&self) -> &'static Path {
         self.project_root
+    }
+
+    /// Returns the Git CLI for this workspace.
+    pub fn git_cli(&self) -> &GitCli {
+        &self.git_cli
     }
 
     /// Returns the package graph for this workspace.

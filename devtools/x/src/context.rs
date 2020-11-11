@@ -14,16 +14,16 @@ pub struct XContext {
 impl XContext {
     /// Creates a new `GlobalContext` by reading the config in the project root.
     pub fn new() -> Result<Self> {
-        Ok(Self::with_config(Config::from_project_root()?))
+        Self::with_config(Config::from_project_root()?)
     }
 
     /// Creates a new `GlobalContext` based on the given config.
-    pub fn with_config(config: Config) -> Self {
-        Self {
-            core: XCoreContext::new(project_root()),
+    pub fn with_config(config: Config) -> Result<Self> {
+        Ok(Self {
+            core: XCoreContext::new(project_root())?,
             installer: Installer::new(config.cargo_config().clone(), config.tools()),
             config,
-        }
+        })
     }
 
     /// Returns a reference to the config.

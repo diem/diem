@@ -1283,6 +1283,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "determinator"
+version = "0.1.0"
+source = "git+https://github.com/facebookincubator/cargo-guppy?rev=05ca64b59f28083891f9e915c5239056b9b67056#05ca64b59f28083891f9e915c5239056b9b67056"
+dependencies = [
+ "globset",
+ "guppy",
+ "itertools 0.9.0",
+ "once_cell",
+ "petgraph",
+ "rayon",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "diagen"
 version = "0.1.0"
 dependencies = [
@@ -2068,6 +2083,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
+name = "globset"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c152169ef1e421390738366d2f796655fec62621dabbd0fd476f905934061e4a"
+dependencies = [
+ "aho-corasick",
+ "bstr",
+ "fnv",
+ "log",
+ "regex",
+]
+
+[[package]]
 name = "goldenfile"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2091,6 +2119,7 @@ dependencies = [
  "once_cell",
  "pathdiff",
  "petgraph",
+ "rayon",
  "semver 0.11.0",
  "serde",
  "serde_json",
@@ -7558,7 +7587,9 @@ dependencies = [
 name = "x-core"
 version = "0.1.0"
 dependencies = [
+ "determinator",
  "guppy",
+ "indoc",
  "libra-workspace-hack",
  "once_cell",
  "rental",
