@@ -497,6 +497,7 @@ where
         Ok((node_key, new_leaf_node))
     }
 
+
     /// Returns the account state blob (if applicable) and the corresponding merkle proof.
     pub fn get_with_proof(
         &self,
@@ -505,12 +506,16 @@ where
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         // Empty tree just returns proof with no sibling hash.
         let mut next_node_key = NodeKey::new_empty_path(version);
-        let mut siblings = vec![];
         let nibble_path = NibblePath::new(key.to_vec());
         let mut nibble_iter = nibble_path.nibbles();
 
-        // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
-        // in the tree structure.
+        let mut internal_nodes = vec![];
+        
+        let mut ret_blob_option: Option<AccountStateBlob> = None;
+        let mut ret_proof_option = None;
+
+        // We limit the number of loops here deliberately to avoid potential
+        // cyclic graph bugs in the tree structure.
         for nibble_depth in 0..=ROOT_NIBBLE_HEIGHT {
             let next_node = self.reader.get_node(&next_node_key)?;
             match next_node {
@@ -518,34 +523,22 @@ where
                     let queried_child_index = nibble_iter
                         .next()
                         .ok_or_else(|| format_err!("ran out of nibbles"))?;
-                    let (child_node_key, mut siblings_in_internal) =
-                        internal_node.get_child_with_siblings(&next_node_key, queried_child_index);
-                    siblings.append(&mut siblings_in_internal);
+                    let child_node_key = internal_node.get_child_key(&next_node_key, queried_child_index);
+
+                    internal_nodes.push((internal_node, queried_child_index));
                     next_node_key = match child_node_key {
                         Some(node_key) => node_key,
                         None => {
-                            return Ok((
-                                None,
-                                SparseMerkleProof::new(None, {
-                                    siblings.reverse();
-                                    siblings
-                                }),
-                            ))
+                            break;
                         }
                     };
                 }
                 Node::Leaf(leaf_node) => {
-                    return Ok((
-                        if leaf_node.account_key() == key {
-                            Some(leaf_node.blob().clone())
-                        } else {
-                            None
-                        },
-                        SparseMerkleProof::new(Some(leaf_node.into()), {
-                            siblings.reverse();
-                            siblings
-                        }),
-                    ));
+                    if leaf_node.account_key() == key {
+                        ret_blob_option = Some(leaf_node.blob().clone());
+                    }
+                    ret_proof_option = Some(leaf_node.into());
+                    break;
                 }
                 Node::Null => {
                     if nibble_depth == 0 {
@@ -559,7 +552,20 @@ where
                 }
             }
         }
-        bail!("Jellyfish Merkle tree has cyclic graph inside.");
+
+        let mut siblings: Vec<HashValue> = internal_nodes
+            .into_iter()
+            // .into_par_iter()
+            .flat_map(|(internal_node, child_index)|
+                      internal_node.get_sibling_hashes(child_index))
+            .collect();
+
+        Ok((ret_blob_option,
+            SparseMerkleProof::new(ret_proof_option, {
+                siblings.reverse();
+                siblings
+            })
+        ))
     }
 
     /// Gets the proof that shows a list of keys up to `rightmost_key_to_prove` exist at `version`.
