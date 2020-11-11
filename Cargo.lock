@@ -3722,6 +3722,7 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "byteorder",
+ "criterion",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-crypto",
@@ -6366,6 +6367,7 @@ name = "storage-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "criterion",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-crypto",
@@ -6374,6 +6376,7 @@ dependencies = [
  "libra-types",
  "libra-workspace-hack",
  "move-core-types",
+ "rayon",
  "scratchpad",
  "serde",
  "thiserror",

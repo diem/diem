@@ -28,6 +28,7 @@ use std::{
     sync::Arc,
 };
 use thiserror::Error;
+use rayon::prelude::*;
 
 #[cfg(any(feature = "testing", feature = "fuzzing"))]
 pub mod mock;
@@ -322,6 +323,11 @@ impl MoveStorage for &dyn DbReader {
             .map(|path| path.address)
             .collect();
 
+        // Simulate the slowed down hashing behavior, only here.
+        // for _x in criterion::black_box(0)..criterion::black_box(22*30000*addresses.len()) {
+        //     let _y = criterion::black_box(_x);
+        // }
+        
         let results = addresses
             .iter()
             .map(|addr| self.get_account_state_with_proof_by_version(*addr, version))

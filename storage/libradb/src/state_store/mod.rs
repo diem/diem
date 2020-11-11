@@ -44,6 +44,11 @@ impl StateStore {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        // Simulate the slowed down hashing behavior, only here.
+        // for _x in criterion::black_box(0)..criterion::black_box(22*30000) {
+            // let _y = criterion::black_box(_x);
+        // }
+        
         JellyfishMerkleTree::new(self).get_with_proof(address.hash(), version)
     }
 

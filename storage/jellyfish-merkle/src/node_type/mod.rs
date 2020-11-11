@@ -424,9 +424,11 @@ impl InternalNode {
             // let left_child = left_computation.join().unwrap();
             
             // Simulate the slowed down hashing behavior, only here.
-            // for _x in criterion::black_box(0)..criterion::black_box(30000) {
-            //     let _y = criterion::black_box(_x);
-            // }
+            for _x in criterion::black_box(0)..criterion::black_box(2000) {
+                for _y in criterion::black_box(0)..criterion::black_box(2000) {
+                    let _z = criterion::black_box(_x);
+                }
+            }
             
             SparseMerkleInternalNode::new(left_child, right_child).hash()
 

@@ -686,6 +686,10 @@ impl DbReader for LibraDB {
             let txn_info_with_proof = self
                 .ledger_store
                 .get_transaction_info_with_proof(version, ledger_version)?;
+            // Simulate the slowed down hashing behavior, only here.
+            // for _x in criterion::black_box(0)..criterion::black_box(22*30000) {
+            //     let _y = criterion::black_box(_x);
+            // }
             let (account_state_blob, sparse_merkle_proof) = self
                 .state_store
                 .get_account_state_with_proof_by_version(address, version)?;
