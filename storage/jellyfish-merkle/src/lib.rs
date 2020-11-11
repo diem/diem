@@ -555,7 +555,6 @@ where
 
         let mut siblings: Vec<HashValue> = internal_nodes
             .into_iter()
-            // .into_par_iter()
             .flat_map(|(internal_node, child_index)|
                       internal_node.get_sibling_hashes(child_index))
             .collect();
