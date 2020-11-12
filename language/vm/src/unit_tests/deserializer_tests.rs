@@ -8,6 +8,7 @@ use crate::{
 use move_core_types::vm_status::StatusCode;
 
 #[test]
+#[allow(clippy::same_item_push)]
 fn malformed_simple() {
     // empty binary
     let mut binary = vec![];

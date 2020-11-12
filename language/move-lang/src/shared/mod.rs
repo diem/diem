@@ -47,9 +47,7 @@ impl Address {
         let len = result.len();
         if len < ADDRESS_LENGTH {
             result.reverse();
-            for _ in len..ADDRESS_LENGTH {
-                result.push(0);
-            }
+            result.resize(ADDRESS_LENGTH, 0);
             result.reverse();
         }
 

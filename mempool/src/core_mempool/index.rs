@@ -173,6 +173,7 @@ impl TTLIndex {
     }
 }
 
+#[allow(clippy::derive_ord_xor_partial_ord)]
 #[derive(Eq, PartialEq, PartialOrd, Clone, Debug)]
 pub struct TTLOrderingKey {
     pub expiration_time: Duration,
@@ -180,6 +181,9 @@ pub struct TTLOrderingKey {
     pub sequence_number: u64,
 }
 
+/// Be very careful with this, to not break the partial ordering.
+/// See:  https://rust-lang.github.io/rust-clippy/master/index.html#derive_ord_xor_partial_ord
+#[allow(clippy::derive_ord_xor_partial_ord)]
 impl Ord for TTLOrderingKey {
     fn cmp(&self, other: &TTLOrderingKey) -> Ordering {
         match self.expiration_time.cmp(&other.expiration_time) {

@@ -4235,7 +4235,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             EA::Exp_::Call(maccess, type_params, args) => {
                 // Need to make a &[&Exp] out of args.
-                let args = args.value.iter().map(|e| e).collect_vec();
+                let args = args.value.iter().collect_vec();
                 self.translate_fun_call(
                     expected_type,
                     &loc,

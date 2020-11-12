@@ -30,8 +30,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
     let network_msgs = network_msgs
         .into_iter()
-        .map(|msg| lcs::to_bytes(&msg).unwrap())
-        .collect::<Vec<_>>();
+        .map(|msg| lcs::to_bytes(&msg).unwrap());
 
     let (write_socket, mut read_socket) = MemorySocket::new_pair();
     let mut writer = FramedWrite::new(IoCompat::new(write_socket), message_codec(MAX_FRAME_SIZE));

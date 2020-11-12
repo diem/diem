@@ -169,7 +169,7 @@ mod tests {
                     assert!(seen_max_concurrency.load(Ordering::Relaxed));
                 }
 
-                outputs.sort();
+                outputs.sort_unstable();
                 assert_eq!(outputs, (0..num_sleeps).collect::<Vec<_>>());
             });
         }

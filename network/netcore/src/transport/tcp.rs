@@ -116,16 +116,14 @@ impl Transport for TcpTransport {
 }
 
 /// Try to lookup the dns name, then filter addrs according to the `IpFilter`.
-fn resolve_with_filter<'a>(
+async fn resolve_with_filter(
     ip_filter: IpFilter,
-    dns_name: &'a str,
+    dns_name: &str,
     port: u16,
-) -> impl Future<Output = io::Result<impl Iterator<Item = SocketAddr> + 'a>> + 'a {
-    async move {
-        Ok(lookup_host((dns_name, port))
-            .await?
-            .filter(move |socketaddr| ip_filter.matches(socketaddr.ip())))
-    }
+) -> io::Result<impl Iterator<Item = SocketAddr> + '_> {
+    Ok(lookup_host((dns_name, port))
+        .await?
+        .filter(move |socketaddr| ip_filter.matches(socketaddr.ip())))
 }
 
 /// Note: we need to take ownership of this `NetworkAddress` (instead of just

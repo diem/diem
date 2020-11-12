@@ -80,17 +80,15 @@ proptest! {
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
-        let all_epoch_changes = ledger_infos_with_sigs
+
+        let expected: Vec<_> = ledger_infos_with_sigs
             .into_iter()
             .filter(|ledger_info_with_sigs| {
                 let li = ledger_info_with_sigs.ledger_info();
                 start_epoch <= li.epoch()
                     && li.epoch() < end_epoch
                     && li.next_epoch_state().is_some()
-            })
-            .collect::<Vec<_>>();
-
-        let expected: Vec<_> = all_epoch_changes.into_iter().collect();
+            }).collect();
         prop_assert_eq!(actual, expected);
     }
 

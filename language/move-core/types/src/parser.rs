@@ -36,10 +36,7 @@ enum Token {
 
 impl Token {
     fn is_whitespace(&self) -> bool {
-        match self {
-            Self::Whitespace(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Whitespace(_))
     }
 }
 

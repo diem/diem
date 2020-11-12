@@ -50,11 +50,13 @@ fn find_single_target_labels(start: Label, blocks: &BasicBlocks) -> BTreeSet<Lab
         .collect()
 }
 
+#[allow(clippy::needless_collect)]
 fn inline_single_target_blocks(
     single_jump_targets: &BTreeSet<Label>,
     start: Label,
     blocks: &mut BasicBlocks,
 ) -> bool {
+    //cleanup of needless_collect would result in mut and non mut borrows, and compilation warning.
     let labels_vec = blocks.keys().cloned().collect::<Vec<_>>();
     let mut labels = labels_vec.into_iter();
     let mut next = labels.next();

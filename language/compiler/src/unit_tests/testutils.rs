@@ -23,10 +23,7 @@ macro_rules! instr_count {
             .code
             .code
             .iter()
-            .filter(|ins| match ins {
-                $instr => true,
-                _ => false,
-            })
+            .filter(|ins| matches!(ins, $instr))
             .count();
     };
 }

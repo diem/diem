@@ -340,7 +340,7 @@ fn test_parking_lot_eviction() {
         .iter()
         .map(SignedTransaction::sequence_number)
         .collect();
-    txns.sort();
+    txns.sort_unstable();
     assert_eq!(txns, vec![0, 0, 1, 1, 2]);
 
     // Make sure we can't insert any new transactions, cause parking lot supposed to be empty by now
@@ -369,7 +369,7 @@ fn test_parking_lot_evict_only_for_ready_txn_insertion() {
         .iter()
         .map(SignedTransaction::sequence_number)
         .collect();
-    txns.sort();
+    txns.sort_unstable();
     assert_eq!(txns, vec![0, 1, 2, 3, 4]);
 
     // trying to insert a tx that would not be ready after inserting should fail

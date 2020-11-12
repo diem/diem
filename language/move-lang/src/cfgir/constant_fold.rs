@@ -64,21 +64,15 @@ fn optimize_exp(e: &mut Exp) -> bool {
         E::ModuleCall(mcall) => optimize_exp(&mut mcall.arguments),
         E::Builtin(_, e) | E::Freeze(e) | E::Dereference(e) | E::Borrow(_, e, _) => optimize_exp(e),
 
-        E::Pack(_, _, fields) => {
-            let results = fields
-                .iter_mut()
-                .map(|(_, _, e)| optimize_exp(e))
-                .collect::<Vec<_>>();
-            results.into_iter().any(|changed| changed)
-        }
+        E::Pack(_, _, fields) => fields
+            .iter_mut()
+            .map(|(_, _, e)| optimize_exp(e))
+            .any(|changed| changed),
 
-        E::ExpList(es) => {
-            let results = es
-                .iter_mut()
-                .map(|item| optimize_exp_item(item))
-                .collect::<Vec<_>>();
-            results.into_iter().any(|changed| changed)
-        }
+        E::ExpList(es) => es
+            .iter_mut()
+            .map(|item| optimize_exp_item(item))
+            .any(|changed| changed),
 
         //************************************
         // Foldable cases

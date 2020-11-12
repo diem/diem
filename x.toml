@@ -5,7 +5,7 @@ version = "0.5.15"
 smoke-test = { path = "smoke-test" }
 
 [cargo]
-toolchain = "nightly-2020-07-08"
+toolchain = "nightly-2020-10-09"
 flags = "-Zfeatures=all"
 
 [cargo.sccache]

@@ -318,7 +318,7 @@ impl SafetyRules {
 
         if let Some(public_key) = self.execution_public_key.as_ref() {
             execution_signature
-                .ok_or_else(|| Error::VoteProposalSignatureNotFound)?
+                .ok_or(Error::VoteProposalSignatureNotFound)?
                 .verify(vote_proposal, public_key)
                 .map_err(|error| Error::InternalError(error.to_string()))?;
         }

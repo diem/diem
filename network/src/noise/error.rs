@@ -85,9 +85,6 @@ impl NoiseHandshakeError {
     /// immediately alert an engineer if we hit one of these errors.
     pub fn should_security_log(&self) -> bool {
         use NoiseHandshakeError::*;
-        match self {
-            ServerReplayDetected(_, _) => true,
-            _ => false,
-        }
+        matches!(self, ServerReplayDetected(_, _))
     }
 }

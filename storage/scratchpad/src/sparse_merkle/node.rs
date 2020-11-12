@@ -110,20 +110,12 @@ impl Node {
 
     #[cfg(test)]
     pub fn is_subtree(&self) -> bool {
-        if let Node::Subtree(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Node::Subtree(_))
     }
 
     #[cfg(test)]
     pub fn is_empty(&self) -> bool {
-        if let Node::Empty = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Node::Empty)
     }
 
     pub fn hash(&self) -> HashValue {

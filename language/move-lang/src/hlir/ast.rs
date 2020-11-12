@@ -355,12 +355,12 @@ impl Exp {
 
 impl UnannotatedExp_ {
     pub fn is_unit(&self) -> bool {
-        match self {
+        matches!(
+            self,
             UnannotatedExp_::Unit {
                 trailing: _trailing,
-            } => true,
-            _ => false,
-        }
+            }
+        )
     }
 }
 
