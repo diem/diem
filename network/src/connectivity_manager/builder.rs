@@ -38,7 +38,7 @@ struct ConnectivityManagerBuilderConfig {
     connection_reqs_tx: ConnectionRequestSender,
     connection_notifs_rx: conn_notifs_channel::Receiver,
     requests_rx: channel::Receiver<ConnectivityRequest>,
-    connection_limit: Option<usize>,
+    outbound_connection_limit: Option<usize>,
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -67,7 +67,7 @@ impl ConnectivityManagerBuilder {
         channel_size: usize,
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_notifs_channel::Receiver,
-        connection_limit: Option<usize>,
+        outbound_connection_limit: Option<usize>,
     ) -> Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
             channel_size,
@@ -85,7 +85,7 @@ impl ConnectivityManagerBuilder {
                 connection_reqs_tx,
                 connection_notifs_rx,
                 requests_rx: conn_mgr_reqs_rx,
-                connection_limit,
+                outbound_connection_limit,
             }),
             connectivity_manager: None,
             conn_mgr_reqs_tx,
@@ -118,7 +118,7 @@ impl ConnectivityManagerBuilder {
                     config.requests_rx,
                     ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
                     config.max_connection_delay_ms,
-                    config.connection_limit,
+                    config.outbound_connection_limit,
                 )
             })
         });

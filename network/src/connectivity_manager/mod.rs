@@ -95,7 +95,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// allows for easy debugging.
     event_id: u32,
     /// A way to limit the number of connected peers by outgoing dials.
-    connection_limit: Option<usize>,
+    outbound_connection_limit: Option<usize>,
     /// Random for shuffling which peers will be dialed
     rng: SmallRng,
 }
@@ -199,7 +199,7 @@ where
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
-        connection_limit: Option<usize>,
+        outbound_connection_limit: Option<usize>,
     ) -> Self {
         assert!(
             eligible.read().is_empty(),
@@ -227,7 +227,7 @@ where
             backoff_strategy,
             max_delay_ms,
             event_id: 0,
-            connection_limit,
+            outbound_connection_limit,
             rng: SmallRng::from_entropy(),
         };
 
@@ -372,7 +372,7 @@ where
         // This does not limit the number of incoming connections
         // It enforces that a full node cannot have more outgoing connections than `connection_limit`
         // including in flight dials.
-        let to_connect_size = if let Some(conn_limit) = self.connection_limit {
+        let to_connect_size = if let Some(conn_limit) = self.outbound_connection_limit {
             min(
                 conn_limit.saturating_sub(self.connected.len() + self.dial_queue.len()),
                 to_connect.len(),
