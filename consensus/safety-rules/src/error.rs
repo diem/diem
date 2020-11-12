@@ -33,6 +33,10 @@ pub enum Error {
     SecureStorageError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    #[error("Validator key not found: {0}")]
+    ValidatorKeyNotFound(String),
+    #[error("The validator is not in the validator set. Address not in set: {0}")]
+    ValidatorNotInSet(String),
     #[error("Vote proposal missing expected signature")]
     VoteProposalSignatureNotFound,
 }

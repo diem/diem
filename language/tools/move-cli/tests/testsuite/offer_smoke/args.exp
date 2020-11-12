@@ -1,0 +1,22 @@
+Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
+Command `publish modules`:
+Command `run scripts/create_offer.move --signers 0xA11CE`:
+Command `run scripts/redeem_offer.move --signers 0xCA21`:
+Execution aborted with code 7 in module 00000000000000000000000000000001::Offer.
+Command `run scripts/redeem_offer_bob.move --signers 0xB0B`:
+Command `run scripts/reclaim_offer.move --signers 0xB0B`:
+Command `clean`:
+Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
+Command `run scripts/self_offer_create.move --signers 0xA11CE`:
+Command `clean`:
+Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
+Command `run scripts/multi_offer.move --signers 0xA11CE`:
+Execution aborted with code 262 in module 00000000000000000000000000000001::Offer.
+Command `clean`:
+Command `publish ../../../../../stdlib/modules`:
+Command `publish ../../../../../stdlib/nursery`:
+Command `run scripts/non_existent_offer.move --signers 0xA11CE`:
+Execution aborted with code 517 in module 00000000000000000000000000000001::Offer.

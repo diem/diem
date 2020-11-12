@@ -10,8 +10,8 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
-structopt = "0.3.18"
+anyhow = "1.0.34"
+structopt = "0.3.20"
 
 executor = { path = "../executor", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

@@ -247,44 +247,7 @@ impl SafetyRules {
             .cloned()
             .ok_or(Error::InvalidLedgerInfo)?;
 
-        let author = self.persistent_storage.author()?;
-        if let Some(expected_key) = epoch_state.verifier.get_public_key(&author) {
-            let curr_key = self.signer().ok().map(|s| s.public_key());
-            if curr_key != Some(expected_key.clone()) {
-                let consensus_key = self
-                    .persistent_storage
-                    .consensus_key_for_version(expected_key)
-                    .map_err(|e| {
-                        let error = Error::InternalError(format!(
-                            "Validator key not found: {:?}",
-                            e.to_string()
-                        ));
-                        error!(
-                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error)
-                                .error(&error),
-                        );
-
-                        self.validator_signer = None;
-                        error
-                    })?;
-
-                self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
-            }
-
-            debug!(
-                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
-                "in set",
-            );
-        } else {
-            debug!(
-                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
-                "not in set",
-            );
-            self.validator_signer = None;
-        }
-
         let current_epoch = self.persistent_storage.safety_data()?.epoch;
-
         if current_epoch < epoch_state.epoch {
             // This is ordered specifically to avoid configuration issues:
             // * First set the waypoint to lock in the minimum restarting point,
@@ -303,9 +266,42 @@ impl SafetyRules {
 
             info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update).epoch(epoch_state.epoch));
         }
-        self.epoch_state = Some(epoch_state);
+        self.epoch_state = Some(epoch_state.clone());
 
-        Ok(())
+        let author = self.persistent_storage.author()?;
+        let expected_key = epoch_state.verifier.get_public_key(&author);
+        let initialize_result = match expected_key {
+            None => Err(Error::ValidatorNotInSet(author.to_string())),
+            Some(expected_key) => {
+                let current_key = self.signer().ok().map(|s| s.public_key());
+                if current_key == Some(expected_key.clone()) {
+                    debug!(
+                        SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
+                        "in set",
+                    );
+                    Ok(())
+                } else {
+                    match self
+                        .persistent_storage
+                        .consensus_key_for_version(expected_key)
+                    {
+                        Err(error) => Err(Error::ValidatorKeyNotFound(error.to_string())),
+                        Ok(consensus_key) => {
+                            self.validator_signer =
+                                Some(ValidatorSigner::new(author, consensus_key));
+                            Ok(())
+                        }
+                    }
+                }
+            }
+        };
+        initialize_result.map_err(|error| {
+            info!(
+                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error).error(&error),
+            );
+            self.validator_signer = None;
+            error
+        })
     }
 
     fn guarded_construct_and_sign_vote(

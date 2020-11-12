@@ -48,16 +48,6 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
-script {
-use 0x1::DesignatedDealer;
-use 0x1::Coin1::Coin1;
-fun main(account: &signer) {
-    DesignatedDealer::add_tier<Coin1>(account, {{bob}}, 0);
-}
-}
-// check: "Keep(ABORTED { code: 258,"
-
-//! new-transaction
 //! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{bob}}, {{bob::auth_key}}, x"", false
@@ -65,17 +55,6 @@ fun main(account: &signer) {
 stdlib_script::create_designated_dealer
 // check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::DesignatedDealer;
-use 0x1::Coin1::Coin1;
-fun main(account: &signer) {
-    DesignatedDealer::add_tier<Coin1>(account, {{bob}}, 1000000000000);
-}
-}
-// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 script {

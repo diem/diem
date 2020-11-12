@@ -1,13 +1,9 @@
 //! account: bob, 0Coin1
 
-module BurnCapabilityHolder {
-    use 0x1::Libra;
-    resource struct Holder<Token> {
-        cap: Libra::BurnCapability<Token>,
-    }
-
-    public fun hold<Token>(account: &signer, cap: Libra::BurnCapability<Token>) {
-        move_to(account, Holder<Token>{ cap })
+module Holder {
+    resource struct Holder<T> { x: T }
+    public fun hold<T>(account: &signer, x: T)  {
+        move_to(account, Holder<T> { x })
     }
 }
 // check: "Keep(EXECUTED)"
@@ -17,7 +13,7 @@ module BurnCapabilityHolder {
 script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
-use 0x1::Offer;
+use {{default}}::Holder;
 fun main(account: &signer) {
     let coin1_tmp = Libra::mint<Coin1>(account, 10000);
     assert(Libra::value<Coin1>(&coin1_tmp) == 10000, 0);
@@ -32,7 +28,7 @@ fun main(account: &signer) {
     assert(Libra::value<Coin1>(&coin1_tmp1) == 5000 , 6);
     let coin1_tmp = Libra::join(coin1_tmp1, coin1_tmp2);
     assert(Libra::value<Coin1>(&coin1_tmp) == 10000, 7);
-    Offer::create(account, coin1_tmp, {{blessed}});
+    Holder::hold(account, coin1_tmp);
 
     Libra::destroy_zero(Libra::zero<Coin1>());
 }
@@ -93,21 +89,12 @@ script {
 script {
     use 0x1::Libra;
     use 0x1::Coin1::Coin1;
-    use {{default}}::BurnCapabilityHolder;
+    use {{default}}::Holder;
     fun main(account: &signer)  {
-        BurnCapabilityHolder::hold(
+        Holder::hold(
             account,
             Libra::remove_burn_capability<Coin1>(account)
         );
-    }
-}
-// check: "Keep(EXECUTED)"
-
-//! new-transaction
-module Holder {
-    resource struct Holder<T> { x: T }
-    public fun hold<T>(account: &signer, x: T)  {
-        move_to(account, Holder<T> { x })
     }
 }
 // check: "Keep(EXECUTED)"

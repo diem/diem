@@ -5,7 +5,7 @@ module M {
         let R { } = r;
         r = R {};
         if  (true) {
-            let R { } = r
+            let R { } = r;
         }
     }
 

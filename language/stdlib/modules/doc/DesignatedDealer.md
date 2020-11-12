@@ -443,7 +443,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account: &signer, dd_addr: address, tier_upperbound: u64)
+<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account: &signer, dd_addr: address, tier_upperbound: u64)
 </code></pre>
 
 
@@ -452,7 +452,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(
     tc_account: &signer,
     dd_addr: address,
     tier_upperbound: u64

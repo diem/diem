@@ -103,7 +103,7 @@ module ApprovedPayment {
 
     // Remove and destroy the ApprovedPayment resource under the sender's account
     public fun unpublish_from_sender(sender: &signer) acquires T {
-        let T { public_key: _ } = move_from<T>(Signer::address_of(sender))
+        let T { public_key: _ } = move_from<T>(Signer::address_of(sender));
     }
 
     // Return true if an ApprovedPayment resource exists under `addr`

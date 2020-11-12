@@ -10,10 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.33"
-structopt = "0.3.18"
-serde = "1.0.116"
-serde_json = "1.0.58"
+anyhow = "1.0.34"
+structopt = "0.3.20"
+serde = "1.0.117"
+serde_json = "1.0.59"
 
 libradb = { path = "../libradb", version = "0.1.0", features = ["librarian"] }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

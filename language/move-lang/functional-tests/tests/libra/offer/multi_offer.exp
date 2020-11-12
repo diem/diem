@@ -1,6 +1,0 @@
-[0] Transaction(0)
-[1] Move VM Status: EXECUTED
-[2] Transaction Status: Keep(EXECUTED)
-[3] Transaction(1)
-[4] Move VM Status: ABORTED { code: 262, location: 00000000000000000000000000000001::Offer }
-[5] Transaction Status: Keep(ABORTED { code: 262, location: 00000000000000000000000000000001::Offer })
