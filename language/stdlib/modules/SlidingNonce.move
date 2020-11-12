@@ -7,7 +7,6 @@ address 0x1 {
 /// When nonce X is recorded, all transactions with nonces lower then X-128 will abort.
 module SlidingNonce {
     use 0x1::Signer;
-    use 0x1::Roles;
     use 0x1::Errors;
 
     resource struct SlidingNonce {
@@ -103,27 +102,9 @@ module SlidingNonce {
         assert(!exists<SlidingNonce>(Signer::address_of(account)), Errors::already_published(ENONCE_ALREADY_PUBLISHED));
         move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
-
-    /// Publishes nonce resource into specific account
-    /// Only the Libra root account can create this resource for different accounts
-    public fun publish_nonce_resource(
-        lr_account: &signer,
-        account: &signer
-    ) {
-        Roles::assert_libra_root(lr_account);
-        let new_resource = SlidingNonce {
-            min_nonce: 0,
-            nonce_mask: 0,
-        };
-        assert(!exists<SlidingNonce>(Signer::address_of(account)),
-                Errors::already_published(ENONCE_ALREADY_PUBLISHED));
-        move_to(account, new_resource);
-    }
-
-    spec fun publish_nonce_resource {
+    spec fun publish {
         pragma opaque;
         modifies global<SlidingNonce>(Signer::spec_address_of(account));
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
         aborts_if exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
         ensures exists<SlidingNonce>(Signer::spec_address_of(account));
     }

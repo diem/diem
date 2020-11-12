@@ -155,7 +155,7 @@ module RecoveryAddress {
         // Only accept the rotation capability if both accounts belong to the same VASP
         let to_recover_address = *LibraAccount::key_rotation_capability_address(&to_recover);
         assert(
-            VASP::parent_address(recovery_address) == VASP::parent_address(to_recover_address),
+            VASP::is_same_vasp(recovery_address, to_recover_address),
             Errors::invalid_argument(EINVALID_KEY_ROTATION_DELEGATION)
         );
 

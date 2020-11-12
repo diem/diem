@@ -558,7 +558,7 @@ NB! currently we do not require the the operator_account to be set
 ## Function `get_config`
 
 Get Config
-Aborts if there is no ValidatorConfig resource of if its config is empty
+Aborts if there is no ValidatorConfig resource or if its config is empty
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a>

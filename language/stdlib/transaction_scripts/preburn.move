@@ -37,6 +37,8 @@ use 0x1::LibraAccount;
 /// | `Errors::NOT_PUBLISHED`  | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`              | `account` doesn't hold a balance in `Token`.                                            |
 /// | `Errors::NOT_PUBLISHED`  | `Libra::EPREBURN`                                        | `account` doesn't have a `Libra::Preburn<Token>` resource published under it.           |
 /// | `Errors::INVALID_STATE`  | `Libra::EPREBURN_OCCUPIED`                               | The `value` field in the `Libra::Preburn<Token>` resource under the sender is non-zero. |
+/// | `Errors::NOT_PUBLISHED`  | `Roles::EROLE_ID`                                        | The `account` did not have a role assigned to it.                                       |
+/// | `Errors::REQUIRES_ROLE`  | `Roles::EDESIGNATED_DEALER`                              | The `account` did not have the role of DesignatedDealer.                                |
 ///
 /// # Related Scripts
 /// * `Script::cancel_burn`
@@ -64,6 +66,7 @@ spec fun preburn {
     aborts_with [check]
         Errors::NOT_PUBLISHED,
         Errors::INVALID_STATE,
+        Errors::REQUIRES_ROLE,
         Errors::LIMIT_EXCEEDED;
 
     /// **Access Control:**

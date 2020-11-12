@@ -57,8 +57,7 @@ module Event {
         }
     }
 
-    /// Emit an event with payload `msg` by using handle's key and counter. Will change the payload from vector<u8> to a
-    /// generic type parameter once we have generics.
+    /// Emit an event with payload `msg` by using `handle_ref`'s key and counter.
     public fun emit_event<T: copyable>(handle_ref: &mut EventHandle<T>, msg: T) {
         let guid = *&handle_ref.guid;
 

@@ -32,8 +32,7 @@ module Libra {
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
-    /// of `CoinType` currency to be burned by the holder of the
-    /// and the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
+    /// of `CoinType` currency to be burned by the holder of it.
     resource struct BurnCapability<CoinType> { }
 
     /// A `MintEvent` is emitted every time a Libra coin is minted. This
@@ -196,9 +195,9 @@ module Libra {
     /// The destruction of a non-zero coin was attempted. Non-zero coins must be burned.
     const EDESTRUCTION_OF_NONZERO_COIN: u64 = 8;
     /// A property expected of `MintCapability` didn't hold
-    const EMINT_CAPABILITY: u64 = 10; // TODO: This error code and below should decrease by 1.
+    const EMINT_CAPABILITY: u64 = 9;
     /// A withdrawal greater than the value of the coin was attempted.
-    const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 11;
+    const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 10;
 
     /// Initialization of the `Libra` module. Initializes the set of
     /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
@@ -348,7 +347,8 @@ module Libra {
         assert(info.can_mint, Errors::invalid_state(EMINTING_NOT_ALLOWED));
         assert(MAX_U128 - info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
         info.total_value = info.total_value + (value as u128);
-        // don't emit mint events for synthetic currenices
+        // don't emit mint events for synthetic currenices as this does not
+        // change the total value of fiat currencies held on-chain.
         if (!info.is_synthetic) {
             Event::emit_event(
                 &mut info.mint_events,
@@ -404,7 +404,10 @@ module Libra {
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         assert(MAX_U64 - info.preburn_value >= coin_value, Errors::limit_exceeded(ECOIN));
         info.preburn_value = info.preburn_value + coin_value;
-        // don't emit preburn events for synthetic currencies
+        // don't emit preburn events for synthetic currenices as this does not
+        // change the total value of fiat currencies held on-chain, and
+        // therefore no off-chain movement of the backing coins needs to be
+        // performed.
         if (!info.is_synthetic) {
             Event::emit_event(
                 &mut info.preburn_events,
@@ -498,6 +501,7 @@ module Libra {
         account: &signer,
         coin: Libra<CoinType>
     ) acquires CurrencyInfo, Preburn {
+        Roles::assert_designated_dealer(account);
         let sender = Signer::address_of(account);
         assert(exists<Preburn<CoinType>>(sender), Errors::not_published(EPREBURN));
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
@@ -514,6 +518,7 @@ module Libra {
         let account_addr = Signer::spec_address_of(account);
         let preburn = global<Preburn<CoinType>>(account_addr);
         /// Must abort if the account does have the Preburn resource [[H4]][PERMISSION].
+        include Roles::AbortsIfNotDesignatedDealer;
         include AbortsIfNoPreburn<CoinType>{preburn_address: account_addr};
         include PreburnWithResourceAbortsIf<CoinType>{preburn: preburn};
     }
@@ -565,7 +570,8 @@ module Libra {
         info.total_value = info.total_value - (value as u128);
         assert(info.preburn_value >= value, Errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - value;
-        // don't emit burn events for synthetic currencies
+        // don't emit burn events for synthetic currenices as this does not
+        // change the total value of fiat currencies held on-chain.
         if (!info.is_synthetic) {
             Event::emit_event(
                 &mut info.burn_events,
@@ -619,8 +625,8 @@ module Libra {
         let amount = value(&coin);
         assert(info.preburn_value >= amount, Errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - amount;
-        // Don't emit cancel burn events for synthetic currencies. cancel burn shouldn't be be used
-        // for synthetics in the first place
+        // Don't emit cancel burn events for synthetic currencies. cancel_burn
+        // shouldn't be be used for synthetic coins in the first place.
         if (!info.is_synthetic) {
             Event::emit_event(
                 &mut info.cancel_burn_events,
@@ -1001,9 +1007,8 @@ module Libra {
     }
 
     public fun is_SCS_currency<CoinType>(): bool acquires CurrencyInfo {
-        assert_is_currency<CoinType>();
-        let info = borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        !info.is_synthetic
+        is_currency<CoinType>() &&
+        !borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).is_synthetic
     }
 
 
@@ -1144,7 +1149,7 @@ module Libra {
     }
     spec schema AbortsIfNoSCSCurrency<CoinType> {
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if !spec_is_SCS_currency<CoinType>() with Errors::INVALID_STATE;
+        aborts_if !is_SCS_currency<CoinType>() with Errors::INVALID_STATE;
     }
 
     // =================================================================
@@ -1178,7 +1183,7 @@ module Libra {
         /// The permission "MintCurrency" is unique per currency [[I1]][PERMISSION].
         /// At most one address has a mint capability for SCS CoinType
         invariant [global, isolated]
-            forall coin_type: type where spec_is_SCS_currency<coin_type>():
+            forall coin_type: type where is_SCS_currency<coin_type>():
                 forall mint_cap_owner1: address, mint_cap_owner2: address
                      where exists<MintCapability<coin_type>>(mint_cap_owner1)
                                 && exists<MintCapability<coin_type>>(mint_cap_owner2):
@@ -1187,7 +1192,7 @@ module Libra {
         /// If an address has a mint capability, it is an SCS currency.
         invariant [global]
             forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
-                spec_is_SCS_currency<coin_type>();
+                is_SCS_currency<coin_type>();
     }
 
     /// ## Minting
@@ -1368,10 +1373,6 @@ module Libra {
 
         define spec_lbr_exchange_rate<CoinType>(): FixedPoint32 {
             global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
-        }
-
-        define spec_is_SCS_currency<CoinType>(): bool {
-            spec_is_currency<CoinType>() && !spec_currency_info<CoinType>().is_synthetic
         }
 
         /// Checks whether the currency has a mint capability.  This is only relevant for

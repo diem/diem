@@ -44,4 +44,4 @@ fun main(account: &signer) {
 }
 
 // will abort because sender doesn't have the mint capability
-// check: "Keep(ABORTED { code: 2564,"
+// check: "Keep(ABORTED { code: 2308,"

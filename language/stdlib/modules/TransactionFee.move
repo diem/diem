@@ -59,7 +59,7 @@ module TransactionFee {
     public fun add_txn_fee_currency<CoinType>(tc_account: &signer) {
         Libra::assert_is_currency<CoinType>();
         assert(
-            !exists<TransactionFee<CoinType>>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()),
+            !is_coin_initialized<CoinType>(),
             Errors::already_published(ETRANSACTION_FEE)
         );
         move_to(

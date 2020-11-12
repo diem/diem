@@ -77,6 +77,8 @@ module DualAttestation {
     const EINVALID_METADATA_SIGNATURE: u64 = 4;
     /// The recipient of a dual attestation payment needs to set a compliance public key
     const EPAYEE_COMPLIANCE_KEY_NOT_SET: u64 = 5;
+    /// The recipient of a dual attestation payment needs to set a base URL
+    const EPAYEE_BASE_URL_NOT_SET: u64 = 6;
 
     /// Value of the dual attestation limit at genesis
     const INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
@@ -225,6 +227,10 @@ module DualAttestation {
         include AbortsIfNoCredential;
         ensures result == global<Credential>(addr).base_url;
     }
+    /// Spec version of `Self::base_url`.
+    spec define spec_base_url(addr: address): vector<u8> {
+        global<Credential>(addr).base_url
+    }
 
     /// Return the compliance public key for `addr`.
     /// Aborts if `addr` does not have a `Credential` resource.
@@ -362,6 +368,12 @@ module DualAttestation {
             !Vector::is_empty(&payee_compliance_key),
             Errors::invalid_state(EPAYEE_COMPLIANCE_KEY_NOT_SET)
         );
+        // sanity check of payee base URL validity
+        let payee_base_url = base_url(credential_address(payee));
+        assert(
+            !Vector::is_empty(&payee_base_url),
+            Errors::invalid_state(EPAYEE_BASE_URL_NOT_SET)
+        );
         // cryptographic check of signature validity
         let message = dual_attestation_message(payer, metadata, deposit_value);
         assert(
@@ -381,6 +393,7 @@ module DualAttestation {
         deposit_value: u64;
         include AbortsIfNoCredential{addr: spec_credential_address(payee)};
         aborts_if Vector::is_empty(spec_compliance_public_key(spec_credential_address(payee))) with Errors::INVALID_STATE;
+        aborts_if Vector::is_empty(spec_base_url(spec_credential_address(payee))) with Errors::INVALID_STATE;
         aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value)
             with Errors::INVALID_ARGUMENT;
     }

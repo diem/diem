@@ -80,7 +80,7 @@ module AccountLimits {
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
         assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
-        can_receive<CoinType>(
+        can_receive_and_update_window<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
         )
@@ -114,7 +114,7 @@ module AccountLimits {
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
         assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
-        can_withdraw<CoinType>(
+        can_withdraw_and_update_window<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
         )
@@ -237,7 +237,7 @@ module AccountLimits {
     /// Update either the `tracked_balance` or `limit_address` fields of the
     /// `Window<CoinType>` stored under `window_address`.
     /// * Since we don't track balances of accounts before they are limited, once
-    ///   they do become limited the approximate balance in `CointType` held by
+    ///   they do become limited the approximate balance in `CoinType` held by
     ///   the entity across all of its accounts will need to be set by the association.
     ///   if `aggregate_balance` is set to zero the field is not updated.
     /// * This updates the `limit_address` in the window resource to a new limits definition at
@@ -318,7 +318,9 @@ module AccountLimits {
     /// Verify that the receiving account tracked by the `receiving` window
     /// can receive `amount` funds without violating requirements
     /// specified the `limits_definition` passed in.
-    fun can_receive<CoinType>(
+    /// If the receipt of `amount` doesn't violate the limits `amount` of
+    /// `CoinType` is recorded as received in the given `receiving` window.
+    fun can_receive_and_update_window<CoinType>(
         amount: u64,
         receiving: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
@@ -342,7 +344,7 @@ module AccountLimits {
         };
         inflow_ok && holding_ok
     }
-    spec fun can_receive {
+    spec fun can_receive_and_update_window {
         pragma opaque;
         include CanReceiveAbortsIf<CoinType>;
         include CanReceiveEnsures<CoinType>;
@@ -403,7 +405,9 @@ module AccountLimits {
     /// Verify that `amount` can be withdrawn from the account tracked
     /// by the `sending` window without violating any limits specified
     /// in its `limits_definition`.
-    fun can_withdraw<CoinType>(
+    /// If the withdrawal of `amount` doesn't violate the limits `amount` of
+    /// `CoinType` is recorded as withdrawn in the given `sending` window.
+    fun can_withdraw_and_update_window<CoinType>(
         amount: u64,
         sending: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
@@ -424,7 +428,7 @@ module AccountLimits {
         };
         outflow_ok
     }
-    spec fun can_withdraw {
+    spec fun can_withdraw_and_update_window {
         pragma opaque;
         include CanWithdrawAbortsIf<CoinType>;
         include CanWithdrawEnsures<CoinType>;

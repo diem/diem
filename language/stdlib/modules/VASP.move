@@ -73,6 +73,7 @@ module VASP {
         child: &signer,
     ) acquires ParentVASP {
         Roles::assert_parent_vasp_role(parent);
+        Roles::assert_child_vasp_role(child);
         let child_vasp_addr = Signer::address_of(child);
         assert(!is_vasp(child_vasp_addr), Errors::already_published(EPARENT_OR_CHILD_VASP));
         let parent_vasp_addr = Signer::address_of(parent);
@@ -85,7 +86,10 @@ module VASP {
     }
     spec fun publish_child_vasp_credential {
         let child_addr = Signer::spec_address_of(child);
-        include PublishChildVASPAbortsIf{child_addr: child_addr};
+        include PublishChildVASPAbortsIf{child_addr};
+        // NB: This aborts condition is separated out so that `PublishChildVASPAbortsIf` can be used in
+        //     `LibraAccount::create_child_vasp_account` since this doesn't hold of the new account in the pre-state.
+        include Roles::AbortsIfNotChildVasp{account: child_addr};
         include PublishChildVASPEnsures{parent_addr: Signer::spec_address_of(parent), child_addr: child_addr};
     }
 

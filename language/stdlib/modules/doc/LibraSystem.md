@@ -933,7 +933,7 @@ Return the size of the current validator set
 
 ## Function `get_ith_validator_address`
 
-Used in <code>transaction_fee.<b>move</b></code> to distribute transaction fees among validators
+Get the <code>i</code>'th validator address in the validator set.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraSystem.md#0x1_LibraSystem_get_ith_validator_address">get_ith_validator_address</a>(i: u64): address

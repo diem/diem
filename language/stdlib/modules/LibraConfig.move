@@ -44,7 +44,7 @@ module LibraConfig {
     /// A `ModifyConfigCapability` is in a different state than was expected
     const EMODIFY_CAPABILITY: u64 = 2;
     /// An invalid block time was encountered.
-    const EINVALID_BLOCK_TIME: u64 = 4;
+    const EINVALID_BLOCK_TIME: u64 = 3;
     /// The largest possible u64 value
     const MAX_U64: u64 = 18446744073709551615;
 
@@ -101,7 +101,8 @@ module LibraConfig {
     }
 
     /// Set a config item to a new value with the default capability stored under config address and trigger a
-    /// reconfiguration. This function requires that the signer be Libra root.
+    /// reconfiguration. This function requires that the signer have a `ModifyConfigCapability<Config>`
+    /// resource published under it.
     public fun set<Config: copyable>(account: &signer, payload: Config)
     acquires LibraConfig, Configuration {
         let signer_address = Signer::address_of(account);

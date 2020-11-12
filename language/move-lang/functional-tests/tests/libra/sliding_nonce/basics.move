@@ -32,7 +32,7 @@ script {
     use 0x1::SlidingNonce;
 
     fun main(account: &signer) {
-        SlidingNonce::publish_nonce_resource(account, account);
+        SlidingNonce::publish(account);
     }
 }
 
@@ -61,12 +61,10 @@ script {
 }
 
 //! new-transaction
-//! sender: libraroot
-//! execute-as: default
 script {
     use 0x1::SlidingNonce;
-    fun main(lr_account: &signer, default_account: &signer) {
-        SlidingNonce::publish_nonce_resource(lr_account, default_account);
+    fun main(default_account: &signer) {
+        SlidingNonce::publish(default_account);
     }
 }
 
@@ -87,11 +85,9 @@ script {
 }
 
 //! new-transaction
-//! sender: libraroot
-//! execute-as: default
 script {
     use 0x1::SlidingNonce;
-    fun main(lr_account: &signer, default_account: &signer) {
-        SlidingNonce::publish_nonce_resource(lr_account, default_account);
+    fun main(default_account: &signer) {
+        SlidingNonce::publish(default_account);
     }
 }

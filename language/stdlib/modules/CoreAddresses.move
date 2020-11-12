@@ -53,7 +53,7 @@ module CoreAddresses {
     /// The operation can only be performed by the VM
     const EVM: u64 = 2;
     /// The operation can only be performed by the account where currencies are registered
-    const ECURRENCY_INFO: u64 = 4; // TODO: This error code and below should decrease by 1.
+    const ECURRENCY_INFO: u64 = 3;
 
     /// Assert that the account is the Libra root address.
     public fun assert_libra_root(account: &signer) {

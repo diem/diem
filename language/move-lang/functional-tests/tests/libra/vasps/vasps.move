@@ -140,7 +140,7 @@ fun main(account: &signer) {
     VASP::publish_child_vasp_credential(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 6,"
+// check: "Keep(ABORTED { code: 2307,"
 
 //! new-transaction
 //! sender: parent

@@ -26,39 +26,37 @@
         -  [Script rotate_authentication_key_with_recovery_address](#@Script_rotate_authentication_key_with_recovery_address_20)
         -  [Script rotate_dual_attestation_info](#@Script_rotate_dual_attestation_info_21)
         -  [Script rotate_shared_ed25519_public_key](#@Script_rotate_shared_ed25519_public_key_22)
-        -  [Script mint_lbr](#@Script_mint_lbr_23)
-        -  [Script unmint_lbr](#@Script_unmint_lbr_24)
-    -  [Payments](#@Payments_25)
-        -  [Script peer_to_peer_with_metadata](#@Script_peer_to_peer_with_metadata_26)
-    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_27)
-        -  [Script add_validator_and_reconfigure](#@Script_add_validator_and_reconfigure_28)
-        -  [Script register_validator_config](#@Script_register_validator_config_29)
-        -  [Script remove_validator_and_reconfigure](#@Script_remove_validator_and_reconfigure_30)
-        -  [Script set_validator_config_and_reconfigure](#@Script_set_validator_config_and_reconfigure_31)
-        -  [Script set_validator_operator](#@Script_set_validator_operator_32)
-        -  [Script set_validator_operator_with_nonce_admin](#@Script_set_validator_operator_with_nonce_admin_33)
-    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_34)
-        -  [Script preburn](#@Script_preburn_35)
-        -  [Script burn](#@Script_burn_36)
-        -  [Script cancel_burn](#@Script_cancel_burn_37)
-        -  [Script burn_txn_fees](#@Script_burn_txn_fees_38)
-        -  [Script tiered_mint](#@Script_tiered_mint_39)
-        -  [Script freeze_account](#@Script_freeze_account_40)
-        -  [Script unfreeze_account](#@Script_unfreeze_account_41)
-        -  [Script update_dual_attestation_limit](#@Script_update_dual_attestation_limit_42)
-        -  [Script update_exchange_rate](#@Script_update_exchange_rate_43)
-        -  [Script update_minting_ability](#@Script_update_minting_ability_44)
-    -  [System Administration](#@System_Administration_45)
-        -  [Script update_libra_version](#@Script_update_libra_version_46)
-        -  [Script add_to_script_allow_list](#@Script_add_to_script_allow_list_47)
--  [Transaction Scripts](#@Transaction_Scripts_48)
-    -  [Account Creation](#@Account_Creation_49)
+    -  [Payments](#@Payments_23)
+        -  [Script peer_to_peer_with_metadata](#@Script_peer_to_peer_with_metadata_24)
+    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_25)
+        -  [Script add_validator_and_reconfigure](#@Script_add_validator_and_reconfigure_26)
+        -  [Script register_validator_config](#@Script_register_validator_config_27)
+        -  [Script remove_validator_and_reconfigure](#@Script_remove_validator_and_reconfigure_28)
+        -  [Script set_validator_config_and_reconfigure](#@Script_set_validator_config_and_reconfigure_29)
+        -  [Script set_validator_operator](#@Script_set_validator_operator_30)
+        -  [Script set_validator_operator_with_nonce_admin](#@Script_set_validator_operator_with_nonce_admin_31)
+    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_32)
+        -  [Script preburn](#@Script_preburn_33)
+        -  [Script burn](#@Script_burn_34)
+        -  [Script cancel_burn](#@Script_cancel_burn_35)
+        -  [Script burn_txn_fees](#@Script_burn_txn_fees_36)
+        -  [Script tiered_mint](#@Script_tiered_mint_37)
+        -  [Script freeze_account](#@Script_freeze_account_38)
+        -  [Script unfreeze_account](#@Script_unfreeze_account_39)
+        -  [Script update_dual_attestation_limit](#@Script_update_dual_attestation_limit_40)
+        -  [Script update_exchange_rate](#@Script_update_exchange_rate_41)
+        -  [Script update_minting_ability](#@Script_update_minting_ability_42)
+    -  [System Administration](#@System_Administration_43)
+        -  [Script update_libra_version](#@Script_update_libra_version_44)
+        -  [Script add_to_script_allow_list](#@Script_add_to_script_allow_list_45)
+-  [Transaction Scripts](#@Transaction_Scripts_46)
+    -  [Account Creation](#@Account_Creation_47)
         -  [Script `create_child_vasp_account`](#create_child_vasp_account)
         -  [Script `create_validator_operator_account`](#create_validator_operator_account)
         -  [Script `create_validator_account`](#create_validator_account)
         -  [Script `create_parent_vasp_account`](#create_parent_vasp_account)
         -  [Script `create_designated_dealer`](#create_designated_dealer)
-    -  [Account Administration](#@Account_Administration_76)
+    -  [Account Administration](#@Account_Administration_74)
         -  [Script `add_currency_to_account`](#add_currency_to_account)
         -  [Script `add_recovery_rotation_capability`](#add_recovery_rotation_capability)
         -  [Script `publish_shared_ed25519_public_key`](#publish_shared_ed25519_public_key)
@@ -69,16 +67,16 @@
         -  [Script `rotate_authentication_key_with_recovery_address`](#rotate_authentication_key_with_recovery_address)
         -  [Script `rotate_dual_attestation_info`](#rotate_dual_attestation_info)
         -  [Script `rotate_shared_ed25519_public_key`](#rotate_shared_ed25519_public_key)
-    -  [Payments](#@Payments_128)
+    -  [Payments](#@Payments_126)
         -  [Script `peer_to_peer_with_metadata`](#peer_to_peer_with_metadata)
-    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_135)
+    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_133)
         -  [Script `add_validator_and_reconfigure`](#add_validator_and_reconfigure)
         -  [Script `register_validator_config`](#register_validator_config)
         -  [Script `remove_validator_and_reconfigure`](#remove_validator_and_reconfigure)
         -  [Script `set_validator_config_and_reconfigure`](#set_validator_config_and_reconfigure)
         -  [Script `set_validator_operator`](#set_validator_operator)
         -  [Script `set_validator_operator_with_nonce_admin`](#set_validator_operator_with_nonce_admin)
-    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_166)
+    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_164)
         -  [Script `preburn`](#preburn)
         -  [Script `burn`](#burn)
         -  [Script `cancel_burn`](#cancel_burn)
@@ -89,10 +87,10 @@
         -  [Script `update_dual_attestation_limit`](#update_dual_attestation_limit)
         -  [Script `update_exchange_rate`](#update_exchange_rate)
         -  [Script `update_minting_ability`](#update_minting_ability)
-    -  [System Administration](#@System_Administration_224)
+    -  [System Administration](#@System_Administration_222)
         -  [Script `update_libra_version`](#update_libra_version)
         -  [Script `add_to_script_allow_list`](#add_to_script_allow_list)
-    -  [Index](#@Index_233)
+    -  [Index](#@Index_231)
 
 
 
@@ -420,45 +418,14 @@ any account that has previously published a shared ed25519 public key using
 Script documentation: <code><a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a></code>
 
 
----
-
-<a name="@Script_mint_lbr_23"></a>
-
-#### Script mint_lbr
-
-
-Mints LBR from the sending account's constituent coins by depositing in the
-on-chain LBR reserve. Deposits the newly-minted LBR into the sending
-account. Can be sent by any account that can hold balances for the constituent
-currencies for LBR and LBR.
-
-Script documentation: <code>mint_lbr</code>
-
-
----
-
-<a name="@Script_unmint_lbr_24"></a>
-
-#### Script unmint_lbr
-
-
-Withdraws a specified amount of LBR from the transaction sender's account, and unstaples the
-withdrawn LBR into its constituent coins. Deposits each of the constituent coins to the
-transaction sender's balances. Any account that can hold balances that has the correct balances
-may send this transaction.
-
-Script documentation: <code>unmint_lbr</code>
-
-
-
-<a name="@Payments_25"></a>
+<a name="@Payments_23"></a>
 
 ### Payments
 
 
 ---
 
-<a name="@Script_peer_to_peer_with_metadata_26"></a>
+<a name="@Script_peer_to_peer_with_metadata_24"></a>
 
 #### Script peer_to_peer_with_metadata
 
@@ -474,14 +441,14 @@ Script documentation: <code><a href="transaction_script_documentation.md#peer_to
 
 
 
-<a name="@Validator_and_Validator_Operator_Administration_27"></a>
+<a name="@Validator_and_Validator_Operator_Administration_25"></a>
 
 ### Validator and Validator Operator Administration
 
 
 ---
 
-<a name="@Script_add_validator_and_reconfigure_28"></a>
+<a name="@Script_add_validator_and_reconfigure_26"></a>
 
 #### Script add_validator_and_reconfigure
 
@@ -495,7 +462,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#add_val
 
 ---
 
-<a name="@Script_register_validator_config_29"></a>
+<a name="@Script_register_validator_config_27"></a>
 
 #### Script register_validator_config
 
@@ -510,7 +477,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#registe
 
 ---
 
-<a name="@Script_remove_validator_and_reconfigure_30"></a>
+<a name="@Script_remove_validator_and_reconfigure_28"></a>
 
 #### Script remove_validator_and_reconfigure
 
@@ -524,7 +491,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#remove_
 
 ---
 
-<a name="@Script_set_validator_config_and_reconfigure_31"></a>
+<a name="@Script_set_validator_config_and_reconfigure_29"></a>
 
 #### Script set_validator_config_and_reconfigure
 
@@ -538,7 +505,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#set_val
 
 ---
 
-<a name="@Script_set_validator_operator_32"></a>
+<a name="@Script_set_validator_operator_30"></a>
 
 #### Script set_validator_operator
 
@@ -553,7 +520,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#set_val
 
 ---
 
-<a name="@Script_set_validator_operator_with_nonce_admin_33"></a>
+<a name="@Script_set_validator_operator_with_nonce_admin_31"></a>
 
 #### Script set_validator_operator_with_nonce_admin
 
@@ -567,14 +534,14 @@ Script documentation: <code><a href="transaction_script_documentation.md#set_val
 
 
 
-<a name="@Treasury_and_Compliance_Operations_34"></a>
+<a name="@Treasury_and_Compliance_Operations_32"></a>
 
 ### Treasury and Compliance Operations
 
 
 ---
 
-<a name="@Script_preburn_35"></a>
+<a name="@Script_preburn_33"></a>
 
 #### Script preburn
 
@@ -589,7 +556,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#preburn
 
 ---
 
-<a name="@Script_burn_36"></a>
+<a name="@Script_burn_34"></a>
 
 #### Script burn
 
@@ -605,7 +572,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#burn">b
 
 ---
 
-<a name="@Script_cancel_burn_37"></a>
+<a name="@Script_cancel_burn_35"></a>
 
 #### Script cancel_burn
 
@@ -619,7 +586,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#cancel_
 
 ---
 
-<a name="@Script_burn_txn_fees_38"></a>
+<a name="@Script_burn_txn_fees_36"></a>
 
 #### Script burn_txn_fees
 
@@ -633,7 +600,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#burn_tx
 
 ---
 
-<a name="@Script_tiered_mint_39"></a>
+<a name="@Script_tiered_mint_37"></a>
 
 #### Script tiered_mint
 
@@ -647,7 +614,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#tiered_
 
 ---
 
-<a name="@Script_freeze_account_40"></a>
+<a name="@Script_freeze_account_38"></a>
 
 #### Script freeze_account
 
@@ -663,7 +630,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#freeze_
 
 ---
 
-<a name="@Script_unfreeze_account_41"></a>
+<a name="@Script_unfreeze_account_39"></a>
 
 #### Script unfreeze_account
 
@@ -677,7 +644,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#unfreez
 
 ---
 
-<a name="@Script_update_dual_attestation_limit_42"></a>
+<a name="@Script_update_dual_attestation_limit_40"></a>
 
 #### Script update_dual_attestation_limit
 
@@ -691,7 +658,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 ---
 
-<a name="@Script_update_exchange_rate_43"></a>
+<a name="@Script_update_exchange_rate_41"></a>
 
 #### Script update_exchange_rate
 
@@ -706,7 +673,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 ---
 
-<a name="@Script_update_minting_ability_44"></a>
+<a name="@Script_update_minting_ability_42"></a>
 
 #### Script update_minting_ability
 
@@ -719,14 +686,14 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 
 
-<a name="@System_Administration_45"></a>
+<a name="@System_Administration_43"></a>
 
 ### System Administration
 
 
 ---
 
-<a name="@Script_update_libra_version_46"></a>
+<a name="@Script_update_libra_version_44"></a>
 
 #### Script update_libra_version
 
@@ -739,7 +706,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 ---
 
-<a name="@Script_add_to_script_allow_list_47"></a>
+<a name="@Script_add_to_script_allow_list_45"></a>
 
 #### Script add_to_script_allow_list
 
@@ -754,14 +721,14 @@ Script documentation: <code><a href="transaction_script_documentation.md#add_to_
 
 ---
 
-<a name="@Transaction_Scripts_48"></a>
+<a name="@Transaction_Scripts_46"></a>
 
 ## Transaction Scripts
 
 ---
 
 
-<a name="@Account_Creation_49"></a>
+<a name="@Account_Creation_47"></a>
 
 ### Account Creation
 
@@ -778,7 +745,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#add_to_
 
 
 
-<a name="@Summary_50"></a>
+<a name="@Summary_48"></a>
 
 ##### Summary
 
@@ -786,7 +753,7 @@ Creates a Child VASP account with its parent being the sending account of the tr
 The sender of the transaction must be a Parent VASP account.
 
 
-<a name="@Technical_Description_51"></a>
+<a name="@Technical_Description_49"></a>
 
 ##### Technical Description
 
@@ -802,7 +769,7 @@ Parent VASP account. The child account will be recorded against the limit of
 child accounts of the creating Parent VASP account.
 
 
-<a name="@Events_52"></a>
+<a name="@Events_50"></a>
 
 ###### Events
 
@@ -815,7 +782,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> handle.
 
 
-<a name="@Parameters_53"></a>
+<a name="@Parameters_51"></a>
 
 ##### Parameters
 
@@ -829,7 +796,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | <code>child_initial_balance</code> | <code>u64</code>        | The initial balance in <code>CoinType</code> to give the child account when it's created.                                                              |
 
 
-<a name="@Common_Abort_Conditions_54"></a>
+<a name="@Common_Abort_Conditions_52"></a>
 
 ##### Common Abort Conditions
 
@@ -846,7 +813,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED">LibraAccount::ECANNOT_CREATE_AT_VM_RESERVED</a></code>            | The <code>child_address</code> is the reserved address 0x0.                                         |
 
 
-<a name="@Related_Scripts_55"></a>
+<a name="@Related_Scripts_53"></a>
 
 ##### Related Scripts
 
@@ -960,7 +927,7 @@ Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
 
 
 
-<a name="@Summary_56"></a>
+<a name="@Summary_54"></a>
 
 ##### Summary
 
@@ -968,7 +935,7 @@ Creates a Validator Operator account. This transaction can only be sent by the L
 Root account.
 
 
-<a name="@Technical_Description_57"></a>
+<a name="@Technical_Description_55"></a>
 
 ##### Technical Description
 
@@ -978,7 +945,7 @@ Creates an account with a Validator Operator role at <code>new_account_address</
 This script does not assign the validator operator to any validator accounts but only creates the account.
 
 
-<a name="@Parameters_58"></a>
+<a name="@Parameters_56"></a>
 
 ##### Parameters
 
@@ -991,7 +958,7 @@ This script does not assign the validator operator to any validator accounts but
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
 
 
-<a name="@Common_Abort_Conditions_59"></a>
+<a name="@Common_Abort_Conditions_57"></a>
 
 ##### Common Abort Conditions
 
@@ -1006,7 +973,7 @@ This script does not assign the validator operator to any validator accounts but
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_60"></a>
+<a name="@Related_Scripts_58"></a>
 
 ##### Related Scripts
 
@@ -1100,7 +1067,7 @@ Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
 
 
 
-<a name="@Summary_61"></a>
+<a name="@Summary_59"></a>
 
 ##### Summary
 
@@ -1108,7 +1075,7 @@ Creates a Validator account. This transaction can only be sent by the Libra
 Root account.
 
 
-<a name="@Technical_Description_62"></a>
+<a name="@Technical_Description_60"></a>
 
 ##### Technical Description
 
@@ -1121,7 +1088,7 @@ This script does not add the validator to the validator set or the system,
 but only creates the account.
 
 
-<a name="@Parameters_63"></a>
+<a name="@Parameters_61"></a>
 
 ##### Parameters
 
@@ -1134,7 +1101,7 @@ but only creates the account.
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
 
 
-<a name="@Common_Abort_Conditions_64"></a>
+<a name="@Common_Abort_Conditions_62"></a>
 
 ##### Common Abort Conditions
 
@@ -1149,7 +1116,7 @@ but only creates the account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_65"></a>
+<a name="@Related_Scripts_63"></a>
 
 ##### Related Scripts
 
@@ -1243,14 +1210,14 @@ Only the Libra Root account can create Validator accounts [[A3]][ROLE].
 
 
 
-<a name="@Summary_66"></a>
+<a name="@Summary_64"></a>
 
 ##### Summary
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_67"></a>
+<a name="@Technical_Description_65"></a>
 
 ##### Technical Description
 
@@ -1261,7 +1228,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <code>sliding_nonce</code> is a unique nonce for operation, see <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> for details.
 
 
-<a name="@Parameters_68"></a>
+<a name="@Parameters_66"></a>
 
 ##### Parameters
 
@@ -1276,7 +1243,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | <code>add_all_currencies</code>  | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                                     |
 
 
-<a name="@Common_Abort_Conditions_69"></a>
+<a name="@Common_Abort_Conditions_67"></a>
 
 ##### Common Abort Conditions
 
@@ -1292,7 +1259,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_70"></a>
+<a name="@Related_Scripts_68"></a>
 
 ##### Related Scripts
 
@@ -1380,7 +1347,7 @@ Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE
 
 
 
-<a name="@Summary_71"></a>
+<a name="@Summary_69"></a>
 
 ##### Summary
 
@@ -1388,7 +1355,7 @@ Creates a Designated Dealer account with the provided information, and initializ
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_72"></a>
+<a name="@Technical_Description_70"></a>
 
 ##### Technical Description
 
@@ -1402,7 +1369,7 @@ At the time of creation the account is also initialized with default mint tiers 
 account.
 
 
-<a name="@Parameters_73"></a>
+<a name="@Parameters_71"></a>
 
 ##### Parameters
 
@@ -1418,7 +1385,7 @@ account.
 
 
 
-<a name="@Common_Abort_Conditions_74"></a>
+<a name="@Common_Abort_Conditions_72"></a>
 
 ##### Common Abort Conditions
 
@@ -1434,7 +1401,7 @@ account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
 
-<a name="@Related_Scripts_75"></a>
+<a name="@Related_Scripts_73"></a>
 
 ##### Related Scripts
 
@@ -1508,7 +1475,7 @@ Only the Treasury Compliance account can create Designated Dealer accounts [[A5]
 
 ---
 
-<a name="@Account_Administration_76"></a>
+<a name="@Account_Administration_74"></a>
 
 ### Account Administration
 
@@ -1525,7 +1492,7 @@ Only the Treasury Compliance account can create Designated Dealer accounts [[A5]
 
 
 
-<a name="@Summary_77"></a>
+<a name="@Summary_75"></a>
 
 ##### Summary
 
@@ -1535,7 +1502,7 @@ successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
 
-<a name="@Technical_Description_78"></a>
+<a name="@Technical_Description_76"></a>
 
 ##### Technical Description
 
@@ -1545,7 +1512,7 @@ accounts that can hold balances can send this transaction, the sending account c
 already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;</code> published under it.
 
 
-<a name="@Parameters_79"></a>
+<a name="@Parameters_77"></a>
 
 ##### Parameters
 
@@ -1555,7 +1522,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 | <code>account</code>  | <code>&signer</code> | The signer of the sending account of the transaction.                                                                                               |
 
 
-<a name="@Common_Abort_Conditions_80"></a>
+<a name="@Common_Abort_Conditions_78"></a>
 
 ##### Common Abort Conditions
 
@@ -1566,7 +1533,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EADD_EXISTING_CURRENCY">LibraAccount::EADD_EXISTING_CURRENCY</a></code>   | A balance for <code>Currency</code> is already published under the sending <code>account</code>. |
 
 
-<a name="@Related_Scripts_81"></a>
+<a name="@Related_Scripts_79"></a>
 
 ##### Related Scripts
 
@@ -1635,7 +1602,7 @@ and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROL
 
 
 
-<a name="@Summary_82"></a>
+<a name="@Summary_80"></a>
 
 ##### Summary
 
@@ -1645,7 +1612,7 @@ both be VASP accounts. After this transaction both the sending account and the
 specified recovery account can rotate the sender account's authentication key.
 
 
-<a name="@Technical_Description_83"></a>
+<a name="@Technical_Description_81"></a>
 
 ##### Technical Description
 
@@ -1666,7 +1633,7 @@ removed in this transaction and stored in the <code><a href="../../modules/doc/R
 resource stored under the account at <code>recovery_address</code>.
 
 
-<a name="@Parameters_84"></a>
+<a name="@Parameters_82"></a>
 
 ##### Parameters
 
@@ -1676,7 +1643,7 @@ resource stored under the account at <code>recovery_address</code>.
 | <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> will be stored. |
 
 
-<a name="@Common_Abort_Conditions_85"></a>
+<a name="@Common_Abort_Conditions_83"></a>
 
 ##### Common Abort Conditions
 
@@ -1687,7 +1654,7 @@ resource stored under the account at <code>recovery_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION</a></code>        | <code>to_recover_account</code> and <code>recovery_address</code> do not belong to the same VASP.                     |
 
 
-<a name="@Related_Scripts_86"></a>
+<a name="@Related_Scripts_84"></a>
 
 ##### Related Scripts
 
@@ -1756,7 +1723,7 @@ resource stored under the account at <code>recovery_address</code>.
 
 
 
-<a name="@Summary_87"></a>
+<a name="@Summary_85"></a>
 
 ##### Summary
 
@@ -1765,7 +1732,7 @@ newly-specified public key and publishes a new shared authentication key
 under the sender's account. Any account can send this transaction.
 
 
-<a name="@Technical_Description_88"></a>
+<a name="@Technical_Description_86"></a>
 
 ##### Technical Description
 
@@ -1775,7 +1742,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <code>account</code> under <code>account</code>.
 
 
-<a name="@Parameters_89"></a>
+<a name="@Parameters_87"></a>
 
 ##### Parameters
 
@@ -1785,7 +1752,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key for <code>account</code>' authentication key to be rotated to and stored. |
 
 
-<a name="@Common_Abort_Conditions_90"></a>
+<a name="@Common_Abort_Conditions_88"></a>
 
 ##### Common Abort Conditions
 
@@ -1796,7 +1763,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code>            | <code>public_key</code> is an invalid ed25519 public key.                                                      |
 
 
-<a name="@Related_Scripts_91"></a>
+<a name="@Related_Scripts_89"></a>
 
 ##### Related Scripts
 
@@ -1854,7 +1821,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 
 
-<a name="@Summary_92"></a>
+<a name="@Summary_90"></a>
 
 ##### Summary
 
@@ -1864,7 +1831,7 @@ Multiple recovery addresses can exist for a single VASP, but accounts in
 each must be disjoint.
 
 
-<a name="@Technical_Description_93"></a>
+<a name="@Technical_Description_91"></a>
 
 ##### Technical Description
 
@@ -1875,7 +1842,7 @@ other accounts may add their key rotation to this resource so that <code>account
 may be used as a recovery account for those accounts.
 
 
-<a name="@Parameters_94"></a>
+<a name="@Parameters_92"></a>
 
 ##### Parameters
 
@@ -1884,7 +1851,7 @@ may be used as a recovery account for those accounts.
 | <code>account</code> | <code>&signer</code> | The signer of the sending account of the transaction. |
 
 
-<a name="@Common_Abort_Conditions_95"></a>
+<a name="@Common_Abort_Conditions_93"></a>
 
 ##### Common Abort Conditions
 
@@ -1896,7 +1863,7 @@ may be used as a recovery account for those accounts.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
-<a name="@Related_Scripts_96"></a>
+<a name="@Related_Scripts_94"></a>
 
 ##### Related Scripts
 
@@ -1965,7 +1932,7 @@ may be used as a recovery account for those accounts.
 
 
 
-<a name="@Summary_97"></a>
+<a name="@Summary_95"></a>
 
 ##### Summary
 
@@ -1973,7 +1940,7 @@ Rotates the transaction sender's authentication key to the supplied new authenti
 be sent by any account.
 
 
-<a name="@Technical_Description_98"></a>
+<a name="@Technical_Description_96"></a>
 
 ##### Technical Description
 
@@ -1982,7 +1949,7 @@ Rotate the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.
 its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_99"></a>
+<a name="@Parameters_97"></a>
 
 ##### Parameters
 
@@ -1992,7 +1959,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.            |
 
 
-<a name="@Common_Abort_Conditions_100"></a>
+<a name="@Common_Abort_Conditions_98"></a>
 
 ##### Common Abort Conditions
 
@@ -2002,7 +1969,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                         |
 
 
-<a name="@Related_Scripts_101"></a>
+<a name="@Related_Scripts_99"></a>
 
 ##### Related Scripts
 
@@ -2083,7 +2050,7 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 
-<a name="@Summary_102"></a>
+<a name="@Summary_100"></a>
 
 ##### Summary
 
@@ -2092,7 +2059,7 @@ any account that has a sliding nonce resource published under it (usually this i
 Compliance or Libra Root accounts).
 
 
-<a name="@Technical_Description_103"></a>
+<a name="@Technical_Description_101"></a>
 
 ##### Technical Description
 
@@ -2101,7 +2068,7 @@ Rotates the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount
 its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_104"></a>
+<a name="@Parameters_102"></a>
 
 ##### Parameters
 
@@ -2112,7 +2079,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.                           |
 
 
-<a name="@Common_Abort_Conditions_105"></a>
+<a name="@Common_Abort_Conditions_103"></a>
 
 ##### Common Abort Conditions
 
@@ -2126,7 +2093,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                           |
 
 
-<a name="@Related_Scripts_106"></a>
+<a name="@Related_Scripts_104"></a>
 
 ##### Related Scripts
 
@@ -2210,7 +2177,7 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 
-<a name="@Summary_107"></a>
+<a name="@Summary_105"></a>
 
 ##### Summary
 
@@ -2218,7 +2185,7 @@ Rotates the specified account's authentication key to the supplied new authentic
 only be sent by the Libra Root account as a write set transaction.
 
 
-<a name="@Technical_Description_108"></a>
+<a name="@Technical_Description_106"></a>
 
 ##### Technical Description
 
@@ -2227,7 +2194,7 @@ Rotate the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.
 its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_109"></a>
+<a name="@Parameters_107"></a>
 
 ##### Parameters
 
@@ -2239,7 +2206,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.                                                             |
 
 
-<a name="@Common_Abort_Conditions_110"></a>
+<a name="@Common_Abort_Conditions_108"></a>
 
 ##### Common Abort Conditions
 
@@ -2253,7 +2220,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                                           |
 
 
-<a name="@Related_Scripts_111"></a>
+<a name="@Related_Scripts_109"></a>
 
 ##### Related Scripts
 
@@ -2344,7 +2311,7 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 
-<a name="@Summary_112"></a>
+<a name="@Summary_110"></a>
 
 ##### Summary
 
@@ -2353,7 +2320,7 @@ new authentication key. Only used for accounts that are part of a recovery addre
 <code><a href="transaction_script_documentation.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code> for account restrictions).
 
 
-<a name="@Technical_Description_113"></a>
+<a name="@Technical_Description_111"></a>
 
 ##### Technical Description
 
@@ -2364,7 +2331,7 @@ account, or by the account where the <code><a href="../../modules/doc/RecoveryAd
 that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_114"></a>
+<a name="@Parameters_112"></a>
 
 ##### Parameters
 
@@ -2376,7 +2343,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 | <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for the account at the <code>to_recover</code> address.                                                 |
 
 
-<a name="@Common_Abort_Conditions_115"></a>
+<a name="@Common_Abort_Conditions_113"></a>
 
 ##### Common Abort Conditions
 
@@ -2388,7 +2355,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                     |
 
 
-<a name="@Related_Scripts_116"></a>
+<a name="@Related_Scripts_114"></a>
 
 ##### Related Scripts
 
@@ -2466,7 +2433,7 @@ the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PER
 
 
 
-<a name="@Summary_117"></a>
+<a name="@Summary_115"></a>
 
 ##### Summary
 
@@ -2476,7 +2443,7 @@ information published under it. In practice the only such accounts are Designate
 Parent VASPs.
 
 
-<a name="@Technical_Description_118"></a>
+<a name="@Technical_Description_116"></a>
 
 ##### Technical Description
 
@@ -2484,7 +2451,7 @@ Updates the <code>base_url</code> and <code>compliance_public_key</code> fields 
 resource published under <code>account</code>. The <code>new_key</code> must be a valid ed25519 public key.
 
 
-<a name="@Events_119"></a>
+<a name="@Events_117"></a>
 
 ###### Events
 
@@ -2497,7 +2464,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code> <code>base_url_rotation_events</code> handle published under <code>account</code>.
 
 
-<a name="@Parameters_120"></a>
+<a name="@Parameters_118"></a>
 
 ##### Parameters
 
@@ -2508,7 +2475,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for on-chain dual attestation checking. |
 
 
-<a name="@Common_Abort_Conditions_121"></a>
+<a name="@Common_Abort_Conditions_119"></a>
 
 ##### Common Abort Conditions
 
@@ -2518,7 +2485,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">DualAttestation::EINVALID_PUBLIC_KEY</a></code> | <code>new_key</code> is not a valid ed25519 public key.                               |
 
 
-<a name="@Related_Scripts_122"></a>
+<a name="@Related_Scripts_120"></a>
 
 ##### Related Scripts
 
@@ -2588,7 +2555,7 @@ Credential is granted to either a Parent VASP or a designated dealer [[H16]][PER
 
 
 
-<a name="@Summary_123"></a>
+<a name="@Summary_121"></a>
 
 ##### Summary
 
@@ -2597,7 +2564,7 @@ any account that has previously published a shared ed25519 public key using
 <code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>.
 
 
-<a name="@Technical_Description_124"></a>
+<a name="@Technical_Description_122"></a>
 
 ##### Technical Description
 
@@ -2607,7 +2574,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> to a new value derived from <code>public_key</code>
 
 
-<a name="@Parameters_125"></a>
+<a name="@Parameters_123"></a>
 
 ##### Parameters
 
@@ -2617,7 +2584,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                                     |
 
 
-<a name="@Common_Abort_Conditions_126"></a>
+<a name="@Common_Abort_Conditions_124"></a>
 
 ##### Common Abort Conditions
 
@@ -2627,7 +2594,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code> | <code>public_key</code> is an invalid ed25519 public key.                                                |
 
 
-<a name="@Related_Scripts_127"></a>
+<a name="@Related_Scripts_125"></a>
 
 ##### Related Scripts
 
@@ -2669,18 +2636,10 @@ rotates the authentication key using the capability stored in <code>account</cod
 
 </details>
 
----
-
-> undefined move-include `mint_lbr`
 
 ---
 
-> undefined move-include `unmint_lbr`
-
-
----
-
-<a name="@Payments_128"></a>
+<a name="@Payments_126"></a>
 
 ### Payments
 
@@ -2697,7 +2656,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 
 
 
-<a name="@Summary_129"></a>
+<a name="@Summary_127"></a>
 
 ##### Summary
 
@@ -2709,7 +2668,7 @@ balance, and to any account that can hold a balance. Both accounts must hold bal
 currency being transacted.
 
 
-<a name="@Technical_Description_130"></a>
+<a name="@Technical_Description_128"></a>
 
 ##### Technical Description
 
@@ -2724,7 +2683,7 @@ However, a transaction sender can opt in to dual attestation even when it is not
 Standardized <code>metadata</code> LCS format can be found in <code>libra_types::transaction::metadata::Metadata</code>.
 
 
-<a name="@Events_131"></a>
+<a name="@Events_129"></a>
 
 ###### Events
 
@@ -2733,7 +2692,7 @@ Successful execution of this script emits two events:
 * A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">LibraAccount::ReceivedPaymentEvent</a></code> on <code>payee</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> handle.
 
 
-<a name="@Parameters_132"></a>
+<a name="@Parameters_130"></a>
 
 ##### Parameters
 
@@ -2746,7 +2705,7 @@ Successful execution of this script emits two events:
 | <code>metadata_signature</code> | <code>vector&lt;u8&gt;</code> | Optional signature over <code>metadata</code> and payment information. See                                                              |
 
 
-<a name="@Common_Abort_Conditions_133"></a>
+<a name="@Common_Abort_Conditions_131"></a>
 
 ##### Common Abort Conditions
 
@@ -2764,7 +2723,7 @@ Successful execution of this script emits two events:
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | <code>payee</code> has exceeded its daily deposit limits for LBR.                                                                              |
 
 
-<a name="@Related_Scripts_134"></a>
+<a name="@Related_Scripts_132"></a>
 
 ##### Related Scripts
 
@@ -2852,7 +2811,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 
 ---
 
-<a name="@Validator_and_Validator_Operator_Administration_135"></a>
+<a name="@Validator_and_Validator_Operator_Administration_133"></a>
 
 ### Validator and Validator Operator Administration
 
@@ -2871,7 +2830,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 
 
 
-<a name="@Summary_136"></a>
+<a name="@Summary_134"></a>
 
 ##### Summary
 
@@ -2880,7 +2839,7 @@ reconfiguration of the system to admit the account to the validator set for the 
 transaction can only be successfully called by the Libra Root account.
 
 
-<a name="@Technical_Description_137"></a>
+<a name="@Technical_Description_135"></a>
 
 ##### Technical Description
 
@@ -2894,7 +2853,7 @@ This transaction script will fail if the <code>validator_address</code> address 
 or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource already published under it.
 
 
-<a name="@Parameters_138"></a>
+<a name="@Parameters_136"></a>
 
 ##### Parameters
 
@@ -2906,7 +2865,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be added to the validator set.                                                                    |
 
 
-<a name="@Common_Abort_Conditions_139"></a>
+<a name="@Common_Abort_Conditions_137"></a>
 
 ##### Common Abort Conditions
 
@@ -2924,7 +2883,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
 
 
-<a name="@Related_Scripts_140"></a>
+<a name="@Related_Scripts_138"></a>
 
 ##### Related Scripts
 
@@ -3018,7 +2977,7 @@ Only the Libra Root account can add Validators [[H13]][PERMISSION].
 
 
 
-<a name="@Summary_141"></a>
+<a name="@Summary_139"></a>
 
 ##### Summary
 
@@ -3028,7 +2987,7 @@ only be successfully sent by a Validator Operator account that is already regist
 validator.
 
 
-<a name="@Technical_Description_142"></a>
+<a name="@Technical_Description_140"></a>
 
 ##### Technical Description
 
@@ -3038,7 +2997,7 @@ so the copy of this config held in the validator set will not be updated, and th
 only "locally" under the <code>validator_account</code> account address.
 
 
-<a name="@Parameters_143"></a>
+<a name="@Parameters_141"></a>
 
 ##### Parameters
 
@@ -3051,7 +3010,7 @@ only "locally" under the <code>validator_account</code> account address.
 | <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                        |
 
 
-<a name="@Common_Abort_Conditions_144"></a>
+<a name="@Common_Abort_Conditions_142"></a>
 
 ##### Common Abort Conditions
 
@@ -3062,7 +3021,7 @@ only "locally" under the <code>validator_account</code> account address.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
 
 
-<a name="@Related_Scripts_145"></a>
+<a name="@Related_Scripts_143"></a>
 
 ##### Related Scripts
 
@@ -3152,7 +3111,7 @@ update the validator's configuration [[H14]][PERMISSION].
 
 
 
-<a name="@Summary_146"></a>
+<a name="@Summary_144"></a>
 
 ##### Summary
 
@@ -3161,7 +3120,7 @@ of the system to remove the validator from the system. This transaction can only
 successfully called by the Libra Root account.
 
 
-<a name="@Technical_Description_147"></a>
+<a name="@Technical_Description_145"></a>
 
 ##### Technical Description
 
@@ -3172,7 +3131,7 @@ validator in the network. This transaction will fail if the validator at <code>v
 is not in the validator set.
 
 
-<a name="@Parameters_148"></a>
+<a name="@Parameters_146"></a>
 
 ##### Parameters
 
@@ -3184,7 +3143,7 @@ is not in the validator set.
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be removed from the validator set.                                                                |
 
 
-<a name="@Common_Abort_Conditions_149"></a>
+<a name="@Common_Abort_Conditions_147"></a>
 
 ##### Common Abort Conditions
 
@@ -3202,7 +3161,7 @@ is not in the validator set.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 
 
-<a name="@Related_Scripts_150"></a>
+<a name="@Related_Scripts_148"></a>
 
 ##### Related Scripts
 
@@ -3298,7 +3257,7 @@ Only the Libra Root account can remove Validators [[H13]][PERMISSION].
 
 
 
-<a name="@Summary_151"></a>
+<a name="@Summary_149"></a>
 
 ##### Summary
 
@@ -3307,7 +3266,7 @@ validator set with this new validator configuration.  Can only be successfully s
 Validator Operator account that is already registered with a validator.
 
 
-<a name="@Technical_Description_152"></a>
+<a name="@Technical_Description_150"></a>
 
 ##### Technical Description
 
@@ -3317,7 +3276,7 @@ trigger a reconfiguration of the system.  This reconfiguration will update the v
 on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.
 
 
-<a name="@Parameters_153"></a>
+<a name="@Parameters_151"></a>
 
 ##### Parameters
 
@@ -3330,7 +3289,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                        |
 
 
-<a name="@Common_Abort_Conditions_154"></a>
+<a name="@Common_Abort_Conditions_152"></a>
 
 ##### Common Abort Conditions
 
@@ -3343,7 +3302,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 
 
-<a name="@Related_Scripts_155"></a>
+<a name="@Related_Scripts_153"></a>
 
 ##### Related Scripts
 
@@ -3458,7 +3417,7 @@ update the validator's configuration [[H14]][PERMISSION].
 
 
 
-<a name="@Summary_156"></a>
+<a name="@Summary_154"></a>
 
 ##### Summary
 
@@ -3468,7 +3427,7 @@ system until a reconfiguration of the system is triggered. May only be sent by a
 Validator role.
 
 
-<a name="@Technical_Description_157"></a>
+<a name="@Technical_Description_155"></a>
 
 ##### Technical Description
 
@@ -3480,7 +3439,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> and no reconfiguration of the system is initiated by this script.
 
 
-<a name="@Parameters_158"></a>
+<a name="@Parameters_156"></a>
 
 ##### Parameters
 
@@ -3491,7 +3450,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator. |
 
 
-<a name="@Common_Abort_Conditions_159"></a>
+<a name="@Common_Abort_Conditions_157"></a>
 
 ##### Common Abort Conditions
 
@@ -3504,7 +3463,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
 
-<a name="@Related_Scripts_160"></a>
+<a name="@Related_Scripts_158"></a>
 
 ##### Related Scripts
 
@@ -3596,7 +3555,7 @@ Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
 
-<a name="@Summary_161"></a>
+<a name="@Summary_159"></a>
 
 ##### Summary
 
@@ -3606,7 +3565,7 @@ system until a reconfiguration of the system is triggered. May only be sent by t
 account as a write set transaction.
 
 
-<a name="@Technical_Description_162"></a>
+<a name="@Technical_Description_160"></a>
 
 ##### Technical Description
 
@@ -3618,7 +3577,7 @@ have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_V
 the system is initiated by this script.
 
 
-<a name="@Parameters_163"></a>
+<a name="@Parameters_161"></a>
 
 ##### Parameters
 
@@ -3631,7 +3590,7 @@ the system is initiated by this script.
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.                 |
 
 
-<a name="@Common_Abort_Conditions_164"></a>
+<a name="@Common_Abort_Conditions_162"></a>
 
 ##### Common Abort Conditions
 
@@ -3649,7 +3608,7 @@ the system is initiated by this script.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
 
-<a name="@Related_Scripts_165"></a>
+<a name="@Related_Scripts_163"></a>
 
 ##### Related Scripts
 
@@ -3733,7 +3692,7 @@ Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 ---
 
-<a name="@Treasury_and_Compliance_Operations_166"></a>
+<a name="@Treasury_and_Compliance_Operations_164"></a>
 
 ### Treasury and Compliance Operations
 
@@ -3750,7 +3709,7 @@ Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
 
-<a name="@Summary_167"></a>
+<a name="@Summary_165"></a>
 
 ##### Summary
 
@@ -3760,7 +3719,7 @@ transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
 
-<a name="@Technical_Description_168"></a>
+<a name="@Technical_Description_166"></a>
 
 ##### Technical Description
 
@@ -3770,7 +3729,7 @@ Moves the specified <code>amount</code> of coins in <code>Token</code> currency 
 transaction in order for it to execute successfully.
 
 
-<a name="@Events_169"></a>
+<a name="@Events_167"></a>
 
 ###### Events
 
@@ -3782,7 +3741,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <code>preburn_address</code> set to <code>account</code>'s address.
 
 
-<a name="@Parameters_170"></a>
+<a name="@Parameters_168"></a>
 
 ##### Parameters
 
@@ -3793,7 +3752,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code>amount</code>  | <code>u64</code>     | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
 
 
-<a name="@Common_Abort_Conditions_171"></a>
+<a name="@Common_Abort_Conditions_169"></a>
 
 ##### Common Abort Conditions
 
@@ -3805,9 +3764,11 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>              | <code>account</code> doesn't hold a balance in <code>Token</code>.                                            |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN">Libra::EPREBURN</a></code>                                        | <code>account</code> doesn't have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under it.           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN_OCCUPIED">Libra::EPREBURN_OCCUPIED</a></code>                               | The <code>value</code> field in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource under the sender is non-zero. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                                        | The <code>account</code> did not have a role assigned to it.                                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>  | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDESIGNATED_DEALER">Roles::EDESIGNATED_DEALER</a></code>                              | The <code>account</code> did not have the role of DesignatedDealer.                                |
 
 
-<a name="@Related_Scripts_172"></a>
+<a name="@Related_Scripts_170"></a>
 
 ##### Related Scripts
 
@@ -3852,6 +3813,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 </code></pre>
 
@@ -3882,7 +3844,7 @@ Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
 
-<a name="@Summary_173"></a>
+<a name="@Summary_171"></a>
 
 ##### Summary
 
@@ -3893,7 +3855,7 @@ The account that holds the preburn resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
 
-<a name="@Technical_Description_174"></a>
+<a name="@Technical_Description_172"></a>
 
 ##### Technical Description
 
@@ -3911,7 +3873,7 @@ under <code>preburn_address</code> immediately before this transaction, and the
 <code>to_burn</code> field of the preburn resource will have a zero value.
 
 
-<a name="@Events_175"></a>
+<a name="@Events_173"></a>
 
 ###### Events
 
@@ -3920,7 +3882,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <code>0xA550C18</code>.
 
 
-<a name="@Parameters_176"></a>
+<a name="@Parameters_174"></a>
 
 ##### Parameters
 
@@ -3932,7 +3894,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                 |
 
 
-<a name="@Common_Abort_Conditions_177"></a>
+<a name="@Common_Abort_Conditions_175"></a>
 
 ##### Common Abort Conditions
 
@@ -3948,7 +3910,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                 | The specified <code>Token</code> is not a registered currency on-chain.                                          |
 
 
-<a name="@Related_Scripts_178"></a>
+<a name="@Related_Scripts_176"></a>
 
 ##### Related Scripts
 
@@ -4019,7 +3981,7 @@ Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 
 
 
-<a name="@Summary_179"></a>
+<a name="@Summary_177"></a>
 
 ##### Summary
 
@@ -4028,7 +3990,7 @@ Cancels and returns all coins held in the preburn area under
 Can only be successfully sent by an account with Treasury Compliance role.
 
 
-<a name="@Technical_Description_180"></a>
+<a name="@Technical_Description_178"></a>
 
 ##### Technical Description
 
@@ -4043,7 +4005,7 @@ the entire balance held in the <code><a href="../../modules/doc/Libra.md#0x1_Lib
 before this script is called otherwise the transaction will fail.
 
 
-<a name="@Events_181"></a>
+<a name="@Events_179"></a>
 
 ###### Events
 
@@ -4055,7 +4017,7 @@ resource's <code>burn_events</code> published under <code>0xA550C18</code>.
 being <code>preburn_address</code>.
 
 
-<a name="@Parameters_182"></a>
+<a name="@Parameters_180"></a>
 
 ##### Parameters
 
@@ -4066,7 +4028,7 @@ being <code>preburn_address</code>.
 | <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                         |
 
 
-<a name="@Common_Abort_Conditions_183"></a>
+<a name="@Common_Abort_Conditions_181"></a>
 
 ##### Common Abort Conditions
 
@@ -4081,7 +4043,7 @@ being <code>preburn_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET</a></code> | The <code>account</code> does not have a compliance key set on it but dual attestion checking was performed.     |
 
 
-<a name="@Related_Scripts_184"></a>
+<a name="@Related_Scripts_182"></a>
 
 ##### Related Scripts
 
@@ -4177,7 +4139,7 @@ Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 
 
 
-<a name="@Summary_185"></a>
+<a name="@Summary_183"></a>
 
 ##### Summary
 
@@ -4186,7 +4148,7 @@ Libra association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_186"></a>
+<a name="@Technical_Description_184"></a>
 
 ##### Technical Description
 
@@ -4199,7 +4161,7 @@ currency. Both <code>balance</code> and <code><a href="transaction_script_docume
 account address will have a value of 0 after the successful execution of this script.
 
 
-<a name="@Events_187"></a>
+<a name="@Events_185"></a>
 
 ###### Events
 
@@ -4208,7 +4170,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <code>0xA550C18</code>.
 
 
-<a name="@Parameters_188"></a>
+<a name="@Parameters_186"></a>
 
 ##### Parameters
 
@@ -4218,7 +4180,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code>tc_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
 
 
-<a name="@Common_Abort_Conditions_189"></a>
+<a name="@Common_Abort_Conditions_187"></a>
 
 ##### Common Abort Conditions
 
@@ -4229,7 +4191,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECOIN">Libra::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
 
 
-<a name="@Related_Scripts_190"></a>
+<a name="@Related_Scripts_188"></a>
 
 ##### Related Scripts
 
@@ -4270,7 +4232,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 
-<a name="@Summary_191"></a>
+<a name="@Summary_189"></a>
 
 ##### Summary
 
@@ -4279,7 +4241,7 @@ must be the Treasury Compliance account, and coins can only be minted to a Desig
 account.
 
 
-<a name="@Technical_Description_192"></a>
+<a name="@Technical_Description_190"></a>
 
 ##### Technical Description
 
@@ -4292,7 +4254,7 @@ they support. The sending <code>tc_account</code> must be the Treasury Complianc
 receiver an authorized Designated Dealer account.
 
 
-<a name="@Events_193"></a>
+<a name="@Events_191"></a>
 
 ###### Events
 
@@ -4305,7 +4267,7 @@ Dealer's address is emitted on the <code>mint_event_handle</code> in the stored 
 resource published under the <code>designated_dealer_address</code>.
 
 
-<a name="@Parameters_194"></a>
+<a name="@Parameters_192"></a>
 
 ##### Parameters
 
@@ -4319,7 +4281,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code>tier_index</code>                | <code>u64</code>     | The mint tier index to use for the Designated Dealer account.                                              |
 
 
-<a name="@Common_Abort_Conditions_195"></a>
+<a name="@Common_Abort_Conditions_193"></a>
 
 ##### Common Abort Conditions
 
@@ -4340,7 +4302,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
 
 
-<a name="@Related_Scripts_196"></a>
+<a name="@Related_Scripts_194"></a>
 
 ##### Related Scripts
 
@@ -4422,7 +4384,7 @@ Only the Treasury Compliance account can mint [[H1]][PERMISSION].
 
 
 
-<a name="@Summary_197"></a>
+<a name="@Summary_195"></a>
 
 ##### Summary
 
@@ -4433,7 +4395,7 @@ execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
 
-<a name="@Technical_Description_198"></a>
+<a name="@Technical_Description_196"></a>
 
 ##### Technical Description
 
@@ -4447,7 +4409,7 @@ accounts and vice versa.
 
 
 
-<a name="@Events_199"></a>
+<a name="@Events_197"></a>
 
 ###### Events
 
@@ -4456,7 +4418,7 @@ the <code>freeze_event_handle</code> held in the <code><a href="../../modules/do
 under <code>0xA550C18</code> with the <code>frozen_address</code> being the <code>to_freeze_account</code>.
 
 
-<a name="@Parameters_200"></a>
+<a name="@Parameters_198"></a>
 
 ##### Parameters
 
@@ -4467,7 +4429,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
 
 
-<a name="@Common_Abort_Conditions_201"></a>
+<a name="@Common_Abort_Conditions_199"></a>
 
 ##### Common Abort Conditions
 
@@ -4483,7 +4445,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT">AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT</a></code> | <code>to_freeze_account</code> was the Libra Root account (<code>0xA550C18</code>).                              |
 
 
-<a name="@Related_Scripts_202"></a>
+<a name="@Related_Scripts_200"></a>
 
 ##### Related Scripts
 
@@ -4524,7 +4486,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 
 
-<a name="@Summary_203"></a>
+<a name="@Summary_201"></a>
 
 ##### Summary
 
@@ -4533,7 +4495,7 @@ Treasury Compliance account. After the successful execution of this transaction 
 may be sent from the previously frozen account, and coins may be sent and received.
 
 
-<a name="@Technical_Description_204"></a>
+<a name="@Technical_Description_202"></a>
 
 ##### Technical Description
 
@@ -4543,7 +4505,7 @@ account. Note that this is a per-account property so unfreezing a Parent VASP wi
 the status any of its child accounts and vice versa.
 
 
-<a name="@Events_205"></a>
+<a name="@Events_203"></a>
 
 ###### Events
 
@@ -4551,7 +4513,7 @@ Successful execution of this script will emit a <code>AccountFreezing::UnFreezeA
 the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s address.
 
 
-<a name="@Parameters_206"></a>
+<a name="@Parameters_204"></a>
 
 ##### Parameters
 
@@ -4562,7 +4524,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
 
 
-<a name="@Common_Abort_Conditions_207"></a>
+<a name="@Common_Abort_Conditions_205"></a>
 
 ##### Common Abort Conditions
 
@@ -4575,7 +4537,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
 
 
-<a name="@Related_Scripts_208"></a>
+<a name="@Related_Scripts_206"></a>
 
 ##### Related Scripts
 
@@ -4616,7 +4578,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 
 
-<a name="@Summary_209"></a>
+<a name="@Summary_207"></a>
 
 ##### Summary
 
@@ -4625,7 +4587,7 @@ only be sent by the Treasury Compliance account.  After this transaction all int
 payments over this limit must be checked for dual attestation.
 
 
-<a name="@Technical_Description_210"></a>
+<a name="@Technical_Description_208"></a>
 
 ##### Technical Description
 
@@ -4633,7 +4595,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 <code>0xA550C18</code>. The amount is set in micro-LBR.
 
 
-<a name="@Parameters_211"></a>
+<a name="@Parameters_209"></a>
 
 ##### Parameters
 
@@ -4644,7 +4606,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 | <code>new_micro_lbr_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
 
 
-<a name="@Common_Abort_Conditions_212"></a>
+<a name="@Common_Abort_Conditions_210"></a>
 
 ##### Common Abort Conditions
 
@@ -4657,7 +4619,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<a name="@Related_Scripts_213"></a>
+<a name="@Related_Scripts_211"></a>
 
 ##### Related Scripts
 
@@ -4704,7 +4666,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 
 
 
-<a name="@Summary_214"></a>
+<a name="@Summary_212"></a>
 
 ##### Summary
 
@@ -4714,7 +4676,7 @@ transaction the updated exchange rate will be used for normalization of gas pric
 dual attestation checking.
 
 
-<a name="@Technical_Description_215"></a>
+<a name="@Technical_Description_213"></a>
 
 ##### Technical Description
 
@@ -4722,7 +4684,7 @@ Updates the on-chain exchange rate from the given <code>Currency</code> to micro
 is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</code>.
 
 
-<a name="@Parameters_216"></a>
+<a name="@Parameters_214"></a>
 
 ##### Parameters
 
@@ -4735,7 +4697,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-LBR exchange rate for <code>Currency</code>.                                                             |
 
 
-<a name="@Common_Abort_Conditions_217"></a>
+<a name="@Common_Abort_Conditions_215"></a>
 
 ##### Common Abort Conditions
 
@@ -4752,7 +4714,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>.                                       |
 
 
-<a name="@Related_Scripts_218"></a>
+<a name="@Related_Scripts_216"></a>
 
 ##### Related Scripts
 
@@ -4839,7 +4801,7 @@ Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISS
 
 
 
-<a name="@Summary_219"></a>
+<a name="@Summary_217"></a>
 
 ##### Summary
 
@@ -4848,7 +4810,7 @@ only be sent by the Treasury Compliance account.  Turning minting off for a curr
 no effect on coins already in circulation, and coins may still be removed from the system.
 
 
-<a name="@Technical_Description_220"></a>
+<a name="@Technical_Description_218"></a>
 
 ##### Technical Description
 
@@ -4858,7 +4820,7 @@ this field is set to <code><b>true</b></code> and minting of new coins in <code>
 This transaction needs to be sent by the Treasury Compliance account.
 
 
-<a name="@Parameters_221"></a>
+<a name="@Parameters_219"></a>
 
 ##### Parameters
 
@@ -4869,7 +4831,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code>allow_minting</code> | <code>bool</code>    | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
-<a name="@Common_Abort_Conditions_222"></a>
+<a name="@Common_Abort_Conditions_220"></a>
 
 ##### Common Abort Conditions
 
@@ -4879,7 +4841,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>               | <code>Currency</code> is not a registered currency on-chain.    |
 
 
-<a name="@Related_Scripts_223"></a>
+<a name="@Related_Scripts_221"></a>
 
 ##### Related Scripts
 
@@ -4911,7 +4873,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ---
 
-<a name="@System_Administration_224"></a>
+<a name="@System_Administration_222"></a>
 
 ### System Administration
 
@@ -4929,7 +4891,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 
 
-<a name="@Summary_225"></a>
+<a name="@Summary_223"></a>
 
 ##### Summary
 
@@ -4937,7 +4899,7 @@ Updates the Libra major version that is stored on-chain and is used by the VM.  
 transaction can only be sent from the Libra Root account.
 
 
-<a name="@Technical_Description_226"></a>
+<a name="@Technical_Description_224"></a>
 
 ##### Technical Description
 
@@ -4947,7 +4909,7 @@ than the current major version held on-chain. The VM reads this information and 
 preserve backwards compatibility with previous major versions of the VM.
 
 
-<a name="@Parameters_227"></a>
+<a name="@Parameters_225"></a>
 
 ##### Parameters
 
@@ -4958,7 +4920,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
-<a name="@Common_Abort_Conditions_228"></a>
+<a name="@Common_Abort_Conditions_226"></a>
 
 ##### Common Abort Conditions
 
@@ -5006,7 +4968,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 
 
-<a name="@Summary_229"></a>
+<a name="@Summary_227"></a>
 
 ##### Summary
 
@@ -5015,7 +4977,7 @@ can only be sent by the Libra Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
 
-<a name="@Technical_Description_230"></a>
+<a name="@Technical_Description_228"></a>
 
 ##### Technical Description
 
@@ -5029,7 +4991,7 @@ successfully a reconfiguration will be initiated, and the on-chain config
 with this <code>hash</code> can be successfully sent to the network.
 
 
-<a name="@Parameters_231"></a>
+<a name="@Parameters_229"></a>
 
 ##### Parameters
 
@@ -5040,7 +5002,7 @@ with this <code>hash</code> can be successfully sent to the network.
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
 
 
-<a name="@Common_Abort_Conditions_232"></a>
+<a name="@Common_Abort_Conditions_230"></a>
 
 ##### Common Abort Conditions
 
@@ -5077,7 +5039,7 @@ with this <code>hash</code> can be successfully sent to the network.
 
 
 
-<a name="@Index_233"></a>
+<a name="@Index_231"></a>
 
 ### Index
 

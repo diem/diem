@@ -178,7 +178,7 @@ fun main(account: &signer) {
     Libra::preburn_to<Coin1>(account, coin)
 }
 }
-// check: "Keep(ABORTED { code: 517,"
+// check: "Keep(ABORTED { code: 1539,"
 
 //! new-transaction
 //! sender: blessed

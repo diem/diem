@@ -31,6 +31,8 @@ module Roles {
     const EVALIDATOR: u64 = 7;
     /// The signer didn't have the required Validator Operator role
     const EVALIDATOR_OPERATOR: u64 = 8;
+    /// The signer didn't have the required Child VASP role
+    const ECHILD_VASP: u64 = 9;
 
     ///////////////////////////////////////////////////////////////////////////
     // Role ID constants
@@ -276,6 +278,21 @@ module Roles {
         pragma opaque;
         include AbortsIfNotParentVasp;
     }
+
+    /// Assert that the account has the child vasp role.
+    public fun assert_child_vasp_role(account: &signer) acquires RoleId {
+        let addr = Signer::address_of(account);
+        assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        assert(
+            borrow_global<RoleId>(addr).role_id == CHILD_VASP_ROLE_ID,
+            Errors::requires_role(ECHILD_VASP)
+        )
+    }
+    spec fun assert_child_vasp_role {
+        pragma opaque;
+        include AbortsIfNotChildVasp{account: Signer::address_of(account)};
+    }
+
 
     /// Assert that the account has the designated dealer role.
     public fun assert_designated_dealer(account: &signer) acquires RoleId {
@@ -526,6 +543,12 @@ module Roles {
         let addr = Signer::spec_address_of(account);
         aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
         aborts_if global<RoleId>(addr).role_id != PARENT_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
+    }
+
+    spec schema AbortsIfNotChildVasp {
+        account: address;
+        aborts_if !exists<RoleId>(account) with Errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(account).role_id != CHILD_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotDesignatedDealer {

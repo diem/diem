@@ -38,8 +38,8 @@ module LibraAccount {
         authentication_key: vector<u8>,
         /// A `withdraw_capability` allows whoever holds this capability
         /// to withdraw from the account. At the time of account creation
-        /// this capability is stored in this option. It can later be
-        /// and can also be restored via `restore_withdraw_capability`.
+        /// this capability is stored in this option. It can later be removed
+        /// by `extract_withdraw_capability` and also restored via `restore_withdraw_capability`.
         withdraw_capability: Option<WithdrawCapability>,
         /// A `key_rotation_capability` allows whoever holds this capability
         /// the ability to rotate the authentication key for the account. At
@@ -857,9 +857,6 @@ module LibraAccount {
 
     /// Add balances for `Token` to `new_account`.  If `add_all_currencies` is true,
     /// then add for both token types.
-    /// It is important that this be a private function. Otherwise, balances could
-    /// be added to inappropriate accounts. See invariant, "Only reasonable accounts
-    /// have currencies", below.
     fun add_currencies_for_account<Token>(
         new_account: &signer,
         add_all_currencies: bool,
@@ -1038,7 +1035,7 @@ module LibraAccount {
         let lr_account = create_signer(CoreAddresses::LIBRA_ROOT_ADDRESS());
         CoreAddresses::assert_libra_root(&lr_account);
         Roles::grant_libra_root_role(&lr_account);
-        SlidingNonce::publish_nonce_resource(&lr_account, &lr_account);
+        SlidingNonce::publish(&lr_account);
         Event::publish_generator(&lr_account);
 
         assert(
@@ -1120,7 +1117,7 @@ module LibraAccount {
         let new_account_address = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         let new_account = create_signer(new_account_address);
         Roles::grant_treasury_compliance_role(&new_account, lr_account);
-        SlidingNonce::publish_nonce_resource(lr_account, &new_account);
+        SlidingNonce::publish(&new_account);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
     }
@@ -1798,10 +1795,7 @@ module LibraAccount {
         if (should_trigger_reconfiguration) LibraConfig::reconfigure(lr_account)
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Proof of concept code used for Validator and ValidatorOperator roles management
-    ///////////////////////////////////////////////////////////////////////////
-
+    /// Create a Validator account
     public fun create_validator_account(
         lr_account: &signer,
         new_account_address: address,
@@ -1840,6 +1834,7 @@ module LibraAccount {
         ensures ValidatorConfig::exists_config(new_account_address);
     }
 
+    /// Create a Validator Operator account
     public fun create_validator_operator_account(
         lr_account: &signer,
         new_account_address: address,
@@ -1876,11 +1871,6 @@ module LibraAccount {
         ensures exists_at(new_account_address);
         ensures ValidatorOperatorConfig::has_validator_operator_config(new_account_address);
     }
-
-
-    ///////////////////////////////////////////////////////////////////////////
-    // End of the proof of concept code
-    ///////////////////////////////////////////////////////////////////////////
 
     // ****************** Module Specifications *******************
     spec module {} // switch documentation context back to module level

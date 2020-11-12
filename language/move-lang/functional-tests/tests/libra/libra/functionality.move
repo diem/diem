@@ -190,7 +190,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(coin1_tmp);
 }
 }
-// check: "Keep(ABORTED { code: 2824,"
+// check: "Keep(ABORTED { code: 2568,"
 
 //! new-transaction
 script {
@@ -214,7 +214,7 @@ fun main(account: &signer) {
     CoreAddresses::assert_currency_info(account)
 }
 }
-// check: "Keep(ABORTED { code: 1026,"
+// check: "Keep(ABORTED { code: 770,"
 
 //! new-transaction
 //! sender: blessed

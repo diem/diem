@@ -286,6 +286,16 @@ Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
 
 
 
+<a name="0x1_DualAttestation_EPAYEE_BASE_URL_NOT_SET"></a>
+
+The recipient of a dual attestation payment needs to set a base URL
+
+
+<pre><code><b>const</b> <a href="DualAttestation.md#0x1_DualAttestation_EPAYEE_BASE_URL_NOT_SET">EPAYEE_BASE_URL_NOT_SET</a>: u64 = 6;
+</code></pre>
+
+
+
 <a name="0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET"></a>
 
 The recipient of a dual attestation payment needs to set a compliance public key
@@ -447,7 +457,7 @@ Rotate the base URL for <code>account</code> to <code>new_url</code>
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">RotateBaseUrlAbortsIf</a> {
     account: signer;
-    <a name="0x1_DualAttestation_sender$24"></a>
+    <a name="0x1_DualAttestation_sender$25"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -483,7 +493,7 @@ Must abort if the account does not have the resource Credential [[H16]][PERMISSI
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
     account: signer;
     new_url: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$25"></a>
+    <a name="0x1_DualAttestation_sender$26"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).base_url == new_url;
 }
@@ -558,7 +568,7 @@ Rotate the compliance public key for <code>account</code> to <code>new_key</code
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">RotateCompliancePublicKeyAbortsIf</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$26"></a>
+    <a name="0x1_DualAttestation_sender$27"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 }
 </code></pre>
@@ -583,7 +593,7 @@ Must abort if the account does not have the resource Credential [[H16]][PERMISSI
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
     account: signer;
     new_key: vector&lt;u8&gt;;
-    <a name="0x1_DualAttestation_sender$27"></a>
+    <a name="0x1_DualAttestation_sender$28"></a>
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).compliance_public_key == new_key;
 }
@@ -679,6 +689,18 @@ Aborts if <code>addr</code> does not have a <code><a href="DualAttestation.md#0x
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>;
 <b>ensures</b> result == <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url;
+</code></pre>
+
+
+Spec version of <code><a href="DualAttestation.md#0x1_DualAttestation_base_url">Self::base_url</a></code>.
+
+
+<a name="0x1_DualAttestation_spec_base_url"></a>
+
+
+<pre><code><b>define</b> <a href="DualAttestation.md#0x1_DualAttestation_spec_base_url">spec_base_url</a>(addr: address): vector&lt;u8&gt; {
+   <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url
+}
 </code></pre>
 
 
@@ -1026,6 +1048,12 @@ Helper function to check validity of a signature when dual attestion is required
         !<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&payee_compliance_key),
         <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">EPAYEE_COMPLIANCE_KEY_NOT_SET</a>)
     );
+    // sanity check of payee base URL validity
+    <b>let</b> payee_base_url = <a href="DualAttestation.md#0x1_DualAttestation_base_url">base_url</a>(<a href="DualAttestation.md#0x1_DualAttestation_credential_address">credential_address</a>(payee));
+    <b>assert</b>(
+        !<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&payee_base_url),
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="DualAttestation.md#0x1_DualAttestation_EPAYEE_BASE_URL_NOT_SET">EPAYEE_BASE_URL_NOT_SET</a>)
+    );
     // cryptographic check of signature validity
     <b>let</b> message = <a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(payer, metadata, deposit_value);
     <b>assert</b>(
@@ -1062,6 +1090,7 @@ Helper function to check validity of a signature when dual attestion is required
     deposit_value: u64;
     <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: <a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)};
     <b>aborts_if</b> <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee))) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
+    <b>aborts_if</b> <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_base_url">spec_base_url</a>(<a href="DualAttestation.md#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee))) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> !<a href="DualAttestation.md#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value)
         <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
@@ -1212,7 +1241,7 @@ Travel rule limit set during genesis
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>aborts_if</b> <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<a name="0x1_DualAttestation_initial_limit$28"></a>
+<a name="0x1_DualAttestation_initial_limit$29"></a>
 <b>let</b> initial_limit = <a href="DualAttestation.md#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT">INITIAL_DUAL_ATTESTATION_LIMIT</a> * <a href="Libra.md#0x1_Libra_spec_scaling_factor">Libra::spec_scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;();
 <b>aborts_if</b> initial_limit &gt; <a href="DualAttestation.md#0x1_DualAttestation_MAX_U64">MAX_U64</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;;

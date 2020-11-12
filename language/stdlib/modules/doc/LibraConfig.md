@@ -193,7 +193,7 @@ The <code><a href="LibraConfig.md#0x1_LibraConfig_Configuration">Configuration</
 An invalid block time was encountered.
 
 
-<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>: u64 = 4;
+<pre><code><b>const</b> <a href="LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>: u64 = 3;
 </code></pre>
 
 
@@ -357,7 +357,8 @@ Returns a copy of <code>Config</code> value stored under <code>addr</code>.
 ## Function `set`
 
 Set a config item to a new value with the default capability stored under config address and trigger a
-reconfiguration. This function requires that the signer be Libra root.
+reconfiguration. This function requires that the signer have a <code><a href="LibraConfig.md#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;</code>
+resource published under it.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraConfig.md#0x1_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)

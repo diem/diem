@@ -192,8 +192,7 @@ Use EventHandleGenerator to generate a unique event handle for <code>sig</code>
 
 ## Function `emit_event`
 
-Emit an event with payload <code>msg</code> by using handle's key and counter. Will change the payload from vector<u8> to a
-generic type parameter once we have generics.
+Emit an event with payload <code>msg</code> by using <code>handle_ref</code>'s key and counter.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Event.md#0x1_Event_emit_event">emit_event</a>&lt;T: <b>copyable</b>&gt;(handle_ref: &<b>mut</b> <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;T&gt;, msg: T)

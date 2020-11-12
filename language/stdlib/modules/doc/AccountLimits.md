@@ -19,8 +19,8 @@ a given time period.
 -  [Function `update_limits_definition`](#0x1_AccountLimits_update_limits_definition)
 -  [Function `update_window_info`](#0x1_AccountLimits_update_window_info)
 -  [Function `reset_window`](#0x1_AccountLimits_reset_window)
--  [Function `can_receive`](#0x1_AccountLimits_can_receive)
--  [Function `can_withdraw`](#0x1_AccountLimits_can_withdraw)
+-  [Function `can_receive_and_update_window`](#0x1_AccountLimits_can_receive_and_update_window)
+-  [Function `can_withdraw_and_update_window`](#0x1_AccountLimits_can_withdraw_and_update_window)
 -  [Function `is_unrestricted`](#0x1_AccountLimits_is_unrestricted)
 -  [Function `limits_definition_address`](#0x1_AccountLimits_limits_definition_address)
 -  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
@@ -294,7 +294,7 @@ Returns false if this deposit violates the account limits.
     _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a> {
     <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
-    <a href="AccountLimits.md#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
+    <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
     )
@@ -381,7 +381,7 @@ Returns <code><b>false</b></code> if this withdrawal violates account limits.
     _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a> {
     <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
-    <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
+    <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
     )
@@ -646,7 +646,7 @@ TODO: This should be specified.
 Update either the <code>tracked_balance</code> or <code>limit_address</code> fields of the
 <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> stored under <code>window_address</code>.
 * Since we don't track balances of accounts before they are limited, once
-they do become limited the approximate balance in <code>CointType</code> held by
+they do become limited the approximate balance in <code>CoinType</code> held by
 the entity across all of its accounts will need to be set by the association.
 if <code>aggregate_balance</code> is set to zero the field is not updated.
 * This updates the <code>limit_address</code> in the window resource to a new limits definition at
@@ -788,16 +788,18 @@ the inflow and outflow records.
 
 </details>
 
-<a name="0x1_AccountLimits_can_receive"></a>
+<a name="0x1_AccountLimits_can_receive_and_update_window"></a>
 
-## Function `can_receive`
+## Function `can_receive_and_update_window`
 
 Verify that the receiving account tracked by the <code>receiving</code> window
 can receive <code>amount</code> funds without violating requirements
 specified the <code>limits_definition</code> passed in.
+If the receipt of <code>amount</code> doesn't violate the limits <code>amount</code> of
+<code>CoinType</code> is recorded as received in the given <code>receiving</code> window.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
 </code></pre>
 
 
@@ -806,7 +808,7 @@ specified the <code>limits_definition</code> passed in.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType&gt;(
     amount: u64,
     receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
@@ -966,16 +968,18 @@ Checks whether receiving limits are satisfied.
 
 </details>
 
-<a name="0x1_AccountLimits_can_withdraw"></a>
+<a name="0x1_AccountLimits_can_withdraw_and_update_window"></a>
 
-## Function `can_withdraw`
+## Function `can_withdraw_and_update_window`
 
 Verify that <code>amount</code> can be withdrawn from the account tracked
 by the <code>sending</code> window without violating any limits specified
 in its <code>limits_definition</code>.
+If the withdrawal of <code>amount</code> doesn't violate the limits <code>amount</code> of
+<code>CoinType</code> is recorded as withdrawn in the given <code>sending</code> window.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
 </code></pre>
 
 
@@ -984,7 +988,7 @@ in its <code>limits_definition</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType&gt;(
     amount: u64,
     sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {

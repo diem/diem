@@ -390,7 +390,7 @@ module LibraSystem {
         ensures result == len(spec_get_validators());
     }
 
-    /// Used in `transaction_fee.move` to distribute transaction fees among validators
+    /// Get the `i`'th validator address in the validator set.
     public fun get_ith_validator_address(i: u64): address {
         assert(i < validator_set_size(), Errors::invalid_argument(EVALIDATOR_INDEX));
         Vector::borrow(&get_libra_system_config().validators, i).addr

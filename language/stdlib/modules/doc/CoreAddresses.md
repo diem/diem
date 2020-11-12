@@ -38,7 +38,7 @@ Module providing well-known addresses and related logic.
 The operation can only be performed by the account where currencies are registered
 
 
-<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_ECURRENCY_INFO">ECURRENCY_INFO</a>: u64 = 4;
+<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_ECURRENCY_INFO">ECURRENCY_INFO</a>: u64 = 3;
 </code></pre>
 
 

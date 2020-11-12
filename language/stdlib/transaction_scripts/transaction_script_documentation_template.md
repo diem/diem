@@ -239,29 +239,6 @@ any account that has previously published a shared ed25519 public key using
 
 Script documentation: `rotate_shared_ed25519_public_key`
 
-
----
-#### Script mint_lbr
-
-Mints LBR from the sending account's constituent coins by depositing in the
-on-chain LBR reserve. Deposits the newly-minted LBR into the sending
-account. Can be sent by any account that can hold balances for the constituent
-currencies for LBR and LBR.
-
-Script documentation: `mint_lbr`
-
-
----
-#### Script unmint_lbr
-
-Withdraws a specified amount of LBR from the transaction sender's account, and unstaples the
-withdrawn LBR into its constituent coins. Deposits each of the constituent coins to the
-transaction sender's balances. Any account that can hold balances that has the correct balances
-may send this transaction.
-
-Script documentation: `unmint_lbr`
-
-
 ### Payments
 
 ---
@@ -510,10 +487,6 @@ Script documentation: `add_to_script_allow_list`
 > {{move-include rotate_dual_attestation_info}}
 ---
 > {{move-include rotate_shared_ed25519_public_key}}
----
-> {{move-include mint_lbr}}
----
-> {{move-include unmint_lbr}}
 
 ---
 ### Payments

@@ -139,8 +139,8 @@ An <code>address</code> is a Libra Account iff it has a published LibraAccount r
 <dd>
  A <code>withdraw_capability</code> allows whoever holds this capability
  to withdraw from the account. At the time of account creation
- this capability is stored in this option. It can later be
- and can also be restored via <code>restore_withdraw_capability</code>.
+ this capability is stored in this option. It can later be removed
+ by <code>extract_withdraw_capability</code> and also restored via <code>restore_withdraw_capability</code>.
 </dd>
 <dt>
 <code>key_rotation_capability: <a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>&gt;</code>
@@ -2155,9 +2155,6 @@ Return the key rotation capability to the account it originally came from
 
 Add balances for <code>Token</code> to <code>new_account</code>.  If <code>add_all_currencies</code> is true,
 then add for both token types.
-It is important that this be a private function. Otherwise, balances could
-be added to inappropriate accounts. See invariant, "Only reasonable accounts
-have currencies", below.
 
 
 <pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(new_account: &signer, add_all_currencies: bool)
@@ -2469,7 +2466,7 @@ AccountOperationsCapability, WriteSetManager, and finally makes the account.
     <b>let</b> lr_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(&lr_account);
     <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(&lr_account);
-    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(&lr_account, &lr_account);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_publish">SlidingNonce::publish</a>(&lr_account);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&lr_account);
 
     <b>assert</b>(
@@ -2608,7 +2605,7 @@ event handle generator, then makes the account.
     <b>let</b> new_account_address = <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
     <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">Roles::grant_treasury_compliance_role</a>(&new_account, lr_account);
-    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(lr_account, &new_account);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_publish">SlidingNonce::publish</a>(&new_account);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="LibraAccount.md#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
@@ -4122,6 +4119,7 @@ Epilogue for WriteSet trasnaction
 
 ## Function `create_validator_account`
 
+Create a Validator account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_create_validator_account">create_validator_account</a>(lr_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
@@ -4199,6 +4197,7 @@ Epilogue for WriteSet trasnaction
 
 ## Function `create_validator_operator_account`
 
+Create a Validator Operator account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>(lr_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)

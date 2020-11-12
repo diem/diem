@@ -240,7 +240,7 @@ module ValidatorConfig {
     }
 
     /// Get Config
-    /// Aborts if there is no ValidatorConfig resource of if its config is empty
+    /// Aborts if there is no ValidatorConfig resource or if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
         assert(exists_config(addr), Errors::not_published(EVALIDATOR_CONFIG));
         let config = &borrow_global<ValidatorConfig>(addr).config;
