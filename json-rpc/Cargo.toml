@@ -25,9 +25,9 @@ reqwest = { version = "0.10.8", features = ["blocking", "json"], default_feature
 proptest = { version = "0.10.1", optional = true }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libradb = { path = "../storage/libradb", version = "0.1.0", optional = true }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libradb = { path = "../storage/libradb", version = "0.1.0", optional = true }
 libra-json-rpc-types = { path = "./types", version = "0.1.0", package = "libra-json-rpc-types" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
@@ -65,5 +65,5 @@ transaction-builder-generated = { path = "../client/transaction-builder", versio
 libra-node = { path = "../libra-node", version = "0.1.0" }
 
 [features]
-fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-temppath", "libradb/fuzzing", "reqwest"]
+fuzzing = ["proptest", "libra-mempool/fuzzing", "libradb/fuzzing", "libra-proptest-helpers", "libra-temppath", "reqwest"]
 failpoints = ["fail/failpoints"]

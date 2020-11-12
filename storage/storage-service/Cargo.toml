@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-async-trait = "0.1.41"
 tokio = { version = "0.2.22", features = ["full"] }
 futures = "0.3.8"
 

@@ -34,5 +34,4 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 netcore = { path = "../../network/netcore", version = "0.1.0" }
 network = { path = "../../network", version = "0.1.0" }
 network-simple-onchain-discovery = { path = "../../network/simple-onchain-discovery", version = "0.1.0"}
-storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../../common/subscription-service", version = "0.1.0" }

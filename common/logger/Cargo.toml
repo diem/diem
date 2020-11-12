@@ -14,7 +14,6 @@ edition = "2018"
 [dependencies]
 chrono = "0.4.19"
 erased-serde = "0.3.12"
-hex = "0.4.2"
 hostname = "0.3.1"
 libra-log-derive = { path = "derive", version = "0.1.0" }
 libra-infallible = { path = "../infallible", version = "0.1.0" }
