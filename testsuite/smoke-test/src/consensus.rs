@@ -3,12 +3,20 @@
 
 use crate::{
     operational_tooling::launch_swarm_with_op_tool_and_backend,
-    test_utils::libra_swarm_utils::load_node_config,
+    smoke_test_environment::SmokeTestEnvironment,
+    test_utils::{
+        libra_swarm_utils::{
+            get_op_tool, load_backend_storage, load_node_config, save_node_config,
+        },
+        wait_for_transaction_on_all_nodes,
+    },
 };
 use libra_config::config::SecureBackend;
+use libra_global_constants::OWNER_ACCOUNT;
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{KVStorage, Storage};
+use libra_types::account_address::AccountAddress;
 use std::{convert::TryInto, str::FromStr};
 
 #[test]
@@ -53,4 +61,71 @@ fn test_consensus_observer_mode_storage_error() {
         .get_sequence_number(&["sequence", &txn_ctx.address.to_string()])
         .unwrap();
     assert_eq!(sequence_number_0, sequence_number_1);
+}
+
+#[test]
+fn test_safety_rules_export_consensus() {
+    // Create the smoke test environment
+    let num_nodes = 4;
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+
+    // Update all nodes to export the consensus key
+    for node_index in 0..num_nodes {
+        let (mut node_config, _) = load_node_config(&env.validator_swarm, node_index);
+        node_config.consensus.safety_rules.export_consensus_key = true;
+        save_node_config(&mut node_config, &env.validator_swarm, node_index);
+    }
+
+    // Launch and test the swarm
+    env.validator_swarm.launch();
+    rotate_operator_and_consensus_key(env, num_nodes);
+}
+
+#[test]
+fn test_safety_rules_export_consensus_compatibility() {
+    // Create the smoke test environment
+    let num_nodes = 4;
+    let mut env = SmokeTestEnvironment::new(num_nodes);
+
+    // Allow the first and second nodes to export the consensus key
+    for node_index in 0..1 {
+        let (mut node_config, _) = load_node_config(&env.validator_swarm, node_index);
+        node_config.consensus.safety_rules.export_consensus_key = true;
+        save_node_config(&mut node_config, &env.validator_swarm, node_index);
+    }
+
+    // Launch and test the swarm
+    env.validator_swarm.launch();
+    rotate_operator_and_consensus_key(env, num_nodes);
+}
+
+fn rotate_operator_and_consensus_key(env: SmokeTestEnvironment, num_nodes: usize) {
+    // Load the first validator's on disk storage
+    let backend = load_backend_storage(&env.validator_swarm, 0);
+    let storage: Storage = (&backend).try_into().unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = get_op_tool(&env.validator_swarm, 0);
+
+    // Rotate the first node's operator key
+    let (txn_ctx, _) = op_tool.rotate_operator_key(&backend, true).unwrap();
+    assert!(txn_ctx.execution_result.is_none());
+
+    // Ensure all nodes have received the transaction
+    wait_for_transaction_on_all_nodes(&env, num_nodes, txn_ctx.address, txn_ctx.sequence_number);
+
+    // Rotate the consensus key to verify the operator key has been updated
+    let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend, false).unwrap();
+    assert_eq!(VMStatusView::Executed, txn_ctx.execution_result.unwrap());
+
+    // Ensure all nodes have received the transaction
+    wait_for_transaction_on_all_nodes(&env, num_nodes, txn_ctx.address, txn_ctx.sequence_number);
+
+    // Verify that the config has been updated correctly with the new consensus key
+    let validator_account = storage.get::<AccountAddress>(OWNER_ACCOUNT).unwrap().value;
+    let config_consensus_key = op_tool
+        .validator_config(validator_account, &backend)
+        .unwrap()
+        .consensus_public_key;
+    assert_eq!(new_consensus_key, config_consensus_key);
 }

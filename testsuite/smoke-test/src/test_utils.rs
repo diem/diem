@@ -5,6 +5,7 @@ use crate::smoke_test_environment::SmokeTestEnvironment;
 use cli::client_proxy::ClientProxy;
 use libra_config::config::{Identity, NodeConfig, SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_types::account_address::AccountAddress;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf, str::FromStr};
 
@@ -54,6 +55,22 @@ pub fn setup_swarm_and_client_proxy(
 
     let client = env.get_validator_client(node_index, None);
     (env, client)
+}
+
+/// Waits for a transaction to be processed by all validator nodes in the smoke
+/// test environment.
+pub fn wait_for_transaction_on_all_nodes(
+    env: &SmokeTestEnvironment,
+    num_nodes: usize,
+    account: AccountAddress,
+    sequence_number: u64,
+) {
+    for i in 0..num_nodes {
+        let client = env.get_validator_client(i, None);
+        client
+            .wait_for_transaction(account, sequence_number)
+            .unwrap();
+    }
 }
 
 /// This module provides useful functions for operating, handling and managing

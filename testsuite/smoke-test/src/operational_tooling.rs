@@ -8,7 +8,8 @@ use crate::{
             get_json_rpc_libra_interface, get_op_tool, load_backend_storage,
             load_libra_root_storage, load_node_config,
         },
-        write_key_to_file_hex_format, write_key_to_file_lcs_format,
+        wait_for_transaction_on_all_nodes, write_key_to_file_hex_format,
+        write_key_to_file_lcs_format,
     },
 };
 use libra_config::config::SecureBackend;
@@ -993,20 +994,6 @@ pub fn launch_swarm_with_op_tool_and_backend(
     let storage: Storage = (&backend).try_into().unwrap();
 
     (env, op_tool, backend, storage)
-}
-
-fn wait_for_transaction_on_all_nodes(
-    swarm: &SmokeTestEnvironment,
-    num_nodes: usize,
-    account: AccountAddress,
-    sequence_number: u64,
-) {
-    for i in 0..num_nodes {
-        let client = swarm.get_validator_client(i, None);
-        client
-            .wait_for_transaction(account, sequence_number)
-            .unwrap();
-    }
 }
 
 /// Writes a given key to file using a specified file writer and test environment.
