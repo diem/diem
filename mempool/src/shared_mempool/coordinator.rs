@@ -72,7 +72,7 @@ pub(crate) async fn coordinator<V>(
 
     loop {
         ::futures::select! {
-            (mut msg, callback) = client_events.select_next_some() => {
+            (msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
                 // this timer measures how long it took for the bounded executor to *schedule* the
                 // task
@@ -181,7 +181,7 @@ pub(crate) async fn coordinator<V>(
                             }
                         }
                     }
-                    Event::RpcRequest(peer_id, msg, res_tx) => {
+                    Event::RpcRequest(peer_id, _msg, _res_tx) => {
                         counters::UNEXPECTED_NETWORK_MSG_COUNT
                             .with_label_values(&[&network_id.network_id().to_string(), &peer_id.to_string()])
                             .inc();

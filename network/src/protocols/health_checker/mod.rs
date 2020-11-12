@@ -249,7 +249,7 @@ where
                                     peer_id,
                                     self.round,
                                     nonce,
-                                    self.ping_timeout.clone()));
+                                    self.ping_timeout));
                         }
                         None => {
                             trace!(

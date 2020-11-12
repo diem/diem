@@ -535,7 +535,7 @@ impl Rpc {
                     }
                 },
                 // The rpc client canceled the request
-                cancel = f_rpc_cancel => {
+                _cancel = f_rpc_cancel => {
                     counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL)
                         .inc();
                     info!(

@@ -245,7 +245,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hex",
  "itertools 0.9.0",
  "libra-canonical-serialization",
@@ -283,7 +283,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hyper",
  "libra-canonical-serialization",
  "libra-config",
@@ -437,7 +437,7 @@ dependencies = [
 name = "bounded-executor"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-workspace-hack",
  "tokio",
 ]
@@ -631,7 +631,7 @@ name = "channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-infallible",
  "libra-metrics",
  "libra-types",
@@ -759,7 +759,7 @@ dependencies = [
  "consensus-types",
  "debug-interface",
  "flate2",
- "futures 0.3.7",
+ "futures 0.3.8",
  "generate-key",
  "hex",
  "itertools 0.9.0",
@@ -902,7 +902,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
- "futures 0.3.7",
+ "futures 0.3.8",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-config",
@@ -1825,9 +1825,9 @@ checksum = "4c7e4c2612746b0df8fed4ce0c69156021b704c9aefa360311c04e6e9e002eed"
 
 [[package]]
 name = "futures"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95314d38584ffbfda215621d723e0a3906f032e03ae5551e650058dac83d4797"
+checksum = "9b3b0c040a1fe6529d30b3c5944b280c7f0dcb2930d2c3062bca967b602583d0"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -1840,9 +1840,9 @@ dependencies = [
 
 [[package]]
 name = "futures-channel"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0448174b01148032eed37ac4aed28963aaaa8cfa93569a08e5b479bbc6c2c151"
+checksum = "4b7109687aa4e177ef6fe84553af6280ef2778bdb7783ba44c9dc3399110fe64"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -1850,15 +1850,15 @@ dependencies = [
 
 [[package]]
 name = "futures-core"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18eaa56102984bed2c88ea39026cff3ce3b4c7f508ca970cedf2450ea10d4e46"
+checksum = "847ce131b72ffb13b6109a221da9ad97a64cbe48feb1028356b836b47b8f1748"
 
 [[package]]
 name = "futures-executor"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5f8e0c9258abaea85e78ebdda17ef9666d390e987f006be6080dfe354b708cb"
+checksum = "4caa2b2b68b880003057c1dd49f1ed937e38f22fcf6c212188a121f08cf40a65"
 dependencies = [
  "futures-core",
  "futures-task",
@@ -1867,15 +1867,15 @@ dependencies = [
 
 [[package]]
 name = "futures-io"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e1798854a4727ff944a7b12aa999f58ce7aa81db80d2dfaaf2ba06f065ddd2b"
+checksum = "611834ce18aaa1bd13c4b374f5d653e1027cf99b6b502584ff8c9a64413b30bb"
 
 [[package]]
 name = "futures-macro"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36fccf3fc58563b4a14d265027c627c3b665d7fed489427e88e7cc929559efe"
+checksum = "77408a692f1f97bcc61dc001d752e00643408fbc922e4d634c655df50d595556"
 dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.24",
@@ -1885,24 +1885,24 @@ dependencies = [
 
 [[package]]
 name = "futures-sink"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e3ca3f17d6e8804ae5d3df7a7d35b2b3a6fe89dac84b31872720fc3060a0b11"
+checksum = "f878195a49cee50e006b02b93cf7e0a95a38ac7b776b4c4d9cc1207cd20fcb3d"
 
 [[package]]
 name = "futures-task"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96d502af37186c4fef99453df03e374683f8a1eec9dcc1e66b3b82dc8278ce3c"
+checksum = "7c554eb5bf48b2426c4771ab68c6b14468b6e76cc90996f528c3338d761a4d0d"
 dependencies = [
  "once_cell",
 ]
 
 [[package]]
 name = "futures-util"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abcb44342f62e6f3e8ac427b8aa815f724fd705dfad060b18ac7866c15bb8e34"
+checksum = "d304cff4a7b99cfb7986f7d43fbe93d175e72e704a8860787cc95e9ffd85cbd2"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -2579,7 +2579,7 @@ dependencies = [
  "chrono",
  "dirs 3.0.1",
  "either",
- "futures 0.3.7",
+ "futures 0.3.8",
  "futures-util",
  "http",
  "k8s-openapi",
@@ -2852,7 +2852,7 @@ name = "libra-events-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hex",
  "libra-canonical-serialization",
  "libra-json-rpc-client",
@@ -3034,7 +3034,7 @@ dependencies = [
  "executor",
  "executor-types",
  "fail",
- "futures 0.3.7",
+ "futures 0.3.8",
  "generate-key",
  "hex",
  "hyper",
@@ -3119,7 +3119,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-config",
  "libra-crypto",
  "libra-genesis-tool",
@@ -3212,7 +3212,7 @@ dependencies = [
  "bounded-executor",
  "channel",
  "fail",
- "futures 0.3.7",
+ "futures 0.3.8",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-config",
@@ -3246,7 +3246,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_approx_eq",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hyper",
  "libra-logger",
  "libra-metrics-core",
@@ -3322,7 +3322,7 @@ dependencies = [
  "executor",
  "executor-types",
  "fail",
- "futures 0.3.7",
+ "futures 0.3.8",
  "jemallocator",
  "libra-config",
  "libra-crypto",
@@ -3405,7 +3405,7 @@ name = "libra-secure-json-rpc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hex",
  "libra-canonical-serialization",
  "libra-config",
@@ -3824,7 +3824,7 @@ name = "many-keys-stress-test"
 version = "0.1.0"
 dependencies = [
  "channel",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-workspace-hack",
  "structopt 0.3.20",
 ]
@@ -3873,7 +3873,7 @@ name = "memsocket"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-infallible",
  "libra-workspace-hack",
  "once_cell",
@@ -4143,7 +4143,7 @@ dependencies = [
  "datatest-stable",
  "docgen",
  "errmapgen",
- "futures 0.3.7",
+ "futures 0.3.8",
  "handlebars",
  "hex",
  "itertools 0.9.0",
@@ -4314,7 +4314,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-logger",
  "libra-network-address",
  "libra-types",
@@ -4333,7 +4333,7 @@ dependencies = [
  "bytes",
  "channel",
  "criterion",
- "futures 0.3.7",
+ "futures 0.3.8",
  "futures-util",
  "hex",
  "libra-bitvec",
@@ -4374,7 +4374,7 @@ name = "network-builder"
 version = "0.1.0"
 dependencies = [
  "channel",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
@@ -4403,7 +4403,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "channel",
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
@@ -5559,7 +5559,7 @@ checksum = "7af1c42491edaa3b2582c6f3a0221f5ef4ed7a02c71cf1f614bb12877e1d44dd"
 dependencies = [
  "async-trait",
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "rusoto_core",
  "serde_urlencoded",
  "xml-rs",
@@ -5575,7 +5575,7 @@ dependencies = [
  "base64 0.12.3",
  "bytes",
  "crc32fast",
- "futures 0.3.7",
+ "futures 0.3.8",
  "http",
  "hyper",
  "hyper-tls",
@@ -5602,7 +5602,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dirs 2.0.2",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hyper",
  "pin-project 0.4.27",
  "regex",
@@ -5621,7 +5621,7 @@ checksum = "1146e37a7c1df56471ea67825fe09bbbd37984b5f6e201d8b2e0be4ee15643d8"
 dependencies = [
  "async-trait",
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "rusoto_core",
  "xml-rs",
 ]
@@ -5634,7 +5634,7 @@ checksum = "97a740a88dde8ded81b6f2cff9cd5e054a5a2e38a38397260f7acdd2c85d17dd"
 dependencies = [
  "base64 0.12.3",
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "hex",
  "hmac 0.8.1",
  "http",
@@ -5660,7 +5660,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "chrono",
- "futures 0.3.7",
+ "futures 0.3.8",
  "rusoto_core",
  "serde_urlencoded",
  "tempfile",
@@ -6228,7 +6228,7 @@ dependencies = [
 name = "socket-bench-server"
 version = "0.1.0"
 dependencies = [
- "futures 0.3.7",
+ "futures 0.3.8",
  "libra-config",
  "libra-crypto",
  "libra-logger",
@@ -6308,7 +6308,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
- "futures 0.3.7",
+ "futures 0.3.8",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-config",
@@ -6473,7 +6473,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "futures 0.3.7",
+ "futures 0.3.8",
  "itertools 0.9.0",
  "libra-canonical-serialization",
  "libra-config",
@@ -7349,7 +7349,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f41be6df54c97904af01aa23e613d4521eed7ab23537cede692d4058f6449407"
 dependencies = [
  "bytes",
- "futures 0.3.7",
+ "futures 0.3.8",
  "headers",
  "http",
  "hyper",

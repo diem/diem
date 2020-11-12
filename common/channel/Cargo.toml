@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-futures = "0.3.7"
+futures = "0.3.8"
 libra-metrics = { path = "../metrics", version = "0.1.0" }
 libra-infallible = { path = "../infallible", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

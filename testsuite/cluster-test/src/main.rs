@@ -720,13 +720,13 @@ impl ClusterTestRunner {
         let mut run_future = experiment.run(&mut context).fuse();
         loop {
             select! {
-                delay = deadline_future => {
+                _delay = deadline_future => {
                     bail!("Experiment deadline reached");
                 }
                 result = run_future => {
                     return result.map_err(|e|format_err!("Failed to run experiment: {}", e));
                 }
-                delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
+                _delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
                     let events = self.logs.recv_all();
                     if let Err(s) = self.health_check_runner.run(
                         &events,
