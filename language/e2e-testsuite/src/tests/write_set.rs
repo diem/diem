@@ -3,9 +3,11 @@
 
 use language_e2e_tests::{
     account::{self, Account},
+    assert_prologue_parity,
     common_transactions::rotate_key_txn,
     current_function_name,
     executor::FakeExecutor,
+    transaction_status_eq,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -26,44 +28,17 @@ use move_core_types::{
 };
 
 #[test]
-fn invalid_write_set_sender() {
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.set_golden_file(current_function_name!());
-    executor.new_block();
-
-    // (1) Create a WriteSet that adds an account on a new address
-    let sender_account = executor.create_raw_account_data(1000, 10);
-    executor.add_account_data(&sender_account);
-
-    let new_account_data = executor.create_raw_account_data(1000, 10);
-    let write_set = new_account_data.to_writeset();
-
-    let writeset_txn = sender_account
-        .account()
-        .transaction()
-        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
-        .sequence_number(0)
-        .sign();
-    let output = executor.execute_transaction(writeset_txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET),
-    );
-}
-
-#[test]
 fn invalid_write_set_signer() {
-    // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     executor.new_block();
 
-    // (1) Create a WriteSet that adds an account on a new address
+    // Create a WriteSet that adds an account on a new address.
     let new_account_data = executor.create_raw_account_data(0, 10);
     let write_set = new_account_data.to_writeset();
 
+    // Signing the txn with a key that does not match the sender should fail.
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
@@ -75,29 +50,26 @@ fn invalid_write_set_signer() {
         )
         .unwrap()
         .into_inner();
-    let output = executor.execute_transaction(writeset_txn.clone());
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
-    );
-    assert_eq!(
-        executor.verify_transaction(writeset_txn).status(),
-        Some(StatusCode::REJECTED_WRITE_SET)
+
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
     );
 }
 
 #[test]
 fn verify_and_execute_writeset() {
-    // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
     executor.new_block();
 
-    // (1) Create a WriteSet that adds an account on a new address
+    // Create a WriteSet that adds an account on a new address.
     let new_account_data = executor.create_raw_account_data(0, 10);
     let write_set = new_account_data.to_writeset();
 
+    // (1) Test that a correct WriteSet is executed as expected.
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
@@ -136,14 +108,10 @@ fn verify_and_execute_writeset() {
     assert_eq!(10, updated_sender.sequence_number());
 
     // (2) Cannot reapply the same writeset.
-    let output = executor.execute_transaction(writeset_txn.clone());
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
-    );
-    assert_eq!(
-        executor.verify_transaction(writeset_txn).status().unwrap(),
-        StatusCode::REJECTED_WRITE_SET,
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
     );
 
     // (3) Cannot apply the writeset with future sequence number.
@@ -152,20 +120,15 @@ fn verify_and_execute_writeset() {
         .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
         .sequence_number(10)
         .sign();
-    let output = executor.execute_transaction(writeset_txn.clone());
-    let status = output.status();
-    assert!(status.is_discarded());
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
     );
-    let err = executor.verify_transaction(writeset_txn).status().unwrap();
-    assert_eq!(err, StatusCode::REJECTED_WRITE_SET);
 }
 
 #[test]
 fn bad_writesets() {
-    // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
@@ -175,8 +138,7 @@ fn bad_writesets() {
     let new_account_data = executor.create_raw_account_data(1000, 10);
     let write_set = new_account_data.to_writeset();
 
-    // (1) This WriteSet is signed by an arbitrary account rather than the libra root account. Should be
-    // rejected.
+    // (1) A WriteSet signed by an arbitrary account, not Libra root, should be rejected.
     let writeset_txn = new_account_data
         .account()
         .transaction()
@@ -186,13 +148,13 @@ fn bad_writesets() {
         )))
         .sequence_number(1)
         .sign();
-    let output = executor.execute_transaction(writeset_txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
     );
 
-    // (2) The WriteSet contains a reconfiguration event, will be dropped.
+    // (2) A WriteSet containing a reconfiguration event should be dropped.
     let event = ContractEvent::new(new_epoch_event_key(), 0, coin1_tmp_tag(), vec![]);
     let writeset_txn = genesis_account
         .transaction()
@@ -202,13 +164,12 @@ fn bad_writesets() {
         )))
         .sequence_number(1)
         .sign();
-    let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
-        output.status(),
+        executor.execute_transaction(writeset_txn).status(),
         &TransactionStatus::Discard(StatusCode::INVALID_WRITE_SET)
     );
 
-    // (3) The WriteSet attempts to change LibraWriteSetManager, will be dropped.
+    // (3) A WriteSet attempting to change LibraWriteSetManager should be dropped.
     let key = ResourceKey::new(
         *genesis_account.address(),
         StructTag {
@@ -234,7 +195,7 @@ fn bad_writesets() {
         &TransactionStatus::Discard(StatusCode::INVALID_WRITE_SET)
     );
 
-    // (4) The WriteSet attempts to change libra root AccountResource, will be dropped.
+    // (4) A WriteSet attempting to change Libra root AccountResource should be dropped.
     let key = ResourceKey::new(
         *genesis_account.address(),
         StructTag {
@@ -260,7 +221,7 @@ fn bad_writesets() {
         &TransactionStatus::Discard(StatusCode::INVALID_WRITE_SET)
     );
 
-    // (5) The WriteSet has bad ChainId
+    // (5) A WriteSet with a bad ChainId should be rejected.
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
@@ -270,13 +231,13 @@ fn bad_writesets() {
         .sequence_number(1)
         .chain_id(ChainId::new(NamedChain::DEVNET.id()))
         .sign();
-    let output = executor.execute_transaction(writeset_txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
     );
 
-    // (6) The WriteSet has expired
+    // (6) A WriteSet that has expired should be rejected.
     let writeset_txn = genesis_account
         .transaction()
         .write_set(WriteSetPayload::Direct(ChangeSet::new(
@@ -286,16 +247,47 @@ fn bad_writesets() {
         .sequence_number(1)
         .ttl(0)
         .sign();
-    let output = executor.execute_transaction(writeset_txn);
+    assert_prologue_parity!(
+        executor.verify_transaction(writeset_txn.clone()).status(),
+        executor.execute_transaction(writeset_txn).status(),
+        StatusCode::REJECTED_WRITE_SET
+    );
+
+    // (7) The gas currency specified in the transaction must be valid
+    // (even though WriteSet transactions are not charged for gas).
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
+            WriteSet::default(),
+            vec![],
+        )))
+        .sequence_number(1)
+        .gas_currency_code("Bad_ID")
+        .sign();
     assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+        executor.verify_transaction(writeset_txn).status().unwrap(),
+        StatusCode::INVALID_GAS_SPECIFIER
+    );
+
+    // (8) The gas currency code must also correspond to a registered currency
+    // (even though WriteSet transactions are not charged for gas).
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
+            WriteSet::default(),
+            vec![],
+        )))
+        .sequence_number(1)
+        .gas_currency_code("INVALID")
+        .sign();
+    assert_eq!(
+        executor.verify_transaction(writeset_txn).status().unwrap(),
+        StatusCode::CURRENCY_INFO_DOES_NOT_EXIST
     );
 }
 
 #[test]
 fn transfer_and_execute_writeset() {
-    // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     executor.set_golden_file(current_function_name!());
     let genesis_account = Account::new_libra_root();
