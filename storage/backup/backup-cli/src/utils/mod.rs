@@ -26,9 +26,10 @@ use tokio::fs::metadata;
 
 #[derive(Clone, StructOpt)]
 pub struct GlobalBackupOpt {
+    // Defaults to 128MB, so concurrent chunk downloads won't take up too much memory.
     #[structopt(
         long = "max-chunk-size",
-        default_value = "1073741824",
+        default_value = "134217728",
         help = "Maximum chunk file size in bytes."
     )]
     pub max_chunk_size: usize,
