@@ -248,6 +248,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let mut network_events = select_all(events).fuse();
 
         loop {
+            let _timer = counters::MAIN_LOOP.start_timer();
             ::futures::select! {
                 msg = self.client_events.select_next_some() => {
                     match msg {

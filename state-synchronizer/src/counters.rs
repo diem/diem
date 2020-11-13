@@ -271,3 +271,14 @@ pub static NETWORK_ERROR_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+/// Duration of each run of the event loop.
+pub static MAIN_LOOP: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(
+        register_histogram!(
+            "libra_state_sync_main_loop",
+            "Duration of the each run of the event loop"
+        )
+        .unwrap(),
+    )
+});
