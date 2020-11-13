@@ -285,12 +285,15 @@ impl SafetyRules {
                         .persistent_storage
                         .consensus_key_for_version(expected_key)
                     {
-                        Err(error) => Err(Error::ValidatorKeyNotFound(error.to_string())),
                         Ok(consensus_key) => {
                             self.validator_signer =
                                 Some(ValidatorSigner::new(author, consensus_key));
                             Ok(())
                         }
+                        Err(Error::SecureStorageMissingDataError(error)) => {
+                            Err(Error::ValidatorKeyNotFound(error))
+                        }
+                        Err(error) => Err(error),
                     }
                 }
             }

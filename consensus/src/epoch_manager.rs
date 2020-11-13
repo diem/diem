@@ -40,7 +40,7 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
-use safety_rules::{Error, SafetyRulesManager};
+use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -304,24 +304,12 @@ impl EpochManager {
 
         let mut safety_rules =
             MetricsSafetyRules::new(self.safety_rules_manager.client(), self.storage.clone());
-        match safety_rules.perform_initialize() {
-            Ok(()) => { /* Expected */ }
-            Err(Error::ValidatorKeyNotFound(error)) => {
-                error!(
-                    error = error,
-                    "Unable to find the validator consensus key during initialize",
-                );
-            }
-            Err(Error::ValidatorNotInSet(error)) => {
-                error!(
-                    error = error,
-                    "The validator is not in the current validator set",
-                );
-            }
-            Err(error) => panic!(
-                "Unable to initialize SafetyRules. Unexpected error: {:?}",
-                error
-            ),
+        if let Err(error) = safety_rules.perform_initialize() {
+            error!(
+                epoch = epoch,
+                error = error,
+                "Unable to initialize safety rules.",
+            );
         }
 
         info!(epoch = epoch, "Create ProposalGenerator");

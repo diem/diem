@@ -29,8 +29,10 @@ pub enum Error {
     InvalidQuorumCertificate(String),
     #[error("{0} is not set, SafetyRules is not initialized")]
     NotInitialized(String),
-    #[error("Error returned by secure storage: {0}")]
-    SecureStorageError(String),
+    #[error("Data not found in secure storage: {0}")]
+    SecureStorageMissingDataError(String),
+    #[error("Unexpected error returned by secure storage: {0}")]
+    SecureStorageUnexpectedError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
     #[error("Validator key not found: {0}")]
@@ -55,18 +57,23 @@ impl From<libra_secure_net::Error> for Error {
 
 impl From<libra_secure_storage::Error> for Error {
     fn from(error: libra_secure_storage::Error) -> Self {
-        // If a storage error is thrown that indicates a permission failure, we
-        // want to panic immediately to alert an operator that something has gone
-        // wrong. For example, this error is thrown when a storage (e.g., vault)
-        // token has expired, so it makes sense to fail fast and require a token
-        // renewal!
-        if libra_secure_storage::Error::PermissionDenied == error {
-            panic!(
-                "A permission error was thrown: {:?}. Maybe the storage token needs to be renewed?",
-                error
-            );
-        } else {
-            Self::SecureStorageError(error.to_string())
+        match error {
+            libra_secure_storage::Error::PermissionDenied => {
+                // If a storage error is thrown that indicates a permission failure, we
+                // want to panic immediately to alert an operator that something has gone
+                // wrong. For example, this error is thrown when a storage (e.g., vault)
+                // token has expired, so it makes sense to fail fast and require a token
+                // renewal!
+                panic!(
+                    "A permission error was thrown: {:?}. Maybe the storage token needs to be renewed?",
+                    error
+                );
+            }
+            libra_secure_storage::Error::KeyVersionNotFound(_, _)
+            | libra_secure_storage::Error::KeyNotSet(_) => {
+                Self::SecureStorageMissingDataError(error.to_string())
+            }
+            _ => Self::SecureStorageUnexpectedError(error.to_string()),
         }
     }
 }
