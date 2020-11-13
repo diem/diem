@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::{BlockReader, BlockRetriever, BlockStore},
+    block_storage::{
+        tracing::{observe_block, BlockStage},
+        BlockReader, BlockRetriever, BlockStore,
+    },
     counters,
     error::VerifyError,
     liveness::{
@@ -31,7 +34,6 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use fail::fail_point;
-use libra_infallible::duration_since_epoch;
 use libra_logger::prelude::*;
 use libra_trace::prelude::*;
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
@@ -277,6 +279,7 @@ impl RoundManager {
             .generate_proposal(new_round_event.round)
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
         self.txn_manager.trace_transactions(&signed_proposal);
         trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
         trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
@@ -296,6 +299,11 @@ impl RoundManager {
             Err(anyhow::anyhow!("Injected error in process_proposal_msg"))
         });
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
+
+        observe_block(
+            proposal_msg.proposal().timestamp_usecs(),
+            BlockStage::RECEIVED,
+        );
         if self
             .ensure_round_and_sync_up(
                 proposal_msg.proposal().round(),
@@ -513,12 +521,9 @@ impl RoundManager {
             self.round_state.current_round_deadline(),
         );
 
+        observe_block(proposal.timestamp_usecs(), BlockStage::SYNCED);
+
         let proposal_round = proposal.round();
-
-        if let Some(time_to_receival) = duration_since_epoch().checked_sub(block_time_since_epoch) {
-            counters::CREATION_TO_RECEIVAL_S.observe_duration(time_to_receival);
-        }
-
         let vote = self
             .execute_and_vote(proposal)
             .await
@@ -580,6 +585,7 @@ impl RoundManager {
                 Fg(Reset),
                 executed_block.block()
             ))?;
+        observe_block(executed_block.block().timestamp_usecs(), BlockStage::VOTED);
 
         self.storage
             .save_vote(&vote)
@@ -660,15 +666,6 @@ impl RoundManager {
             .insert_vote(vote, &self.epoch_state.verifier)
         {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
-                // Note that the block might not be present locally, in which case we cannot calculate
-                // time between block creation and qc
-                if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
-                    duration_since_epoch()
-                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                }) {
-                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
-                }
-
                 self.new_qc_aggregated(qc, vote.author()).await
             }
             VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
@@ -681,6 +678,10 @@ impl RoundManager {
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
     ) -> anyhow::Result<()> {
+        observe_block(
+            qc.certified_block().timestamp_usecs(),
+            BlockStage::QC_AGGREGATED,
+        );
         let result = self
             .block_store
             .insert_quorum_cert(&qc, &mut self.create_block_retriever(preferred_peer))

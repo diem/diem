@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 mod block_store;
 mod block_tree;
+pub mod tracing;
 
 pub use block_store::{sync_manager::BlockRetriever, BlockStore};
 use consensus_types::sync_info::SyncInfo;

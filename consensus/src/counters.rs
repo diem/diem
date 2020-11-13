@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_metrics::{
-    register_histogram, register_int_counter, register_int_counter_vec, register_int_gauge,
-    DurationHistogram, Histogram, IntCounter, IntCounterVec, IntGauge,
+    register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
+    register_int_gauge, DurationHistogram, Histogram, HistogramVec, IntCounter, IntCounterVec,
+    IntGauge,
 };
 use once_cell::sync::Lazy;
 
@@ -188,26 +189,13 @@ pub static NUM_TXNS_PER_BLOCK: Lazy<Histogram> = Lazy::new(|| {
     .unwrap()
 });
 
-/// Histogram of the time it takes for a block to get committed.
-/// Measured as the commit time minus block's timestamp.
-pub static CREATION_TO_COMMIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_commit_s", "Histogram of the time it takes for a block to get committed. Measured as the commit time minus block's timestamp.").unwrap())
-});
-
-/// Duration between block generation time until the moment it gathers full QC
-pub static CREATION_TO_QC_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_creation_to_qc_s",
-            "Duration between block generation time until the moment it gathers full QC"
-        )
-        .unwrap(),
+pub static BLOCK_TRACING: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_consensus_block_tracing",
+        "Histogram for different stages of a block",
+        &["stage"]
     )
-});
-
-/// Duration between block generation time until the moment it is received and ready for execution.
-pub static CREATION_TO_RECEIVAL_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_receival_s", "Duration between block generation time until the moment it is received and ready for execution.").unwrap())
+    .unwrap()
 });
 
 /// Histogram of the time it requires to wait before inserting blocks into block store.
