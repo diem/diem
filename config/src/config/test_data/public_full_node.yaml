@@ -19,6 +19,11 @@ full_node_networks:
       # prevent remote, incoming connections.
       listen_address: "/ip4/127.0.0.1/tcp/6180"
       network_id: "public"
+    - discovery_method: "onchain"
+      # The network must have a listen address to specify protocols. This runs it locally to
+      # prevent remote, incoming connections.
+      listen_address: "/ip4/127.0.0.1/tcp/6188"
+      network_id: "public"
 
 json_rpc:
     # This specifies your JSON-RPC endpoint. This runs locally to prevent remote queries, setting
