@@ -55,7 +55,7 @@ const MAX_VASP_ACCOUNT_NUM: usize = 16;
 const DD_KEY: &str = "dd.key";
 
 pub struct TxEmitter {
-    accounts: Vec<AccountData>,
+    pub accounts: Vec<AccountData>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     chain_id: ChainId,
     premainnet: bool,
