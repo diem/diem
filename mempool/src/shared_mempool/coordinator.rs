@@ -71,6 +71,7 @@ pub(crate) async fn coordinator<V>(
     let bounded_executor = BoundedExecutor::new(workers_available, executor.clone());
 
     loop {
+        let _timer = counters::MAIN_LOOP.start_timer();
         ::futures::select! {
             (msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
