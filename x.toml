@@ -142,6 +142,7 @@ members = [
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
     "testsuite/smoke-test",
+    "testsuite/smoke-test/attribute",
 ]
 
 # Interesting subsets of the workspace, These are used for generating and

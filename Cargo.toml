@@ -141,6 +141,7 @@ members = [
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
     "testsuite/smoke-test",
+    "testsuite/smoke-test/attribute",
     "types",
     "vm-validator",
 ]

@@ -3497,6 +3497,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-smoke-test-attribute"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack",
+ "proc-macro2 1.0.24",
+ "quote 1.0.7",
+]
+
+[[package]]
 name = "libra-state-view"
 version = "0.1.0"
 dependencies = [
@@ -6195,6 +6204,7 @@ dependencies = [
  "libra-secure-json-rpc",
  "libra-secure-storage",
  "libra-secure-time",
+ "libra-smoke-test-attribute",
  "libra-swarm",
  "libra-temppath",
  "libra-trace",
@@ -6208,6 +6218,7 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "rust_decimal",
+ "rusty-fork",
  "statistical",
  "tokio",
  "transaction-builder",
