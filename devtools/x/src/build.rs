@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    cargo::{CargoArgs, CargoCommand},
+    cargo::{CargoArgs, CargoCommand, SelectedPackageArgs},
     context::XContext,
-    utils, Result,
+    Result,
 };
 use log::info;
 use std::ffi::OsString;
@@ -23,15 +23,8 @@ pub struct Args {
     #[structopt(long, short)]
     /// No output printed to stdout
     quiet: bool,
-    #[structopt(long, short, number_of_values = 1)]
-    /// Package to build (see `cargo help pkgid`)
-    package: Vec<String>,
-    #[structopt(long)]
-    /// Alias for --workspace (deprecated)
-    all: bool,
-    #[structopt(long)]
-    /// Build all packages in the workspace
-    workspace: bool,
+    #[structopt(flatten)]
+    package_args: SelectedPackageArgs,
     #[structopt(long, number_of_values = 1)]
     /// Package to exclude (see `cargo help pkgid`)
     exclude: Vec<String>,
@@ -123,12 +116,6 @@ pub fn convert_args(args: &Args) -> Vec<OsString> {
     let mut direct_args = Vec::new();
     if args.quiet {
         direct_args.push(OsString::from("--quiet"));
-    }
-    if args.all {
-        direct_args.push(OsString::from("--all"));
-    }
-    if args.workspace {
-        direct_args.push(OsString::from("--workspace"));
     }
     if let Some(jobs) = args.jobs {
         direct_args.push(OsString::from("--jobs"));
@@ -255,14 +242,6 @@ pub fn run(args: Box<Args>, xctx: XContext) -> Result<()> {
         env: &[],
     };
 
-    if !args.package.is_empty() {
-        cmd.run_on_packages(args.package.iter(), &CargoArgs::default())?;
-    } else if utils::project_is_root(&xctx.config().cargo_config())? {
-        // TODO Maybe only run a subest of builds if we're not inside
-        // a package but not at the project root (e.g. language)
-        cmd.run_on_all_packages(&CargoArgs::default())?;
-    } else {
-        cmd.run_on_local_package(&CargoArgs::default())?;
-    }
-    Ok(())
+    let packages = args.package_args.to_selected_packages(&xctx)?;
+    cmd.run_on_packages(&packages, &CargoArgs::default())
 }

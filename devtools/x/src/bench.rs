@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{CargoArgs, CargoCommand},
+    cargo::{CargoArgs, CargoCommand, SelectedPackageArgs},
     context::XContext,
-    utils, Result,
+    Result,
 };
 use std::ffi::OsString;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
-    #[structopt(long, short, number_of_values = 1)]
-    /// Run test on the provided packages
-    package: Vec<String>,
+    #[structopt(flatten)]
+    package_args: SelectedPackageArgs,
     /// Do not run the benchmarks, but compile them
     #[structopt(long)]
     no_run: bool,
@@ -39,13 +38,6 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     };
 
     let base_args = CargoArgs::default();
-
-    if !args.package.is_empty() {
-        cmd.run_on_packages(args.package.iter(), &base_args)?;
-    } else if utils::project_is_root(&xctx.config().cargo_config())? {
-        cmd.run_on_all_packages(&base_args)?;
-    } else {
-        cmd.run_on_local_package(&base_args)?;
-    };
-    Ok(())
+    let packages = args.package_args.to_selected_packages(&xctx)?;
+    cmd.run_on_packages(&packages, &base_args)
 }

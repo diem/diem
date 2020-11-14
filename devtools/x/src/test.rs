@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{CargoArgs, CargoCommand},
+    cargo::{CargoArgs, CargoCommand, SelectedPackageArgs},
     context::XContext,
-    utils,
     utils::project_root,
     Result,
 };
@@ -20,9 +19,8 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
-    #[structopt(long, short, number_of_values = 1)]
-    /// Run test on the provided packages
-    package: Vec<String>,
+    #[structopt(flatten)]
+    pub(crate) package_args: SelectedPackageArgs,
     #[structopt(long, short)]
     /// Skip running expensive libra testsuite integration tests
     unit: bool,
@@ -106,20 +104,11 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         env: &env_vars,
     };
 
-    let cmd_result = if args.unit {
-        cmd.run_with_exclusions(
-            config.system_tests().iter().map(|(p, _)| p),
-            &CargoArgs::default(),
-        )
-    } else if !args.package.is_empty() {
-        cmd.run_on_packages(args.package.iter(), &CargoArgs::default())
-    } else if utils::project_is_root(&xctx.config().cargo_config())? {
-        // TODO Maybe only run a subest of tests if we're not inside
-        // a package but not at the project root (e.g. language)
-        cmd.run_on_all_packages(&CargoArgs::default())
-    } else {
-        cmd.run_on_local_package(&CargoArgs::default())
-    };
+    let mut packages = args.package_args.to_selected_packages(&xctx)?;
+    if args.unit {
+        packages.add_excludes(config.system_tests().iter().map(|(p, _)| p.as_str()));
+    }
+    let cmd_result = cmd.run_on_packages(&packages, &CargoArgs::default());
 
     if !args.no_fail_fast && cmd_result.is_err() {
         return cmd_result;
