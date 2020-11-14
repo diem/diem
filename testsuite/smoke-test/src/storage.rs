@@ -192,7 +192,7 @@ fn db_backup(backup_service_port: u16, target_epoch: u64, target_version: Versio
             "--transaction-batch-size",
             "20",
             "--state-snapshot-interval",
-            "50",
+            "40",
             "--metadata-cache-dir",
             metadata_cache_path1.path().to_str().unwrap(),
             "local-fs",

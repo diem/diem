@@ -47,6 +47,13 @@ impl BackupCoordinatorOpt {
             self.state_snapshot_interval > 0 && self.transaction_batch_size > 0,
             "Backup interval and batch size must be greater than 0."
         );
+        ensure!(
+            self.state_snapshot_interval % self.transaction_batch_size == 0,
+            "State snapshot interval should be N x transaction_batch_size, N >= 1. \
+             Otherwise there can be edge case where the only snapshot is taken at a version  \
+             that's not yet in a transaction backup, resulting in replaying all transactions \
+             at restore time."
+        );
         Ok(())
     }
 }
