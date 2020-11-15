@@ -1550,6 +1550,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "errno"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa68f2fb9cae9d37c9b2b3584aba698a2e97f72d7aef7b9f7aa71d8b54ce46fe"
+dependencies = [
+ "errno-dragonfly",
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "errno-dragonfly"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14ca354e36190500e1e1fb267c647932382b54053c50b14970856c0b00a35067"
+dependencies = [
+ "gcc",
+ "libc",
+]
+
+[[package]]
 name = "execution-correctness"
 version = "0.1.0"
 dependencies = [
@@ -4167,6 +4188,7 @@ dependencies = [
  "tokio",
  "toml",
  "vm",
+ "vmw_backdoor",
 ]
 
 [[package]]
@@ -7310,6 +7332,20 @@ dependencies = [
  "storage-service",
  "transaction-builder",
  "vm-genesis",
+]
+
+[[package]]
+name = "vmw_backdoor"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "782273e25af43e3b255d00a72a22311feacabf9482bcbab26a8a03aae9197867"
+dependencies = [
+ "cc",
+ "cfg-if 0.1.10",
+ "errno",
+ "libc",
+ "log",
+ "thiserror",
 ]
 
 [[package]]
