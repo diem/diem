@@ -2720,12 +2720,9 @@ name = "libra-canonical-serialization"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "libra-crypto",
- "libra-crypto-derive",
  "libra-workspace-hack",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
  "serde",
  "thiserror",
 ]
