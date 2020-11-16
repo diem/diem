@@ -5,10 +5,7 @@ use crate::{
     access_path_cache::AccessPathCache,
     counters::*,
     data_cache::{RemoteStorage, StateViewCache},
-    errors::{
-        convert_normal_prologue_error, convert_normal_success_epilogue_error,
-        convert_write_set_prologue_error, expect_only_successful_execution,
-    },
+    errors::{convert_epilogue_error, convert_prologue_error, expect_only_successful_execution},
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
@@ -242,7 +239,7 @@ impl LibraVMImpl {
                 cost_strategy,
                 log_context,
             )
-            .or_else(|err| convert_normal_prologue_error(err, log_context))
+            .or_else(|err| convert_prologue_error(err, log_context))
     }
 
     /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
@@ -281,7 +278,7 @@ impl LibraVMImpl {
                 cost_strategy,
                 log_context,
             )
-            .or_else(|err| convert_normal_prologue_error(err, log_context))
+            .or_else(|err| convert_prologue_error(err, log_context))
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -322,7 +319,7 @@ impl LibraVMImpl {
                 cost_strategy,
                 log_context,
             )
-            .or_else(|err| convert_normal_success_epilogue_error(err, log_context))
+            .or_else(|err| convert_epilogue_error(err, log_context))
     }
 
     /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
@@ -393,7 +390,7 @@ impl LibraVMImpl {
                 &mut cost_strategy,
                 log_context,
             )
-            .or_else(|err| convert_write_set_prologue_error(err, log_context))
+            .or_else(|err| convert_prologue_error(err, log_context))
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored

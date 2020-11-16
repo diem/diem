@@ -500,9 +500,7 @@ impl LibraVM {
             .0
             .run_writeset_prologue(&mut session, &txn_data, log_context)
         {
-            // Switch any error from the prologue to a reject
-            debug_assert_eq!(e.status_code(), StatusCode::REJECTED_WRITE_SET);
-            return Ok((e, discard_error_output(StatusCode::REJECTED_WRITE_SET)));
+            return Ok(discard_error_vm_status(e));
         };
 
         let change_set = match txn.payload() {

@@ -54,7 +54,7 @@ fn invalid_write_set_signer() {
     assert_prologue_parity!(
         executor.verify_transaction(writeset_txn.clone()).status(),
         executor.execute_transaction(writeset_txn).status(),
-        StatusCode::REJECTED_WRITE_SET
+        StatusCode::INVALID_AUTH_KEY
     );
 }
 
@@ -111,7 +111,7 @@ fn verify_and_execute_writeset() {
     assert_prologue_parity!(
         executor.verify_transaction(writeset_txn.clone()).status(),
         executor.execute_transaction(writeset_txn).status(),
-        StatusCode::REJECTED_WRITE_SET
+        StatusCode::SEQUENCE_NUMBER_TOO_OLD
     );
 
     // (3) Cannot apply the writeset with future sequence number.
@@ -120,11 +120,13 @@ fn verify_and_execute_writeset() {
         .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
         .sequence_number(10)
         .sign();
-    assert_prologue_parity!(
-        executor.verify_transaction(writeset_txn.clone()).status(),
-        executor.execute_transaction(writeset_txn).status(),
-        StatusCode::REJECTED_WRITE_SET
+    let output = executor.execute_transaction(writeset_txn.clone());
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Discard(StatusCode::SEQUENCE_NUMBER_TOO_NEW)
     );
+    // "Too new" sequence numbers are accepted during validation.
+    assert!(executor.verify_transaction(writeset_txn).status().is_none());
 }
 
 #[test]
@@ -234,7 +236,7 @@ fn bad_writesets() {
     assert_prologue_parity!(
         executor.verify_transaction(writeset_txn.clone()).status(),
         executor.execute_transaction(writeset_txn).status(),
-        StatusCode::REJECTED_WRITE_SET
+        StatusCode::BAD_CHAIN_ID
     );
 
     // (6) A WriteSet that has expired should be rejected.
@@ -250,7 +252,7 @@ fn bad_writesets() {
     assert_prologue_parity!(
         executor.verify_transaction(writeset_txn.clone()).status(),
         executor.execute_transaction(writeset_txn).status(),
-        StatusCode::REJECTED_WRITE_SET
+        StatusCode::TRANSACTION_EXPIRED
     );
 
     // (7) The gas currency specified in the transaction must be valid

@@ -384,16 +384,29 @@ fn test_validate_invalid_arguments() {
 fn test_validate_non_genesis_write_set() {
     let vm_validator = TestValidator::new();
 
+    // Confirm that a correct transaction is validated successfully.
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_write_set_txn(
         address,
-        2,
+        1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
     )
     .into_inner();
     let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert!(ret.status().is_none());
+
+    // A WriteSet txn is only valid when sent from the Libra root account.
+    let bad_transaction = transaction_test_helpers::get_write_set_txn(
+        account_config::treasury_compliance_account_address(),
+        1,
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
+        None,
+    )
+    .into_inner();
+    let ret = vm_validator.validate_transaction(bad_transaction).unwrap();
     assert_eq!(ret.status().unwrap(), StatusCode::REJECTED_WRITE_SET);
 }
 
