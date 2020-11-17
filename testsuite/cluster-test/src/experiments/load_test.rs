@@ -106,8 +106,10 @@ impl Experiment for LoadTest {
         info!("hhhhh1 {}", self.random_instances.len());
         //let futures = self.random_instances.iter().enumerate().map(|(index, inst)|get_stubbed_node(inst, index));
         //let nodes = join_all(futures).await;
-        let mut node1 = get_stubbed_node(&self.random_instances[0], 0).await;
-        let mut node2 = get_stubbed_node(&self.random_instances[1], 1).await;
+        let mut node1 = get_stubbed_node(&context.cluster.fullnode_instances()[0], 0).await;
+        let mut node2 = get_stubbed_node(&context.cluster.fullnode_instances()[1], 1).await;
+        info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[0].instance_config().pod_name());
+        info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[1].instance_config().pod_name());
 
 
         let mut emit_job = None;
