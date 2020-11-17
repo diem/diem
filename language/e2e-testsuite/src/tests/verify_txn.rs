@@ -10,19 +10,20 @@ use diem_types::{
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
-    transaction::{Script, TransactionArgument, TransactionStatus},
+    transaction::{Script, TransactionArgument, TransactionStatus, WriteSetPayload},
     vm_status::{KeptVMStatus, StatusCode},
 };
 use language_e2e_tests::{
     account::Account, assert_prologue_disparity, assert_prologue_parity,
     compile::compile_module_with_address, current_function_name, executor::FakeExecutor, gas_costs,
-    transaction_status_eq,
+    keygen::KeyGen, transaction_status_eq,
 };
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
 };
+use move_vm_types::values::Value;
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm::file_format::CompiledModule;
 
@@ -580,6 +581,31 @@ fn verify_gas_currency_code() {
 }
 
 #[test]
+fn verify_max_sequence_number() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+    let sender = executor.create_raw_account_data(900_000, std::u64::MAX);
+    executor.add_account_data(&sender);
+    let private_key = &sender.account().privkey;
+    let txn = transaction_test_helpers::get_test_signed_transaction(
+        *sender.address(),
+        std::u64::MAX, /* sequence_number */
+        private_key,
+        private_key.public_key(),
+        None,     /* script */
+        u64::MAX, /* expiration_time */
+        0,        /* gas_unit_price */
+        "XUS".to_string(),
+        None, /* max_gas_amount */
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::SEQUENCE_NUMBER_TOO_BIG
+    );
+}
+
+#[test]
 pub fn test_no_publishing_diem_root_sender() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
@@ -1123,4 +1149,162 @@ fn charge_gas_invalid_args() {
     let output = executor.execute_transaction(txn);
     assert!(!output.status().is_discarded());
     assert!(output.gas_used() > 0);
+}
+
+#[test]
+pub fn publish_and_register_new_currency() {
+    // create a FakeExecutor with a genesis from file
+    let mut executor = FakeExecutor::allowlist_genesis();
+    executor.set_golden_file(current_function_name!());
+
+    // create a transaction trying to publish a new module.
+    let sender = Account::new_diem_root();
+    let tc_account = Account::new_blessed_tc();
+
+    let module = r#"
+        module COIN {
+            import 0x1.FixedPoint32;
+            import 0x1.Diem;
+            struct COIN { x: bool }
+            public initialize(dr_account: &signer, tc_account: &signer) {
+                Diem.register_SCS_currency<Self.COIN>(
+                    move(dr_account),
+                    move(tc_account),
+                    FixedPoint32.create_from_rational(1,2),
+                    100000,
+                    100,
+                    h"434f494e",
+                );
+                return;
+            }
+        }
+    "#;
+
+    let (compiled_module, module) =
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &module);
+    let txn = sender
+        .transaction()
+        .module(module)
+        .sequence_number(1)
+        .sign();
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    assert_eq!(
+        executor.execute_and_apply(txn).status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
+    let coin_tag = account_config::type_tag_for_currency_code(Identifier::new("COIN").unwrap());
+
+    {
+        let program = {
+            let code = r#"
+            import 0x1.COIN;
+            main(lr_account: &signer, tc_account: &signer) {
+                COIN.initialize(move(lr_account), move(tc_account));
+                return;
+            }
+            "#;
+            let compiler = Compiler {
+                address: account_config::CORE_CODE_ADDRESS,
+                extra_deps: vec![compiled_module],
+                ..Compiler::default()
+            };
+            compiler
+                .into_script_blob("file_name", code)
+                .expect("Failed to compile")
+        };
+        let txn = sender
+            .transaction()
+            .write_set(WriteSetPayload::Script {
+                script: Script::new(program, vec![], vec![]),
+                execute_as: *tc_account.address(),
+            })
+            .sequence_number(2)
+            .sign();
+        executor.new_block();
+        executor.execute_and_apply(txn);
+    }
+
+    let dd = Account::new_from_seed(&mut KeyGen::from_seed([0; 32]));
+
+    let txn = tc_account
+        .transaction()
+        .script(transaction_builder::encode_create_designated_dealer_script(
+            coin_tag.clone(),
+            0,
+            *dd.address(),
+            dd.auth_key_prefix(),
+            b"".to_vec(),
+            true,
+        ))
+        .sequence_number(0)
+        .sign();
+
+    executor.execute_and_apply(txn);
+
+    executor.exec(
+        "DesignatedDealer",
+        "add_currency",
+        vec![coin_tag.clone()],
+        vec![
+            Value::transaction_argument_signer_reference(*dd.address()),
+            Value::transaction_argument_signer_reference(*tc_account.address()),
+        ],
+        tc_account.address(),
+    );
+
+    let txn = tc_account
+        .transaction()
+        .script(transaction_builder::encode_tiered_mint_script(
+            coin_tag.clone(),
+            0,
+            *dd.address(),
+            50000,
+            1,
+        ))
+        .sequence_number(1)
+        .sign();
+
+    executor.execute_and_apply(txn);
+
+    let txn = dd
+        .transaction()
+        .script(
+            transaction_builder::encode_peer_to_peer_with_metadata_script(
+                coin_tag.clone(),
+                *dd.address(),
+                1,
+                b"".to_vec(),
+                b"".to_vec(),
+            ),
+        )
+        .gas_unit_price(1)
+        .max_gas_amount(800)
+        .gas_currency_code("COIN")
+        .sequence_number(0)
+        .sign();
+
+    let balance = executor.read_balance_resource(&dd, Identifier::new("COIN").unwrap());
+    assert!(balance.unwrap().coin() > 800);
+
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn.clone()).status(),
+        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
+    );
+
+    executor.exec(
+        "TransactionFee",
+        "add_txn_fee_currency",
+        vec![coin_tag],
+        vec![Value::transaction_argument_signer_reference(
+            *tc_account.address(),
+        )],
+        tc_account.address(),
+    );
+
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
 }

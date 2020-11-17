@@ -22,6 +22,7 @@ pub const EBAD_CHAIN_ID: u64 = 1007; // chain_id in transaction doesn't match th
 pub const ESCRIPT_NOT_ALLOWED: u64 = 1008;
 pub const EMODULE_NOT_ALLOWED: u64 = 1009;
 pub const EINVALID_WRITESET_SENDER: u64 = 1010; // invalid sender (not diem root) for write set
+pub const ESEQUENCE_NUMBER_TOO_BIG: u64 = 1011;
 
 const INVALID_STATE: u8 = 1;
 const INVALID_ARGUMENT: u8 = 7;
@@ -77,6 +78,8 @@ pub fn convert_prologue_error(
                 (INVALID_STATE, ESCRIPT_NOT_ALLOWED) => StatusCode::UNKNOWN_SCRIPT,
                 (INVALID_STATE, EMODULE_NOT_ALLOWED) => StatusCode::INVALID_MODULE_PUBLISHER,
                 (INVALID_ARGUMENT, EINVALID_WRITESET_SENDER) => StatusCode::REJECTED_WRITE_SET,
+                // Sequence number will overflow
+                (LIMIT_EXCEEDED, ESEQUENCE_NUMBER_TOO_BIG) => StatusCode::SEQUENCE_NUMBER_TOO_BIG,
                 (category, reason) => {
                     log_context.alert();
                     error!(

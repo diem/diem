@@ -45,7 +45,7 @@ module TransactionFee {
             with Errors::ALREADY_PUBLISHED;
     }
 
-    fun is_coin_initialized<CoinType>(): bool {
+    public fun is_coin_initialized<CoinType>(): bool {
         exists<TransactionFee<CoinType>>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
 

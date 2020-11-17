@@ -645,6 +645,15 @@ Tried to withdraw funds in a currency that the account does hold
 
 
 
+<a name="0x1_DiemAccount_EPILOGUE_INVALID_WRITESET_SENDER"></a>
+
+
+
+<pre><code><b>const</b> <a href="DiemAccount.md#0x1_DiemAccount_EPILOGUE_INVALID_WRITESET_SENDER">EPILOGUE_INVALID_WRITESET_SENDER</a>: u64 = 1012;
+</code></pre>
+
+
+
 <a name="0x1_DiemAccount_EROLE_CANT_STORE_BALANCE"></a>
 
 Tried to create a balance for an account whose role does not allow holding balances
@@ -769,6 +778,15 @@ via the <code><a href="Errors.md#0x1_Errors">Errors</a></code> module.
 
 
 <pre><code><b>const</b> <a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED">PROLOGUE_ESCRIPT_NOT_ALLOWED</a>: u64 = 1008;
+</code></pre>
+
+
+
+<a name="0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG"></a>
+
+
+
+<pre><code><b>const</b> <a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG">PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG</a>: u64 = 1011;
 </code></pre>
 
 
@@ -3827,25 +3845,36 @@ The main properties that it verifies:
             balance_amount &gt;= max_transaction_fee,
             <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT">PROLOGUE_ECANT_PAY_GAS_DEPOSIT</a>)
         );
+        // [PCA8]: Check that the gas fee can be paid in this currency
+        <b>assert</b>(
+            <a href="TransactionFee.md#0x1_TransactionFee_is_coin_initialized">TransactionFee::is_coin_initialized</a>&lt;Token&gt;(),
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT">PROLOGUE_ECANT_PAY_GAS_DEPOSIT</a>)
+        );
     };
 
-    // [PCA8]: Check that the transaction hasn't expired
+    // [PCA9]: Check that the transaction hasn't expired
     <b>assert</b>(
         <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_seconds">DiemTimestamp::now_seconds</a>() &lt; txn_expiration_time_seconds,
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ETRANSACTION_EXPIRED">PROLOGUE_ETRANSACTION_EXPIRED</a>)
     );
 
-    // [PCA9]: Check that the transaction sequence number is not too <b>old</b> (in the past)
+    // [PCA10]: Check that the transaction sequence number is not too <b>old</b> (in the past)
     <b>assert</b>(
         txn_sequence_number &gt;= sender_account.sequence_number,
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>)
     );
 
-    // [PCA10]: Check that the transaction's sequence number matches the
+    // [PCA11]: Check that the transaction's sequence number matches the
     // current sequence number. Otherwise sequence number is too new by [PCA8].
     <b>assert</b>(
         txn_sequence_number == sender_account.sequence_number,
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
+    );
+
+    // [PCA12]: Check that the transaction's sequence number will not overflow.
+    <b>assert</b>(
+        (txn_sequence_number <b>as</b> u128) &lt; <a href="DiemAccount.md#0x1_DiemAccount_MAX_U64">MAX_U64</a>,
+        <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="DiemAccount.md#0x1_DiemAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG">PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG</a>)
     );
 
     // WARNING: No checks should be added here <b>as</b> the sequence number too new check should be the last check run
@@ -3963,7 +3992,16 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 </code></pre>
 
 
-[PCA8] Covered: L72 (Match 6)
+[PCA8] Covered: L69 (Match 5)
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> max_transaction_fee &gt; 0 && !<a href="TransactionFee.md#0x1_TransactionFee_is_coin_initialized">TransactionFee::is_coin_initialized</a>&lt;Token&gt;() <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+[PCA9] Covered: L72 (Match 6)
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
@@ -3972,7 +4010,7 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 </code></pre>
 
 
-[PCA9] Covered: L61 (Match 2)
+[PCA10] Covered: L61 (Match 2)
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
@@ -3981,11 +4019,20 @@ Only happens if this is called in Genesis. Doesn't need to be handled.
 </code></pre>
 
 
-[PCA10] Covered: L63 (match 3)
+[PCA11] Covered: L63 (match 3)
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
     <b>aborts_if</b> txn_sequence_number &gt; <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(transaction_sender).sequence_number <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+[PCA12] Covered: L81 (match 11)
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> txn_sequence_number &gt;= <a href="DiemAccount.md#0x1_DiemAccount_MAX_U64">MAX_U64</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -4105,6 +4152,14 @@ Epilogue for WriteSet trasnaction
         &<b>mut</b> writeset_events_ref.upgrade_events,
         <a href="DiemAccount.md#0x1_DiemAccount_AdminTransactionEvent">AdminTransactionEvent</a> { committed_timestamp_secs: <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_seconds">DiemTimestamp::now_seconds</a>() },
     );
+
+    // Double check that the sender is the DiemRoot account at the `<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>`
+    <b>assert</b>(
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>(),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_EPILOGUE_INVALID_WRITESET_SENDER">EPILOGUE_INVALID_WRITESET_SENDER</a>)
+    );
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(dr_account), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemAccount.md#0x1_DiemAccount_EPILOGUE_INVALID_WRITESET_SENDER">EPILOGUE_INVALID_WRITESET_SENDER</a>));
+
     // Currency code don't matter here <b>as</b> it won't be charged anyway.
     <a href="DiemAccount.md#0x1_DiemAccount_epilogue">epilogue</a>&lt;<a href="XUS.md#0x1_XUS">XUS</a>&gt;(dr_account, txn_sequence_number, 0, 0, 0);
     <b>if</b> (should_trigger_reconfiguration) <a href="DiemConfig.md#0x1_DiemConfig_reconfigure">DiemConfig::reconfigure</a>(dr_account)

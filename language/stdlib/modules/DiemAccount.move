@@ -198,6 +198,8 @@ module DiemAccount {
     const PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 1008;
     const PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 1009;
     const PROLOGUE_INVALID_WRITESET_SENDER: u64 = 1010;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG: u64 = 1011;
+    const EPILOGUE_INVALID_WRITESET_SENDER: u64 = 1012;
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -1650,25 +1652,36 @@ module DiemAccount {
                 balance_amount >= max_transaction_fee,
                 Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
             );
+            // [PCA8]: Check that the gas fee can be paid in this currency
+            assert(
+                TransactionFee::is_coin_initialized<Token>(),
+                Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+            );
         };
 
-        // [PCA8]: Check that the transaction hasn't expired
+        // [PCA9]: Check that the transaction hasn't expired
         assert(
             DiemTimestamp::now_seconds() < txn_expiration_time_seconds,
             Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
         );
 
-        // [PCA9]: Check that the transaction sequence number is not too old (in the past)
+        // [PCA10]: Check that the transaction sequence number is not too old (in the past)
         assert(
             txn_sequence_number >= sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
         );
 
-        // [PCA10]: Check that the transaction's sequence number matches the
+        // [PCA11]: Check that the transaction's sequence number matches the
         // current sequence number. Otherwise sequence number is too new by [PCA8].
         assert(
             txn_sequence_number == sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
+        );
+
+        // [PCA12]: Check that the transaction's sequence number will not overflow.
+        assert(
+            (txn_sequence_number as u128) < MAX_U64,
+            Errors::limit_exceeded(PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG)
         );
 
         // WARNING: No checks should be added here as the sequence number too new check should be the last check run
@@ -1705,12 +1718,16 @@ module DiemAccount {
         aborts_if max_transaction_fee > 0 && !exists<Balance<Token>>(transaction_sender) with Errors::INVALID_ARGUMENT;
         /// [PCA7] Covered: L69 (Match 5)
         aborts_if max_transaction_fee > 0 && balance<Token>(transaction_sender) < max_transaction_fee with Errors::INVALID_ARGUMENT;
-        /// [PCA8] Covered: L72 (Match 6)
+        /// [PCA8] Covered: L69 (Match 5)
+        aborts_if max_transaction_fee > 0 && !TransactionFee::is_coin_initialized<Token>() with Errors::INVALID_ARGUMENT;
+        /// [PCA9] Covered: L72 (Match 6)
         aborts_if DiemTimestamp::spec_now_seconds() >= txn_expiration_time_seconds with Errors::INVALID_ARGUMENT;
-        /// [PCA9] Covered: L61 (Match 2)
+        /// [PCA10] Covered: L61 (Match 2)
         aborts_if txn_sequence_number < global<DiemAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
-        /// [PCA10] Covered: L63 (match 3)
+        /// [PCA11] Covered: L63 (match 3)
         aborts_if txn_sequence_number > global<DiemAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
+        /// [PCA12] Covered: L81 (match 11)
+        aborts_if txn_sequence_number >= MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
 
     /// Collects gas and bumps the sequence number for executing a transaction.
@@ -1790,6 +1807,14 @@ module DiemAccount {
             &mut writeset_events_ref.upgrade_events,
             AdminTransactionEvent { committed_timestamp_secs: DiemTimestamp::now_seconds() },
         );
+
+        // Double check that the sender is the DiemRoot account at the `CoreAddresses::DIEM_ROOT_ADDRESS`
+        assert(
+            Signer::address_of(dr_account) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Errors::invalid_argument(EPILOGUE_INVALID_WRITESET_SENDER)
+        );
+        assert(Roles::has_diem_root_role(dr_account), Errors::invalid_argument(EPILOGUE_INVALID_WRITESET_SENDER));
+
         // Currency code don't matter here as it won't be charged anyway.
         epilogue<XUS>(dr_account, txn_sequence_number, 0, 0, 0);
         if (should_trigger_reconfiguration) DiemConfig::reconfigure(dr_account)

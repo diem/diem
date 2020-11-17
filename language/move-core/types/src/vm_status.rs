@@ -461,6 +461,8 @@ pub enum StatusCode {
     NO_ACCOUNT_ROLE = 22,
     // The transaction's chain_id does not match the one published on-chain
     BAD_CHAIN_ID = 23,
+    // The sequence number is too large and would overflow if the transaction were executed
+    SEQUENCE_NUMBER_TOO_BIG = 24,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
