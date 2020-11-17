@@ -661,7 +661,7 @@ pub enum ScriptCall {
     /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT` | `to_freeze_account` was the Libra Root account (`0xA550C18`).                              |
     ///
     /// # Related Scripts
-    /// * `Scripts::unfreeze_account`
+    /// * `Script::unfreeze_account`
     FreezeAccount {
         sliding_nonce: u64,
         to_freeze_account: AccountAddress,
@@ -1316,7 +1316,7 @@ pub enum ScriptCall {
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
     ///
     /// # Related Scripts
-    /// * `Scripts::freeze_account`
+    /// * `Script::freeze_account`
     UnfreezeAccount {
         sliding_nonce: u64,
         to_unfreeze_account: AccountAddress,
@@ -1348,8 +1348,8 @@ pub enum ScriptCall {
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
     ///
     /// # Related Scripts
-    /// * `Scripts::update_exchange_rate`
-    /// * `Scripts::update_minting_ability`
+    /// * `Script::update_exchange_rate`
+    /// * `Script::update_minting_ability`
     UpdateDualAttestationLimit {
         sliding_nonce: u64,
         new_micro_lbr_limit: u64,
@@ -1388,8 +1388,8 @@ pub enum ScriptCall {
     /// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
     ///
     /// # Related Scripts
-    /// * `Scripts::update_dual_attestation_limit`
-    /// * `Scripts::update_minting_ability`
+    /// * `Script::update_dual_attestation_limit`
+    /// * `Script::update_minting_ability`
     UpdateExchangeRate {
         currency: TypeTag,
         sliding_nonce: u64,
@@ -1450,8 +1450,8 @@ pub enum ScriptCall {
     /// | `Errors::NOT_PUBLISHED`    | `Libra::ECURRENCY_INFO`               | `Currency` is not a registered currency on-chain.    |
     ///
     /// # Related Scripts
-    /// * `Scripts::update_dual_attestation_limit`
-    /// * `Scripts::update_exchange_rate`
+    /// * `Script::update_dual_attestation_limit`
+    /// * `Script::update_exchange_rate`
     UpdateMintingAbility {
         currency: TypeTag,
         allow_minting: bool,
@@ -2431,7 +2431,7 @@ pub fn encode_create_validator_operator_account_script(
 /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT` | `to_freeze_account` was the Libra Root account (`0xA550C18`).                              |
 ///
 /// # Related Scripts
-/// * `Scripts::unfreeze_account`
+/// * `Script::unfreeze_account`
 pub fn encode_freeze_account_script(
     sliding_nonce: u64,
     to_freeze_account: AccountAddress,
@@ -3235,7 +3235,7 @@ pub fn encode_tiered_mint_script(
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
 ///
 /// # Related Scripts
-/// * `Scripts::freeze_account`
+/// * `Script::freeze_account`
 pub fn encode_unfreeze_account_script(
     sliding_nonce: u64,
     to_unfreeze_account: AccountAddress,
@@ -3276,8 +3276,8 @@ pub fn encode_unfreeze_account_script(
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
 ///
 /// # Related Scripts
-/// * `Scripts::update_exchange_rate`
-/// * `Scripts::update_minting_ability`
+/// * `Script::update_exchange_rate`
+/// * `Script::update_minting_ability`
 pub fn encode_update_dual_attestation_limit_script(
     sliding_nonce: u64,
     new_micro_lbr_limit: u64,
@@ -3325,8 +3325,8 @@ pub fn encode_update_dual_attestation_limit_script(
 /// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
 ///
 /// # Related Scripts
-/// * `Scripts::update_dual_attestation_limit`
-/// * `Scripts::update_minting_ability`
+/// * `Script::update_dual_attestation_limit`
+/// * `Script::update_minting_ability`
 pub fn encode_update_exchange_rate_script(
     currency: TypeTag,
     sliding_nonce: u64,
@@ -3406,8 +3406,8 @@ pub fn encode_update_libra_version_script(sliding_nonce: u64, major: u64) -> Scr
 /// | `Errors::NOT_PUBLISHED`    | `Libra::ECURRENCY_INFO`               | `Currency` is not a registered currency on-chain.    |
 ///
 /// # Related Scripts
-/// * `Scripts::update_dual_attestation_limit`
-/// * `Scripts::update_exchange_rate`
+/// * `Script::update_dual_attestation_limit`
+/// * `Script::update_exchange_rate`
 pub fn encode_update_minting_ability_script(currency: TypeTag, allow_minting: bool) -> Script {
     Script::new(
         UPDATE_MINTING_ABILITY_CODE.to_vec(),

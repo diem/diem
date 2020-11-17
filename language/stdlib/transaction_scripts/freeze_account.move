@@ -44,7 +44,7 @@ use 0x1::SlidingNonce;
 /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT` | `to_freeze_account` was the Libra Root account (`0xA550C18`).                              |
 ///
 /// # Related Scripts
-/// * `Scripts::unfreeze_account`
+/// * `Script::unfreeze_account`
 
 fun freeze_account(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);

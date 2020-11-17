@@ -4487,7 +4487,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 ##### Related Scripts
 
-* <code>Scripts::unfreeze_account</code>
+* <code><a href="transaction_script_documentation.md#unfreeze_account">Script::unfreeze_account</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
@@ -4579,7 +4579,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 ##### Related Scripts
 
-* <code>Scripts::freeze_account</code>
+* <code><a href="transaction_script_documentation.md#freeze_account">Script::freeze_account</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
@@ -4661,8 +4661,8 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 
 ##### Related Scripts
 
-* <code>Scripts::update_exchange_rate</code>
-* <code>Scripts::update_minting_ability</code>
+* <code><a href="transaction_script_documentation.md#update_exchange_rate">Script::update_exchange_rate</a></code>
+* <code><a href="transaction_script_documentation.md#update_minting_ability">Script::update_minting_ability</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
@@ -4756,8 +4756,8 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 ##### Related Scripts
 
-* <code>Scripts::update_dual_attestation_limit</code>
-* <code>Scripts::update_minting_ability</code>
+* <code><a href="transaction_script_documentation.md#update_dual_attestation_limit">Script::update_dual_attestation_limit</a></code>
+* <code><a href="transaction_script_documentation.md#update_minting_ability">Script::update_minting_ability</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
@@ -4883,8 +4883,8 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ##### Related Scripts
 
-* <code>Scripts::update_dual_attestation_limit</code>
-* <code>Scripts::update_exchange_rate</code>
+* <code><a href="transaction_script_documentation.md#update_dual_attestation_limit">Script::update_dual_attestation_limit</a></code>
+* <code><a href="transaction_script_documentation.md#update_exchange_rate">Script::update_exchange_rate</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: &signer, allow_minting: bool)

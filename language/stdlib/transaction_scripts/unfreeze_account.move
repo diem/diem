@@ -34,7 +34,7 @@ use 0x1::SlidingNonce;
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
 ///
 /// # Related Scripts
-/// * `Scripts::freeze_account`
+/// * `Script::freeze_account`
 
 fun unfreeze_account(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);

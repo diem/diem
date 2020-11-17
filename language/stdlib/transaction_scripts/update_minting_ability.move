@@ -26,8 +26,8 @@ use 0x1::Libra;
 /// | `Errors::NOT_PUBLISHED`    | `Libra::ECURRENCY_INFO`               | `Currency` is not a registered currency on-chain.    |
 ///
 /// # Related Scripts
-/// * `Scripts::update_dual_attestation_limit`
-/// * `Scripts::update_exchange_rate`
+/// * `Script::update_dual_attestation_limit`
+/// * `Script::update_exchange_rate`
 
 fun update_minting_ability<Currency>(
     tc_account: &signer,

@@ -28,8 +28,8 @@ use 0x1::DualAttestation;
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`   | `tc_account` is not the Treasury Compliance account.                                       |
 ///
 /// # Related Scripts
-/// * `Scripts::update_exchange_rate`
-/// * `Scripts::update_minting_ability`
+/// * `Script::update_exchange_rate`
+/// * `Script::update_minting_ability`
 
 fun update_dual_attestation_limit(
     tc_account: &signer,

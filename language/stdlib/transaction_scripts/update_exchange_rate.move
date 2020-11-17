@@ -36,8 +36,8 @@ use 0x1::SlidingNonce;
 /// | `Errors::LIMIT_EXCEEDED`   | `FixedPoint32::ERATIO_OUT_OF_RANGE`     | The quotient is unrepresentable as a `FixedPoint32`.                                       |
 ///
 /// # Related Scripts
-/// * `Scripts::update_dual_attestation_limit`
-/// * `Scripts::update_minting_ability`
+/// * `Script::update_dual_attestation_limit`
+/// * `Script::update_minting_ability`
 
 fun update_exchange_rate<Currency>(
     tc_account: &signer,
