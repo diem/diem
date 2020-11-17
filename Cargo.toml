@@ -189,6 +189,10 @@ debug = true
 [profile.bench]
 debug = true
 
+# Build guppy in opt mode so that x commands are faster.
+[profile.dev.package.guppy]
+opt-level = 3
+
 # (sunshowers) temporary override to guppy to use a newer version, will be removed once determinator is released to
 # crates.io
 [patch.crates-io]

@@ -8,6 +8,7 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
+determinator = "0.1"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
 structopt = "0.3.20"
@@ -21,6 +22,7 @@ log = "0.4.11"
 chrono = "0.4.19"
 globset = "0.4.6"
 regex = "1.4.2"
+rayon = "1.5.0"
 indexmap = "1.6.0"
 x-core = { version = "0.1.0", path = "../x-core" }
 x-lint = { version = "0.1.0", path = "../x-lint" }

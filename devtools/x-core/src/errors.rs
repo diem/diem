@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use hex::FromHexError;
 use serde::{de, ser};
 use std::{borrow::Cow, error, fmt, io, process::ExitStatus, result};
 
@@ -16,6 +17,10 @@ pub enum SystemError {
         status: ExitStatus,
     },
     GitRoot(Cow<'static, str>),
+    FromHex {
+        context: Cow<'static, str>,
+        err: FromHexError,
+    },
     Guppy(guppy::Error),
     Io {
         context: Cow<'static, str>,
@@ -37,6 +42,13 @@ impl SystemError {
 
     pub fn git_root(msg: impl Into<Cow<'static, str>>) -> Self {
         SystemError::GitRoot(msg.into())
+    }
+
+    pub fn from_hex(context: impl Into<Cow<'static, str>>, err: FromHexError) -> Self {
+        SystemError::FromHex {
+            context: context.into(),
+            err,
+        }
     }
 
     pub fn de(
@@ -68,9 +80,9 @@ impl fmt::Display for SystemError {
                 None => write!(f, "'{}' terminated by signal", cmd),
             },
             SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
-            SystemError::Io { context, .. } | SystemError::Serde { context, .. } => {
-                write!(f, "while {}", context)
-            }
+            SystemError::FromHex { context, .. }
+            | SystemError::Io { context, .. }
+            | SystemError::Serde { context, .. } => write!(f, "while {}", context),
             SystemError::Guppy(err) => write!(f, "guppy error: {}", err),
         }
     }
@@ -80,6 +92,7 @@ impl error::Error for SystemError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             SystemError::Exec { .. } | SystemError::GitRoot(_) => None,
+            SystemError::FromHex { err, .. } => Some(err),
             SystemError::Io { err, .. } => Some(err),
             SystemError::Guppy(err) => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),

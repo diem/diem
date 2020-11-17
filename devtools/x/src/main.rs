@@ -12,6 +12,7 @@ use structopt::StructOpt;
 mod bench;
 mod build;
 mod cargo;
+mod changed_since;
 mod check;
 mod clippy;
 mod config;
@@ -46,6 +47,13 @@ enum Command {
     #[structopt(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
+    /// List packages changed since merge base with the given commit
+    ///
+    /// Note that this compares against the merge base (common ancestor) of the specified commit.
+    /// For example, if origin/master is specified, the current working directory will be compared
+    /// against the point at which it branched off of origin/master.
+    #[structopt(name = "changed-since")]
+    ChangedSince(changed_since::Args),
     #[structopt(name = "clippy")]
     /// Run `cargo clippy`
     Clippy(clippy::Args),
@@ -101,6 +109,7 @@ fn main() -> Result<()> {
         Command::Tools(args) => tools::run(args, xctx),
         Command::Test(args) => test::run(args, xctx),
         Command::Build(args) => build::run(args, xctx),
+        Command::ChangedSince(args) => changed_since::run(args, xctx),
         Command::Check(args) => check::run(args, xctx),
         Command::Clippy(args) => clippy::run(args, xctx),
         Command::Fix(args) => fix::run(args, xctx),

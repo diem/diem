@@ -7,6 +7,7 @@ use structopt::StructOpt;
 use x_lint::{prelude::*, LintEngineConfig};
 
 mod allowed_paths;
+mod determinator;
 mod guppy;
 mod license;
 mod toml;
@@ -36,9 +37,13 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];
 
-    let file_path_linters: &[&dyn FilePathLinter] = &[&allowed_paths::AllowedPaths::new(
-        &workspace_config.allowed_paths,
-    )?];
+    let file_path_linters: &[&dyn FilePathLinter] = &[
+        &allowed_paths::AllowedPaths::new(&workspace_config.allowed_paths)?,
+        &determinator::DeterminatorMatch::new(
+            xctx.core().package_graph()?,
+            &xctx.config().determinator_rules(),
+        )?,
+    ];
 
     let whitespace_exceptions =
         whitespace::build_exceptions(&workspace_config.whitespace_exceptions)?;

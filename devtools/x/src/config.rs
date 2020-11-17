@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{utils::project_root, Result};
+use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -26,6 +27,8 @@ pub struct Config {
     /// Cargo configuration
     cargo: CargoConfig,
     grcov: CargoTool,
+    /// Determinator configuration
+    determinator: DeterminatorRules,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -220,5 +223,9 @@ impl Config {
 
     pub fn grcov(&self) -> &CargoTool {
         &self.grcov
+    }
+
+    pub fn determinator_rules(&self) -> &DeterminatorRules {
+        &self.determinator
     }
 }

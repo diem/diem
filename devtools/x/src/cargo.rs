@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    changed_since::changed_since_impl,
     config::CargoConfig,
     context::XContext,
     utils::{apply_sccache_if_possible, project_is_root, project_root},
     Result,
 };
 use anyhow::anyhow;
+use guppy::graph::DependencyDirection;
 use indexmap::map::IndexMap;
 use log::{info, warn};
 use std::{
@@ -398,15 +400,33 @@ pub struct SelectedPackageArgs {
     #[structopt(long, short, number_of_values = 1)]
     /// Run on the provided packages
     pub(crate) package: Vec<String>,
+    #[structopt(long, short)]
+    /// Run on packages changed since the merge base of this commit
+    changed_since: Option<String>,
     #[structopt(long)]
     /// Run on all packages in the workspace
     pub(crate) workspace: bool,
 }
 
 impl SelectedPackageArgs {
-    pub fn to_selected_packages(&self, xctx: &XContext) -> Result<SelectedPackages> {
-        if !self.package.is_empty() && self.workspace {
-            return Err(anyhow!("can only specify one of --package and --workspace"));
+    pub fn to_selected_packages<'a>(&'a self, xctx: &'a XContext) -> Result<SelectedPackages<'a>> {
+        // Mutually exclusive options -- only one of these can be provided.
+        {
+            let mut exclusive = vec![];
+            if self.changed_since.is_some() {
+                exclusive.push("--changed-since");
+            }
+            if !self.package.is_empty() {
+                exclusive.push("--package");
+            }
+            if self.workspace {
+                exclusive.push("--workspace");
+            }
+
+            if exclusive.len() > 1 {
+                let err_msg = exclusive.join(", ");
+                return Err(anyhow!("can only specify one of {}", err_msg));
+            }
         }
 
         if self.workspace {
@@ -414,6 +434,14 @@ impl SelectedPackageArgs {
         } else if !self.package.is_empty() {
             Ok(SelectedPackages::includes(
                 self.package.iter().map(|s| s.as_str()),
+            ))
+        } else if let Some(base) = &self.changed_since {
+            let affected_set = changed_since_impl(&xctx, &base)?;
+
+            Ok(SelectedPackages::includes(
+                affected_set
+                    .packages(DependencyDirection::Forward)
+                    .map(|package| package.name()),
             ))
         } else {
             SelectedPackages::default_cwd(xctx)

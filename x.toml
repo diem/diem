@@ -169,3 +169,38 @@ members = [
     "secure/key-manager",
     "storage/backup/backup-cli",
 ]
+
+# ---
+# Determinator rules
+# ---
+
+# CI-related files. TODO: maybe have separate rules for local and CI?
+[[determinator.path-rule]]
+globs = [".github/**/*", ".circleci/**/*", "codecov.yml"]
+mark-changed = "all"
+
+# Core devtools files.
+[[determinator.path-rule]]
+globs = ["cargo-toolchain", "cargo-flags", "scripts/dev_setup.sh", "x.toml"]
+mark-changed = "all"
+
+[[determinator.path-rule]]
+# Ignore website and other ancillary files, and scripts not listed above.
+globs = ["developers.libra.org/**/*", "documentation/**/*", "docker/**/*", "specifications/**/*", "scripts/**/*"]
+mark-changed = []
+
+[[determinator.path-rule]]
+# A bunch of images that should be ignored, I guess.
+globs = ["libra.png", ".assets/libra.png", "storage/data.png"]
+mark-changed = []
+
+[[determinator.path-rule]]
+# This file is a bit of a special one -- it is only invoked by developers, not by CI. It should probably be migrated to
+# x.
+globs = ["language/test.sh"]
+mark-changed = []
+
+[[determinator.package-rule]]
+# x controls the build process, so if it changes, build everything.
+on-affected = ["x"]
+mark-changed = "all"

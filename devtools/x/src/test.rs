@@ -50,8 +50,14 @@ pub struct Args {
 }
 
 pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
-    args.args.extend(args.testname.clone());
     let config = xctx.config();
+
+    let mut packages = args.package_args.to_selected_packages(&xctx)?;
+    if args.unit {
+        packages.add_excludes(config.system_tests().iter().map(|(p, _)| p.as_str()));
+    }
+
+    args.args.extend(args.testname.clone());
 
     let generate_coverage = args.html_cov_dir.is_some() || args.html_lcov_dir.is_some();
 
@@ -104,10 +110,6 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         env: &env_vars,
     };
 
-    let mut packages = args.package_args.to_selected_packages(&xctx)?;
-    if args.unit {
-        packages.add_excludes(config.system_tests().iter().map(|(p, _)| p.as_str()));
-    }
     let cmd_result = cmd.run_on_packages(&packages, &CargoArgs::default());
 
     if !args.no_fail_fast && cmd_result.is_err() {

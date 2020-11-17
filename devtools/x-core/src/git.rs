@@ -4,9 +4,14 @@
 use crate::errors::*;
 use determinator::Paths0;
 use indoc::formatdoc;
+use guppy::{graph::PackageGraph, MetadataCommand};
+use log::{debug, info};
 use once_cell::sync::OnceCell;
 use std::{
-    path::Path,
+    borrow::Cow,
+    ffi::{OsStr, OsString},
+    fmt,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -43,7 +48,6 @@ impl GitCli {
                 .git_command()
                 // The -z causes files to not be quoted, and to be separated by \0.
                 .args(&["ls-files", "-z"])
-                .stderr(Stdio::inherit())
                 .output()
                 .map_err(|err| SystemError::io("running git ls-files", err))?;
             if !output.status.success() {
@@ -56,6 +60,70 @@ impl GitCli {
             // TODO: Get this working on Windows.
             Ok(Paths0::new_unix(output.stdout))
         })
+    }
+
+    /// Returns the merge base of the current commit (`HEAD`) with the specified commit.
+    pub fn merge_base(&self, commit_ref: &str) -> Result<GitHash> {
+        let output = self
+            .git_command()
+            .args(&["merge-base", "HEAD", commit_ref])
+            .output()
+            .map_err(|err| {
+                SystemError::io(format!("running git merge-base HEAD {}", commit_ref), err)
+            })?;
+        if !output.status.success() {
+            return Err(SystemError::Exec {
+                cmd: "git merge-base",
+                status: output.status,
+            });
+        }
+
+        // The output is a hex-encoded hash followed by a newline.
+        let stdout = &output.stdout[..(output.stdout.len() - 1)];
+        GitHash::from_hex(stdout)
+    }
+
+    /// Returns the files changed between the given commits, or the current directory if the new
+    /// commit isn't specified.
+    ///
+    /// For more about the diff filter, see `man git-diff`'s help for `--diff-filter`.
+    pub fn files_changed_between<'a>(
+        &self,
+        old: impl Into<Cow<'a, OsStr>>,
+        new: impl Into<Option<Cow<'a, OsStr>>>,
+        // TODO: make this more well-typed/express more of the diff model in Rust
+        diff_filter: Option<&str>,
+    ) -> Result<Paths0> {
+        let mut command = self.git_command();
+        command.args(&["diff", "-z", "--name-only"]);
+        if let Some(diff_filter) = diff_filter {
+            command.arg(format!("--diff-filter={}", diff_filter));
+        }
+        command.arg(old.into());
+        if let Some(new) = new.into() {
+            command.arg(new);
+        }
+
+        let output = command
+            .output()
+            .map_err(|err| SystemError::io("running git diff", err))?;
+        if !output.status.success() {
+            return Err(SystemError::Exec {
+                cmd: "git diff",
+                status: output.status,
+            });
+        }
+
+        Ok(Paths0::new_unix(output.stdout))
+    }
+
+    /// Returns a package graph for the given commit, using a scratch repo if necessary.
+    pub fn package_graph_at(&self, commit_ref: &GitHash) -> Result<PackageGraph> {
+        // Create or initialize the scratch worktree.
+        let scratch = self.get_or_init_scratch(commit_ref)?;
+
+        // Compute the package graph for the scratch worktree.
+        Ok(MetadataCommand::new().current_dir(scratch).build_graph()?)
     }
 
     // ---
@@ -102,10 +170,90 @@ impl GitCli {
         Ok(())
     }
 
+    // TODO: abstract out command running and error handling
     fn git_command(&self) -> Command {
         // TODO: add support for the GIT environment variable?
         let mut command = Command::new("git");
-        command.current_dir(self.root);
+        command.current_dir(self.root).stderr(Stdio::inherit());
         command
+    }
+
+    /// Gets the scratch worktree if it exists, or initializes it if it doesn't.
+    ///
+    /// The scratch worktree is meant to be persistent across invocations of `x`. This is done for
+    /// performance reasons.
+    fn get_or_init_scratch(&self, hash: &GitHash) -> Result<PathBuf> {
+        let mut scratch_dir = self.root.join("target");
+        scratch_dir.extend(&["x-scratch", "tree"]);
+
+        if scratch_dir.is_dir() {
+            debug!(
+                "Using existing scratch worktree at {}",
+                scratch_dir.display()
+            );
+
+            // TODO: check if the directory is actually a Git worktree.
+
+            // Check out the given hash in the scratch worktree.
+            let output = self
+                .git_command()
+                .current_dir(&scratch_dir)
+                // TODO: also git clean?
+                .args(&["reset", &format!("{:x}", hash), "--hard"])
+                .output()
+                .map_err(|err| SystemError::io("running git checkout in scratch tree", err))?;
+            if !output.status.success() {
+                return Err(SystemError::Exec {
+                    cmd: "git checkout",
+                    status: output.status,
+                });
+            }
+        } else {
+            // Try creating a scratch worktree at that location.
+            info!("Setting up scratch worktree in {}", scratch_dir.display());
+            let output = self
+                .git_command()
+                .args(&["worktree", "add"])
+                .arg(&scratch_dir)
+                .args(&[&format!("{:x}", hash), "--detach"])
+                .output()
+                .map_err(|err| SystemError::io("running git worktree add", err))?;
+            if !output.status.success() {
+                return Err(SystemError::Exec {
+                    cmd: "git worktree add",
+                    status: output.status,
+                });
+            }
+        }
+
+        // TODO: some sort of cross-process locking may be necessary in the future. Don't worry
+        // about it for now.
+        Ok(scratch_dir)
+    }
+}
+
+/// A Git hash.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct GitHash([u8; 20]);
+
+impl GitHash {
+    /// Creates a new Git hash from a hex-encoded string.
+    pub fn from_hex(hex: impl AsRef<[u8]>) -> Result<Self> {
+        let hex = hex.as_ref();
+        Ok(GitHash(hex::FromHex::from_hex(hex).map_err(|err| {
+            SystemError::from_hex(format!("parsing a Git hash: {:?}", hex), err)
+        })?))
+    }
+}
+
+impl<'a, 'b> From<&'a GitHash> for Cow<'b, OsStr> {
+    fn from(git_hash: &'a GitHash) -> Cow<'b, OsStr> {
+        OsString::from(format!("{:x}", git_hash)).into()
+    }
+}
+
+impl fmt::LowerHex for GitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode(&self.0))
     }
 }
