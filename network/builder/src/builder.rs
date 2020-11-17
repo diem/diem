@@ -15,7 +15,7 @@ use libra_config::{
         DiscoveryMethod, NetworkConfig, RoleType, CONNECTION_BACKOFF_BASE,
         CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
         MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
-        NETWORK_CHANNEL_SIZE,
+        MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
     },
     network_id::NetworkContext,
 };
@@ -90,6 +90,7 @@ impl NetworkBuilder {
         network_channel_size: usize,
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
+        inbound_connection_limit: usize,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -104,6 +105,7 @@ impl NetworkBuilder {
             max_concurrent_network_notifs,
             max_frame_size,
             enable_proxy_protocol,
+            inbound_connection_limit,
         );
 
         NetworkBuilder {
@@ -138,6 +140,7 @@ impl NetworkBuilder {
             NETWORK_CHANNEL_SIZE,
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
+            MAX_INBOUND_CONNECTIONS,
         );
 
         builder.add_connectivity_manager(
@@ -184,6 +187,7 @@ impl NetworkBuilder {
             config.network_channel_size,
             config.max_concurrent_network_reqs,
             config.max_concurrent_network_notifs,
+            config.max_inbound_connections,
         );
 
         network_builder.add_connection_monitoring(

@@ -18,7 +18,7 @@ use crate::{
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::oneshot, io::AsyncWriteExt, sink::SinkExt, stream::StreamExt};
-use libra_config::network_id::NetworkContext;
+use libra_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -103,6 +103,7 @@ fn build_test_peer_manager(
         constants::MAX_CONCURRENT_NETWORK_REQS,
         constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         constants::MAX_FRAME_SIZE,
+        MAX_INBOUND_CONNECTIONS,
     );
 
     (

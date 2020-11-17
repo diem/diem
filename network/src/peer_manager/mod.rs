@@ -287,6 +287,8 @@ where
     channel_size: usize,
     /// Max network frame size
     max_frame_size: usize,
+    /// Inbound connection limit separate of outbound connections
+    inbound_connection_limit: usize,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -312,6 +314,7 @@ where
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
         max_frame_size: usize,
+        inbound_connection_limit: usize,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
@@ -350,6 +353,7 @@ where
             max_concurrent_network_notifs,
             channel_size,
             max_frame_size,
+            inbound_connection_limit,
         }
     }
 
@@ -447,9 +451,27 @@ where
                     "{} New connection established: {}", self.network_context, conn.metadata
                 );
 
-                // Update libra_network_peer counter.
-                self.add_peer(conn);
-                self.update_connected_peers_metrics();
+                // TODO: Keep track of somewhere else to not take this hit in case of DDoS
+                let inbound_conns = self
+                    .active_peers
+                    .iter()
+                    .filter(|(_, (metadata, _))| metadata.origin == ConnectionOrigin::Inbound)
+                    .count();
+
+                // Reject excessive inbound connections by letting them just drop out of scope
+                // We control outbound connections with Connectivity manager before we even send them
+                // and we must allow connections that already exist to pass through tie breaking.
+                // TODO: Allow for trusted peers to still connect
+                if conn.metadata.origin == ConnectionOrigin::Outbound
+                    || self
+                        .active_peers
+                        .contains_key(&conn.metadata.remote_peer_id)
+                    || inbound_conns < self.inbound_connection_limit
+                {
+                    // Add new peer, updating counters and all
+                    self.add_peer(conn);
+                    self.update_connected_peers_metrics();
+                }
             }
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for

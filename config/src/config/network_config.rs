@@ -38,6 +38,7 @@ pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 60_000; /* 1 minute */
 pub const MAX_FULLNODE_OUTBOUND_CONNECTIONS: usize = 3;
+pub const MAX_INBOUND_CONNECTIONS: usize = 100;
 pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024; /* 8 MiB */
 pub const CONNECTION_BACKOFF_BASE: u64 = 2;
 
@@ -93,6 +94,8 @@ pub struct NetworkConfig {
     pub ping_failures_tolerated: u64,
     // Maximum number of outbound connections, limited by ConnectivityManager
     pub max_outbound_connections: usize,
+    // Maximum number of outbound connections, limited by PeerManager
+    pub max_inbound_connections: usize,
 }
 
 impl Default for NetworkConfig {
@@ -124,6 +127,7 @@ impl NetworkConfig {
             ping_timeout_ms: PING_TIMEOUT_MS,
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             max_outbound_connections: MAX_FULLNODE_OUTBOUND_CONNECTIONS,
+            max_inbound_connections: MAX_INBOUND_CONNECTIONS,
         };
         config.prepare_identity();
         config
