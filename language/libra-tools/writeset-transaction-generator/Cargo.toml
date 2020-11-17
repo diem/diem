@@ -23,4 +23,4 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 libra-types = { path = "../../../types", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 move-lang = { path = "../../move-lang", version = "0.0.1" }
-lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }

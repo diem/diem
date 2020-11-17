@@ -14,7 +14,6 @@ members = [
     "common/datatest-stable",
     "common/debug-interface",
     "common/infallible",
-    "common/lcs",
     "common/libradoc",
     "common/logger",
     "common/logger/derive",

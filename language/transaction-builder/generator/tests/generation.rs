@@ -144,18 +144,14 @@ edition = "2018"
 libra-types = {{ path = "../libra-types", version = "0.1.0" }}
 serde_bytes = "0.11"
 serde = {{ version = "1.0.114", features = ["derive"] }}
-libra-canonical-serialization = {{ path = "{}", version = "0.1.0" }}
+libra-canonical-serialization = "0.1.0"
 once_cell = "1.4.0"
 
 [[bin]]
 name = "stdlib_demo"
 path = "src/stdlib_demo.rs"
 test = false
-"#,
-        std::env::current_dir()
-            .unwrap()
-            .join("../../../common/lcs")
-            .to_string_lossy()
+"#
     )
     .unwrap();
     std::fs::create_dir(stdlib_dir_path.join("src")).unwrap();

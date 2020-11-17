@@ -26,7 +26,7 @@ serde_bytes = "0.11.5"
 thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
-lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 libra-infallible = { path = "../common/infallible", version = "0.1.0" }

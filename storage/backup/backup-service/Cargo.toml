@@ -18,7 +18,7 @@ serde = { version = "1.0.117", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.5"
 
-lcs = { path = "../../../common/lcs", package = "libra-canonical-serialization", version = "0.1.0" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../../common/metrics", version = "0.1.0" }

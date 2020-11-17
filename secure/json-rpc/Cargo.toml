@@ -17,7 +17,7 @@ serde_json = "1.0.59"
 thiserror = "1.0.22"
 ureq = { version = "1.5.2", features = ["json", "native-tls"], default-features = false }
 
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../../types", version = "0.1.0" }

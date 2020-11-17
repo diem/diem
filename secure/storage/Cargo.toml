@@ -18,7 +18,7 @@ serde = { version = "1.0.117", features = ["rc"], default-features = false }
 serde_json = "1.0.59"
 thiserror = "1.0.22"
 
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-github-client = { path = "github", version = "0.1.0" }
 libra-infallible = { path = "../../common/infallible", version = "0.1.0" }

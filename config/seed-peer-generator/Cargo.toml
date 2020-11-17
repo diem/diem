@@ -17,7 +17,7 @@ serde_yaml = "0.8.14"
 structopt = "0.3.20"
 thiserror = "1.0.22"
 
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }

@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.34"
 serde = "1.0.117"
 
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-infallible = { path = "../../common/infallible", version = "0.1.0" }

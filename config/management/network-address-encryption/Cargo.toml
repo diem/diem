@@ -14,7 +14,7 @@ base64 = "0.13.0"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
 thiserror = "1.0.22"
 
-lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 libra-global-constants = { path = "../../../config/global-constants", version = "0.1.0"}
 libra-infallible = { path = "../../../common/infallible", version = "0.1.0" }
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }

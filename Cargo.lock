@@ -2738,11 +2738,9 @@ dependencies = [
 [[package]]
 name = "libra-canonical-serialization"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d8dddda30939e963210412740c920779b3b57d0b8ab58d94d562cc433d621f1"
 dependencies = [
- "criterion",
- "libra-workspace-hack",
- "proptest",
- "proptest-derive",
  "serde",
  "thiserror",
 ]
