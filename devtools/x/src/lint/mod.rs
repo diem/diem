@@ -35,11 +35,13 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];
 
+    let whitespace_exceptions =
+        whitespace::build_exceptions(&workspace_config.whitespace_exceptions)?;
     let content_linters: &[&dyn ContentLinter] = &[
         &license::LicenseHeader,
         &toml::RootToml,
-        &whitespace::EofNewline,
-        &whitespace::TrailingWhitespace,
+        &whitespace::EofNewline::new(&whitespace_exceptions),
+        &whitespace::TrailingWhitespace::new(&whitespace_exceptions),
     ];
 
     let engine = LintEngineConfig::new(xctx.core())

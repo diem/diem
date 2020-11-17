@@ -7569,7 +7569,7 @@ dependencies = [
  "chrono",
  "colored-diff",
  "env_logger 0.8.1",
- "glob",
+ "globset",
  "guppy",
  "indexmap",
  "indoc",

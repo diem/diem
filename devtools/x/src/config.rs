@@ -106,6 +106,8 @@ pub struct WorkspaceConfig {
     pub overlay: OverlayConfig,
     /// Test-only config in this workspace
     pub test_only: TestOnlyConfig,
+    /// Exceptions to whitespace linters
+    pub whitespace_exceptions: Vec<String>,
     /// Subsets of this workspace
     pub subsets: BTreeMap<String, SubsetConfig>,
 }

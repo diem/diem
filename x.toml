@@ -69,6 +69,15 @@ include-dev = true
 proc-macros-on-target = false
 # Don't set target or host platforms, or omitted packages, for the full set.
 
+[workspace]
+whitespace-exceptions = [
+    ".github/actions/*/dist/*",
+    # TODO: reevaluate skipping whitespace checks in .md files for the website
+    "developers.libra.org/**/*.md",
+    "**/*.exp",
+    "**/*.errmap",
+]
+
 [workspace.enforced-attributes]
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
