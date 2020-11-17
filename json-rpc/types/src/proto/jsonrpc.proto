@@ -185,6 +185,11 @@ message Metadata {
    * Libra chain major version number.
    */
   uint64 libra_version = 6 [json_name="libra_version"];
+
+  /**
+   * accumulator root hash of the ledger version requested
+   */
+  string accumulator_root_hash = 7 [json_name="accumulator_root_hash"];
 }
 
 message Transaction {
