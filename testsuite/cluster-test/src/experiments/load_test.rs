@@ -107,9 +107,9 @@ impl Experiment for LoadTest {
         //let futures = self.random_instances.iter().enumerate().map(|(index, inst)|get_stubbed_node(inst, index));
         //let nodes = join_all(futures).await;
         let mut node1 = get_stubbed_node(&context.cluster.fullnode_instances()[0], 0).await;
-        let mut node2 = get_stubbed_node(&context.cluster.fullnode_instances()[1], 1).await;
+        //let mut node2 = get_stubbed_node(&context.cluster.fullnode_instances()[1], 1).await;
         info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[0].instance_config().pod_name());
-        info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[1].instance_config().pod_name());
+        //info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[1].instance_config().pod_name());
 
 
         let mut emit_job = None;
@@ -182,31 +182,11 @@ impl Experiment for LoadTest {
                 context.tx_emitter.accounts.clone(),
                 context.cluster.chain_id,
             ))));
-            let (mempool_sender, mempool_events) = node2
-                .mempool_handle
-                .take()
-                .expect("missing mempool network handles");
-            mempool_task.push(Some(tokio::task::spawn(mempool_load_test(
-                duration,
-                mempool_sender,
-                mempool_events,
-                context.tx_emitter.accounts.clone(),
-                context.cluster.chain_id,
-            ))));
         }
 
         if self.state_sync {
             // spawn state sync load test
             let (state_sync_sender, state_sync_events) = node1
-                .state_sync_handle
-                .take()
-                .expect("missing state sync network handles");
-            state_sync_task.push(Some(tokio::task::spawn(state_sync_load_test(
-                duration,
-                state_sync_sender,
-                state_sync_events,
-            ))));
-            let (state_sync_sender, state_sync_events) = node2
                 .state_sync_handle
                 .take()
                 .expect("missing state sync network handles");
@@ -267,9 +247,6 @@ impl Experiment for LoadTest {
         // this thread will panic.
         tokio::task::spawn_blocking(move || {
             drop(node1);
-        }).await?;
-        tokio::task::spawn_blocking(move || {
-            drop(node2);
         }).await?;
 
         for s in report {
