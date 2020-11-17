@@ -4,14 +4,25 @@
 use crate::{prelude::*, LintContext};
 use std::{ffi::OsStr, fs, io, path::Path};
 
-/// Contains information for a single file.
+/// Represents a linter that runs once per file path.
+pub trait FilePathLinter: Linter {
+    /// Executes this linter against the given file path context.
+    fn run<'l>(
+        &self,
+        ctx: &FilePathContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>>;
+}
+
+/// Contains information for a single file path.
 #[derive(Clone, Debug)]
-pub struct FileContext<'l> {
+pub struct FilePathContext<'l> {
     project_ctx: &'l ProjectContext<'l>,
     file_path: &'l Path,
 }
 
-impl<'l> FileContext<'l> {
+impl<'l> FilePathContext<'l> {
+    /// Constructs a new context.
     pub fn new(project_ctx: &'l ProjectContext<'l>, file_path: &'l Path) -> Self {
         Self {
             project_ctx,
@@ -48,9 +59,9 @@ impl<'l> FileContext<'l> {
     }
 }
 
-impl<'l> LintContext<'l> for FileContext<'l> {
+impl<'l> LintContext<'l> for FilePathContext<'l> {
     fn kind(&self) -> LintKind<'l> {
-        LintKind::File(self.file_path)
+        LintKind::FilePath(self.file_path)
     }
 }
 

@@ -10,7 +10,7 @@ pub trait ContentLinter: Linter {
     ///
     /// The default implementation returns `Ok(RunStatus::Executed)`; individual lints may configure
     /// a more restricted set.
-    fn pre_run<'l>(&self, _file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
+    fn pre_run<'l>(&self, _file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         Ok(RunStatus::Executed)
     }
 
@@ -24,7 +24,7 @@ pub trait ContentLinter: Linter {
 
 #[derive(Debug)]
 pub struct ContentContext<'l> {
-    file_ctx: FileContext<'l>,
+    file_ctx: FilePathContext<'l>,
     content: Content,
 }
 
@@ -36,7 +36,7 @@ impl<'l> ContentContext<'l> {
     /// The value is [the same as Git's](https://stackoverflow.com/a/6134127).
     pub const BINARY_FILE_CUTOFF: usize = 8000;
 
-    pub(super) fn new(file_ctx: FileContext<'l>, content: Vec<u8>) -> Self {
+    pub(super) fn new(file_ctx: FilePathContext<'l>, content: Vec<u8>) -> Self {
         Self {
             file_ctx,
             content: Content::new(content),
@@ -44,7 +44,7 @@ impl<'l> ContentContext<'l> {
     }
 
     /// Returns the file context.
-    pub fn file_ctx(&self) -> &FileContext<'l> {
+    pub fn file_ctx(&self) -> &FilePathContext<'l> {
         &self.file_ctx
     }
 

@@ -18,7 +18,7 @@ impl Linter for RootToml {
 }
 
 impl ContentLinter for RootToml {
-    fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
+    fn pre_run<'l>(&self, file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         let file_path = file_ctx.file_path();
         if file_path == Path::new("Cargo.toml") {
             Ok(RunStatus::Executed)

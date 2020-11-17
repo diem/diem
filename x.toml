@@ -70,6 +70,10 @@ proc-macros-on-target = false
 # Don't set target or host platforms, or omitted packages, for the full set.
 
 [workspace]
+
+# Regex for allowed characters in paths. Regex must have ^ and $ anchors.
+allowed-paths = "^([a-zA-Z0-9._\\-/@:]|-)+$"
+
 whitespace-exceptions = [
     ".github/actions/*/dist/*",
     # TODO: reevaluate skipping whitespace checks in .md files for the website

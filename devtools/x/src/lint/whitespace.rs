@@ -23,7 +23,7 @@ impl<'cfg> Linter for EofNewline<'cfg> {
 }
 
 impl<'cfg> ContentLinter for EofNewline<'cfg> {
-    fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
+    fn pre_run<'l>(&self, file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         Ok(skip_whitespace_checks(self.exceptions, file_ctx))
     }
 
@@ -61,7 +61,7 @@ impl<'cfg> Linter for TrailingWhitespace<'cfg> {
 }
 
 impl<'cfg> ContentLinter for TrailingWhitespace<'cfg> {
-    fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
+    fn pre_run<'l>(&self, file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         Ok(skip_whitespace_checks(self.exceptions, file_ctx))
     }
 
@@ -100,8 +100,6 @@ impl<'cfg> ContentLinter for TrailingWhitespace<'cfg> {
 
 pub(super) fn build_exceptions(patterns: &[String]) -> crate::Result<GlobSet> {
     let mut builder = GlobSetBuilder::new();
-    // glob based opt outs
-    // TODO Reevaluate skipping whitespace checks in .md files for the website
     for pattern in patterns {
         let glob = Glob::new(pattern).with_context(|| {
             format!(
@@ -116,7 +114,7 @@ pub(super) fn build_exceptions(patterns: &[String]) -> crate::Result<GlobSet> {
         .with_context(|| "error while building globset for whitespace patterns")
 }
 
-fn skip_whitespace_checks<'l>(exceptions: &GlobSet, file: &FileContext<'l>) -> RunStatus<'l> {
+fn skip_whitespace_checks<'l>(exceptions: &GlobSet, file: &FilePathContext<'l>) -> RunStatus<'l> {
     if exceptions.is_match(file.file_path()) {
         return RunStatus::Skipped(SkipReason::UnsupportedFile(file.file_path()));
     }

@@ -20,6 +20,7 @@ env_logger = "0.8.1"
 log = "0.4.11"
 chrono = "0.4.19"
 globset = "0.4.6"
+regex = "1.4.2"
 indexmap = "1.6.0"
 x-core = { version = "0.1.0", path = "../x-core" }
 x-lint = { version = "0.1.0", path = "../x-lint" }

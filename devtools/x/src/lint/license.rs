@@ -17,7 +17,7 @@ impl Linter for LicenseHeader {
 }
 
 impl ContentLinter for LicenseHeader {
-    fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
+    fn pre_run<'l>(&self, file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         // TODO: Add a way to pass around state between pre_run and run, so that this computation
         // only needs to be done once.
         match FileType::new(file_ctx) {
@@ -78,7 +78,7 @@ enum FileType {
 }
 
 impl FileType {
-    fn new(ctx: &FileContext<'_>) -> Option<Self> {
+    fn new(ctx: &FilePathContext<'_>) -> Option<Self> {
         match ctx.extension() {
             Some("rs") => Some(FileType::Rust),
             Some("sh") => Some(FileType::Shell),

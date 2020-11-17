@@ -7575,6 +7575,7 @@ dependencies = [
  "indoc",
  "libra-workspace-hack",
  "log",
+ "regex",
  "serde",
  "serde_json",
  "structopt 0.3.20",

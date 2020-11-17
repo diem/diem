@@ -98,6 +98,8 @@ pub struct SummariesConfig {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct WorkspaceConfig {
+    /// Allowed characters in file paths. Regex must have ^ and $ anchors.
+    pub allowed_paths: String,
     /// Attributes to enforce on workspace crates
     pub enforced_attributes: EnforcedAttributesConfig,
     /// Banned dependencies

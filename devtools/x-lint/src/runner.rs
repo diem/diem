@@ -11,6 +11,7 @@ pub struct LintEngineConfig<'cfg> {
     core: &'cfg XCoreContext,
     project_linters: &'cfg [&'cfg dyn ProjectLinter],
     package_linters: &'cfg [&'cfg dyn PackageLinter],
+    file_path_linters: &'cfg [&'cfg dyn FilePathLinter],
     content_linters: &'cfg [&'cfg dyn ContentLinter],
     fail_fast: bool,
 }
@@ -21,6 +22,7 @@ impl<'cfg> LintEngineConfig<'cfg> {
             core,
             project_linters: &[],
             package_linters: &[],
+            file_path_linters: &[],
             content_linters: &[],
             fail_fast: false,
         }
@@ -39,6 +41,14 @@ impl<'cfg> LintEngineConfig<'cfg> {
         package_linters: &'cfg [&'cfg dyn PackageLinter],
     ) -> &mut Self {
         self.package_linters = package_linters;
+        self
+    }
+
+    pub fn with_file_path_linters(
+        &mut self,
+        file_path_linters: &'cfg [&'cfg dyn FilePathLinter],
+    ) -> &mut Self {
+        self.file_path_linters = file_path_linters;
         self
     }
 
@@ -134,13 +144,40 @@ impl<'cfg> LintEngine<'cfg> {
             }
         }
 
+        // Run file path linters.
+        if !self.config.file_path_linters.is_empty() {
+            let file_list = self.file_list()?;
+
+            let file_ctxs = file_list.map(|path| FilePathContext::new(&self.project_ctx, path));
+
+            for file_ctx in file_ctxs {
+                for linter in self.config.file_path_linters {
+                    let source = file_ctx.source(linter.name());
+                    let mut formatter = LintFormatter::new(source, &mut messages);
+                    match linter.run(&file_ctx, &mut formatter)? {
+                        RunStatus::Executed => {
+                            // Lint ran successfully.
+                        }
+                        RunStatus::Skipped(reason) => {
+                            skipped.push((source, reason));
+                        }
+                    }
+
+                    if self.config.fail_fast && !messages.is_empty() {
+                        // At least one issue was found.
+                        return Ok(LintResults { skipped, messages });
+                    }
+                }
+            }
+        }
+
         // Run content linters.
         if !self.config.content_linters.is_empty() {
             let file_list = self.file_list()?;
 
             // TODO: This should probably be a worker queue with a thread pool or something.
 
-            let file_ctxs = file_list.map(|path| FileContext::new(&self.project_ctx, path));
+            let file_ctxs = file_list.map(|path| FilePathContext::new(&self.project_ctx, path));
 
             for file_ctx in file_ctxs {
                 let linters_to_run = self
