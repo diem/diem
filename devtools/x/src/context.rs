@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::Config, installer::Installer, utils::project_root, Result};
+use anyhow::Context;
 use x_core::XCoreContext;
 
 /// Global context shared across x commands.
@@ -19,8 +20,10 @@ impl XContext {
 
     /// Creates a new `GlobalContext` based on the given config.
     pub fn with_config(config: Config) -> Result<Self> {
+        let current_dir =
+            std::env::current_dir().with_context(|| "error while fetching current dir")?;
         Ok(Self {
-            core: XCoreContext::new(project_root())?,
+            core: XCoreContext::new(project_root(), current_dir)?,
             installer: Installer::new(config.cargo_config().clone(), config.tools()),
             config,
         })

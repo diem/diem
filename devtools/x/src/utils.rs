@@ -1,15 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{cargo::Cargo, config::CargoConfig, installer::install_if_needed, Result};
+use crate::{config::CargoConfig, installer::install_if_needed, Result};
 use anyhow::anyhow;
 use log::{info, warn};
-use serde::Deserialize;
-use std::{
-    env::var_os,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{env::var_os, path::Path, process::Command};
 
 /// The number of directories between the project root and the root of this crate.
 pub const X_DEPTH: usize = 2;
@@ -20,23 +15,6 @@ pub fn project_root() -> &'static Path {
         .ancestors()
         .nth(X_DEPTH)
         .unwrap()
-}
-
-pub fn locate_project(cargo_config: &CargoConfig) -> Result<PathBuf> {
-    #[derive(Deserialize)]
-    struct LocateProject {
-        root: PathBuf,
-    };
-
-    let output = Cargo::new(cargo_config, "locate-project", false).run_with_output()?;
-    Ok(serde_json::from_slice::<LocateProject>(&output)?.root)
-}
-
-pub fn project_is_root(cargo_config: &CargoConfig) -> Result<bool> {
-    let mut project = locate_project(cargo_config)?;
-    project.pop();
-
-    Ok(project == project_root())
 }
 
 fn stop_sccache_server() {

@@ -5,7 +5,7 @@ use crate::{
     changed_since::changed_since_impl,
     config::CargoConfig,
     context::XContext,
-    utils::{apply_sccache_if_possible, project_is_root, project_root},
+    utils::{apply_sccache_if_possible, project_root},
     Result,
 };
 use anyhow::anyhow;
@@ -135,9 +135,6 @@ impl Cargo {
                     self.inner.args(&["--exclude", e]);
                 }
             }
-            SelectedInclude::LocalPackage => {
-                // Don't add any arguments, and ignore excludes.
-            }
             SelectedInclude::Includes(includes) => {
                 for &p in includes {
                     if !packages.excludes.contains(p) {
@@ -217,6 +214,7 @@ impl Cargo {
 
     /// Runs this command, capturing the standard output into a `Vec<u8>`.
     /// No logging/timing will be displayed as the result of this call from x.
+    #[allow(dead_code)]
     pub fn run_with_output(&mut self) -> Result<Vec<u8>> {
         self.inner.stderr(Stdio::inherit());
         // Since system out hijacked don't log for this command
@@ -479,12 +477,25 @@ impl<'a> SelectedPackages<'a> {
     }
 
     /// Returns a new `CargoPackages` that selects the default set of packages for the current
-    /// working directory. This may either be the entire workspace or a local package.
-    pub fn default_cwd(xctx: &XContext) -> Result<Self> {
-        let includes = if project_is_root(&xctx.config().cargo_config())? {
+    /// working directory. This may either be the entire workspace or a set of packages inside the
+    /// workspace.
+    pub fn default_cwd(xctx: &'a XContext) -> Result<Self> {
+        let includes = if xctx.core().current_dir_is_root() {
             SelectedInclude::Workspace
         } else {
-            SelectedInclude::LocalPackage
+            // Select all packages that begin with the current rel dir.
+            let rel = xctx.core().current_rel_dir();
+            let workspace = xctx.core().package_graph()?.workspace();
+            let selected = workspace.iter_by_path().filter_map(|(path, package)| {
+                // If we're in devtools, run tests for all packages inside devtools.
+                // If we're in devtools/x/src, run tests for devtools/x.
+                if path.starts_with(rel) || rel.starts_with(path) {
+                    Some(package.name())
+                } else {
+                    None
+                }
+            });
+            SelectedInclude::Includes(selected.collect())
         };
         Ok(Self {
             includes,
@@ -514,7 +525,7 @@ impl<'a> SelectedPackages<'a> {
 
     fn should_invoke(&self) -> bool {
         match &self.includes {
-            SelectedInclude::Workspace | SelectedInclude::LocalPackage => true,
+            SelectedInclude::Workspace => true,
             SelectedInclude::Includes(includes) => {
                 // If everything in the include set is excluded, a command invocation isn't needed.
                 includes.iter().any(|p| !self.excludes.contains(p))
@@ -526,7 +537,6 @@ impl<'a> SelectedPackages<'a> {
 #[derive(Clone, Debug)]
 enum SelectedInclude<'a> {
     Workspace,
-    LocalPackage,
     Includes(Vec<&'a str>),
 }
 
@@ -539,11 +549,6 @@ mod test {
         let packages = SelectedPackages::workspace();
         assert!(packages.should_invoke(), "workspace => invoke");
 
-        let mut packages = SelectedPackages::workspace();
-        packages.includes = SelectedInclude::LocalPackage;
-        packages.add_excludes(vec!["foo"]);
-        assert!(packages.should_invoke(), "local package => invoke");
-
         let mut packages = SelectedPackages::includes(vec!["foo", "bar"]);
         packages.add_excludes(vec!["foo"]);
         assert!(packages.should_invoke(), "non-empty packages => invoke");
@@ -553,6 +558,9 @@ mod test {
 
         let mut packages = SelectedPackages::includes(vec!["foo", "bar"]);
         packages.add_excludes(vec!["foo", "bar"]);
-        assert!(!packages.should_invoke(), "all packages excluded => do not invoke");
+        assert!(
+            !packages.should_invoke(),
+            "all packages excluded => do not invoke"
+        );
     }
 }

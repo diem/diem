@@ -3,8 +3,8 @@
 
 use crate::errors::*;
 use determinator::Paths0;
-use indoc::formatdoc;
 use guppy::{graph::PackageGraph, MetadataCommand};
+use indoc::formatdoc;
 use log::{debug, info};
 use once_cell::sync::OnceCell;
 use std::{
