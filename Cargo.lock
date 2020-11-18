@@ -321,6 +321,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bincode"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f30d3a39baa26f9651f17b375061f3233dde33424a8b72b0dbe93a68a0bc896d"
+dependencies = [
+ "byteorder",
+ "serde",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.54.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5880,12 +5890,14 @@ dependencies = [
 
 [[package]]
 name = "serde-generate"
-version = "0.15.2"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dbbd5f23fb6261d94e4364f4904b881a44f3f6900005d120684036dc7d5239b"
+checksum = "d318fbd6ee6b078bf0da7ef6e97152a1a4802125f43443f61a8a8e711ccc1efb"
 dependencies = [
+ "bincode",
  "heck",
  "include_dir",
+ "libra-canonical-serialization",
  "maplit",
  "serde",
  "serde-reflection",
