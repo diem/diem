@@ -13,9 +13,11 @@ use crate::{
 use anyhow::{bail, Result};
 use backup_cli::metadata::view::BackupStorageState;
 use cli::client_proxy::ClientProxy;
+use libra_smoke_test_attribute::smoke_test;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
 use rand::random;
+use rusty_fork::rusty_fork_test;
 use std::{
     fs,
     path::Path,
@@ -28,7 +30,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[test]
+#[smoke_test]
 fn test_db_restore() {
     let (mut env, mut client) = setup_swarm_and_client_proxy(4, 1);
 

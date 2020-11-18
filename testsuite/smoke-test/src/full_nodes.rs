@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::compare_balances};
+use libra_smoke_test_attribute::smoke_test;
 use libra_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address,
 };
+use rusty_fork::rusty_fork_test;
 
-#[test]
+#[smoke_test]
 fn test_full_node_basic_flow() {
     let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
@@ -131,7 +133,7 @@ fn test_full_node_basic_flow() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_vfn_failover() {
     let mut env = SmokeTestEnvironment::new(7);
     env.setup_vfn_swarm();

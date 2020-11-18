@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils::libra_swarm_utils::get_client_proxy, workspace_builder};
+use crate::test_utils::libra_swarm_utils::get_client_proxy;
 use cli::client_proxy::ClientProxy;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -24,13 +24,8 @@ impl SmokeTestEnvironment {
         let mut template = NodeConfig::default_for_validator();
         template.state_sync.chunk_limit = chunk_limit;
 
-        let validator_swarm = LibraSwarm::configure_validator_swarm(
-            &workspace_builder::get_libra_node_with_failpoints(),
-            num_validators,
-            None,
-            Some(template),
-        )
-        .unwrap();
+        let validator_swarm =
+            LibraSwarm::configure_validator_swarm(num_validators, None, Some(template)).unwrap();
 
         let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
@@ -60,7 +55,6 @@ impl SmokeTestEnvironment {
     pub fn setup_vfn_swarm(&mut self) {
         self.vfn_swarm = Some(
             LibraSwarm::configure_fn_swarm(
-                &workspace_builder::get_libra_node_with_failpoints(),
                 None,
                 None,
                 &self.validator_swarm.config,
@@ -73,7 +67,6 @@ impl SmokeTestEnvironment {
     pub fn setup_pfn_swarm(&mut self, num_nodes: usize) {
         self.pfn_swarm = Some(
             LibraSwarm::configure_fn_swarm(
-                &workspace_builder::get_libra_node_with_failpoints(),
                 None,
                 None,
                 &self.validator_swarm.config,

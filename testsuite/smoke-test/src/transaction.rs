@@ -3,9 +3,11 @@
 
 use crate::test_utils::setup_swarm_and_client_proxy;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
+use libra_smoke_test_attribute::smoke_test;
 use libra_types::{account_config::COIN1_NAME, transaction::authenticator::AuthenticationKey};
+use rusty_fork::rusty_fork_test;
 
-#[test]
+#[smoke_test]
 fn test_external_transaction_signer() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
 

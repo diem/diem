@@ -3542,6 +3542,7 @@ dependencies = [
  "libra-config",
  "libra-genesis-tool",
  "libra-logger",
+ "libra-node",
  "libra-temppath",
  "libra-types",
  "libra-workspace-hack",

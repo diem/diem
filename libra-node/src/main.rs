@@ -35,6 +35,7 @@ fn main() {
     } else {
         let config = NodeConfig::load(args.config.unwrap()).expect("Failed to load node config");
         println!("Using node config {:?}", &config);
+        crash_handler::setup_panic_handler();
         libra_node::start(&config, None);
     };
 }

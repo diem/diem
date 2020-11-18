@@ -26,11 +26,13 @@ use libra_network_address::NetworkAddress;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
+use libra_smoke_test_attribute::smoke_test;
 use libra_types::{
     account_address::AccountAddress, block_info::BlockInfo, ledger_info::LedgerInfo,
     transaction::authenticator::AuthenticationKey, waypoint::Waypoint,
 };
 use rand::rngs::OsRng;
+use rusty_fork::rusty_fork_test;
 use std::{
     convert::{TryFrom, TryInto},
     fs,
@@ -38,7 +40,7 @@ use std::{
     str::FromStr,
 };
 
-#[test]
+#[smoke_test]
 fn test_account_resource() {
     let (_env, op_tool, _, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -66,7 +68,7 @@ fn test_account_resource() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_auto_validate_options() {
     let (env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -95,7 +97,7 @@ fn test_auto_validate_options() {
     assert_eq!(VMStatusView::Executed, txn_ctx.execution_result.unwrap());
 }
 
-#[test]
+#[smoke_test]
 fn test_consensus_key_rotation() {
     let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -128,27 +130,27 @@ fn test_consensus_key_rotation() {
     assert_eq!(rotated_consensus_key, new_consensus_key);
 }
 
-#[test]
+#[smoke_test]
 fn test_create_operator_hex_file() {
     create_operator_with_file_writer(write_key_to_file_hex_format);
 }
 
-#[test]
+#[smoke_test]
 fn test_create_operator_lcs_file() {
     create_operator_with_file_writer(write_key_to_file_lcs_format);
 }
 
-#[test]
+#[smoke_test]
 fn test_create_validator_hex_file() {
     create_validator_with_file_writer(write_key_to_file_hex_format);
 }
 
-#[test]
+#[smoke_test]
 fn test_create_validator_lcs_file() {
     create_validator_with_file_writer(write_key_to_file_lcs_format);
 }
 
-#[test]
+#[smoke_test]
 fn test_disable_address_validation() {
     let num_nodes = 1;
     let (_env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
@@ -194,11 +196,10 @@ fn test_disable_address_validation() {
         .unwrap();
 }
 
-#[test]
+#[smoke_test]
 fn test_set_operator_and_add_new_validator() {
     let num_nodes = 3;
     let (env, op_tool, _, _) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
-
     // Create new validator and validator operator keys and accounts
     let (validator_key, validator_account) = create_new_test_account();
     let (operator_key, operator_account) = create_new_test_account();
@@ -358,7 +359,7 @@ fn test_set_operator_and_add_new_validator() {
     assert_ne!(VMStatusView::Executed, txn_ctx.execution_result.unwrap());
 }
 
-#[test]
+#[smoke_test]
 fn test_extract_private_key() {
     let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -376,7 +377,7 @@ fn test_extract_private_key() {
     assert_eq!(key_from_storage, key_from_file);
 }
 
-#[test]
+#[smoke_test]
 fn test_extract_public_key() {
     let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -394,7 +395,7 @@ fn test_extract_public_key() {
     assert_eq!(key_from_storage, key_from_file);
 }
 
-#[test]
+#[smoke_test]
 fn test_insert_waypoint() {
     let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -428,7 +429,7 @@ fn test_insert_waypoint() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_fullnode_network_key_rotation() {
     let num_nodes = 1;
     let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
@@ -463,7 +464,7 @@ fn test_fullnode_network_key_rotation() {
     assert_eq!(new_network_key, info_network_key);
 }
 
-#[test]
+#[smoke_test]
 fn test_network_key_rotation() {
     let num_nodes = 4;
     let (mut env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);
@@ -502,7 +503,7 @@ fn test_network_key_rotation() {
     env.validator_swarm.add_node(0).unwrap();
 }
 
-#[test]
+#[smoke_test]
 fn test_network_key_rotation_recovery() {
     let num_nodes = 4;
     let (mut env, op_tool, backend, mut storage) =
@@ -546,7 +547,7 @@ fn test_network_key_rotation_recovery() {
     env.validator_swarm.add_node(0).unwrap();
 }
 
-#[test]
+#[smoke_test]
 fn test_operator_key_rotation() {
     let (env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -578,7 +579,7 @@ fn test_operator_key_rotation() {
     assert_eq!(new_consensus_key, config_consensus_key);
 }
 
-#[test]
+#[smoke_test]
 fn test_operator_key_rotation_recovery() {
     let (env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -633,7 +634,7 @@ fn test_operator_key_rotation_recovery() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_print_account() {
     let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -651,7 +652,7 @@ fn test_print_account() {
     assert_eq!(storage_operator_account, op_tool_operator_account);
 }
 
-#[test]
+#[smoke_test]
 fn test_print_key() {
     let (_env, op_tool, backend, storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -666,7 +667,7 @@ fn test_print_key() {
     assert_eq!(storage_consensus_key, op_tool_consensus_key);
 }
 
-#[test]
+#[smoke_test]
 fn test_print_waypoints() {
     let (_env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -686,7 +687,7 @@ fn test_print_waypoints() {
     assert_eq!(inserted_waypoint, genesis_waypoint);
 }
 
-#[test]
+#[smoke_test]
 fn test_validate_transaction() {
     let (env, op_tool, backend, _) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -724,7 +725,7 @@ fn test_validate_transaction() {
     assert_eq!(VMStatusView::Executed, result.unwrap());
 }
 
-#[test]
+#[smoke_test]
 fn test_validator_config() {
     let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -765,7 +766,7 @@ fn test_validator_config() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_validator_decryption() {
     let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(1, 0);
 
@@ -802,7 +803,7 @@ fn test_validator_decryption() {
     assert_eq!(failed_decryption_address, config_network_address);
 }
 
-#[test]
+#[smoke_test]
 fn test_validator_set() {
     let num_nodes = 4;
     let (_env, op_tool, backend, mut storage) = launch_swarm_with_op_tool_and_backend(num_nodes, 0);

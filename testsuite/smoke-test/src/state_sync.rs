@@ -12,10 +12,12 @@ use crate::{
 };
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
+use libra_smoke_test_attribute::smoke_test;
 use libra_types::waypoint::Waypoint;
+use rusty_fork::rusty_fork_test;
 use std::{fs, path::PathBuf};
 
-#[test]
+#[smoke_test]
 fn test_basic_state_synchronization() {
     // - Start a swarm of 4 nodes (3 nodes forming a QC).
     // - Kill one node and continue submitting transactions to the others.
@@ -117,7 +119,7 @@ fn test_basic_state_synchronization() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_startup_sync_state() {
     let (mut env, mut client_1) = setup_swarm_and_client_proxy(4, 1);
     client_1.create_next_account(false).unwrap();
@@ -180,7 +182,7 @@ fn test_startup_sync_state() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_startup_sync_state_with_empty_consensus_db() {
     let (mut env, mut client_1) = setup_swarm_and_client_proxy(4, 1);
     client_1.create_next_account(false).unwrap();
@@ -247,7 +249,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_state_sync_multichunk_epoch() {
     let mut env = SmokeTestEnvironment::new_with_chunk_limit(4, 5);
     env.validator_swarm.launch();

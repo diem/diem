@@ -52,18 +52,13 @@ fn main() {
 
     libra_logger::Logger::new().init();
 
-    let mut validator_swarm = LibraSwarm::configure_validator_swarm(
-        args.libra_node.as_ref(),
-        num_nodes,
-        args.config_dir.clone(),
-        None,
-    )
-    .expect("Failed to configure validator swarm");
+    let mut validator_swarm =
+        LibraSwarm::configure_validator_swarm(num_nodes, args.config_dir.clone(), None)
+            .expect("Failed to configure validator swarm");
 
     let mut full_node_swarm = if num_full_nodes > 0 {
         Some(
             LibraSwarm::configure_fn_swarm(
-                args.libra_node.as_ref(),
                 None, /* config dir */
                 None,
                 &validator_swarm.config,

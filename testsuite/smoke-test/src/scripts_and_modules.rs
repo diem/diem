@@ -6,15 +6,17 @@ use crate::{
     workspace_builder,
 };
 use libra_crypto::HashValue;
+use libra_smoke_test_attribute::smoke_test;
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
+use rusty_fork::rusty_fork_test;
 use std::{
     fs, io,
     io::Write,
     path::{Path, PathBuf},
 };
 
-#[test]
+#[smoke_test]
 fn test_e2e_modify_publishing_option() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
     client.create_next_account(false).unwrap();
@@ -76,7 +78,7 @@ fn test_e2e_modify_publishing_option() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_malformed_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
     client.create_next_account(false).unwrap();
@@ -108,7 +110,7 @@ fn test_malformed_script() {
         .unwrap();
 }
 
-#[test]
+#[smoke_test]
 fn test_execute_custom_module_and_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
     client.create_next_account(false).unwrap();

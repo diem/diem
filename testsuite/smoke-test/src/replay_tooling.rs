@@ -5,8 +5,10 @@ use crate::{
     test_utils::{libra_swarm_utils::get_libra_debugger, setup_swarm_and_client_proxy},
     workspace_builder,
 };
+use libra_smoke_test_attribute::smoke_test;
+use rusty_fork::rusty_fork_test;
 
-#[test]
+#[smoke_test]
 fn test_replay_tooling() {
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
     let json_debugger = get_libra_debugger(&env.validator_swarm, 0);

@@ -71,8 +71,6 @@ impl LibraHandle {
 }
 
 pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
-    crash_handler::setup_panic_handler();
-
     let mut logger = libra_logger::Logger::new();
     logger
         .channel_size(config.logger.chan_size)
@@ -179,6 +177,7 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     println!("Libra is running, press ctrl-c to exit");
     println!();
 
+    crash_handler::setup_panic_handler();
     start(&config, Some(log_file))
 }
 
@@ -217,8 +216,12 @@ fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> No
     .next()
     .unwrap();
 
-    libra_trace::set_libra_trace(&config.debug_interface.libra_trace.sampling)
-        .expect("Failed to set libra trace sampling rate.");
+    if let Err(error) = libra_trace::set_libra_trace(&config.debug_interface.libra_trace.sampling) {
+        error!(
+            "Failed to set libra trace sampling rate. Error: {:?}",
+            error
+        );
+    }
 
     NodeDebugService::new(addr, logger)
 }

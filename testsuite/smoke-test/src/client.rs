@@ -8,12 +8,14 @@ use crate::test_utils::{
 };
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
+use libra_smoke_test_attribute::smoke_test;
 use libra_trace::trace::trace_node;
 use libra_types::{
     account_config::testnet_dd_account_address, ledger_info::LedgerInfo, waypoint::Waypoint,
 };
+use rusty_fork::rusty_fork_test;
 
-#[test]
+#[smoke_test]
 fn test_create_mint_transfer_block_metadata() {
     let (env, client) = setup_swarm_and_client_proxy(1, 0);
 
@@ -32,7 +34,7 @@ fn test_create_mint_transfer_block_metadata() {
     );
 }
 
-#[test]
+#[smoke_test]
 fn test_basic_fault_tolerance() {
     // A configuration with 4 validators should tolerate single node failure.
     let (mut env, client) = setup_swarm_and_client_proxy(4, 1);
@@ -40,7 +42,7 @@ fn test_basic_fault_tolerance() {
     check_create_mint_transfer(client);
 }
 
-#[test]
+#[smoke_test]
 fn test_basic_restartability() {
     let (mut env, mut client) = setup_swarm_and_client_proxy(4, 0);
 
@@ -90,7 +92,7 @@ fn test_basic_restartability() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_client_waypoints() {
     let (env, mut client) = setup_swarm_and_client_proxy(4, 1);
 
@@ -155,7 +157,7 @@ fn test_client_waypoints() {
     assert!(client_with_bad_waypoint.test_trusted_connection().is_err());
 }
 
-#[test]
+#[smoke_test]
 fn test_concurrent_transfers_single_node() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
 
@@ -188,7 +190,7 @@ fn test_concurrent_transfers_single_node() {
     ));
 }
 
-#[test]
+#[smoke_test]
 fn test_trace() {
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
 

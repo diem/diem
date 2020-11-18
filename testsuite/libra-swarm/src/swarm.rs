@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_genesis_tool::{
@@ -17,13 +17,14 @@ use std::{
     fs::File,
     io::{self, Read},
     path::{Path, PathBuf},
-    process::{Child, Command},
     str::FromStr,
+    thread,
+    thread::JoinHandle,
 };
 use thiserror::Error;
 
 pub struct LibraNode {
-    node: Child,
+    _thread: JoinHandle<()>,
     node_id: String,
     validator_peer_id: Option<AccountAddress>,
     role: RoleType,
@@ -32,28 +33,8 @@ pub struct LibraNode {
     pub log: PathBuf,
 }
 
-impl Drop for LibraNode {
-    // When the LibraNode struct goes out of scope we need to kill the child process
-    fn drop(&mut self) {
-        // check if the process has already been terminated
-        match self.node.try_wait() {
-            // The child process has already terminated, perhaps due to a crash
-            Ok(Some(_)) => {}
-
-            // The node is still running so we need to attempt to kill it
-            _ => {
-                if let Err(e) = self.node.kill() {
-                    panic!("LibraNode process could not be killed: '{}'", e);
-                }
-                self.node.wait().unwrap();
-            }
-        }
-    }
-}
-
 impl LibraNode {
     pub fn launch(
-        libra_node_bin_path: &Path,
         node_id: String,
         role: RoleType,
         config_path: &Path,
@@ -61,37 +42,32 @@ impl LibraNode {
     ) -> Result<Self> {
         let config = NodeConfig::load(&config_path)
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
-        let log_file = File::create(&log_path)?;
         let validator_peer_id = match role {
             RoleType::Validator => Some(config.validator_network.as_ref().unwrap().peer_id()),
             RoleType::FullNode => None,
         };
-        let mut node_command = Command::new(libra_node_bin_path);
-        node_command.arg("-f").arg(config_path);
-        if env::var("RUST_LOG").is_err() {
-            // Only set our RUST_LOG if its not present in environment
-            node_command.env("RUST_LOG", "debug");
-        }
-        node_command
-            .stdout(log_file.try_clone()?)
-            .stderr(log_file.try_clone()?);
-        let node = node_command.spawn().with_context(|| {
-            format!(
-                "Error launching node process with binary: {:?}",
-                libra_node_bin_path
-            )
-        })?;
         let debug_client = NodeDebugClient::new(
             "localhost",
             config.debug_interface.admission_control_node_debug_port,
         );
+        let port = config.json_rpc.address.port();
+
+        if env::var("RUST_LOG").is_err() {
+            // Only set our RUST_LOG if its not present in environment
+            env::set_var("RUST_LOG", "debug");
+        }
+        let log_file_path = log_path.clone();
+        let thread = thread::spawn(move || {
+            libra_node::start(&config, Some(log_file_path));
+        });
+
         Ok(Self {
-            node,
+            _thread: thread,
             node_id,
             validator_peer_id,
             role,
             debug_client,
-            port: config.json_rpc.address.port(),
+            port,
             log: log_path,
         })
     }
@@ -150,24 +126,6 @@ impl LibraNode {
 
     pub fn health_check(&mut self) -> HealthStatus {
         println!("Health check on node '{}'", self.node_id);
-
-        // check if the process has terminated
-        match self.node.try_wait() {
-            // This would mean the child process has crashed
-            Ok(Some(status)) => {
-                println!("Node '{}' crashed with: {}", self.node_id, status);
-                return HealthStatus::Crashed(status);
-            }
-
-            // This is the case where the node is still running
-            Ok(None) => {}
-
-            // Some other unknown error
-            Err(e) => {
-                panic!("error attempting to query Node: {}", e);
-            }
-        }
-
         match self.debug_client.get_node_metrics() {
             Ok(_) => {
                 println!("Node '{}' is healthy", self.node_id);
@@ -205,7 +163,6 @@ impl AsRef<Path> for LibraSwarmDir {
 
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
-    libra_node_bin_path: PathBuf,
     // Output log, LibraNodes' config file, libradb etc, into this dir.
     pub dir: LibraSwarmDir,
     // Maps the node id of a node to the LibraNode struct
@@ -252,7 +209,6 @@ impl LibraSwarm {
     }
 
     pub fn configure_fn_swarm(
-        libra_node_bin_path: &Path,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
         upstream_config: &SwarmConfig,
@@ -276,7 +232,6 @@ impl LibraSwarm {
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
-            libra_node_bin_path: libra_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
@@ -285,7 +240,6 @@ impl LibraSwarm {
     }
 
     pub fn configure_validator_swarm(
-        libra_node_bin_path: &Path,
         num_nodes: usize,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
@@ -300,7 +254,6 @@ impl LibraSwarm {
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
-            libra_node_bin_path: libra_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
@@ -327,7 +280,6 @@ impl LibraSwarm {
             // Use index as node id.
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
-                &self.libra_node_bin_path,
                 node_id.clone(),
                 self.role,
                 &path,
@@ -523,14 +475,7 @@ impl LibraSwarm {
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));
         let node_id = format!("{}", idx);
-        let mut node = LibraNode::launch(
-            &self.libra_node_bin_path,
-            node_id.clone(),
-            self.role,
-            path,
-            log_file_path,
-        )
-        .unwrap();
+        let mut node = LibraNode::launch(node_id.clone(), self.role, path, log_file_path).unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.nodes.insert(node_id, node);

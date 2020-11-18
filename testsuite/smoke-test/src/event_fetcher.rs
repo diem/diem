@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_utils::{libra_swarm_utils::get_libra_event_fetcher, setup_swarm_and_client_proxy};
+use libra_smoke_test_attribute::smoke_test;
+use rusty_fork::rusty_fork_test;
 
-#[test]
+#[smoke_test]
 fn test_event_fetcher() {
     let mut runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
 

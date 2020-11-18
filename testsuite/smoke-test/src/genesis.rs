@@ -10,6 +10,7 @@ use crate::{
     workspace_builder::workspace_root,
 };
 use anyhow::anyhow;
+use libra_smoke_test_attribute::smoke_test;
 use libra_temppath::TempPath;
 use libra_types::{
     account_config::{libra_root_address, treasury_compliance_account_address},
@@ -17,13 +18,14 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use regex::Regex;
+use rusty_fork::rusty_fork_test;
 use std::{
     fs, fs::File, io::Write, path::PathBuf, process::Command, str::FromStr, thread::sleep,
     time::Duration,
 };
 use transaction_builder::encode_remove_validator_and_reconfigure_script;
 
-#[test]
+#[smoke_test]
 /// This test verifies the flow of a genesis transaction after the chain starts.
 /// 1. Test the consensus sync_only mode, every node should stop at the same version.
 /// 2. Test the db-bootstrapper applying a manual genesis transaction (remove validator 0) on libradb directly
