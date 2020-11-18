@@ -1,0 +1,45 @@
+[package]
+name = "move-transactional-test-runner"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Transactional testing framework for Move"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+colored = "2.0.0"
+once_cell = "1.7.2"
+regex = "1.1.9"
+rayon = "1.5.0"
+structopt = "0.3.21"
+tempfile = "3.2.0"
+
+diem-workspace-hack = { path = "../../../crates/diem-workspace-hack" }
+
+bytecode-interpreter = { path = "../../move-prover/interpreter" }
+compiler = { path = "../../compiler" }
+move-binary-format = { path = "../../move-binary-format" }
+move-bytecode-utils = { path = "../../tools/move-bytecode-utils" }
+move-cli = { path = "../../tools/move-cli" }
+move-command-line-common = { path = "../../move-command-line-common" }
+move-core-types = { path = "../../move-core/types" }
+move-lang = { path = "../../move-lang" }
+move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
+move-symbol-pool = { path = "../../move-symbol-pool" }
+move-vm-test-utils = { path = "../../move-vm/test-utils" }
+move-vm-types = { path = "../../move-vm/types" }
+move-vm-runtime = { path = "../../move-vm/runtime" }
+resource-viewer = { path = "../../tools/resource-viewer" }
+
+[dev-dependencies]
+datatest-stable = "0.1.1"
+difference = "2.0.0"
+move-lang-test-utils = { path = "../../move-lang/test-utils" }
+
+[[test]]
+name = "tests"
+harness = false

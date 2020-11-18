@@ -35,7 +35,7 @@ pub use mode::*;
 pub use on_disk_state_view::*;
 pub use package::*;
 
-pub(crate) fn get_gas_status(gas_budget: Option<u64>) -> Result<GasStatus<'static>> {
+pub fn get_gas_status(gas_budget: Option<u64>) -> Result<GasStatus<'static>> {
     let gas_status = if let Some(gas_budget) = gas_budget {
         let gas_schedule = &move_vm_types::gas_schedule::INITIAL_GAS_SCHEDULE;
         let max_gas_budget = u64::MAX
