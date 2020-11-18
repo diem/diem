@@ -17,7 +17,7 @@ hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking", "json"] }
 structopt = "0.3.20"
 futures = "0.3.8"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.3", features = ["full"] }
 
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 libra-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
