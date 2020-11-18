@@ -217,6 +217,7 @@ members = [
     "move-lang-test-utils",
     "move-oncall-trainer",
     "move-prover-test-utils",
+    "move-transactional-test-runner",
     "move-vm-integration-tests",
     "offchain",
     "diem-scratchpad-benchmark",
