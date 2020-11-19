@@ -5,7 +5,7 @@
 
 use bytecode_verifier::{verify_module, DependencyChecker};
 use log::LevelFilter;
-use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
+use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -141,8 +141,8 @@ pub fn script_files() -> Vec<String> {
 }
 
 pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
-    let (_, compiled_units) =
-        move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE), None).unwrap();
+    let (_files, compiled_units) =
+        move_compile_and_report(&stdlib_files(), &[], Some(Address::LIBRA_CORE), None).unwrap();
     let mut modules = BTreeMap::new();
     for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
         let name = compiled_unit.name();
@@ -162,7 +162,7 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
 }
 
 pub fn compile_script(source_file_str: String) -> Vec<u8> {
-    let (_, mut compiled_program) = move_compile(
+    let (_files, mut compiled_program) = move_compile_and_report(
         &[source_file_str],
         &stdlib_files(),
         Some(Address::LIBRA_CORE),

@@ -34,9 +34,10 @@ fn compile_module(addr: &[u8; AccountAddress::LENGTH]) -> CompiledModule {
     path.push("src/bench.move");
     let s = path.to_str().expect("no path specified").to_owned();
 
-    let (_, mut modules) = move_lang::move_compile(&[s], &[], Some(Address::new(*addr)), None)
-        .expect("Error compiling...");
-    match modules.remove(0) {
+    let (_files, mut compiled_units) =
+        move_lang::move_compile_and_report(&[s], &[], Some(Address::new(*addr)), None)
+            .expect("Error compiling...");
+    match compiled_units.remove(0) {
         CompiledUnit::Module { module, .. } => module,
         CompiledUnit::Script { .. } => panic!("Expected a module but received a script"),
     }

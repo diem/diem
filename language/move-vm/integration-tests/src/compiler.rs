@@ -17,7 +17,7 @@ pub fn compile_units(addr: AccountAddress, s: &str) -> Result<Vec<CompiledUnit>>
         writeln!(file, "{}", s)?;
     }
 
-    let (_, units) = move_lang::move_compile(
+    let (_, units) = move_lang::move_compile_and_report(
         &[file_path.to_str().unwrap().to_string()],
         &[],
         Some(Address::new(addr.to_u8())),
@@ -39,7 +39,7 @@ fn expect_modules(
 }
 
 pub fn compile_modules_in_file(addr: AccountAddress, path: &Path) -> Result<Vec<CompiledModule>> {
-    let (_, units) = move_lang::move_compile(
+    let (_, units) = move_lang::move_compile_and_report(
         &[path.to_str().unwrap().to_string()],
         &[],
         Some(Address::new(addr.to_u8())),

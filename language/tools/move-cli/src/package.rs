@@ -12,7 +12,8 @@ use std::{
 };
 
 use move_lang::{
-    compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile, path_to_string,
+    compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
+    path_to_string,
 };
 use std::path::PathBuf;
 use stdlib::{COMPILED_EXTENSION, MOVE_EXTENSION};
@@ -162,8 +163,8 @@ impl MovePackage {
             fs::create_dir_all(&pkg_bin_path)?;
 
             // compile the source files
-            let (_, compiled_units) =
-                move_compile(&[path_to_string(&pkg_src_path)?], &src_dirs, None, None)?;
+            let (_files, compiled_units) =
+                move_compile_and_report(&[path_to_string(&pkg_src_path)?], &src_dirs, None, None)?;
 
             // save modules and ignore scripts
             for unit in compiled_units {

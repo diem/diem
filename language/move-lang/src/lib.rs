@@ -44,9 +44,43 @@ pub const MOVE_COMPILED_EXTENSION: &str = "mv";
 pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";
 pub const SOURCE_MAP_EXTENSION: &str = "mvsm";
 
+#[macro_export]
+macro_rules! unwrap_or_report_errors {
+    ($files:ident, $res:ident) => {{
+        match $res {
+            Ok(t) => t,
+            Err(errors) => {
+                assert!(!errors.is_empty());
+                $crate::errors::report_errors($files, errors)
+            }
+        }
+    }};
+}
+
 //**************************************************************************************************
 // Entry
 //**************************************************************************************************
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Pass {
+    Parser,
+    Expansion,
+    Naming,
+    Typing,
+    HLIR,
+    CFGIR,
+    Compilation,
+}
+
+pub enum PassResult {
+    Parser(Option<Address>, parser::ast::Program),
+    Expansion(expansion::ast::Program, Errors),
+    Naming(naming::ast::Program, Errors),
+    Typing(typing::ast::Program),
+    HLIR(hlir::ast::Program, Errors),
+    CFGIR(cfgir::ast::Program),
+    Compilation(Vec<CompiledUnit>),
+}
 
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
@@ -58,29 +92,31 @@ pub fn move_check(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
-) -> anyhow::Result<()> {
-    let (files, errors) = move_check_no_report(targets, deps, sender_opt, interface_files_dir_opt)?;
-    if !errors.is_empty() {
-        errors::report_errors(files, errors)
-    }
-    Ok(())
+) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
+    let (files, pprog_and_comments_res) =
+        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+        Err(errors) => return Ok((files, Err(errors))),
+        Ok(res) => res,
+    };
+    let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::CFGIR) {
+        Ok(PassResult::CFGIR(_)) => Ok(()),
+        Ok(_) => unreachable!(),
+        Err(errors) => Err(errors),
+    };
+    Ok((files, result))
 }
 
-/// Move check but it returns the errors instead of reporting them to stderr
-pub fn move_check_no_report(
+/// Similar to move_check but it reports it's errors to stderr
+pub fn move_check_and_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
-) -> anyhow::Result<(FilesSourceText, Errors)> {
-    let mut deps = deps.to_vec();
-    generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
-    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
-    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
-    match check_program(pprog_res, sender_opt) {
-        Err(errors) => Ok((files, errors)),
-        Ok(_) => Ok((files, vec![])),
-    }
+) -> anyhow::Result<FilesSourceText> {
+    let (files, errors_result) = move_check(targets, deps, sender_opt, interface_files_dir_opt)?;
+    unwrap_or_report_errors!(files, errors_result);
+    Ok(files)
 }
 
 /// Given a set of targets and a set of dependencies
@@ -93,53 +129,56 @@ pub fn move_compile(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
-) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, compiled_units_or_errors) =
-        move_compile_no_report(targets, deps, sender_opt, interface_files_dir_opt)?;
-    match compiled_units_or_errors {
-        Err(errors) => errors::report_errors(files, errors),
-        Ok(compiled_units) => Ok((files, compiled_units)),
-    }
+) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
+    let (files, pprog_and_comments_res) =
+        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+        Err(errors) => return Ok((files, Err(errors))),
+        Ok(res) => res,
+    };
+    let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::Compilation)
+    {
+        Ok(PassResult::Compilation(units)) => Ok(units),
+        Ok(_) => unreachable!(),
+        Err(errors) => Err(errors),
+    };
+    Ok((files, result))
 }
 
-/// Move compile but it returns the errors instead of reporting them to stderr
-pub fn move_compile_no_report(
+/// Similar to move_compile but it reports it's errors to stderr
+pub fn move_compile_and_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
-) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
-    let mut deps = deps.to_vec();
-    generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
-    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
-    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
-    Ok(match compile_program(pprog_res, sender_opt) {
-        Err(errors) => (files, Err(errors)),
-        Ok(units) => (files, Ok(units)),
-    })
+) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
+    let (files, units_res) = move_compile(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let units = unwrap_or_report_errors!(files, units_res);
+    Ok((files, units))
 }
 
-/// Move compile up to expansion phase, returning errors instead of reporting them to stderr.
-///
-/// This also returns a map containing documentation comments for each source in `targets`.
-pub fn move_compile_to_expansion_no_report(
+/// Given a set of targets and a set of dependencies, produces a `parser::ast::Program` along side a
+/// `CommentMap`. The `sender_opt` is returned for ease of use with `PassResult::Parser`
+pub fn move_parse(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(
     FilesSourceText,
-    Result<(expansion::ast::Program, CommentMap), Errors>,
+    Result<(CommentMap, Option<Address>, parser::ast::Program), Errors>,
 )> {
     let mut deps = deps.to_vec();
     generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
     let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
-    let res = pprog_and_comments_res.and_then(|(pprog, comment_map)| {
-        let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
-        check_errors(errors)?;
-        Ok((eprog, comment_map))
-    });
-    Ok((files, res))
+    let result = pprog_and_comments_res.map(|(pprog, comments)| (comments, sender_opt, pprog));
+    Ok((files, result))
+}
+
+/// Runs the compiler from a previous result until a stopping point.
+/// The stopping point is inclusive, meaning the pass specified by `until: Pass` will be run
+pub fn move_continue_up_to(pass: PassResult, until: Pass) -> Result<PassResult, Errors> {
+    run(pass, until)
 }
 
 //**************************************************************************************************
@@ -348,26 +387,76 @@ pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
 // Translations
 //**************************************************************************************************
 
-fn check_program(
-    prog: Result<parser::ast::Program, Errors>,
-    sender_opt: Option<Address>,
-) -> Result<cfgir::ast::Program, Errors> {
-    let (eprog, errors) = expansion::translate::program(prog?, sender_opt);
-    let (nprog, errors) = naming::translate::program(eprog, errors);
-    let (tprog, errors) = typing::translate::program(nprog, errors);
-    check_errors(errors)?;
-    let (hprog, errors) = hlir::translate::program(tprog);
-    let (cprog, errors) = cfgir::translate::program(errors, hprog);
-    check_errors(errors)?;
-    Ok(cprog)
+impl PassResult {
+    pub fn equivalent_pass(&self) -> Pass {
+        match self {
+            PassResult::Parser(_, _) => Pass::Parser,
+            PassResult::Expansion(_, _) => Pass::Expansion,
+            PassResult::Naming(_, _) => Pass::Naming,
+            PassResult::Typing(_) => Pass::Typing,
+            PassResult::HLIR(_, _) => Pass::HLIR,
+            PassResult::CFGIR(_) => Pass::CFGIR,
+            PassResult::Compilation(_) => Pass::Compilation,
+        }
+    }
+
+    pub fn check_for_errors(self) -> Result<Self, Errors> {
+        Ok(match self {
+            result @ PassResult::Parser(_, _)
+            | result @ PassResult::Typing(_)
+            | result @ PassResult::CFGIR(_)
+            | result @ PassResult::Compilation(_) => result,
+            PassResult::Expansion(eprog, errors) => {
+                check_errors(errors)?;
+                PassResult::Expansion(eprog, Errors::new())
+            }
+            PassResult::Naming(nprog, errors) => {
+                check_errors(errors)?;
+                PassResult::Naming(nprog, Errors::new())
+            }
+            PassResult::HLIR(hprog, errors) => {
+                check_errors(errors)?;
+                PassResult::HLIR(hprog, Errors::new())
+            }
+        })
+    }
 }
 
-fn compile_program(
-    prog: Result<parser::ast::Program, Errors>,
-    sender_opt: Option<Address>,
-) -> Result<Vec<CompiledUnit>, Errors> {
-    let cprog = check_program(prog, sender_opt)?;
-    to_bytecode::translate::program(cprog)
+fn run(cur: PassResult, until: Pass) -> Result<PassResult, Errors> {
+    if cur.equivalent_pass() >= until {
+        return Ok(cur);
+    }
+
+    match cur {
+        PassResult::Parser(sender_opt, prog) => {
+            let (eprog, errors) = expansion::translate::program(prog, sender_opt);
+            run(PassResult::Expansion(eprog, errors), until)
+        }
+        PassResult::Expansion(eprog, errors) => {
+            let (nprog, errors) = naming::translate::program(eprog, errors);
+            run(PassResult::Naming(nprog, errors), until)
+        }
+        PassResult::Naming(nprog, errors) => {
+            let (tprog, errors) = typing::translate::program(nprog, errors);
+            check_errors(errors)?;
+            run(PassResult::Typing(tprog), until)
+        }
+        PassResult::Typing(tprog) => {
+            let (hprog, errors) = hlir::translate::program(tprog);
+            run(PassResult::HLIR(hprog, errors), until)
+        }
+        PassResult::HLIR(hprog, errors) => {
+            let (cprog, errors) = cfgir::translate::program(errors, hprog);
+            check_errors(errors)?;
+            run(PassResult::CFGIR(cprog), until)
+        }
+        PassResult::CFGIR(cprog) => {
+            let compiled_units = to_bytecode::translate::program(cprog)?;
+            assert!(until == Pass::Compilation);
+            run(PassResult::Compilation(compiled_units), Pass::Compilation)
+        }
+        PassResult::Compilation(_) => unreachable!("ICE Pass::Compilation is >= all passes"),
+    }
 }
 
 //**************************************************************************************************

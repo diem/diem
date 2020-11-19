@@ -8,7 +8,7 @@ use functional_tests::{
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_lang::{
-    compiled_unit::CompiledUnit, move_compile_no_report, shared::Address, test_utils::read_bool_var,
+    compiled_unit::CompiledUnit, move_compile, shared::Address, test_utils::read_bool_var,
 };
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
@@ -56,7 +56,7 @@ impl Compiler for MoveSourceCompiler {
 
         let targets = &vec![cur_path.clone()];
         let sender = Some(sender_addr);
-        let (files, units_or_errors) = move_compile_no_report(targets, &self.deps, sender, None)?;
+        let (files, units_or_errors) = move_compile(targets, &self.deps, sender, None)?;
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = if read_bool_var(testsuite::PRETTY) {
