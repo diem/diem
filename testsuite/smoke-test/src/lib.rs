@@ -5,6 +5,9 @@
 mod client;
 
 #[cfg(test)]
+mod consensus;
+
+#[cfg(test)]
 mod event_fetcher;
 
 #[cfg(test)]

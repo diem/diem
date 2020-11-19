@@ -972,7 +972,7 @@ fn create_validator_with_file_writer(file_writer: fn(&Ed25519PublicKey, PathBuf)
 
 /// Launches a validator swarm of a specified size, connects an operational
 /// tool to the node at the specified index and fetches the node's secure backend.
-fn launch_swarm_with_op_tool_and_backend(
+pub fn launch_swarm_with_op_tool_and_backend(
     num_nodes: usize,
     node_index: usize,
 ) -> (
