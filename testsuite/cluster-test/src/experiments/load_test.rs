@@ -481,19 +481,22 @@ async fn state_sync_load_test(
         bytes += lcs::to_bytes(&msg)?.len() as u64;
         msg_num += 1;
         sender.send_to(vfn, msg)?;
+    }
 
-        // await response from remote peer
-        let response = events.select_next_some().await;
+    while let Some(response) = events.next().await {
         if let Event::Message(_remote_peer, payload) = response {
             if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
                 chunk_response,
             ) = payload
             {
                 // TODO analyze response and update StateSyncResult with stats accordingly
-                served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;
+                let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                served_txns += temp;
+                info!("hhhhhhhhh tx {}", temp);
             }
         }
     }
+
     Ok(StateSyncStats {
         served_txns,
         bytes,
