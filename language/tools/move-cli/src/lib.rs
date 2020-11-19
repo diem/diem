@@ -30,6 +30,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub mod package;
 pub mod test;
 
 /// Default directory where saved Move resources live
@@ -37,6 +38,12 @@ pub const DEFAULT_STORAGE_DIR: &str = "storage";
 
 /// Default directory where Move modules live
 pub const DEFAULT_SOURCE_DIR: &str = "src";
+
+/// Default directory where Move packages live under build_dir
+pub const DEFAULT_PACKAGE_DIR: &str = "package";
+
+/// Default dependency inclusion mode
+pub const DEFAULT_DEP_MODE: &str = "bare";
 
 /// Default directory for build output
 pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_DIR;

@@ -330,14 +330,14 @@ fn has_compiled_module_magic_number(path: &str) -> bool {
     num_bytes_read == BinaryConstants::LIBRA_MAGIC_SIZE && magic == BinaryConstants::LIBRA_MAGIC
 }
 
-fn path_to_string(path: &Path) -> anyhow::Result<String> {
+pub fn path_to_string(path: &Path) -> anyhow::Result<String> {
     match path.to_str() {
         Some(p) => Ok(p.to_string()),
         None => Err(anyhow!("non-Unicode file name")),
     }
 }
 
-fn extension_equals(path: &Path, target_ext: &str) -> bool {
+pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
     match path.extension().and_then(|s| s.to_str()) {
         Some(extension) => extension == target_ext,
         None => false,

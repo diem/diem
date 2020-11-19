@@ -3,7 +3,10 @@
 
 use errmapgen::ErrorMapping;
 
-use move_cli::*;
+use move_cli::{
+    package::{parse_mode_from_string, Mode},
+    *,
+};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
@@ -18,7 +21,7 @@ use move_vm_types::{gas_schedule, values::Value};
 use vm::{
     access::ScriptAccess,
     errors::VMError,
-    file_format::{CompiledScript, SignatureToken},
+    file_format::{CompiledModule, CompiledScript, SignatureToken},
 };
 
 use anyhow::{bail, Result};
@@ -41,6 +44,14 @@ struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
     #[structopt(long, default_value = DEFAULT_BUILD_DIR, global = true)]
     build_dir: String,
+    /// Dependency inclusion mode
+    #[structopt(
+        long,
+        default_value = DEFAULT_DEP_MODE,
+        global = true,
+        parse(try_from_str = parse_mode_from_string),
+    )]
+    mode: Mode,
     /// Print additional diagnostics
     #[structopt(short = "v", global = true)]
     verbose: bool,
@@ -127,6 +138,39 @@ enum Command {
     Clean {},
 }
 
+impl Move {
+    fn get_package_dir(&self) -> PathBuf {
+        Path::new(&self.build_dir).join(DEFAULT_PACKAGE_DIR)
+    }
+
+    /// Prepare the library dependencies, need to run it before every related command,
+    /// i.e., check, publish, and run.
+    ///
+    /// If `source_only` is true, only the source files will be populated. The modules will
+    /// not be compiled nor loaded.
+    ///
+    /// Currently, `source_only` is set to true for "check" and "publish" and false for "run"
+    fn prepare_mode(&self, source_only: bool) -> Result<()> {
+        self.mode.prepare(&self.get_package_dir(), source_only)
+    }
+
+    /// This collect the dependencies for compiling a script or module. The dependencies
+    /// include not only the loaded libraries, but also the interface files generated from
+    /// prior "publish" commands.
+    fn get_compilation_deps(&self) -> Result<Vec<String>> {
+        let mut src_dirs = self.mode.source_files(&self.get_package_dir())?;
+        src_dirs.push(interface_files_dir(&self.build_dir)?);
+        Ok(src_dirs)
+    }
+
+    /// This collects only the compiled modules from dependent libraries. The modules
+    /// created via the "publish" command should already sit in the storage based on
+    /// current implementation.
+    fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
+        self.mode.compiled_modules(&self.get_package_dir())
+    }
+}
+
 /// Create a directory at ./`dir_name` if one does not already exist
 fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
     let dir = Path::new(dir_name);
@@ -159,8 +203,7 @@ fn check(args: &Move, files: &[String]) -> Result<()> {
     if args.verbose {
         println!("Checking Move files...");
     }
-    let interface_dir = interface_files_dir(&args.build_dir)?;
-    move_lang::move_check(files, &[interface_dir], None, None)?;
+    move_lang::move_check(files, &args.get_compilation_deps()?, None, None)?;
     Ok(())
 }
 
@@ -170,8 +213,8 @@ fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
     if args.verbose {
         println!("Compiling Move modules...")
     }
-    let interface_dir = interface_files_dir(&args.build_dir)?;
-    let (_, compiled_units) = move_lang::move_compile(files, &[interface_dir], None, None)?;
+    let (_, compiled_units) =
+        move_lang::move_compile(files, &args.get_compilation_deps()?, None, None)?;
 
     let num_modules = compiled_units
         .iter()
@@ -220,12 +263,11 @@ fn run(
         if args.verbose {
             println!("Compiling transaction script...")
         }
-        let interface_dir = interface_files_dir(&args.build_dir)?;
         let (_, compiled_units) = move_lang::move_compile(
             &[script_file.to_string()],
-            &[interface_dir.clone()],
+            &args.get_compilation_deps()?,
             None,
-            Some(interface_dir),
+            None,
         )?;
 
         let mut script_opt = None;
@@ -248,6 +290,11 @@ fn run(
                 }
             }
         }
+
+        // preload the modules to the storage
+        let state =
+            OnDiskStateView::create(storage_dir.to_path_buf(), &args.get_library_modules()?)?;
+        state.save_modules()?;
         Ok((
             OnDiskStateView::create(storage_dir.to_path_buf(), &[])?,
             script_opt,
@@ -588,13 +635,17 @@ fn main() -> Result<()> {
     let move_args = Move::from_args();
 
     match &move_args.cmd {
-        Command::Check { source_files } => check(&move_args, &source_files),
+        Command::Check { source_files } => {
+            move_args.prepare_mode(true)?;
+            check(&move_args, &source_files)
+        }
         Command::Publish {
             source_files,
             dry_run,
         } => {
+            move_args.prepare_mode(true)?;
             let state = publish(&move_args, source_files)?;
-            maybe_commit_effects(&move_args, !dry_run, None, &state)
+            maybe_commit_effects(&move_args, !*dry_run, None, &state)
         }
         Command::Run {
             script_file,
@@ -603,15 +654,18 @@ fn main() -> Result<()> {
             type_args,
             gas_budget,
             dry_run,
-        } => run(
-            &move_args,
-            script_file,
-            signers,
-            args,
-            type_args.to_vec(),
-            *gas_budget,
-            *dry_run,
-        ),
+        } => {
+            move_args.prepare_mode(false)?;
+            run(
+                &move_args,
+                script_file,
+                signers,
+                args,
+                type_args.to_vec(),
+                *gas_budget,
+                *dry_run,
+            )
+        }
         Command::Test { path, track_cov } => test::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
