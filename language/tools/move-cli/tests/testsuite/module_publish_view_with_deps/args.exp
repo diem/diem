@@ -1,0 +1,17 @@
+Command `publish src --mode stdlib -v`:
+Compiling Move modules...
+Found and compiled 1 modules
+Command `view storage/0x00000000000000000000000000000042/modules/Module.mv`:
+module 42.Module {
+resource S {
+	i: u64
+}
+
+public foo(): S {
+	0: ImmBorrowLoc[0](Arg0: u64)
+	1: Call[0](print<u64>(&u64))
+	2: CopyLoc[0](Arg0: u64)
+	3: Pack[0](S)
+	4: Ret
+}
+}
