@@ -82,7 +82,8 @@ fn routes(
                 OptFmt(info.user_agent()),
                 info.elapsed(),
             )
-        }));
+        }))
+        .with(warp::cors().allow_any_origin().allow_methods(vec!["POST"]));
 
     // POST /?amount=25&auth_key=xxx&currency_code=XXX
     let route_root = warp::path::end().and(mint.clone());
