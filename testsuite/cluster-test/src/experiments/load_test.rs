@@ -479,11 +479,9 @@ async fn state_sync_load_test(
             ));
             bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
             msg_num1.fetch_add(1, Ordering::Relaxed);
-            info!("hhhhhh3");
             sender.send_to(vfn, msg);
-            info!("hhhhhh4");
         }
-    });
+    }).join();
 
     /*let response = events.select_next_some().await;
     if let Event::Message(_remote_peer, payload) = response {
@@ -500,6 +498,7 @@ async fn state_sync_load_test(
     let served_txns = served_txns1.load(Ordering::Relaxed);
     let bytes = bytes1.load(Ordering::Relaxed);
     let msg_num = msg_num1.load(Ordering::Relaxed);
+    info!("hhhhhhhh {}, {}", bytes, msg_num);
 
     Ok(StateSyncStats {
         served_txns,
