@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{sink::SinkExt, StreamExt};
+use futures::{sink::SinkExt, StreamExt, FutureExt, future::join};
 use libra_config::{config::NodeConfig, network_id::NetworkId};
 use libra_crypto::x25519;
 use libra_logger::info;
@@ -32,6 +32,10 @@ use crate::instance::Instance;
 use futures::future::join_all;
 use std::borrow::{Borrow, BorrowMut};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
+use tokio::time;
+use std::sync::Arc;
+use std::ops::Deref;
+use futures::lock::Mutex;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions in mempool
 const SEND_AMOUNT: u64 = 1;
@@ -447,6 +451,8 @@ async fn state_sync_load_test(
     mut events: StateSynchronizerEvents,
 ) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;
+    let sender = Arc::new(Mutex::new(sender));
+    let clone = sender.clone();
     info!("hhhhhh111");
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
@@ -471,19 +477,62 @@ async fn state_sync_load_test(
     static bytes1: AtomicU64 = AtomicU64::new(0);
     static msg_num1: AtomicU64 = AtomicU64::new(0);
 
-    thread::spawn(move || {
-        info!("hhhhhh2");
+    let a = async move {
+        let mut b = clone.try_lock().unwrap();
         while Instant::now().duration_since(task_start) < duration {
             let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
                 chunk_request.clone(),
             ));
             bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
             msg_num1.fetch_add(1, Ordering::Relaxed);
-            info!("hhhhhh3");
-            sender.send_to(vfn, msg);
-            info!("hhhhhh4");
+            b.send_to(vfn, msg);
         }
-    });
+    };
+    /*let a = thread::spawn(move || {
+        info!("hhhhhh2");
+        let mut b = clone.try_lock().unwrap();
+        while Instant::now().duration_since(task_start) < duration {
+            let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
+                chunk_request.clone(),
+            ));
+            bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
+            msg_num1.fetch_add(1, Ordering::Relaxed);
+            b.send_to(vfn, msg);
+        }
+    });*/
+    time::delay_for(Duration::from_secs(10)).await;
+    let b = async move {
+        while let Some(response) = events.select_next_some().now_or_never() {
+            info!("hhhhhhh");
+            if let Event::Message(_remote_peer, payload) = response {
+                if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                    chunk_response,
+                ) = payload
+                {
+                    let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                    // TODO analyze response and update StateSyncResult with stats accordingly
+                    served_txns1.fetch_add(temp, Ordering::Relaxed);
+                    info!("hhhhhhhhh tx {}", temp);
+                }
+            }
+        }
+    };
+    /*let b = thread::spawn(move || {
+        while let Some(response) = events.select_next_some().now_or_never() {
+            info!("hhhhhhh");
+            if let Event::Message(_remote_peer, payload) = response {
+                if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                    chunk_response,
+                ) = payload
+                {
+                    let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                    // TODO analyze response and update StateSyncResult with stats accordingly
+                    served_txns1.fetch_add(temp, Ordering::Relaxed);
+                    info!("hhhhhhhhh tx {}", temp);
+                }
+            }
+        }
+    });*/
 
     /*let response = events.select_next_some().await;
     if let Event::Message(_remote_peer, payload) = response {
@@ -497,6 +546,8 @@ async fn state_sync_load_test(
             info!("hhhhhhhhh tx {}", temp);
         }
     }*/
+    let mut rt = Runtime::new().unwrap();
+    rt.block_on(join(a, b));
     let served_txns = served_txns1.load(Ordering::Relaxed);
     let bytes = bytes1.load(Ordering::Relaxed);
     let msg_num = msg_num1.load(Ordering::Relaxed);
