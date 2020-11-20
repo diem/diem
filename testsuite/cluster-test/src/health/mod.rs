@@ -167,7 +167,7 @@ impl HealthCheckRunner {
                 failed.push(node);
             }
             if (i + 1) % 15 == 0 {
-                validators_message.push_str("\n");
+                validators_message.push('\n');
             }
         }
         messages.push(validators_message);

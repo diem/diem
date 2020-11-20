@@ -198,7 +198,7 @@ impl NetworkClient {
             LogEvent::Shutdown,
         ));
 
-        let stream = self.stream.take().ok_or_else(|| Error::NoActiveStream)?;
+        let stream = self.stream.take().ok_or(Error::NoActiveStream)?;
         stream.shutdown()?;
         Ok(())
     }
@@ -265,7 +265,7 @@ impl NetworkClient {
             .remote_peer(&self.server));
         }
 
-        self.stream.as_mut().ok_or_else(|| Error::NoActiveStream)
+        self.stream.as_mut().ok_or(Error::NoActiveStream)
     }
 }
 
@@ -328,8 +328,8 @@ impl NetworkServer {
             LogEvent::Shutdown,
         ));
 
-        self.listener.take().ok_or_else(|| Error::AlreadyShutdown)?;
-        let stream = self.stream.take().ok_or_else(|| Error::NoActiveStream)?;
+        self.listener.take().ok_or(Error::AlreadyShutdown)?;
+        let stream = self.stream.take().ok_or(Error::NoActiveStream)?;
         stream.shutdown()?;
         Ok(())
     }
@@ -371,10 +371,7 @@ impl NetworkServer {
                 LogEvent::ConnectionAttempt,
             ));
 
-            let listener = self
-                .listener
-                .as_mut()
-                .ok_or_else(|| Error::AlreadyShutdown)?;
+            let listener = self.listener.as_mut().ok_or(Error::AlreadyShutdown)?;
 
             let (stream, stream_addr) = match listener.accept() {
                 Ok(ok) => ok,
@@ -403,7 +400,7 @@ impl NetworkServer {
             self.stream = Some(NetworkStream::new(stream, stream_addr, self.timeout_ms));
         }
 
-        self.stream.as_mut().ok_or_else(|| Error::NoActiveStream)
+        self.stream.as_mut().ok_or(Error::NoActiveStream)
     }
 }
 

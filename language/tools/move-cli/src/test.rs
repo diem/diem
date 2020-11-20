@@ -55,19 +55,19 @@ fn format_diff(expected: String, actual: String) -> String {
         match &seq {
             Difference::Same(x) => {
                 ret.push_str(x);
-                ret.push_str("\n");
+                ret.push('\n');
             }
             Difference::Add(x) => {
                 ret.push_str("\x1B[92m");
                 ret.push_str(x);
                 ret.push_str("\x1B[0m");
-                ret.push_str("\n");
+                ret.push('\n');
             }
             Difference::Rem(x) => {
                 ret.push_str("\x1B[91m");
                 ret.push_str(x);
                 ret.push_str("\x1B[0m");
-                ret.push_str("\n");
+                ret.push('\n');
             }
         }
     }

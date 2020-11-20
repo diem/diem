@@ -17,7 +17,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{compat::IoCompat, transport::ConnectionOrigin};
-use std::{mem::ManuallyDrop, str::FromStr, time::Duration};
+use std::{mem::forget, str::FromStr, time::Duration};
 use tokio::{
     runtime::{Handle, Runtime},
     time::timeout,
@@ -191,7 +191,8 @@ fn peer_send_message() {
 
     let client = async move {
         peer_handle.send_message(send_msg, PROTOCOL).await.unwrap();
-        ManuallyDrop::new(peer_handle);
+        //ManuallyDrop::new(peer_handle);
+        forget(peer_handle);
     };
     rt.spawn(peer.start());
     rt.block_on(join(server, client));
@@ -380,7 +381,7 @@ fn peer_terminates_when_request_tx_has_dropped() {
     // Perform yamux handshake in a different task.
     let drop = async move {
         // Do not drop connection.
-        ManuallyDrop::new(connection);
+        forget(connection);
         // Drop peer handle.
         drop(peer_handle);
     };

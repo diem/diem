@@ -323,7 +323,7 @@ impl CryptoStorage for VaultStorage {
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
         let name = self.crypto_name(name);
         let resp = self.client().read_ed25519_key(&name)?;
-        let mut last_key = resp.first().ok_or_else(|| Error::KeyNotSet(name))?;
+        let mut last_key = resp.first().ok_or(Error::KeyNotSet(name))?;
         for key in &resp {
             last_key = if last_key.version > key.version {
                 last_key

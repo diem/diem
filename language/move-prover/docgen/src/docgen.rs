@@ -307,7 +307,7 @@ impl<'env> Docgen<'env> {
                     for (_, out) in self.output.iter_mut() {
                         out.push_str("\n\n");
                         out.push_str(trimmed_content);
-                        out.push_str("\n");
+                        out.push('\n');
                     }
                 }
             } else {
@@ -1303,6 +1303,7 @@ impl<'env> Docgen<'env> {
     // Helpers
 
     /// Returns a string for a name symbol.
+    #[allow(clippy::rc_buffer)]
     fn name_string(&self, name: Symbol) -> Rc<String> {
         self.env.symbol_pool().string(name)
     }

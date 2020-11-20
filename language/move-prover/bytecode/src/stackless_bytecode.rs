@@ -484,6 +484,7 @@ impl<'env> BytecodeDisplay<'env> {
         Ok(())
     }
 
+    #[allow(clippy::rc_buffer)]
     fn lstr(&self, idx: TempIndex) -> Rc<String> {
         self.func_target
             .symbol_pool()

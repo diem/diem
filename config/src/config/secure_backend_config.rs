@@ -58,7 +58,7 @@ impl VaultConfig {
         let path = self
             .ca_certificate
             .as_ref()
-            .ok_or_else(|| Error::Missing("ca_certificate"))?;
+            .ok_or(Error::Missing("ca_certificate"))?;
         read_file(path)
     }
 }

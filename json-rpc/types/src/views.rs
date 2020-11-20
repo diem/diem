@@ -426,7 +426,7 @@ impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
                         reason: context.reason.code_name,
                         reason_description: context.reason.code_description,
                     })
-                    .ok_or_else(|| ())
+                    .ok_or(())
             }
             _ => Err(()),
         }

@@ -133,7 +133,7 @@ impl BackupHandler {
                     synced_version: s
                         .synced_tree_state
                         .as_ref()
-                        .unwrap_or_else(|| &s.committed_tree_state)
+                        .unwrap_or(&s.committed_tree_state)
                         .num_transactions
                         .checked_sub(1)
                         .ok_or_else(|| anyhow!("Bootstrapped DB has no transactions."))?,

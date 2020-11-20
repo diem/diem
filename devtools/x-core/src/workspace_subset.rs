@@ -85,13 +85,13 @@ impl<'g> WorkspaceSubset<'g> {
             .build_set
             .original_query()
             .starts_from_package(package_id)
-            .unwrap_or_else(|_| false)
+            .unwrap_or(false)
         {
             WorkspaceStatus::RootMember
         } else if self
             .unified_set
             .features_for(package_id)
-            .unwrap_or_else(|_| None)
+            .unwrap_or(None)
             .is_some()
         {
             WorkspaceStatus::Dependency

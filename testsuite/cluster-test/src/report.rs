@@ -38,7 +38,7 @@ impl SuiteReport {
 
     pub fn report_text(&mut self, text: String) {
         if !self.text.is_empty() {
-            self.text.push_str("\n");
+            self.text.push('\n');
         }
         self.text.push_str(&text);
     }

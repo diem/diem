@@ -1755,7 +1755,7 @@ impl<'env> ModuleEnv<'env> {
             .borrow()
             .get(&node_id)
             .cloned()
-            .unwrap_or_else(|| Type::Error)
+            .unwrap_or(Type::Error)
     }
 
     /// Allocates a new node id.
@@ -2553,12 +2553,14 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Returns the function name excluding the address and the module name
+    //TODO: return slice rather than owned strings.
+    #[allow(clippy::rc_buffer)]
     pub fn get_simple_name_string(&self) -> Rc<String> {
         self.symbol_pool().string(self.get_name())
     }
 
     /// Returns the function name with the module name excluding the address
-    pub fn get_name_string(&self) -> Rc<String> {
+    pub fn get_name_string(&self) -> Rc<str> {
         if self.module_env.is_script_module() {
             Rc::from(format!("Script::{}", self.get_simple_name_string()))
         } else {

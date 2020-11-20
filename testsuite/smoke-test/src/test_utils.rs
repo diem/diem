@@ -101,7 +101,7 @@ pub mod libra_swarm_utils {
             false,
             /* faucet server */ None,
             Some(mnemonic_file_path),
-            waypoint.unwrap_or_else(|| swarm.config.waypoint),
+            waypoint.unwrap_or(swarm.config.waypoint),
             true,
         )
         .unwrap()

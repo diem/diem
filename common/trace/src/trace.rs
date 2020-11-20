@@ -383,8 +383,8 @@ fn crate_name(path: &str) -> &str {
         Some(pos) => &path[0..pos],
         None => path,
     };
-    let name = if name.starts_with("libra_") {
-        &name["libra_".len()..]
+    let name = if let Some(stripped) = name.strip_prefix("libra_") {
+        stripped
     } else {
         name
     };

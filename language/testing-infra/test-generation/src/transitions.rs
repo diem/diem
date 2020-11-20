@@ -174,9 +174,7 @@ pub fn stack_kind_is_subkind(state: &AbstractState, index: usize, instruction_ki
 
 /// Check whether the local at `index` is of the given kind
 pub fn local_kind_is(state: &AbstractState, index: u8, kind: Kind) -> bool {
-    state
-        .local_kind_is(index as usize, kind)
-        .unwrap_or_else(|_| false)
+    state.local_kind_is(index as usize, kind).unwrap_or(false)
 }
 
 //---------------------------------------------------------------------------
@@ -227,7 +225,7 @@ pub fn local_exists(state: &AbstractState, index: u8) -> bool {
 pub fn local_availability_is(state: &AbstractState, index: u8, availability: BorrowState) -> bool {
     state
         .local_availability_is(index as usize, availability)
-        .unwrap_or_else(|_| false)
+        .unwrap_or(false)
 }
 
 /// Determine whether an abstract value on the stack that is a reference points to something of the

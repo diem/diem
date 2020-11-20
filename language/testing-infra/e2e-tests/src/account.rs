@@ -271,12 +271,11 @@ impl TransactionBuilder {
             *self.sender.address(),
             self.sequence_number.expect("sequence number not set"),
             self.program.expect("transaction payload not set"),
-            self.max_gas_amount
-                .unwrap_or_else(|| gas_costs::TXN_RESERVED),
+            self.max_gas_amount.unwrap_or(gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
                 .unwrap_or_else(|| COIN1_NAME.to_owned()),
-            self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
+            self.ttl.unwrap_or(DEFAULT_EXPIRATION_TIME),
             ChainId::test(),
         )
     }
@@ -286,12 +285,11 @@ impl TransactionBuilder {
             *self.sender.address(),
             self.sequence_number.expect("sequence number not set"),
             self.program.expect("transaction payload not set"),
-            self.max_gas_amount
-                .unwrap_or_else(|| gas_costs::TXN_RESERVED),
+            self.max_gas_amount.unwrap_or(gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
                 .unwrap_or_else(|| COIN1_NAME.to_owned()),
-            self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
+            self.ttl.unwrap_or(DEFAULT_EXPIRATION_TIME),
             self.chain_id.unwrap_or_else(ChainId::test),
         )
         .sign(&self.sender.privkey, self.sender.pubkey)

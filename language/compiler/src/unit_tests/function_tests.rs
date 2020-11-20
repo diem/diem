@@ -62,7 +62,7 @@ fn generate_function(name: &str, num_formals: usize, num_locals: usize) -> Strin
 
     code.push_str("return;");
 
-    code.push_str("}");
+    code.push('}');
 
     code
 }
@@ -79,7 +79,7 @@ fn compile_script_with_large_frame() {
     // Max number of locals (formals + local variables) is u8::max_value().
     code.push_str(&generate_function("foo_func", 128, 127));
 
-    code.push_str("}");
+    code.push('}');
 
     let compiled_module_res = compile_module_string(&code);
     assert!(compiled_module_res.is_ok());

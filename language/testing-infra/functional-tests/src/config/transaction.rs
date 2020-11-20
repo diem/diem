@@ -281,9 +281,9 @@ impl<'a> Config<'a> {
             sequence_number,
             expiration_timestamp_secs,
             execute_as,
-            show_gas: show_gas.unwrap_or_else(|| false),
-            show_writeset: show_writeset.unwrap_or_else(|| false),
-            show_events: show_events.unwrap_or_else(|| false),
+            show_gas: show_gas.unwrap_or(false),
+            show_writeset: show_writeset.unwrap_or(false),
+            show_events: show_events.unwrap_or(false),
         })
     }
 

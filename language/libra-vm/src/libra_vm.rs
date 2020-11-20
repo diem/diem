@@ -481,9 +481,9 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
             let op = match val_opt {
                 None => WriteOp::Deletion,
                 Some((ty_layout, val)) => {
-                    let blob = val.simple_serialize(&ty_layout).ok_or_else(|| {
-                        VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    })?;
+                    let blob = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
+                        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                    ))?;
 
                     WriteOp::Value(blob)
                 }
@@ -504,9 +504,9 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         .events
         .into_iter()
         .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
-            let msg = val
-                .simple_serialize(&ty_layout)
-                .ok_or_else(|| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
+            let msg = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            ))?;
             let key = EventKey::try_from(guid.as_slice())
                 .map_err(|_| VMStatus::Error(StatusCode::EVENT_KEY_MISMATCH))?;
             Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
