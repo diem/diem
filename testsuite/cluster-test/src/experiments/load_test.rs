@@ -25,17 +25,13 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use rand::{rngs::ThreadRng, seq::IteratorRandom};
 use state_synchronizer::network::{StateSynchronizerEvents, StateSynchronizerSender};
-use std::{
-    cmp::min,
-    collections::{HashMap, HashSet},
-    fmt,
-    time::{Duration, Instant},
-};
+use std::{cmp::min, collections::{HashMap, HashSet}, fmt, time::{Duration, Instant}, thread};
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
 use crate::instance::Instance;
 use futures::future::join_all;
 use std::borrow::{Borrow, BorrowMut};
+use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions in mempool
 const SEND_AMOUNT: u64 = 1;
@@ -103,7 +99,6 @@ impl Experiment for LoadTest {
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         // spin up StubbedNodes
-        info!("hhhhh1 {}", self.random_instances.len());
         //let futures = self.random_instances.iter().enumerate().map(|(index, inst)|get_stubbed_node(inst, index));
         //let nodes = join_all(futures).await;
         let mut node1 = get_stubbed_node(&context.cluster.fullnode_instances()[0], 0).await;
@@ -452,6 +447,7 @@ async fn state_sync_load_test(
     mut events: StateSynchronizerEvents,
 ) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;
+    info!("hhhhhh111");
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
     } else {
@@ -471,31 +467,39 @@ async fn state_sync_load_test(
     );
 
     let task_start = Instant::now();
-    let mut served_txns = 0_u64;
-    let mut bytes = 0_u64;
-    let mut msg_num = 0_u64;
-    while Instant::now().duration_since(task_start) < duration {
-        let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
-            chunk_request.clone(),
-        ));
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
-        msg_num += 1;
-        sender.send_to(vfn, msg)?;
-    }
+    static served_txns1: AtomicU64 = AtomicU64::new(0);
+    static bytes1: AtomicU64 = AtomicU64::new(0);
+    static msg_num1: AtomicU64 = AtomicU64::new(0);
 
-    while let Some(response) = events.next().await {
-        if let Event::Message(_remote_peer, payload) = response {
-            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                chunk_response,
-            ) = payload
-            {
-                // TODO analyze response and update StateSyncResult with stats accordingly
-                let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
-                served_txns += temp;
-                info!("hhhhhhhhh tx {}", temp);
-            }
+    thread::spawn(move || {
+        info!("hhhhhh2");
+        while Instant::now().duration_since(task_start) < duration {
+            let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
+                chunk_request.clone(),
+            ));
+            bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
+            msg_num1.fetch_add(1, Ordering::Relaxed);
+            info!("hhhhhh3");
+            sender.send_to(vfn, msg);
+            info!("hhhhhh4");
         }
-    }
+    });
+
+    /*let response = events.select_next_some().await;
+    if let Event::Message(_remote_peer, payload) = response {
+        if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+            chunk_response,
+        ) = payload
+        {
+            let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+            // TODO analyze response and update StateSyncResult with stats accordingly
+            served_txns1.fetch_add(temp, Ordering::Relaxed);
+            info!("hhhhhhhhh tx {}", temp);
+        }
+    }*/
+    let served_txns = served_txns1.load(Ordering::Relaxed);
+    let bytes = bytes1.load(Ordering::Relaxed);
+    let msg_num = msg_num1.load(Ordering::Relaxed);
 
     Ok(StateSyncStats {
         served_txns,
