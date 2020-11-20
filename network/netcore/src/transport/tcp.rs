@@ -4,12 +4,12 @@
 //! TCP Transport
 use crate::{compat::IoCompat, transport::Transport};
 use futures::{
-    future::{self, Future},
+    future::{self, Either, Future},
     io::{AsyncRead, AsyncWrite},
     ready,
     stream::Stream,
 };
-use libra_network_address::{parse_dns_tcp, parse_ip_tcp, IpFilter, NetworkAddress};
+use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress};
 use libra_types::PeerId;
 use std::{
     convert::TryFrom,
@@ -20,7 +20,11 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::net::{lookup_host, TcpListener, TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{lookup_host, TcpListener, TcpStream},
+};
+use url::Url;
 
 /// Transport to build TCP connections
 #[derive(Debug, Clone, Default)]
@@ -105,8 +109,26 @@ impl Transport for TcpTransport {
             .or_else(|| parse_dns_tcp(protos).map(|_| ()))
             .ok_or_else(|| invalid_addr_error(&addr))?;
 
+        let proxy_addr = std::env::var("https_proxy")
+            .ok()
+            .and_then(|https_proxy| Url::parse(&https_proxy).ok())
+            .and_then(|url| {
+                if url.has_host() && url.scheme() == "http" {
+                    Some(format!(
+                        "{}:{}",
+                        url.host().unwrap(),
+                        url.port_or_known_default().unwrap()
+                    ))
+                } else {
+                    None
+                }
+            });
+
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
-            Box::pin(resolve_and_connect(addr));
+            Box::pin(match proxy_addr {
+                Some(proxy_addr) => Either::Left(connect_via_proxy(proxy_addr, addr)),
+                None => Either::Right(resolve_and_connect(addr)),
+            });
 
         Ok(TcpOutbound {
             inner: f,
@@ -158,6 +180,43 @@ async fn resolve_and_connect(addr: NetworkAddress) -> io::Result<TcpStream> {
                 ),
             )
         }))
+    } else {
+        Err(invalid_addr_error(&addr))
+    }
+}
+
+async fn connect_via_proxy(proxy_addr: String, addr: NetworkAddress) -> io::Result<TcpStream> {
+    let protos = addr.as_slice();
+
+    if let Some(((host, port), _addr_suffix)) = parse_tcp(protos) {
+        let mut stream = TcpStream::connect(proxy_addr).await?;
+        let mut buffer = [0; 4096];
+        let mut read = 0;
+
+        stream
+            .write_all(&format!("CONNECT {0}:{1} HTTP/1.0\r\n\r\n", host, port).into_bytes())
+            .await?;
+
+        loop {
+            let len = stream.read(&mut buffer[read..]).await?;
+            read += len;
+            let msg = &buffer[..read];
+
+            if len == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!(
+                        "HTTP proxy CONNECT failed: {}",
+                        String::from_utf8_lossy(&msg)
+                    ),
+                ));
+            } else if msg.len() >= 16
+                && (msg.starts_with(b"HTTP/1.1 200") || msg.starts_with(b"HTTP/1.0 200"))
+                && msg.ends_with(b"\r\n\r\n")
+            {
+                return Ok(stream);
+            }
+        }
     } else {
         Err(invalid_addr_error(&addr))
     }

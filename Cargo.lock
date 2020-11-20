@@ -4319,6 +4319,7 @@ dependencies = [
  "pin-project 1.0.2",
  "serde",
  "tokio",
+ "url",
 ]
 
 [[package]]

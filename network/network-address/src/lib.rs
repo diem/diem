@@ -711,6 +711,24 @@ pub fn parse_dns_tcp(protos: &[Protocol]) -> Option<((IpFilter, &DnsName, u16), 
     }
 }
 
+pub fn parse_tcp(protos: &[Protocol]) -> Option<((String, u16), &[Protocol])> {
+    use Protocol::*;
+
+    if protos.len() < 2 {
+        return None;
+    }
+
+    let (prefix, suffix) = protos.split_at(2);
+    match prefix {
+        [Ip4(ip), Tcp(port)] => Some(((ip.to_string(), *port), suffix)),
+        [Ip6(ip), Tcp(port)] => Some(((ip.to_string(), *port), suffix)),
+        [Dns(name), Tcp(port)] => Some(((name.to_string(), *port), suffix)),
+        [Dns4(name), Tcp(port)] => Some(((name.to_string(), *port), suffix)),
+        [Dns6(name), Tcp(port)] => Some(((name.to_string(), *port), suffix)),
+        _ => None,
+    }
+}
+
 /// parse the `&[Protocol]` into the `"/ln-noise-ik/<pubkey>"` prefix and
 /// unparsed `&[Protocol]` suffix.
 pub fn parse_noise_ik(protos: &[Protocol]) -> Option<(&x25519::PublicKey, &[Protocol])> {
