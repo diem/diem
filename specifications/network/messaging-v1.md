@@ -118,4 +118,28 @@ The serialized `NetworkMsg`s over-the-wire then look like a sequence of length-p
 [u32-length-prefix] || [serialized-message-bytes] || ..
 ```
 
+### Maximum Frame Size
+
+Each `serialized-message-bytes` MUST be less than or equal to 8 MiB in size (8388608 bytes). Note that this calculated length does NOT include the `u32-length-prefix`. LibraNet servers should reject inbound messages larger than the 8 MiB limit and LibraNet clients MUST NOT send outbound messages larger than the 8 MiB limit.
+
+As an example, basic pseudocode for reading a single LibraNet message might look like:
+
+```rust
+const MAX_DIEMNET_FRAME_LEN: u32 = 8388608; // 8 MiB
+
+// read the 4-byte length prefix first
+let length_prefix: u32 = noise_socket.read(4).to_host_endian();
+
+// reject messages that are too large
+if length_prefix > MAX_DIEMNET_FRAME_LEN {
+    reject;
+}
+
+// read the actual lcs-serialized message
+let message_bytes = noise_socket.read(length_prefix);
+
+// deserialize the message
+let message = lcs::from_bytes(message_bytes);
+```
+
 (TODO(philiphayes): add streaming RPC protocol when supported)

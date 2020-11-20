@@ -140,22 +140,27 @@ After establishing and negotiating a complete connection, peers may begin exchan
 
 Since the Noise layer limits frame sizes to at-most `65535` bytes, of which `16` bytes are always reserved for the AES GCM authentication tag, sending a serialized `NetworkMsg` (include the big-endian 4-byte length prefix) over-the-write first requires splitting it into chunks of size at most `65535 - 16 = 65519` bytes.
 
-(TODO(philiphayes): describe maximum `NetworkMsg` size after implementing size limit)
-
-Sending a single `NetworkMsg` over a negotiated Diem Transport, in simplified pseudo-rust:
+#### Sending a single `NetworkMsg` over a negotiated Diem Transport, in simplified pseudo-rust:
 
 ```rust
-const MAX_MSG_CHUNK_LEN: u16 = 65519; /* u16::MAX - AES_GCM_TAG_LEN */
+const MAX_NOISE_FRAME_LEN: u16 = 65519; // u16::MAX - AES_GCM_TAG_LEN
+
+const MAX_DIEMNET_FRAME_LEN: u32 = 8388608; // 8 MiB
 
 fn send_one_msg_and_flush(socket: TcpStream, msg: NetworkMsg) {
     // Serialize the message using LCS
     let msg_bytes = lcs::to_bytes(msg);
+
+    if msg_bytes.len() > MAX_DIEMNET_FRAME_LEN {
+        abort("serialized message is too large!");
+    }
+
     let msg_len: [u8; 4] = msg_bytes.len().to_big_endian_bytes();
     // Concatenate the msg length and serialized msg bytes into a msg frame
     let msg_frame = msg_len || msg_bytes;
 
-    // Split the msg frame into chunks of size at-most MAX_MSG_CHUNK_LEN bytes
-    for msg_chunk in msg_frame.chunks(MAX_MSG_CHUNK_LEN) {
+    // Split the msg frame into chunks of size at-most MAX_NOISE_FRAME_LEN bytes
+    for msg_chunk in msg_frame.chunks(MAX_NOISE_FRAME_LEN) {
         // Encrypt the msg chunk (and append the authentication tag)
         let crypto_bytes = Noise::encrypt_with_ad(null, msg_chunk);
         let crypto_len: [u8; 2] = crypto_bytes.len().to_big_endian_bytes();
