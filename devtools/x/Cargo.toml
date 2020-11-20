@@ -17,7 +17,7 @@ colored-diff = "0.2.2"
 guppy = { version = "0.5.0", features = ["summaries"] }
 indoc = "1.0.3"
 toml = "0.5.7"
-env_logger = "0.8.1"
+env_logger = "0.8.2"
 log = "0.4.11"
 chrono = "0.4.19"
 globset = "0.4.6"
