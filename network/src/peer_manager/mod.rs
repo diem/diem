@@ -445,12 +445,6 @@ where
         self.sample_connected_peers();
         match event {
             TransportNotification::NewConnection(conn) => {
-                info!(
-                    NetworkSchema::new(&self.network_context)
-                        .connection_metadata_with_address(&conn.metadata),
-                    "{} New connection established: {}", self.network_context, conn.metadata
-                );
-
                 // TODO: Keep track of somewhere else to not take this hit in case of DDoS
                 let inbound_conns = self
                     .active_peers
@@ -468,9 +462,23 @@ where
                         .contains_key(&conn.metadata.remote_peer_id)
                     || inbound_conns < self.inbound_connection_limit
                 {
+                    info!(
+                        NetworkSchema::new(&self.network_context)
+                            .connection_metadata_with_address(&conn.metadata),
+                        "{} New connection established: {}", self.network_context, conn.metadata
+                    );
                     // Add new peer, updating counters and all
                     self.add_peer(conn);
                     self.update_connected_peers_metrics();
+                } else {
+                    info!(
+                        NetworkSchema::new(&self.network_context)
+                            .connection_metadata_with_address(&conn.metadata),
+                        "{} Connection rejected due to connection limit: {}",
+                        self.network_context,
+                        conn.metadata
+                    );
+                    self.disconnect(conn);
                 }
             }
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
@@ -690,6 +698,30 @@ where
         }
     }
 
+    fn disconnect(&mut self, connection: Connection<TSocket>) {
+        let network_context = self.network_context.clone();
+
+        // Close connection, and drop it
+        let drop_fut = async move {
+            let mut connection = connection;
+            let peer_id = connection.metadata.remote_peer_id;
+            if let Err(e) =
+                tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.socket.close()).await
+            {
+                error!(
+                    NetworkSchema::new(&network_context)
+                        .remote_peer(&peer_id),
+                    error = %e,
+                    "{} Closing connection with Peer {} failed with error: {}",
+                    network_context,
+                    peer_id.short_str(),
+                    e
+                );
+            };
+        };
+        self.executor.spawn(drop_fut);
+    }
+
     fn add_peer(&mut self, connection: Connection<TSocket>) {
         let conn_meta = connection.metadata.clone();
         let peer_id = conn_meta.remote_peer_id;
@@ -723,28 +755,8 @@ where
                     self.network_context,
                     peer_id.short_str()
                 );
-                let network_context = self.network_context.clone();
                 // Drop the new connection and keep the one already stored in active_peers
-                let drop_fut = async move {
-                    let mut connection = connection;
-                    if let Err(e) = tokio::time::timeout(
-                        transport::TRANSPORT_TIMEOUT,
-                        connection.socket.close(),
-                    )
-                    .await
-                    {
-                        error!(
-                            NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id),
-                            error = %e,
-                            "{} Closing connection with Peer {} failed with error: {}",
-                            network_context,
-                            peer_id.short_str(),
-                            e
-                        );
-                    };
-                };
-                self.executor.spawn(drop_fut);
+                self.disconnect(connection);
                 return;
             }
         }
