@@ -43,7 +43,7 @@ pub const DEFAULT_SOURCE_DIR: &str = "src";
 pub const DEFAULT_PACKAGE_DIR: &str = "package";
 
 /// Default dependency inclusion mode
-pub const DEFAULT_DEP_MODE: &str = "bare";
+pub const DEFAULT_DEP_MODE: &str = "stdlib";
 
 /// Default directory for build output
 pub use move_lang::command_line::DEFAULT_OUTPUT_DIR as DEFAULT_BUILD_DIR;

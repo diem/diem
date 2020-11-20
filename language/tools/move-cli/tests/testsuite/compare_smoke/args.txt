@@ -1,5 +1,3 @@
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
-publish src/modules
-run src/scripts/compare.move --dry-run
-run src/scripts/set.move --dry-run
+publish src/modules --mode libra
+run src/scripts/compare.move --mode libra --dry-run
+run src/scripts/set.move --mode libra --dry-run

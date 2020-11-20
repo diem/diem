@@ -1,7 +1,0 @@
-publish src/modules --mode stdlib -v
-run src/scripts/script.move --signers 0xA 0xB --args 6 7 --dry-run --mode stdlib -v
-view storage/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::Test::R.lcs
-view storage/0x0000000000000000000000000000000B/resources/0x00000000000000000000000000000002::Test::R.lcs
-run src/scripts/script.move --signers 0xA 0xB --args 6 7 --mode stdlib -v
-view storage/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::Test::R.lcs
-view storage/0x0000000000000000000000000000000B/resources/0x00000000000000000000000000000002::Test::R.lcs

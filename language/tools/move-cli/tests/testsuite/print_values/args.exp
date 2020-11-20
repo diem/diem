@@ -1,5 +1,3 @@
-Command `publish ../../../../../stdlib/modules`:
-Command `publish ../../../../../stdlib/nursery`:
 Command `publish src/modules`:
 Command `run src/scripts/print_values.move --dry-run`:
 [debug] 42

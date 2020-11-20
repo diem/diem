@@ -1,4 +1,2 @@
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
 publish src/modules
 run src/scripts/script.move --dry-run

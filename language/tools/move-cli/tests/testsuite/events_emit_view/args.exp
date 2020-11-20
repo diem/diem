@@ -1,4 +1,3 @@
-Command `publish ../../../../../stdlib/modules`:
 Command `publish src/modules -v`:
 Compiling Move modules...
 Found and compiled 1 modules

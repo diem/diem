@@ -1,1 +1,1 @@
-run script.move
+run script.move --mode bare

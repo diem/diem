@@ -1,2 +1,2 @@
-publish src/modules
-run src/scripts/test.move --dry-run
+publish src/modules --mode bare
+run src/scripts/test.move --mode bare --dry-run

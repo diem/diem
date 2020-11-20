@@ -1,19 +1,11 @@
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
 publish modules
 run scripts/create_offer.move --signers 0xA11CE
 run scripts/redeem_offer.move --signers 0xCA21
 run scripts/redeem_offer_bob.move --signers 0xB0B
 run scripts/reclaim_offer.move --signers 0xB0B
 clean
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
 run scripts/self_offer_create.move --signers 0xA11CE
 clean
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
 run scripts/multi_offer.move --signers 0xA11CE
 clean
-publish ../../../../../stdlib/modules
-publish ../../../../../stdlib/nursery
 run scripts/non_existent_offer.move --signers 0xA11CE
