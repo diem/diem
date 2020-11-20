@@ -483,7 +483,7 @@ async fn state_sync_load_test(
         }
     }).join();
 
-    /*let response = events.select_next_some().await;
+    let response = events.select_next_some().await;
     if let Event::Message(_remote_peer, payload) = response {
         if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
             chunk_response,
@@ -494,11 +494,10 @@ async fn state_sync_load_test(
             served_txns1.fetch_add(temp, Ordering::Relaxed);
             info!("hhhhhhhhh tx {}", temp);
         }
-    }*/
+    }
     let served_txns = served_txns1.load(Ordering::Relaxed);
     let bytes = bytes1.load(Ordering::Relaxed);
     let msg_num = msg_num1.load(Ordering::Relaxed);
-    info!("hhhhhhhh {}, {}", bytes, msg_num);
 
     Ok(StateSyncStats {
         served_txns,
