@@ -11,6 +11,7 @@ use serde::{de, ser, Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
+    str::FromStr,
 };
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
@@ -66,6 +67,15 @@ impl EventKey {
         lhs.copy_from_slice(&salt.to_le_bytes());
         rhs.copy_from_slice(addr.as_ref());
         EventKey(output_bytes)
+    }
+}
+
+impl FromStr for EventKey {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let bytes_out = ::hex::decode(s)?;
+        EventKey::try_from(bytes_out.as_slice())
     }
 }
 

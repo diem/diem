@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, event::EventKey};
 use libradb::librarian::Librarian;
 use serde::Serialize;
 use serde_json::to_string_pretty;
@@ -37,6 +37,9 @@ enum Command {
     Txn(TxnOp),
     /// Account related query
     Account(AccountCmd),
+    /// Event related query
+    #[structopt(flatten)]
+    Event(EventCmd),
 }
 
 #[derive(StructOpt)]
@@ -48,11 +51,11 @@ enum TxnOp {
     },
     Scan {
         /// The lower bound of the version range in transaction scan
-        #[structopt(default_value = "0", long)]
-        from: u64,
+        #[structopt(default_value = "0", long = "from")]
+        from_version: u64,
         /// The upper bound (inclusive) of the version range in transaction scan, by default the current ledger version
-        #[structopt(long)]
-        to: Option<u64>,
+        #[structopt(long = "to")]
+        to_version: Option<u64>,
     },
 }
 
@@ -74,6 +77,41 @@ enum AccountOp {
     },
 }
 
+#[derive(StructOpt)]
+enum EventCmd {
+    /// Look for a range of event stream of an EventKey
+    EventByKey {
+        /// The event key
+        #[structopt(short, long = "key", short = "k")]
+        event_key: EventKey,
+        #[structopt(subcommand)]
+        event_op: EventOp,
+    },
+    /// Look for events emitted by the txn at the specified version
+    EventByVersion {
+        /// The target version for the interested events
+        #[structopt(long, short)]
+        version: u64,
+    },
+}
+
+#[derive(StructOpt)]
+enum EventOp {
+    Get {
+        /// The sequence at which the event is requested
+        #[structopt(long, short)]
+        seq: u64,
+    },
+    Scan {
+        /// The lower bound of the sequence range in event scan
+        #[structopt(default_value = "0", long = "from")]
+        from_seq: u64,
+        /// The upper bound (inclusive) of the sequence range in event scan, by default the latest sequence
+        #[structopt(long = "to")]
+        to_seq: Option<u64>,
+    },
+}
+
 fn main() {
     if let Err(err) = run_cmd() {
         println!("Error: {}", err);
@@ -92,12 +130,18 @@ fn run_cmd() -> Result<()> {
             TxnOp::Get { version } => {
                 print(&librarian.get_txn_by_version(version)?, is_json)?;
             }
-            TxnOp::Scan { from, to } => {
-                let to = match to {
-                    Some(to) => to,
+            TxnOp::Scan {
+                from_version,
+                to_version,
+            } => {
+                let to_version = match to_version {
+                    Some(to_version) => to_version,
                     None => librarian.get_committed_version()?,
                 };
-                print(librarian.scan_txn_by_version(from, to)?, is_json)?;
+                print(
+                    librarian.scan_txn_by_version(from_version, to_version)?,
+                    is_json,
+                )?;
             }
         },
         Command::Account(account_cmd) => {
@@ -111,6 +155,29 @@ fn run_cmd() -> Result<()> {
                 }
             }
         }
+        Command::Event(event_cmd) => match event_cmd {
+            EventCmd::EventByKey {
+                event_key,
+                event_op,
+            } => match event_op {
+                EventOp::Get { seq } => {
+                    print(librarian.scan_events_by_seq(&event_key, seq, seq)?, is_json)?;
+                }
+                EventOp::Scan { from_seq, to_seq } => {
+                    let to_seq = match to_seq {
+                        Some(to_version) => to_version,
+                        None => u64::max_value(),
+                    };
+                    print(
+                        librarian.scan_events_by_seq(&event_key, from_seq, to_seq)?,
+                        is_json,
+                    )?;
+                }
+            },
+            EventCmd::EventByVersion { version } => {
+                print(librarian.get_events_by_version(version)?, is_json)?;
+            }
+        },
     }
     Ok(())
 }
