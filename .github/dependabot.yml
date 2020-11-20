@@ -15,6 +15,7 @@ updates:
     labels:
       - "github-actions"
       - "dependencies"
+    open-pull-requests-limit: 15
 
   - package-ecosystem: "cargo"
     directory: "/"
@@ -27,3 +28,4 @@ updates:
       - dependency-name: "codespan*"
       - dependency-name: "libfuzzer-sys"
       - dependency-name: "bindgen"
+    open-pull-requests-limit: 15
