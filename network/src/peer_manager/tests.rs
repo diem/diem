@@ -10,17 +10,19 @@ use crate::{
     },
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
-        messaging::v1::{ErrorCode, NetworkMessage},
+        messaging::v1::{ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream},
     },
     transport,
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
+use anyhow::anyhow;
+use bytes::Bytes;
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
 use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
-use futures::{channel::oneshot, io::AsyncWriteExt, sink::SinkExt, stream::StreamExt};
+use futures::{channel::oneshot, io::AsyncWriteExt, stream::StreamExt};
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,
@@ -28,7 +30,6 @@ use netcore::{
 };
 use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize};
 use tokio::runtime::Handle;
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
@@ -116,15 +117,20 @@ fn build_test_peer_manager(
 }
 
 async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
-    let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
-    let bad_message = vec![255, 111];
-    connection.send(bad_message.into()).await?;
-    let raw_error = connection.next().await.ok_or_else(|| {
-        PeerManagerError::TransportError(anyhow::anyhow!("Failed to read pong msg"))
-    })??;
-    let error: NetworkMessage = lcs::from_bytes(&raw_error)?;
+    let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
+    let mut msg_tx = NetworkMessageSink::new(IoCompat::new(write_half), constants::MAX_FRAME_SIZE);
+    let mut msg_rx = NetworkMessageStream::new(IoCompat::new(read_half), constants::MAX_FRAME_SIZE);
+
+    // Send a garbage frame to trigger an expected Error response message
+    msg_tx
+        .send_raw_frame(Bytes::from_static(&[255, 111]))
+        .await?;
+    let error_msg = msg_rx
+        .next()
+        .await
+        .ok_or_else(|| PeerManagerError::Error(anyhow!("Failed to read pong msg")))??;
     assert_eq!(
-        error,
+        error_msg,
         NetworkMessage::Error(ErrorCode::parsing_error(255, 111))
     );
     Ok(())

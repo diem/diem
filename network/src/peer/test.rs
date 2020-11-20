@@ -3,10 +3,10 @@
 
 use crate::{
     constants::MAX_FRAME_SIZE,
-    peer::{message_codec, DisconnectReason, Peer, PeerHandle, PeerNotification},
+    peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
-        messaging::v1::{DirectSendMsg, NetworkMessage},
+        messaging::v1::{DirectSendMsg, NetworkMessage, NetworkMessageSink, NetworkMessageStream},
     },
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
@@ -16,13 +16,12 @@ use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
 use memsocket::MemorySocket;
-use netcore::{compat::IoCompat, transport::ConnectionOrigin};
+use netcore::transport::ConnectionOrigin;
 use std::{str::FromStr, time::Duration};
 use tokio::{
     runtime::{Handle, Runtime},
     time::timeout,
 };
-use tokio_util::codec::Framed;
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
@@ -182,11 +181,9 @@ fn peer_send_message() {
 
     let server = async move {
         // The client should then send the network message.
-        let mut connection = Framed::new(IoCompat::new(connection), message_codec(MAX_FRAME_SIZE));
-        let msg = connection.next().await.unwrap();
-        let msg: NetworkMessage = lcs::from_bytes(&msg.unwrap().freeze()).unwrap();
+        let mut connection = NetworkMessageStream::new(connection, MAX_FRAME_SIZE);
+        let msg = connection.next().await.unwrap().unwrap();
         assert_eq!(msg, recv_msg);
-        connection.close().await.unwrap();
     };
 
     let client = async move {
@@ -217,13 +214,10 @@ fn peer_recv_message() {
     let recv_msg = send_msg.clone();
 
     let server = async move {
-        let mut connection = Framed::new(IoCompat::new(connection), message_codec(MAX_FRAME_SIZE));
+        let mut connection = NetworkMessageSink::new(connection, MAX_FRAME_SIZE);
         for _ in 0..30 {
             // The client should then send the network message.
-            connection
-                .send(lcs::to_bytes(&send_msg).unwrap().into())
-                .await
-                .unwrap();
+            connection.send(&send_msg).await.unwrap();
         }
         // Client then closes connection.
         connection.close().await.unwrap();

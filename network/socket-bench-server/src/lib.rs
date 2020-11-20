@@ -23,11 +23,15 @@ use netcore::{
         Transport, TransportExt,
     },
 };
-use network::noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader};
+use network::{
+    constants,
+    noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
+    protocols::wire::messaging::v1::network_message_frame_codec,
+};
 use rand::prelude::*;
 use std::{env, ffi::OsString, io, sync::Arc};
 use tokio::runtime::Handle;
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::codec::Framed;
 
 #[derive(Debug)]
 pub struct Args {
@@ -136,8 +140,8 @@ where
                 Ok((f_stream, _)) => {
                     match f_stream.await {
                         Ok(stream) => {
-                            let mut stream =
-                                Framed::new(IoCompat::new(stream), LengthDelimitedCodec::new());
+                            let codec = network_message_frame_codec(constants::MAX_FRAME_SIZE);
+                            let mut stream = Framed::new(IoCompat::new(stream), codec);
 
                             tokio::task::spawn(async move {
                                 // Drain all messages from the client.
