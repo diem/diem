@@ -465,7 +465,8 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
+            eval $(.circleci/get_pr_info.sh -b)
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit --changed-since "origin/$TARGET_BRANCH"
   run-crypto-unit-test:
     working_directory: *working_directory
     executor: audit-executor
