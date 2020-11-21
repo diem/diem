@@ -51,10 +51,9 @@ pub(crate) fn changed_since_impl<'g>(xctx: &'g XContext, base: &str) -> Result<P
                 },
                 || {
                     // Get the list of files changed between the merge base and the current dir.
-                    // diff_filter = "d" means "skip over deleted files".
                     trace!("getting files changed");
                     git_cli
-                        .files_changed_between(&merge_base, None, Some("d"))
+                        .files_changed_between(&merge_base, None, None)
                         .with_context(|| "error while getting files changed from merge base")
                 },
             )
