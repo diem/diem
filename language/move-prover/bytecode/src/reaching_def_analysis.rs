@@ -148,7 +148,7 @@ struct ReachingDefAnalysis<'a> {
     target: FunctionTarget<'a>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
 struct ReachingDefState {
     map: BTreeMap<TempIndex, BTreeSet<Def>>,
 }

@@ -54,7 +54,7 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
 
 /// A data flow analysis state used for optimization analysis. Currently it tracks the nodes
 /// which have been updated but not yet written back.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Eq, PartialEq, PartialOrd)]
 struct AnalysisState {
     unwritten: BTreeSet<BorrowNode>,
 }

@@ -163,7 +163,7 @@ struct LiveVarAnalysis<'a> {
     next_attr_id: usize,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
 struct LiveVarState {
     livevars: BTreeSet<TempIndex>,
 }

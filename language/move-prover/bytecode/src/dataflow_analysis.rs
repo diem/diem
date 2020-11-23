@@ -8,7 +8,7 @@ use crate::{
     stackless_bytecode::Bytecode,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use vm::file_format::CodeOffset;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,8 +27,45 @@ impl JoinResult {
     }
 }
 
-pub trait AbstractDomain: Clone + Sized {
+pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq {
     fn join(&mut self, other: &Self) -> JoinResult;
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct SetDomain<Elem: Clone + Ord + Sized>(pub BTreeSet<Elem>);
+
+impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
+    fn join(&mut self, other: &Self) -> JoinResult {
+        if self == other {
+            JoinResult::Unchanged
+        } else {
+            for e in other.0.iter() {
+                self.0.insert(e.clone());
+            }
+            JoinResult::Changed
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct MapDomain<K, V: AbstractDomain>(pub BTreeMap<K, V>);
+
+impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
+    fn join(&mut self, other: &Self) -> JoinResult {
+        if self.0 == other.0 {
+            JoinResult::Unchanged
+        } else {
+            for (k, v1) in other.0.iter() {
+                self.0
+                    .entry(k.clone())
+                    .and_modify(|v2| {
+                        v2.join(&v1);
+                    })
+                    .or_insert_with(|| v1.clone());
+            }
+            JoinResult::Changed
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]

@@ -16,7 +16,7 @@ use spec_lang::env::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Default)]
 pub struct BorrowInfo {
     /// Contains the nodes which are alive. This excludes nodes which are alive because
     /// other nodes which are alive borrow from them.
@@ -477,7 +477,7 @@ struct PropagateSplicedAnalysis {
     borrow: BTreeMap<CodeOffset, BorrowInfoAtCodeOffset>,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Eq, PartialEq, PartialOrd)]
 struct SplicedState {
     spliced: BTreeSet<BorrowNode>,
 }
