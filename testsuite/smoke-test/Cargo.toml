@@ -19,7 +19,7 @@ rand = "0.7.3"
 regex = "1.4.2"
 rust_decimal = "1.8.1"
 statistical = "1.0.0"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.4", features = ["full"] }
 
 backup-cli = { path = "../../storage/backup/backup-cli", version = "0.1.0" }
 cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
