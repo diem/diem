@@ -13,7 +13,7 @@ use std::{
     time::Instant,
 };
 use stdlib::*;
-use vm::{normalized::Module, CompiledModule};
+use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
 // modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for

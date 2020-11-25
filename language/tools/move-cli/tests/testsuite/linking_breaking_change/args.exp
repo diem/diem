@@ -1,0 +1,5 @@
+Command `publish src/modules/`:
+Command `publish M.move`:
+Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.
+Error: Linking API for structs/functions of module 00000000000000000000000000000002::M has changed. Need to redeploy all dependent modules.
+Command `publish --ignore-breaking-changes M.move`:

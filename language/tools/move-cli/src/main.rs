@@ -24,8 +24,10 @@ use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, mov
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
     access::ScriptAccess,
+    compatibility::Compatibility,
     errors::VMError,
     file_format::{CompiledModule, CompiledScript, SignatureToken},
+    normalized::Module,
 };
 
 use anyhow::{bail, Result};
@@ -91,6 +93,11 @@ enum Command {
         /// If set, modules will not override existing ones in storage
         #[structopt(long = "no-republish")]
         no_republish: bool,
+        /// By default, code that might cause breaking changes for bytecode
+        /// linking or data layout compatibility checks will not be published.
+        /// Set this flag to ignore breaking changes checks and publish anyway
+        #[structopt(long = "ignore-breaking-changes")]
+        ignore_breaking_changes: bool,
         /// If set, the effects of executing `script_file` (i.e., published, updated, and
         /// deleted resources) will NOT be committed to disk.
         #[structopt(long = "dry-run", short = "n")]
@@ -301,18 +308,25 @@ fn check(args: &Move, republish: bool, files: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskStateView> {
+fn publish(
+    args: &Move,
+    files: &[String],
+    republish: bool,
+    ignore_breaking_changes: bool,
+) -> Result<OnDiskStateView> {
     let storage_dir = maybe_create_dir(&args.storage_dir)?;
 
     if args.verbose {
         println!("Compiling Move modules...")
     }
+
     let (files, result) =
         move_compile_to_and_shadow(args, files, republish, MovePass::Compilation)?;
     let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
         MovePassResult::Compilation(units) => units,
         _ => unreachable!(),
     };
+
     let num_modules = compiled_units
         .iter()
         .filter(|u| matches!(u,  CompiledUnit::Module {..}))
@@ -336,10 +350,33 @@ fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskState
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
     }
-    Ok(OnDiskStateView::create(
-        storage_dir.to_path_buf(),
-        &modules,
-    )?)
+
+    if !ignore_breaking_changes {
+        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &[])?;
+        for m in &modules {
+            let id = m.self_id();
+            if let Ok(old_m) = view.get_compiled_module(&m.self_id()) {
+                let old_api = Module::new(&old_m);
+                let new_api = Module::new(m);
+                let compat = Compatibility::check(&old_api, &new_api);
+                if !compat.is_fully_compatible() {
+                    eprintln!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
+                }
+                if !compat.struct_layout {
+                    // TODO: we could choose to make this more precise by walking the global state and looking for published
+                    // structs of this type. but probably a bad idea
+                    bail!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", id)
+                }
+                if !compat.struct_and_function_linking {
+                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
+                    // but this is not easy to check without walking the global state and looking for everything
+                    bail!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", id)
+                }
+            }
+        }
+    }
+
+    OnDiskStateView::create(storage_dir.to_path_buf(), &modules)
 }
 
 fn run(
@@ -388,6 +425,7 @@ fn run(
             }
         }
 
+        // TODO: run `move publish` here instead?
         // preload the modules to the storage
         let state =
             OnDiskStateView::create(storage_dir.to_path_buf(), &args.get_library_modules()?)?;
@@ -750,10 +788,16 @@ fn main() -> Result<()> {
         Command::Publish {
             source_files,
             no_republish,
+            ignore_breaking_changes,
             dry_run,
         } => {
             move_args.prepare_mode(true)?;
-            let state = publish(&move_args, !*no_republish, source_files)?;
+            let state = publish(
+                &move_args,
+                source_files,
+                !*no_republish,
+                *ignore_breaking_changes,
+            )?;
             maybe_commit_effects(&move_args, !*dry_run, None, &state)
         }
         Command::Run {
