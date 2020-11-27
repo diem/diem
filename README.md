@@ -48,7 +48,7 @@ To begin contributing, [sign the CLA](https://libra.org/en-US/cla-sign/). You ca
 * [Bytecode Verifier](https://developers.libra.org/docs/crates/bytecode-verifier)
 * [Consensus](https://developers.libra.org/docs/crates/consensus)
 * [Crypto](https://developers.libra.org/docs/crates/crypto)
-* [Execution](https://developers.libra.org/docs/crates/execution)
+* [Execution](https://developers.libra.org/docs/crates/executor)
 * [Mempool](https://developers.libra.org/docs/crates/mempool)
 * [Move IR Compiler](https://developers.libra.org/docs/crates/ir-to-bytecode)
 * [Move Language](https://developers.libra.org/docs/crates/move-language)
