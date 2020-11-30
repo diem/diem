@@ -3,10 +3,10 @@
 
 use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_STORAGE_DIR};
 use anyhow::anyhow;
-use move_coverage::{coverage_map::CoverageMap, summary::summarize_inst_cov};
+use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
 use move_lang::{extension_equals, path_to_string, test_utils::*, MOVE_COMPILED_EXTENSION};
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashMap, HashSet},
     env,
     fs::{self, File},
     io::{self, BufRead, Write},
@@ -38,9 +38,10 @@ const UB: &str = "UB";
 /// enabled in the move VM.
 const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
 
-/// The default file name for the runtime to dump the execution trace to.
-/// The trace will be used by the coverage tool if --track-cov is set.
-/// If --track-cov is not set, then no trace file will be produced.
+/// The default file name (inside the build output dir) for the runtime to
+/// dump the execution trace to. The trace will be used by the coverage tool
+/// if --track-cov is set. If --track-cov is not set, then no trace file will
+/// be produced.
 const DEFAULT_TRACE_FILE: &str = "trace";
 
 fn format_diff(expected: String, actual: String) -> String {
@@ -73,7 +74,11 @@ fn format_diff(expected: String, actual: String) -> String {
     ret
 }
 
-fn show_coverage(trace_file: &Path, build_dir: &Path, storage_dir: &Path) -> anyhow::Result<()> {
+fn collect_coverage(
+    trace_file: &Path,
+    build_dir: &Path,
+    storage_dir: &Path,
+) -> anyhow::Result<ExecCoverageMapWithModules> {
     fn find_compiled_move_filenames(path: &Path) -> anyhow::Result<Vec<String>> {
         if path.exists() {
             move_lang::find_filenames(&[path_to_string(path)?], |fpath| {
@@ -92,32 +97,47 @@ fn show_coverage(trace_file: &Path, build_dir: &Path, storage_dir: &Path) -> any
             .collect();
 
     // collect modules published minus modules compiled for packages
-    let mut modules: Vec<CompiledModule> = Vec::new();
-    for entry in move_lang::find_filenames(&[path_to_string(storage_dir)?], |fpath| {
+    let src_module_files = move_lang::find_filenames(&[path_to_string(storage_dir)?], |fpath| {
         extension_equals(fpath, MOVE_COMPILED_EXTENSION)
             && !pkg_modules.contains(fpath.file_name().unwrap())
-    })? {
-        let bytecode_bytes = fs::read(&entry)?;
-        let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
-            .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", entry, e))?;
-        modules.push(compiled_module);
+    })?;
+    let src_modules = src_module_files
+        .iter()
+        .map(|entry| {
+            let bytecode_bytes = fs::read(entry)?;
+            let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
+                .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", entry, e))?;
+
+            // use absolute path to the compiled module file
+            let module_absolute_path = path_to_string(&PathBuf::from(entry).canonicalize()?)?;
+            Ok((module_absolute_path, compiled_module))
+        })
+        .collect::<anyhow::Result<HashMap<_, _>>>()?;
+
+    // build the filter
+    let mut filter = BTreeMap::new();
+    for (entry, module) in src_modules.into_iter() {
+        let module_id = module.self_id();
+        filter
+            .entry(*module_id.address())
+            .or_insert_with(BTreeMap::new)
+            .insert(module_id.name().to_owned(), (entry, module));
     }
 
-    // collect trace
-    let coverage_map = CoverageMap::from_trace_file(trace_file).to_unified_exec_map();
+    // collect filtered trace
+    let coverage_map = CoverageMap::from_trace_file(trace_file)
+        .to_unified_exec_map()
+        .into_coverage_map_with_modules(filter);
 
-    // summarize
-    let mut summary_writer: Box<dyn Write> = Box::new(io::stdout());
-    for module in modules.iter() {
-        let module_summary = summarize_inst_cov(module, &coverage_map);
-        module_summary.summarize_human(&mut summary_writer, true)?;
-    }
-
-    Ok(())
+    Ok(coverage_map)
 }
 
 /// Run the `args_path` batch file with`cli_binary`
-pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::Result<()> {
+pub fn run_one(
+    args_path: &Path,
+    cli_binary: &str,
+    track_cov: bool,
+) -> anyhow::Result<Option<ExecCoverageMapWithModules>> {
     let args_file = io::BufReader::new(File::open(args_path)?).lines();
     // path where we will run the binary
     let exe_dir = args_path.parent().unwrap();
@@ -132,6 +152,13 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
             .output()?;
     }
     let mut output = "".to_string();
+
+    // for tracing file path: always use the absolute path so we do not need to worry about where
+    // the VM is executed.
+    let trace_file = env::current_dir()?
+        .join(&build_output)
+        .join(DEFAULT_TRACE_FILE);
+
     for args_line in args_file {
         let args_line = args_line?;
         if args_line.starts_with('#') {
@@ -145,11 +172,6 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
         }
 
         // enable tracing in the VM by setting the env var.
-        // for tracing file path: always use the absolute path so we do not need
-        // to worry about where the VM is executed.
-        let mut trace_file = env::current_dir()?;
-        trace_file.push(&storage_dir);
-        trace_file.push(DEFAULT_TRACE_FILE);
         if track_cov {
             env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, trace_file.as_os_str());
         } else if env::var_os(MOVE_VM_TRACING_ENV_VAR_NAME).is_some() {
@@ -168,17 +190,23 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
         output += &format!("Command `{}`:\n", args_line);
         output += std::str::from_utf8(&cmd_output.stdout)?;
         output += std::str::from_utf8(&cmd_output.stderr)?;
-
-        // show coverage information
-        if track_cov && trace_file.exists() {
-            if !trace_file.exists() {
-                eprintln!("Trace file {} not found", trace_file.to_string_lossy());
-                eprintln!("Coverage is only applicable to the RUN command in args.txt");
-            } else {
-                show_coverage(&trace_file, &build_output, &storage_dir)?;
-            }
-        }
     }
+
+    // collect coverage information
+    let cov_info = if track_cov && trace_file.exists() {
+        if !trace_file.exists() {
+            eprintln!(
+                "Trace file {:?} not found: coverage is only available with at least one `run` \
+                command in the args.txt (after a `clean`, if there is one)",
+                trace_file
+            );
+            None
+        } else {
+            Some(collect_coverage(&trace_file, &build_output, &storage_dir)?)
+        }
+    } else {
+        None
+    };
 
     // post-test cleanup and cleanup checks
     // check that the test command didn't create a src dir
@@ -207,7 +235,7 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
     let exp_path = args_path.with_extension(EXP_EXT);
     if update_baseline {
         fs::write(exp_path, &output)?;
-        return Ok(());
+        return Ok(cov_info);
     }
     // compare output and exp_file
     let expected_output = fs::read_to_string(exp_path).unwrap_or_else(|_| "".to_string());
@@ -217,29 +245,45 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
             format_diff(expected_output, output)
         )
     } else {
-        Ok(())
+        Ok(cov_info)
     }
 }
 
 pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Result<()> {
     let mut test_total = 0;
     let mut test_passed = 0;
+    let mut cov_info = ExecCoverageMapWithModules::empty();
+
+    // find `args.txt` and iterate over them
     for entry in move_lang::find_filenames(&[args_path.to_owned()], |fpath| {
         fpath.file_name().expect("unexpected file entry path") == "args.txt"
     })? {
         match run_one(Path::new(&entry), cli_binary, track_cov) {
-            Ok(_) => test_passed += 1,
+            Ok(cov_opt) => {
+                test_passed += 1;
+                if let Some(cov) = cov_opt {
+                    cov_info.merge(cov);
+                }
+            }
             Err(ex) => eprintln!("Test {} failed with error: {}", entry, ex),
         }
         test_total += 1;
     }
-    println!("{} / {} test(s) passed.", test_total, test_passed);
+    println!("{} / {} test(s) passed.", test_passed, test_total);
 
     // if any test fails, bail
     let test_failed = test_total - test_passed;
     if test_failed != 0 {
         anyhow::bail!("{} / {} test(s) failed.", test_failed, test_total)
-    } else {
-        Ok(())
     }
+
+    // show coverage information if requested
+    if track_cov {
+        let mut summary_writer: Box<dyn Write> = Box::new(io::stdout());
+        for (_, module_summary) in cov_info.into_module_summaries() {
+            module_summary.summarize_human(&mut summary_writer, true)?;
+        }
+    }
+
+    Ok(())
 }

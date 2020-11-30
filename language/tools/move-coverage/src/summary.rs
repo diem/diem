@@ -3,7 +3,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::coverage_map::{ExecCoverageMap, TraceMap};
+use crate::coverage_map::{
+    ExecCoverageMap, ExecCoverageMapWithModules, ModuleCoverageMap, TraceMap,
+};
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use petgraph::{algo::tarjan_scc, Graph};
@@ -121,15 +123,11 @@ impl FunctionSummary {
     }
 }
 
-pub fn summarize_inst_cov(
+pub fn summarize_inst_cov_by_module(
     module: &CompiledModule,
-    coverage_map: &ExecCoverageMap,
+    module_map: Option<&ModuleCoverageMap>,
 ) -> ModuleSummary {
     let module_name = module.self_id();
-    let module_map = coverage_map
-        .module_maps
-        .get(&(*module_name.address(), module_name.name().to_owned()));
-
     let function_summaries: BTreeMap<_, _> = module
         .function_defs()
         .iter()
@@ -169,6 +167,17 @@ pub fn summarize_inst_cov(
         module_name,
         function_summaries,
     }
+}
+
+pub fn summarize_inst_cov(
+    module: &CompiledModule,
+    coverage_map: &ExecCoverageMap,
+) -> ModuleSummary {
+    let module_name = module.self_id();
+    let module_map = coverage_map
+        .module_maps
+        .get(&(*module_name.address(), module_name.name().to_owned()));
+    summarize_inst_cov_by_module(module, module_map)
 }
 
 pub fn summarize_path_cov(module: &CompiledModule, trace_map: &TraceMap) -> ModuleSummary {
@@ -432,5 +441,21 @@ pub fn summarize_path_cov(module: &CompiledModule, trace_map: &TraceMap) -> Modu
     ModuleSummary {
         module_name,
         function_summaries,
+    }
+}
+
+impl ExecCoverageMapWithModules {
+    pub fn into_module_summaries(self) -> BTreeMap<String, ModuleSummary> {
+        let compiled_modules = self.compiled_modules;
+        self.module_maps
+            .into_iter()
+            .map(|((module_path, _, _), module_cov)| {
+                let module_summary = summarize_inst_cov_by_module(
+                    compiled_modules.get(&module_path).unwrap(),
+                    Some(&module_cov),
+                );
+                (module_path, module_summary)
+            })
+            .collect()
     }
 }

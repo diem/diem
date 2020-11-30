@@ -7,10 +7,10 @@ Command `test dummy`:
 Command `test cov`:
 1 / 1 test(s) passed.
 Command `test cov --track-cov`:
+1 / 1 test(s) passed.
 Module 00000000000000000000000000000042::M
 	fun test
 		total: 1
 		covered: 1
 		% coverage: 100.00
 >>> % Module coverage: 100.00
-1 / 1 test(s) passed.
