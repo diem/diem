@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{sink::SinkExt, StreamExt};
+use futures::{sink::SinkExt, StreamExt, FutureExt};
 use libra_config::{config::NodeConfig, network_id::NetworkId};
 use libra_crypto::x25519;
 use libra_logger::info;
@@ -483,7 +483,20 @@ async fn state_sync_load_test(
         }
     }).join();
 
-    let response = events.select_next_some().await;
+    while let Some(response) = events.select_next_some().now_or_never() {
+        if let Event::Message(_remote_peer, payload) = response {
+            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                chunk_response,
+            ) = payload
+            {
+                let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                // TODO analyze response and update StateSyncResult with stats accordingly
+                served_txns1.fetch_add(temp, Ordering::Relaxed);
+                info!("hhhhhhhhh tx {}", temp);
+            }
+        }
+    }
+    /*let response = events.select_next_some().await;
     if let Event::Message(_remote_peer, payload) = response {
         if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
             chunk_response,
@@ -494,7 +507,7 @@ async fn state_sync_load_test(
             served_txns1.fetch_add(temp, Ordering::Relaxed);
             info!("hhhhhhhhh tx {}", temp);
         }
-    }
+    }*/
     let served_txns = served_txns1.load(Ordering::Relaxed);
     let bytes = bytes1.load(Ordering::Relaxed);
     let msg_num = msg_num1.load(Ordering::Relaxed);
