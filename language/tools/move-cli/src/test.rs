@@ -1,14 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
+use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_STORAGE_DIR};
+use anyhow::anyhow;
 use move_coverage::{coverage_map::CoverageMap, summary::summarize_inst_cov};
-use move_lang::test_utils::*;
+use move_lang::{extension_equals, path_to_string, test_utils::*, MOVE_COMPILED_EXTENSION};
 use std::{
+    collections::HashSet,
     env,
     fs::{self, File},
     io::{self, BufRead, Write},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 use vm::file_format::CompiledModule;
@@ -71,14 +73,33 @@ fn format_diff(expected: String, actual: String) -> String {
     ret
 }
 
-fn show_coverage(trace_file: &Path, storage_dir: &Path) -> anyhow::Result<()> {
-    // collect modules
+fn show_coverage(trace_file: &Path, build_dir: &Path, storage_dir: &Path) -> anyhow::Result<()> {
+    fn find_compiled_move_filenames(path: &Path) -> anyhow::Result<Vec<String>> {
+        if path.exists() {
+            move_lang::find_filenames(&[path_to_string(path)?], |fpath| {
+                extension_equals(fpath, MOVE_COMPILED_EXTENSION)
+            })
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    // collect modules compiled for packages (to be filtered out)
+    let pkg_modules: HashSet<_> =
+        find_compiled_move_filenames(&build_dir.join(DEFAULT_PACKAGE_DIR))?
+            .into_iter()
+            .map(|entry| PathBuf::from(entry).file_name().unwrap().to_owned())
+            .collect();
+
+    // collect modules published minus modules compiled for packages
     let mut modules: Vec<CompiledModule> = Vec::new();
-    for entry in move_lang::find_filenames(&[storage_dir.to_str().unwrap().to_owned()], |fpath| {
-        fpath.extension().map_or(false, |e| e == "mv")
+    for entry in move_lang::find_filenames(&[path_to_string(storage_dir)?], |fpath| {
+        extension_equals(fpath, MOVE_COMPILED_EXTENSION)
+            && !pkg_modules.contains(fpath.file_name().unwrap())
     })? {
-        let bytecode_bytes = fs::read(entry).unwrap();
-        let compiled_module = CompiledModule::deserialize(&bytecode_bytes).unwrap();
+        let bytecode_bytes = fs::read(&entry)?;
+        let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
+            .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", entry, e))?;
         modules.push(compiled_module);
     }
 
@@ -154,7 +175,7 @@ pub fn run_one(args_path: &Path, cli_binary: &str, track_cov: bool) -> anyhow::R
                 eprintln!("Trace file {} not found", trace_file.to_string_lossy());
                 eprintln!("Coverage is only applicable to the RUN command in args.txt");
             } else {
-                show_coverage(Path::new(&trace_file), Path::new(&storage_dir))?;
+                show_coverage(&trace_file, &build_output, &storage_dir)?;
             }
         }
     }
