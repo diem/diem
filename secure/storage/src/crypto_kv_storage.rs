@@ -86,7 +86,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn sign<U: CryptoHash + Serialize>(
-        &mut self,
+        &self,
         name: &str,
         message: &U,
     ) -> Result<Ed25519Signature, Error> {
@@ -95,7 +95,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn sign_using_version<U: CryptoHash + Serialize>(
-        &mut self,
+        &self,
         name: &str,
         version: Ed25519PublicKey,
         message: &U,

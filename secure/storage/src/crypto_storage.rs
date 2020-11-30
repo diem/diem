@@ -48,7 +48,7 @@ pub trait CryptoStorage {
     /// key.
     // The FQDNs on the next line help macros don't remove them
     fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
-        &mut self,
+        &self,
         name: &str,
         message: &T,
     ) -> Result<Ed25519Signature, Error>;
@@ -57,7 +57,7 @@ pub trait CryptoStorage {
     /// even if the 'named' key exists but the version is not present.
     // The FQDNs on the next line help macros, don't remove them
     fn sign_using_version<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
-        &mut self,
+        &self,
         name: &str,
         version: Ed25519PublicKey,
         message: &T,

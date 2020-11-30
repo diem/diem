@@ -361,7 +361,7 @@ impl CryptoStorage for VaultStorage {
     }
 
     fn sign<T: CryptoHash + Serialize>(
-        &mut self,
+        &self,
         name: &str,
         message: &T,
     ) -> Result<Ed25519Signature, Error> {
@@ -377,7 +377,7 @@ impl CryptoStorage for VaultStorage {
     }
 
     fn sign_using_version<T: CryptoHash + Serialize>(
-        &mut self,
+        &self,
         name: &str,
         version: Ed25519PublicKey,
         message: &T,

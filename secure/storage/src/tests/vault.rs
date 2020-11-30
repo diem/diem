@@ -373,7 +373,7 @@ fn test_vault_crypto_policies() {
     signature.verify(&message, &pubkey).unwrap_err();
     signature.verify(&message, &new_pubkey).unwrap();
     // Verify a signer with another namespace has no permission for the operations
-    let mut signer_store_with_namespace = VaultStorage::new(
+    let signer_store_with_namespace = VaultStorage::new(
         dev::test_host(),
         signer_token,
         Some(VAULT_NAMESPACE_1.into()),
