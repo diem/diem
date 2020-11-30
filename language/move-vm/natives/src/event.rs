@@ -21,7 +21,6 @@ pub fn native_emit_event(
 
     let ty = ty_args.pop().unwrap();
     let msg = arguments.pop_back().unwrap();
-    let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
     let cost = native_gas(
@@ -30,7 +29,7 @@ pub fn native_emit_event(
         msg.size().get() as usize,
     );
 
-    if !context.save_event(guid, seq_num, ty, msg)? {
+    if !context.save_event(guid, ty, msg)? {
         return Ok(NativeResult::err(cost, 0));
     }
 

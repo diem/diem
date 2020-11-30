@@ -285,7 +285,6 @@ impl OnDiskStateView {
     pub fn save_event(
         &self,
         event_key: &[u8],
-        event_sequence_number: u64,
         event_type: TypeTag,
         event_layout: &MoveTypeLayout,
         event_value: Value,
@@ -294,7 +293,7 @@ impl OnDiskStateView {
         let event_data = event_value
             .simple_serialize(event_layout)
             .ok_or_else(|| anyhow!("Failed to serialize event"))?;
-        let event = ContractEvent::new(key, event_sequence_number, event_type, event_data);
+        let event = ContractEvent::new(key, event_type, event_data);
 
         // save event data in handle_address/EVENTS_DIR/handle_number
         let path = self.get_event_path(&key);

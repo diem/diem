@@ -644,11 +644,10 @@ impl ContractEventGen {
         } else {
             &mut account_info.received_event_handle
         };
-        let sequence_number = event_handle.count();
         *event_handle.count_mut() += 1;
         let event_key = event_handle.key();
 
-        ContractEvent::new(*event_key, sequence_number, self.type_tag, self.payload)
+        ContractEvent::new(*event_key, self.type_tag, self.payload)
     }
 }
 
@@ -733,12 +732,11 @@ impl ContractEvent {
     ) -> impl Strategy<Value = Self> {
         (
             event_key_strategy,
-            any::<u64>(),
             any::<TypeTag>(),
             vec(any::<u8>(), 1..10),
         )
-            .prop_map(|(event_key, seq_num, type_tag, event_data)| {
-                ContractEvent::new(event_key, seq_num, type_tag, event_data)
+            .prop_map(|(event_key, type_tag, event_data)| {
+                ContractEvent::new(event_key, type_tag, event_data)
             })
     }
 }

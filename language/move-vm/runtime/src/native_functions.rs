@@ -149,14 +149,8 @@ impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
         self.cost_strategy.cost_table()
     }
 
-    fn save_event(
-        &mut self,
-        guid: Vec<u8>,
-        seq_num: u64,
-        ty: Type,
-        val: Value,
-    ) -> PartialVMResult<bool> {
-        match self.data_store.emit_event(guid, seq_num, ty, val) {
+    fn save_event(&mut self, guid: Vec<u8>, ty: Type, val: Value) -> PartialVMResult<bool> {
+        match self.data_store.emit_event(guid, ty, val) {
             Ok(()) => Ok(true),
             Err(e) if e.major_status().status_type() == StatusType::InvariantViolation => Err(e),
             Err(_) => Ok(false),

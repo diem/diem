@@ -535,8 +535,6 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
         new_epoch_events.len() == 1,
         "There should only be one NewEpochEvent"
     );
-    // (4) This should be the first new_epoch_event
-    assert_eq!(new_epoch_events[0].sequence_number(), 0,);
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing

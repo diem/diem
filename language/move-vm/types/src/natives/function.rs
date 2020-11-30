@@ -39,13 +39,7 @@ pub trait NativeContext {
     /// Gets cost table ref.
     fn cost_table(&self) -> &CostTable;
     /// Saves contract event. Returns true if successful
-    fn save_event(
-        &mut self,
-        guid: Vec<u8>,
-        count: u64,
-        ty: Type,
-        val: Value,
-    ) -> PartialVMResult<bool>;
+    fn save_event(&mut self, guid: Vec<u8>, ty: Type, val: Value) -> PartialVMResult<bool>;
     /// Get the a data layout via the type.
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
     /// Whether a type is a resource or not.

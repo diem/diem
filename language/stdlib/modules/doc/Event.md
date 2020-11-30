@@ -82,12 +82,6 @@ A handle for an event such that:
 
 <dl>
 <dt>
-<code>counter: u64</code>
-</dt>
-<dd>
- Total number of events emitted to this event stream.
-</dd>
-<dt>
 <code>guid: vector&lt;u8&gt;</code>
 </dt>
 <dd>
@@ -178,7 +172,6 @@ Use EventHandleGenerator to generate a unique event handle for <code>sig</code>
 <pre><code><b>public</b> <b>fun</b> <a href="Event.md#0x1_Event_new_event_handle">new_event_handle</a>&lt;T: <b>copyable</b>&gt;(account: &signer): <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt;
 <b>acquires</b> <a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a> {
     <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt; {
-        counter: 0,
         guid: <a href="Event.md#0x1_Event_fresh_guid">fresh_guid</a>(borrow_global_mut&lt;<a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)))
     }
 }
@@ -207,9 +200,7 @@ generic type parameter once we have generics.
 
 <pre><code><b>public</b> <b>fun</b> <a href="Event.md#0x1_Event_emit_event">emit_event</a>&lt;T: <b>copyable</b>&gt;(handle_ref: &<b>mut</b> <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt;, msg: T) {
     <b>let</b> guid = *&handle_ref.guid;
-
-    <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T&gt;(guid, handle_ref.counter, msg);
-    handle_ref.counter = handle_ref.counter + 1;
+    <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T&gt;(guid, msg);
 }
 </code></pre>
 
@@ -225,7 +216,7 @@ Native procedure that writes to the actual event stream in Event store
 This will replace the "native" portion of EmitEvent bytecode
 
 
-<pre><code><b>fun</b> <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T: <b>copyable</b>&gt;(guid: vector&lt;u8&gt;, count: u64, msg: T)
+<pre><code><b>fun</b> <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T: <b>copyable</b>&gt;(guid: vector&lt;u8&gt;, msg: T)
 </code></pre>
 
 
@@ -234,7 +225,7 @@ This will replace the "native" portion of EmitEvent bytecode
 <summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>fun</b> <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T: <b>copyable</b>&gt;(guid: vector&lt;u8&gt;, count: u64, msg: T);
+<pre><code><b>native</b> <b>fun</b> <a href="Event.md#0x1_Event_write_to_event_store">write_to_event_store</a>&lt;T: <b>copyable</b>&gt;(guid: vector&lt;u8&gt;, msg: T);
 </code></pre>
 
 
@@ -258,7 +249,7 @@ Destroy a unique handle.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Event.md#0x1_Event_destroy_handle">destroy_handle</a>&lt;T: <b>copyable</b>&gt;(handle: <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt;) {
-    <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt; { counter: _, guid: _ } = handle;
+    <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt; { guid: _ } = handle;
 }
 </code></pre>
 

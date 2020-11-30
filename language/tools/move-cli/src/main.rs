@@ -375,13 +375,8 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
     if !effects.events.is_empty() {
         println!("Emitted {:?} events:", effects.events.len());
         // TODO: better event printing
-        for (event_key, event_sequence_number, _event_type, _event_layout, event_data) in
-            &effects.events
-        {
-            println!(
-                "Emitted {:?} as the {}th event to stream {:?}",
-                event_data, event_sequence_number, event_key
-            )
+        for (event_key, _event_type, _event_layout, event_data) in &effects.events {
+            println!("Emitted {:?} to stream {:?}", event_data, event_key)
         }
     }
     if !effects.resources.is_empty() {
@@ -439,16 +434,8 @@ fn maybe_commit_effects(
                 }
             }
 
-            for (event_key, event_sequence_number, event_type, event_layout, event_data) in
-                effects.events
-            {
-                state.save_event(
-                    &event_key,
-                    event_sequence_number,
-                    event_type,
-                    &event_layout,
-                    event_data,
-                )?
+            for (event_key, event_type, event_layout, event_data) in effects.events {
+                state.save_event(&event_key, event_type, &event_layout, event_data)?
             }
         }
 

@@ -30,18 +30,8 @@ pub enum ContractEvent {
 }
 
 impl ContractEvent {
-    pub fn new(
-        key: EventKey,
-        sequence_number: u64,
-        type_tag: TypeTag,
-        event_data: Vec<u8>,
-    ) -> Self {
-        ContractEvent::V0(ContractEventV0::new(
-            key,
-            sequence_number,
-            type_tag,
-            event_data,
-        ))
+    pub fn new(key: EventKey, type_tag: TypeTag, event_data: Vec<u8>) -> Self {
+        ContractEvent::V0(ContractEventV0::new(key, type_tag, event_data))
     }
 }
 
@@ -62,8 +52,6 @@ impl Deref for ContractEvent {
 pub struct ContractEventV0 {
     /// The unique key that the event was emitted to
     key: EventKey,
-    /// The number of messages that have been emitted to the path previously
-    sequence_number: u64,
     /// The type of the data
     type_tag: TypeTag,
     /// The data payload of the event
@@ -72,15 +60,9 @@ pub struct ContractEventV0 {
 }
 
 impl ContractEventV0 {
-    pub fn new(
-        key: EventKey,
-        sequence_number: u64,
-        type_tag: TypeTag,
-        event_data: Vec<u8>,
-    ) -> Self {
+    pub fn new(key: EventKey, type_tag: TypeTag, event_data: Vec<u8>) -> Self {
         Self {
             key,
-            sequence_number,
             type_tag,
             event_data,
         }
@@ -88,10 +70,6 @@ impl ContractEventV0 {
 
     pub fn key(&self) -> &EventKey {
         &self.key
-    }
-
-    pub fn sequence_number(&self) -> u64 {
-        self.sequence_number
     }
 
     pub fn event_data(&self) -> &[u8] {
@@ -258,9 +236,8 @@ impl std::fmt::Debug for ContractEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "ContractEvent {{ key: {:?}, index: {:?}, type: {:?}, event_data: {:?} }}",
+            "ContractEvent {{ key: {:?}, type: {:?}, event_data: {:?} }}",
             self.key,
-            self.sequence_number,
             self.type_tag,
             hex::encode(&self.event_data)
         )
@@ -272,14 +249,14 @@ impl std::fmt::Display for ContractEvent {
         if let Ok(payload) = SentPaymentEvent::try_from(self) {
             write!(
                 f,
-                "ContractEvent {{ key: {}, index: {:?}, type: {:?}, event_data: {:?} }}",
-                self.key, self.sequence_number, self.type_tag, payload,
+                "ContractEvent {{ key: {}, type: {:?}, event_data: {:?} }}",
+                self.key, self.type_tag, payload,
             )
         } else if let Ok(payload) = ReceivedPaymentEvent::try_from(self) {
             write!(
                 f,
-                "ContractEvent {{ key: {}, index: {:?}, type: {:?}, event_data: {:?} }}",
-                self.key, self.sequence_number, self.type_tag, payload,
+                "ContractEvent {{ key: {}, type: {:?}, event_data: {:?} }}",
+                self.key, self.type_tag, payload,
             )
         } else {
             write!(f, "{:?}", self)
@@ -327,7 +304,7 @@ impl EventWithProof {
     ///
     /// Two things are ensured if no error is raised:
     ///   1. This event exists in the ledger represented by `ledger_info`.
-    ///   2. And this event has the same `event_key`, `sequence_number`, `transaction_version`,
+    ///   2. And this event has the same `event_key`, `transaction_version`,
     /// and `event_index` as indicated in the parameter list. If any of these parameter is unknown
     /// to the call site and is supposed to be informed by this struct, get it from the struct
     /// itself, such as: `event_with_proof.event.access_path()`, `event_with_proof.event_index()`,
@@ -336,7 +313,6 @@ impl EventWithProof {
         &self,
         ledger_info: &LedgerInfo,
         event_key: &EventKey,
-        sequence_number: u64,
         transaction_version: Version,
         event_index: u64,
     ) -> Result<()> {
@@ -345,12 +321,6 @@ impl EventWithProof {
             "Event key ({}) not expected ({}).",
             self.event.key(),
             *event_key,
-        );
-        ensure!(
-            self.event.sequence_number == sequence_number,
-            "Sequence number ({}) not expected ({}).",
-            self.event.sequence_number(),
-            sequence_number,
         );
         ensure!(
             self.transaction_version == transaction_version,

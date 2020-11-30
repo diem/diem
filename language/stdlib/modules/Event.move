@@ -21,8 +21,6 @@ module Event {
     /// 1. Other modules can emit events to this handle.
     /// 2. Storage can use this handle to prove the total number of events that happened in the past.
     resource struct EventHandle<T: copyable> {
-        /// Total number of events emitted to this event stream.
-        counter: u64,
         /// A globally unique ID for this event stream.
         guid: vector<u8>,
     }
@@ -52,7 +50,6 @@ module Event {
     public fun new_event_handle<T: copyable>(account: &signer): EventHandle<T>
     acquires EventHandleGenerator {
         EventHandle<T> {
-            counter: 0,
             guid: fresh_guid(borrow_global_mut<EventHandleGenerator>(Signer::address_of(account)))
         }
     }
@@ -61,18 +58,16 @@ module Event {
     /// generic type parameter once we have generics.
     public fun emit_event<T: copyable>(handle_ref: &mut EventHandle<T>, msg: T) {
         let guid = *&handle_ref.guid;
-
-        write_to_event_store<T>(guid, handle_ref.counter, msg);
-        handle_ref.counter = handle_ref.counter + 1;
+        write_to_event_store<T>(guid, msg);
     }
 
     /// Native procedure that writes to the actual event stream in Event store
     /// This will replace the "native" portion of EmitEvent bytecode
-    native fun write_to_event_store<T: copyable>(guid: vector<u8>, count: u64, msg: T);
+    native fun write_to_event_store<T: copyable>(guid: vector<u8>, msg: T);
 
     /// Destroy a unique handle.
     public fun destroy_handle<T: copyable>(handle: EventHandle<T>) {
-        EventHandle<T> { counter: _, guid: _ } = handle;
+        EventHandle<T> { guid: _ } = handle;
     }
 
     // ****************** SPECIFICATIONS *******************
