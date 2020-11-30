@@ -471,7 +471,7 @@ async fn state_sync_load_test(
     static bytes1: AtomicU64 = AtomicU64::new(0);
     static msg_num1: AtomicU64 = AtomicU64::new(0);
 
-    thread::spawn(move || {
+    let a = thread::spawn(move || {
         info!("hhhhhh2");
         while Instant::now().duration_since(task_start) < duration {
             let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
@@ -481,9 +481,10 @@ async fn state_sync_load_test(
             msg_num1.fetch_add(1, Ordering::Relaxed);
             sender.send_to(vfn, msg);
         }
-    }).join();
+    });
 
     while let Some(response) = events.select_next_some().now_or_never() {
+        info!("hhhhhhh");
         if let Event::Message(_remote_peer, payload) = response {
             if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
                 chunk_response,
@@ -496,6 +497,7 @@ async fn state_sync_load_test(
             }
         }
     }
+    a.join();
     /*let response = events.select_next_some().await;
     if let Event::Message(_remote_peer, payload) = response {
         if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
