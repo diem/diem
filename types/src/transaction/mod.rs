@@ -174,7 +174,7 @@ impl RawTransaction {
         Self::new_change_set(
             sender,
             sequence_number,
-            ChangeSet::new(write_set, vec![]),
+            ChangeSet::new(write_set),
             chain_id,
         )
     }
@@ -713,9 +713,6 @@ pub struct TransactionOutput {
     /// The list of writes this transaction intends to do.
     write_set: WriteSet,
 
-    /// The list of events emitted during this transaction.
-    events: Vec<ContractEvent>,
-
     /// The amount of gas used during execution.
     gas_used: u64,
 
@@ -726,13 +723,11 @@ pub struct TransactionOutput {
 impl TransactionOutput {
     pub fn new(
         write_set: WriteSet,
-        events: Vec<ContractEvent>,
         gas_used: u64,
         status: TransactionStatus,
     ) -> Self {
         TransactionOutput {
             write_set,
-            events,
             gas_used,
             status,
         }
@@ -740,10 +735,6 @@ impl TransactionOutput {
 
     pub fn write_set(&self) -> &WriteSet {
         &self.write_set
-    }
-
-    pub fn events(&self) -> &[ContractEvent] {
-        &self.events
     }
 
     pub fn gas_used(&self) -> u64 {

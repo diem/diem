@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::access_path::AccessPath;
+use libra_types::{access_path::AccessPath};
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},

@@ -7,12 +7,12 @@ use crate::{
     errors::expect_only_successful_execution,
     libra_vm::{
         charge_global_write_gas_usage, get_currency_info, get_transaction_output,
-        txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
+        txn_effects_to_writeset_cached, LibraVMImpl, LibraVMInternals,
     },
     logging::AdapterLogSchema,
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
-    txn_effects_to_writeset_and_events, VMExecutor,
+    txn_effects_to_writeset, VMExecutor,
 };
 use fail::fail_point;
 use libra_logger::prelude::*;
@@ -381,9 +381,9 @@ impl LibraVM {
                     .map_err(|e| e.into_vm_status());
                 match execution_result {
                     Ok(effect) => {
-                        let (cs, events) =
-                            txn_effects_to_writeset_and_events(effect).map_err(Err)?;
-                        ChangeSet::new(cs, events)
+                        let cs =
+                            txn_effects_to_writeset(effect).map_err(Err)?;
+                        ChangeSet::new(cs)
                     }
                     Err(e) => {
                         return Err(Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET))))
@@ -419,12 +419,12 @@ impl LibraVM {
                 Ok(cs) => cs,
                 Err(e) => return e,
             };
-        let (write_set, events) = change_set.into_inner();
+        let write_set = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
         Ok((
             VMStatus::Executed,
-            TransactionOutput::new(write_set, events, 0, VMStatus::Executed.into()),
+            TransactionOutput::new(write_set, 0, VMStatus::Executed.into()),
         ))
     }
 
@@ -540,8 +540,8 @@ impl LibraVM {
         };
 
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        let (epilogue_writeset, epilogue_events) =
-            txn_effects_to_writeset_and_events_cached(&mut (), effects)?;
+        let epilogue_writeset =
+            txn_effects_to_writeset_cached(&mut (), effects)?;
 
         // Make sure epilogue WriteSet doesn't intersect with the writeset in TransactionPayload.
         if !epilogue_writeset
@@ -559,21 +559,6 @@ impl LibraVM {
             let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
             return Ok(discard_error_vm_status(vm_status));
         }
-        if !epilogue_events
-            .iter()
-            .map(|event| event.key())
-            .collect::<HashSet<_>>()
-            .is_disjoint(
-                &change_set
-                    .events()
-                    .iter()
-                    .map(|event| event.key())
-                    .collect::<HashSet<_>>(),
-            )
-        {
-            let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
-            return Ok(discard_error_vm_status(vm_status));
-        }
 
         let write_set = WriteSetMut::new(
             epilogue_writeset
@@ -584,19 +569,12 @@ impl LibraVM {
         )
         .freeze()
         .map_err(|_| VMStatus::Error(StatusCode::INVALID_WRITE_SET))?;
-        let events = change_set
-            .events()
-            .iter()
-            .chain(epilogue_events.iter())
-            .cloned()
-            .collect();
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
         Ok((
             VMStatus::Executed,
             TransactionOutput::new(
                 write_set,
-                events,
                 0,
                 TransactionStatus::Keep(KeptVMStatus::Executed),
             ),
@@ -636,7 +614,6 @@ impl LibraVM {
             if should_restart {
                 let txn_output = TransactionOutput::new(
                     WriteSet::default(),
-                    vec![],
                     0,
                     TransactionStatus::Retry,
                 );
@@ -756,11 +733,12 @@ fn preprocess_transaction(txn: Transaction) -> Result<PreprocessedTransaction, V
 }
 
 fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
-    let new_epoch_event_key = libra_types::on_chain_config::new_epoch_event_key();
+    panic!("TODO: look in WriteSet instead")
+    /*let new_epoch_event_key = libra_types::on_chain_config::new_epoch_event_key();
     vm_output
         .events()
         .iter()
-        .any(|event| *event.key() == new_epoch_event_key)
+        .any(|event| *event.key() == new_epoch_event_key)*/
 }
 
 /// Transactions after signature checking:
@@ -815,7 +793,6 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
     // Since this transaction will be discarded, no writeset will be included.
     TransactionOutput::new(
         WriteSet::default(),
-        vec![],
         0,
         TransactionStatus::Discard(err),
     )

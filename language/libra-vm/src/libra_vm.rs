@@ -16,6 +16,7 @@ use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
+    access_path::AccessPath,
     account_config::{self, CurrencyInfoResource},
     contract_event::ContractEvent,
     event::EventKey,
@@ -471,10 +472,10 @@ impl<'a> LibraVMInternals<'a> {
     }
 }
 
-pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
+pub fn txn_effects_to_writeset_cached<C: AccessPathCache>(
     ap_cache: &mut C,
     effects: TransactionEffects,
-) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
+) -> Result<WriteSet, VMStatus> {
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
 
@@ -499,10 +500,6 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         ops.push((ap_cache.get_module_path(module_id), WriteOp::Value(blob)))
     }
 
-    let ws = WriteSetMut::new(ops)
-        .freeze()
-        .map_err(|_| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
-
     let events = effects
         .events
         .into_iter()
@@ -516,7 +513,21 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         })
         .collect::<Result<Vec<_>, VMStatus>>()?;
 
-    Ok((ws, events))
+    for event in events {
+        ops.push((
+            AccessPath::from(&event),
+            // TODO: there are two options for what we can store here:
+            // (1) type tag + raw event
+            // (2) just raw event, but roll type tag into event access path (as we do for resources). E.g.: 
+            WriteOp::Value(lcs::to_bytes(&event).map_err(|_| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?)
+        ));
+    }
+
+    let ws = WriteSetMut::new(ops)
+        .freeze()
+        .map_err(|_| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
+
+    Ok(ws)
 }
 
 pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
@@ -553,20 +564,19 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         .get();
 
     let effects = session.finish().map_err(|e| e.into_vm_status())?;
-    let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
+    let write_set = txn_effects_to_writeset_cached(ap_cache, effects)?;
 
     Ok(TransactionOutput::new(
         write_set,
-        events,
         gas_used,
         TransactionStatus::Keep(status),
     ))
 }
 
-pub fn txn_effects_to_writeset_and_events(
+pub fn txn_effects_to_writeset(
     effects: TransactionEffects,
-) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
-    txn_effects_to_writeset_and_events_cached(&mut (), effects)
+) -> Result<WriteSet, VMStatus> {
+    txn_effects_to_writeset_cached(&mut (), effects)
 }
 
 pub(crate) fn get_currency_info(

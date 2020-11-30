@@ -14,6 +14,7 @@ use std::fmt::{Display, Formatter};
 
 pub const CODE_TAG: u8 = 0;
 pub const RESOURCE_TAG: u8 = 1;
+pub const EVENT_TAG: u8 = 2;
 
 pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::new([
     0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,

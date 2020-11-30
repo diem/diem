@@ -35,9 +35,9 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-use crate::account_address::AccountAddress;
+use crate::{account_address::AccountAddress, contract_event::ContractEvent};
 use libra_crypto::hash::HashValue;
-use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG};
+use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -51,10 +51,11 @@ pub struct AccessPath {
     pub path: Vec<u8>,
 }
 
-impl AccessPath {
-    pub const CODE_TAG: u8 = 0;
-    pub const RESOURCE_TAG: u8 = 1;
+pub const CODE_TAG: u8 = 0;
+pub const RESOURCE_TAG: u8 = 1;
+pub const EVENT_TAG: u8 = 2;
 
+impl AccessPath {
     pub fn new(address: AccountAddress, path: Vec<u8>) -> Self {
         AccessPath { address, path }
     }
@@ -106,6 +107,7 @@ impl fmt::Display for AccessPath {
             match self.path[0] {
                 RESOURCE_TAG => write!(f, "type: Resource, ")?,
                 CODE_TAG => write!(f, "type: Module, ")?,
+                EVENT_TAG => write!(f, "type: Event, ")?,
                 tag => write!(f, "type: {:?}, ", tag)?,
             };
             write!(
@@ -127,6 +129,18 @@ impl From<&ModuleId> for AccessPath {
         AccessPath {
             address: *id.address(),
             path: id.access_vector(),
+        }
+    }
+}
+
+impl From<&ContractEvent> for AccessPath {
+    fn from(event: &ContractEvent) -> AccessPath {
+        let mut path = vec![];
+        path.push(EVENT_TAG);
+        path.append(&mut event.key().get_creation_number().to_le_bytes().to_vec());
+        AccessPath {
+            address: event.key().get_creator_address(),
+            path,
         }
     }
 }

@@ -108,8 +108,8 @@ impl Arbitrary for WriteSet {
 impl Arbitrary for ChangeSet {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {
-        (any::<WriteSet>(), vec(any::<ContractEvent>(), 0..10))
-            .prop_map(|(ws, events)| ChangeSet::new(ws, events))
+        (any::<WriteSet>(), 0..10)
+            .prop_map(|(ws, _)| ChangeSet::new(ws))
             .boxed()
     }
 
@@ -515,14 +515,14 @@ impl TransactionPayload {
 
     pub fn write_set_strategy() -> impl Strategy<Value = Self> {
         any::<WriteSet>().prop_map(|ws| {
-            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws, vec![])))
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws)))
         })
     }
 
     /// Similar to `write_set_strategy` except generates a valid write set for the genesis block.
     pub fn genesis_strategy() -> impl Strategy<Value = Self> {
         WriteSet::genesis_strategy().prop_map(|ws| {
-            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws, vec![])))
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws)))
         })
     }
 }

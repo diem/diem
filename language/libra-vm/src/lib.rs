@@ -121,7 +121,7 @@ pub mod system_module_names;
 
 pub use crate::{
     libra_transaction_executor::LibraVM, libra_transaction_validator::LibraVMValidator,
-    libra_vm::txn_effects_to_writeset_and_events,
+    libra_vm::txn_effects_to_writeset,
 };
 
 use libra_state_view::StateView;
