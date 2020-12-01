@@ -596,7 +596,6 @@ struct Worker {
 struct SubmissionWorker {
     accounts: Vec<AccountData>,
     client: JsonRpcAsyncClient,
-    #[allow(clippy::rc_buffer)]
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,

@@ -39,6 +39,7 @@ allowed = [
     "clippy::mutable_key_type",
     "clippy::eval-order-dependence",
     "clippy::new-without-default",
+    "clippy::rc_buffer",
 ]
 warn = [
     "clippy::wildcard_dependencies",

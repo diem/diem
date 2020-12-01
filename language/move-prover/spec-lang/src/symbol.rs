@@ -43,7 +43,6 @@ pub struct SymbolPool {
 }
 
 #[derive(Debug)]
-#[allow(clippy::rc_buffer)]
 struct InnerPool {
     strings: Vec<Rc<String>>,
     lookup: HashMap<Rc<String>, usize>,
@@ -79,7 +78,6 @@ impl SymbolPool {
     /// Returns the string representation of this symbol, as an rc'ed string to avoid copies.
     /// If the past symbol was not created from this pool, a runtime error may happen (or a wrong
     /// string will be returned).
-    #[allow(clippy::rc_buffer)]
     pub fn string(&self, sym: Symbol) -> Rc<String> {
         self.inner.borrow().strings[sym.0].clone()
     }

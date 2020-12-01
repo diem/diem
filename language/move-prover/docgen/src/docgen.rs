@@ -1303,7 +1303,6 @@ impl<'env> Docgen<'env> {
     // Helpers
 
     /// Returns a string for a name symbol.
-    #[allow(clippy::rc_buffer)]
     fn name_string(&self, name: Symbol) -> Rc<String> {
         self.env.symbol_pool().string(name)
     }

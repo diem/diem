@@ -230,7 +230,6 @@ impl<'env> ErrmapGen<'env> {
         ModuleId::new(addr, name)
     }
 
-    #[allow(clippy::rc_buffer)]
     fn name_string(&self, symbol: Symbol) -> Rc<String> {
         self.env.symbol_pool().string(symbol)
     }

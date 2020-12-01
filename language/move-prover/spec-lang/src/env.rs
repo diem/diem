@@ -2553,8 +2553,6 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Returns the function name excluding the address and the module name
-    //TODO: return slice rather than owned strings.
-    #[allow(clippy::rc_buffer)]
     pub fn get_simple_name_string(&self) -> Rc<String> {
         self.symbol_pool().string(self.get_name())
     }
