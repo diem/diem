@@ -358,7 +358,7 @@ At the same time, the other two functions, `unpublish` and `write`, are never
 executed, making the average coverage 27.78% for the whole `Test` module.
 
 Internally, Move CLI uses the tracing feature provided by the Move VM to record
-records which instructions in the compiled bytecode are executed and uses this
+which instructions in the compiled bytecode are executed and uses this
 information to calculate code coverage. Instruction coverage in Move can
 usually serve the purpose of line coverage in common C/C++/Rust coverage
 tracking tools.
