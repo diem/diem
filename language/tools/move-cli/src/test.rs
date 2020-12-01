@@ -250,8 +250,8 @@ pub fn run_one(
 }
 
 pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Result<()> {
-    let mut test_total = 0;
-    let mut test_passed = 0;
+    let mut test_total: u64 = 0;
+    let mut test_passed: u64 = 0;
     let mut cov_info = ExecCoverageMapWithModules::empty();
 
     // find `args.txt` and iterate over them
@@ -260,19 +260,19 @@ pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Re
     })? {
         match run_one(Path::new(&entry), cli_binary, track_cov) {
             Ok(cov_opt) => {
-                test_passed += 1;
+                test_passed = test_passed.checked_add(1).unwrap();
                 if let Some(cov) = cov_opt {
                     cov_info.merge(cov);
                 }
             }
             Err(ex) => eprintln!("Test {} failed with error: {}", entry, ex),
         }
-        test_total += 1;
+        test_total = test_total.checked_add(1).unwrap();
     }
     println!("{} / {} test(s) passed.", test_passed, test_total);
 
     // if any test fails, bail
-    let test_failed = test_total - test_passed;
+    let test_failed = test_total.checked_sub(test_passed).unwrap();
     if test_failed != 0 {
         anyhow::bail!("{} / {} test(s) failed.", test_failed, test_total)
     }
