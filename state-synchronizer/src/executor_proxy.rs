@@ -49,6 +49,9 @@ pub trait ExecutorProxyTrait: Send {
     /// Get ledger info at an epoch boundary version.
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 
+    /// Returns the ledger's timestamp for the given version in microseconds
+    fn get_version_timestamp(&self, version: u64) -> Result<u64>;
+
     /// Load all on-chain configs from storage
     /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
     /// using the tonic storage read client, which needs the tokio runtime to block on with no runtime/async issues
@@ -193,6 +196,10 @@ impl ExecutorProxyTrait for ExecutorProxy {
 
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage.get_epoch_ending_ledger_info(version)
+    }
+
+    fn get_version_timestamp(&self, version: u64) -> Result<u64> {
+        self.storage.get_block_timestamp(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {

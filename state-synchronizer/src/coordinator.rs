@@ -461,6 +461,19 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let local_epoch = self.local_state.epoch();
         counters::set_version(counters::VersionType::Synced, synced_version);
         counters::set_version(counters::VersionType::Committed, committed_version);
+        counters::set_timestamp(
+            counters::TimestampType::Synced,
+            self.executor_proxy.get_version_timestamp(synced_version)?,
+        );
+        counters::set_timestamp(
+            counters::TimestampType::Committed,
+            self.executor_proxy
+                .get_version_timestamp(committed_version)?,
+        );
+        counters::set_timestamp(
+            counters::TimestampType::Real,
+            libra_infallible::duration_since_epoch().as_micros() as u64,
+        );
         counters::EPOCH.set(local_epoch as i64);
         debug!(LogSchema::new(LogEntry::LocalState)
             .local_li_version(committed_version)

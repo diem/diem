@@ -18,7 +18,31 @@ pub const COMMIT_MSG_LABEL: &str = "commit";
 pub const CHUNK_REQUEST_MSG_LABEL: &str = "chunk_request";
 pub const CHUNK_RESPONSE_MSG_LABEL: &str = "chunk_response";
 
-// version type labels
+pub fn set_timestamp(timestamp_type: TimestampType, time_as_usecs: u64) {
+    TIMESTAMP
+        .with_label_values(&[timestamp_type.as_str()])
+        .set((time_as_usecs / 1000) as i64)
+}
+
+pub enum TimestampType {
+    /// Current ledger committed timestamp
+    Committed,
+    /// Current computers clock
+    Real,
+    /// Current ledger synced timestamp
+    Synced,
+}
+
+impl TimestampType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TimestampType::Committed => "committed",
+            TimestampType::Real => "real",
+            TimestampType::Synced => "synced",
+        }
+    }
+}
+
 pub fn set_version(version_type: VersionType, version: u64) {
     VERSION
         .with_label_values(&[version_type.as_str()])
@@ -154,6 +178,15 @@ pub static MULTICAST_LEVEL: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_state_sync_multicast_level",
         "Max network preference of the networks state sync is sending chunk requests to"
+    )
+    .unwrap()
+});
+
+pub static TIMESTAMP: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_state_sync_timestamp",
+        "Timestamp involved in state sync progress",
+        &["type"] // see TimestampType above
     )
     .unwrap()
 });
