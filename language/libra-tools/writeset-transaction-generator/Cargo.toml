@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-structopt = "0.3.20"
+structopt = "0.3.21"
 tempfile = "3.1.0"
 handlebars = "3.5.1"
 serde = { version = "1.0.117", default-features = false }

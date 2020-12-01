@@ -11,7 +11,7 @@ license = "Apache-2.0"
 determinator = "0.1"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
-structopt = "0.3.20"
+structopt = "0.3.21"
 anyhow = "1.0.34"
 colored-diff = "0.2.2"
 guppy = { version = "0.5.0", features = ["summaries"] }

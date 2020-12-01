@@ -24,7 +24,7 @@ regex = "1.4.2"
 reqwest = { version = "0.10.8", features = ["stream"], default-features = false }
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
-structopt = "0.3.20"
+structopt = "0.3.21"
 toml = "0.5.7"
 tokio = { version = "0.2.22", features = ["full"] }
 tokio-util = { version = "0.3.1", features = ["compat"] }

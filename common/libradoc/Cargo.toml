@@ -14,7 +14,7 @@ serde-reflection = "0.3.2"
 serde-generate = "0.16.0"
 anyhow = "1.0.34"
 regex = "1.4.2"
-structopt = "0.3.20"
+structopt = "0.3.21"
 once_cell = "1.4.1"
 
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
