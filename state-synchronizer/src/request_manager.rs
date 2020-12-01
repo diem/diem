@@ -286,11 +286,6 @@ impl RequestManager {
             .event(LogEvent::ChunkRequestInfo)
             .chunk_req_info(&req_info));
 
-        // This is for counters, either it is some or assumed to be the version proceeding known
-        let target_version = req
-            .target()
-            .version()
-            .unwrap_or_else(|| req.known_version.wrapping_add(1));
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
         let mut failed_peer_sends = vec![];
 
@@ -320,7 +315,6 @@ impl RequestManager {
         }
 
         if failed_peer_sends.is_empty() {
-            counters::set_version(counters::VersionType::Target, target_version);
             Ok(())
         } else {
             bail!("Failed to send chunk request to: {:?}", failed_peer_sends)

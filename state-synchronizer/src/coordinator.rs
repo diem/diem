@@ -144,6 +144,10 @@ impl PendingLedgerInfos {
     fn target_li(&self) -> Option<LedgerInfoWithSignatures> {
         self.target_li.clone()
     }
+
+    fn highest_version(&self) -> Option<Version> {
+        self.pending_li_queue.keys().last().cloned()
+    }
 }
 
 /// Coordination of synchronization process is driven by SyncCoordinator, which `start()` function
@@ -1217,6 +1221,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         };
 
+        let target_version = target
+            .version()
+            .unwrap_or_else(|| known_version.wrapping_add(1));
+        counters::set_version(counters::VersionType::Target, target_version);
+        let highest_version = self
+            .pending_ledger_infos
+            .highest_version()
+            .unwrap_or(target_version);
+        counters::set_version(counters::VersionType::Highest, highest_version);
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
         self.request_manager.send_chunk_request(req)
     }

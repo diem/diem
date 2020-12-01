@@ -28,6 +28,8 @@ pub fn set_version(version_type: VersionType, version: u64) {
 pub enum VersionType {
     /// Version of latest ledger info committed.
     Committed,
+    /// Highest known version or version proceeding it
+    Highest,
     /// Version of most recent txn that was synced (even if it is not backed by an LI)
     Synced,
     /// Current version a node is trying to catch up to usually within the current epoch
@@ -38,6 +40,7 @@ impl VersionType {
     pub fn as_str(&self) -> &'static str {
         match self {
             VersionType::Committed => "committed",
+            VersionType::Highest => "highest",
             VersionType::Synced => "synced",
             VersionType::Target => "target",
         }
