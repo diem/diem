@@ -231,6 +231,7 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+ "serde",
 ]
 
 [[package]]
@@ -3188,6 +3189,7 @@ dependencies = [
 name = "libra-logger"
 version = "0.1.0"
 dependencies = [
+ "backtrace",
  "chrono",
  "erased-serde",
  "hostname",

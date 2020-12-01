@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use backtrace::Backtrace;
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     /// The level of verbosity of the event
     level: Level,
@@ -23,10 +24,14 @@ pub struct Metadata {
 
     /// The file name and line number together 'file:line'
     location: &'static str,
+
+    /// The program backtrace taken when the event occurred. Backtraces are
+    /// only supported for errors.
+    backtrace: Option<Backtrace>,
 }
 
 impl Metadata {
-    pub const fn new(
+    pub fn new(
         level: Level,
         target: &'static str,
         module_path: &'static str,
@@ -34,6 +39,11 @@ impl Metadata {
         line: u32,
         location: &'static str,
     ) -> Self {
+        let backtrace = match level {
+            Level::Error => Some(Backtrace::new()),
+            _ => None,
+        };
+
         Self {
             level,
             target,
@@ -41,6 +51,7 @@ impl Metadata {
             file,
             line,
             location,
+            backtrace,
         }
     }
 
@@ -70,6 +81,10 @@ impl Metadata {
 
     pub fn location(&self) -> &'static str {
         self.location
+    }
+
+    pub fn backtrace(&self) -> Option<Backtrace> {
+        self.backtrace.clone()
     }
 }
 
