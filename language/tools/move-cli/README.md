@@ -325,6 +325,87 @@ Command `run scripts/debug_script.move --signers 0xf --mode bare`:
 ...
 ```
 
+### Testing with code coverage tracking
+
+Code coverage has been an important metric in software testing. In Move CLI, we
+address the need for code coverage information with an additional flag,
+`--track-cov`, that can be passed to the `move test` command.
+
+Using our running example to illustrate:
+```shell
+$ move test readme --track-cov
+1 / 1 test(s) passed.
+Module 00000000000000000000000000000002::Test
+        fun publish
+                total: 5
+                covered: 5
+                % coverage: 100.00
+        fun unpublish
+                total: 6
+                covered: 0
+                % coverage: 0.00
+        fun write
+                total: 7
+                covered: 0
+                % coverage: 0.00
+>>> % Module coverage: 27.78
+```
+
+The output indicates that not only the test is passed, but also that a 100%
+instruction coverage is observed in the `publish` funciton. This is expected
+as the whole purpose of our `test_script.move` is to run the `publish` function.
+At the same time, the other two functions, `unpublish` and `write`, are never
+executed, making the average coverage 27.78% for the whole `Test` module.
+
+Internally, Move CLI uses the tracing feature provided by the Move VM to record
+records which instructions in the compiled bytecode are executed and uses this
+information to calculate code coverage. Instruction coverage in Move can
+usually serve the purpose of line coverage in common C/C++/Rust coverage
+tracking tools.
+
+Note that the coverage information is aggregated across multiple `run` commands
+in `args.txt`. To illustrate this, suppose that we have another test script,
+`test_unpublish_script.move`, under `readme/src/scripts` with the following
+content:
+
+```rust
+script {
+use 0x2::Test;
+fun main(account: &signer) {
+    Test::unpublish(account)
+}
+}
+```
+
+We further add a new command to the end of `args.txt`
+(`args.exp` needs to be updated too).
+```shell
+run src/scripts/test_unpublish_script.move --signers 0xf -v --mode bare
+```
+
+Now we can re-test the `readme` again
+```shell
+$ move test readme --track-cov
+1 / 1 test(s) passed.
+Module 00000000000000000000000000000002::Test
+        fun publish
+                total: 5
+                covered: 5
+                % coverage: 100.00
+        fun unpublish
+                total: 6
+                covered: 6
+                % coverage: 100.00
+        fun write
+                total: 7
+                covered: 0
+                % coverage: 0.00
+>>> % Module coverage: 61.11
+```
+
+This time, note that the `unpublish` function is 100% covered too and the
+overall module coverage is boosted to 61.11%.
+
 ## Using the CLI with modes and genesis state
 
 The CLI offers a couple of different _modes_ that it can be run with---each
