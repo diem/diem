@@ -3419,6 +3419,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-rate-limiter"
+version = "0.1.0"
+dependencies = [
+ "libra-logger",
+ "libra-workspace-hack",
+ "tokio",
+]
+
+[[package]]
 name = "libra-retrier"
 version = "0.1.0"
 dependencies = [

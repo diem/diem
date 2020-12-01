@@ -113,6 +113,7 @@ members = [
     "common/channel/many-keys-stress-test",
     "common/libradoc",
     "common/proptest-helpers",
+    "common/rate-limiter",
     "common/retrier",
     "devtools/x",
     "devtools/x-core",

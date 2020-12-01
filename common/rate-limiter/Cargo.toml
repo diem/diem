@@ -1,0 +1,15 @@
+[package]
+name = "libra-rate-limiter"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra implementation for rate limiter"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+libra-workspace-hack = { path = "..//workspace-hack", version = "0.1.0" }
+tokio = { version = "0.2.22", features = ["time"] }
+libra-logger = { path = "../../common/logger", version = "0.1.0"}
