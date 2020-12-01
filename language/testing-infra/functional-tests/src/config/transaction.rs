@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
+use crate::{config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use language_e2e_tests::account::Account;
 use move_core_types::{
     account_address::AccountAddress,
@@ -40,20 +40,21 @@ impl FromStr for Entry {
 
     fn from_str(s: &str) -> Result<Self> {
         let s = s.split_whitespace().collect::<String>();
-        let s = strip(&s, "//!")
+        let s = &s
+            .strip_prefix("//!")
             .ok_or_else(|| ErrorKind::Other("txn config entry must start with //!".to_string()))?
             .trim_start();
 
-        if let Some(s) = strip(s, "sender:") {
+        if let Some(s) = s.strip_prefix("sender:") {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
             return Ok(Entry::Sender(s.to_ascii_lowercase()));
         }
-        if let Some(s) = strip(s, "type-args:") {
+        if let Some(s) = s.strip_prefix("type-args:") {
             return Ok(Entry::TypeArguments(parse_type_tags(s)?));
         }
-        if let Some(s) = strip(s, "args:") {
+        if let Some(s) = s.strip_prefix("args:") {
             return Ok(Entry::Arguments(
                 parse_transaction_arguments(s)?
                     .into_iter()
@@ -61,7 +62,7 @@ impl FromStr for Entry {
                     .collect(),
             ));
         }
-        if let Some(s) = strip(s, "no-run:") {
+        if let Some(s) = s.strip_prefix("no-run:") {
             let res: Result<Vec<_>> = s
                 .split(',')
                 .map(|s| s.trim())
@@ -70,31 +71,31 @@ impl FromStr for Entry {
                 .collect();
             return Ok(Entry::DisableStages(res?));
         }
-        if let Some(s) = strip(s, "max-gas:") {
+        if let Some(s) = s.strip_prefix("max-gas:") {
             return Ok(Entry::MaxGas(s.parse::<u64>()?));
         }
-        if let Some(s) = strip(s, "gas-price:") {
+        if let Some(s) = s.strip_prefix("gas-price:") {
             return Ok(Entry::GasPrice(s.parse::<u64>()?));
         }
-        if let Some(s) = strip(s, "gas-currency:") {
+        if let Some(s) = s.strip_prefix("gas-currency:") {
             return Ok(Entry::GasCurrencyCode(s.to_owned()));
         }
-        if let Some(s) = strip(s, "sequence-number:") {
+        if let Some(s) = s.strip_prefix("sequence-number:") {
             return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
         }
-        if let Some(s) = strip(s, "expiration-time:") {
+        if let Some(s) = s.strip_prefix("expiration-time:") {
             return Ok(Entry::ExpirationTime(s.parse::<u64>()?));
         }
-        if let Some(s) = strip(s, "execute-as:") {
+        if let Some(s) = s.strip_prefix("execute-as:") {
             return Ok(Entry::ExecuteAs(s.to_ascii_lowercase()));
         }
-        if let Some(s) = strip(s, "show-gas:") {
+        if let Some(s) = s.strip_prefix("show-gas:") {
             return Ok(Entry::ShowGas(s.trim_end().parse()?));
         }
-        if let Some(s) = strip(s, "show-writeset:") {
+        if let Some(s) = s.strip_prefix("show-writeset:") {
             return Ok(Entry::ShowWriteSet(s.trim_end().parse()?));
         }
-        if let Some(s) = strip(s, "show-events:") {
+        if let Some(s) = s.strip_prefix("show-events:") {
             return Ok(Entry::ShowEvents(s.trim_end().parse()?));
         }
 

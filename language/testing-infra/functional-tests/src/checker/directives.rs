@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    common::{strip, Sp},
-    errors::*,
-};
+use crate::{common::Sp, errors::*};
 use std::iter::Peekable;
 
 /// The basic unit of input to the directive parser.
@@ -171,7 +168,7 @@ impl Directive {
         macro_rules! strip {
             ($s: expr, $pat: expr) => {{
                 let pat = $pat;
-                let res = strip($s, pat);
+                let res = $s.strip_prefix(pat);
                 if res.is_some() {
                     offset += pat.len();
                 }

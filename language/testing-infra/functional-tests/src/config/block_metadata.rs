@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{common::strip, config::global::Config as GlobalConfig, errors::*};
+use crate::{config::global::Config as GlobalConfig, errors::*};
 use libra_crypto::HashValue;
 use libra_types::{account_address::AccountAddress, block_metadata::BlockMetadata};
 use std::str::FromStr;
@@ -23,18 +23,19 @@ impl FromStr for Entry {
 
     fn from_str(s: &str) -> Result<Self> {
         let s = s.split_whitespace().collect::<String>();
-        let s = strip(&s, "//!")
+        let s = &s
+            .strip_prefix("//!")
             .ok_or_else(|| ErrorKind::Other("txn config entry must start with //!".to_string()))?
             .trim_start();
 
-        if let Some(s) = strip(s, "proposer:") {
+        if let Some(s) = s.strip_prefix("proposer:") {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
             return Ok(Entry::Proposer(Proposer::Account(s.to_string())));
         }
 
-        if let Some(s) = strip(s, "proposer-address:") {
+        if let Some(s) = s.strip_prefix("proposer-address:") {
             if s.is_empty() {
                 return Err(ErrorKind::Other("sender address cannot be empty".to_string()).into());
             }
@@ -43,7 +44,7 @@ impl FromStr for Entry {
             )));
         }
 
-        if let Some(s) = strip(s, "block-time:") {
+        if let Some(s) = s.strip_prefix("block-time:") {
             return Ok(Entry::Timestamp(s.parse::<u64>()?));
         }
         Err(ErrorKind::Other(format!(

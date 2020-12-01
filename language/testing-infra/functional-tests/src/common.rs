@@ -92,10 +92,3 @@ impl<T> AsRef<T> for LineSp<T> {
         self.as_inner()
     }
 }
-
-/// Checks if `s` starts with `prefix`. If yes, returns a reference to the remaining part
-/// with the prefix stripped away.
-/// please just use: `s.strip_prefix(prefix)`
-pub fn strip<'a>(s: &'a str, prefix: &str) -> Option<&'a str> {
-    s.strip_prefix(prefix)
-}

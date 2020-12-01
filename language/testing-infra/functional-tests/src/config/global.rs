@@ -4,7 +4,7 @@
 // The config holds the options that define the testing environment.
 // A config entry starts with "//!", differentiating it from a directive.
 
-use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
+use crate::{errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::{
     account::{Account, AccountData, AccountRoleSpecifier},
     keygen::KeyGen,
@@ -121,11 +121,12 @@ impl FromStr for Entry {
 
     fn from_str(s: &str) -> Result<Self> {
         let s = s.split_whitespace().collect::<String>();
-        let s = strip(&s, "//!")
+        let s = &s
+            .strip_prefix("//!")
             .ok_or_else(|| ErrorKind::Other("txn config entry must start with //!".to_string()))?
             .trim_start();
 
-        if let Some(s) = strip(s, "account:") {
+        if let Some(s) = s.strip_prefix("account:") {
             let v: Vec<_> = s
                 .split(|c: char| c == ',' || c.is_whitespace())
                 .filter(|s| !s.is_empty())
