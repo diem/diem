@@ -1,0 +1,3 @@
+Command `publish src/modules --mode bare`:
+Command `run src/scripts/test.move --args 0u8 --mode bare --dry-run`:
+Command `run src/scripts/test.move --args 1u8 --mode bare --dry-run`:
