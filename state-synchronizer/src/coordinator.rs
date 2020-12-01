@@ -455,12 +455,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let synced_version = self.local_state.highest_version_in_local_storage();
         let committed_version = self.local_state.highest_local_li.ledger_info().version();
         let local_epoch = self.local_state.epoch();
-        counters::VERSION
-            .with_label_values(&[counters::SYNCED_VERSION_LABEL])
-            .set(synced_version as i64);
-        counters::VERSION
-            .with_label_values(&[counters::COMMITTED_VERSION_LABEL])
-            .set(committed_version as i64);
+        counters::set_version(counters::VersionType::Synced, synced_version);
+        counters::set_version(counters::VersionType::Committed, committed_version);
         counters::EPOCH.set(local_epoch as i64);
         debug!(LogSchema::new(LogEntry::LocalState)
             .local_li_version(committed_version)

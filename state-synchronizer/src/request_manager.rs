@@ -318,9 +318,7 @@ impl RequestManager {
         // TODO set target version of chunk request in counter
         if failed_peer_sends.is_empty() {
             if let Some(version) = target_version {
-                counters::VERSION
-                    .with_label_values(&[counters::TARGET_VERSION_LABEL])
-                    .set(version as i64);
+                counters::set_version(counters::VersionType::Target, version);
             }
             Ok(())
         } else {

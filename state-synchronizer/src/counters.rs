@@ -19,9 +19,30 @@ pub const CHUNK_REQUEST_MSG_LABEL: &str = "chunk_request";
 pub const CHUNK_RESPONSE_MSG_LABEL: &str = "chunk_response";
 
 // version type labels
-pub const COMMITTED_VERSION_LABEL: &str = "committed"; // Version of latest ledger info committed.
-pub const SYNCED_VERSION_LABEL: &str = "synced"; // Version of most recent txn that was synced (even if it is not backed by an LI)
-pub const TARGET_VERSION_LABEL: &str = "target"; // Version a node is trying to catch up to
+pub fn set_version(version_type: VersionType, version: u64) {
+    VERSION
+        .with_label_values(&[version_type.as_str()])
+        .set(version as i64)
+}
+
+pub enum VersionType {
+    /// Version of latest ledger info committed.
+    Committed,
+    /// Version of most recent txn that was synced (even if it is not backed by an LI)
+    Synced,
+    /// Current version a node is trying to catch up to usually within the current epoch
+    Target,
+}
+
+impl VersionType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VersionType::Committed => "committed",
+            VersionType::Synced => "synced",
+            VersionType::Target => "target",
+        }
+    }
+}
 
 // failed channel send type labels
 pub const CONSENSUS_SYNC_REQ_CALLBACK: &str = "consensus_sync_req_callback";
