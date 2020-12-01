@@ -351,7 +351,7 @@ Module 00000000000000000000000000000002::Test
 >>> % Module coverage: 27.78
 ```
 
-The output indicates that not only the test is passed, but also that a 100%
+The output indicates that not only the test is passed, but also that 100%
 instruction coverage is observed in the `publish` funciton. This is expected
 as the whole purpose of our `test_script.move` is to run the `publish` function.
 At the same time, the other two functions, `unpublish` and `write`, are never
