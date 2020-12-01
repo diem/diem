@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use crate::instance::Instance;
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
@@ -10,7 +11,10 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{sink::SinkExt, StreamExt, FutureExt, future::join};
+use futures::executor::block_on;
+use futures::future::join_all;
+use futures::lock::Mutex;
+use futures::{sink::SinkExt, FutureExt, StreamExt};
 use libra_config::{config::NodeConfig, network_id::NetworkId};
 use libra_crypto::x25519;
 use libra_logger::info;
@@ -25,17 +29,19 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use rand::{rngs::ThreadRng, seq::IteratorRandom};
 use state_synchronizer::network::{StateSynchronizerEvents, StateSynchronizerSender};
-use std::{cmp::min, collections::{HashMap, HashSet}, fmt, time::{Duration, Instant}, thread};
+use std::borrow::{Borrow, BorrowMut};
+use std::ops::Deref;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::{
+    cmp::min,
+    collections::{HashMap, HashSet},
+    fmt, thread,
+    time::{Duration, Instant},
+};
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
-use crate::instance::Instance;
-use futures::future::join_all;
-use std::borrow::{Borrow, BorrowMut};
-use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use tokio::time;
-use std::sync::Arc;
-use std::ops::Deref;
-use futures::lock::Mutex;
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions in mempool
 const SEND_AMOUNT: u64 = 1;
@@ -61,11 +67,7 @@ pub struct LoadTestParams {
         help = "Number of accounts to mint before starting the experiment"
     )]
     pub num_accounts_to_mint: usize,
-    #[structopt(
-        long,
-        default_value = "1",
-        help = "Number of stubbed nodes"
-    )]
+    #[structopt(long, default_value = "1", help = "Number of stubbed nodes")]
     pub num_of_stubbed_nodes: usize,
 }
 
@@ -107,9 +109,13 @@ impl Experiment for LoadTest {
         //let nodes = join_all(futures).await;
         let mut node1 = get_stubbed_node(&context.cluster.fullnode_instances()[0], 0).await;
         //let mut node2 = get_stubbed_node(&context.cluster.fullnode_instances()[1], 1).await;
-        info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[0].instance_config().pod_name());
+        info!(
+            "hhhhh pod name {:?}",
+            context.cluster.fullnode_instances()[0]
+                .instance_config()
+                .pod_name()
+        );
         //info!("hhhhh pod name {:?}", context.cluster.fullnode_instances()[1].instance_config().pod_name());
-
 
         let mut emit_job = None;
         let mut mempool_task = vec![];
@@ -246,7 +252,8 @@ impl Experiment for LoadTest {
         // this thread will panic.
         tokio::task::spawn_blocking(move || {
             drop(node1);
-        }).await?;
+        })
+        .await?;
 
         for s in report {
             info!("{}", s);
@@ -268,7 +275,6 @@ impl fmt::Display for LoadTest {
         )
     }
 }
-
 
 async fn get_stubbed_node(instance: &Instance, index: usize) -> StubbedNode {
     let vfn_endpoint = format!("http://{}:{}/v1", instance.ip(), instance.ac_port());
@@ -451,8 +457,6 @@ async fn state_sync_load_test(
     mut events: StateSynchronizerEvents,
 ) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;
-    let sender = Arc::new(Mutex::new(sender));
-    let clone = sender.clone();
     info!("hhhhhh111");
     let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
         peer_id
@@ -461,7 +465,6 @@ async fn state_sync_load_test(
             "received unexpected network event for state sync load test"
         ));
     };
-
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
@@ -476,78 +479,39 @@ async fn state_sync_load_test(
     static served_txns1: AtomicU64 = AtomicU64::new(0);
     static bytes1: AtomicU64 = AtomicU64::new(0);
     static msg_num1: AtomicU64 = AtomicU64::new(0);
+    let send = Arc::new(AtomicU64::new(0));
+    let ack = send.clone();
 
-    let a = async move {
-        let mut b = clone.try_lock().unwrap();
+    thread::spawn(move || {
         while Instant::now().duration_since(task_start) < duration {
             let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
                 chunk_request.clone(),
             ));
-            bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
-            msg_num1.fetch_add(1, Ordering::Relaxed);
-            b.send_to(vfn, msg);
+            bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::SeqCst);
+            msg_num1.fetch_add(1, Ordering::SeqCst);
+            while send.load(Ordering::SeqCst) >= 5 {}
+            let add = send.fetch_add(1, Ordering::SeqCst);
+            info!("aaa pending ack: {}", add + 1);
+            sender.send_to(vfn, msg);
         }
-    };
-    /*let a = thread::spawn(move || {
-        info!("hhhhhh2");
-        let mut b = clone.try_lock().unwrap();
-        while Instant::now().duration_since(task_start) < duration {
-            let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
-                chunk_request.clone(),
-            ));
-            bytes1.fetch_add(lcs::to_bytes(&msg).unwrap().len() as u64, Ordering::Relaxed);
-            msg_num1.fetch_add(1, Ordering::Relaxed);
-            b.send_to(vfn, msg);
-        }
-    });*/
-    time::delay_for(Duration::from_secs(10)).await;
-    let b = async move {
-        while let Some(response) = events.select_next_some().now_or_never() {
-            info!("hhhhhhh");
-            if let Event::Message(_remote_peer, payload) = response {
-                if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                    chunk_response,
-                ) = payload
-                {
-                    let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
-                    // TODO analyze response and update StateSyncResult with stats accordingly
-                    served_txns1.fetch_add(temp, Ordering::Relaxed);
-                    info!("hhhhhhhhh tx {}", temp);
-                }
+        info!("send thread ends");
+    });
+    while let Some(response) = events.next().await {
+        info!("hhhhhhh");
+        if let Event::Message(_remote_peer, payload) = response {
+            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                chunk_response,
+            ) = payload
+            {
+                let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                // TODO analyze response and update StateSyncResult with stats accordingly
+                served_txns1.fetch_add(temp, Ordering::SeqCst);
+                let sub = ack.fetch_sub(1, Ordering::SeqCst);
+                info!("bbb pending ack: {}", sub - 1);
             }
         }
-    };
-    /*let b = thread::spawn(move || {
-        while let Some(response) = events.select_next_some().now_or_never() {
-            info!("hhhhhhh");
-            if let Event::Message(_remote_peer, payload) = response {
-                if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                    chunk_response,
-                ) = payload
-                {
-                    let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
-                    // TODO analyze response and update StateSyncResult with stats accordingly
-                    served_txns1.fetch_add(temp, Ordering::Relaxed);
-                    info!("hhhhhhhhh tx {}", temp);
-                }
-            }
-        }
-    });*/
+    }
 
-    /*let response = events.select_next_some().await;
-    if let Event::Message(_remote_peer, payload) = response {
-        if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-            chunk_response,
-        ) = payload
-        {
-            let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
-            // TODO analyze response and update StateSyncResult with stats accordingly
-            served_txns1.fetch_add(temp, Ordering::Relaxed);
-            info!("hhhhhhhhh tx {}", temp);
-        }
-    }*/
-    let mut rt = Runtime::new().unwrap();
-    rt.block_on(join(a, b));
     let served_txns = served_txns1.load(Ordering::Relaxed);
     let bytes = bytes1.load(Ordering::Relaxed);
     let msg_num = msg_num1.load(Ordering::Relaxed);
