@@ -1,303 +1,15 @@
 [
   [
-    "010189eb756f028218f6dd01088ae20c5d0660aa1249dd4314bae8dff6dc02bed9",
+    "010000000000000000000000000000000103584458075265736572766500",
     {
       "address": "00000000000000000000000000000001",
-      "module": "DiemTransactionPublishingOption",
-      "name": "DiemTransactionPublishingOption",
+      "module": "XDX",
+      "name": "Reserve",
       "type_params": []
     }
   ],
   [
-    "0102592aa78482a2a45f70dd470227fdccfbc7f1593e4779cd7caf7753d9fd9b85",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "CreateAccountEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "01044daa839af0cc67586b2d72102660de9804307118f78660d328412dcdc36491",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Option",
-      "name": "Option",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemAccount",
-            "name": "KeyRotationCapability",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0105112f3114d1ce16f77e34ec67b24a842064993b095934cc8b13f3a21cdb33b7",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Roles",
-      "name": "RoleId",
-      "type_params": []
-    }
-  ],
-  [
-    "01074ab55935496cc500c4213ad4a64a5f86c4591915fc08069e9475a9111edfb0",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountFreezing",
-      "name": "FreezeAccountEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "010cf812caa08e3b91d8f1b3f16950d257a435b929b74b3ee997d51aa555af2a8a",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "ValidatorConfig",
-      "name": "Config",
-      "type_params": []
-    }
-  ],
-  [
-    "0112899569c230296a5e8e0926fccdbf7a7a449010f9edd3dbe6300119ae2ce811",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "TransactionFee",
-      "name": "TransactionFee",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0117f27d1c2e56cd2e47dfb5517450adce789a24ad711e734d3210ff8254801af0",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "BurnCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "011a35c11d36eb0f85db8dc7c7f2b4e3d1af60c2271d5aee0ac86c97e607e3bbdc",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "ModifyConfigCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "RegisteredCurrencies",
-            "name": "RegisteredCurrencies",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "011a9c40c64d16154570770496ad7c53b755682b25a3e020b951570c86ec704b0f",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "DiemConfig",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "RegisteredCurrencies",
-            "name": "RegisteredCurrencies",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "011b6fd2b29c20f5f779d150d47ccdab6f3b4a6ebe0dcf306886bf2194ef6bb89e",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DualAttestation",
-      "name": "Limit",
-      "type_params": []
-    }
-  ],
-  [
-    "011f6eeb55f1885003c71186e7bbf80b393bfb9604ab5027153d16617730c3e255",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountLimits",
-      "name": "AccountLimitMutationCapability",
-      "type_params": []
-    }
-  ],
-  [
-    "01268272535a3df2f4754fc249b8b1a800c58dc73133274b3cb80bb1399e45ad44",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "DiemWriteSetManager",
-      "type_params": []
-    }
-  ],
-  [
-    "0128c7f7b83054cfbb9bf0e7eca7f2b5a40bf59741e89f6cac68fe21522eefecc5",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "PreburnEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "012b60b912ee076aac0a04ed019d3c966b4c8248c68ffe912b7cf0322eda86aca1",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemVersion",
-      "name": "DiemVersion",
-      "type_params": []
-    }
-  ],
-  [
-    "012b6cbe9dbd764f1389a58edfefa645e893f8996cbb641ed86c009e0e1b236eb0",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DesignatedDealer",
-      "name": "TierInfo",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "012c3324513ca6159f7845daac8dcda8f8c46a64992fbdf7efe0c836030d7df457",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DesignatedDealer",
-      "name": "TierInfo",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XDX",
-            "name": "XDX",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0131326e1e1d0f542d5ddda666797bd5a2a44b8094e2881a25065c61d45838cfe0",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "VASP",
-      "name": "ParentVASP",
-      "type_params": []
-    }
-  ],
-  [
-    "0132c94d998fee0b20c6df77a1e3d8c5da53bbd3ecac519dca6fc2a92e72ba46f8",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DesignatedDealer",
-      "name": "ReceivedMintEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "0135c112e3c9918f6539c4d2cee3f4f2f82fae09a2c6bb60a630e6c01c6c38ee7b",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemSystem",
-      "name": "DiemSystem",
-      "type_params": []
-    }
-  ],
-  [
-    "0139bf86a870228cd9e9a0744833bcf8c2593fa594861259a095ab0fa2a0dde09f",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "ChainId",
-      "name": "ChainId",
-      "type_params": []
-    }
-  ],
-  [
-    "013dda847a1d16c0fad3c88a1b5677c0dc79fc4df0e3a02a55437dac5ea92125a2",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "KeyRotationCapability",
-      "type_params": []
-    }
-  ],
-  [
-    "014302b4f0b63b6ea4b9422e2330a84e9841e7c770d5367a1bdaed57c1e4f8a689",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemBlock",
-      "name": "BlockMetadata",
-      "type_params": []
-    }
-  ],
-  [
-    "01445c13812a56977ca14aa83aeb741e0980dd21c4e520328d1fb7c14069072039",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "Balance",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0145a88b0bd5bfa89a7c07e9669a6164debb4a1c39a89d6e87a879976dd55b56a5",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountFreezing",
-      "name": "FreezeEventsHolder",
-      "type_params": []
-    }
-  ],
-  [
-    "0145fc95ae78a6f9a65188248168d7efa4c238039c960a3cf645a27d8e3da28437",
+    "0100000000000000000000000000000001044469656d044469656d010700000000000000000000000000000001035844580358445800",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
@@ -315,254 +27,11 @@
     }
   ],
   [
-    "014b6dbad8c551b1f036aa86a468f44509f3366f672a970e0866daa14eaf1f372a",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "NewEpochEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "014b7b431bf5fe453da111b256e27e11b83dd19545bd723703c24a21d92504b575",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemVMConfig",
-      "name": "DiemVMConfig",
-      "type_params": []
-    }
-  ],
-  [
-    "01537af6bfd1a9cd0c23f3d7289b361836a34d389817fbe5d4b908609ab14cb8fb",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountLimits",
-      "name": "LimitsDefinition",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XDX",
-            "name": "XDX",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "015b7ec2145ac79fd76df48a56f52168761a8a7f93cdd4bcf0693600ce6a0fde6b",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Option",
-      "name": "Option",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "ValidatorConfig",
-            "name": "Config",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "015e40cd7b9c6127c1e3f4a0ecbd49b061a7fe06a206691468d26287f738abbb33",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemVMConfig",
-      "name": "GasConstants",
-      "type_params": []
-    }
-  ],
-  [
-    "015fe98e54e7482fad2f5b6c3625424744ea87d14bba5b3fd2071b761e250a81be",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "DiemConfig",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemSystem",
-            "name": "DiemSystem",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0163829849cd5e781a5e9de942dfc2d2d0ec3b70154af59e6f8c74e6226366c617",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "RegisteredCurrencies",
-      "name": "RegisteredCurrencies",
-      "type_params": []
-    }
-  ],
-  [
-    "0163dbc3422ef71915f9738cc48666a9ea5702a6c59c54820381b08bcff9a05131",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "ValidatorConfig",
-      "name": "ValidatorConfig",
-      "type_params": []
-    }
-  ],
-  [
-    "01657a36a94a4463465ad9abffbf3f317c42bcb92deafd22091eb0c8409e16a69b",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "ReceivedPaymentEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "01684f16ca7e938e275c452d44baa0dace7046e81079defdf883206b5515825893",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "DiemAccount",
-      "type_params": []
-    }
-  ],
-  [
-    "0169e6b1d48fbec15097a889c56e05d93bfb8c0b02bad095293273bba2917d76b7",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "SlidingNonce",
-      "name": "SlidingNonce",
-      "type_params": []
-    }
-  ],
-  [
-    "016e1ef5334765d3904d23267cdd8101cc1ea4cb8d0543bb9fd5f5c130d66dd007",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DualAttestation",
-      "name": "Credential",
-      "type_params": []
-    }
-  ],
-  [
-    "016edc90b5d6f91be693914cbcd20af9b2bd811b6262fec2e84e9a9038d3577b83",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "Configuration",
-      "type_params": []
-    }
-  ],
-  [
-    "0173b513a3c85b52f7d770b697d8ccc1d679611e19b90e335697f4381510412efc",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "DiemConfig",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemTransactionPublishingOption",
-            "name": "DiemTransactionPublishingOption",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "017c7f53aef4842736d325e7995ab9f7973b6784e6b9dd7a63afd80bd570ec8a81",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "FixedPoint32",
-      "name": "FixedPoint32",
-      "type_params": []
-    }
-  ],
-  [
-    "017e5211cd62277ca6687dd30e8a887c619a708ddc493016583100ea20dc58e2b6",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemTimestamp",
-      "name": "CurrentTimeMicroseconds",
-      "type_params": []
-    }
-  ],
-  [
-    "01807dd31c6bcf80b607468202866125fb10ca3c699c18eb861c7be19a19e08b96",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountFreezing",
-      "name": "FreezingBit",
-      "type_params": []
-    }
-  ],
-  [
-    "0181b1db4c5e92724faf83deb41a7fd6fd39d5fe8dc2dac372b41b0aa4f7101ee5",
+    "0100000000000000000000000000000001044469656d044469656d010700000000000000000000000000000001035855530358555300",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
-      "name": "MintCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XDX",
-            "name": "XDX",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "018456b30729656e73150a265806e0fcf1457040f69b268f1e6bd305fe2e6f01da",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemSystem",
-      "name": "ValidatorInfo",
-      "type_params": []
-    }
-  ],
-  [
-    "018768c92914f9179f86ad3f08ad9e004ad144edc2923bb5eabc3eacdbc6438f92",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "XDX",
-      "name": "Reserve",
-      "type_params": []
-    }
-  ],
-  [
-    "018837e691e2dfad61a86a752a81dda51b10a823b4a9b92b4734080bd1646638b9",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "SentPaymentEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "01898aa4792429d7cb13161b12e80d178397e06552ffdfe4b87d9afea851f60914",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "BurnEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "0189a4b3d205b6ffaa14c3e35ef672da35b9e5b21659e2bd855fb90c9ea68aee0e",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountLimits",
-      "name": "LimitsDefinition",
+      "name": "Diem",
       "type_params": [
         {
           "Struct": {
@@ -576,7 +45,7 @@
     }
   ],
   [
-    "018a5ad82e5ae58b4d744ab5c78007373ce8b950414b38a3f67df97ee64d7d5261",
+    "0100000000000000000000000000000001044469656d075072656275726e010700000000000000000000000000000001035844580358445800",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
@@ -594,17 +63,17 @@
     }
   ],
   [
-    "01908b866fff71b42be665e55f2104d7936e0c443811df00113d5292d271604731",
+    "0100000000000000000000000000000001044469656d075072656275726e010700000000000000000000000000000001035855530358555300",
     {
       "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "ModifyConfigCapability",
+      "module": "Diem",
+      "name": "Preburn",
       "type_params": [
         {
           "Struct": {
             "address": "00000000000000000000000000000001",
-            "module": "DiemSystem",
-            "name": "DiemSystem",
+            "module": "XUS",
+            "name": "XUS",
             "type_params": []
           }
         }
@@ -612,34 +81,43 @@
     }
   ],
   [
-    "01930bfce316538b494e279ccb03cbff937ca0416c3c6d1334fe8597fdba30d6b3",
+    "0100000000000000000000000000000001044469656d094275726e4576656e7400",
     {
       "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "ModifyConfigCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemTransactionPublishingOption",
-            "name": "DiemTransactionPublishingOption",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "0194539a59aa3cc35aa76618e8c7296730906b040db2c1bb5978942a3cdf865ace",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemSystem",
-      "name": "CapabilityHolder",
+      "module": "Diem",
+      "name": "BurnEvent",
       "type_params": []
     }
   ],
   [
-    "0194ff005657e4cd22d938a381796224e911acc64ea7b0bedadeabbdc903784b91",
+    "0100000000000000000000000000000001044469656d094d696e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Diem",
+      "name": "MintEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "0100000000000000000000000000000001044469656d0c43757272656e6379496e666f010700000000000000000000000000000001035844580358445800",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Diem",
+      "name": "CurrencyInfo",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XDX",
+            "name": "XDX",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001044469656d0c43757272656e6379496e666f010700000000000000000000000000000001035855530358555300",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
@@ -657,124 +135,16 @@
     }
   ],
   [
-    "019a06aba5ed3867bc24396156b7e1796b58d08bd1809b672adcbf6e87df6ef2eb",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DualAttestation",
-      "name": "BaseUrlRotationEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "019b1af31db39ebeed2a66437c15ce4fab3101b68624f6307d0ccd2af3c4083d9c",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DualAttestation",
-      "name": "ComplianceKeyRotationEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "019cefc537069ba839778cac48c315a42201c179d94af85e6a617b656e7a3556f5",
+    "0100000000000000000000000000000001044469656d0c5072656275726e4576656e7400",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
-      "name": "MintEvent",
+      "name": "PreburnEvent",
       "type_params": []
     }
   ],
   [
-    "019e0e78c176ed6538bfeb8a879f1ad9c1b63271f0ea8ab7857d8b3e69d8d8e9b4",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "Diem",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "019e80593be66d1a3fd3718d62e0e6e9898dd176a11f8a1b6e6c418af16d3bb744",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "AccountFreezing",
-      "name": "UnfreezeAccountEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "019fd5d4533093f1e7bcc14590f73e6fab02295bc7c8698849b6c261931e7ab547",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "MintCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "01a2448d5d1f048102c1e4c2d326199cd8e6a29b056a5fb560425fc3efacea5927",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemVMConfig",
-      "name": "GasSchedule",
-      "type_params": []
-    }
-  ],
-  [
-    "01a3408195082b97046d08ab4047eed60ba5231aa6c1c9ef715ecdefab88aef9d3",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "DiemConfig",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemVersion",
-            "name": "DiemVersion",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "01a40541b31f8b5153ccc1920ba1a6d8635b5ae642401864c2c68ddc6b6760eb9a",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemConfig",
-      "name": "ModifyConfigCapability",
-      "type_params": [
-        {
-          "Struct": {
-            "address": "00000000000000000000000000000001",
-            "module": "DiemVersion",
-            "name": "DiemVersion",
-            "type_params": []
-          }
-        }
-      ]
-    }
-  ],
-  [
-    "01a6125799e83e2caf942dbfee0e2b4b54d62379039911c3b80912123960a53d63",
+    "0100000000000000000000000000000001044469656d0e4275726e4361706162696c697479010700000000000000000000000000000001035844580358445800",
     {
       "address": "00000000000000000000000000000001",
       "module": "Diem",
@@ -792,34 +162,128 @@
     }
   ],
   [
-    "01a796582f423d4875cbb4f438dcd7c27584622b08752b27aa0c64fe38148f7078",
+    "0100000000000000000000000000000001044469656d0e4275726e4361706162696c697479010700000000000000000000000000000001035855530358555300",
     {
       "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "WithdrawCapability",
+      "module": "Diem",
+      "name": "BurnCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001044469656d0e4d696e744361706162696c697479010700000000000000000000000000000001035844580358445800",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Diem",
+      "name": "MintCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XDX",
+            "name": "XDX",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001044469656d0e4d696e744361706162696c697479010700000000000000000000000000000001035855530358555300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Diem",
+      "name": "MintCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001044469656d0f43616e63656c4275726e4576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Diem",
+      "name": "CancelBurnEvent",
       "type_params": []
     }
   ],
   [
-    "01b71ecbd94907c3c663e1475658ed7ea1f32c8eca46ff4470bfe72bbff076a51c",
+    "0100000000000000000000000000000001044469656d1c546f58445845786368616e6765526174655570646174654576656e7400",
     {
       "address": "00000000000000000000000000000001",
-      "module": "DesignatedDealer",
-      "name": "Dealer",
+      "module": "Diem",
+      "name": "ToXDXExchangeRateUpdateEvent",
       "type_params": []
     }
   ],
   [
-    "01b8de352f67a89de82bb0a21f8ee4b924e9f5600368e95c893171a63733f463fb",
+    "01000000000000000000000000000000010456415350094368696c645641535000",
     {
       "address": "00000000000000000000000000000001",
-      "module": "SharedEd25519PublicKey",
-      "name": "SharedEd25519PublicKey",
+      "module": "VASP",
+      "name": "ChildVASP",
       "type_params": []
     }
   ],
   [
-    "01bc6970344f7b2bbcb5e059a3b4c8ff2c4fdedf01c0e24769d57d19a7b6dd803d",
+    "010000000000000000000000000000000104564153500a506172656e745641535000",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "VASP",
+      "name": "ParentVASP",
+      "type_params": []
+    }
+  ],
+  [
+    "010000000000000000000000000000000105526f6c657306526f6c65496400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Roles",
+      "name": "RoleId",
+      "type_params": []
+    }
+  ],
+  [
+    "0100000000000000000000000000000001064f7074696f6e064f7074696f6e0102",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        "U64"
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001064f7074696f6e064f7074696f6e0104",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        "Address"
+      ]
+    }
+  ],
+  [
+    "0100000000000000000000000000000001064f7074696f6e064f7074696f6e0107000000000000000000000000000000010b4469656d4163636f756e741257697468647261774361706162696c69747900",
     {
       "address": "00000000000000000000000000000001",
       "module": "Option",
@@ -837,17 +301,17 @@
     }
   ],
   [
-    "01bd2244c73ffd3886d5ce2f76d36f5050372d54a61cffa39d1e4fae2e4d11f3c4",
+    "0100000000000000000000000000000001064f7074696f6e064f7074696f6e0107000000000000000000000000000000010b4469656d4163636f756e74154b6579526f746174696f6e4361706162696c69747900",
     {
       "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "CurrencyInfo",
+      "module": "Option",
+      "name": "Option",
       "type_params": [
         {
           "Struct": {
             "address": "00000000000000000000000000000001",
-            "module": "XDX",
-            "name": "XDX",
+            "module": "DiemAccount",
+            "name": "KeyRotationCapability",
             "type_params": []
           }
         }
@@ -855,26 +319,53 @@
     }
   ],
   [
-    "01c28655b9b5cd93f75953eaa5f77a1bf0032c5ca04c89f920c9ebaba74aa15759",
+    "0100000000000000000000000000000001064f7074696f6e064f7074696f6e0107000000000000000000000000000000010f56616c696461746f72436f6e66696706436f6e66696700",
     {
       "address": "00000000000000000000000000000001",
-      "module": "ValidatorOperatorConfig",
-      "name": "ValidatorOperatorConfig",
+      "module": "Option",
+      "name": "Option",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "ValidatorConfig",
+            "name": "Config",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "010000000000000000000000000000000107436861696e496407436861696e496400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ChainId",
+      "name": "ChainId",
       "type_params": []
     }
   ],
   [
-    "01c5abee902997bc51723cdbf3b7ad66d2a334d14ba21ae983c3693406385b19e2",
+    "0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemBlock",
+      "name": "BlockMetadata",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e6669670a4469656d436f6e6669670107000000000000000000000000000000010a4469656d53797374656d0a4469656d53797374656d00",
     {
       "address": "00000000000000000000000000000001",
       "module": "DiemConfig",
-      "name": "ModifyConfigCapability",
+      "name": "DiemConfig",
       "type_params": [
         {
           "Struct": {
             "address": "00000000000000000000000000000001",
-            "module": "DiemVMConfig",
-            "name": "DiemVMConfig",
+            "module": "DiemSystem",
+            "name": "DiemSystem",
             "type_params": []
           }
         }
@@ -882,7 +373,25 @@
     }
   ],
   [
-    "01d54c5a7dcfd5f668d359375bccdd04bd77d79f4dc4c76d939f80bd062a3c7743",
+    "01000000000000000000000000000000010a4469656d436f6e6669670a4469656d436f6e6669670107000000000000000000000000000000010b4469656d56657273696f6e0b4469656d56657273696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "DiemConfig",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemVersion",
+            "name": "DiemVersion",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e6669670a4469656d436f6e6669670107000000000000000000000000000000010c4469656d564d436f6e6669670c4469656d564d436f6e66696700",
     {
       "address": "00000000000000000000000000000001",
       "module": "DiemConfig",
@@ -900,55 +409,17 @@
     }
   ],
   [
-    "01d9bdbb5aa40ff8cffd2be2f9eeff2bdb983e58cb7532c68339a320d648681d66",
+    "01000000000000000000000000000000010a4469656d436f6e6669670a4469656d436f6e666967010700000000000000000000000000000001145265676973746572656443757272656e63696573145265676973746572656443757272656e6369657300",
     {
       "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "ToXDXExchangeRateUpdateEvent",
-      "type_params": []
-    }
-  ],
-  [
-    "01da1de5726ee78b137ff0df4ad9bc3381c754fd48a6d2a9e4fac07fa8803601bb",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Option",
-      "name": "Option",
-      "type_params": [
-        "U64"
-      ]
-    }
-  ],
-  [
-    "01e8af9e59348c99e9bedd90059e125d1059f80271dcfa4362b02f7e263ce6ec72",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "RecoveryAddress",
-      "name": "RecoveryAddress",
-      "type_params": []
-    }
-  ],
-  [
-    "01f02a5f4d464d8bb73f195be22bd78572c777c09a86c370e8b1441392c8de8304",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "DiemAccount",
-      "name": "AccountOperationsCapability",
-      "type_params": []
-    }
-  ],
-  [
-    "01f2a133f96cac512c6f2f3207542cd069a431efe3891378d20ca775cf3b3b8eeb",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "Preburn",
+      "module": "DiemConfig",
+      "name": "DiemConfig",
       "type_params": [
         {
           "Struct": {
             "address": "00000000000000000000000000000001",
-            "module": "XUS",
-            "name": "XUS",
+            "module": "RegisteredCurrencies",
+            "name": "RegisteredCurrencies",
             "type_params": []
           }
         }
@@ -956,25 +427,160 @@
     }
   ],
   [
-    "01f77125176049225bbd80e0c748fee99fcf2f0bd3dffe435e7f24e069152047eb",
+    "01000000000000000000000000000000010a4469656d436f6e6669670a4469656d436f6e6669670107000000000000000000000000000000011f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e1f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e00",
     {
       "address": "00000000000000000000000000000001",
-      "module": "VASP",
-      "name": "ChildVASP",
+      "module": "DiemConfig",
+      "name": "DiemConfig",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemTransactionPublishingOption",
+            "name": "DiemTransactionPublishingOption",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e6669670d436f6e66696775726174696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "Configuration",
       "type_params": []
     }
   ],
   [
-    "01fbe5c36611247aa1b2f8331e45f5ad3e97b6670b6605546e841ed54808a85d0a",
+    "01000000000000000000000000000000010a4469656d436f6e6669670d4e657745706f63684576656e7400",
     {
       "address": "00000000000000000000000000000001",
-      "module": "Diem",
-      "name": "CancelBurnEvent",
+      "module": "DiemConfig",
+      "name": "NewEpochEvent",
       "type_params": []
     }
   ],
   [
-    "01fed7a7652e644876be3d2437c82d8e9c5a858fb4c0bf56f4913bf56b23b89b4c",
+    "01000000000000000000000000000000010a4469656d436f6e666967164d6f64696679436f6e6669674361706162696c6974790107000000000000000000000000000000010a4469656d53797374656d0a4469656d53797374656d00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemSystem",
+            "name": "DiemSystem",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e666967164d6f64696679436f6e6669674361706162696c6974790107000000000000000000000000000000010b4469656d56657273696f6e0b4469656d56657273696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemVersion",
+            "name": "DiemVersion",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e666967164d6f64696679436f6e6669674361706162696c6974790107000000000000000000000000000000010c4469656d564d436f6e6669670c4469656d564d436f6e66696700",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemVMConfig",
+            "name": "DiemVMConfig",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e666967164d6f64696679436f6e6669674361706162696c697479010700000000000000000000000000000001145265676973746572656443757272656e63696573145265676973746572656443757272656e6369657300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "RegisteredCurrencies",
+            "name": "RegisteredCurrencies",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d436f6e666967164d6f64696679436f6e6669674361706162696c6974790107000000000000000000000000000000011f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e1f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemConfig",
+      "name": "ModifyConfigCapability",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "DiemTransactionPublishingOption",
+            "name": "DiemTransactionPublishingOption",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d53797374656d0a4469656d53797374656d00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemSystem",
+      "name": "DiemSystem",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d53797374656d0d56616c696461746f72496e666f00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemSystem",
+      "name": "ValidatorInfo",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010a4469656d53797374656d104361706162696c697479486f6c64657200",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemSystem",
+      "name": "CapabilityHolder",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e740742616c616e6365010700000000000000000000000000000001035844580358445800",
     {
       "address": "00000000000000000000000000000001",
       "module": "DiemAccount",
@@ -992,14 +598,408 @@
     }
   ],
   [
-    "01fefd700bb0bd41336f2bb7803ae998fabf19cf2b64a89170f3a9b1bcd0f0d65b",
+    "01000000000000000000000000000000010b4469656d4163636f756e740742616c616e6365010700000000000000000000000000000001035855530358555300",
     {
       "address": "00000000000000000000000000000001",
-      "module": "Option",
-      "name": "Option",
+      "module": "DiemAccount",
+      "name": "Balance",
       "type_params": [
-        "Address"
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
       ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e740b4469656d4163636f756e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "DiemAccount",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e741053656e745061796d656e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "SentPaymentEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e74124372656174654163636f756e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "CreateAccountEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e741257697468647261774361706162696c69747900",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "WithdrawCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e74134469656d57726974655365744d616e6167657200",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "DiemWriteSetManager",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e741452656365697665645061796d656e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "ReceivedPaymentEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e74154b6579526f746174696f6e4361706162696c69747900",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "KeyRotationCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d4163636f756e741b4163636f756e744f7065726174696f6e734361706162696c69747900",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemAccount",
+      "name": "AccountOperationsCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010b4469656d56657273696f6e0b4469656d56657273696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemVersion",
+      "name": "DiemVersion",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010c4469656d564d436f6e6669670b4761735363686564756c6500",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemVMConfig",
+      "name": "GasSchedule",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010c4469656d564d436f6e6669670c4469656d564d436f6e66696700",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemVMConfig",
+      "name": "DiemVMConfig",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010c4469656d564d436f6e6669670c476173436f6e7374616e747300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemVMConfig",
+      "name": "GasConstants",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010c4669786564506f696e7433320c4669786564506f696e74333200",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "FixedPoint32",
+      "name": "FixedPoint32",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010c536c6964696e674e6f6e63650c536c6964696e674e6f6e636500",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "SlidingNonce",
+      "name": "SlidingNonce",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010d4163636f756e744c696d697473104c696d697473446566696e6974696f6e010700000000000000000000000000000001035844580358445800",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountLimits",
+      "name": "LimitsDefinition",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XDX",
+            "name": "XDX",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010d4163636f756e744c696d697473104c696d697473446566696e6974696f6e010700000000000000000000000000000001035855530358555300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountLimits",
+      "name": "LimitsDefinition",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010d4163636f756e744c696d6974731e4163636f756e744c696d69744d75746174696f6e4361706162696c69747900",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountLimits",
+      "name": "AccountLimitMutationCapability",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemTimestamp",
+      "name": "CurrentTimeMicroseconds",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010e5472616e73616374696f6e4665650e5472616e73616374696f6e466565010700000000000000000000000000000001035855530358555300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "TransactionFee",
+      "name": "TransactionFee",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4163636f756e74467265657a696e670b467265657a696e6742697400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "FreezingBit",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4163636f756e74467265657a696e6712467265657a654163636f756e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "FreezeAccountEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4163636f756e74467265657a696e6712467265657a654576656e7473486f6c64657200",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "FreezeEventsHolder",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4163636f756e74467265657a696e6714556e667265657a654163636f756e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "AccountFreezing",
+      "name": "UnfreezeAccountEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4475616c4174746573746174696f6e054c696d697400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "Limit",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4475616c4174746573746174696f6e0a43726564656e7469616c00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "Credential",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4475616c4174746573746174696f6e144261736555726c526f746174696f6e4576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "BaseUrlRotationEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f4475616c4174746573746174696f6e1a436f6d706c69616e63654b6579526f746174696f6e4576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DualAttestation",
+      "name": "ComplianceKeyRotationEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f5265636f76657279416464726573730f5265636f766572794164647265737300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "RecoveryAddress",
+      "name": "RecoveryAddress",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f56616c696461746f72436f6e66696706436f6e66696700",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ValidatorConfig",
+      "name": "Config",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000010f56616c696461746f72436f6e6669670f56616c696461746f72436f6e66696700",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ValidatorConfig",
+      "name": "ValidatorConfig",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000011044657369676e617465644465616c6572064465616c657200",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "Dealer",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000011044657369676e617465644465616c65720854696572496e666f010700000000000000000000000000000001035844580358445800",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "TierInfo",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XDX",
+            "name": "XDX",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000011044657369676e617465644465616c65720854696572496e666f010700000000000000000000000000000001035855530358555300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "TierInfo",
+      "type_params": [
+        {
+          "Struct": {
+            "address": "00000000000000000000000000000001",
+            "module": "XUS",
+            "name": "XUS",
+            "type_params": []
+          }
+        }
+      ]
+    }
+  ],
+  [
+    "01000000000000000000000000000000011044657369676e617465644465616c65721152656365697665644d696e744576656e7400",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DesignatedDealer",
+      "name": "ReceivedMintEvent",
+      "type_params": []
+    }
+  ],
+  [
+    "0100000000000000000000000000000001145265676973746572656443757272656e63696573145265676973746572656443757272656e6369657300",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "RegisteredCurrencies",
+      "name": "RegisteredCurrencies",
+      "type_params": []
+    }
+  ],
+  [
+    "010000000000000000000000000000000116536861726564456432353531395075626c69634b657916536861726564456432353531395075626c69634b657900",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "SharedEd25519PublicKey",
+      "name": "SharedEd25519PublicKey",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000011756616c696461746f724f70657261746f72436f6e6669671756616c696461746f724f70657261746f72436f6e66696700",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "ValidatorOperatorConfig",
+      "name": "ValidatorOperatorConfig",
+      "type_params": []
+    }
+  ],
+  [
+    "01000000000000000000000000000000011f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e1f4469656d5472616e73616374696f6e5075626c697368696e674f7074696f6e00",
+    {
+      "address": "00000000000000000000000000000001",
+      "module": "DiemTransactionPublishingOption",
+      "name": "DiemTransactionPublishingOption",
+      "type_params": []
     }
   ]
 ]
