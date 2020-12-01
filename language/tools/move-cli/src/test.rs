@@ -4,7 +4,10 @@
 use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_STORAGE_DIR};
 use anyhow::anyhow;
 use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
-use move_lang::{extension_equals, path_to_string, test_utils::*, MOVE_COMPILED_EXTENSION};
+use move_lang::{
+    command_line::{read_bool_env_var, COLOR_MODE_ENV_VAR},
+    extension_equals, path_to_string, MOVE_COMPILED_EXTENSION,
+};
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     env,
@@ -159,6 +162,8 @@ pub fn run_one(
         .join(&build_output)
         .join(DEFAULT_TRACE_FILE);
 
+    // Disable colors in error reporting from the Move compiler
+    env::set_var(COLOR_MODE_ENV_VAR, "NONE");
     for args_line in args_file {
         let args_line = args_line?;
         if args_line.starts_with('#') {
@@ -211,7 +216,7 @@ pub fn run_one(
     // post-test cleanup and cleanup checks
     // check that the test command didn't create a src dir
 
-    let run_move_clean = !read_bool_var(NO_MOVE_CLEAN);
+    let run_move_clean = !read_bool_env_var(NO_MOVE_CLEAN);
     if run_move_clean {
         // run `move clean` to ensure that temporary state is cleaned up
         Command::new(cli_binary_path)
@@ -231,7 +236,7 @@ pub fn run_one(
         );
     }
 
-    let update_baseline = read_bool_var(UPDATE_BASELINE) || read_bool_var(UB);
+    let update_baseline = read_bool_env_var(UPDATE_BASELINE) || read_bool_env_var(UB);
     let exp_path = args_path.with_extension(EXP_EXT);
     if update_baseline {
         fs::write(exp_path, &output)?;

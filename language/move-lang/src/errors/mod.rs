@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::command_line::{read_env_var, COLOR_MODE_ENV_VAR};
 use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
@@ -43,7 +44,13 @@ pub fn check_errors(errors: Errors) -> Result<(), Errors> {
 //**************************************************************************************************
 
 pub fn report_errors(files: FilesSourceText, errors: Errors) -> ! {
-    let mut writer = StandardStream::stderr(ColorChoice::Auto);
+    let color_choice = match read_env_var(COLOR_MODE_ENV_VAR).as_str() {
+        "NONE" => ColorChoice::Never,
+        "ANSI" => ColorChoice::AlwaysAnsi,
+        "ALWAYS" => ColorChoice::Always,
+        _ => ColorChoice::Auto,
+    };
+    let mut writer = StandardStream::stderr(color_choice);
     output_errors(&mut writer, files, errors);
     std::process::exit(1)
 }

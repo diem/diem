@@ -47,15 +47,6 @@ impl std::error::Error for StringError {
     }
 }
 
-pub fn read_env_var(v: &str) -> String {
-    std::env::var(v).unwrap_or_else(|_| "".into())
-}
-
-pub fn read_bool_var(v: &str) -> bool {
-    let val = read_env_var(v);
-    val == "1" || val == "true"
-}
-
 pub fn error(s: String) -> datatest_stable::Result<()> {
     Err(Box::new(StringError(s)))
 }

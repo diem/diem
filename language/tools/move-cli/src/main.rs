@@ -10,12 +10,16 @@ use move_cli::{
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
-    language_storage::TypeTag,
+    identifier::Identifier,
+    language_storage::{ModuleId, TypeTag},
     parser,
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_INTERFACES_DIR};
+use move_lang::{
+    self, compiled_unit::CompiledUnit, Pass as MovePass, PassResult as MovePassResult,
+    MOVE_COMPILED_INTERFACES_DIR,
+};
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
@@ -26,8 +30,10 @@ use vm::{
 
 use anyhow::{bail, Result};
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 use structopt::StructOpt;
 
@@ -70,6 +76,9 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
+        /// If set, modules will not override existing ones in storage
+        #[structopt(long = "no-republish")]
+        no_republish: bool,
     },
     #[structopt(name = "publish")]
     Publish {
@@ -79,6 +88,9 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
+        /// If set, modules will not override existing ones in storage
+        #[structopt(long = "no-republish")]
+        no_republish: bool,
         /// If set, the effects of executing `script_file` (i.e., published, updated, and
         /// deleted resources) will NOT be committed to disk.
         #[structopt(long = "dry-run", short = "n")]
@@ -198,24 +210,109 @@ fn interface_files_dir(build_dir: &str) -> Result<String> {
     Ok(dir)
 }
 
+fn shadow_storage(
+    args: &Move,
+    pprog: move_lang::parser::ast::Program,
+) -> Result<move_lang::parser::ast::Program> {
+    fn convert_module_id(
+        address: &move_lang::shared::Address,
+        name: &move_lang::parser::ast::ModuleName,
+    ) -> ModuleId {
+        use move_lang::shared::Identifier as MoveIdentifier;
+        ModuleId::new(
+            AccountAddress::new(address.to_u8()),
+            Identifier::new(name.value().to_string()).unwrap(),
+        )
+    }
+    use move_lang::parser::ast::{Definition, Program};
+    let Program {
+        source_definitions,
+        lib_definitions,
+    } = pprog;
+    let mut interface_modules_to_remove = BTreeSet::new();
+    for def in &source_definitions {
+        match def {
+            Definition::Address(_, addr, modules) => {
+                for module in modules {
+                    interface_modules_to_remove.insert(convert_module_id(addr, &module.name));
+                }
+            }
+            Definition::Module(_) | Definition::Script(_) => (),
+        }
+    }
+
+    let interface_dir = interface_files_dir(&args.build_dir)?;
+    let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
+        let module_str = path.file_stem().unwrap().to_str().unwrap();
+        let module = Identifier::new(module_str.to_string()).unwrap();
+
+        let mut comps = path.components().rev();
+        let _file = comps.next().unwrap();
+        let addr_str = comps.next().unwrap().as_os_str().to_str().unwrap();
+        let addr = AccountAddress::from_str(addr_str).unwrap();
+
+        let id = ModuleId::new(addr, module);
+        interface_modules_to_remove.contains(&id)
+    })?
+    .into_iter()
+    .collect::<BTreeSet<_>>();
+    let lib_definitions = lib_definitions
+        .into_iter()
+        .filter(|def| !interface_files_to_ignore.contains(def.file()))
+        .collect();
+    Ok(Program {
+        source_definitions,
+        lib_definitions,
+    })
+}
+
+fn move_compile_to_and_shadow(
+    args: &Move,
+    files: &[String],
+    republish: bool,
+    until: MovePass,
+) -> Result<(
+    move_lang::errors::FilesSourceText,
+    std::result::Result<MovePassResult, move_lang::errors::Errors>,
+)> {
+    let (files, pprog_and_comments_res) =
+        move_lang::move_parse(files, &args.get_compilation_deps()?, None, None)?;
+    let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
+        Err(errors) => return Ok((files, Err(errors))),
+        Ok(res) => res,
+    };
+    assert!(sender_opt.is_none());
+    if republish {
+        pprog = shadow_storage(args, pprog)?;
+    }
+    Ok((
+        files,
+        move_lang::move_continue_up_to(MovePassResult::Parser(None, pprog), until),
+    ))
+}
+
 /// Compile the user modules in `src` and the script in `script_file`
-fn check(args: &Move, files: &[String]) -> Result<()> {
+fn check(args: &Move, republish: bool, files: &[String]) -> Result<()> {
     if args.verbose {
         println!("Checking Move files...");
     }
-    let _files =
-        move_lang::move_check_and_report(files, &args.get_compilation_deps()?, None, None)?;
+    let (files, result) = move_compile_to_and_shadow(args, files, republish, MovePass::CFGIR)?;
+    move_lang::unwrap_or_report_errors!(files, result);
     Ok(())
 }
 
-fn publish(args: &Move, files: &[String]) -> Result<OnDiskStateView> {
+fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskStateView> {
     let storage_dir = maybe_create_dir(&args.storage_dir)?;
 
     if args.verbose {
         println!("Compiling Move modules...")
     }
-    let (_files, compiled_units) =
-        move_lang::move_compile_and_report(files, &args.get_compilation_deps()?, None, None)?;
+    let (files, result) =
+        move_compile_to_and_shadow(args, files, republish, MovePass::Compilation)?;
+    let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
+        MovePassResult::Compilation(units) => units,
+        _ => unreachable!(),
+    };
     let num_modules = compiled_units
         .iter()
         .filter(|u| matches!(u,  CompiledUnit::Module {..}))
@@ -643,16 +740,20 @@ fn main() -> Result<()> {
     let move_args = Move::from_args();
 
     match &move_args.cmd {
-        Command::Check { source_files } => {
+        Command::Check {
+            source_files,
+            no_republish,
+        } => {
             move_args.prepare_mode(true)?;
-            check(&move_args, &source_files)
+            check(&move_args, !*no_republish, &source_files)
         }
         Command::Publish {
             source_files,
+            no_republish,
             dry_run,
         } => {
             move_args.prepare_mode(true)?;
-            let state = publish(&move_args, source_files)?;
+            let state = publish(&move_args, !*no_republish, source_files)?;
             maybe_commit_effects(&move_args, !*dry_run, None, &state)
         }
         Command::Run {

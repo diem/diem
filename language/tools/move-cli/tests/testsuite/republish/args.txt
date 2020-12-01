@@ -1,0 +1,8 @@
+publish -v
+view storage/0x00000000000000000000000000000042/modules/M.mv
+view storage/0x00000000000000000000000000000043/modules/N.mv
+publish -v
+view storage/0x00000000000000000000000000000042/modules/M.mv
+view storage/0x00000000000000000000000000000043/modules/N.mv
+publish -v --no-republish
+publish -v --no-republish src/M.move

@@ -574,6 +574,16 @@ impl TName for ModuleIdent {
 // Impl
 //**************************************************************************************************
 
+impl Definition {
+    pub fn file(&self) -> &'static str {
+        match self {
+            Definition::Module(m) => m.loc.file(),
+            Definition::Address(loc, _, _) => loc.file(),
+            Definition::Script(s) => s.loc.file(),
+        }
+    }
+}
+
 impl ModuleIdent {
     pub fn loc(&self) -> Loc {
         self.0.loc
