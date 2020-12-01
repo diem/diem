@@ -109,6 +109,7 @@ const siteConfig = {
     `${baseUrl}js/mobile_nav.js`,
     // `${baseUrl}js/docsearch.min.js`,
     // `${baseUrl}js/search.js`,
+    `${baseUrl}js/new-site-redirects.js`,
   ],
 
   // Custom markdown functions
