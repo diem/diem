@@ -15,7 +15,7 @@ regex = "1.4.2"
 structopt = "0.3.21"
 textwrap = "0.12.1"
 serde-reflection = "0.3.2"
-serde-generate = "0.16.0"
+serde-generate = "0.16.1"
 serde_yaml = "0.8.14"
 
 libra-types = { path = "../../../types", version = "0.1.0" }
