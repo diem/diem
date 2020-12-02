@@ -74,10 +74,9 @@ impl<'a> CostStrategy<'a> {
 
     /// Charge a given amount of gas and fail if not enough gas units are left.
     pub fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> PartialVMResult<()> {
-        if !self.charge {
+        if !self.charge || amount.get() == 0 {
             return Ok(());
         }
-        debug_assert!(amount.get() > 0);
         if self
             .gas_left
             .app(&amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
