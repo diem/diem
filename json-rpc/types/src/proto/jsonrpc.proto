@@ -190,6 +190,11 @@ message Metadata {
    * accumulator root hash of the ledger version requested
    */
   string accumulator_root_hash = 7 [json_name="accumulator_root_hash"];
+
+   /**
+     * The dual attestation limit on-chain. Defined in terms of micro-LBR.
+     */
+   uint64 dual_attestation_limit = 8 [json_name="dual_attestation_limit"];
 }
 
 message Transaction {

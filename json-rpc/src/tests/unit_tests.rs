@@ -924,7 +924,8 @@ fn test_json_rpc_protocol_invalid_requests() {
                     "script_hash_allow_list": [],
                     "module_publishing_allowed": true,
                     "libra_version": 1,
-                    "accumulator_root_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                    "accumulator_root_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+                    "dual_attestation_limit": 1000000000,
                 }
             }),
         ),

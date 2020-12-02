@@ -20,7 +20,10 @@ use libra_mempool::MempoolClientSender;
 use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, libra_root_address, AccountResource},
+    account_config::{
+        from_currency_code_string, libra_root_address, resources::dual_attestation::Limit,
+        AccountResource,
+    },
     account_state::AccountState,
     chain_id::ChainId,
     event::EventKey,
@@ -305,6 +308,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     let mut script_hash_allow_list: Option<Vec<BytesView>> = None;
     let mut module_publishing_allowed: Option<bool> = None;
     let mut libra_version: Option<u64> = None;
+    let mut dual_attestation_limit: Option<u64> = None;
     if version == request.version() {
         if let Some(account) = service.get_account_state(libra_root_address(), version)? {
             if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
@@ -321,6 +325,9 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
             if let Some(v) = account.get_libra_version()? {
                 libra_version = Some(v.major)
             }
+            if let Some(limit) = account.get_resource::<Limit>()? {
+                dual_attestation_limit = Some(limit.micro_lbr_limit)
+            }
         }
     }
     Ok(MetadataView {
@@ -331,6 +338,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
         script_hash_allow_list,
         module_publishing_allowed,
         libra_version,
+        dual_attestation_limit,
     })
 }
 

@@ -91,6 +91,7 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(metadata["script_hash_allow_list"], json!([]));
                 assert_eq!(metadata["module_publishing_allowed"], true);
                 assert_eq!(metadata["libra_version"], 1);
+                assert_eq!(metadata["dual_attestation_limit"], 1000000000);
                 assert_ne!(resp.libra_ledger_timestampusec, 0);
                 assert_ne!(resp.libra_ledger_version, 0);
 

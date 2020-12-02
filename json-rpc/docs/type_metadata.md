@@ -11,6 +11,7 @@
 | module_publishing_allowed  | boolean        | True for allowing publishing customized script, server may not return this field if the flag not found in on chain configuration. |
 | libra_version              | unsigned int64 | Libra chain major version number              |
 | accumulator_root_hash      | string         | accumulator root hash of the block (ledger) version |
+| dual_attestation_limit     | unsigned int64 | The dual attestation limit on-chain. Defined in terms of micro-LBR. |
 
 Note:
 1. see [LibraTransactionPublishingOption](../../language/stdlib/modules/doc/LibraTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
@@ -40,7 +41,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
     ],
     "module_publishing_allowed": false,
     "libra_version": 1,
-    "accumulator_root_hash": "<hash string>"
+    "accumulator_root_hash": "<hash string>",
+    "dual_attestation_limit": 1000000000
   }
 }
 ```

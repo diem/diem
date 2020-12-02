@@ -352,6 +352,7 @@ pub struct MetadataView {
     pub script_hash_allow_list: Option<Vec<BytesView>>,
     pub module_publishing_allowed: Option<bool>,
     pub libra_version: Option<u64>,
+    pub dual_attestation_limit: Option<u64>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
