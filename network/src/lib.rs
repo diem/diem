@@ -22,6 +22,7 @@ pub mod transport;
 
 #[cfg(feature = "fuzzing")]
 pub mod fuzzing;
+mod rate_limiter;
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 pub mod testutils;
 

@@ -19,7 +19,7 @@ use crate::{
         direct_send::Message,
         rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
     },
-    transport,
+    rate_limiter, transport,
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
@@ -55,7 +55,9 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
+use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use serde::export::Formatter;
+use std::{net::IpAddr, num::NonZeroU32};
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
@@ -289,6 +291,8 @@ where
     max_frame_size: usize,
     /// Inbound connection limit separate of outbound connections
     inbound_connection_limit: usize,
+    /// Inbound request rate limiter TODO: adjust state store and clock
+    inbound_rate_limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -334,6 +338,8 @@ where
                 transport_notifs_tx_clone,
             )
         });
+        let default_rate = NonZeroU32::new(102_400).unwrap(); // 100 KiB
+
         Self {
             network_context,
             executor,
@@ -354,6 +360,8 @@ where
             channel_size,
             max_frame_size,
             inbound_connection_limit,
+            // FIXME: Use a config configured quota
+            inbound_rate_limiter: rate_limiter::new_per_second_keyed(default_rate, default_rate),
         }
     }
 
@@ -771,6 +779,7 @@ where
             self.max_concurrent_network_notifs,
             self.channel_size,
             self.max_frame_size,
+            self.inbound_rate_limiter.clone(),
         );
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.

@@ -292,6 +292,17 @@ impl NetworkAddress {
         })
     }
 
+    /// Finds the `IpAddr` in the network address, returns `UNSPECIFIED` if it's DNS, and `None` if it has no IP
+    pub fn find_ip_addr(&self) -> Option<IpAddr> {
+        self.0.iter().find_map(|proto| match proto {
+            Protocol::Ip4(addr) => Some(IpAddr::V4(*addr)),
+            Protocol::Ip6(addr) => Some(IpAddr::V6(*addr)),
+            Protocol::Dns(_) | Protocol::Dns4(_) => Some(IpAddr::V4(Ipv4Addr::UNSPECIFIED)),
+            Protocol::Dns6(_) => Some(IpAddr::V6(Ipv6Addr::UNSPECIFIED)),
+            _ => None,
+        })
+    }
+
     /// A function to rotate public keys for `NoiseIK` protocols
     pub fn rotate_noise_public_key(
         &mut self,

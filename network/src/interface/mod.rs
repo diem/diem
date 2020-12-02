@@ -32,7 +32,10 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt,
 };
-use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, sync::Arc, time::Duration};
+use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
+use std::{
+    fmt::Debug, marker::PhantomData, net::IpAddr, num::NonZeroUsize, sync::Arc, time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -73,6 +76,9 @@ where
         max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
+        inbound_rate_limiter: Arc<
+            RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>,
+        >,
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,
@@ -99,6 +105,7 @@ where
             peer_notifs_tx,
             peer_rpc_notifs_tx,
             max_frame_size,
+            inbound_rate_limiter,
         );
         executor.spawn(peer.start());
 

@@ -33,9 +33,14 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt, TryFutureExt,
 };
+use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, sync::Arc};
+use std::{
+    fmt::Debug,
+    net::{IpAddr, Ipv4Addr},
+    sync::Arc,
+};
 use tokio::runtime::Handle;
 
 #[cfg(test)]
@@ -110,6 +115,8 @@ pub struct Peer<TSocket> {
     /// The maximum size of an inbound or outbound request frame
     /// Currently, requests are only a single frame
     max_frame_size: usize,
+    /// Inbound request rate limiter
+    inbound_rate_limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -124,6 +131,9 @@ where
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
         max_frame_size: usize,
+        inbound_rate_limiter: Arc<
+            RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>,
+        >,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -139,6 +149,7 @@ where
             rpc_notifs_tx,
             state: State::Connected,
             max_frame_size,
+            inbound_rate_limiter,
         }
     }
 
@@ -160,8 +171,18 @@ where
         let (read_socket, write_socket) =
             tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
 
-        let mut reader =
-            NetworkMessageStream::new(IoCompat::new(read_socket), self.max_frame_size).fuse();
+        let ip_addr = self
+            .connection_metadata
+            .addr
+            .find_ip_addr()
+            .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+        let mut reader = NetworkMessageStream::new_with_rate_limiting(
+            ip_addr,
+            IoCompat::new(read_socket),
+            self.max_frame_size,
+            Some(self.inbound_rate_limiter.clone()),
+        )
+        .fuse();
         let writer = NetworkMessageSink::new(IoCompat::new(write_socket), self.max_frame_size);
 
         // Start writer "process" as a separate task. We receive two handles to communicate with

@@ -9,13 +9,14 @@
 //! describes in greater detail how these messages are sent and received
 //! over-the-wire.
 
-use crate::protocols::wire::handshake::v1::ProtocolId;
+use crate::{protocols::wire::handshake::v1::ProtocolId, rate_limiter::rate_limit_msg};
 use bytes::Bytes;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     sink::Sink,
     stream::Stream,
 };
+use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use netcore::compat::IoCompat;
 use pin_project::pin_project;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -23,7 +24,9 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{
     io,
+    net::{IpAddr, Ipv4Addr},
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
 use thiserror::Error;
@@ -154,16 +157,38 @@ pub fn network_message_frame_codec(max_frame_size: usize) -> LengthDelimitedCode
 /// underlying socket.
 #[pin_project]
 pub struct NetworkMessageStream<TReadSocket: AsyncRead> {
+    ip_addr: IpAddr,
     #[pin]
     framed_read: FramedRead<IoCompat<TReadSocket>, LengthDelimitedCodec>,
+    rate_limiter: Option<Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>>,
 }
 
 impl<TReadSocket: AsyncRead> NetworkMessageStream<TReadSocket> {
     pub fn new(socket: TReadSocket, max_frame_size: usize) -> Self {
+        Self::new_with_rate_limiting(
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            socket,
+            max_frame_size,
+            None,
+        )
+    }
+
+    pub fn new_with_rate_limiting(
+        ip_addr: IpAddr,
+        socket: TReadSocket,
+        max_frame_size: usize,
+        rate_limiter: Option<
+            Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
+        >,
+    ) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
         let compat_socket = IoCompat::new(socket);
         let framed_read = FramedRead::new(compat_socket, frame_codec);
-        Self { framed_read }
+        Self {
+            ip_addr,
+            framed_read,
+            rate_limiter,
+        }
     }
 }
 
@@ -171,9 +196,20 @@ impl<TReadSocket: AsyncRead> Stream for NetworkMessageStream<TReadSocket> {
     type Item = Result<NetworkMessage, ReadError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.project().framed_read.poll_next(cx) {
+        let stream = self.project();
+        match stream.framed_read.poll_next(cx) {
             Poll::Ready(Some(Ok(frame))) => {
                 let frame = frame.freeze();
+
+                // Handle rate limiting of messages
+                if let Some(rate_limiter) = &stream.rate_limiter {
+                    if let Err(_error) = rate_limit_msg(rate_limiter, &stream.ip_addr, frame.len())
+                    {
+                        // TODO save message until it's ready
+                        // Drop message, it's been throttled
+                        return Poll::Pending;
+                    }
+                }
 
                 match lcs::from_bytes(&frame) {
                     Ok(message) => Poll::Ready(Some(Ok(message))),
