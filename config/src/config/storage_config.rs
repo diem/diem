@@ -21,7 +21,7 @@ pub struct RocksdbConfig {
 impl Default for RocksdbConfig {
     fn default() -> Self {
         Self {
-            // Set max_open_files to 10k instead of -1 to avoid keep-growing memory in corridance
+            // Set max_open_files to 10k instead of -1 to avoid keep-growing memory in accordance
             // with the number of files.
             max_open_files: 10_000,
             // For now we set the max total WAL size to be 1G. This config can be useful when column

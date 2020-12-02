@@ -10,7 +10,7 @@ use crate::{
     utils::{
         backup_service_client::BackupServiceClient,
         test_utils::{start_local_backup_service, tmp_db_with_random_content},
-        GlobalBackupOpt, GlobalRestoreOpt,
+        GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt,
     },
 };
 use libra_config::config::RocksdbConfig;
@@ -64,6 +64,7 @@ fn end_to_end() {
                 dry_run: false,
                 db_dir: Some(tgt_db_dir.path().to_path_buf()),
                 target_version: None, // max
+                rocksdb_opt: RocksdbOpt::default(),
             }
             .try_into()
             .unwrap(),
