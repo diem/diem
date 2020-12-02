@@ -294,12 +294,14 @@ mod last_usage {
                     match display_var(v.value()) {
                         DisplayVar::Tmp => (),
                         DisplayVar::Orig(v_str) => {
-                            let msg = format!(
-                                "Unused assignment or binding for local '{}'. Consider removing \
-                                 or replacing it with '_'",
-                                v_str
-                            );
-                            context.error(vec![(l.loc, msg)]);
+                            if !v_str.starts_with('_') {
+                                let msg = format!(
+                                    "Unused assignment or binding for local '{}'. \
+                                    Consider removing or replacing it with '_'",
+                                    v_str
+                                );
+                                context.error(vec![(l.loc, msg)]);
+                            }
                             if !context.is_resourceful(v) {
                                 l.value = L::Ignore
                             }

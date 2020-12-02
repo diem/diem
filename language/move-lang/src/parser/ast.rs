@@ -595,6 +595,10 @@ impl ModuleName {
 }
 
 impl Var {
+    pub fn is_underscore(&self) -> bool {
+        self.0.value == "_"
+    }
+
     pub fn starts_with_underscore(&self) -> bool {
         self.0.value.starts_with('_')
     }

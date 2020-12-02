@@ -953,7 +953,7 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
     let nl_ = match l_ {
         EL::Var(sp!(_, E::ModuleAccess_::Name(n)), None) => {
             let v = Var(n);
-            if v.starts_with_underscore() {
+            if v.is_underscore() {
                 NL::Ignore
             } else {
                 NL::Var(v)

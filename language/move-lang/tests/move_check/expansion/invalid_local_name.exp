@@ -38,3 +38,11 @@ error:
     │             ^^ Unbound constant 'No'
     │
 
+error: 
+
+    ┌── tests/move_check/expansion/invalid_local_name.move:19:13 ───
+    │
+ 19 │         let _No;
+    │             ^^^ Could not infer this type. Try adding an annotation
+    │
+

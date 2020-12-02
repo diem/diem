@@ -15,4 +15,8 @@ module M {
         F { No };
     }
 
+    fun t4() {
+        let _No;
+    }
+
 }
