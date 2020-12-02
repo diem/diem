@@ -160,7 +160,7 @@ pub fn new_epoch_event_key() -> EventKey {
 pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {
     AccessPath::new(
         address,
-        AccessPath::resource_access_vec(&StructTag {
+        AccessPath::resource_access_vec(StructTag {
             address: CORE_CODE_ADDRESS,
             module: Identifier::new("DiemConfig").unwrap(),
             name: Identifier::new("DiemConfig").unwrap(),

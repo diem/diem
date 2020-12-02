@@ -178,7 +178,7 @@ fn bad_writesets() {
             type_params: vec![],
         },
     );
-    let path = AccessPath::resource_access_path(&key);
+    let path = AccessPath::resource_access_path(key);
 
     let write_set = WriteSetMut::new(vec![(path, WriteOp::Value(vec![]))])
         .freeze()
@@ -204,7 +204,7 @@ fn bad_writesets() {
             type_params: vec![],
         },
     );
-    let path = AccessPath::resource_access_path(&key);
+    let path = AccessPath::resource_access_path(key);
 
     let write_set = WriteSetMut::new(vec![(path, WriteOp::Value(vec![]))])
         .freeze()

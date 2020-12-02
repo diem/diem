@@ -114,7 +114,7 @@ impl CurrencyInfoResource {
             diem_root_address(),
             CurrencyInfoResource::struct_tag_for(currency_code),
         );
-        AccessPath::resource_access_path(&resource_key)
+        AccessPath::resource_access_path(resource_key)
     }
 
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {

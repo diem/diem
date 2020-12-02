@@ -69,8 +69,8 @@ impl StructTag {
 /// the struct tag
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct ResourceKey {
-    address: AccountAddress,
-    type_: StructTag,
+    pub address: AccountAddress,
+    pub type_: StructTag,
 }
 
 impl ResourceKey {

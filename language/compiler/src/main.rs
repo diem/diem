@@ -104,7 +104,7 @@ fn main() {
             script.get_external_deps()
         }
         .into_iter()
-        .map(|m| AccessPath::code_access_path(&m))
+        .map(AccessPath::code_access_path)
         .collect();
         println!(
             "{}",

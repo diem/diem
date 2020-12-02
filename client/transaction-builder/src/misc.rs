@@ -27,7 +27,7 @@ pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
             .serialize(&mut bytes)
             .expect("Failed to serialize module");
         write_set.push((
-            AccessPath::code_access_path(&module.self_id()),
+            AccessPath::code_access_path(module.self_id()),
             WriteOp::Value(bytes),
         ));
     }

@@ -164,7 +164,7 @@ impl Account {
     pub fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (FatStructType) of the Account in place
         let resource_tag = ResourceKey::new(self.addr, tag);
-        AccessPath::resource_access_path(&resource_tag)
+        AccessPath::resource_access_path(resource_tag)
     }
 
     /// Changes the keys for this account to the provided ones.
