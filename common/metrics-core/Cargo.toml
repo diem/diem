@@ -11,4 +11,4 @@ edition = "2018"
 
 [dependencies]
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-prometheus = { version = "0.10.0", default-features = false }
+prometheus = { version = "0.11.0", default-features = false }

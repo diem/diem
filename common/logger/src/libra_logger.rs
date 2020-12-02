@@ -372,7 +372,7 @@ impl LoggerService {
             );
         } else {
             SENT_STRUCT_LOG_COUNT.inc();
-            SENT_STRUCT_LOG_BYTES.inc_by(message_length as i64);
+            SENT_STRUCT_LOG_BYTES.inc_by(message_length as u64);
         }
     }
 }

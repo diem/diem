@@ -590,7 +590,7 @@ async fn handle_outbound_rpc_inner(
 
     // Collect counters for requests sent.
     counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
-    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len as i64);
+    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len as u64);
 
     // Wait for listener's response.
     trace!(
@@ -621,7 +621,7 @@ async fn handle_outbound_rpc_inner(
     let res_data = response.raw_response;
     counters::rpc_messages(network_context, RESPONSE_LABEL, RECEIVED_LABEL).inc();
     counters::rpc_bytes(network_context, RESPONSE_LABEL, RECEIVED_LABEL)
-        .inc_by(res_data.len() as i64);
+        .inc_by(res_data.len() as u64);
     Ok(Bytes::from(res_data))
 }
 
@@ -649,7 +649,7 @@ async fn handle_inbound_request_inner(
     // Collect counters for received request.
     counters::rpc_messages(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc();
     counters::rpc_bytes(network_context, REQUEST_LABEL, RECEIVED_LABEL)
-        .inc_by(req_data.len() as i64);
+        .inc_by(req_data.len() as u64);
     let timer = counters::inbound_rpc_handler_latency(network_context, protocol_id).start_timer();
 
     // Forward request to upper layer.
@@ -697,6 +697,6 @@ async fn handle_inbound_request_inner(
 
     // Collect counters for sent response.
     counters::rpc_messages(network_context, RESPONSE_LABEL, SENT_LABEL).inc();
-    counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).inc_by(res_len as i64);
+    counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).inc_by(res_len as u64);
     Ok(())
 }

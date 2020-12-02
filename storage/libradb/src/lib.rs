@@ -871,7 +871,7 @@ impl DbWriter for LibraDB {
             // to the storage. That's also when we'd inform the pruner thread to work.
             if num_txns > 0 {
                 let last_version = first_version + num_txns - 1;
-                LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
+                LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns);
                 LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
                 counters
                     .expect("Counters should be bumped with transactions being saved.")

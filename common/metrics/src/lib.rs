@@ -102,8 +102,8 @@ fn get_metrics_file<P: AsRef<Path>>(dir_path: &P, file_name: &str) -> File {
 
 pub fn gather_metrics() -> Vec<prometheus::proto::MetricFamily> {
     let metric_families = libra_metrics_core::gather();
-    let mut total: i64 = 0;
-    let mut families_over_1000: i64 = 0;
+    let mut total: u64 = 0;
+    let mut families_over_1000: u64 = 0;
 
     // Take metrics of metric gathering so we know possible overhead of this process
     for metric_family in &metric_families {
@@ -119,7 +119,7 @@ pub fn gather_metrics() -> Vec<prometheus::proto::MetricFamily> {
                 family_count
             );
         }
-        total = total.saturating_add(family_count as i64);
+        total = total.saturating_add(family_count as u64);
     }
 
     // These metrics will be reported on the next pull, rather than create a new family

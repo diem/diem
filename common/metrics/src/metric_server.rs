@@ -28,7 +28,7 @@ fn encode_metrics(encoder: impl Encoder, whitelist: &'static [&'static str]) -> 
 
     NUM_METRICS
         .with_label_values(&["total_bytes"])
-        .inc_by(buffer.len() as i64);
+        .inc_by(buffer.len() as u64);
     buffer
 }
 

@@ -39,7 +39,7 @@ pub(super) fn reply_with_lcs_bytes<R: Serialize>(
     let bytes = lcs::to_bytes(record)?;
     THROUGHPUT_COUNTER
         .with_label_values(&[endpoint])
-        .inc_by(bytes.len() as i64);
+        .inc_by(bytes.len() as u64);
     Ok(Box::new(bytes))
 }
 
@@ -58,7 +58,7 @@ impl BytesSender {
         self.inner.send_data(chunk).await?;
         THROUGHPUT_COUNTER
             .with_label_values(&[self.endpoint])
-            .inc_by(n_bytes as i64);
+            .inc_by(n_bytes as u64);
         Ok(())
     }
 

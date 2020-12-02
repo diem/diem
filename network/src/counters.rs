@@ -77,7 +77,7 @@ pub fn inc_by_with_context(
     counter: &IntCounterVec,
     network_context: &NetworkContext,
     label: &str,
-    val: i64,
+    val: u64,
 ) {
     counter
         .with_label_values(&[

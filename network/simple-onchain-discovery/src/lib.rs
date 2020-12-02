@@ -165,7 +165,7 @@ impl ConfigurationChangeListener {
             &DISCOVERY_COUNTS,
             &self.network_context,
             "new_nodes",
-            updates.len() as i64,
+            updates.len() as u64,
         );
         info!(
             NetworkSchema::new(&self.network_context),

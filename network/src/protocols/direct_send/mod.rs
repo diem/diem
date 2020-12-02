@@ -163,7 +163,7 @@ impl DirectSend {
                     let data = message.raw_msg;
                     counters::direct_send_messages(&self.network_context, RECEIVED_LABEL).inc();
                     counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
-                        .inc_by(data.len() as i64);
+                        .inc_by(data.len() as u64);
                     let notif = DirectSendNotification::RecvMessage(Message {
                         protocol_id,
                         mdata: Bytes::from(data),
@@ -240,7 +240,7 @@ impl DirectSend {
                     Ok(()) => {
                         counters::direct_send_messages(&self.network_context, SENT_LABEL).inc();
                         counters::direct_send_bytes(&self.network_context, SENT_LABEL)
-                            .inc_by(msg_len as i64);
+                            .inc_by(msg_len as u64);
                     }
                     Err(e) => {
                         let peer_id = self.peer_handle.peer_id();
