@@ -29,6 +29,7 @@ use std::{
 };
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
+use network::constants::NETWORK_CHANNEL_SIZE;
 
 const EXPERIMENT_BUFFER_SECS: u64 = 900;
 
@@ -222,9 +223,11 @@ impl StubbedNode {
         let mut network_builder =
             NetworkBuilder::create(ChainId::test(), pfn_config.base.role, network_config);
 
+        let mut config = state_synchronizer::network::network_endpoint_config();
+        config.3 = 1000;
         let state_sync_handle = Some(
             network_builder
-                .add_protocol_handler(state_synchronizer::network::network_endpoint_config()),
+                .add_protocol_handler(config),
         );
 
         let mempool_handle = Some(network_builder.add_protocol_handler(
@@ -389,23 +392,31 @@ async fn state_sync_load_test(
     let mut served_txns = 0_u64;
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
+    let mut pending = 0_usize;
     while Instant::now().duration_since(task_start) < duration {
         let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
-        msg_num += 1;
-        sender.send_to(vfn, msg)?;
+        if pending <= NETWORK_CHANNEL_SIZE {
+            bytes += lcs::to_bytes(&msg)?.len() as u64;
+            sender.send_to(vfn, msg)?;
+            pending += 1;
+            info!("hhhhh current pending {}", pending);
+        }
 
         // await response from remote peer
-        let response = events.select_next_some().await;
-        if let Event::Message(_remote_peer, payload) = response {
-            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                chunk_response,
-            ) = payload
-            {
-                // TODO analyze response and update StateSyncResult with stats accordingly
-                served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;
+        if let Some(response) = events.select_next_some().now_or_never() {
+            if let Event::Message(_remote_peer, payload) = response {
+                if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                    chunk_response,
+                ) = payload
+                {
+                    let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                    served_txns += temp;
+                    msg_num += 1;
+                    pending -= 1;
+                    info!("hhhhh22 pending {}, tx = {}", pending, temp);
+                }
             }
         }
     }
