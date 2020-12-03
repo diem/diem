@@ -7,7 +7,7 @@ use libra_management::{config::ConfigPath, error::Error, secure_backend::SharedB
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
 
@@ -35,7 +35,7 @@ impl CreateWaypoint {
         let genesis = genesis_helper.execute()?;
 
         let path = TempPath::new();
-        let libradb = LibraDB::open(&path, false, None, RocksdbConfig::default())
+        let libradb = DiemDB::open(&path, false, None, RocksdbConfig::default())
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
         let db_rw = DbReaderWriter::new(libradb);
 

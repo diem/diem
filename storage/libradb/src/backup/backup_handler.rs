@@ -23,7 +23,7 @@ use libra_types::{
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{fmt::Display, sync::Arc};
 
-/// `BackupHandler` provides functionalities for LibraDB data backup.
+/// `BackupHandler` provides functionalities for DiemDB data backup.
 #[derive(Clone)]
 pub struct BackupHandler {
     ledger_store: Arc<LedgerStore>,

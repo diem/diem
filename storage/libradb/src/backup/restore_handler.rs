@@ -4,7 +4,7 @@
 use crate::{
     change_set::ChangeSet, ledger_store::LedgerStore,
     schema::transaction_accumulator::TransactionAccumulatorSchema, state_store::StateStore,
-    transaction_store::TransactionStore, LibraDB,
+    transaction_store::TransactionStore, DiemDB,
 };
 use anyhow::{ensure, Result};
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
@@ -18,11 +18,11 @@ use schemadb::DB;
 use std::sync::Arc;
 use storage_interface::{DbReader, TreeState};
 
-/// Provides functionalities for LibraDB data restore.
+/// Provides functionalities for DiemDB data restore.
 #[derive(Clone)]
 pub struct RestoreHandler {
     db: Arc<DB>,
-    pub libradb: Arc<LibraDB>,
+    pub libradb: Arc<DiemDB>,
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
@@ -31,7 +31,7 @@ pub struct RestoreHandler {
 impl RestoreHandler {
     pub(crate) fn new(
         db: Arc<DB>,
-        libradb: Arc<LibraDB>,
+        libradb: Arc<DiemDB>,
         ledger_store: Arc<LedgerStore>,
         transaction_store: Arc<TransactionStore>,
         state_store: Arc<StateStore>,

@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-//! This crate provides [`LibraDB`] which represents physical storage of the core Libra data
+//! This crate provides [`DiemDB`] which represents physical storage of the core Libra data
 //! structures.
 //!
 //! It relays read/write operations on the physical storage via [`schemadb`] to the underlying
@@ -104,7 +104,7 @@ fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Libra data structures.
 #[derive(Debug)]
-pub struct LibraDB {
+pub struct DiemDB {
     db: Arc<DB>,
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
@@ -114,7 +114,7 @@ pub struct LibraDB {
     pruner: Option<Pruner>,
 }
 
-impl LibraDB {
+impl DiemDB {
     fn column_families() -> Vec<ColumnFamilyName> {
         vec![
             /* LedgerInfo CF = */ DEFAULT_CF_NAME,
@@ -135,7 +135,7 @@ impl LibraDB {
     fn new_with_db(db: DB, prune_window: Option<u64>) -> Self {
         let db = Arc::new(db);
 
-        LibraDB {
+        DiemDB {
             db: Arc::clone(&db),
             event_store: EventStore::new(Arc::clone(&db)),
             ledger_store: Arc::new(LedgerStore::new(Arc::clone(&db))),
@@ -183,7 +183,7 @@ impl LibraDB {
         info!(
             path = path,
             time_ms = %instant.elapsed().as_millis(),
-            "Opened LibraDB.",
+            "Opened DiemDB.",
         );
 
         Ok(Self::new_with_db(db, prune_window))
@@ -221,7 +221,7 @@ impl LibraDB {
             None,  /* pruner */
             RocksdbConfig::default(),
         )
-        .expect("Unable to open LibraDB")
+        .expect("Unable to open DiemDB")
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
@@ -507,7 +507,7 @@ impl LibraDB {
     }
 }
 
-impl DbReader for LibraDB {
+impl DbReader for DiemDB {
     fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
@@ -799,7 +799,7 @@ impl DbReader for LibraDB {
     }
 }
 
-impl DbWriter for LibraDB {
+impl DbWriter for DiemDB {
     /// `first_version` is the version of the first transaction in `txns_to_commit`.
     /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
     /// it carries is generated after the `txns_to_commit` are applied.
@@ -903,7 +903,7 @@ pub trait GetRestoreHandler {
     fn get_restore_handler(&self) -> RestoreHandler;
 }
 
-impl GetRestoreHandler for Arc<LibraDB> {
+impl GetRestoreHandler for Arc<DiemDB> {
     fn get_restore_handler(&self) -> RestoreHandler {
         RestoreHandler::new(
             Arc::clone(&self.db),
@@ -929,7 +929,7 @@ where
             warn!(
                 api_name = api_name,
                 error = ?e,
-                "LibraDB API returned error."
+                "DiemDB API returned error."
             );
             "Err"
         }

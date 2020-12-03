@@ -5,7 +5,7 @@
 //! themselves.
 #![allow(unused)]
 
-use super::LibraDB;
+use super::DiemDB;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,

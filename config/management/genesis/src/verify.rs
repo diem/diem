@@ -18,7 +18,7 @@ use libra_types::{
     on_chain_config::ValidatorSet, validator_config::ValidatorConfig, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{
     convert::TryFrom,
     fmt::Write,
@@ -206,7 +206,7 @@ fn compute_genesis(
     genesis_path: &PathBuf,
     db_path: &Path,
 ) -> Result<(DbReaderWriter, Waypoint), Error> {
-    let libradb = LibraDB::open(db_path, false, None, RocksdbConfig::default())
+    let libradb = DiemDB::open(db_path, false, None, RocksdbConfig::default())
         .map_err(|e| Error::UnexpectedError(e.to_string()))?;
     let db_rw = DbReaderWriter::new(libradb);
 

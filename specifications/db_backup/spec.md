@@ -1,8 +1,8 @@
-# LibraDB Backup
+# DiemDB Backup
 
-Libra nodes runs on top of [LibraDB](../../storage/libradb) that serves the [core data stucture](../data_structure/spec.md) to other parts of the system. While the LibraDB is designed to provide efficient access to the recent history of the block chain, and append data to it, the LibraDB Backup is a concise data format to archive the full history of the chain, away from the running Libra validator network. It's useful in at least these situations:
+Libra nodes runs on top of [DiemDB](../../storage/libradb) that serves the [core data stucture](../data_structure/spec.md) to other parts of the system. While the DiemDB is designed to provide efficient access to the recent history of the block chain, and append data to it, the DiemDB Backup is a concise data format to archive the full history of the chain, away from the running Libra validator network. It's useful in at least these situations:
 
-* In case a validator lost its LibraDB, restoring the full transaction history from a backup is supposed to be 10x or more faster than replying on synchronizing from a peer.
+* In case a validator lost its DiemDB, restoring the full transaction history from a backup is supposed to be 10x or more faster than replying on synchronizing from a peer.
 * In case of a fatal bug in the software destroying the DB on every single Libra Node, we can recover the network using the backups. The backups are not likely to be corrupt at the same time because the format is 1. Different; 2. Simple.
 * If a fork ever happens, and we plan to make resolve and converge the branches,  this piece of history can still be archived in the form of backups.
 
@@ -23,13 +23,13 @@ pub type FileHandle = String;
 pub struct TextLine(String);
 ```
 
-A LibraDB **backup storage** stores **backups** and **metadata lines**.
+A DiemDB **backup storage** stores **backups** and **metadata lines**.
 
 Each of the **backups** contains information that reflects different aspects of the blockchain history. It is identified by its manifest file (human readable, in JSON), which can contain links to data files. Depending on the specific type of backup, the content differs. The backup system doesn’t care about how physically the storage organizes backups, it dumps backups as group of files (although it does try to hint the storage that the group are related to each other, see the [Backup Storage interface](#backup-storage-interface)), asking back one single FileHandle to identify the whole backup. The restore system takes `FileHandle`s pointing to manifests, it’s up to the human / external system to decide which manifests are relevant, probably based on the **metadata**.
 
 Among other purposes, **Metadata lines** mainly serve as an index of all the backups in the storage. After each backup is written to the storage, the backup system put in one line of metadata, containing the FileHandle it just got from the storage. One can get a complete picture of what's in a backup storage by looking at all the metadata lines. Similar to files in a backup, the backup system doesn't care about how the storage organizes the metadata lines, each line can be a separate file or a DB record.
 
-At this point we backup three essential types of the information, with which a LibraDB can be popped up and start supporting the functionality of a Validator or a Full Node. It describes below each of the backup types:
+At this point we backup three essential types of the information, with which a DiemDB can be popped up and start supporting the functionality of a Validator or a Full Node. It describes below each of the backup types:
 
 ### TransactionBackup
 
@@ -347,7 +347,7 @@ A BackupCoordinator is implemented as well, which runs in the background and mon
 
 Similar to the Backup controller, a RestoreController glues the functionality of a BackupStorage and the LibraDb. The difference is a RestoreController operates directly on an (potentially empty) DB, without the dependency on a running Node. A node is instead supposed to be started on top of a DB created by the controllers.
 
-To create a LibraDB from scratch, on top of which a validator can boot and join the network, one usually needs to pick a state snapshot at version V, and a target version T and do the following:
+To create a DiemDB from scratch, on top of which a validator can boot and join the network, one usually needs to pick a state snapshot at version V, and a target version T and do the following:
 
 1. Recover EpochEnding backup from epoch 0 all the way to the one which right precedes version T.
 3. (Optional, but supposed to do in Libra V1, since Libra nodes doesn't work on partial transaction history in V1.) Restore transactions from 0 to V to DB.

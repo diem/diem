@@ -232,7 +232,7 @@ pub trait VMExecutor: Send {
 
 #### Storage
 
-Storage of Libra Core is implemented as `LibraDB`, a rocksdb based storage system highly customized for
+Storage of Libra Core is implemented as `DiemDB`, a rocksdb based storage system highly customized for
 Libra. It stores all the required data consistutes the Libra blockchain. After executing a block, LEC will store the
 speculative execution result in its own cache and commit it later to storage if consensus commands. The commit
 will persist the result into storage and make the execution effect live on chain. Since the commit, all the

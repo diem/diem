@@ -16,7 +16,7 @@ use crate::{
 use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::transaction::PRE_GENESIS_VERSION;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{convert::TryInto, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
@@ -75,7 +75,7 @@ fn end_to_end() {
     )
     .unwrap();
 
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */

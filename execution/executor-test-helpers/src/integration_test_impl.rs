@@ -24,7 +24,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReaderWriter, Order};
@@ -32,7 +32,7 @@ use transaction_builder::{
     encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
 };
 
-pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
+pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
@@ -512,8 +512,8 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 pub fn create_db_and_executor<P: AsRef<std::path::Path>>(
     path: P,
     genesis: &Transaction,
-) -> (Arc<LibraDB>, DbReaderWriter, Executor<LibraVM>, Waypoint) {
-    let (db, dbrw) = DbReaderWriter::wrap(LibraDB::new_for_test(&path));
+) -> (Arc<DiemDB>, DbReaderWriter, Executor<LibraVM>, Waypoint) {
+    let (db, dbrw) = DbReaderWriter::wrap(DiemDB::new_for_test(&path));
     let waypoint = bootstrap_genesis::<LibraVM>(&dbrw, genesis).unwrap();
     let executor = Executor::<LibraVM>::new(dbrw.clone());
 

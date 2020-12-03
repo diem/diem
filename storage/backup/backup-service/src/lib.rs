@@ -4,11 +4,11 @@
 mod handlers;
 
 use crate::handlers::get_routes;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
-pub fn start_backup_service(address: SocketAddr, db: Arc<LibraDB>) -> Runtime {
+pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
 
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn routing_and_error_codes() {
         let tmpdir = TempPath::new();
-        let db = Arc::new(LibraDB::new_for_test(&tmpdir));
+        let db = Arc::new(DiemDB::new_for_test(&tmpdir));
         let port = get_available_port();
         let _rt = start_backup_service(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port), db);
 

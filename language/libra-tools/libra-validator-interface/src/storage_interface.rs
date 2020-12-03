@@ -9,7 +9,7 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     transaction::{Transaction, Version},
 };
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{path::Path, sync::Arc};
 use storage_interface::DbReader;
 
@@ -17,7 +17,7 @@ pub struct DBDebuggerInterface(Arc<dyn DbReader>);
 
 impl DBDebuggerInterface {
     pub fn open<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
-        Ok(Self(Arc::new(LibraDB::open(
+        Ok(Self(Arc::new(DiemDB::open(
             db_root_path,
             true,
             None,

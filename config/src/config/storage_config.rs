@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 
-/// Port selected RocksDB options for tuning underlying rocksdb instance of LibraDB.
+/// Port selected RocksDB options for tuning underlying rocksdb instance of DiemDB.
 /// see https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h
 /// for detailed explanations.
 #[derive(Copy, Clone, Debug, Deserialize, PartialEq, Serialize)]

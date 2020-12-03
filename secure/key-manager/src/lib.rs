@@ -15,7 +15,7 @@
 //! levels of severity depending on the delta.
 //!
 //! KeyManager talks to Libra via the LibraInterface that may either be a direct link into
-//! `LibraDB`/`Executor`, JSON-RPC, or some other concoction.
+//! `DiemDB`/`Executor`, JSON-RPC, or some other concoction.
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 

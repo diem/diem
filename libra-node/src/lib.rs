@@ -21,7 +21,7 @@ use libra_types::{
     move_resource::MoveStorage, PeerId,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use network_builder::builder::NetworkBuilder;
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -277,7 +277,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
     let mut instant = Instant::now();
     let (libra_db, db_rw) = DbReaderWriter::wrap(
-        LibraDB::open(
+        DiemDB::open(
             &node_config.storage.dir(),
             false, /* readonly */
             node_config.storage.prune_window,

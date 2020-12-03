@@ -164,19 +164,19 @@ pub enum Order {
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
-    /// See [`LibraDB::get_epoch_ending_ledger_infos`].
+    /// See [`DiemDB::get_epoch_ending_ledger_infos`].
     ///
-    /// [`LibraDB::get_epoch_ending_ledger_infos`]:
-    /// ../libradb/struct.LibraDB.html#method.get_epoch_ending_ledger_infos
+    /// [`DiemDB::get_epoch_ending_ledger_infos`]:
+    /// ../libradb/struct.DiemDB.html#method.get_epoch_ending_ledger_infos
     fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<EpochChangeProof>;
 
-    /// See [`LibraDB::get_transactions`].
+    /// See [`DiemDB::get_transactions`].
     ///
-    /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
+    /// [`DiemDB::get_transactions`]: ../libradb/struct.DiemDB.html#method.get_transactions
     fn get_transactions(
         &self,
         start_version: Version,
@@ -194,16 +194,16 @@ pub trait DbReader: Send + Sync {
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
 
-    /// See [`LibraDB::get_block_timestamp`].
+    /// See [`DiemDB::get_block_timestamp`].
     ///
-    /// [`LibraDB::get_block_timestamp`]:
-    /// ../libradb/struct.LibraDB.html#method.get_block_timestamp
+    /// [`DiemDB::get_block_timestamp`]:
+    /// ../libradb/struct.DiemDB.html#method.get_block_timestamp
     fn get_block_timestamp(&self, version: u64) -> Result<u64>;
 
-    /// See [`LibraDB::get_latest_account_state`].
+    /// See [`DiemDB::get_latest_account_state`].
     ///
-    /// [`LibraDB::get_latest_account_state`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_account_state
+    /// [`DiemDB::get_latest_account_state`]:
+    /// ../libradb/struct.DiemDB.html#method.get_latest_account_state
     fn get_latest_account_state(&self, address: AccountAddress)
         -> Result<Option<AccountStateBlob>>;
 
@@ -223,10 +223,10 @@ pub trait DbReader: Send + Sync {
     }
 
     /// Gets information needed from storage during the main node startup.
-    /// See [`LibraDB::get_startup_info`].
+    /// See [`DiemDB::get_startup_info`].
     ///
-    /// [`LibraDB::get_startup_info`]:
-    /// ../libradb/struct.LibraDB.html#method.get_startup_info
+    /// [`DiemDB::get_startup_info`]:
+    /// ../libradb/struct.DiemDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
     fn get_txn_by_account(
@@ -266,10 +266,10 @@ pub trait DbReader: Send + Sync {
 
     // Gets an account state by account address, out of the ledger state indicated by the state
     // Merkle tree root with a sparse merkle proof proving state tree root.
-    // See [`LibraDB::get_account_state_with_proof_by_version`].
+    // See [`DiemDB::get_account_state_with_proof_by_version`].
     //
-    // [`LibraDB::get_account_state_with_proof_by_version`]:
-    // ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    // [`DiemDB::get_account_state_with_proof_by_version`]:
+    // ../libradb/struct.DiemDB.html#method.get_account_state_with_proof_by_version
     //
     // This is used by libra core (executor) internally.
     fn get_account_state_with_proof_by_version(
@@ -278,10 +278,10 @@ pub trait DbReader: Send + Sync {
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 
-    /// See [`LibraDB::get_latest_state_root`].
+    /// See [`DiemDB::get_latest_state_root`].
     ///
-    /// [`LibraDB::get_latest_state_root`]:
-    /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
+    /// [`DiemDB::get_latest_state_root`]:
+    /// ../libradb/struct.DiemDB.html#method.get_latest_state_root
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
 
     /// Gets the latest TreeState no matter if db has been bootstrapped.
@@ -371,9 +371,9 @@ impl MoveStorage for &dyn DbReader {
 pub trait DbWriter: Send + Sync {
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.
-    /// See [`LibraDB::save_transactions`].
+    /// See [`DiemDB::save_transactions`].
     ///
-    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
+    /// [`DiemDB::save_transactions`]: ../libradb/struct.DiemDB.html#method.save_transactions
     fn save_transactions(
         &self,
         txns_to_commit: &[TransactionToCommit],

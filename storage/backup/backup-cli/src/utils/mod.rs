@@ -15,7 +15,7 @@ use libra_crypto::HashValue;
 use libra_infallible::duration_since_epoch;
 use libra_jellyfish_merkle::{restore::JellyfishMerkleRestore, NodeBatch, TreeWriter};
 use libra_types::transaction::Version;
-use libradb::{backup::restore_handler::RestoreHandler, GetRestoreHandler, LibraDB};
+use libradb::{backup::restore_handler::RestoreHandler, DiemDB, GetRestoreHandler};
 use std::{
     convert::TryFrom,
     mem::size_of,
@@ -144,7 +144,7 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
     fn try_from(opt: GlobalRestoreOpt) -> Result<Self> {
         let target_version = opt.target_version.unwrap_or(Version::max_value());
         let run_mode = if let Some(db_dir) = &opt.db_dir {
-            let restore_handler = Arc::new(LibraDB::open(
+            let restore_handler = Arc::new(DiemDB::open(
                 db_dir,
                 false, /* read_only */
                 None,  /* pruner */

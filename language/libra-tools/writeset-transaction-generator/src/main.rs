@@ -11,7 +11,7 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
-    /// Path to the local LibraDB file
+    /// Path to the local DiemDB file
     #[structopt(long, short, parse(from_os_str))]
     output: PathBuf,
     #[structopt(subcommand)] // Note that we mark a field as a subcommand

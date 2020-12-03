@@ -7,7 +7,7 @@ use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{fs::File, io::Read, path::PathBuf};
 use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
     let tmpdir;
 
     let db = if opt.commit {
-        LibraDB::open(
+        DiemDB::open(
             &opt.db_dir,
             false,
             None, /* pruner */
@@ -54,7 +54,7 @@ fn main() -> Result<()> {
         // When not committing, we open the DB as secondary so the tool is usable along side a
         // running node on the same DB. Using a TempPath since it won't run for long.
         tmpdir = TempPath::new();
-        LibraDB::open_as_secondary(
+        DiemDB::open_as_secondary(
             opt.db_dir.as_path(),
             tmpdir.path(),
             RocksdbConfig::default(),

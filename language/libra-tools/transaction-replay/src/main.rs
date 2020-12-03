@@ -12,7 +12,7 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
-    /// Path to the local LibraDB file
+    /// Path to the local DiemDB file
     #[structopt(long, parse(from_os_str))]
     db: Option<PathBuf>,
     /// Full URL address to connect to - should include port number, if applicable

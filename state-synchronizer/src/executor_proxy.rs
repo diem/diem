@@ -52,7 +52,7 @@ pub trait ExecutorProxyTrait: Send {
     /// Load all on-chain configs from storage
     /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
     /// using the tonic storage read client, which needs the tokio runtime to block on with no runtime/async issues
-    /// Once we make storage reads sync (by replacing the storage read client with direct LibraDB),
+    /// Once we make storage reads sync (by replacing the storage read client with direct DiemDB),
     /// we can make this entirely internal to `ExecutorProxy`'s initialization procedure
     fn load_on_chain_configs(&mut self) -> Result<()>;
 

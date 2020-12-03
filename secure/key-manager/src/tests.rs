@@ -35,7 +35,7 @@ use libra_types::{
     validator_info::ValidatorInfo,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
@@ -210,11 +210,11 @@ impl<T: LibraInterface> LibraInterface for LibraInterfaceTestHarness<T> {
     }
 }
 
-/// A mock libra interface implementation that stores a pointer to the LibraDB from which to
+/// A mock libra interface implementation that stores a pointer to the DiemDB from which to
 /// process API requests.
 #[derive(Clone)]
 struct MockLibraInterface {
-    storage: Arc<LibraDB>,
+    storage: Arc<DiemDB>,
 }
 
 impl MockLibraInterface {
@@ -344,8 +344,8 @@ fn setup_node_using_test_mocks() -> Node<MockLibraInterface> {
 }
 
 // Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
-fn setup_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
-    let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+fn setup_libra_db(config: &NodeConfig) -> (Arc<DiemDB>, DbReaderWriter) {
+    let (storage, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&config.storage.dir()));
     executor_test_helpers::bootstrap_genesis::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
         .expect("Failed to execute genesis");
 

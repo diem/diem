@@ -5,7 +5,7 @@ use super::*;
 use crate::{
     change_set::ChangeSet,
     ledger_counters::{LedgerCounter, LedgerCounterBumps},
-    LibraDB,
+    DiemDB,
 };
 use libra_temppath::TempPath;
 use std::collections::HashMap;
@@ -44,7 +44,7 @@ fn create_bumps_map(
 #[test]
 fn test_inc_ledger_counters() {
     let tmp_dir = TempPath::new();
-    let db = LibraDB::new_for_test(&tmp_dir);
+    let db = DiemDB::new_for_test(&tmp_dir);
     let store = &db.system_store;
 
     // First batch, add to zeros.

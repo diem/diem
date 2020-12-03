@@ -23,7 +23,7 @@ fn start_test_storage_with_client() -> (JoinHandle<()>, libra_temppath::TempPath
     // Test timeout of 5 seconds
     config.storage.timeout_ms = 5_000;
 
-    let db = Arc::new(LibraDB::new_for_test(&tmp_dir));
+    let db = Arc::new(DiemDB::new_for_test(&tmp_dir));
     let storage_server_handle = start_storage_service_with_db(&config, db);
 
     let client = StorageClient::new(&config.storage.address, config.storage.timeout_ms);

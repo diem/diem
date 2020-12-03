@@ -16,7 +16,7 @@ use crate::{
 use libra_config::config::RocksdbConfig;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{convert::TryInto, mem::size_of, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
@@ -96,7 +96,7 @@ fn end_to_end() {
     // We don't write down any ledger infos when recovering transactions. State-sync needs to take
     // care of it before running consensus. The latest transactions are deemed "synced" instead of
     // "committed" most likely.
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */

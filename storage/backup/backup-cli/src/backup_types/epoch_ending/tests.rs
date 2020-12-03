@@ -15,7 +15,7 @@ use crate::{
 use backup_service::start_backup_service;
 use libra_config::{config::RocksdbConfig, utils::get_available_port};
 use libra_temppath::TempPath;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{
     convert::TryInto,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -90,7 +90,7 @@ fn end_to_end() {
         .map(|li| li.ledger_info().next_block_epoch())
         .unwrap_or(0);
 
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */

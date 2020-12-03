@@ -37,7 +37,7 @@ use libra_types::{
     write_set::{WriteOp, WriteSetMut},
 };
 use libra_vm::LibraVM;
-use libradb::{GetRestoreHandler, LibraDB};
+use libradb::{DiemDB, GetRestoreHandler};
 use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
@@ -51,7 +51,7 @@ fn test_empty_db() {
     let genesis = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis.0));
     let tmp_dir = TempPath::new();
-    let db_rw = DbReaderWriter::new(LibraDB::new_for_test(&tmp_dir));
+    let db_rw = DbReaderWriter::new(DiemDB::new_for_test(&tmp_dir));
 
     // Executor won't be able to boot on empty db due to lack of StartupInfo.
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
@@ -210,7 +210,7 @@ fn get_configuration(db: &DbReaderWriter) -> ConfigurationResource {
 }
 
 fn get_state_backup(
-    db: &LibraDB,
+    db: &DiemDB,
 ) -> (
     Vec<(HashValue, AccountStateBlob)>,
     SparseMerkleRangeProof,
@@ -231,7 +231,7 @@ fn get_state_backup(
 }
 
 fn restore_state_to_db(
-    db: &Arc<LibraDB>,
+    db: &Arc<DiemDB>,
     accounts: Vec<(HashValue, AccountStateBlob)>,
     proof: SparseMerkleRangeProof,
     root_hash: HashValue,
@@ -253,7 +253,7 @@ fn test_pre_genesis() {
 
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&tmp_dir));
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&tmp_dir));
     let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
     let waypoint = bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
@@ -271,7 +271,7 @@ fn test_pre_genesis() {
     let (accounts_backup, proof, root_hash) = get_state_backup(&db);
     // Restore into PRE-GENESIS state of a new empty DB.
     let tmp_dir = TempPath::new();
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&tmp_dir));
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&tmp_dir));
     restore_state_to_db(&db, accounts_backup, proof, root_hash, PRE_GENESIS_VERSION);
 
     // DB is not empty, `maybe_bootstrap()` will try to apply and fail the waypoint check.
@@ -323,7 +323,7 @@ fn test_new_genesis() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis.0));
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
-    let db = DbReaderWriter::new(LibraDB::new_for_test(&tmp_dir));
+    let db = DbReaderWriter::new(DiemDB::new_for_test(&tmp_dir));
     let waypoint = bootstrap_genesis::<LibraVM>(&db, &genesis_txn).unwrap();
     let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
 

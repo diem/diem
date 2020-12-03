@@ -17,7 +17,7 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{Transaction, TransactionListWithProof, Version},
 };
-use libradb::LibraDB;
+use libradb::DiemDB;
 use proptest::prelude::*;
 use rand::Rng;
 use std::collections::BTreeMap;
@@ -50,7 +50,7 @@ impl TestExecutor {
     fn new() -> TestExecutor {
         let path = libra_temppath::TempPath::new();
         path.create_as_dir().unwrap();
-        let db = DbReaderWriter::new(LibraDB::new_for_test(path.path()));
+        let db = DbReaderWriter::new(DiemDB::new_for_test(path.path()));
         let genesis = vm_genesis::test_genesis_transaction();
         let waypoint = generate_waypoint::<MockVM>(&db, &genesis).unwrap();
         maybe_bootstrap::<MockVM>(&db, &genesis, waypoint).unwrap();

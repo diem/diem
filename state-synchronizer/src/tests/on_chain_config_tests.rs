@@ -18,7 +18,7 @@ use libra_types::{
     transaction::{Transaction, WriteSetPayload},
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
@@ -39,7 +39,7 @@ fn test_on_chain_config_pub_sub() {
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
     let db_path = libra_temppath::TempPath::new();
     db_path.create_as_dir().unwrap();
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(db_path.path()));
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(db_path.path()));
     bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
     let mut block_executor = Box::new(Executor::<LibraVM>::new(db_rw.clone()));

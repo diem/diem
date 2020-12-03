@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::{change_set::ChangeSet, LibraDB};
+use crate::{change_set::ChangeSet, DiemDB};
 use libra_temppath::TempPath;
 use libra_types::{
     proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen},
@@ -176,8 +176,8 @@ proptest! {
     }
 }
 
-fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> LibraDB {
-    let db = LibraDB::new_for_test(path);
+fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> DiemDB {
+    let db = DiemDB::new_for_test(path);
     let store = &db.ledger_store;
 
     // Write LIs to DB.
@@ -193,7 +193,7 @@ fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSigna
     db
 }
 
-fn put_transaction_infos(db: &LibraDB, txn_infos: &[TransactionInfo]) {
+fn put_transaction_infos(db: &DiemDB, txn_infos: &[TransactionInfo]) {
     let mut cs = ChangeSet::new();
     db.ledger_store
         .put_transaction_infos(0, txn_infos, &mut cs)

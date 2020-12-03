@@ -21,7 +21,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use libra_vm::{LibraVM, VMExecutor};
-use libradb::LibraDB;
+use libradb::DiemDB;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
@@ -44,7 +44,7 @@ pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>
     let (mut config, _genesis_key) = libra_genesis_tool::test_config();
     let server_port = utils::get_available_port();
     config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&config.storage.dir()));
     bootstrap_genesis::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
     let handle = start_storage_service_with_db(&config, db.clone());
     (config, handle, db as Arc<dyn DbReader>)

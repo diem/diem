@@ -30,7 +30,7 @@ use libra_types::{
     },
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::BTreeMap,
@@ -308,7 +308,7 @@ fn create_storage_service_and_executor(
     config: &NodeConfig,
 ) -> (Arc<dyn DbReader>, Executor<LibraVM>) {
     let (db, db_rw) = DbReaderWriter::wrap(
-        LibraDB::open(
+        DiemDB::open(
             &config.storage.dir(),
             false, /* readonly */
             None,  /* pruner */

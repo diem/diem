@@ -12,7 +12,7 @@ use libra_types::{
     vm_status::StatusCode,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::DiemDB;
 use move_core_types::gas_schedule::MAX_TRANSACTION_SIZE_IN_BYTES;
 use rand::SeedableRng;
 use std::u64;
@@ -28,7 +28,7 @@ impl TestValidator {
     fn new() -> Self {
         let _db_path = libra_temppath::TempPath::new();
         _db_path.create_as_dir().unwrap();
-        let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(_db_path.path()));
+        let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(_db_path.path()));
         executor_test_helpers::bootstrap_genesis::<LibraVM>(
             &db_rw,
             &vm_genesis::test_genesis_transaction(),

@@ -549,7 +549,7 @@ mod test {
         MockLibraDB::new(BTreeMap::new())
     }
 
-    // This offers a simple mock of LibraDB for testing.
+    // This offers a simple mock of DiemDB for testing.
     #[derive(Clone)]
     pub struct MockLibraDB {
         account_states_with_proof: BTreeMap<AccountAddress, AccountStateWithProof>,

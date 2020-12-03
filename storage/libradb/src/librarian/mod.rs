@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{LibraDB, Order, MAX_LIMIT};
+use crate::{DiemDB, Order, MAX_LIMIT};
 use anyhow::{ensure, format_err, Result};
 use libra_config::config::RocksdbConfig;
 use libra_types::{
@@ -15,12 +15,12 @@ use std::{convert::AsRef, path::Path};
 use storage_interface::{DbReader, StartupInfo};
 
 pub struct Librarian {
-    db: LibraDB,
+    db: DiemDB,
 }
 
 impl Librarian {
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
-        let db = LibraDB::open(
+        let db = DiemDB::open(
             db_root_path,
             true, /* read only */
             None, /* no prune_window */

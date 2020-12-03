@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::LibraDB;
+use crate::DiemDB;
 use libra_proptest_helpers::Index;
 use libra_temppath::TempPath;
 use libra_types::{
@@ -24,7 +24,7 @@ proptest! {
         ),
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new_for_test(&tmp_dir);
+        let db = DiemDB::new_for_test(&tmp_dir);
         let store = &db.transaction_store;
         let txns = init_store(universe, gens, &store);
 
@@ -58,7 +58,7 @@ proptest! {
         ),
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new_for_test(&tmp_dir);
+        let db = DiemDB::new_for_test(&tmp_dir);
         let store = &db.transaction_store;
         let txns = init_store(universe, gens, &store);
 
@@ -114,7 +114,7 @@ proptest! {
         )
     ) {
         let tmp_dir = TempPath::new();
-        let db = LibraDB::new_for_test(&tmp_dir);
+        let db = DiemDB::new_for_test(&tmp_dir);
         let store = &db.transaction_store;
 
         let mut cs = ChangeSet::new();

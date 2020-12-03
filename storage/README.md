@@ -70,7 +70,7 @@ key-value pairs in RocksDB are byte arrays, there is a wrapper on top of RocksDB
 to deal with the serialization of keys and values. This wrapper enforces that all data in and
 out of the DB is structured according to predefined schemas.
 
-The core module that implements the main functionalities is called *LibraDB*.
+The core module that implements the main functionalities is called *DiemDB*.
 While we use a single RocksDB instance to store the entire set of data, related
 data are grouped into logical stores &mdash; for example, ledger store, state store,
 and transaction store, etc.
@@ -86,7 +86,7 @@ Patricia tree.
 ```
     storage
           └── accumulator      # Implementation of Merkle accumulator.
-          └── libradb          # Implementation of LibraDB.
+          └── libradb          # Implementation of DiemDB.
           └── schemadb         # Schematized wrapper on top of RocksDB.
           └── scratchpad       # In-memory representation of Libra core data structures used by execution.
           └── jellyfish-merkle # Implementation of sparse Merkle tree.

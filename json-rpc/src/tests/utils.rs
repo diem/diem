@@ -52,7 +52,7 @@ pub fn test_bootstrap(
     )
 }
 
-/// Lightweight mock of LibraDB
+/// Lightweight mock of DiemDB
 #[derive(Clone)]
 pub struct MockLibraDB {
     pub version: u64,
