@@ -1274,8 +1274,9 @@ dependencies = [
 
 [[package]]
 name = "determinator"
-version = "0.1.0"
-source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfc34c72c766278fa177275fc2173e0237899065ba55e7934db753db01518a59"
 dependencies = [
  "globset",
  "guppy",
@@ -2086,8 +2087,9 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.5.0"
-source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0658e39db7498a195f3f68c3ecf0ed2bce7f35c580c2ee9dd2c2dc4bbe1e7c4"
 dependencies = [
  "cargo_metadata",
  "fixedbitset",
@@ -2108,8 +2110,9 @@ dependencies = [
 
 [[package]]
 name = "guppy-summaries"
-version = "0.2.0"
-source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4db8242f1f19bfdbb0226cc425bca27cc5f1e029cde7d3145924fe71184dff9f"
 dependencies = [
  "diffus",
  "semver 0.11.0",
@@ -6605,8 +6608,9 @@ checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
 
 [[package]]
 name = "target-spec"
-version = "0.4.1"
-source = "git+https://github.com/facebookincubator/cargo-guppy?rev=37351774bae259d76bead19e87415e64f85673f7#37351774bae259d76bead19e87415e64f85673f7"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6e124d078c7958d618b8322f040d72eccfd02a30e12f050307f5ad3bbcf904e"
 dependencies = [
  "cfg-expr",
  "serde",

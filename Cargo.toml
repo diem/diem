@@ -193,10 +193,3 @@ debug = true
 # Build guppy in opt mode so that x commands are faster.
 [profile.dev.package.guppy]
 opt-level = 3
-
-# (sunshowers) temporary override to guppy to use a newer version, will be removed once determinator is released to
-# crates.io
-[patch.crates-io]
-guppy = { git = "https://github.com/facebookincubator/cargo-guppy", rev = "37351774bae259d76bead19e87415e64f85673f7" }
-guppy-summaries = { git = "https://github.com/facebookincubator/cargo-guppy", rev = "37351774bae259d76bead19e87415e64f85673f7" }
-determinator = { git = "https://github.com/facebookincubator/cargo-guppy", rev = "37351774bae259d76bead19e87415e64f85673f7" }
