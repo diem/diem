@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.34"
 hex = "0.4.2"
-reqwest = { version = "0.10.8", features = ["blocking"], default-features = false }
+reqwest = { version = "0.10.9", features = ["blocking"], default-features = false }
 serde = "1.0.117"
 serde_derive = "1.0.117"
 structopt = "0.3.21"

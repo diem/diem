@@ -14,7 +14,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.34"
 hex = "0.4.2"
-reqwest = { version = "0.10.8", features = ["blocking", "json"] }
+reqwest = { version = "0.10.9", features = ["blocking", "json"] }
 structopt = "0.3.21"
 futures = "0.3.8"
 tokio = { version = "0.2.22", features = ["full"] }
