@@ -457,13 +457,13 @@ jobs:
   run-unit-test:
     working_directory: *working_directory
     executor: unittest-executor
-    description: Run all unit tests, excluding E2E and flaky tests that are
+    description: Run affected unit tests, excluding E2E and flaky tests that are
       explicitly ignored.
     steps:
       - build_setup
       - restore_cargo_package_cache
       - run:
-          name: Run all unit tests
+          name: Run affected unit tests
           command: |
             eval $(.circleci/get_pr_info.sh -b)
             RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit --changed-since "origin/$TARGET_BRANCH"
