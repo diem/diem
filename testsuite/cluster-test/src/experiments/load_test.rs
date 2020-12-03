@@ -16,12 +16,12 @@ use diem_logger::info;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
 use diem_network_address::NetworkAddress;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
-use futures::{sink::SinkExt, StreamExt};
+use futures::{sink::SinkExt, StreamExt, FutureExt};
 use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
 use network_builder::builder::NetworkBuilder;
-use state_synchronizer::network::{StateSynchronizerEvents, StateSynchronizerSender};
+use state_synchronizer::network::{StateSynchronizerEvents, StateSynchronizerSender, StateSynchronizerMsg};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -29,6 +29,7 @@ use std::{
 };
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
+use network::constants::MAX_CONCURRENT_NETWORK_REQS;
 
 const EXPERIMENT_BUFFER_SECS: u64 = 900;
 
@@ -222,9 +223,11 @@ impl StubbedNode {
         let mut network_builder =
             NetworkBuilder::create(ChainId::test(), pfn_config.base.role, network_config);
 
+        let mut config = state_synchronizer::network::network_endpoint_config();
+        config.3 = MAX_CONCURRENT_NETWORK_REQS;
         let state_sync_handle = Some(
             network_builder
-                .add_protocol_handler(state_synchronizer::network::network_endpoint_config()),
+                .add_protocol_handler(config),
         );
 
         let mempool_handle = Some(network_builder.add_protocol_handler(
@@ -296,18 +299,30 @@ async fn mempool_load_test(
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
     let task_start = Instant::now();
+    let mut pending = 0_usize;
     while Instant::now().duration_since(task_start) < duration {
-        let msg = diem_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
-            request_id: lcs::to_bytes("request_id")?,
-            transactions: vec![], // TODO submit actual txns
-        };
-        // TODO log stats for bandwidth sent to remote peer to MempoolResult
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
-        msg_num += 1;
-        sender.send_to(vfn, msg)?;
-
-        // await ACK from remote peer
-        let _response = events.select_next_some().await;
+        if pending < MAX_CONCURRENT_NETWORK_REQS {
+            let msg = diem_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
+                request_id: lcs::to_bytes("request_id")?,
+                transactions: vec![], // TODO submit actual txns
+            };
+            bytes += lcs::to_bytes(&msg)?.len() as u64;
+            sender.send_to(vfn, msg)?;
+            pending += 1;
+        }
+        // await response from remote peer
+        while let Some(_response) = events.select_next_some().now_or_never() {
+            pending -= 1;
+            msg_num += 1;
+        }
+    }
+    // wait for all msgs are processed and acks back
+    while pending > 0 {
+        let response = events.select_next_some().await;
+        if let Event::Message(_remote_peer, _payload) = response {
+            msg_num += 1;
+            pending -= 1;
+        }
     }
 
     Ok(MempoolStats {
@@ -361,6 +376,19 @@ impl fmt::Display for MempoolStatsRate {
     }
 }
 
+fn process_poll_msg(response: Event<StateSynchronizerMsg>) -> Option<usize> {
+    if let Event::Message(_remote_peer, payload) = response {
+        if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+            chunk_response,
+        ) = payload
+        {
+            return Some(chunk_response.txn_list_with_proof.transactions.len());
+        }
+    }
+    // this msg is not an ack back
+    None
+}
+
 async fn state_sync_load_test(
     duration: Duration,
     mut sender: StateSynchronizerSender,
@@ -389,26 +417,34 @@ async fn state_sync_load_test(
     let mut served_txns = 0_u64;
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
+    let mut pending = 0_usize;
     while Instant::now().duration_since(task_start) < duration {
-        let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
-            chunk_request.clone(),
-        ));
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
-        msg_num += 1;
-        sender.send_to(vfn, msg)?;
-
+        if pending < MAX_CONCURRENT_NETWORK_REQS {
+            let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
+                chunk_request.clone(),
+            ));
+            bytes += lcs::to_bytes(&msg)?.len() as u64;
+            sender.send_to(vfn, msg)?;
+            pending += 1;
+        }
         // await response from remote peer
-        let response = events.select_next_some().await;
-        if let Event::Message(_remote_peer, payload) = response {
-            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                chunk_response,
-            ) = payload
-            {
-                // TODO analyze response and update StateSyncResult with stats accordingly
-                served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;
+        while let Some(response) = events.select_next_some().now_or_never() {
+            if let Some(txs_num) = process_poll_msg(response) {
+                served_txns += txs_num as u64;
+                pending -= 1;
+                msg_num += 1;
             }
         }
     }
+    // wait for all msgs are processed and acks back
+    while pending > 0 {
+        let response = events.select_next_some().await;
+        if let Some(txs_num) = process_poll_msg(response) {
+            served_txns += txs_num as u64;
+            pending -= 1;
+        }
+    }
+
     Ok(StateSyncStats {
         served_txns,
         bytes,
