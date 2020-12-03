@@ -397,7 +397,7 @@ async fn state_sync_load_test(
         let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
-        if pending <= NETWORK_CHANNEL_SIZE {
+        if pending < NETWORK_CHANNEL_SIZE {
             bytes += lcs::to_bytes(&msg)?.len() as u64;
             sender.send_to(vfn, msg)?;
             pending += 1;
