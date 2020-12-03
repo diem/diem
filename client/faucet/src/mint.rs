@@ -32,6 +32,7 @@ pub struct MintParams {
     pub currency_code: move_core_types::identifier::Identifier,
     pub auth_key: libra_types::transaction::authenticator::AuthenticationKey,
     pub return_txns: Option<bool>,
+    pub is_designated_dealer: Option<bool>,
 }
 
 impl MintParams {
@@ -49,7 +50,23 @@ impl MintParams {
                 0, // sliding nonce
                 self.receiver(),
                 self.auth_key.prefix().to_vec(),
-                format!("No. {}", seq).as_bytes().to_vec(),
+                format!("No. {} VASP", seq).as_bytes().to_vec(),
+                false, /* add all currencies */
+            ),
+        )
+    }
+
+    fn create_designated_dealer_account_script(
+        &self,
+        seq: u64,
+    ) -> libra_types::transaction::TransactionPayload {
+        libra_types::transaction::TransactionPayload::Script(
+            transaction_builder_generated::stdlib::encode_create_designated_dealer_script(
+                self.currency_code(),
+                0, // sliding nonce
+                self.receiver(),
+                self.auth_key.prefix().to_vec(),
+                format!("No. {} DD", seq).as_bytes().to_vec(),
                 false, /* add all currencies */
             ),
         )
@@ -99,11 +116,12 @@ impl Service {
 
         let mut txns = vec![];
         if receiver_seq.is_none() {
-            txns.push(self.create_txn(
-                params.create_parent_vasp_account_script(tc_seq),
-                treasury_compliance_account_address(),
-                tc_seq,
-            )?);
+            let script = if params.is_designated_dealer.unwrap_or(false) {
+                params.create_designated_dealer_account_script(tc_seq)
+            } else {
+                params.create_parent_vasp_account_script(tc_seq)
+            };
+            txns.push(self.create_txn(script, treasury_compliance_account_address(), tc_seq)?);
         }
         txns.push(self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?);
 

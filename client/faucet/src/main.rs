@@ -234,6 +234,38 @@ mod tests {
         let addr = AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
         let account = reader.get(&addr).expect("account should be created");
         assert_eq!(account["balances"][0]["amount"], amount);
+        assert_eq!(account["role"]["type"], "parent_vasp");
+    }
+
+    #[tokio::test]
+    async fn test_mint_dd_account_with_txns_response() {
+        let accounts = genesis_accounts();
+        let service = setup(accounts.clone());
+        let filter = routes(service);
+
+        let auth_key = "44b8f03f203ec45dbd7484e433752efe54aa533116e934f8a50c28bece06d3ac";
+        let amount = 13345;
+        let resp = warp::test::request()
+            .method("POST")
+            .path(
+                format!(
+                    "/mint?auth_key={}&amount={}&currency_code=LBR&return_txns=true&is_designated_dealer=true",
+                    auth_key, amount
+                )
+                .as_str(),
+            )
+            .reply(&filter)
+            .await;
+        let body = resp.body();
+        let txns: Vec<libra_types::transaction::SignedTransaction> =
+            lcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
+                .expect("valid lcs vec");
+        assert_eq!(txns.len(), 2);
+        let reader = accounts.read();
+        let addr = AccountAddress::try_from("54aa533116e934f8a50c28bece06d3ac".to_owned()).unwrap();
+        let account = reader.get(&addr).expect("account should be created");
+        assert_eq!(account["balances"][0]["amount"], amount);
+        assert_eq!(account["role"]["type"], "designated_dealer");
     }
 
     #[tokio::test]
@@ -309,11 +341,17 @@ mod tests {
                                 .insert(address, create_vasp_account(&address.to_string(), 0));
                             assert!(previous.is_none(), "should not create account twice");
                         }
+                        Some(ScriptCall::CreateDesignatedDealer { addr: address, .. }) => {
+                            let mut writer = accounts.write();
+                            let previous =
+                                writer.insert(address, create_dd_account(&address.to_string(), 0));
+                            assert!(previous.is_none(), "should not create account twice");
+                        }
                         Some(ScriptCall::PeerToPeerWithMetadata { payee, amount, .. }) => {
                             let mut writer = accounts.write();
                             let account =
                                 writer.get_mut(&payee).expect("account should be created");
-                            *account = create_vasp_account(payee.to_string().as_str(), amount);
+                            account["balances"][0]["amount"] = serde_json::json!(amount);
                         }
                         _ => panic!("unexpected type of script"),
                     }
@@ -363,7 +401,7 @@ mod tests {
         let dd = "000000000000000000000000000000dd";
         accounts.insert(
             AccountAddress::try_from(dd.to_owned()).unwrap(),
-            create_dd_account(dd),
+            create_dd_account(dd, 4611685774556657903u64),
         );
         Arc::new(RwLock::new(accounts))
     }
@@ -377,7 +415,7 @@ mod tests {
             }]),
             serde_json::json!({
                 "type": "parent_vasp",
-                "human_name": "No. 0",
+                "human_name": "No. 0 VASP",
                 "base_url": "",
                 "expiration_time": 18446744073709551615u64,
                 "compliance_key": "",
@@ -388,11 +426,11 @@ mod tests {
         )
     }
 
-    fn create_dd_account(address: &str) -> serde_json::Value {
+    fn create_dd_account(address: &str, amount: u64) -> serde_json::Value {
         create_account(
             address,
             serde_json::json!([{
-                "amount": 4611685774556657903u64,
+                "amount": amount,
                 "currency": "LBR",
             }]),
             serde_json::json!({
