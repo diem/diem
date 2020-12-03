@@ -224,7 +224,7 @@ impl StubbedNode {
             NetworkBuilder::create(ChainId::test(), pfn_config.base.role, network_config);
 
         let mut config = state_synchronizer::network::network_endpoint_config();
-        config.3 = 1000;
+        config.3 = NETWORK_CHANNEL_SIZE;
         let state_sync_handle = Some(
             network_builder
                 .add_protocol_handler(config),
@@ -299,18 +299,23 @@ async fn mempool_load_test(
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
     let task_start = Instant::now();
+    let mut pending = 0_usize;
     while Instant::now().duration_since(task_start) < duration {
         let msg = diem_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
             request_id: lcs::to_bytes("request_id")?,
             transactions: vec![], // TODO submit actual txns
         };
-        // TODO log stats for bandwidth sent to remote peer to MempoolResult
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
-        msg_num += 1;
-        sender.send_to(vfn, msg)?;
 
-        // await ACK from remote peer
-        let _response = events.select_next_some().await;
+        if pending < NETWORK_CHANNEL_SIZE {
+            bytes += lcs::to_bytes(&msg)?.len() as u64;
+            sender.send_to(vfn, msg)?;
+            pending += 1;
+        }
+        // await response from remote peer
+        if let Some(_response) = events.select_next_some().now_or_never() {
+            msg_num += 1;
+            pending -= 1;
+        }
     }
 
     Ok(MempoolStats {
@@ -381,7 +386,7 @@ async fn state_sync_load_test(
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
-        1000,
+        250,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,
