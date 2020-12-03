@@ -27,7 +27,7 @@ serde_json = "1.0.59"
 structopt = "0.3.21"
 toml = "0.5.7"
 tokio = { version = "0.2.22", features = ["full"] }
-tokio-util = { version = "0.3.1", features = ["compat"] }
+tokio-util = { version = "0.5.0", features = ["compat"] }
 
 executor = { path = "../../../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../../../execution/executor-test-helpers", version = "0.1.0", optional = true }
