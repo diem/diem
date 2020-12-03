@@ -10,7 +10,7 @@ results in the generated docs.
 
 ## Calling the Generator
 
-The generator is called from within the Libra tree as such:
+The generator is called from within the Diem tree as such:
 
 ```shell script
 > cargo run -p move-prover -- --docgen <flags> .. <sources>
@@ -84,7 +84,7 @@ Github). One can also use section headers in documentation comments; those heade
 the context in which they are included in the overall doc. For example:
 
 ```move
-/// This is the Libra account module
+/// This is the Diem account module
 ///
 /// # Overview
 ///
@@ -94,7 +94,7 @@ the context in which they are included in the overall doc. For example:
 ///
 /// The following details need to be considered:
 /// ...
-module LibraAccount {
+module DiemAccount {
    ...
 }
 ```
@@ -103,9 +103,9 @@ If the module documentation is included in a larger context, the section tags wi
 doc:
 
 ```move
-# Module `0x1::LibraAccount`
+# Module `0x1::DiemAccount`
 
-This is the Libra account module.
+This is the Diem account module.
 
 ## Overview
 ...
@@ -124,8 +124,8 @@ decorated as follows:
    positives, as the generator does not analyze the syntax right now.
 
 -  Identifiers are attempted to resolve against the documented code and on success, hyperlinked to the declaration.
-   For example, within the `LibraAccount` module, all occurences of `T`, `Self::T`, `LibraAccount::T`, and
-   `0x1::LibraAccount:T` will resolve into a link to the declaration. This resolution is heuristic and may have
+   For example, within the `DiemAccount` module, all occurences of `T`, `Self::T`, `DiemAccount::T`, and
+   `0x1::DiemAccount:T` will resolve into a link to the declaration. This resolution is heuristic and may have
    positive and negative false positives. Specifically, it currently does not consider aliases and use-declarations.
 
    If you use a simple name in code comments. like `foo`, it will not resolve against a function `foo` in the current

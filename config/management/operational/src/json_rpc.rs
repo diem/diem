@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::TransactionContext;
-use libra_management::error::Error;
-use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
-use libra_types::{
+use diem_management::error::Error;
+use diem_secure_json_rpc::{JsonRpcClient, VMStatusView};
+use diem_types::{
     account_address::AccountAddress, account_config, account_config::AccountResource,
     account_state::AccountState, transaction::SignedTransaction,
     validator_config::ValidatorConfigResource, validator_info::ValidatorInfo,
@@ -52,7 +52,7 @@ impl JsonRpcClientWrapper {
     }
 
     /// This method returns all validator infos currently registered in the validator set of the
-    /// Libra blockchain. If account is specified, only a single validator info is returned: the
+    /// Diem blockchain. If account is specified, only a single validator info is returned: the
     /// one that matches the given account.
     pub fn validator_set(
         &self,

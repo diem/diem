@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,9 +6,9 @@ use crate::{
     request_manager::ChunkRequestInfo,
 };
 use anyhow::Error;
-use libra_config::config::PeerNetworkId;
-use libra_logger::Schema;
-use libra_types::{
+use diem_config::config::PeerNetworkId;
+use diem_logger::Schema;
+use diem_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint,
 };
 use serde::Serialize;

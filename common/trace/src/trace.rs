@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, ensure, Result};
-use libra_logger::json_log::JsonLogEntry;
+use diem_logger::json_log::JsonLogEntry;
 use std::time::Instant;
 
 pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
-pub const LIBRA_TRACE: &str = "libra_trace";
+pub const DIEM_TRACE: &str = "diem_trace";
 
 use std::{
     collections::HashMap,
@@ -18,7 +18,7 @@ use std::{
 // It have few unsafe lines, but does not require extra dependency
 // Sampling rate is the form of (nominator, denominator)
 static mut SAMPLING_CONFIG: Option<Sampling> = None;
-static LIBRA_TRACE_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
+static DIEM_TRACE_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
 const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
@@ -68,10 +68,10 @@ macro_rules! node_sampling_data {
 #[macro_export]
 macro_rules! send_logs {
     ($name:expr, $json:expr) => {
-        let log_entry = libra_logger::json_log::JsonLogEntry::new($name, $json);
-        libra_logger::json_log::send_json_log(log_entry.clone());
+        let log_entry = diem_logger::json_log::JsonLogEntry::new($name, $json);
+        diem_logger::json_log::send_json_log(log_entry.clone());
         // TODO: we should determine what level we want to use for these traces so they show up
-        libra_logger::trace!(trace_type = $name, trace_entry = log_entry);
+        diem_logger::trace!(trace_type = $name, trace_entry = log_entry);
         $crate::counters::TRACE_EVENT_COUNT.inc();
     };
 }
@@ -383,7 +383,7 @@ fn crate_name(path: &str) -> &str {
         Some(pos) => &path[0..pos],
         None => path,
     };
-    let name = if let Some(stripped) = name.strip_prefix("libra_") {
+    let name = if let Some(stripped) = name.strip_prefix("diem_") {
         stripped
     } else {
         name
@@ -399,22 +399,21 @@ fn abbreviate_crate(name: &str) -> &str {
 }
 
 // This is exact copy of similar function in log crate
-/// Sets libra trace config
-pub fn set_libra_trace(config: &HashMap<String, String>) -> Result<()> {
+/// Sets diem trace config
+pub fn set_diem_trace(config: &HashMap<String, String>) -> Result<()> {
     match parse_sampling_config(config) {
         Ok(sampling) => unsafe {
-            match LIBRA_TRACE_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst)
-            {
+            match DIEM_TRACE_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
                 UNINITIALIZED => {
                     SAMPLING_CONFIG = Some(sampling);
-                    LIBRA_TRACE_STATE.store(INITIALIZED, Ordering::SeqCst);
+                    DIEM_TRACE_STATE.store(INITIALIZED, Ordering::SeqCst);
                     Ok(())
                 }
                 INITIALIZING => {
-                    while LIBRA_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                    bail!("Failed to initialize LIBRA_TRACE_STATE");
+                    while DIEM_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZING {}
+                    bail!("Failed to initialize DIEM_TRACE_STATE");
                 }
-                _ => bail!("Failed to initialize LIBRA_TRACE_STATE"),
+                _ => bail!("Failed to initialize DIEM_TRACE_STATE"),
             }
         },
         Err(s) => bail!("Failed to parse sampling config: {}", s),
@@ -440,13 +439,13 @@ fn parse_sampling_config(config: &HashMap<String, String>) -> Result<Sampling> {
     Ok(Sampling(map))
 }
 
-/// Checks if libra trace is enabled
-pub fn libra_trace_set() -> bool {
-    LIBRA_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZED
+/// Checks if diem trace is enabled
+pub fn diem_trace_set() -> bool {
+    DIEM_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZED
 }
 
 pub fn is_selected(node: (&'static str, u64)) -> bool {
-    if !libra_trace_set() {
+    if !diem_trace_set() {
         return false;
     }
     unsafe {

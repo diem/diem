@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use generate_format::Corpus;
@@ -7,11 +7,11 @@ use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
-    name = "Libra format generator",
-    about = "Trace serde (de)serialization to generate format descriptions for Libra types"
+    name = "Diem format generator",
+    about = "Trace serde (de)serialization to generate format descriptions for Diem types"
 )]
 struct Options {
-    #[structopt(long, possible_values = &Corpus::variants(), default_value = "Libra", case_insensitive = true)]
+    #[structopt(long, possible_values = &Corpus::variants(), default_value = "Diem", case_insensitive = true)]
     corpus: Corpus,
 
     #[structopt(long)]

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{errors::*, file_format::*, file_format_common::*};
@@ -295,9 +295,9 @@ fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModu
 ///
 /// Returns the offset where the count of tables in the binary.
 fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<()> {
-    let mut magic = [0u8; BinaryConstants::LIBRA_MAGIC_SIZE];
+    let mut magic = [0u8; BinaryConstants::DIEM_MAGIC_SIZE];
     if let Ok(count) = cursor.read(&mut magic) {
-        if count != BinaryConstants::LIBRA_MAGIC_SIZE || magic != BinaryConstants::LIBRA_MAGIC {
+        if count != BinaryConstants::DIEM_MAGIC_SIZE || magic != BinaryConstants::DIEM_MAGIC {
             return Err(PartialVMError::new(StatusCode::BAD_MAGIC));
         }
     } else {

@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
+use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

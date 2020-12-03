@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::pick_slice_idxs;
@@ -18,7 +18,7 @@ use std::iter;
 /// # Examples
 ///
 /// ```
-/// use libra_proptest_helpers::RepeatVec;
+/// use diem_proptest_helpers::RepeatVec;
 ///
 /// let mut repeat_vec = RepeatVec::new();
 /// repeat_vec.extend("a", 10); // logically, insert "a" 10 times
@@ -33,7 +33,7 @@ use std::iter;
 /// The data structure doesn't care about whether the inserted items are equal or not.
 ///
 /// ```
-/// use libra_proptest_helpers::RepeatVec;
+/// use diem_proptest_helpers::RepeatVec;
 ///
 /// let mut repeat_vec = RepeatVec::new();
 /// repeat_vec.extend("a", 10); // logically, insert "a" 10 times
@@ -78,7 +78,7 @@ impl<T> RepeatVec<T> {
     /// # Examples
     ///
     /// ```
-    /// use libra_proptest_helpers::RepeatVec;
+    /// use diem_proptest_helpers::RepeatVec;
     ///
     /// let mut repeat_vec = RepeatVec::new();
     ///

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Support for encoding transactions for common situations.
@@ -6,7 +6,7 @@
 use crate::account::Account;
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
-use libra_types::{
+use diem_types::{
     account_config,
     transaction::{RawTransaction, Script, SignedTransaction, TransactionArgument},
 };
@@ -15,15 +15,15 @@ use once_cell::sync::Lazy;
 
 pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "
-    import 0x1.Libra;
-    import 0x1.LibraAccount;
+    import 0x1.Diem;
+    import 0x1.DiemAccount;
 
     main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
-      let with_cap: LibraAccount.WithdrawCapability;
+      let with_cap: DiemAccount.WithdrawCapability;
       let name: vector<u8>;
       name = h\"\";
 
-      LibraAccount.create_parent_vasp_account<Token>(
+      DiemAccount.create_parent_vasp_account<Token>(
         copy(account),
         copy(fresh_address),
         move(auth_key_prefix),
@@ -31,15 +31,15 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
         false
       );
       if (copy(initial_amount) > 0) {
-         with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-         LibraAccount.pay_from<Token>(
+         with_cap = DiemAccount.extract_withdraw_capability(copy(account));
+         DiemAccount.pay_from<Token>(
            &with_cap,
            move(fresh_address),
            move(initial_amount),
            h\"\",
            h\"\"
          );
-         LibraAccount.restore_withdraw_capability(move(with_cap));
+         DiemAccount.restore_withdraw_capability(move(with_cap));
       }
       return;
     }
@@ -134,7 +134,7 @@ pub fn peer_to_peer_txn(
             StdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args,
         ))
         .sequence_number(seq_num)

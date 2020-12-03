@@ -1,7 +1,7 @@
 [package]
 name = "test-utils"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 edition = "2018"
 license = "Apache-2.0"
 
@@ -9,4 +9,4 @@ license = "Apache-2.0"
 prettydiff = "0.3.1"
 anyhow = "1.0.34"
 regex = "1.4.2"
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }

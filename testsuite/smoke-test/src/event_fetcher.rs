@@ -1,31 +1,31 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::test_utils::{libra_swarm_utils::get_libra_event_fetcher, setup_swarm_and_client_proxy};
+use crate::test_utils::{diem_swarm_utils::get_diem_event_fetcher, setup_swarm_and_client_proxy};
 
 #[test]
 fn test_event_fetcher() {
     let mut runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
 
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
-    let events_fetcher = get_libra_event_fetcher(&env.validator_swarm, 0);
+    let events_fetcher = get_diem_event_fetcher(&env.validator_swarm, 0);
 
     client.create_next_account(false).unwrap();
     client.create_next_account(false).unwrap();
     client
-        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "100", "XUS"], true)
         .unwrap();
 
     client
-        .mint_coins(&["mintb", "1", "100", "Coin1"], true)
+        .mint_coins(&["mintb", "1", "100", "XUS"], true)
         .unwrap();
 
     client
-        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
+        .transfer_coins(&["tb", "0", "1", "3", "XUS"], true)
         .unwrap();
 
     client
-        .transfer_coins(&["tb", "0", "1", "4", "Coin1"], true)
+        .transfer_coins(&["tb", "0", "1", "4", "XUS"], true)
         .unwrap();
 
     let (account, _) = client.get_account_address_from_parameter("0").unwrap();

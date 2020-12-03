@@ -8,17 +8,17 @@ RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
 
-WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
+WORKDIR /diem
+COPY rust-toolchain /diem/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
-COPY cargo-toolchain /libra/cargo-toolchain
+COPY cargo-toolchain /diem/cargo-toolchain
 RUN rustup install $(cat cargo-toolchain)
 
 FROM toolchain AS builder
 
 ARG ENABLE_FAILPOINTS
-COPY . /libra
+COPY . /diem
 
 RUN ./docker/build-common.sh
 
@@ -27,11 +27,11 @@ FROM debian:buster-20200803-slim@sha256:e0a33348ac8cace6b4294885e6e0bb57ecdfe4b6
 
 RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && apt-get clean && rm -r /var/lib/apt/lists/*
 
-RUN mkdir -p /opt/libra/bin /opt/libra/etc
-COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
+RUN mkdir -p /opt/diem/bin /opt/diem/etc
+COPY --from=builder /diem/target/release/cli /opt/diem/bin/diem_client
 
-ENTRYPOINT ["/opt/libra/bin/libra_client"]
-CMD ["--url", "https://testnet.libra.org/v1", "--waypoint_url",  "https://testnet.libra.org/waypoint.txt", "--chain-id", "TESTNET"]
+ENTRYPOINT ["/opt/diem/bin/diem_client"]
+CMD ["--url", "https://testnet.diem.com/v1", "--waypoint_url",  "https://testnet.diem.com/waypoint.txt", "--chain-id", "TESTNET"]
 
 ARG BUILD_DATE
 ARG GIT_REV

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! `conn_notifs_channel` is a channel which delivers to the receiver only the last of N
@@ -9,24 +9,24 @@
 //! and `conn_notifs_channel::Sender` which behave similarly to existing mpsc data structures.
 
 use crate::peer_manager::ConnectionNotification;
-use channel::{libra_channel, message_queues::QueueStyle};
-use libra_types::PeerId;
+use channel::{diem_channel, message_queues::QueueStyle};
+use diem_types::PeerId;
 use std::num::NonZeroUsize;
 
-pub type Sender = libra_channel::Sender<PeerId, ConnectionNotification>;
-pub type Receiver = libra_channel::Receiver<PeerId, ConnectionNotification>;
+pub type Sender = diem_channel::Sender<PeerId, ConnectionNotification>;
+pub type Receiver = diem_channel::Receiver<PeerId, ConnectionNotification>;
 
 pub fn new() -> (Sender, Receiver) {
-    libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None)
+    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::peer::DisconnectReason;
+    use diem_config::network_id::NetworkContext;
+    use diem_network_address::NetworkAddress;
     use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
-    use libra_config::network_id::NetworkContext;
-    use libra_network_address::NetworkAddress;
     use netcore::transport::ConnectionOrigin;
 
     fn send_new_peer(sender: &mut Sender, peer_id: PeerId) {

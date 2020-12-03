@@ -2,7 +2,7 @@
 
 ## Abstract
 
-This document describes the spec of a Libra node's mempool component,
+This document describes the spec of a Diem node's mempool component,
 which is responsible for accepting transaction submitted from other nodes
 or directly to the node and relaying them to consensus.
 
@@ -10,13 +10,13 @@ This document is organized as follows:
 
 1. Overview: high-level outline of the mempool architecture
 2. Module Specifications: spec of mempool components
-3. Network Protocol: the Mempool LibraNet protocol used to participate in the Libra
+3. Network Protocol: the Mempool DiemNet protocol used to participate in the Diem
 Payment Network
 4. Abstracted Modules: external components that mempool interfaces with
 
 ## Overview
 
-Mempool is a system component of the Libra node that is responsible for accepting,
+Mempool is a system component of the Diem node that is responsible for accepting,
 validating, and prioritizing, and broadcasting pending transactions.
 
 Mempool consists of a local memory-buffer that holds the transactions that

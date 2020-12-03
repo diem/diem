@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vote_data::VoteData;
 use anyhow::{ensure, Context};
-use libra_crypto::{hash::CryptoHash, HashValue};
-use libra_types::{
+use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_types::{
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_verifier::ValidatorVerifier,

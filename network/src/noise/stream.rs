@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! The socket module implements the post-handshake part of the protocol.
@@ -19,8 +19,8 @@ use std::{
     task::{Context, Poll},
 };
 
-use libra_crypto::{noise, x25519};
-use libra_logger::prelude::*;
+use diem_crypto::{noise, x25519};
+use diem_logger::prelude::*;
 
 //
 // NoiseStream
@@ -550,14 +550,14 @@ mod test {
         noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
         testutils::fake_socket::{ReadOnlyTestSocket, ReadWriteTestSocket},
     };
+    use diem_config::network_id::NetworkContext;
+    use diem_crypto::{test_utils::TEST_SEED, traits::Uniform as _, x25519};
+    use diem_types::PeerId;
     use futures::{
         executor::block_on,
         future::join,
         io::{AsyncReadExt, AsyncWriteExt},
     };
-    use libra_config::network_id::NetworkContext;
-    use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _, x25519};
-    use libra_types::PeerId;
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
     use std::io;

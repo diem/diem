@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -35,7 +35,7 @@ fn malformed_simple() {
     );
 
     // only magic
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected malformed binary").major_status(),
@@ -43,7 +43,7 @@ fn malformed_simple() {
     );
 
     // bad version
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(2); // version
     binary.push(0);
     binary.push(0);
@@ -57,7 +57,7 @@ fn malformed_simple() {
     );
 
     // bad version
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(2); // version
     binary.push(0);
     binary.push(0);
@@ -71,7 +71,7 @@ fn malformed_simple() {
     );
 
     // bad uleb (more than allowed for table count)
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -86,7 +86,7 @@ fn malformed_simple() {
     );
 
     // bad uleb (too big)
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -110,7 +110,7 @@ fn malformed_simple() {
     );
 
     // no tables
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -123,7 +123,7 @@ fn malformed_simple() {
     );
 
     // missing tables
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -136,7 +136,7 @@ fn malformed_simple() {
     );
 
     // missing table content
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -152,7 +152,7 @@ fn malformed_simple() {
     );
 
     // bad table header (bad offset)
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -168,7 +168,7 @@ fn malformed_simple() {
     );
 
     // bad table header (bad offset)
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -190,7 +190,7 @@ fn malformed_simple() {
     );
 
     // incomplete table
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -209,7 +209,7 @@ fn malformed_simple() {
     );
 
     // unknown table
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -228,7 +228,7 @@ fn malformed_simple() {
     );
 
     // duplicate table
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);
@@ -254,7 +254,7 @@ fn malformed_simple() {
     );
 
     // bad table in script
-    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary = BinaryConstants::DIEM_MAGIC.to_vec();
     binary.push(1); // version
     binary.push(0);
     binary.push(0);

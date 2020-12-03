@@ -1,10 +1,10 @@
 [package]
 name = "many-keys-stress-test"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra channel"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem channel"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -12,5 +12,5 @@ edition = "2018"
 [dependencies]
 futures = "0.3.8"
 channel = { path = "../", version = "0.1.0" }
-libra-workspace-hack = { path = "../../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../workspace-hack", version = "0.1.0" }
 structopt = "0.3.21"

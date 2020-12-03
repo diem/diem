@@ -6,7 +6,7 @@ address 0x1 {
 
 module VASP {
     use 0x1::Errors;
-    use 0x1::LibraTimestamp;
+    use 0x1::DiemTimestamp;
     use 0x1::Signer;
     use 0x1::Roles;
     use 0x1::AccountLimits;
@@ -40,10 +40,10 @@ module VASP {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Create a new `ParentVASP` resource under `vasp`
-    /// Aborts if `lr_account` is not the libra root account,
+    /// Aborts if `dr_account` is not the diem root account,
     /// or if there is already a VASP (child or parent) at this account.
     public fun publish_parent_vasp_credential(vasp: &signer, tc_account: &signer) {
-        LibraTimestamp::assert_operating();
+        DiemTimestamp::assert_operating();
         Roles::assert_treasury_compliance(tc_account);
         Roles::assert_parent_vasp_role(vasp);
         let vasp_addr = Signer::address_of(vasp);
@@ -52,7 +52,7 @@ module VASP {
     }
 
     spec fun publish_parent_vasp_credential {
-        include LibraTimestamp::AbortsIfNotOperating;
+        include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotParentVasp{account: vasp};
         let vasp_addr = Signer::spec_address_of(vasp);
@@ -88,7 +88,7 @@ module VASP {
         let child_addr = Signer::spec_address_of(child);
         include PublishChildVASPAbortsIf{child_addr};
         // NB: This aborts condition is separated out so that `PublishChildVASPAbortsIf` can be used in
-        //     `LibraAccount::create_child_vasp_account` since this doesn't hold of the new account in the pre-state.
+        //     `DiemAccount::create_child_vasp_account` since this doesn't hold of the new account in the pre-state.
         include Roles::AbortsIfNotChildVasp{account: child_addr};
         include PublishChildVASPEnsures{parent_addr: Signer::spec_address_of(parent), child_addr: child_addr};
     }

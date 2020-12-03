@@ -14,7 +14,7 @@ consensus:
       server_address: "/ip4/{safety_rules_addr}/tcp/6185"
 
 execution:
-  genesis_file_location: "/opt/libra/etc/genesis.blob"
+  genesis_file_location: "/opt/diem/etc/genesis.blob"
   backend:
     type: "vault"
     server: "http://{vault_addr}:8200"

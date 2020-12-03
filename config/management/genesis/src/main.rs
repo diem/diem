@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-use libra_genesis_tool::command::Command;
+use diem_genesis_tool::command::Command;
 use structopt::StructOpt;
 
 fn main() {

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // This is the definition of json-rpc service response data structures for keeping
@@ -17,14 +17,14 @@
 // == How to use ==
 //
 // 1. Generate code by protoc.
-// 2. The generated data types can be used to deserialize Libra JSON-RPC response#result
+// 2. The generated data types can be used to deserialize Diem JSON-RPC response#result
 //    object.
 // 3. Use protobuf json format parser deserialize response#result.
 // 4. As protobuf does not provide functions to deserialize list of objects, when
 //    response#result is an array, you need use the parser deserialize object in the
 //    array and then collect them as array.
 //
-// May checkout python implementation as example: https://github.com/libra/libra-client-sdk-python/blob/master/src/libra/jsonrpc/client.py#L474
+// May checkout python implementation as example: https://github.com/libra/libra-client-sdk-python/blob/master/src/diem/jsonrpc/client.py#L474
 //
 // For each data type detail document, please checkout https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md.
 
@@ -32,8 +32,8 @@
 syntax = "proto3";
 
 package jsonrpc;
-option go_package = "github.com/libra/jsonrpc";
-option java_package = "org.libra.jsonrpc";
+option go_package = "github.com/diem/jsonrpc";
+option java_package = "org.diem.jsonrpc";
 option java_outer_classname = "JsonRpc";
 
 message Amount {
@@ -100,9 +100,9 @@ message EventData {
   // hex-encoded bytes
   string preburn_address = 3 [json_name="preburn_address"];
 
-  // to_lbr_exchange_rate_update event only
+  // to_xdx_exchange_rate_update event only
   string currency_code = 4 [json_name="currency_code"];
-  float new_to_lbr_exchange_rate = 5 [json_name="new_to_lbr_exchange_rate"];
+  float new_to_xdx_exchange_rate = 5 [json_name="new_to_xdx_exchange_rate"];
 
   // receivedpayment and sentpayment events
   // hex-encoded bytes
@@ -142,7 +142,7 @@ message EventData {
   string created_address = 18 [json_name="created_address"];
   /**
    * createaccount event field.
-   * Role id of the created account, see [LIP-2](https://lip.libra.org/lip-2/#move-implementation)
+   * Role id of the created account, see [LIP-2](https://dip.diem.com/dip-2/#move-implementation)
    * for more details
    */
   uint64 role_id = 19 [json_name="role_id"];
@@ -165,7 +165,7 @@ message Metadata {
    */
   uint64 timestamp = 2;
   /**
-   * Chain ID of the Libra network
+   * Chain ID of the Diem network
    */
   uint32 chain_id = 3 [json_name="chain_id"];
 
@@ -182,9 +182,9 @@ message Metadata {
   bool module_publishing_allowed = 5 [json_name="module_publishing_allowed"];
 
   /**
-   * Libra chain major version number.
+   * Diem chain major version number.
    */
-  uint64 libra_version = 6 [json_name="libra_version"];
+  uint64 diem_version = 6 [json_name="diem_version"];
 
   /**
    * accumulator root hash of the ledger version requested
@@ -192,7 +192,7 @@ message Metadata {
   string accumulator_root_hash = 7 [json_name="accumulator_root_hash"];
 
    /**
-     * The dual attestation limit on-chain. Defined in terms of micro-LBR.
+     * The dual attestation limit on-chain. Defined in terms of micro-XDX.
      */
    uint64 dual_attestation_limit = 8 [json_name="dual_attestation_limit"];
 }
@@ -304,12 +304,12 @@ message Script {
 
   /**
    * Metadata of the transaction, LCS serialized hex-encoded string.
-   * See [LIP-4](https://lip.libra.org/lip-4/) for more details.
+   * See [LIP-4](https://dip.diem.com/dip-4/) for more details.
    */
   string metadata = 8;
   /**
    * Hex-encoded metadata signature, use this to validate metadata.
-   * See [LIP-4](https://lip.libra.org/lip-4/) for more details.
+   * See [LIP-4](https://dip.diem.com/dip-4/) for more details.
    */
   string metadata_signature = 9 [json_name="metadata_signature"];
 }
@@ -318,7 +318,7 @@ message CurrencyInfo {
   string code = 1;
   uint64 scaling_factor = 2 [json_name="scaling_factor"];
   uint64 fractional_part = 3 [json_name="fractional_part"];
-  float to_lbr_exchange_rate = 4 [json_name="to_lbr_exchange_rate"];
+  float to_xdx_exchange_rate = 4 [json_name="to_xdx_exchange_rate"];
   // hex-encoded bytes
   string mint_events_key = 5 [json_name="mint_events_key"];
   // hex-encoded bytes

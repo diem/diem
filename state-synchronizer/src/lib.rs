@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -7,8 +7,8 @@
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
 
+use diem_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 use executor_types::ExecutedTrees;
-use libra_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
 pub mod chunk_request;

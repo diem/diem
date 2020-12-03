@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -8,11 +8,11 @@ pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
 };
-use libra_types::{
+use diem_types::{
     account_address,
     account_config::{
         self,
@@ -26,7 +26,7 @@ use libra_types::{
         WriteSetPayload,
     },
 };
-use libra_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
+use diem_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -72,7 +72,7 @@ pub type OperatorAssignment = (Option<Ed25519PublicKey>, Name, Script);
 pub type OperatorRegistration = (Ed25519PublicKey, Name, Script);
 
 pub fn encode_genesis_transaction(
-    libra_root_key: Ed25519PublicKey,
+    diem_root_key: Ed25519PublicKey,
     treasury_compliance_key: Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
@@ -80,7 +80,7 @@ pub fn encode_genesis_transaction(
     chain_id: ChainId,
 ) -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(encode_genesis_change_set(
-        &libra_root_key,
+        &diem_root_key,
         &treasury_compliance_key,
         operator_assignments,
         operator_registrations,
@@ -102,7 +102,7 @@ fn merge_txn_effects(
 }
 
 pub fn encode_genesis_change_set(
-    libra_root_key: &Ed25519PublicKey,
+    diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
@@ -122,20 +122,20 @@ pub fn encode_genesis_change_set(
     let mut session = move_vm.new_session(&data_cache);
     let log_context = NoContextLog::new();
 
-    let lbr_ty = TypeTag::Struct(StructTag {
-        address: *account_config::LBR_MODULE.address(),
-        module: account_config::LBR_MODULE.name().to_owned(),
-        name: account_config::LBR_STRUCT_NAME.to_owned(),
+    let xdx_ty = TypeTag::Struct(StructTag {
+        address: *account_config::XDX_MODULE.address(),
+        module: account_config::XDX_MODULE.name().to_owned(),
+        name: account_config::XDX_STRUCT_NAME.to_owned(),
         type_params: vec![],
     });
 
     create_and_initialize_main_accounts(
         &mut session,
         &log_context,
-        &libra_root_key,
+        &diem_root_key,
         &treasury_compliance_key,
         vm_publishing_option,
-        &lbr_ty,
+        &xdx_ty,
         chain_id,
     );
     // generate the genesis WriteSet
@@ -239,16 +239,16 @@ fn exec_script(
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    libra_root_key: &Ed25519PublicKey,
+    diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
-    lbr_ty: &TypeTag,
+    xdx_ty: &TypeTag,
     chain_id: ChainId,
 ) {
-    let libra_root_auth_key = AuthenticationKey::ed25519(libra_root_key);
+    let diem_root_auth_key = AuthenticationKey::ed25519(diem_root_key);
     let treasury_compliance_auth_key = AuthenticationKey::ed25519(treasury_compliance_key);
 
-    let root_libra_root_address = account_config::libra_root_address();
+    let root_diem_root_address = account_config::diem_root_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
 
     let initial_allow_list = Value::constant_vector_generic(
@@ -269,14 +269,14 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_libra_root_address,
+        root_diem_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
         vec![
-            Value::transaction_argument_signer_reference(root_libra_root_address),
+            Value::transaction_argument_signer_reference(root_diem_root_address),
             Value::transaction_argument_signer_reference(tc_account_address),
-            Value::vector_u8(libra_root_auth_key.to_vec()),
+            Value::vector_u8(diem_root_auth_key.to_vec()),
             Value::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
             Value::bool(publishing_option.is_open_module),
@@ -293,12 +293,12 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_libra_root_address,
-        "LibraAccount",
+        root_diem_root_address,
+        "DiemAccount",
         "epilogue",
-        vec![lbr_ty.clone()],
+        vec![xdx_ty.clone()],
         vec![
-            Value::transaction_argument_signer_reference(root_libra_root_address),
+            Value::transaction_argument_signer_reference(root_diem_root_address),
             Value::u64(/* txn_sequence_number */ 0),
             Value::u64(/* txn_gas_price */ 0),
             Value::u64(/* txn_max_gas_units */ 0),
@@ -314,7 +314,7 @@ fn create_and_initialize_testnet_minting(
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
     let create_dd_script = encode_create_designated_dealer_script(
-        account_config::coin1_tmp_tag(),
+        account_config::xus_tag(),
         0,
         account_config::testnet_dd_account_address(),
         genesis_auth_key.prefix().to_vec(),
@@ -322,8 +322,8 @@ fn create_and_initialize_testnet_minting(
         true,                  // add_all_currencies
     );
 
-    let mint_max_coin1_tmp = transaction_builder::encode_tiered_mint_script(
-        account_config::coin1_tmp_tag(),
+    let mint_max_xus = transaction_builder::encode_tiered_mint_script(
+        account_config::xus_tag(),
         0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
@@ -343,7 +343,7 @@ fn create_and_initialize_testnet_minting(
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
-        vec![account_config::coin1_tmp_tag()],
+        vec![account_config::xus_tag()],
         vec![
             Value::transaction_argument_signer_reference(
                 account_config::treasury_compliance_account_address(),
@@ -354,13 +354,13 @@ fn create_and_initialize_testnet_minting(
         ],
     );
 
-    // mint Coin1.
+    // mint XUS.
     let treasury_compliance_account_address = account_config::treasury_compliance_account_address();
     exec_script(
         session,
         log_context,
         treasury_compliance_account_address,
-        &mint_max_coin1_tmp,
+        &mint_max_xus,
     );
 
     let testnet_dd_account_address = account_config::testnet_dd_account_address();
@@ -381,7 +381,7 @@ fn create_and_initialize_owners_operators(
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
 ) {
-    let libra_root_address = account_config::libra_root_address();
+    let diem_root_address = account_config::diem_root_address();
 
     // Create accounts for each validator owner. The inputs for creating an account are the auth
     // key prefix and account address. Internally move then computes the auth key as auth key
@@ -389,7 +389,7 @@ fn create_and_initialize_owners_operators(
     // account address from the name and not the public key.
     for (owner_key, owner_name, _op_assignment) in operator_assignments {
         let staged_owner_auth_key =
-            libra_config::utils::default_validator_owner_auth_key_from_name(owner_name);
+            diem_config::utils::default_validator_owner_auth_key_from_name(owner_name);
         let owner_address = staged_owner_auth_key.derived_address();
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
             0,
@@ -400,7 +400,7 @@ fn create_and_initialize_owners_operators(
         exec_script(
             session,
             log_context,
-            libra_root_address,
+            diem_root_address,
             &create_owner_script,
         );
 
@@ -433,14 +433,14 @@ fn create_and_initialize_owners_operators(
         exec_script(
             session,
             log_context,
-            libra_root_address,
+            diem_root_address,
             &create_operator_script,
         );
     }
 
     // Set the validator operator for each validator owner
     for (_owner_key, owner_name, op_assignment) in operator_assignments {
-        let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
+        let owner_address = diem_config::utils::validator_owner_account_from_name(owner_name);
         exec_script(session, log_context, owner_address, op_assignment);
     }
 
@@ -452,16 +452,16 @@ fn create_and_initialize_owners_operators(
 
     // Add each validator to the validator set
     for (_owner_key, owner_name, _op_assignment) in operator_assignments {
-        let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
+        let owner_address = diem_config::utils::validator_owner_account_from_name(owner_name);
         exec_function(
             session,
             log_context,
-            libra_root_address,
-            "LibraSystem",
+            diem_root_address,
+            "DiemSystem",
             "add_validator",
             vec![],
             vec![
-                Value::transaction_argument_signer_reference(libra_root_address),
+                Value::transaction_argument_signer_reference(diem_root_address),
                 Value::address(owner_address),
             ],
         );
@@ -502,8 +502,8 @@ fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogCont
     exec_function(
         session,
         log_context,
-        account_config::libra_root_address(),
-        "LibraConfig",
+        account_config::diem_root_address(),
+        "DiemConfig",
         "emit_genesis_reconfiguration_event",
         vec![],
         vec![],
@@ -512,10 +512,10 @@ fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogCont
 
 /// Verify the consistency of the genesis `WriteSet`
 fn verify_genesis_write_set(events: &[ContractEvent]) {
-    // (1) first event is account creation event for LibraRoot
-    let create_libra_root_event = &events[0];
+    // (1) first event is account creation event for DiemRoot
+    let create_diem_root_event = &events[0];
     assert_eq!(
-        *create_libra_root_event.key(),
+        *create_diem_root_event.key(),
         CreateAccountEvent::event_key(),
     );
 
@@ -582,7 +582,7 @@ impl Validator {
         let name = index.to_string().as_bytes().to_vec();
         let key = Ed25519PrivateKey::generate(rng);
         let operator_address = account_address::from_public_key(&key.public_key());
-        let owner_address = libra_config::utils::validator_owner_account_from_name(&name);
+        let owner_address = diem_config::utils::validator_owner_account_from_name(&name);
 
         Self {
             index,

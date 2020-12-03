@@ -3,16 +3,16 @@
 # * JSON-RPC endpoint at http://127.0.0.1:8080.
 # * waypoint file at waypoint.txt in the same directory as this compose
 # * genesis.blob at genesis.blob in the same directory as this compose
-# * libra_root_key (mint.key) in the same directory as this compose
+# * diem_root_key (mint.key) in the same directory as this compose
 # * chain_id of 4 / TESTING
 #
 # Additional information:
-# * If you use this compose for different Libra Networks, you will need remove the db volume first.
+# * If you use this compose for different Diem Networks, you will need remove the db volume first.
 # * If you move this compose, you must recreate the empty waypoint.txt and genesis.blob otherwise
 # the container will fail to start.
-# * If you would like to use the current Libra version within this repository, execute the
-# `build.sh` in `docker/validator` and change the image tag below to libra_e2e:latest
-# * Images can be found at https://hub.docker.com/r/libra/validator/tags, obtain the latest tag and
+# * If you would like to use the current Diem version within this repository, execute the
+# `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
+# * Images can be found at https://hub.docker.com/r/diem/validator/tags, obtain the latest tag and
 # update below.
 version: "3.8"
 services:
@@ -26,22 +26,22 @@ services:
         volumes:
             - type: volume
               source: db
-              target: /opt/libra/var
+              target: /opt/diem/var
             - type: bind
               source: ./genesis.blob
-              target: /opt/libra/var/0/genesis.blob
+              target: /opt/diem/var/0/genesis.blob
             - type: bind
-              source: ./libra_root_key
-              target: /opt/libra/var/mint.key
+              source: ./diem_root_key
+              target: /opt/diem/var/mint.key
             - type: bind
               source: ./waypoint.txt
-              target: /opt/libra/var/waypoint.txt
-        command: ["/opt/libra/bin/libra-node", "--test", "--config", "/opt/libra/var"]
+              target: /opt/diem/var/waypoint.txt
+        command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
         ports:
             - "8080:8080"
 networks:
     shared:
-        name: "libra-docker-compose-shared"
+        name: "diem-docker-compose-shared"
         ipam:
           config:
             - subnet: 172.16.1.0/24

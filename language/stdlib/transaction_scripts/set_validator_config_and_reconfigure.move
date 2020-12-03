@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraSystem;
+use 0x1::DiemSystem;
 use 0x1::ValidatorConfig;
 
 /// # Summary
@@ -9,7 +9,7 @@ use 0x1::ValidatorConfig;
 ///
 /// # Technical Description
 /// This updates the fields with corresponding names held in the `ValidatorConfig::ValidatorConfig`
-/// config resource held under `validator_account`. It then emits a `LibraConfig::NewEpochEvent` to
+/// config resource held under `validator_account`. It then emits a `DiemConfig::NewEpochEvent` to
 /// trigger a reconfiguration of the system.  This reconfiguration will update the validator set
 /// on-chain with the updated `ValidatorConfig::ValidatorConfig`.
 ///
@@ -29,7 +29,7 @@ use 0x1::ValidatorConfig;
 /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR_OPERATOR`                   | `validator_operator_account` does not have a Validator Operator role.                                 |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_TRANSACTION_SENDER` | `validator_operator_account` is not the registered operator for the validator at `validator_address`. |
 /// | `Errors::INVALID_ARGUMENT` | `ValidatorConfig::EINVALID_CONSENSUS_KEY`      | `consensus_pubkey` is not a valid ed25519 public key.                                                 |
-/// | `Errors::INVALID_STATE`    | `LibraConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
+/// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 ///
 /// # Related Scripts
 /// * `Script::create_validator_account`
@@ -54,22 +54,22 @@ fun set_validator_config_and_reconfigure(
         validator_network_addresses,
         fullnode_network_addresses
     );
-    LibraSystem::update_config_and_reconfigure(validator_operator_account, validator_account);
+    DiemSystem::update_config_and_reconfigure(validator_operator_account, validator_account);
  }
 
 spec fun set_validator_config_and_reconfigure {
-    use 0x1::LibraAccount;
-    use 0x1::LibraConfig;
-    use 0x1::LibraSystem;
+    use 0x1::DiemAccount;
+    use 0x1::DiemConfig;
+    use 0x1::DiemSystem;
     use 0x1::Errors;
     use 0x1::Signer;
 
      // properties checked by the prologue.
-   include LibraAccount::TransactionChecks{sender: validator_operator_account};
+   include DiemAccount::TransactionChecks{sender: validator_operator_account};
     // UpdateConfigAndReconfigureEnsures includes properties such as not changing info
     // for validators in the validator_set other than that for validator_account, etc.
-    // These properties are important for access control. See notes in LibraSystem.
-    include LibraSystem::UpdateConfigAndReconfigureEnsures{validator_addr: validator_account};
+    // These properties are important for access control. See notes in DiemSystem.
+    include DiemSystem::UpdateConfigAndReconfigureEnsures{validator_addr: validator_account};
     ensures ValidatorConfig::is_valid(validator_account);
     // The published ValidatorConfig has the correct data, according to the arguments to
     // set_validator_config_and_reconfigure
@@ -81,23 +81,23 @@ spec fun set_validator_config_and_reconfigure {
     };
 
     include ValidatorConfig::SetConfigAbortsIf{validator_addr: validator_account};
-    include LibraSystem::UpdateConfigAndReconfigureAbortsIf{validator_addr: validator_account};
+    include DiemSystem::UpdateConfigAndReconfigureAbortsIf{validator_addr: validator_account};
 
     // Reconfiguration only happens if validator info changes for a validator in the validator set.
     // v_info.config is the old config (if it exists) and the Config with args from set_config is
     // the new config
     let is_validator_info_updated =
-        (exists v_info in LibraSystem::spec_get_validators():
+        (exists v_info in DiemSystem::spec_get_validators():
             v_info.addr == validator_account
             && v_info.config != ValidatorConfig::Config {
                     consensus_pubkey,
                     validator_network_addresses,
                     fullnode_network_addresses,
                });
-    include is_validator_info_updated ==> LibraConfig::ReconfigureAbortsIf;
+    include is_validator_info_updated ==> DiemConfig::ReconfigureAbortsIf;
 
 
-    /// This reports a possible INVALID_STATE abort, which comes from an assert in LibraConfig::reconfigure_
+    /// This reports a possible INVALID_STATE abort, which comes from an assert in DiemConfig::reconfigure_
     /// that config.last_reconfiguration_time is not in the future. This is a system error that a user
     /// for which there is no useful recovery except to resubmit the transaction.
     aborts_with [check]

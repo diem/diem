@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraAccount;
+use 0x1::DiemAccount;
 use 0x1::SlidingNonce;
 
 /// # Summary
@@ -37,7 +37,7 @@ use 0x1::SlidingNonce;
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
 /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
 /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::NOT_PUBLISHED`     | `Libra::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `Currency` is not a registered currency on-chain.                                      |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `addr` address is already taken.                                                       |
 ///
 /// # Related Scripts
@@ -54,7 +54,7 @@ fun create_designated_dealer<Currency>(
     add_all_currencies: bool,
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-    LibraAccount::create_designated_dealer<Currency>(
+    DiemAccount::create_designated_dealer<Currency>(
         tc_account,
         addr,
         auth_key_prefix,
@@ -67,11 +67,11 @@ spec fun create_designated_dealer {
     use 0x1::Errors;
     use 0x1::Roles;
 
-    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
-    include LibraAccount::CreateDesignatedDealerAbortsIf<Currency>{
+    include DiemAccount::CreateDesignatedDealerAbortsIf<Currency>{
         creator_account: tc_account, new_account_address: addr};
-    include LibraAccount::CreateDesignatedDealerEnsures<Currency>{new_account_address: addr};
+    include DiemAccount::CreateDesignatedDealerEnsures<Currency>{new_account_address: addr};
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,

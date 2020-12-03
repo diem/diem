@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::super::*;
@@ -30,7 +30,7 @@ fn gather_metrics_test() {
 // has been successfully published to prometheus and the result gathered reflect the value change.
 #[test]
 fn publish_metrics_test() {
-    let counter_opts = Opts::new("libra_test_counter", "libra test counter help");
+    let counter_opts = Opts::new("diem_test_counter", "diem test counter help");
     let counter = Counter::with_opts(counter_opts).unwrap();
 
     let r = Registry::new();
@@ -41,8 +41,8 @@ fn publish_metrics_test() {
 
     assert_eq!(metric_families.len(), 1);
     let m: &MetricFamily = metric_families.get(0).unwrap();
-    assert_eq!("libra test counter help", m.get_help());
-    assert_eq!("libra_test_counter", m.get_name());
+    assert_eq!("diem test counter help", m.get_help());
+    assert_eq!("diem_test_counter", m.get_name());
 
     let metrics = m.get_metric();
     assert_eq!(metrics.len(), 1);

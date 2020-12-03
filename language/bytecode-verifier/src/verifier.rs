@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains the public APIs supported by the bytecode verifier.
@@ -8,7 +8,7 @@ use crate::{
     resources::ResourceTransitiveChecker, signature::SignatureChecker,
     struct_defs::RecursiveStructDefChecker,
 };
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use vm::{
     access::ScriptAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},

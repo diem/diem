@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,10 +13,10 @@ use crate::{
         GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt,
     },
 };
-use libra_config::config::RocksdbConfig;
-use libra_temppath::TempPath;
-use libra_types::transaction::Version;
-use libradb::LibraDB;
+use diem_config::config::RocksdbConfig;
+use diem_temppath::TempPath;
+use diem_types::transaction::Version;
+use diemdb::DiemDB;
 use std::{convert::TryInto, mem::size_of, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
@@ -96,7 +96,7 @@ fn end_to_end() {
     // We don't write down any ledger infos when recovering transactions. State-sync needs to take
     // care of it before running consensus. The latest transactions are deemed "synced" instead of
     // "committed" most likely.
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */

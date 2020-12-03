@@ -4,8 +4,8 @@ kind: Service
 metadata:
   name: vault-{validator_index}
   labels:
-    app: libra-vault
-    libra-node: "true"
+    app: diem-vault
+    diem-node: "true"
     peer_id: vault-{validator_index}
   annotations:
     service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
@@ -20,6 +20,6 @@ spec:
     port: 8201
     targetPort: 8201
   selector:
-    app: libra-vault
-    libra-node: "true"
+    app: diem-vault
+    diem-node: "true"
     peer_id: vault-{validator_index}

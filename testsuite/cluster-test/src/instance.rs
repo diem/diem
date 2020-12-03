@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -6,8 +6,8 @@
 use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
 use debug_interface::AsyncNodeDebugClient;
-use libra_config::config::NodeConfig;
-use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
+use diem_config::config::NodeConfig;
+use diem_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{
@@ -303,10 +303,10 @@ impl Instance {
             .map(|_| ())
     }
 
-    /// If deleting /opt/libra/data/* is required, call Instance::clean_date before calling
+    /// If deleting /opt/diem/data/* is required, call Instance::clean_date before calling
     /// Instance::start.
     pub async fn clean_data(&self) -> Result<()> {
-        self.util_cmd("rm -rf /opt/libra/data/*; ", "clean-data")
+        self.util_cmd("rm -rf /opt/diem/data/*; ", "clean-data")
             .await
     }
 

@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{mock_tree_store::MockTreeStore, node_type::LeafNode, JellyfishMerkleTree};
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleRangeProof},
     transaction::Version,

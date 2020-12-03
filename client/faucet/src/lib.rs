@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This crates provides Faucet service for creating Testnet with simplified on-chain account creation
@@ -11,22 +11,22 @@
 //! Launch faucet service local and connect to Testnet:
 //!
 //! ```bash
-//! cargo run -p libra-faucet -- -a 127.0.0.1 -p 8080 -c TESTNET \
-//!     -m <treasury-compliance-private-key-path> -s https://testnet.libra.org/v1
+//! cargo run -p diem-faucet -- -a 127.0.0.1 -p 8080 -c TESTNET \
+//!     -m <treasury-compliance-private-key-path> -s https://testnet.diem.com/v1
 //! ```
 //!
 //! Check help doc for options details:
 //!
 //! ```bash
-//! cargo run -p libra-faucet -- -h
+//! cargo run -p diem-faucet -- -h
 //! ```
 //!
 //! ## Development
 //!
-//! Test with libra-swarm by add -m option:
+//! Test with diem-swarm by add -m option:
 //!
 //! ```bash
-//! cargo run -p libra-swarm -- -s -l -n 1 -m
+//! cargo run -p diem-swarm -- -s -l -n 1 -m
 //! ```
 //!
 

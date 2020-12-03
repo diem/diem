@@ -2,19 +2,19 @@
 
 ## Overview
 
-The [LibraNet](spec.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Libra blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawEncNetworkAddress`](network-address.md)es for validators and [`RawNetworkAddress`](network-address.md)es for VFNs.
+The [DiemNet](spec.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Diem blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawEncNetworkAddress`](network-address.md)es for validators and [`RawNetworkAddress`](network-address.md)es for VFNs.
 
 ## Design Principles
 
 * All communication between peers _MUST_ be authenticated and encrypted.
-* All authentication is rooted in the Libra blockchain. In the same way that the chain is the source-of-truth for the `ValidatorSet`, the chain is also the source of truth for validator and VFN network addresses and network identity public keys.
+* All authentication is rooted in the Diem blockchain. In the same way that the chain is the source-of-truth for the `ValidatorSet`, the chain is also the source of truth for validator and VFN network addresses and network identity public keys.
 * Uniform discovery interface for both validators and VFNs.
 * Unify key rotation and address rotation procedures. The protocol for adding/removing a validator or rotating the consensus key is effectively the same as rotating the network key or network addresses.
 * Support network protocol upgradability.
 
 ## Use cases
 
-There are four separate discovery problems in Libra:
+There are four separate discovery problems in Diem:
 
 1. Validators discovering other validators.
 2. All node types discovering public-facing VFNs.
@@ -104,4 +104,4 @@ Alternatively, a safer approach to preserve validator connectivity (at the expen
 
 ## Caveats
 
-Modifications to the discovery information requires a quorum. In the event of a connectivity crisis where the validator set loses quorum (e.g. 1/3+ validators crash and forget their identity pubkeys), validators can't submit transactions to modify the on-chain discovery information to regain connectivity. A sufficient fallback in such an extreme event might be for each validator to manually configure their seed peers config with all other validators' discovery information. Alternatively, the Libra Association may issue a new Genesis Transaction to manually set a new validator set, though this requires significant coordination.
+Modifications to the discovery information requires a quorum. In the event of a connectivity crisis where the validator set loses quorum (e.g. 1/3+ validators crash and forget their identity pubkeys), validators can't submit transactions to modify the on-chain discovery information to regain connectivity. A sufficient fallback in such an extreme event might be for each validator to manually configure their seed peers config with all other validators' discovery information. Alternatively, the Diem Association may issue a new Genesis Transaction to manually set a new validator set, though this requires significant coordination.

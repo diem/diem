@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Noise is a [protocol framework](https://noiseprotocol.org/) which we use in Libra to
+//! Noise is a [protocol framework](https://noiseprotocol.org/) which we use in Diem to
 //! encrypt and authenticate communications between nodes of the network.
 //!
 //! This file implements a stripped-down version of Noise_IK_25519_AESGCM_SHA256.
@@ -13,10 +13,10 @@
 //! Usage example:
 //!
 //! ```
-//! use libra_crypto::{noise, x25519, traits::*};
+//! use diem_crypto::{noise, x25519, traits::*};
 //! use rand::prelude::*;
 //!
-//! # fn main() -> Result<(), libra_crypto::noise::NoiseError> {
+//! # fn main() -> Result<(), diem_crypto::noise::NoiseError> {
 //! let mut rng = rand::thread_rng();
 //! let initiator_static = x25519::PrivateKey::generate(&mut rng);
 //! let responder_static = x25519::PrivateKey::generate(&mut rng);

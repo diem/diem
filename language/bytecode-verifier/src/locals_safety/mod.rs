@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the transfer functions for verifying local safety of a
@@ -13,7 +13,7 @@ use crate::{
     binary_views::{BinaryIndexedView, FunctionView},
 };
 use abstract_state::{AbstractState, LocalState};
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use mirai_annotations::*;
 use vm::{
     errors::{PartialVMError, PartialVMResult},

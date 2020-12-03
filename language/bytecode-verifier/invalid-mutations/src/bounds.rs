@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_proptest_helpers::pick_slice_idxs;
-use libra_types::vm_status::StatusCode;
+use diem_proptest_helpers::pick_slice_idxs;
+use diem_types::vm_status::StatusCode;
 use proptest::{
     prelude::*,
     sample::{self, Index as PropIndex},

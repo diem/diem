@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
+use diem_types::{account_config, vm_status::KeptVMStatus};
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
-use libra_types::{account_config, vm_status::KeptVMStatus};
 use move_core_types::vm_status::VMStatus;
 use move_vm_types::values::Value;
 use transaction_builder::*;
@@ -22,7 +22,7 @@ fn valid_creator_already_vasp() {
         treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tmp_tag(),
+                account_config::xus_tag(),
                 0,
                 *account.address(),
                 account.auth_key_prefix(),
@@ -67,7 +67,7 @@ fn max_child_accounts_for_vasp() {
         treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
-                account_config::coin1_tmp_tag(),
+                account_config::xus_tag(),
                 0,
                 *account.address(),
                 account.auth_key_prefix(),
@@ -84,7 +84,7 @@ fn max_child_accounts_for_vasp() {
             account
                 .transaction()
                 .script(encode_create_child_vasp_account_script(
-                    account_config::coin1_tmp_tag(),
+                    account_config::xus_tag(),
                     *child.address(),
                     child.auth_key_prefix(),
                     false,
@@ -100,7 +100,7 @@ fn max_child_accounts_for_vasp() {
         account
             .transaction()
             .script(encode_create_child_vasp_account_script(
-                account_config::coin1_tmp_tag(),
+                account_config::xus_tag(),
                 *child.address(),
                 child.auth_key_prefix(),
                 false,

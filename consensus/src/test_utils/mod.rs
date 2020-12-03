@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block_storage::{BlockReader, BlockStore};
@@ -9,9 +9,9 @@ use consensus_types::{
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
 };
-use libra_crypto::HashValue;
-use libra_logger::Level;
-use libra_types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
+use diem_crypto::HashValue;
+use diem_logger::Level;
+use diem_types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
 use std::{future::Future, sync::Arc, time::Duration};
 use tokio::{runtime, time::timeout};
 
@@ -22,7 +22,7 @@ mod mock_txn_manager;
 
 use crate::util::mock_time_service::SimulatedTimeService;
 use consensus_types::{block::block_test_utils::gen_test_certificate, common::Payload};
-use libra_types::block_info::BlockInfo;
+use diem_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
@@ -175,7 +175,7 @@ fn nocapture() -> bool {
 
 pub fn consensus_runtime() -> runtime::Runtime {
     if nocapture() {
-        ::libra_logger::Logger::new().level(Level::Debug).init();
+        ::diem_logger::Logger::new().level(Level::Debug).init();
     }
 
     runtime::Builder::new()

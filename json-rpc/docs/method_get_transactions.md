@@ -25,15 +25,15 @@ if include_events is false, the [events](type_event.md) field in the Transaction
 
 ```
 // Request: fetches 10 transactions since version 100000
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[100000, 10, false],"id":1}' https://testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[100000, 10, false],"id":1}' https://testnet.diem.com/v1
 
 // Response
 {
   "id": 1,
   "jsonrpc": "2.0",
-  "libra_chain_id": 2,
-  "libra_ledger_timestampusec": 1596694433936687,
-  "libra_ledger_version": 3308663,
+  "diem_chain_id": 2,
+  "diem_ledger_timestampusec": 1596694433936687,
+  "diem_ledger_version": 3308663,
   "result": [
     {
       "events": [],
@@ -64,13 +64,13 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "transaction": {
         "chain_id": 2,
         "expiration_timestamp_secs": 1596085170,
-        "gas_currency": "LBR",
+        "gas_currency": "XDX",
         "gas_unit_price": 0,
         "max_gas_amount": 1000000,
         "public_key": "86f38df4199842f3bfe0dcd003aaf739f9cddd2845b2c5a3318b1878d56b0eb8",
         "script": {
           "amount": 100000,
-          "currency": "LBR",
+          "currency": "XDX",
           "metadata": "",
           "metadata_signature": "",
           "receiver": "2ce4a93c05ba7ac8e6e94736731b3ddd",

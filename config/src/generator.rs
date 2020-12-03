@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Convenience structs and functions for generating a random set of Libra ndoes without the
+//! Convenience structs and functions for generating a random set of Diem ndoes without the
 //! genesis.blob.
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     },
     network_id::NetworkId,
 };
-use libra_network_address::NetworkAddress;
+use diem_network_address::NetworkAddress;
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
@@ -65,7 +65,7 @@ pub fn build_seed_addrs(
     seed_config: &NetworkConfig,
     seed_base_addr: NetworkAddress,
 ) -> SeedAddresses {
-    let seed_pubkey = libra_crypto::PrivateKey::public_key(&seed_config.identity_key());
+    let seed_pubkey = diem_crypto::PrivateKey::public_key(&seed_config.identity_key());
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
     let mut seed_addrs = SeedAddresses::default();

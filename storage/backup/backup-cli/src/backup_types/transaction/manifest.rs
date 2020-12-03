@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::storage::FileHandle;
 use anyhow::{ensure, Result};
-use libra_types::transaction::Version;
+use diem_types::transaction::Version;
 use serde::{Deserialize, Serialize};
 
 /// A chunk of a transaction backup manifest to represent the

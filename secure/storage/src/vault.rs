@@ -1,17 +1,17 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     Capability, CryptoStorage, Error, GetResponse, Identity, KVStorage, Policy, PublicKeyResponse,
 };
 use chrono::DateTime;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
-use libra_infallible::RwLock;
-use libra_secure_time::{RealTimeService, TimeService};
-use libra_vault_client::{self as vault, Client};
+use diem_infallible::RwLock;
+use diem_secure_time::{RealTimeService, TimeService};
+use diem_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     collections::HashMap,
@@ -19,15 +19,15 @@ use std::{
 };
 
 #[cfg(any(test, feature = "testing"))]
-use libra_vault_client::ReadResponse;
+use diem_vault_client::ReadResponse;
 
-const LIBRA_DEFAULT: &str = "libra_default";
+const DIEM_DEFAULT: &str = "diem_default";
 
-/// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
+/// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Diem. This
 /// version currently matches the behavior of OnDiskStorage and InMemoryStorage. In the future,
 /// Vault will be able to create keys, sign messages, and handle permissions across different
 /// services. The specific vault service leveraged herein is called KV (Key Value) Secrets Engine -
-/// Version 2 (https://www.vaultproject.io/api/secret/kv/kv-v2.html). So while Libra Secure Storage
+/// Version 2 (https://www.vaultproject.io/api/secret/kv/kv-v2.html). So while Diem Secure Storage
 /// calls pointers to data keys, Vault has actually a secret that contains multiple key value
 /// pairs.
 pub struct VaultStorage {
@@ -69,7 +69,7 @@ impl VaultStorage {
                     let next_renewal = now + (ttl as u64) / 2;
                     self.next_renewal.store(next_renewal, Ordering::Relaxed);
                 } else if let Err(e) = result {
-                    libra_logger::error!("Unable to renew lease: {}", e.to_string());
+                    diem_logger::error!("Unable to renew lease: {}", e.to_string());
                 }
             }
         }
@@ -95,7 +95,7 @@ impl VaultStorage {
         let keys = match self.client().list_keys() {
             Ok(keys) => keys,
             // No keys were found, so there's no need to reset.
-            Err(libra_vault_client::Error::NotFound(_, _)) => return Ok(()),
+            Err(diem_vault_client::Error::NotFound(_, _)) => return Ok(()),
             Err(e) => return Err(e.into()),
         };
         for key in keys {
@@ -108,7 +108,7 @@ impl VaultStorage {
     fn reset_policies(&self) -> Result<(), Error> {
         let policies = match self.client().list_policies() {
             Ok(policies) => policies,
-            Err(libra_vault_client::Error::NotFound(_, _)) => return Ok(()),
+            Err(diem_vault_client::Error::NotFound(_, _)) => return Ok(()),
             Err(e) => return Err(e.into()),
         };
 
@@ -138,7 +138,7 @@ impl VaultStorage {
 
     /// Creates a token but uses the namespace for policies
     pub fn create_token(&self, mut policies: Vec<&str>) -> Result<String, Error> {
-        policies.push(LIBRA_DEFAULT);
+        policies.push(DIEM_DEFAULT);
         let result = if let Some(ns) = &self.namespace {
             let policies: Vec<_> = policies.iter().map(|p| format!("{}/{}", ns, p)).collect();
             self.client()
@@ -209,7 +209,7 @@ impl VaultStorage {
             match &perm.id {
                 Identity::User(id) => self.set_policy(id, engine, name, &perm.capabilities)?,
                 Identity::Anyone => {
-                    self.set_policy(LIBRA_DEFAULT, engine, name, &perm.capabilities)?
+                    self.set_policy(DIEM_DEFAULT, engine, name, &perm.capabilities)?
                 }
                 Identity::NoOne => (),
             };
@@ -366,7 +366,7 @@ impl CryptoStorage for VaultStorage {
         message: &T,
     ) -> Result<Ed25519Signature, Error> {
         let name = self.crypto_name(name);
-        let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
+        let mut bytes = <T::Hasher as diem_crypto::hash::CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message).map_err(|e| {
             Error::InternalError(format!(
                 "Serialization of signable material should not fail, yet returned Error:{}",
@@ -384,7 +384,7 @@ impl CryptoStorage for VaultStorage {
     ) -> Result<Ed25519Signature, Error> {
         let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
-        let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
+        let mut bytes = <T::Hasher as diem_crypto::hash::CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message).map_err(|e| {
             Error::InternalError(format!(
                 "Serialization of signable material should not fail, yet returned Error:{}",

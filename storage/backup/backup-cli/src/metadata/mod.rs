@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod cache;
@@ -6,7 +6,7 @@ pub mod view;
 
 use crate::storage::{FileHandle, ShellSafeName, TextLine};
 use anyhow::Result;
-use libra_types::transaction::Version;
+use diem_types::transaction::Version;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 

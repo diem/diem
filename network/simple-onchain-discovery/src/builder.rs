@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ConfigurationChangeListener;
-use channel::libra_channel;
-use libra_config::network_id::NetworkContext;
-use libra_network_address_encryption::Encryptor;
-use libra_types::on_chain_config::OnChainConfigPayload;
+use channel::diem_channel;
+use diem_config::network_id::NetworkContext;
+use diem_network_address_encryption::Encryptor;
+use diem_types::on_chain_config::OnChainConfigPayload;
 use network::connectivity_manager::ConnectivityRequest;
 use std::sync::Arc;
 use tokio::runtime::Handle;
@@ -14,7 +14,7 @@ struct ConfigurationChangeListenerConfig {
     network_context: Arc<NetworkContext>,
     encryptor: Encryptor,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-    reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 }
 
 impl ConfigurationChangeListenerConfig {
@@ -22,7 +22,7 @@ impl ConfigurationChangeListenerConfig {
         network_context: Arc<NetworkContext>,
         encryptor: Encryptor,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         Self {
             network_context,
@@ -51,7 +51,7 @@ impl ConfigurationChangeListenerBuilder {
         network_context: Arc<NetworkContext>,
         encryptor: Encryptor,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> ConfigurationChangeListenerBuilder {
         Self {
             config: Some(ConfigurationChangeListenerConfig::new(

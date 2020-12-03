@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -19,28 +19,23 @@ pub mod db_bootstrapper;
 use crate::{
     logging::{LogEntry, LogSchema},
     metrics::{
-        LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_ERRORS,
-        LIBRA_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS, LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS,
-        LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, LIBRA_EXECUTOR_TRANSACTIONS_SAVED,
-        LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
+        DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS, DIEM_EXECUTOR_ERRORS,
+        DIEM_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS, DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS,
+        DIEM_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, DIEM_EXECUTOR_TRANSACTIONS_SAVED,
+        DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
 };
 use anyhow::{bail, ensure, format_err, Result};
-use executor_types::{
-    BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
-    TransactionReplayer,
-};
-use fail::fail_point;
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
 };
-use libra_logger::prelude::*;
-use libra_state_view::StateViewId;
-use libra_trace::prelude::*;
-use libra_types::{
+use diem_logger::prelude::*;
+use diem_state_view::StateViewId;
+use diem_trace::prelude::*;
+use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -55,7 +50,12 @@ use libra_types::{
     },
     write_set::{WriteOp, WriteSet},
 };
-use libra_vm::VMExecutor;
+use diem_vm::VMExecutor;
+use executor_types::{
+    BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
+    TransactionReplayer,
+};
+use fail::fail_point;
 use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -326,7 +326,7 @@ where
                              Transaction: {:?}. Status: {:?}.",
                             txn, status,
                         );
-                        LIBRA_EXECUTOR_ERRORS.inc();
+                        DIEM_EXECUTOR_ERRORS.inc();
                     }
                 }
                 TransactionStatus::Retry => (),
@@ -561,7 +561,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>> {
-        let _timer = LIBRA_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS.start_timer();
+        let _timer = DIEM_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS.start_timer();
         // 1. Update the cache in executor to be consistent with latest synced state.
         self.reset_cache()?;
 
@@ -723,7 +723,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 "execute_block"
             );
 
-            let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
+            let _timer = DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
 
@@ -734,7 +734,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
-                let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
+                let _timer = DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
                 fail_point!("executor::vm_execute_block", |_| {
                     Err(Error::from(anyhow::anyhow!(
                         "Injected error in vm_execute_block"
@@ -784,7 +784,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
-        let _timer = LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
+        let _timer = DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
         info!(
@@ -883,8 +883,8 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let _timer = LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS.start_timer();
-            LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
+            let _timer = DIEM_EXECUTOR_SAVE_TRANSACTIONS_SECONDS.start_timer();
+            DIEM_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
 
             assert_eq!(first_version_to_commit, num_txns_in_li - num_txns_to_commit);
             fail_point!("executor::commit_blocks", |_| {

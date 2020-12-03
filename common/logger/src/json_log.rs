@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_infallible::{duration_since_epoch, Mutex};
+use diem_infallible::{duration_since_epoch, Mutex};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value as json};

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,8 +6,8 @@ use crate::{
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules, TSafetyRules,
 };
-use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer};
+use diem_logger::warn;
+use diem_secure_net::{NetworkClient, NetworkServer};
 use std::net::SocketAddr;
 
 pub trait RemoteService {

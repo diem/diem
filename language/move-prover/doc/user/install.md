@@ -3,8 +3,8 @@
 If you have used one of the older installation methods for the prover tools, read the next section first, then
 continue here.
 
-If you already have a Libra development environment running, and just want to add prover tools,
-run (in the Libra root directory):
+If you already have a Diem development environment running, and just want to add prover tools,
+run (in the Diem root directory):
 
 ```shell script
 ./scripts/dev_setup.sh -yp
@@ -17,8 +17,8 @@ Notice that you have to include environment variable definitions in `~/.profile`
 setup, the  `~/.profile` may be already automatically loaded for each login shell, or it may not. If not, you may
 need to add `. ~/.profile` to your `~/.bash_profile` or other shell configuration manually.
 
-The `dev-setup.sh` command can be used to set up other parts of the Libra tool chain; use `-h` for more information.
-Specifically, if you have a fresh Libra enlistment and machine, you can use the following to install basic build
+The `dev-setup.sh` command can be used to set up other parts of the Diem tool chain; use `-h` for more information.
+Specifically, if you have a fresh Diem enlistment and machine, you can use the following to install basic build
 tools like Rust together with prover tools:
 
 ```shell script

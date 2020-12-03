@@ -3,7 +3,7 @@ use 0x1::TransactionFee;
 
 /// # Summary
 /// Burns the transaction fees collected in the `CoinType` currency so that the
-/// Libra association may reclaim the backing coins off-chain. May only be sent
+/// Diem association may reclaim the backing coins off-chain. May only be sent
 /// by the Treasury Compliance account.
 ///
 /// # Technical Description
@@ -16,8 +16,8 @@ use 0x1::TransactionFee;
 /// account address will have a value of 0 after the successful execution of this script.
 ///
 /// ## Events
-/// The successful execution of this transaction will emit a `Libra::BurnEvent` on the event handle
-/// held in the `Libra::CurrencyInfo<CoinType>` resource's `burn_events` published under
+/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+/// held in the `Diem::CurrencyInfo<CoinType>` resource's `burn_events` published under
 /// `0xA550C18`.
 ///
 /// # Parameters
@@ -31,7 +31,7 @@ use 0x1::TransactionFee;
 /// | ----------------           | --------------                        | -------------                                               |
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE` | The sending account is not the Treasury Compliance account. |
 /// | `Errors::NOT_PUBLISHED`    | `TransactionFee::ETRANSACTION_FEE`    | `CoinType` is not an accepted transaction fee currency.     |
-/// | `Errors::INVALID_ARGUMENT` | `Libra::ECOIN`                        | The collected fees in `CoinType` are zero.                  |
+/// | `Errors::INVALID_ARGUMENT` | `Diem::ECOIN`                        | The collected fees in `CoinType` are zero.                  |
 ///
 /// # Related Scripts
 /// * `Script::burn`

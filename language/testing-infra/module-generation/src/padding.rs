@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{options::ModuleGeneratorOptions, utils::random_string};
-use libra_types::account_address::AccountAddress;
+use diem_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use vm::file_format::{Bytecode, CompiledModuleMut, Signature};

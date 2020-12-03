@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Support for compiling scripts and modules in tests.
 
 use compiler::Compiler;
 
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     transaction::{Module, Script},
 };

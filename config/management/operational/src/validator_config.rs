@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, TransactionContext};
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_global_constants::{
+use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
+use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
-use libra_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
-use libra_network_address::{NetworkAddress, Protocol};
-use libra_network_address_encryption::Encryptor;
-use libra_types::account_address::AccountAddress;
+use diem_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
+use diem_network_address::{NetworkAddress, Protocol};
+use diem_network_address_encryption::Encryptor;
+use diem_types::account_address::AccountAddress;
 use serde::Serialize;
 use std::{convert::TryFrom, str::FromStr};
 use structopt::StructOpt;
@@ -21,7 +21,7 @@ pub struct SetValidatorConfig {
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
     #[structopt(flatten)]
-    validator_config: libra_management::validator_config::ValidatorConfig,
+    validator_config: diem_management::validator_config::ValidatorConfig,
     #[structopt(
         long,
         required_unless = "fullnode-address",
@@ -122,7 +122,7 @@ pub struct RotateKey {
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
     #[structopt(flatten)]
-    validator_config: libra_management::validator_config::ValidatorConfig,
+    validator_config: diem_management::validator_config::ValidatorConfig,
     #[structopt(flatten)]
     auto_validate: AutoValidate,
 }
@@ -257,7 +257,7 @@ pub struct ValidatorConfig {
     #[structopt(long, help = "Validator account address to display the config")]
     account_address: AccountAddress,
     #[structopt(flatten)]
-    config: libra_management::config::ConfigPath,
+    config: diem_management::config::ConfigPath,
     /// JSON-RPC Endpoint (e.g. http://localhost:8080)
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
@@ -296,7 +296,7 @@ pub struct DecryptedValidatorConfig {
 
 impl DecryptedValidatorConfig {
     pub fn from_validator_config_resource(
-        config_resource: &libra_types::validator_config::ValidatorConfigResource,
+        config_resource: &diem_types::validator_config::ValidatorConfigResource,
         account_address: AccountAddress,
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {
@@ -310,7 +310,7 @@ impl DecryptedValidatorConfig {
     }
 
     pub fn from_validator_config(
-        config: &libra_types::validator_config::ValidatorConfig,
+        config: &diem_types::validator_config::ValidatorConfig,
         account_address: AccountAddress,
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {

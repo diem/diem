@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -9,7 +9,17 @@ use crate::{
     tests::common::{batch_add_signed_txn, TestTransaction},
     CommitNotification, CommittedTransaction, ConsensusRequest,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, diem_channel, message_queues::QueueStyle};
+use diem_config::{
+    config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
+    network_id::{NetworkContext, NetworkId, NodeNetworkId},
+};
+use diem_infallible::{Mutex, RwLock};
+use diem_network_address::NetworkAddress;
+use diem_types::{
+    transaction::{GovernanceRole, SignedTransaction},
+    PeerId,
+};
 use futures::{
     channel::{
         mpsc::{self, unbounded, UnboundedReceiver},
@@ -19,16 +29,6 @@ use futures::{
     future::FutureExt,
     sink::SinkExt,
     StreamExt,
-};
-use libra_config::{
-    config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
-    network_id::{NetworkContext, NetworkId, NodeNetworkId},
-};
-use libra_infallible::{Mutex, RwLock};
-use libra_network_address::NetworkAddress;
-use libra_types::{
-    transaction::{GovernanceRole, SignedTransaction},
-    PeerId,
 };
 use netcore::transport::ConnectionOrigin;
 use network::{
@@ -52,9 +52,9 @@ use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 struct SharedMempoolNetwork {
     mempools: HashMap<PeerId, Arc<Mutex<CoreMempool>>>,
     network_reqs_rxs:
-        HashMap<PeerId, libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
+        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     network_notifs_txs:
-        HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
@@ -71,11 +71,11 @@ fn init_single_shared_mempool(
 ) {
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
     let (network_reqs_tx, network_reqs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (connection_reqs_tx, _) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (network_notifs_tx, network_notifs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
     let network_sender = MempoolNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
@@ -92,7 +92,7 @@ fn init_single_shared_mempool(
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
     let (_reconfig_events, reconfig_events_receiver) =
-        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+        diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let runtime = Builder::new()
         .thread_name("shared-mem")
@@ -134,11 +134,11 @@ fn init_smp_multiple_networks(
     let mut network_handles = vec![];
     for (idx, (network_id, peer_id)) in network_ids.iter().enumerate() {
         let (network_reqs_tx, network_reqs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (network_notifs_tx, network_notifs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
@@ -162,7 +162,7 @@ fn init_smp_multiple_networks(
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
     let (_reconfig_events, reconfig_events_receiver) =
-        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+        diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
     let runtime = Builder::new()
         .thread_name("shared-mem")

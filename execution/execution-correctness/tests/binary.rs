@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use execution_correctness::ExecutionCorrectnessManager;
-use libra_config::{
+use diem_config::{
     config::{ExecutionCorrectnessService, PersistableConfig, RemoteExecutionService},
     utils,
 };
+use execution_correctness::ExecutionCorrectnessManager;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 const BINARY: &str = env!("CARGO_BIN_EXE_execution-correctness");
@@ -17,7 +17,7 @@ fn test_rest() {
     config.execution.service =
         ExecutionCorrectnessService::Process(RemoteExecutionService { server_address });
 
-    let config_path = libra_temppath::TempPath::new();
+    let config_path = diem_temppath::TempPath::new();
     config_path.create_as_file().unwrap();
     config.save_config(config_path.path()).unwrap();
 

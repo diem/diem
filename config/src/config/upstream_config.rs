@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::network_id::{NetworkId, NodeNetworkId};
-use libra_types::PeerId;
+use diem_types::PeerId;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

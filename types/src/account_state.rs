@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,10 +8,10 @@ use crate::{
         ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer, FreezingBit, ParentVASP,
         PreburnResource,
     },
-    block_metadata::LibraBlockResource,
-    libra_timestamp::LibraTimestampResource,
+    block_metadata::DiemBlockResource,
+    diem_timestamp::DiemTimestampResource,
     on_chain_config::{
-        ConfigurationResource, LibraVersion, OnChainConfig, RegisteredCurrencies,
+        ConfigurationResource, DiemVersion, OnChainConfig, RegisteredCurrencies,
         VMPublishingOption, ValidatorSet,
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
@@ -77,8 +77,8 @@ impl AccountState {
         self.get_resource::<ConfigurationResource>()
     }
 
-    pub fn get_libra_timestamp_resource(&self) -> Result<Option<LibraTimestampResource>> {
-        self.get_resource::<LibraTimestampResource>()
+    pub fn get_diem_timestamp_resource(&self) -> Result<Option<DiemTimestampResource>> {
+        self.get_resource::<DiemTimestampResource>()
     }
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
@@ -134,8 +134,8 @@ impl AccountState {
         self.get_config::<ValidatorSet>()
     }
 
-    pub fn get_libra_version(&self) -> Result<Option<LibraVersion>> {
-        self.get_config::<LibraVersion>()
+    pub fn get_diem_version(&self) -> Result<Option<DiemVersion>> {
+        self.get_config::<DiemVersion>()
     }
 
     pub fn get_vm_publishing_option(&self) -> Result<Option<VMPublishingOption>> {
@@ -165,8 +165,8 @@ impl AccountState {
         }
     }
 
-    pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {
-        self.get_resource::<LibraBlockResource>()
+    pub fn get_diem_block_resource(&self) -> Result<Option<DiemBlockResource>> {
+        self.get_resource::<DiemBlockResource>()
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
@@ -210,9 +210,9 @@ impl fmt::Debug for AccountState {
             .map(|account_resource_opt| format!("{:#?}", account_resource_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
 
-        let libra_timestamp_str = self
-            .get_libra_timestamp_resource()
-            .map(|libra_timestamp_opt| format!("{:#?}", libra_timestamp_opt))
+        let diem_timestamp_str = self
+            .get_diem_timestamp_resource()
+            .map(|diem_timestamp_opt| format!("{:#?}", diem_timestamp_opt))
             .unwrap_or_else(|e| format!("parse: {:#?}", e));
 
         let validator_config_str = self
@@ -229,11 +229,11 @@ impl fmt::Debug for AccountState {
             f,
             "{{ \n \
              AccountResource {{ {} }} \n \
-             LibraTimestamp {{ {} }} \n \
+             DiemTimestamp {{ {} }} \n \
              ValidatorConfig {{ {} }} \n \
              ValidatorSet {{ {} }} \n \
              }}",
-            account_resource_str, libra_timestamp_str, validator_config_str, validator_set_str,
+            account_resource_str, diem_timestamp_str, validator_config_str, validator_set_str,
         )
     }
 }

@@ -1,10 +1,10 @@
 [package]
-name = "libra-secure-net"
+name = "diem-secure-net"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 repository = "https://github.com/libra/libra"
-description = "Libra's Simple Network Substrate"
-homepage = "https://libra.org"
+description = "Diem's Simple Network Substrate"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -14,9 +14,9 @@ once_cell = "1.4.1"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
 thiserror = "1.0.22"
 
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-libra-config = { path = "../../config", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }

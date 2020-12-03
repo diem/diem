@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -9,29 +9,26 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 
 use anyhow::Result;
-use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_secure_net::NetworkServer;
-use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
-use libradb::LibraDB;
+use diem_config::config::NodeConfig;
+use diem_logger::prelude::*;
+use diem_secure_net::NetworkServer;
+use diem_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use diemdb::DiemDB;
 use std::{
     sync::Arc,
     thread::{self, JoinHandle},
 };
 use storage_interface::{DbReader, DbWriter, Error, StartupInfo};
 
-/// Starts storage service with a given LibraDB
-pub fn start_storage_service_with_db(
-    config: &NodeConfig,
-    libra_db: Arc<LibraDB>,
-) -> JoinHandle<()> {
-    let storage_service = StorageService { db: libra_db };
+/// Starts storage service with a given DiemDB
+pub fn start_storage_service_with_db(config: &NodeConfig, diem_db: Arc<DiemDB>) -> JoinHandle<()> {
+    let storage_service = StorageService { db: diem_db };
     storage_service.run(config)
 }
 
 #[derive(Clone)]
 pub struct StorageService {
-    db: Arc<LibraDB>,
+    db: Arc<DiemDB>,
 }
 
 impl StorageService {

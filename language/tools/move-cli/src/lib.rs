@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use disassembler::disassembler::Disassembler;
 // TODO: do we want to make these Move core types or allow this to be customizable?
-use libra_types::{contract_event::ContractEvent, event::EventKey};
+use diem_types::{contract_event::ContractEvent, event::EventKey};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,

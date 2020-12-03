@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,14 +8,14 @@ use crate::{
     validator_set::DecryptedValidatorInfo,
     TransactionContext,
 };
-use libra_config::config;
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::{error::Error, secure_backend::DISK};
-use libra_network_address::NetworkAddress;
-use libra_types::{account_address::AccountAddress, chain_id::ChainId, waypoint::Waypoint};
+use diem_config::config;
+use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
+use diem_management::{error::Error, secure_backend::DISK};
+use diem_network_address::NetworkAddress;
+use diem_types::{account_address::AccountAddress, chain_id::ChainId, waypoint::Waypoint};
 use structopt::StructOpt;
 
-const TOOL_NAME: &str = "libra-operational-tool";
+const TOOL_NAME: &str = "diem-operational-tool";
 
 /// A helper to test the operational tool in tests
 pub struct OperationalTool {

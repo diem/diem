@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{on_chain_config::OnChainConfig, validator_info::ValidatorInfo};
@@ -52,7 +52,7 @@ impl ValidatorSet {
 
 impl OnChainConfig for ValidatorSet {
     // validator_set_address
-    const IDENTIFIER: &'static str = "LibraSystem";
+    const IDENTIFIER: &'static str = "DiemSystem";
 }
 
 impl IntoIterator for ValidatorSet {

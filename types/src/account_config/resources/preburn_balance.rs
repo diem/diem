@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     access_path::AccessPath,
-    account_config::constants::{coin1_tmp_tag, CORE_CODE_ADDRESS, LIBRA_MODULE_NAME},
+    account_config::constants::{xus_tag, CORE_CODE_ADDRESS, DIEM_MODULE_NAME},
 };
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
@@ -46,10 +46,10 @@ impl PreburnResource {
 }
 
 impl MoveResource for PreburnResource {
-    const MODULE_NAME: &'static str = LIBRA_MODULE_NAME;
+    const MODULE_NAME: &'static str = DIEM_MODULE_NAME;
     const STRUCT_NAME: &'static str = "Preburn";
 
     fn type_params() -> Vec<TypeTag> {
-        vec![coin1_tmp_tag()]
+        vec![xus_tag()]
     }
 }

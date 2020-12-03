@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::{Error, LoggerConfig, PersistableConfig, SecureBackend};
-use libra_types::chain_id::{self, ChainId};
+use diem_types::chain_id::{self, ChainId};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 

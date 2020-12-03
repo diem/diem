@@ -5,7 +5,7 @@
 
 address 0x1 {
 
-module Libra {
+module Diem {
     use 0x1::Signer;
     use 0x1::Vector;
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,8 +8,8 @@ use crate::{
         TestTransaction,
     },
 };
-use libra_config::config::NodeConfig;
-use libra_types::transaction::{GovernanceRole, SignedTransaction};
+use diem_config::config::NodeConfig;
+use diem_types::transaction::{GovernanceRole, SignedTransaction};
 use std::{
     collections::HashSet,
     time::{Duration, SystemTime},
@@ -68,7 +68,7 @@ fn test_transaction_ordering() {
 #[test]
 fn test_ordering_of_governance_transactions() {
     let gov_roles = vec![
-        GovernanceRole::LibraRoot,
+        GovernanceRole::DiemRoot,
         GovernanceRole::TreasuryCompliance,
         GovernanceRole::Validator,
         GovernanceRole::ValidatorOperator,

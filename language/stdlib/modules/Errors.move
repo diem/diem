@@ -5,7 +5,7 @@ address 0x1 {
 /// A `u64` error code is constructed from two values:
 ///
 ///  1. The *error category* which is encoded in the lower 8 bits of the code. Error categories are
-///     declared in this module and are globally unique across the Libra framework. There is a limited
+///     declared in this module and are globally unique across the Diem framework. There is a limited
 ///     fixed set of predefined categories, and the framework is guaranteed to use those consistently.
 ///
 ///  2. The *error reason* which is encoded in the remaining 56 bits of the code. The reason is a unique

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -12,7 +12,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
 };
 
-use libra_infallible::Mutex;
+use diem_infallible::Mutex;
 use std::sync::Arc;
 
 #[cfg(test)]

@@ -4,11 +4,11 @@ title: Crypto
 custom_edit_url: https://github.com/libra/libra/edit/master/crypto/crypto/README.md
 ---
 
-The crypto component hosts all the implementations of cryptographic primitives we use in Libra: hashing, signing, and key derivation/generation. The parts of the library using traits.rs contains the crypto API enforcing type safety, verifiable random functions, EdDSA & MultiEdDSA signatures.
+The crypto component hosts all the implementations of cryptographic primitives we use in Diem: hashing, signing, and key derivation/generation. The parts of the library using traits.rs contains the crypto API enforcing type safety, verifiable random functions, EdDSA & MultiEdDSA signatures.
 
 ## Overview
 
-Libra makes use of several cryptographic algorithms:
+Diem makes use of several cryptographic algorithms:
 
 * SHA-3 as the main hash function. It is standardized in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf). It is based on the [tiny_keccak](https://docs.rs/tiny-keccak/1.4.2/tiny_keccak/) library.
 * HKDF: HMAC-based Extract-and-Expand Key Derivation Function (HKDF) based on [RFC 5869](https://tools.ietf.org/html/rfc5869). It is used to generate keys from a salt (optional), seed, and application-info (optional).

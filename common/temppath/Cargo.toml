@@ -1,15 +1,15 @@
 [package]
-name = "libra-temppath"
+name = "diem-temppath"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra libra-temppath"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem diem-temppath"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 hex = "0.4.2"
-libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 rand = "0.7.3"

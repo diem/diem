@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /// This wraps around `futures::stream::futures_unorderd::FuturesUnordered` to provide similar

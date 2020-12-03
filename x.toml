@@ -9,13 +9,13 @@ toolchain = "nightly-2020-10-09"
 flags = "-Zfeatures=all"
 
 [cargo.sccache]
-bucket = "ci-artifacts.libra.org"
-prefix = "sccache/libra/"
+bucket = "ci-artifacts.diem.com"
+prefix = "sccache/diem/"
 public = true
 region = "us-west-2"
 endpoint = "https://s3-us-west-2.amazonaws.com"
 required-cargo-home = "/opt/cargo"
-required-git-home = "/opt/git/libra"
+required-git-home = "/opt/git/diem"
 envs = [
    #To debug sccache uncomment the two lines below.
    #["SCCACHE_ERROR_LOG","/tmp/sccache_log"],
@@ -60,7 +60,7 @@ triple = "x86_64-unknown-linux-gnu"
 target-features = "all"
 
 [[summaries.default.omitted-packages]]
-name = "libra-workspace-hack"
+name = "diem-workspace-hack"
 version = "0.1.0"
 workspace-path = "common/workspace-hack"
 
@@ -84,7 +84,7 @@ whitespace-exceptions = [
 ]
 
 [workspace.enforced-attributes]
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 license = "Apache-2.0"
 
 [workspace.banned-deps.direct]
@@ -98,11 +98,11 @@ proptest = "proptest is only for testing and fuzzing"
 features = ["fuzzing"]
 
 # This is a list of test-only members. These are workspace members that do not form part of the main
-# Libra production codebase, and are only used to verify correctness and/or performance.
+# Diem production codebase, and are only used to verify correctness and/or performance.
 #
 # *** IMPORTANT ***
 #
-# Published developer tools (e.g. Move compiler) ARE part of the production Libra codebase.
+# Published developer tools (e.g. Move compiler) ARE part of the production Diem codebase.
 # They should be listed in the root Cargo.toml's default-members, not here!
 #
 # Before adding a new crate to this list, ensure that it is *actually* test-only. If not, add it
@@ -112,7 +112,7 @@ features = ["fuzzing"]
 [workspace.test-only]
 members = [
     "common/channel/many-keys-stress-test",
-    "common/libradoc",
+    "common/diemdoc",
     "common/proptest-helpers",
     "common/retrier",
     "devtools/x",
@@ -136,12 +136,12 @@ members = [
     "network/memsocket",
     "network/socket-bench-server",
     "testsuite/cli",
-    "testsuite/cli/libra-wallet",
+    "testsuite/cli/diem-wallet",
     "testsuite/cluster-test",
     "testsuite/generate-format",
-    "testsuite/libra-fuzzer",
-    "testsuite/libra-fuzzer/fuzz",
-    "testsuite/libra-swarm",
+    "testsuite/diem-fuzzer",
+    "testsuite/diem-fuzzer/fuzz",
+    "testsuite/diem-swarm",
     "testsuite/smoke-test",
     "testsuite/smoke-test/attribute",
 ]
@@ -150,24 +150,24 @@ members = [
 # checking dependency summaries.
 
 [workspace.subsets.lsr]
-# The Libra safety rules TCB.
+# The Diem safety rules TCB.
 members = [
     "consensus/safety-rules",
 ]
 
 [workspace.subsets.lec]
-# The Libra execution correctness TCB.
+# The Diem execution correctness TCB.
 members = [
     "execution/execution-correctness",
 ]
 
 [workspace.subsets.release]
-# The Libra release binaries
+# The Diem release binaries
 members = [
     "config/management/genesis",
     "consensus/safety-rules",
     "execution/db-bootstrapper",
-    "libra-node",
+    "diem-node",
     "secure/key-manager",
     "storage/backup/backup-cli",
 ]
@@ -193,7 +193,7 @@ mark-changed = []
 
 [[determinator.path-rule]]
 # A bunch of images that should be ignored, I guess.
-globs = ["libra.png", ".assets/libra.png", "storage/data.png"]
+globs = ["diem.png", ".assets/diem.png", "storage/data.png"]
 mark-changed = []
 
 [[determinator.package-rule]]

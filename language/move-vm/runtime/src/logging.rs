@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_logger::Schema;
+use diem_logger::Schema;
 
 // Trait used by the VM to log interesting data.
 // Clients are responsible for the implementation of alert.

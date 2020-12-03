@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-//! Test infrastructure for the Libra VM.
+//! Test infrastructure for the Diem VM.
 //!
-//! This crate contains helpers for executing tests against the Libra VM.
+//! This crate contains helpers for executing tests against the Diem VM.
 
-use libra_types::{transaction::TransactionStatus, vm_status::KeptVMStatus};
+use diem_types::{transaction::TransactionStatus, vm_status::KeptVMStatus};
 
 pub mod account;
 pub mod account_universe;

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -10,14 +10,14 @@ use crate::{
         types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
 };
-use itertools::Itertools;
-use libra_config::{
+use diem_config::{
     config::{MempoolConfig, PeerNetworkId, UpstreamConfig},
     network_id::NetworkId,
 };
-use libra_infallible::Mutex;
-use libra_logger::prelude::*;
-use libra_types::transaction::SignedTransaction;
+use diem_infallible::Mutex;
+use diem_logger::prelude::*;
+use diem_types::transaction::SignedTransaction;
+use itertools::Itertools;
 use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
@@ -236,7 +236,7 @@ impl PeerManager {
                 // If the number of un-ACK'ed un-expired broadcasts reaches this threshold, we do not broadcast anymore
                 // and wait until an ACK is received or a sent broadcast expires
                 // This helps rate-limit egress network bandwidth and not overload a remote peer or this
-                // node's Libra network sender
+                // node's Diem network sender
                 if pending_broadcasts >= self.mempool_config.max_broadcasts_per_peer {
                     return;
                 }

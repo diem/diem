@@ -1,10 +1,10 @@
 [package]
 name = "test-generation"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra test generation"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem test generation"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -20,18 +20,18 @@ getrandom = "0.2.0"
 crossbeam-channel = "0.5.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
-libra-config = { path = "../../../config", version = "0.1.0" }
-libra-logger = { path = "../../../common/logger", version = "0.1.0" }
-libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../../../config", version = "0.1.0" }
+diem-logger = { path = "../../../common/logger", version = "0.1.0" }
+diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 module-generation = { path = "../module-generation", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
-libra-vm = { path = "../../libra-vm", version = "0.1.0" }
+diem-vm = { path = "../../diem-vm", version = "0.1.0" }
 language-e2e-tests = { path = "../e2e-tests", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
 
 [features]
 mirai-contracts = []

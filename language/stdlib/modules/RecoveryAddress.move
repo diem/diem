@@ -3,7 +3,7 @@ address 0x1 {
 /// This module defines an account recovery mechanism that can be used by VASPs.
 module RecoveryAddress {
     use 0x1::Errors;
-    use 0x1::LibraAccount::{Self, KeyRotationCapability};
+    use 0x1::DiemAccount::{Self, KeyRotationCapability};
     use 0x1::Signer;
     use 0x1::VASP;
     use 0x1::Vector;
@@ -47,7 +47,7 @@ module RecoveryAddress {
         //     B and B is the recovery account for A
         // (2) rotation_caps is always nonempty
         assert(
-            *LibraAccount::key_rotation_capability_address(&rotation_cap) == addr,
+            *DiemAccount::key_rotation_capability_address(&rotation_cap) == addr,
              Errors::invalid_argument(EKEY_ROTATION_DEPENDENCY_CYCLE)
         );
         assert(!exists<RecoveryAddress>(addr), Errors::already_published(ERECOVERY_ADDRESS));
@@ -66,7 +66,7 @@ module RecoveryAddress {
         let addr = Signer::spec_address_of(recovery_account);
         aborts_if !VASP::is_vasp(addr) with Errors::INVALID_ARGUMENT;
         aborts_if spec_is_recovery_address(addr) with Errors::ALREADY_PUBLISHED;
-        aborts_if LibraAccount::key_rotation_capability_address(rotation_cap) != addr
+        aborts_if DiemAccount::key_rotation_capability_address(rotation_cap) != addr
             with Errors::INVALID_ARGUMENT;
     }
     spec schema PublishEnsures {
@@ -110,8 +110,8 @@ module RecoveryAddress {
         })
         {
             let cap = Vector::borrow(caps, i);
-            if (LibraAccount::key_rotation_capability_address(cap) == &to_recover) {
-                LibraAccount::rotate_authentication_key(cap, new_key);
+            if (DiemAccount::key_rotation_capability_address(cap) == &to_recover) {
+                DiemAccount::rotate_authentication_key(cap, new_key);
                 return
             };
             i = i + 1
@@ -133,7 +133,7 @@ module RecoveryAddress {
         to_recover: address;
         new_key: vector<u8>;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
-        aborts_if !LibraAccount::exists_at(to_recover) with Errors::NOT_PUBLISHED;
+        aborts_if !DiemAccount::exists_at(to_recover) with Errors::NOT_PUBLISHED;
         aborts_if len(new_key) != 32 with Errors::INVALID_ARGUMENT;
         aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
         aborts_if !(Signer::spec_address_of(account) == recovery_address
@@ -142,7 +142,7 @@ module RecoveryAddress {
     spec schema RotateAuthenticationKeyEnsures {
         to_recover: address;
         new_key: vector<u8>;
-        ensures LibraAccount::authentication_key(to_recover) == new_key;
+        ensures DiemAccount::authentication_key(to_recover) == new_key;
     }
 
     /// Add `to_recover` to the `RecoveryAddress` resource under `recovery_address`.
@@ -153,7 +153,7 @@ module RecoveryAddress {
         // Check that `recovery_address` has a `RecoveryAddress` resource
         assert(exists<RecoveryAddress>(recovery_address), Errors::not_published(ERECOVERY_ADDRESS));
         // Only accept the rotation capability if both accounts belong to the same VASP
-        let to_recover_address = *LibraAccount::key_rotation_capability_address(&to_recover);
+        let to_recover_address = *DiemAccount::key_rotation_capability_address(&to_recover);
         assert(
             VASP::is_same_vasp(recovery_address, to_recover_address),
             Errors::invalid_argument(EINVALID_KEY_ROTATION_DELEGATION)
@@ -172,7 +172,7 @@ module RecoveryAddress {
         to_recover: KeyRotationCapability;
         recovery_address: address;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
-        let to_recover_address = LibraAccount::key_rotation_capability_address(to_recover);
+        let to_recover_address = DiemAccount::key_rotation_capability_address(to_recover);
         aborts_if !VASP::spec_is_same_vasp(recovery_address, to_recover_address) with Errors::INVALID_ARGUMENT;
     }
     spec schema AddRotationCapabilityEnsures {
@@ -241,7 +241,7 @@ module RecoveryAddress {
 
         /// Returns all the `KeyRotationCapability`s held at `recovery_address`.
         define spec_get_rotation_caps(recovery_address: address):
-            vector<LibraAccount::KeyRotationCapability>
+            vector<DiemAccount::KeyRotationCapability>
         {
             global<RecoveryAddress>(recovery_address).rotation_caps
         }

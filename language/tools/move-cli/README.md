@@ -6,7 +6,7 @@ mimics the Move memory model
 
 ## Installation
 ```shell
-$ cargo install --path libra/language/tools/move-cli
+$ cargo install --path diem/language/tools/move-cli
 ```
 or
 ```shell
@@ -442,25 +442,25 @@ are the following:
   [`Vector`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Vector.move), and
   [`Signer`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Signer.move).
 
-* **libra:** This includes all of the modules in the `stdlib` mode, along with
-  all of the other modules that comprise the Libra Framework as defined
+* **diem:** This includes all of the modules in the `stdlib` mode, along with
+  all of the other modules that comprise the Diem Framework as defined
   [here](https://github.com/libra/libra/blob/master/language/stdlib/modules/doc/overview.md).
 
 ### Running with genesis state
 
-You can run the Move CLI using the modules from the Libra Framework by using
-the `--mode libra` mode flag in your commands. However, a number of the Libra
+You can run the Move CLI using the modules from the Diem Framework by using
+the `--mode diem` mode flag in your commands. However, a number of the Diem
 Framework modules require a specific initialization sequence to be run in
 genesis in order to function properly.
 
 The `tests/testsuite/liba_smoke` test uses the CLI to run a fairly
-realistic Libra genesis setup to initialize these modules, and also contains a
+realistic Diem genesis setup to initialize these modules, and also contains a
 few basic transactions. If you want to experiment with running
-different transactions with the Libra semantics, you can use this test as a
+different transactions with the Diem semantics, you can use this test as a
 starting point, and add your scripts/modules as you wish. You'll need to update
 the `args.txt` file as well to exercise these new scripts as well, and then
 you can run them just like any other Move CLI test:
 
 ```shell
-$ move test ./tests/testsuite/libra_smoke
+$ move test ./tests/testsuite/diem_smoke
 ```

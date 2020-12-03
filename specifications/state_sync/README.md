@@ -2,25 +2,25 @@
 
 ## Abstract
 
-This document describes the spec of a Libra node's state synchronizer component,
+This document describes the spec of a Diem node's state synchronizer component,
 which is responsible for synchronizing a node's local ledger to the latest state in
-the Libra Payment Network.
+the Diem Payment Network.
 
 This document is organized as follows:
 
 1. Overview: high-level outline of the the state synchronizer design and
 functionality.
 2. Sync Protocols: specify technical requirements of various sync protocols
-recognized in the Libra Network.
-3. Network Protocol: the State Synchronizer LibraNet protocol used to participate
-as a node in the Libra Network
+recognized in the Diem Network.
+3. Network Protocol: the State Synchronizer DiemNet protocol used to participate
+as a node in the Diem Network
 4. Abstracted Modules: external components that state synchronizer interfaces with
 
 
 ## Overview
 
 State Synchronizer is a system component that is responsible for syncing ledger
-state among peers in the Libra Payment Network. Using state sync, a Libra node
+state among peers in the Diem Payment Network. Using state sync, a Diem node
 can discover and update to a more recent ledger state if available with the following
 general flow:
 1. A node sends a [`GetChunkRequest`](#getchunkrequest) to a remote peer
@@ -58,7 +58,7 @@ for the technical requirements for each of these sync protocols.
 ## Sync Protocols
 
 This section describes the technical requirements for the sync protocols
-supported in the Libra Network.
+supported in the Diem Network.
 
 For each sync protocol, we specify:
 * requester: specs for the node requesting sync

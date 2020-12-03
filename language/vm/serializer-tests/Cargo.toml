@@ -1,16 +1,16 @@
 [package]
 name = "serializer-tests"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra serializer tests"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem serializer tests"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dev-dependencies]
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
 vm = { path = "../", version = "0.1.0", features = ["fuzzing"] }

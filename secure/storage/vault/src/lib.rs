@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 pub mod dev;
 
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH},
     PrivateKey,
 };
@@ -49,8 +49,8 @@ impl From<base64::DecodeError> for Error {
     }
 }
 
-impl From<libra_crypto::traits::CryptoMaterialError> for Error {
-    fn from(error: libra_crypto::traits::CryptoMaterialError) -> Self {
+impl From<diem_crypto::traits::CryptoMaterialError> for Error {
+    fn from(error: diem_crypto::traits::CryptoMaterialError) -> Self {
         Self::SerializationError(format!("{}", error))
     }
 }

@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
-use libra_secure_json_rpc::JsonRpcClient;
-use libra_types::{
-    account_config::libra_root_address, on_chain_config::ValidatorSet,
+use diem_logger::prelude::*;
+use diem_network_address::NetworkAddress;
+use diem_secure_json_rpc::JsonRpcClient;
+use diem_types::{
+    account_config::diem_root_address, on_chain_config::ValidatorSet,
     validator_info::ValidatorInfo, PeerId,
 };
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
 
 pub fn gen_seed_peer_config(client_endpoint: String) -> SeedPeersConfig {
-    let validator_set = get_validator_set(client_endpoint, libra_root_address())
+    let validator_set = get_validator_set(client_endpoint, diem_root_address())
         .unwrap()
         .expect("No validator set found.");
 

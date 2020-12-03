@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! An abstraction of x25519 elliptic curve keys required for
 //! [Diffie-Hellman key exchange](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange)
-//! in the Libra project.
+//! in the Diem project.
 //! Ideally, only `x25519::PrivateKey` and `x25519::PublicKey` should be used throughout the
 //! codebase, until the bytes are actually used in cryptographic operations.
 //!
 //! # Examples
 //!
 //! ```
-//! use libra_crypto::{x25519, Uniform, test_utils::TEST_SEED};
+//! use diem_crypto::{x25519, Uniform, test_utils::TEST_SEED};
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! // Derive an X25519 private key for testing.
@@ -19,8 +19,8 @@
 //! let public_key = private_key.public_key();
 //!
 //! // Deserialize an hexadecimal private or public key
-//! use libra_crypto::traits::ValidCryptoMaterialStringExt;
-//! # fn main() -> Result<(), libra_crypto::traits::CryptoMaterialError> {
+//! use diem_crypto::traits::ValidCryptoMaterialStringExt;
+//! # fn main() -> Result<(), diem_crypto::traits::CryptoMaterialError> {
 //! let private_key = "404acc8ec6a0f18df7359a6ee7823f19dd95616b10fed8bdb0de030e891b945a";
 //! let private_key = x25519::PrivateKey::from_encoded_string(&private_key)?;
 //! let public_key = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
@@ -38,7 +38,7 @@ use crate::{
     traits::{self, CryptoMaterialError, ValidCryptoMaterial, ValidCryptoMaterialStringExt},
     x25519,
 };
-use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
+use diem_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use rand::{CryptoRng, RngCore};
 use std::convert::{TryFrom, TryInto};
 
@@ -50,7 +50,7 @@ use proptest_derive::Arbitrary;
 // =========================
 //
 // We re-export the dalek-x25519 library,
-// This makes it easier to uniformalize build dalek-x25519 in libra-core.
+// This makes it easier to uniformalize build dalek-x25519 in diem-core.
 //
 
 #[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]

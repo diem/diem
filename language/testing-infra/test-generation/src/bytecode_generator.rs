@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     control_flow_graph::CFG,
     substitute, summaries,
 };
-use libra_logger::{debug, error, warn};
+use diem_logger::{debug, error, warn};
 use rand::{rngs::StdRng, Rng};
 use vm::{
     access::ModuleAccess,

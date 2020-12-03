@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{error::Error, storage::StorageWrapper};
-use libra_config::config;
-use libra_types::chain_id::{self, ChainId};
+use diem_config::config;
+use diem_types::chain_id::{self, ChainId};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -13,7 +13,7 @@ use structopt::StructOpt;
 /// # Example:
 ///
 /// ```
-/// use libra_management::config::ConfigPath;
+/// use diem_management::config::ConfigPath;
 /// use structopt::StructOpt;
 ///
 /// #[derive(Clone, Debug, StructOpt)]
@@ -38,7 +38,7 @@ use structopt::StructOpt;
 /// // Output:
 /// // ...
 /// // OPTIONS:
-/// //         --config <config>    Path to a libra-management configuration file
+/// //         --config <config>    Path to a diem-management configuration file
 /// //         --test <test>
 ///
 /// // let none  = "cmd";
@@ -52,7 +52,7 @@ use structopt::StructOpt;
 /// //     cmd [OPTIONS] --test <test>
 ///```
 
-/// Config for libra management tools
+/// Config for diem management tools
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -145,7 +145,7 @@ impl Config {
 
 #[derive(Clone, Debug, Default, StructOpt)]
 pub struct ConfigPath {
-    /// Path to a libra-management configuration file
+    /// Path to a diem-management configuration file
     #[structopt(long)]
     config: Option<PathBuf>,
 }
@@ -163,8 +163,8 @@ impl ConfigPath {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_config::config::{SecureBackend, Token, VaultConfig};
-    use libra_types::chain_id::NamedChain;
+    use diem_config::config::{SecureBackend, Token, VaultConfig};
+    use diem_types::chain_id::NamedChain;
 
     #[test]
     fn example() {

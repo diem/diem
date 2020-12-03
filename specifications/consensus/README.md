@@ -2,7 +2,7 @@
 
 ## Overview
 
-The consensus specification describes the mechanism used by the Libra Payment Network (LPN) validators to agree on both ordering and transaction execution output under byzantine fault-tolerant (BFT) conditions - at most _f_ validators (where _f_ < (_all validators_)/3) are faulty or malicious. Currently, the consensus specification is an implementation of _LibraBFT_, a BFT consensus protocol that ensures liveness and safety under partial synchrony. The [LibraBFT whitepaper](https://developers.libra.org/docs/state-machine-replication-paper) describes a high level overview of the protocol, the liveness and safety proofs, and a rationale on why LibraBFT was adopted for the LPN. This document specifies how to implement the LibraBFT protocol in order to participate as a validating node in the LPN.
+The consensus specification describes the mechanism used by the Diem Payment Network (LPN) validators to agree on both ordering and transaction execution output under byzantine fault-tolerant (BFT) conditions - at most _f_ validators (where _f_ < (_all validators_)/3) are faulty or malicious. Currently, the consensus specification is an implementation of _DiemBFT_, a BFT consensus protocol that ensures liveness and safety under partial synchrony. The [DiemBFT whitepaper](https://developers.diem.com/docs/state-machine-replication-paper) describes a high level overview of the protocol, the liveness and safety proofs, and a rationale on why DiemBFT was adopted for the LPN. This document specifies how to implement the DiemBFT protocol in order to participate as a validating node in the LPN.
 
 This document is organized as follows:
 
@@ -12,7 +12,7 @@ This document is organized as follows:
 4. [Abstracted modules](#Abstracted-modules) - The components this specification depends on.
 5. [Consensus modules](#Consensus-modules) - The components built upon common data structures that are described as a part of this specification.
 
-All network communication occurs over LibraNet and any serialization, deserialization and hashing is determined by [LCS](https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/).
+All network communication occurs over DiemNet and any serialization, deserialization and hashing is determined by [LCS](https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/).
 
 ## Architecture
 
@@ -941,7 +941,7 @@ Fields
 * `block_store`: the current block store we have, specified in [block store](#blockstore).
 * `proposer_election`: decides the proposer of each round, specified in [proposer election](#proposer-election).
 * `proposal_generator`: decide how to propose a block of transactions, specified in [proposal generator](#proposal-generator).
-* `safety_rules`: the voting and commit rule of LibraBFT, specified in [safety rules](#safety-rules).
+* `safety_rules`: the voting and commit rule of DiemBFT, specified in [safety rules](#safety-rules).
 
 The initial state is constructed with an initial `LedgerInfo` on a genesis transaction following the reconfiguration state transition.
 
@@ -1030,7 +1030,7 @@ fn certificate_for_genesis(ledger_info: LedgerInfoWithSignatures) -> QuorumCert 
 
 * a validator is free to prune any data from the previous epoch in PersistentStorage after the transition to a new epoch.
 * genesis block and its quorum cert/commit cert are locally generated from previous end-epoch LedgerInfoWithSignatures's **deterministic** fields
-* the Libra network is bootstrapped with a genesis transaction (note the different from genesis block) and a ledger_info commits it with next_epoch_state set.
+* the Diem network is bootstrapped with a genesis transaction (note the different from genesis block) and a ledger_info commits it with next_epoch_state set.
 
 #### ConsensusMsg
 

@@ -1,28 +1,28 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     commands::{is_address, is_authentication_key},
-    libra_client::LibraClient,
+    diem_client::DiemClient,
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
 use compiled_stdlib::StdLibOptions;
 use compiler::Compiler;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
 };
-use libra_json_rpc_client::async_client::{types as jsonrpc, WaitForTransactionError};
-use libra_logger::prelude::{error, info};
-use libra_temppath::TempPath;
-use libra_types::{
+use diem_json_rpc_client::async_client::{types as jsonrpc, WaitForTransactionError};
+use diem_logger::prelude::{error, info};
+use diem_temppath::TempPath;
+use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        from_currency_code_string, libra_root_address, testnet_dd_account_address,
+        diem_root_address, from_currency_code_string, testnet_dd_account_address,
         treasury_compliance_account_address, type_tag_for_currency_code,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, COIN1_NAME, LBR_NAME,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, XDX_NAME, XUS_NAME,
     },
     account_state::AccountState,
     chain_id::ChainId,
@@ -35,7 +35,7 @@ use libra_types::{
     },
     waypoint::Waypoint,
 };
-use libra_wallet::{io_utils, WalletLibrary};
+use diem_wallet::{io_utils, WalletLibrary};
 use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
@@ -95,18 +95,18 @@ pub struct IndexAndSequence {
 
 /// Proxy handling CLI commands/inputs.
 pub struct ClientProxy {
-    /// chain ID of the Libra network this client is interacting with
+    /// chain ID of the Diem network this client is interacting with
     pub chain_id: ChainId,
     /// client for admission control interface.
-    pub client: LibraClient,
+    pub client: DiemClient,
     /// Created accounts.
     pub accounts: Vec<AccountData>,
     /// Address to account_ref_id map.
     address_to_ref_id: HashMap<AccountAddress, usize>,
     /// Host that operates a faucet service
     faucet_url: Url,
-    /// Account used for Libra Root operations (e.g., adding a new transaction script)
-    pub libra_root_account: Option<AccountData>,
+    /// Account used for Diem Root operations (e.g., adding a new transaction script)
+    pub diem_root_account: Option<AccountData>,
     /// Account used for Treasury Compliance operations
     pub tc_account: Option<AccountData>,
     /// Account used for "minting" operations
@@ -127,7 +127,7 @@ impl ClientProxy {
     pub fn new(
         chain_id: ChainId,
         url: &str,
-        libra_root_account_file: &str,
+        diem_root_account_file: &str,
         tc_account_file: &str,
         testnet_designated_dealer_account_file: &str,
         sync_on_wallet_recovery: bool,
@@ -138,22 +138,22 @@ impl ClientProxy {
     ) -> Result<Self> {
         // fail fast if url is not valid
         let url = Url::parse(url)?;
-        let client = LibraClient::new(url.clone(), waypoint)?;
+        let client = DiemClient::new(url.clone(), waypoint)?;
 
         let accounts = vec![];
 
-        let libra_root_account = if libra_root_account_file.is_empty() {
+        let diem_root_account = if diem_root_account_file.is_empty() {
             None
         } else {
-            let libra_root_account_key = generate_key::load_key(libra_root_account_file);
-            let libra_root_account_data = Self::get_account_data_from_address(
+            let diem_root_account_key = generate_key::load_key(diem_root_account_file);
+            let diem_root_account_data = Self::get_account_data_from_address(
                 &client,
-                libra_root_address(),
+                diem_root_address(),
                 true,
-                Some(KeyPair::from(libra_root_account_key)),
+                Some(KeyPair::from(diem_root_account_key)),
                 None,
             )?;
-            Some(libra_root_account_data)
+            Some(diem_root_account_data)
         };
 
         let tc_account = if tc_account_file.is_empty() {
@@ -203,10 +203,10 @@ impl ClientProxy {
             accounts,
             address_to_ref_id,
             faucet_url,
-            libra_root_account,
+            diem_root_account,
             tc_account,
             testnet_designated_dealer_account: dd_account,
-            wallet: Self::get_libra_wallet(mnemonic_file)?,
+            wallet: Self::get_diem_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
             temp_files: vec![],
             quiet_wait,
@@ -263,12 +263,12 @@ impl ClientProxy {
             }
         }
 
-        if let Some(libra_root_account) = &self.libra_root_account {
+        if let Some(diem_root_account) = &self.diem_root_account {
             println!(
                 "AssocRoot account address: {}, sequence_number: {}, status: {:?}",
-                hex::encode(&libra_root_account.address),
-                libra_root_account.sequence_number,
-                libra_root_account.status,
+                hex::encode(&diem_root_account.address),
+                diem_root_account.sequence_number,
+                diem_root_account.status,
             );
         }
         if let Some(tc_account) = &self.tc_account {
@@ -565,17 +565,17 @@ impl ClientProxy {
         );
         let script_body = {
             let code = "
-                import 0x1.LibraTransactionPublishingOption;
+                import 0x1.DiemTransactionPublishingOption;
 
                 main(account: &signer) {
-                    LibraTransactionPublishingOption.set_open_script(move(account));
+                    DiemTransactionPublishingOption.set_open_script(move(account));
 
                     return;
                 }
             ";
 
             let compiler = Compiler {
-                address: libra_types::account_config::CORE_CODE_ADDRESS,
+                address: diem_types::account_config::CORE_CODE_ADDRESS,
                 extra_deps: vec![],
                 ..Compiler::default()
             };
@@ -583,8 +583,8 @@ impl ClientProxy {
                 .into_script_blob("file_name", code)
                 .expect("Failed to compile")
         };
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
+        match self.diem_root_account {
+            Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::Script(Script::new(script_body, vec![], vec![])),
                 is_blocking,
             ),
@@ -607,12 +607,12 @@ impl ClientProxy {
             space_delim_strings.len() == 2,
             "Invalid number of arguments for adding hash to script whitelist"
         );
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
+        match self.diem_root_account {
+            Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::Script(
                     transaction_builder::encode_add_to_script_allow_list_script(
                         hex::decode(space_delim_strings[1])?,
-                        self.libra_root_account.as_ref().unwrap().sequence_number,
+                        self.diem_root_account.as_ref().unwrap().sequence_number,
                     ),
                 ),
                 is_blocking,
@@ -621,29 +621,27 @@ impl ClientProxy {
         }
     }
 
-    /// Modify the stored LibraVersion on chain.
-    pub fn change_libra_version(
+    /// Modify the stored DiemVersion on chain.
+    pub fn change_diem_version(
         &mut self,
         space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            space_delim_strings[0] == "change_libra_version" || space_delim_strings[0] == "v",
-            "inconsistent command '{}' for change_libra_version",
+            space_delim_strings[0] == "change_diem_version" || space_delim_strings[0] == "v",
+            "inconsistent command '{}' for change_diem_version",
             space_delim_strings[0]
         );
         ensure!(
             space_delim_strings.len() == 2,
-            "Invalid number of arguments for changing libra_version"
+            "Invalid number of arguments for changing diem_version"
         );
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_update_libra_version_script(
-                        self.libra_root_account.as_ref().unwrap().sequence_number,
-                        space_delim_strings[1].parse::<u64>().unwrap(),
-                    ),
-                ),
+        match self.diem_root_account {
+            Some(_) => self.association_transaction_with_local_diem_root_account(
+                TransactionPayload::Script(transaction_builder::encode_update_diem_version_script(
+                    self.diem_root_account.as_ref().unwrap().sequence_number,
+                    space_delim_strings[1].parse::<u64>().unwrap(),
+                )),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -666,8 +664,8 @@ impl ClientProxy {
             "Invalid number of arguments for upgrading_stdlib_transaction"
         );
 
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
+        match self.diem_root_account {
+            Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::WriteSet(WriteSetPayload::Direct(
                     transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
                 )),
@@ -819,7 +817,7 @@ impl ClientProxy {
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            gas_currency_code.unwrap_or_else(|| COIN1_NAME.to_owned()),
+            gas_currency_code.unwrap_or_else(|| XUS_NAME.to_owned()),
             TX_EXPIRATION,
             self.chain_id,
         ))
@@ -1285,9 +1283,9 @@ impl ClientProxy {
 
     /// Update account seq
     fn update_account_seq(&mut self, address: &AccountAddress, seq: u64) {
-        if let Some(libra_root_account) = &mut self.libra_root_account {
-            if &libra_root_account.address == address {
-                libra_root_account.sequence_number = seq;
+        if let Some(diem_root_account) = &mut self.diem_root_account {
+            if &diem_root_account.address == address {
+                diem_root_account.sequence_number = seq;
             }
         }
         if let Some(tc_account) = &mut self.tc_account {
@@ -1321,7 +1319,7 @@ impl ClientProxy {
     /// Sync with validator for account sequence number in case it is already created on chain.
     /// This assumes we have a very low probability of mnemonic word conflict.
     fn get_account_data_from_address(
-        client: &LibraClient,
+        client: &DiemClient,
         address: AccountAddress,
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
@@ -1355,7 +1353,7 @@ impl ClientProxy {
         })
     }
 
-    fn get_libra_wallet(mnemonic_file: Option<String>) -> Result<WalletLibrary> {
+    fn get_diem_wallet(mnemonic_file: Option<String>) -> Result<WalletLibrary> {
         let wallet_recovery_file_path = if let Some(input_mnemonic_word) = mnemonic_file {
             Path::new(&input_mnemonic_word).to_path_buf()
         } else {
@@ -1412,16 +1410,16 @@ impl ClientProxy {
         Ok(auth_key)
     }
 
-    fn association_transaction_with_local_libra_root_account(
+    fn association_transaction_with_local_diem_root_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            self.libra_root_account.is_some(),
+            self.diem_root_account.is_some(),
             "No assoc root account loaded"
         );
-        let sender = self.libra_root_account.as_ref().unwrap();
+        let sender = self.diem_root_account.as_ref().unwrap();
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
 
         self.submit_and_wait(&txn, is_blocking)?;
@@ -1509,7 +1507,7 @@ impl ClientProxy {
         scaling_factor: i64,
         fractional_part: i64,
     ) -> Result<u64> {
-        ensure!(!input.is_empty(), "Empty input not allowed for libra unit");
+        ensure!(!input.is_empty(), "Empty input not allowed for diem unit");
         let max_value = Decimal::from_u64(std::u64::MAX).unwrap() / Decimal::new(scaling_factor, 0);
         let scale = input.find('.').unwrap_or(input.len() - 1);
         let digits_after_decimal = input
@@ -1552,10 +1550,10 @@ impl ClientProxy {
         input: &str,
         currency: &str,
     ) -> Result<u64> {
-        ensure!(!input.is_empty(), "Empty input not allowed for libra unit");
+        ensure!(!input.is_empty(), "Empty input not allowed for diem unit");
         ensure!(
-            currency != LBR_NAME,
-            "LBR not allowed to be minted or transferred. Use Coin1 instead"
+            currency != XDX_NAME,
+            "XDX not allowed to be minted or transferred. Use XUS instead"
         );
         // This is not supposed to panic as it is used as constant here.
         let currencies_info = self.client.get_currency_info()?;
@@ -1595,7 +1593,7 @@ impl ClientProxy {
             sender_account.sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            gas_currency_code.unwrap_or_else(|| COIN1_NAME.to_owned()),
+            gas_currency_code.unwrap_or_else(|| XUS_NAME.to_owned()),
             TX_EXPIRATION,
             self.chain_id,
         )
@@ -1642,12 +1640,12 @@ impl fmt::Display for AccountEntry {
 #[cfg(test)]
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
-    use libra_temppath::TempPath;
-    use libra_types::{
+    use diem_temppath::TempPath;
+    use diem_types::{
         chain_id::ChainId, ledger_info::LedgerInfo, on_chain_config::ValidatorSet,
         waypoint::Waypoint,
     };
-    use libra_wallet::io_utils;
+    use diem_wallet::io_utils;
     use proptest::prelude::*;
 
     fn generate_accounts_from_wallet(count: usize) -> (ClientProxy, Vec<AddressAndIndex>) {
@@ -1700,7 +1698,7 @@ mod tests {
     }
 
     #[test]
-    fn test_micro_libra_conversion() {
+    fn test_micro_diem_conversion() {
         assert!(ClientProxy::convert_to_scaled_representation("", 1_000_000, 1_000_000).is_err());
         assert!(
             ClientProxy::convert_to_scaled_representation("-11", 1_000_000, 1_000_000).is_err()
@@ -1720,7 +1718,7 @@ mod tests {
         assert!(ClientProxy::convert_to_scaled_representation("1", 1_000_000, 1_000_000).is_ok());
         assert!(ClientProxy::convert_to_scaled_representation("0.1", 1_000_000, 1_000_000).is_ok());
         assert!(ClientProxy::convert_to_scaled_representation("1.1", 1_000_000, 1_000_000).is_ok());
-        // Max of micro libra is u64::MAX (18446744073709551615).
+        // Max of micro diem is u64::MAX (18446744073709551615).
         assert!(ClientProxy::convert_to_scaled_representation(
             "18446744073709.551615",
             1_000_000,
@@ -1795,16 +1793,16 @@ mod tests {
     proptest! {
         // Proptest is used to verify that the conversion will not panic with random input.
         #[test]
-        fn test_micro_libra_conversion_random_string(req in any::<String>()) {
+        fn test_micro_diem_conversion_random_string(req in any::<String>()) {
             let _res = ClientProxy::convert_to_scaled_representation(&req, 1_000_000, 1_000_000);
         }
         #[test]
-        fn test_micro_libra_conversion_random_f64(req in any::<f64>()) {
+        fn test_micro_diem_conversion_random_f64(req in any::<f64>()) {
             let req_str = req.to_string();
             let _res = ClientProxy::convert_to_scaled_representation(&req_str, 1_000_000, 1_000_000);
         }
         #[test]
-        fn test_micro_libra_conversion_random_u64(req in any::<u64>()) {
+        fn test_micro_diem_conversion_random_u64(req in any::<u64>()) {
             let req_str = req.to_string();
             let _res = ClientProxy::convert_to_scaled_representation(&req_str, 1_000_000, 1_000_000);
         }

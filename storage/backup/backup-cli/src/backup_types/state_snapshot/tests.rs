@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,10 +13,10 @@ use crate::{
         GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt,
     },
 };
-use libra_config::config::RocksdbConfig;
-use libra_temppath::TempPath;
-use libra_types::transaction::PRE_GENESIS_VERSION;
-use libradb::LibraDB;
+use diem_config::config::RocksdbConfig;
+use diem_temppath::TempPath;
+use diem_types::transaction::PRE_GENESIS_VERSION;
+use diemdb::DiemDB;
 use std::{convert::TryInto, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
@@ -75,7 +75,7 @@ fn end_to_end() {
     )
     .unwrap();
 
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         true, /* read_only */
         None, /* pruner */

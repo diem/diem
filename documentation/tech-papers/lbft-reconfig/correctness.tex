@@ -15,7 +15,7 @@ It is fairly obvious to see inductively that in this manner, we maintain agreeme
 
 \paragraph{Enters pipelining}
 
-As depicted above under “Pipelined reconfiguration”, the LibraBFT consensus algorithm “spreads” the phases of the protocol (for every slot) over
+As depicted above under “Pipelined reconfiguration”, the DiemBFT consensus algorithm “spreads” the phases of the protocol (for every slot) over
 3 rounds. More specifically, every phase is carried in a single round and contains a new proposal. For example, the leader of round k drives only
 a single phase of certification of its proposal. In the next round, k+1, a leader again drives a single phase of certification. Interestingly,
 this phase has multiple purposes:

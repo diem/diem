@@ -1,8 +1,8 @@
 [package]
 name = "x"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra extended cargo tasks"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem extended cargo tasks"
 edition = "2018"
 publish = false
 license = "Apache-2.0"
@@ -26,4 +26,4 @@ rayon = "1.5.0"
 indexmap = "1.6.0"
 x-core = { version = "0.1.0", path = "../x-core" }
 x-lint = { version = "0.1.0", path = "../x-lint" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use rand::{rngs::StdRng, SeedableRng};
@@ -45,8 +45,8 @@ mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
 use crate::network_id::NetworkId;
-use libra_secure_storage::{KVStorage, Storage};
-use libra_types::waypoint::Waypoint;
+use diem_secure_storage::{KVStorage, Storage};
+use diem_types::waypoint::Waypoint;
 pub use test_config::*;
 
 /// Config pulls in configuration information from the config file.
@@ -99,7 +99,7 @@ pub struct BaseConfig {
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            data_dir: PathBuf::from("/opt/libra/data"),
+            data_dir: PathBuf::from("/opt/diem/data"),
             role: RoleType::Validator,
             waypoint: WaypointConfig::None,
         }
@@ -138,7 +138,7 @@ impl WaypointConfig {
             WaypointConfig::FromStorage(backend) => {
                 let storage: Storage = backend.into();
                 let waypoint = storage
-                    .get::<Waypoint>(libra_global_constants::WAYPOINT)
+                    .get::<Waypoint>(diem_global_constants::WAYPOINT)
                     .expect("Unable to read waypoint")
                     .value;
                 Some(waypoint)
@@ -153,7 +153,7 @@ impl WaypointConfig {
             WaypointConfig::FromStorage(backend) => {
                 let storage: Storage = backend.into();
                 storage
-                    .get::<Waypoint>(libra_global_constants::GENESIS_WAYPOINT)
+                    .get::<Waypoint>(diem_global_constants::GENESIS_WAYPOINT)
                     .expect("Unable to read waypoint")
                     .value
             }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 # Check that the test directory and report path arguments are provided

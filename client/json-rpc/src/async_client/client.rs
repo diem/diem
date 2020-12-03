@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::{
     defaults, types as jsonrpc, Error, JsonRpcResponse, RetryStrategy, State,
     WaitForTransactionError,
 };
-use libra_crypto::hash::CryptoHash;
-use libra_types::{
+use diem_crypto::hash::CryptoHash;
+use diem_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Transaction},
 };
@@ -376,13 +376,13 @@ impl<R: RetryStrategy> Client<R> {
     /// in order of given requests:
     ///
     /// ```rust
-    /// use libra_json_rpc_client::async_client::{
+    /// use diem_json_rpc_client::async_client::{
     ///     types as jsonrpc, Client, Error, Request, Response, Retry,
     /// };
     /// use std::convert::{TryInto};
     ///
     /// # async fn doc() -> Result<(), Error> {
-    /// let client = Client::from_url("http://testnet.libra.org/v1", Retry::default()).unwrap();
+    /// let client = Client::from_url("http://testnet.diem.com/v1", Retry::default()).unwrap();
     /// let mut res = client
     ///     .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
     ///     .await?;
@@ -499,7 +499,7 @@ impl<R: RetryStrategy> Client<R> {
         };
 
         if let Some(state) = self.last_known_state() {
-            if resp.libra_chain_id != state.chain_id {
+            if resp.diem_chain_id != state.chain_id {
                 return Err(Error::ChainIdMismatch(resp.clone()));
             }
         }

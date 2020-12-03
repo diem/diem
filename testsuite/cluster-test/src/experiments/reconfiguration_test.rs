@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -11,10 +11,10 @@ use crate::{
 };
 use anyhow::{bail, ensure};
 use async_trait::async_trait;
-use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse};
-use libra_logger::prelude::*;
-use libra_operational_tool::json_rpc::JsonRpcClientWrapper;
-use libra_types::{
+use diem_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse};
+use diem_logger::prelude::*;
+use diem_operational_tool::json_rpc::JsonRpcClientWrapper;
+use diem_types::{
     account_address::AccountAddress, chain_id::ChainId, ledger_info::LedgerInfoWithSignatures,
 };
 use std::{
@@ -25,7 +25,7 @@ use std::{
 use structopt::StructOpt;
 use transaction_builder::{
     encode_add_validator_and_reconfigure_script, encode_remove_validator_and_reconfigure_script,
-    encode_update_libra_version_script,
+    encode_update_diem_version_script,
 };
 
 #[derive(StructOpt, Debug)]
@@ -103,9 +103,9 @@ impl Experiment for Reconfiguration {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         let full_node = context.cluster.random_fullnode_instance();
         let mut full_node_client = full_node.json_rpc_client();
-        let mut libra_root_account = context
+        let mut diem_root_account = context
             .tx_emitter
-            .load_libra_root_account(&full_node_client)
+            .load_diem_root_account(&full_node_client)
             .await?;
         let allowed_nonce = 0;
         let emit_job = if self.emit_txn {
@@ -145,13 +145,13 @@ impl Experiment for Reconfiguration {
                     validator_name.clone(),
                     self.affected_peer_id,
                 ),
-                &mut libra_root_account,
+                &mut diem_root_account,
                 ChainId::test(),
                 0,
             );
             execute_and_wait_transactions(
                 &mut full_node_client,
-                &mut libra_root_account,
+                &mut diem_root_account,
                 vec![remove_txn],
             )
             .await?;
@@ -162,13 +162,13 @@ impl Experiment for Reconfiguration {
                     validator_name.clone(),
                     self.affected_peer_id,
                 ),
-                &mut libra_root_account,
+                &mut diem_root_account,
                 ChainId::test(),
                 0,
             );
             execute_and_wait_transactions(
                 &mut full_node_client,
-                &mut libra_root_account,
+                &mut diem_root_account,
                 vec![add_txn],
             )
             .await?;
@@ -177,17 +177,17 @@ impl Experiment for Reconfiguration {
 
         if self.count % 2 == 1 {
             let magic_number = 42;
-            info!("Bump LibraVersion to {}", magic_number);
+            info!("Bump DiemVersion to {}", magic_number);
             let update_txn = gen_submit_transaction_request(
-                encode_update_libra_version_script(allowed_nonce, magic_number),
-                &mut libra_root_account,
+                encode_update_diem_version_script(allowed_nonce, magic_number),
+                &mut diem_root_account,
                 ChainId::test(),
                 0,
             );
 
             execute_and_wait_transactions(
                 &mut full_node_client,
-                &mut libra_root_account,
+                &mut diem_root_account,
                 vec![update_txn],
             )
             .await?;

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,23 +8,23 @@ use crate::{
 };
 use bytecode_verifier::DependencyChecker;
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use language_e2e_tests::executor::FakeExecutor;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_state_view::StateView;
-use libra_types::{
+use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use diem_state_view::StateView;
+use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::COIN1_NAME,
+    account_config::XUS_NAME,
     block_metadata::BlockMetadata,
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
-        SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,
+        SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionStatus,
     },
     vm_status::KeptVMStatus,
 };
+use language_e2e_tests::executor::FakeExecutor;
 use mirai_annotations::checked_verify;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants},
@@ -62,13 +62,13 @@ pub struct Transaction<'a> {
     pub input: String,
 }
 
-/// Commands that drives the operation of LibraVM. Such as:
+/// Commands that drives the operation of DiemVM. Such as:
 /// 1. Execute user transaction
 /// 2. Publish a new block metadata
 ///
-/// In the future we will add more commands to mimic the full public API of LibraVM,
-/// including reloading the on-chain configuration that will affect the code path for LibraVM,
-/// cleaning the cache in the LibraVM, etc.
+/// In the future we will add more commands to mimic the full public API of DiemVM,
+/// including reloading the on-chain configuration that will affect the code path for DiemVM,
+/// cleaning the cache in the DiemVM, etc.
 #[derive(Debug)]
 pub enum Command<'a> {
     Transaction(Transaction<'a>),
@@ -312,7 +312,7 @@ fn get_transaction_parameters<'a>(
     let gas_currency_code = config
         .gas_currency_code
         .clone()
-        .unwrap_or_else(|| COIN1_NAME.to_owned());
+        .unwrap_or_else(|| XUS_NAME.to_owned());
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {
@@ -693,7 +693,7 @@ pub fn eval_block_metadata(
     log: &mut EvaluationLog,
 ) -> Result<Status> {
     let outputs =
-        executor.execute_transaction_block(vec![LibraTransaction::BlockMetadata(block_metadata)]);
+        executor.execute_transaction_block(vec![DiemTransaction::BlockMetadata(block_metadata)]);
 
     match outputs {
         Ok(mut outputs) => {

@@ -14,7 +14,7 @@ use 0x1::ValidatorOperatorConfig;
 /// a Validator Operator role and have a `ValidatorOperatorConfig::ValidatorOperatorConfig`
 /// resource published under it. The sending `account` must be a Validator and have a
 /// `ValidatorConfig::ValidatorConfig` resource published under it. This script does not emit a
-/// `LibraConfig::NewEpochEvent` and no reconfiguration of the system is initiated by this script.
+/// `DiemConfig::NewEpochEvent` and no reconfiguration of the system is initiated by this script.
 ///
 /// # Parameters
 /// | Name               | Type         | Description                                                                                  |
@@ -51,13 +51,13 @@ fun set_validator_operator(
 }
 
 spec fun set_validator_operator {
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signer;
     use 0x1::Errors;
     use 0x1::Roles;
 
     let account_addr = Signer::address_of(account);
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     // next is due to abort in get_human_name
     include ValidatorConfig::AbortsIfNoValidatorConfig{addr: account_addr};
     // TODO: use an error code from Errors.move instead of 0.
@@ -65,7 +65,7 @@ spec fun set_validator_operator {
     include ValidatorConfig::SetOperatorAbortsIf{validator_account: account, operator_addr: operator_account};
     include ValidatorConfig::SetOperatorEnsures{validator_account: account, operator_addr: operator_account};
 
-    /// Reports INVALID_STATE because of !exists<LibraSystem::CapabilityHolder>, but that can't happen
+    /// Reports INVALID_STATE because of !exists<DiemSystem::CapabilityHolder>, but that can't happen
     /// because CapabilityHolder is published during initialization (Genesis).
     aborts_with [check]
         0, // Odd error code in assert on second statement in add_validator_and_reconfigure

@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     test_utils::{compare_balances, setup_swarm_and_client_proxy},
     workspace_builder,
 };
-use libra_crypto::HashValue;
-use libra_temppath::TempPath;
-use libra_types::account_address::AccountAddress;
+use diem_crypto::HashValue;
+use diem_temppath::TempPath;
+use diem_types::account_address::AccountAddress;
 use std::{
     fs, io,
     io::Write,
@@ -20,10 +20,10 @@ fn test_e2e_modify_publishing_option() {
     client.create_next_account(false).unwrap();
 
     client
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "10", "XUS"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "Coin1".to_string())],
+        vec![(10.0, "XUS".to_string())],
         client.get_balances(&["b", "0"]).unwrap(),
     ));
     let script_path = workspace_builder::workspace_root()
@@ -81,7 +81,7 @@ fn test_malformed_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
     client.create_next_account(false).unwrap();
     client
-        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "100", "XUS"], true)
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
@@ -104,7 +104,7 @@ fn test_malformed_script() {
 
     // Previous transaction should not choke the system.
     client
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "10", "XUS"], true)
         .unwrap();
 }
 
@@ -113,16 +113,16 @@ fn test_execute_custom_module_and_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
     client.create_next_account(false).unwrap();
     client
-        .mint_coins(&["mintb", "0", "50", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "50", "XUS"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(50.0, "Coin1".to_string())],
+        vec![(50.0, "XUS".to_string())],
         client.get_balances(&["b", "0"]).unwrap(),
     ));
 
     let recipient_address = client.create_next_account(false).unwrap().address;
     client
-        .mint_coins(&["mintb", "1", "1", "Coin1"], true)
+        .mint_coins(&["mintb", "1", "1", "XUS"], true)
         .unwrap();
 
     let (sender_account, _) = client.get_account_address_from_parameter("0").unwrap();
@@ -181,11 +181,11 @@ fn test_execute_custom_module_and_script() {
         .unwrap();
 
     assert!(compare_balances(
-        vec![(49.999_990, "Coin1".to_string())],
+        vec![(49.999_990, "XUS".to_string())],
         client.get_balances(&["b", "0"]).unwrap(),
     ));
     assert!(compare_balances(
-        vec![(1.000_010, "Coin1".to_string())],
+        vec![(1.000_010, "XUS".to_string())],
         client.get_balances(&["b", "1"]).unwrap(),
     ));
 }

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::JsonRpcResponse;
@@ -13,9 +13,9 @@ pub struct State {
 impl State {
     pub fn from_response(resp: &JsonRpcResponse) -> Self {
         Self {
-            chain_id: resp.libra_chain_id,
-            version: resp.libra_ledger_version,
-            timestamp_usecs: resp.libra_ledger_timestampusec,
+            chain_id: resp.diem_chain_id,
+            version: resp.diem_ledger_version,
+            timestamp_usecs: resp.diem_ledger_timestampusec,
         }
     }
 }

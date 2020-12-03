@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -49,7 +49,7 @@ impl GitHub {
         })?;
         let request = self.client.get(url);
         let response = request
-            .header(USER_AGENT, "libra-cluster-test")
+            .header(USER_AGENT, "diem-cluster-test")
             .send()
             .map_err(|e| format_err!("Failed to query github: {:?}", e))?;
         let response: Vec<CommitInfo> = response

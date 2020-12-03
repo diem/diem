@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::metadata::{
     EpochEndingBackupMeta, Metadata, StateSnapshotBackupMeta, TransactionBackupMeta,
 };
 use anyhow::{anyhow, ensure, Result};
+use diem_types::transaction::Version;
 use itertools::Itertools;
-use libra_types::transaction::Version;
 use serde::export::Formatter;
 use std::{fmt::Display, str::FromStr};
 

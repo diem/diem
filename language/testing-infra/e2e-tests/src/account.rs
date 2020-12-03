@@ -1,17 +1,17 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Test infrastructure for modeling Libra accounts.
+//! Test infrastructure for modeling Diem accounts.
 
 use crate::{gas_costs, keygen::KeyGen};
 use anyhow::{Error, Result};
-use libra_crypto::ed25519::*;
-use libra_types::{
+use diem_crypto::ed25519::*;
+use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, RoleId, COIN1_NAME,
+        BalanceResource, RoleId, XUS_NAME,
     },
     chain_id::ChainId,
     event::EventHandle,
@@ -34,18 +34,18 @@ use vm_genesis::GENESIS_KEYPAIR;
 // TTL is 86400s. Initial time was set to 0.
 pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
 
-pub fn coin1_tmp_currency_code() -> Identifier {
-    from_currency_code_string(COIN1_NAME).unwrap()
+pub fn xus_currency_code() -> Identifier {
+    from_currency_code_string(XUS_NAME).unwrap()
 }
 
 pub fn currency_code(code: &str) -> Identifier {
     from_currency_code_string(code).unwrap()
 }
 
-/// Details about a Libra account.
+/// Details about a Diem account.
 ///
 /// Tests will typically create a set of `Account` instances to run transactions on. This type
-/// encodes the logic to operate on and verify operations on any Libra account.
+/// encodes the logic to operate on and verify operations on any Diem account.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Account {
     addr: AccountAddress,
@@ -59,7 +59,7 @@ impl Account {
     /// Creates a new account in memory.
     ///
     /// The account returned by this constructor is a purely logical entity, meaning that it does
-    /// not automatically get added to the Libra store. To add an account to the store, use
+    /// not automatically get added to the Diem store. To add an account to the store, use
     /// [`AccountData`] instances with
     /// [`FakeExecutor::add_account_data`][crate::executor::FakeExecutor::add_account_data].
     /// This function returns distinct values upon every call.
@@ -79,7 +79,7 @@ impl Account {
     /// Like with [`Account::new`], the account returned by this constructor is a purely logical
     /// entity.
     pub fn with_keypair(privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) -> Self {
-        let addr = libra_types::account_address::from_public_key(&pubkey);
+        let addr = diem_types::account_address::from_public_key(&pubkey);
         Account {
             addr,
             privkey,
@@ -115,12 +115,12 @@ impl Account {
         }
     }
 
-    /// Creates a new account representing the libra root account in memory.
+    /// Creates a new account representing the diem root account in memory.
     ///
-    /// The address will be [`libra_root_address`][account_config::libra_root_address], and
+    /// The address will be [`diem_root_address`][account_config::diem_root_address], and
     /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
-    pub fn new_libra_root() -> Self {
-        Self::new_genesis_account(account_config::libra_root_address())
+    pub fn new_diem_root() -> Self {
+        Self::new_genesis_account(account_config::diem_root_address())
     }
 
     /// Creates a new account representing treasury compliance in memory.
@@ -274,7 +274,7 @@ impl TransactionBuilder {
             self.max_gas_amount.unwrap_or(gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
-                .unwrap_or_else(|| COIN1_NAME.to_owned()),
+                .unwrap_or_else(|| XUS_NAME.to_owned()),
             self.ttl.unwrap_or(DEFAULT_EXPIRATION_TIME),
             ChainId::test(),
         )
@@ -288,7 +288,7 @@ impl TransactionBuilder {
             self.max_gas_amount.unwrap_or(gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
-                .unwrap_or_else(|| COIN1_NAME.to_owned()),
+                .unwrap_or_else(|| XUS_NAME.to_owned()),
             self.ttl.unwrap_or(DEFAULT_EXPIRATION_TIME),
             self.chain_id.unwrap_or_else(ChainId::test),
         )
@@ -336,7 +336,7 @@ impl Balance {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AccountRoleSpecifier {
-    LibraRoot,
+    DiemRoot,
     TreasuryCompliance,
     DesignatedDealer,
     Validator,
@@ -348,7 +348,7 @@ pub enum AccountRoleSpecifier {
 impl AccountRoleSpecifier {
     pub fn id(&self) -> u64 {
         match self {
-            Self::LibraRoot => 0,
+            Self::DiemRoot => 0,
             Self::TreasuryCompliance => 1,
             Self::DesignatedDealer => 2,
             Self::Validator => 3,
@@ -484,7 +484,7 @@ impl AccountData {
         Self::with_account(
             Account::new(),
             balance,
-            coin1_tmp_currency_code(),
+            xus_currency_code(),
             sequence_number,
             AccountRoleSpecifier::ParentVASP,
         )
@@ -497,7 +497,7 @@ impl AccountData {
         Self::with_account(
             Account::new_from_seed(seed),
             balance,
-            coin1_tmp_currency_code(),
+            xus_currency_code(),
             sequence_number,
             AccountRoleSpecifier::ParentVASP,
         )
@@ -600,7 +600,7 @@ impl AccountData {
         ])
     }
 
-    /// Returns the (Move value) layout of the LibraAccount::LibraAccount struct
+    /// Returns the (Move value) layout of the DiemAccount::DiemAccount struct
     pub fn layout() -> MoveStructLayout {
         use MoveStructLayout as S;
         use MoveTypeLayout as T;

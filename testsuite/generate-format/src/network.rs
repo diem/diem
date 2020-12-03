@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
+use diem_crypto::{
     traits::Uniform,
     x25519::{PrivateKey, PublicKey},
 };
-use libra_network_address as address;
+use diem_network_address as address;
 use network::protocols::wire::{handshake, messaging};
 use rand::{rngs::StdRng, SeedableRng};
 use serde_reflection::{Registry, Result, Samples, Tracer, TracerConfig};
@@ -50,7 +50,7 @@ pub fn get_registry() -> Result<Registry> {
     tracer.trace_type::<messaging::v1::NotSupportedType>(&samples)?;
     tracer.trace_type::<handshake::v1::ProtocolId>(&samples)?;
     tracer.trace_type::<address::Protocol>(&samples)?;
-    tracer.trace_type::<libra_config::network_id::NetworkId>(&samples)?;
+    tracer.trace_type::<diem_config::network_id::NetworkId>(&samples)?;
 
     tracer.registry()
 }

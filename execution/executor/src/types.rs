@@ -1,11 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-use executor_types::{ExecutedTrees, StateComputeResult};
-use libra_crypto::{hash::EventAccumulatorHasher, HashValue};
-use libra_types::{
+use diem_crypto::{hash::EventAccumulatorHasher, HashValue};
+use diem_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
@@ -13,6 +12,7 @@ use libra_types::{
     proof::accumulator::InMemoryAccumulator,
     transaction::{TransactionStatus, Version},
 };
+use executor_types::{ExecutedTrees, StateComputeResult};
 use scratchpad::SparseMerkleTree;
 use std::{collections::HashMap, sync::Arc};
 

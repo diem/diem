@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
-    libra_logger::Logger::new().init();
+    diem_logger::Logger::new().init();
 
     rayon::ThreadPoolBuilder::new()
         .thread_name(|index| format!("rayon-global-{}", index))

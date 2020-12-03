@@ -3,11 +3,11 @@
 # The mint / faucet can be accessed at 127.0.0.1:8000
 #
 # Place the following files into the same directory:
-# * mint.key (also known as the libra_root_key)
+# * mint.key (also known as the diem_root_key)
 # * waypoint.txt
 #
 # Additional notes:
-# * Images can be found at https://hub.docker.com/r/libra/mint/tags, obtain the latest tag and
+# * Images can be found at https://hub.docker.com/r/diem/mint/tags, obtain the latest tag and
 # update below.
 version: "3.8"
 services:
@@ -23,10 +23,10 @@ services:
         volumes:
             - type: bind
               source: ./mint.key
-              target: /opt/libra/etc/mint.key
+              target: /opt/diem/etc/mint.key
             - type: bind
               source: ./waypoint.txt
-              target: /opt/libra/etc/waypoint.txt
+              target: /opt/diem/etc/waypoint.txt
         command: [
             "gunicorn",
             "--bind",
@@ -38,7 +38,7 @@ services:
             "--log-level",
             "info",
             "--pythonpath",
-            "/opt/libra/bin",
+            "/opt/diem/bin",
             "server",
         ]
         ports:
@@ -46,4 +46,4 @@ services:
 networks:
     shared:
         external: true
-        name: "libra-docker-compose-shared"
+        name: "diem-docker-compose-shared"

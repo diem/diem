@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! The handshake module implements the handshake part of the protocol.
@@ -11,12 +11,12 @@
 //! [stream]: network::noise::stream
 
 use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
+use diem_config::network_id::NetworkContext;
+use diem_crypto::{noise, x25519};
+use diem_infallible::{duration_since_epoch, RwLock};
+use diem_logger::trace;
+use diem_types::PeerId;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use libra_config::network_id::NetworkContext;
-use libra_crypto::{noise, x25519};
-use libra_infallible::{duration_since_epoch, RwLock};
-use libra_logger::trace;
-use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{
     collections::{HashMap, HashSet},
@@ -76,7 +76,7 @@ pub enum HandshakeAuthMode {
     /// In `Mutual` mode, both sides will authenticate each other with their
     /// `trusted_peers` set. We also include replay attack mitigation in this mode.
     ///
-    /// For example, in the Libra validator network, validator peers will only
+    /// For example, in the Diem validator network, validator peers will only
     /// allow connections from other validator peers. They will use this mode to
     /// check that inbound connections authenticate to a network public key
     /// actually contained in the current validator set.
@@ -443,8 +443,8 @@ impl NoiseUpgrader {
 mod test {
     use super::*;
     use crate::testutils::fake_socket::ReadWriteTestSocket;
+    use diem_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use futures::{executor::block_on, future::join};
-    use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
 
@@ -657,7 +657,7 @@ mod test {
 
     #[test]
     fn test_handshake_client_peerid_mismatch_fails_server_only_auth() {
-        ::libra_logger::Logger::init_for_testing();
+        ::diem_logger::Logger::init_for_testing();
 
         let ((mut client, _), (server, server_public_key)) =
             build_peers(false /* is_mutual_auth */);

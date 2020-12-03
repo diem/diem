@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 use crate::execution_strategies::types::{Block, Executor, ExecutorResult};
-use libra_types::transaction::TransactionOutput;
+use diem_types::transaction::TransactionOutput;
 use std::{collections::BTreeMap, error::Error, fmt};
 
 #[derive(Debug)]

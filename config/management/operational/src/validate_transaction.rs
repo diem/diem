@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
-use libra_management::{config::ConfigPath, error::Error};
-use libra_types::account_address::AccountAddress;
+use diem_management::{config::ConfigPath, error::Error};
+use diem_types::account_address::AccountAddress;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::CodeUnitVerifier;
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use vm::file_format::{self, Bytecode};
 
 #[test]

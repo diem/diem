@@ -1,6 +1,6 @@
 ---
 name: "\U0001F680 Feature request"
-about: Suggest a new feature in Libra Core
+about: Suggest a new feature in Diem Core
 title: "[Feature Request]"
 labels: enhancement
 assignees: ''

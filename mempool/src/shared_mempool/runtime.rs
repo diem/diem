@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -12,14 +12,14 @@ use crate::{
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
 use anyhow::Result;
-use channel::libra_channel;
+use channel::diem_channel;
+use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
+use diem_infallible::{Mutex, RwLock};
+use diem_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use futures::channel::{
     mpsc::{self, Receiver, UnboundedSender},
     oneshot,
 };
-use libra_config::{config::NodeConfig, network_id::NodeNetworkId};
-use libra_infallible::{Mutex, RwLock};
-use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
@@ -40,7 +40,7 @@ pub(crate) fn start_shared_mempool<V>(
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
     state_sync_requests: mpsc::Receiver<CommitNotification>,
-    mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -98,7 +98,7 @@ pub fn bootstrap(
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,
     state_sync_requests: Receiver<CommitNotification>,
-    mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("shared-mem")

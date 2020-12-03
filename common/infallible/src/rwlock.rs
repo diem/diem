@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::sync::{RwLock as RwLockImpl, RwLockReadGuard, RwLockWriteGuard};
@@ -18,21 +18,21 @@ impl<T> RwLock<T> {
     pub fn read(&self) -> RwLockReadGuard<'_, T> {
         self.0
             .read()
-            .expect("libra cannot currently handle a poisoned lock")
+            .expect("diem cannot currently handle a poisoned lock")
     }
 
     /// lock the rwlock in write mode
     pub fn write(&self) -> RwLockWriteGuard<'_, T> {
         self.0
             .write()
-            .expect("libra cannot currently handle a poisoned lock")
+            .expect("diem cannot currently handle a poisoned lock")
     }
 
     /// return the owned type consuming the lock
     pub fn into_inner(self) -> T {
         self.0
             .into_inner()
-            .expect("libra cannot currently handle a poisoned lock")
+            .expect("diem cannot currently handle a poisoned lock")
     }
 }
 
@@ -43,7 +43,7 @@ mod tests {
     use std::{sync::Arc, thread};
 
     #[test]
-    fn test_libra_rwlock() {
+    fn test_diem_rwlock() {
         let a = 7u8;
         let rwlock = Arc::new(RwLock::new(a));
         let rwlock2 = rwlock.clone();

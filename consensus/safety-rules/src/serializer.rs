@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, logging::LogEntry, ConsensusState, Error, SafetyRules, TSafetyRules};
@@ -6,9 +6,9 @@ use consensus_types::{
     block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
     vote_proposal::MaybeSignedVoteProposal,
 };
-use libra_crypto::ed25519::Ed25519Signature;
-use libra_infallible::RwLock;
-use libra_types::epoch_change::EpochChangeProof;
+use diem_crypto::ed25519::Ed25519Signature;
+use diem_infallible::RwLock;
+use diem_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

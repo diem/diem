@@ -15,7 +15,7 @@ module Compare {
     /// (2) vector length to break ties.
     /// Returns either `EQUAL` (0u8), `LESS_THAN` (1u8), or `GREATER_THAN` (2u8).
     ///
-    /// This function is designed to compare LCS (Libra Canonical Serialization)-encoded values
+    /// This function is designed to compare LCS (Diem Canonical Serialization)-encoded values
     /// (i.e., vectors produced by `LCS::to_bytes`). A typical client will call
     /// `Compare::cmp_lcs_bytes(LCS::to_bytes(&t1), LCS::to_bytes(&t2))`. The comparison provides the
     /// following guarantees w.r.t the original values t1 and t2:
@@ -38,7 +38,7 @@ module Compare {
     /// Keep this in mind when using this function to compare addresses.
     ///
     /// > TODO: there is currently no specification for this function, which causes no problem because it is not yet
-    /// > used in the Libra framework. However, should this functionality be needed in specification, a customized
+    /// > used in the Diem framework. However, should this functionality be needed in specification, a customized
     /// > native abstraction is needed in the prover framework.
     public fun cmp_lcs_bytes(v1: &vector<u8>, v2: &vector<u8>): u8 {
         let i1 = Vector::length(v1);

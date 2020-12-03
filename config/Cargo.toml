@@ -1,10 +1,10 @@
 [package]
-name = "libra-config"
+name = "diem-config"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra libra-config"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem diem-config"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -20,21 +20,21 @@ thiserror = "1.0.22"
 
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
-libra-global-constants = { path = "../config/global-constants", version = "0.1.0"}
-libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
-libra-network-address-encryption = { path = "management/network-address-encryption", version = "0.1.0" }
-libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
-libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+diem-global-constants = { path = "../config/global-constants", version = "0.1.0"}
+diem-logger = { path = "../common/logger", version = "0.1.0" }
+diem-network-address = { path = "../network/network-address", version = "0.1.0" }
+diem-network-address-encryption = { path = "management/network-address-encryption", version = "0.1.0" }
+diem-secure-storage = { path = "../secure/storage", version = "0.1.0" }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []
-fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["diem-crypto/fuzzing", "diem-types/fuzzing"]
 testing = []

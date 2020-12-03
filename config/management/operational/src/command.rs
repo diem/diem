@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     account_resource::SimplifiedAccountResource, validator_config::DecryptedValidatorConfig,
     validator_set::DecryptedValidatorInfo, TransactionContext,
 };
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::{error::Error, execute_command};
-use libra_types::{account_address::AccountAddress, waypoint::Waypoint};
+use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
+use diem_management::{error::Error, execute_command};
+use diem_types::{account_address::AccountAddress, waypoint::Waypoint};
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -29,7 +29,7 @@ pub enum Command {
     #[structopt(about = "Extract a public key from the validator storage")]
     ExtractPublicKey(crate::keys::ExtractPublicKey),
     #[structopt(about = "Set the waypoint in the validator storage")]
-    InsertWaypoint(libra_management::waypoint::InsertWaypoint),
+    InsertWaypoint(diem_management::waypoint::InsertWaypoint),
     #[structopt(about = "Prints an account from the validator storage")]
     PrintAccount(crate::print::PrintAccount),
     #[structopt(about = "Prints a public key from the validator storage")]

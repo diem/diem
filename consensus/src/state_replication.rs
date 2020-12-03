@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::{MempoolError, StateSyncError};
 use anyhow::Result;
 use consensus_types::{block::Block, common::Payload};
+use diem_crypto::HashValue;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error as ExecutionError, StateComputeResult};
-use libra_crypto::HashValue;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]

@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraAccount;
+use 0x1::DiemAccount;
 use 0x1::SlidingNonce;
 
 /// # Summary
@@ -18,8 +18,8 @@ use 0x1::SlidingNonce;
 ///
 /// ## Events
 /// Successful execution of the transaction will emit two events:
-/// * A `Libra::MintEvent` with the amount and currency code minted is emitted on the
-/// `mint_event_handle` in the stored `Libra::CurrencyInfo<CoinType>` resource stored under
+/// * A `Diem::MintEvent` with the amount and currency code minted is emitted on the
+/// `mint_event_handle` in the stored `Diem::CurrencyInfo<CoinType>` resource stored under
 /// `0xA550C18`; and
 /// * A `DesignatedDealer::ReceivedMintEvent` with the amount, currency code, and Designated
 /// Dealer's address is emitted on the `mint_event_handle` in the stored `DesignatedDealer::Dealer`
@@ -48,9 +48,9 @@ use 0x1::SlidingNonce;
 /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
 /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_TIER_INDEX`      | The `tier_index` is out of bounds.                                                                                           |
 /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_AMOUNT_FOR_TIER` | `mint_amount` exceeds the maximum allowed amount for `tier_index`.                                                           |
-/// | `Errors::REQUIRES_CAPABILITY` | `Libra::EMINT_CAPABILITY`                    | `tc_account` does not have a `Libra::MintCapability<CoinType>` resource published under it.                                  |
-/// | `Errors::INVALID_STATE`       | `Libra::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
-/// | `Errors::LIMIT_EXCEEDED`      | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
+/// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
 ///
 /// # Related Scripts
 /// * `Script::create_designated_dealer`
@@ -65,7 +65,7 @@ fun tiered_mint<CoinType>(
     tier_index: u64
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-    LibraAccount::tiered_mint<CoinType>(
+    DiemAccount::tiered_mint<CoinType>(
         tc_account, designated_dealer_address, mint_amount, tier_index
     );
 }
@@ -74,10 +74,10 @@ spec fun tiered_mint {
     use 0x1::Errors;
     use 0x1::Roles;
 
-    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
-    include LibraAccount::TieredMintAbortsIf<CoinType>;
-    include LibraAccount::TieredMintEnsures<CoinType>;
+    include DiemAccount::TieredMintAbortsIf<CoinType>;
+    include DiemAccount::TieredMintEnsures<CoinType>;
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{test_utils, Error, SafetyRules, TSafetyRules};
@@ -6,13 +6,13 @@ use consensus_types::{
     block::block_test_utils::random_payload, common::Round, quorum_cert::QuorumCert,
     timeout::Timeout, vote_proposal::MaybeSignedVoteProposal,
 };
-use libra_crypto::{
+use diem_crypto::{
     ed25519::Ed25519PrivateKey,
     hash::{CryptoHash, HashValue},
 };
-use libra_global_constants::CONSENSUS_KEY;
-use libra_secure_storage::CryptoStorage;
-use libra_types::{
+use diem_global_constants::CONSENSUS_KEY;
+use diem_secure_storage::CryptoStorage;
+use diem_types::{
     epoch_state::EpochState, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };

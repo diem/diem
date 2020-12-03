@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,11 +8,11 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use libra_crypto::{
+use diem_crypto::{
     ed25519::Ed25519PrivateKey,
     hash::{CryptoHash, HashValue},
 };
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -42,7 +42,7 @@ prop_compose! {
         Block::new_proposal(
             vec![],
             round,
-            libra_infallible::duration_since_epoch().as_micros() as u64,
+            diem_infallible::duration_since_epoch().as_micros() as u64,
             parent_qc,
             &signer,
         )
@@ -87,7 +87,7 @@ prop_compose! {
                     block.payload().unwrap().clone(),
                     block.author().unwrap(),
                     block.round(),
-                    libra_infallible::duration_since_epoch().as_micros() as u64,
+                    diem_infallible::duration_since_epoch().as_micros() as u64,
                     block.quorum_cert().clone(),
                 ),
                 signature: Some(block.signature().unwrap().clone()),

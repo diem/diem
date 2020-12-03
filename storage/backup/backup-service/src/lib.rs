@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 mod handlers;
 
 use crate::handlers::get_routes;
-use libradb::LibraDB;
+use diemdb::DiemDB;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
-pub fn start_backup_service(address: SocketAddr, db: Arc<LibraDB>) -> Runtime {
+pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
 
@@ -34,9 +34,9 @@ pub fn start_backup_service(address: SocketAddr, db: Arc<LibraDB>) -> Runtime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_config::utils::get_available_port;
-    use libra_crypto::hash::HashValue;
-    use libra_temppath::TempPath;
+    use diem_config::utils::get_available_port;
+    use diem_crypto::hash::HashValue;
+    use diem_temppath::TempPath;
     use reqwest::blocking::get;
     use std::net::{IpAddr, Ipv4Addr};
 
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn routing_and_error_codes() {
         let tmpdir = TempPath::new();
-        let db = Arc::new(LibraDB::new_for_test(&tmpdir));
+        let db = Arc::new(DiemDB::new_for_test(&tmpdir));
         let port = get_available_port();
         let _rt = start_backup_service(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port), db);
 

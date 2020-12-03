@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -140,7 +140,7 @@ impl HealthCheckRunner {
             if self.debug {
                 messages.push(format!(
                     "{} {}, on_event time: {}ms, verify time: {}ms, events: {}",
-                    libra_infallible::duration_since_epoch().as_millis(),
+                    diem_infallible::duration_since_epoch().as_millis(),
                     health_check.name(),
                     (events_processed - start).as_millis(),
                     (verified - events_processed).as_millis(),
@@ -152,7 +152,7 @@ impl HealthCheckRunner {
             node_health.insert(err.validator.clone(), false);
             messages.push(format!(
                 "{} {:?}",
-                libra_infallible::duration_since_epoch().as_millis(),
+                diem_infallible::duration_since_epoch().as_millis(),
                 err
             ));
         }
@@ -233,7 +233,7 @@ pub struct HealthCheckError {
 
 impl HealthCheckContext {
     pub fn new() -> Self {
-        let now = libra_infallible::duration_since_epoch();
+        let now = diem_infallible::duration_since_epoch();
         Self {
             now,
             err_acc: vec![],

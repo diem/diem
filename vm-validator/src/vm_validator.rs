@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use fail::fail_point;
-use libra_state_view::StateViewId;
-use libra_types::{
+use diem_state_view::StateViewId;
+use diem_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig, VMPublishingOption},
+    on_chain_config::{DiemVersion, OnChainConfigPayload, VMConfig, VMPublishingOption},
     transaction::{SignedTransaction, VMValidatorResult},
 };
-use libra_vm::LibraVMValidator;
+use diem_vm::DiemVMValidator;
+use fail::fail_point;
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{state_view::VerifiedStateView, DbReader};
@@ -20,7 +20,7 @@ use storage_interface::{state_view::VerifiedStateView, DbReader};
 mod vm_validator_test;
 
 pub trait TransactionValidation: Send + Sync + Clone {
-    type ValidationInstance: libra_vm::VMValidator;
+    type ValidationInstance: diem_vm::VMValidator;
 
     /// Validate a txn from client
     fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
@@ -32,7 +32,7 @@ pub trait TransactionValidation: Send + Sync + Clone {
 #[derive(Clone)]
 pub struct VMValidator {
     db_reader: Arc<dyn DbReader>,
-    vm: LibraVMValidator,
+    vm: DiemVMValidator,
 }
 
 impl VMValidator {
@@ -47,13 +47,13 @@ impl VMValidator {
             &smt,
         );
 
-        let vm = LibraVMValidator::new(&state_view);
+        let vm = DiemVMValidator::new(&state_view);
         VMValidator { db_reader, vm }
     }
 }
 
 impl TransactionValidation for VMValidator {
-    type ValidationInstance = LibraVMValidator;
+    type ValidationInstance = DiemVMValidator;
 
     fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         fail_point!("vm_validator::validate_transaction", |_| {
@@ -61,7 +61,7 @@ impl TransactionValidation for VMValidator {
                 "Injected error in vm_validator::validate_transaction"
             ))
         });
-        use libra_vm::VMValidator;
+        use diem_vm::VMValidator;
 
         let (version, state_root) = self.db_reader.get_latest_state_root()?;
         let db_reader = Arc::clone(&self.db_reader);
@@ -83,10 +83,10 @@ impl TransactionValidation for VMValidator {
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
         let vm_config = config.get::<VMConfig>()?;
-        let version = config.get::<LibraVersion>()?;
+        let version = config.get::<DiemVersion>()?;
         let publishing_option = config.get::<VMPublishingOption>()?;
 
-        self.vm = LibraVMValidator::init_with_config(version, vm_config, publishing_option);
+        self.vm = DiemVMValidator::init_with_config(version, vm_config, publishing_option);
         Ok(())
     }
 }

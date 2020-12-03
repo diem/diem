@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
+use diem_types::account_config;
 use language_e2e_tests::{
     account::{self, Account},
     executor::FakeExecutor,
 };
-use libra_types::account_config;
 use proptest::{collection::vec, prelude::*};
 use std::convert::TryFrom;
 use transaction_builder::encode_create_parent_vasp_account_script;
@@ -20,7 +20,7 @@ proptest! {
     ) {
         let executor = FakeExecutor::from_genesis_file();
         let mut accounts = vec![];
-        accounts.push((Account::new_libra_root(), 1));
+        accounts.push((Account::new_diem_root(), 1));
         accounts.push((Account::new_blessed_tc(), 0));
         let num_accounts = accounts.len();
 
@@ -43,13 +43,13 @@ proptest! {
     ) {
         let mut executor = FakeExecutor::from_genesis_file();
         let mut accounts = vec![];
-        let libra_root = Account::new_libra_root();
-        let coins = vec![account::coin1_tmp_currency_code()];
+        let diem_root = Account::new_diem_root();
+        let coins = vec![account::xus_currency_code()];
         // Create a number of accounts
         for i in 0..10 {
             let account = executor.create_raw_account();
             executor.execute_and_apply(
-                libra_root
+                diem_root
                 .transaction()
                 .script(encode_create_parent_vasp_account_script(
                         account_config::type_tag_for_currency_code(coins[i % coins.len()].clone()),
@@ -64,7 +64,7 @@ proptest! {
             );
             accounts.push((account, 0));
         }
-        // Don't include the LR account since txns from that can bork the system
+        // Don't include the DR account since txns from that can bork the system
         accounts.push((Account::new_genesis_account(account_config::testnet_dd_account_address()), 0));
         accounts.push((Account::new_blessed_tc(), 0));
         let num_accounts = accounts.len();

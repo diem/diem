@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account::{coin1_tmp_currency_code, Account, AccountData, AccountRoleSpecifier};
+use crate::account::{xus_currency_code, Account, AccountData, AccountRoleSpecifier};
 use proptest::prelude::*;
 
 impl Arbitrary for Account {
@@ -36,7 +36,7 @@ impl AccountData {
                     AccountData::with_account_and_event_counts(
                         account,
                         balance,
-                        coin1_tmp_currency_code(), // TODO: Vary account balance currency?
+                        xus_currency_code(), // TODO: Vary account balance currency?
                         sequence_number,
                         sent_events_count,
                         received_events_count,

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -14,16 +14,16 @@ use crate::{
 };
 use anyhow::format_err;
 use async_trait::async_trait;
-use libra_logger::prelude::*;
-use libra_types::{
-    account_config::{coin1_tmp_tag, COIN1_NAME},
+use diem_logger::prelude::*;
+use diem_types::{
+    account_config::{xus_tag, XUS_NAME},
     chain_id::ChainId,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
 use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
 use transaction_builder::{
-    encode_peer_to_peer_with_metadata_script, encode_update_libra_version_script,
+    encode_peer_to_peer_with_metadata_script, encode_update_diem_version_script,
 };
 
 #[derive(StructOpt, Debug)]
@@ -117,7 +117,7 @@ impl Experiment for ValidatorVersioning {
         let account_2 = context.tx_emitter.take_account();
 
         let txn_payload = TransactionPayload::Script(encode_peer_to_peer_with_metadata_script(
-            coin1_tmp_tag(),
+            xus_tag(),
             account_2.address,
             1,
             vec![],
@@ -136,7 +136,7 @@ impl Experiment for ValidatorVersioning {
                 account.sequence_number,
                 123456,
                 0,
-                COIN1_NAME.to_owned(),
+                XUS_NAME.to_owned(),
                 10,
                 ChainId::test(),
             )
@@ -171,12 +171,12 @@ impl Experiment for ValidatorVersioning {
         let allowed_nonce = 0;
         let update_txn = create_user_txn(
             &faucet_account.key_pair,
-            TransactionPayload::Script(encode_update_libra_version_script(allowed_nonce, 11)),
+            TransactionPayload::Script(encode_update_diem_version_script(allowed_nonce, 11)),
             faucet_account.address,
             faucet_account.sequence_number,
             123456,
             0,
-            COIN1_NAME.to_owned(),
+            XUS_NAME.to_owned(),
             10,
             ChainId::test(),
         )

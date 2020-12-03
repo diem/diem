@@ -1,17 +1,17 @@
 [package]
 name = "transaction-builder"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra transaction-builder"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem transaction-builder"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
 mirai-annotations = "1.10.1"
 
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 transaction-builder-generated = { path = "../../client/transaction-builder", version = "0.1.0" }
 
 [features]

@@ -1,32 +1,29 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface,
-    GAS_UNIT_PRICE, MAX_GAS_AMOUNT,
+    diem_interface::JsonRpcDiemInterface, Action, DiemInterface, Error, KeyManager, GAS_UNIT_PRICE,
+    MAX_GAS_AMOUNT,
 };
 use anyhow::Result;
-use executor::Executor;
-use executor_types::BlockExecutor;
-use futures::{channel::mpsc::channel, StreamExt};
-use libra_config::{
+use diem_config::{
     config::{KeyManagerConfig, NodeConfig},
     utils,
     utils::get_genesis_txn,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-use libra_global_constants::{
+use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use diem_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
-use libra_secure_storage::{InMemoryStorageInternal, KVStorage};
-use libra_secure_time::{MockTimeService, TimeService};
-use libra_types::{
+use diem_secure_storage::{InMemoryStorageInternal, KVStorage};
+use diem_secure_time::{MockTimeService, TimeService};
+use diem_types::{
     account_address::AccountAddress,
     account_config,
-    account_config::LBR_NAME,
+    account_config::XDX_NAME,
     account_state::AccountState,
     block_info::BlockInfo,
-    block_metadata::{BlockMetadata, LibraBlockResource},
+    block_metadata::{BlockMetadata, DiemBlockResource},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
@@ -34,8 +31,11 @@ use libra_types::{
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
 };
-use libra_vm::LibraVM;
-use libradb::LibraDB;
+use diem_vm::DiemVM;
+use diemdb::DiemDB;
+use executor::Executor;
+use executor_types::BlockExecutor;
+use futures::{channel::mpsc::channel, StreamExt};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
@@ -46,23 +46,23 @@ use vm_validator::{
 
 const TXN_EXPIRATION_SECS: u64 = 100;
 
-struct Node<T: LibraInterface> {
-    executor: Executor<LibraVM>,
-    libra: LibraInterfaceTestHarness<T>,
+struct Node<T: DiemInterface> {
+    executor: Executor<DiemVM>,
+    diem: DiemInterfaceTestHarness<T>,
     key_manager: KeyManager<
-        LibraInterfaceTestHarness<T>,
+        DiemInterfaceTestHarness<T>,
         InMemoryStorageInternal<MockTimeService>,
         MockTimeService,
     >,
     time: MockTimeService,
 }
 
-impl<T: LibraInterface> Node<T> {
+impl<T: DiemInterface> Node<T> {
     pub fn new(
-        executor: Executor<LibraVM>,
-        libra: LibraInterfaceTestHarness<T>,
+        executor: Executor<DiemVM>,
+        diem: DiemInterfaceTestHarness<T>,
         key_manager: KeyManager<
-            LibraInterfaceTestHarness<T>,
+            DiemInterfaceTestHarness<T>,
             InMemoryStorageInternal<MockTimeService>,
             MockTimeService,
         >,
@@ -70,14 +70,14 @@ impl<T: LibraInterface> Node<T> {
     ) -> Self {
         Self {
             executor,
-            libra,
+            diem,
             key_manager,
             time,
         }
     }
 
-    // Increments the libra_timestamp on the blockchain by executing an empty block.
-    fn update_libra_timestamp(&mut self) {
+    // Increments the diem_timestamp on the blockchain by executing an empty block.
+    fn update_diem_timestamp(&mut self) {
         self.execute_and_commit(vec![]);
     }
 
@@ -135,19 +135,19 @@ impl<T: LibraInterface> Node<T> {
     }
 }
 
-/// The struct below is a LibraInterface wrapper that exposes several additional methods to better
-/// test the internal state of a LibraInterface implementation (e.g., during end-to-end and
+/// The struct below is a DiemInterface wrapper that exposes several additional methods to better
+/// test the internal state of a DiemInterface implementation (e.g., during end-to-end and
 /// integration tests).
 #[derive(Clone)]
-struct LibraInterfaceTestHarness<T: LibraInterface> {
-    libra: T,
+struct DiemInterfaceTestHarness<T: DiemInterface> {
+    diem: T,
     submitted_transactions: Arc<RefCell<Vec<Transaction>>>,
 }
 
-impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
-    fn new(libra: T) -> Self {
+impl<T: DiemInterface> DiemInterfaceTestHarness<T> {
+    fn new(diem: T) -> Self {
         Self {
-            libra,
+            diem,
             submitted_transactions: Arc::new(RefCell::new(Vec::new())),
         }
     }
@@ -155,18 +155,18 @@ impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
     /// Returns the validator set associated with the validator set address.
     fn retrieve_validator_set(&self) -> Result<ValidatorSet, Error> {
         let account = account_config::validator_set_address();
-        let account_state = self.libra.retrieve_account_state(account)?;
+        let account_state = self.diem.retrieve_account_state(account)?;
         Ok(account_state
             .get_validator_set()?
             .ok_or_else(|| Error::DataDoesNotExist("ValidatorSetResource".into()))?)
     }
 
-    /// Returns the libra block resource associated with the association address.
-    fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
-        let account = account_config::libra_root_address();
-        let account_state = self.libra.retrieve_account_state(account)?;
+    /// Returns the diem block resource associated with the association address.
+    fn retrieve_diem_block_resource(&self) -> Result<DiemBlockResource, Error> {
+        let account = account_config::diem_root_address();
+        let account_state = self.diem.retrieve_account_state(account)?;
         account_state
-            .get_libra_block_resource()?
+            .get_diem_block_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("BlockMetadata".into()))
     }
 
@@ -177,47 +177,47 @@ impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
     }
 }
 
-impl<T: LibraInterface> LibraInterface for LibraInterfaceTestHarness<T> {
-    fn libra_timestamp(&self) -> Result<u64, Error> {
-        self.libra.libra_timestamp()
+impl<T: DiemInterface> DiemInterface for DiemInterfaceTestHarness<T> {
+    fn diem_timestamp(&self) -> Result<u64, Error> {
+        self.diem.diem_timestamp()
     }
 
     fn last_reconfiguration(&self) -> Result<u64, Error> {
-        self.libra.last_reconfiguration()
+        self.diem.last_reconfiguration()
     }
 
     fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
-        self.libra.retrieve_sequence_number(account)
+        self.diem.retrieve_sequence_number(account)
     }
 
     fn submit_transaction(&self, transaction: Transaction) -> Result<(), Error> {
         self.submitted_transactions
             .borrow_mut()
             .push(transaction.clone());
-        self.libra.submit_transaction(transaction)
+        self.diem.submit_transaction(transaction)
     }
 
     fn retrieve_validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error> {
-        self.libra.retrieve_validator_config(account)
+        self.diem.retrieve_validator_config(account)
     }
 
     fn retrieve_validator_info(&self, account: AccountAddress) -> Result<ValidatorInfo, Error> {
-        self.libra.retrieve_validator_info(account)
+        self.diem.retrieve_validator_info(account)
     }
 
     fn retrieve_account_state(&self, account: AccountAddress) -> Result<AccountState, Error> {
-        self.libra.retrieve_account_state(account)
+        self.diem.retrieve_account_state(account)
     }
 }
 
-/// A mock libra interface implementation that stores a pointer to the LibraDB from which to
+/// A mock diem interface implementation that stores a pointer to the DiemDB from which to
 /// process API requests.
 #[derive(Clone)]
-struct MockLibraInterface {
-    storage: Arc<LibraDB>,
+struct MockDiemInterface {
+    storage: Arc<DiemDB>,
 }
 
-impl MockLibraInterface {
+impl MockDiemInterface {
     fn retrieve_validator_set_resource(&self) -> Result<ValidatorSet, Error> {
         let account = account_config::validator_set_address();
         let account_state = self.retrieve_account_state(account)?;
@@ -227,7 +227,7 @@ impl MockLibraInterface {
     }
 
     pub fn retrieve_configuration_resource(&self) -> Result<ConfigurationResource, Error> {
-        let account = libra_types::on_chain_config::config_address();
+        let account = diem_types::on_chain_config::config_address();
         let account_state = self.retrieve_account_state(account)?;
         account_state
             .get_configuration_resource()?
@@ -235,18 +235,18 @@ impl MockLibraInterface {
     }
 }
 
-impl LibraInterface for MockLibraInterface {
-    fn libra_timestamp(&self) -> Result<u64, Error> {
-        let account = account_config::libra_root_address();
+impl DiemInterface for MockDiemInterface {
+    fn diem_timestamp(&self) -> Result<u64, Error> {
+        let account = account_config::diem_root_address();
         let blob = self
             .storage
             .get_latest_account_state(account)?
             .ok_or_else(|| Error::DataDoesNotExist("AccountState".into()))?;
         let account_state = AccountState::try_from(&blob)?;
         Ok(account_state
-            .get_libra_timestamp_resource()?
-            .ok_or_else(|| Error::DataDoesNotExist("LibraTimestampResource".into()))?
-            .libra_timestamp
+            .get_diem_timestamp_resource()?
+            .ok_or_else(|| Error::DataDoesNotExist("DiemTimestampResource".into()))?
+            .diem_timestamp
             .microseconds)
     }
 
@@ -312,69 +312,69 @@ impl LibraInterface for MockLibraInterface {
 
 // Creates and returns NodeConfig and KeyManagerConfig structs that are consistent for testing.
 fn get_test_configs() -> (NodeConfig, KeyManagerConfig) {
-    let (node_config, _) = libra_genesis_tool::test_config();
+    let (node_config, _) = diem_genesis_tool::test_config();
     let key_manager_config = KeyManagerConfig::default();
     (node_config, key_manager_config)
 }
 
-// Creates and returns a test node that uses the JsonRpcLibraInterface.
+// Creates and returns a test node that uses the JsonRpcDiemInterface.
 // This setup is useful for testing nodes as they operate in a production environment.
-fn setup_node_using_json_rpc() -> (Node<JsonRpcLibraInterface>, Runtime) {
+fn setup_node_using_json_rpc() -> (Node<JsonRpcDiemInterface>, Runtime) {
     let (node_config, key_manager_config) = get_test_configs();
 
-    let (_storage, db_rw) = setup_libra_db(&node_config);
-    let (libra, server) = setup_libra_interface_and_json_server(db_rw.clone());
+    let (_storage, db_rw) = setup_diem_db(&node_config);
+    let (diem, server) = setup_diem_interface_and_json_server(db_rw.clone());
     let executor = Executor::new(db_rw);
 
     (
-        setup_node(&node_config, &key_manager_config, executor, libra),
+        setup_node(&node_config, &key_manager_config, executor, diem),
         server,
     )
 }
 
-// Creates and returns a Node using the MockLibraInterface implementation.
+// Creates and returns a Node using the MockDiemInterface implementation.
 // This setup is useful for testing and verifying new development features quickly.
-fn setup_node_using_test_mocks() -> Node<MockLibraInterface> {
+fn setup_node_using_test_mocks() -> Node<MockDiemInterface> {
     let (node_config, key_manager_config) = get_test_configs();
-    let (storage, db_rw) = setup_libra_db(&node_config);
-    let libra = MockLibraInterface { storage };
+    let (storage, db_rw) = setup_diem_db(&node_config);
+    let diem = MockDiemInterface { storage };
     let executor = Executor::new(db_rw);
 
-    setup_node(&node_config, &key_manager_config, executor, libra)
+    setup_node(&node_config, &key_manager_config, executor, diem)
 }
 
-// Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
-fn setup_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
-    let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    executor_test_helpers::bootstrap_genesis::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
+// Creates and returns a diem database and database reader/writer pair bootstrapped with genesis.
+fn setup_diem_db(config: &NodeConfig) -> (Arc<DiemDB>, DbReaderWriter) {
+    let (storage, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&config.storage.dir()));
+    executor_test_helpers::bootstrap_genesis::<DiemVM>(&db_rw, get_genesis_txn(config).unwrap())
         .expect("Failed to execute genesis");
 
     (storage, db_rw)
 }
 
-// Creates and returns a node for testing using the given config, executor and libra interface
+// Creates and returns a node for testing using the given config, executor and diem interface
 // wrapper implementation.
-fn setup_node<T: LibraInterface + Clone>(
+fn setup_node<T: DiemInterface + Clone>(
     node_config: &NodeConfig,
     key_manager_config: &KeyManagerConfig,
-    executor: Executor<LibraVM>,
-    libra: T,
+    executor: Executor<DiemVM>,
+    diem: T,
 ) -> Node<T> {
     let time = MockTimeService::new();
-    let libra_test_harness = LibraInterfaceTestHarness::new(libra);
+    let diem_test_harness = DiemInterfaceTestHarness::new(diem);
     let storage = setup_secure_storage(&node_config, time.clone());
 
     let key_manager = KeyManager::new(
-        libra_test_harness.clone(),
+        diem_test_harness.clone(),
         storage,
         time.clone(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
-        libra_types::chain_id::ChainId::test(),
+        diem_types::chain_id::ChainId::test(),
     );
 
-    Node::new(executor, libra_test_harness, key_manager, time)
+    Node::new(executor, diem_test_harness, key_manager, time)
 }
 
 // Creates and returns a secure storage implementation (based on an in memory storage engine) for
@@ -399,8 +399,7 @@ fn setup_secure_storage(
         .set(OPERATOR_KEY, operator_key.private_key())
         .unwrap();
 
-    let operator_account =
-        libra_types::account_address::from_public_key(&operator_key.public_key());
+    let operator_account = diem_types::account_address::from_public_key(&operator_key.public_key());
     sec_storage.set(OPERATOR_ACCOUNT, operator_account).unwrap();
 
     // Initialize the consensus key in storage
@@ -413,19 +412,17 @@ fn setup_secure_storage(
     sec_storage
 }
 
-// Generates and returns a (libra interface, server) pair, where the libra interface is a JSON RPC
+// Generates and returns a (diem interface, server) pair, where the diem interface is a JSON RPC
 // based interface using the lightweight JSON client internally, and the server is a JSON server
 // that serves the JSON RPC requests. The server communicates with the given database reader/writer
 // to handle each JSON RPC request.
-fn setup_libra_interface_and_json_server(
-    db_rw: DbReaderWriter,
-) -> (JsonRpcLibraInterface, Runtime) {
+fn setup_diem_interface_and_json_server(db_rw: DbReaderWriter) -> (JsonRpcDiemInterface, Runtime) {
     let address = "0.0.0.0";
     let port = utils::get_available_port();
     let host = format!("{}:{}", address, port);
 
     let (mp_sender, mut mp_events) = channel(1024);
-    let server = libra_json_rpc::test_bootstrap(host.parse().unwrap(), db_rw.reader, mp_sender);
+    let server = diem_json_rpc::test_bootstrap(host.parse().unwrap(), db_rw.reader, mp_sender);
 
     // Provide a VMValidator to the runtime.
     server.spawn(async move {
@@ -441,31 +438,31 @@ fn setup_libra_interface_and_json_server(
     });
 
     let json_rpc_endpoint = format!("http://{}", host);
-    let libra = JsonRpcLibraInterface::new(json_rpc_endpoint);
+    let diem = JsonRpcDiemInterface::new(json_rpc_endpoint);
 
-    (libra, server)
+    (diem, server)
 }
 
 #[test]
 // This simple test just proves that genesis took effect and the values are on-chain (in storage).
 fn test_ability_to_read_move_data() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_ability_to_read_move_data(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_ability_to_read_move_data(node);
 }
 
-fn verify_ability_to_read_move_data<T: LibraInterface>(mut node: Node<T>) {
+fn verify_ability_to_read_move_data<T: DiemInterface>(mut node: Node<T>) {
     let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
 
-    node.libra.last_reconfiguration().unwrap();
-    node.libra.retrieve_validator_set().unwrap();
-    node.libra.retrieve_validator_config(owner_account).unwrap();
-    node.libra.retrieve_validator_info(owner_account).unwrap();
-    node.libra.retrieve_libra_block_resource().unwrap();
+    node.diem.last_reconfiguration().unwrap();
+    node.diem.retrieve_validator_set().unwrap();
+    node.diem.retrieve_validator_config(owner_account).unwrap();
+    node.diem.retrieve_validator_info(owner_account).unwrap();
+    node.diem.retrieve_diem_block_resource().unwrap();
 }
 
 #[test]
@@ -473,19 +470,19 @@ fn verify_ability_to_read_move_data<T: LibraInterface>(mut node: Node<T>) {
 // unexpected failure). To do this, the test generates a new keypair locally, creates a new rotation
 // transaction manually and executes the transaction on-chain.
 fn test_manual_rotation_on_chain() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_manual_rotation_on_chain(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_manual_rotation_on_chain(node);
 }
 
-fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
+fn verify_manual_rotation_on_chain<T: DiemInterface>(mut node: Node<T>) {
     let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
-    let genesis_config = node.libra.retrieve_validator_config(owner_account).unwrap();
-    let genesis_info = node.libra.retrieve_validator_info(owner_account).unwrap();
+    let genesis_config = node.diem.retrieve_validator_config(owner_account).unwrap();
+    let genesis_info = node.diem.retrieve_validator_info(owner_account).unwrap();
 
     // Check on-chain consensus state matches the genesis state
     let consensus_pubkey = node.get_key_from_storage(CONSENSUS_KEY).public_key();
@@ -509,7 +506,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         Vec::new(),
         Vec::new(),
         node.time.now() + TXN_EXPIRATION_SECS,
-        libra_types::chain_id::ChainId::test(),
+        diem_types::chain_id::ChainId::test(),
     );
     let txn1 = txn1
         .sign(&operator_privkey, operator_privkey.public_key())
@@ -518,8 +515,8 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
 
     node.execute_and_commit(vec![txn1]);
 
-    let new_config = node.libra.retrieve_validator_config(owner_account).unwrap();
-    let new_info = node.libra.retrieve_validator_info(owner_account).unwrap();
+    let new_config = node.diem.retrieve_validator_config(owner_account).unwrap();
+    let new_info = node.diem.retrieve_validator_info(owner_account).unwrap();
 
     // Check on-chain consensus state has been rotated
     assert_ne!(new_pubkey, consensus_pubkey);
@@ -530,29 +527,29 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
 #[test]
 // This verifies that the key manager is properly setup and that a basic rotation can be performed.
 fn test_key_manager_init_and_basic_rotation() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_init_and_basic_rotation(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_init_and_basic_rotation(node);
 }
 
-fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
+fn verify_init_and_basic_rotation<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initialization (on-chain and in storage)
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
     assert_eq!(node.time.now(), node.key_manager.last_rotation().unwrap());
     // No executions yet
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
-    assert_eq!(0, node.key_manager.libra_timestamp().unwrap());
+    assert_eq!(0, node.key_manager.diem_timestamp().unwrap());
 
     // Perform key rotation locally
     let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
-    let genesis_info = node.libra.retrieve_validator_info(owner_account).unwrap();
+    let genesis_info = node.diem.retrieve_validator_info(owner_account).unwrap();
     let new_key = node.key_manager.rotate_consensus_key().unwrap();
-    let pre_exe_rotated_info = node.libra.retrieve_validator_info(owner_account).unwrap();
+    let pre_exe_rotated_info = node.diem.retrieve_validator_info(owner_account).unwrap();
     assert_eq!(
         genesis_info.consensus_public_key(),
         pre_exe_rotated_info.consensus_public_key()
@@ -563,8 +560,8 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     node.time.increment_by(301);
 
     // Execute key rotation on-chain
-    node.execute_and_commit(node.libra.take_all_transactions());
-    let rotated_info = node.libra.retrieve_validator_info(owner_account).unwrap();
+    node.execute_and_commit(node.diem.take_all_transactions());
+    let rotated_info = node.diem.retrieve_validator_info(owner_account).unwrap();
     assert_ne!(
         genesis_info.consensus_public_key(),
         rotated_info.consensus_public_key()
@@ -572,17 +569,17 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     assert_eq!(rotated_info.consensus_public_key(), &new_key);
 
     // Executions have occurred but nothing after our rotation
-    assert_ne!(0, node.key_manager.libra_timestamp().unwrap());
+    assert_ne!(0, node.key_manager.diem_timestamp().unwrap());
     assert_eq!(
         node.key_manager.last_reconfiguration(),
-        node.key_manager.libra_timestamp()
+        node.key_manager.diem_timestamp()
     );
 
     // Executions have occurred after our rotation
-    node.execute_and_commit(node.libra.take_all_transactions());
+    node.execute_and_commit(node.diem.take_all_transactions());
     assert_ne!(
         node.key_manager.last_reconfiguration(),
-        node.key_manager.libra_timestamp()
+        node.key_manager.diem_timestamp()
     );
 }
 
@@ -591,37 +588,37 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
 // To do this, the test repeatedly calls "execute_once_and_sleep" -- identical to the main "execute"
 // loop.
 fn test_execute() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_execute(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_execute(node);
 }
 
-fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
+fn verify_execute<T: DiemInterface>(mut node: Node<T>) {
     let (_, key_manager_config) = get_test_configs();
 
     // Verify correct initial state (i.e., nothing to be done by key manager)
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify rotation required after enough time
     node.time
         .increment_by(key_manager_config.rotation_period_secs);
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::FullKeyRotation,
         node.key_manager.evaluate_status().unwrap()
     );
 
     // Verify a single execution iteration will perform the rotation and re-sync everything
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     node.key_manager.execute_once().unwrap();
 
     // Verify nothing to be done after rotation except wait for transaction execution
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::WaitForTransactionExecution,
         node.key_manager.evaluate_status().unwrap()
@@ -630,14 +627,14 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     // Verify rotation transaction not executed, now expired
     node.time
         .increment_by(key_manager_config.txn_expiration_secs);
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::SubmitKeyRotationTransaction,
         node.key_manager.evaluate_status().unwrap()
     );
 
     // Let's execute the expired transaction and see that a resubmission is still required
-    node.execute_and_commit(node.libra.take_all_transactions());
+    node.execute_and_commit(node.diem.take_all_transactions());
     assert_eq!(
         Action::SubmitKeyRotationTransaction,
         node.key_manager.evaluate_status().unwrap()
@@ -645,42 +642,42 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
 
     // Verify that a single execution iteration will resubmit the transaction, which can then be
     // executed to re-sync everything up (on-chain).
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     node.key_manager.execute_once().unwrap();
-    node.execute_and_commit(node.libra.take_all_transactions());
+    node.execute_and_commit(node.diem.take_all_transactions());
     assert_eq!(
         Action::NoAction,
         node.key_manager.evaluate_status().unwrap()
     );
-    assert_ne!(0, node.libra.last_reconfiguration().unwrap());
+    assert_ne!(0, node.diem.last_reconfiguration().unwrap());
 }
 
 #[test]
 // This tests the key manager's ability to detect liveness errors on the blockchain.
 fn test_liveness_error() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_liveness_error(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_liveness_error(node);
 }
 
-fn verify_liveness_error<T: LibraInterface>(mut node: Node<T>) {
+fn verify_liveness_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::NoAction,
         node.key_manager.evaluate_status().unwrap()
     );
 
     // Verify a single execution iteration will detect a liveness error because
-    // the libra timestamp on-chain hasn't been updated since it was last checked.
+    // the diem timestamp on-chain hasn't been updated since it was last checked.
     match node.key_manager.execute_once() {
         Err(Error::LivenessError(last_timestamp, current_timestamp)) => {
             assert_eq!(last_timestamp, current_timestamp)
@@ -692,22 +689,22 @@ fn verify_liveness_error<T: LibraInterface>(mut node: Node<T>) {
 #[test]
 // This tests the key manager's ability to detect missing accounts in storage.
 fn test_missing_account_error() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_missing_account_error(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_missing_account_error(node);
 }
 
-fn verify_missing_account_error<T: LibraInterface>(mut node: Node<T>) {
+fn verify_missing_account_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Reset storage to wipe all account addresses
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     node.key_manager.storage.reset_and_clear().unwrap();
 
     // Verify a single execution iteration will detect the missing account address
@@ -724,22 +721,22 @@ fn verify_missing_account_error<T: LibraInterface>(mut node: Node<T>) {
 // This tests the key manager's ability to detect mismatches between the validator
 // config and the validator set.
 fn test_validator_config_info_mismatch() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_validator_config_info_mismatch(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_validator_config_info_mismatch(node);
 }
 
-fn verify_validator_config_info_mismatch<T: LibraInterface>(mut node: Node<T>) {
+fn verify_validator_config_info_mismatch<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::NoAction,
         node.key_manager.evaluate_status().unwrap()
@@ -760,9 +757,9 @@ fn verify_validator_config_info_mismatch<T: LibraInterface>(mut node: Node<T>) {
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        LBR_NAME.to_owned(),
+        XDX_NAME.to_owned(),
         node.time.now() + TXN_EXPIRATION_SECS,
-        libra_types::chain_id::ChainId::test(),
+        diem_types::chain_id::ChainId::test(),
     );
 
     // Sign and execute the validator config update transaction
@@ -775,7 +772,7 @@ fn verify_validator_config_info_mismatch<T: LibraInterface>(mut node: Node<T>) {
 
     // Verify the key manager will detect a key mismatch between the validator
     // config and the validator set
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::WaitForReconfiguration,
         node.key_manager.evaluate_status().unwrap()
@@ -786,22 +783,22 @@ fn verify_validator_config_info_mismatch<T: LibraInterface>(mut node: Node<T>) {
 // This tests the key manager's ability to detect mismatches between storage and
 // the blockchain.
 fn test_storage_blockchain_mismatch() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_storage_blockchain_mismatch(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_storage_blockchain_mismatch(node);
 }
 
-fn verify_storage_blockchain_mismatch<T: LibraInterface>(mut node: Node<T>) {
+fn verify_storage_blockchain_mismatch<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::NoAction,
         node.key_manager.evaluate_status().unwrap()
@@ -812,7 +809,7 @@ fn verify_storage_blockchain_mismatch<T: LibraInterface>(mut node: Node<T>) {
 
     // Verify the key manager will detect a key mismatch between storage and the
     // blockchain and thus wait for transaction execution
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     assert_eq!(
         Action::WaitForTransactionExecution,
         node.key_manager.evaluate_status().unwrap()
@@ -822,22 +819,22 @@ fn verify_storage_blockchain_mismatch<T: LibraInterface>(mut node: Node<T>) {
 #[test]
 // This tests the key manager's ability to detect generic storage errors.
 fn test_storage_error() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_storage_error(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_storage_error(node);
 }
 
-fn verify_storage_error<T: LibraInterface>(mut node: Node<T>) {
+fn verify_storage_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Update the consensus key to an invalid value to force a storage error
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     node.key_manager
         .storage
         .set(CONSENSUS_KEY, "invalid value")
@@ -853,22 +850,22 @@ fn verify_storage_error<T: LibraInterface>(mut node: Node<T>) {
 #[test]
 // This tests the key manager's ability to handle missing data errors.
 fn test_missing_data_error() {
-    // Test the mock libra interface implementation
+    // Test the mock diem interface implementation
     let node = setup_node_using_test_mocks();
     verify_missing_data(node);
 
-    // Test the json libra interface implementation
+    // Test the json diem interface implementation
     let (node, _runtime) = setup_node_using_json_rpc();
     verify_missing_data(node);
 }
 
-fn verify_missing_data<T: LibraInterface>(mut node: Node<T>) {
+fn verify_missing_data<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
     assert_eq!(0, node.time.now());
-    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+    assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Update the owner account to an account that will not have any state on chain
-    node.update_libra_timestamp();
+    node.update_diem_timestamp();
     node.key_manager
         .storage
         .set(OWNER_ACCOUNT, "00000000000000000000000000000001")

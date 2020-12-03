@@ -5,7 +5,7 @@ use 0x1::SlidingNonce;
 /// # Summary
 /// Freezes the account at `address`. The sending account of this transaction
 /// must be the Treasury Compliance account. The account being frozen cannot be
-/// the Libra Root or Treasury Compliance account. After the successful
+/// the Diem Root or Treasury Compliance account. After the successful
 /// execution of this transaction no transactions may be sent from the frozen
 /// account, and the frozen account may not send or receive coins.
 ///
@@ -13,7 +13,7 @@ use 0x1::SlidingNonce;
 /// Sets the `AccountFreezing::FreezingBit` to `true` and emits a
 /// `AccountFreezing::FreezeAccountEvent`. The transaction sender must be the
 /// Treasury Compliance account, but the account at `to_freeze_account` must
-/// not be either `0xA550C18` (the Libra Root address), or `0xB1E55ED` (the
+/// not be either `0xA550C18` (the Diem Root address), or `0xB1E55ED` (the
 /// Treasury Compliance address). Note that this is a per-account property
 /// e.g., freezing a Parent VASP will not effect the status any of its child
 /// accounts and vice versa.
@@ -41,7 +41,7 @@ use 0x1::SlidingNonce;
 /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::ETREASURY_COMPLIANCE`        | The sending account is not the Treasury Compliance account.                                |
 /// | `Errors::REQUIRES_ROLE`    | `Roles::ETREASURY_COMPLIANCE`                | The sending account is not the Treasury Compliance account.                                |
 /// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_TC`         | `to_freeze_account` was the Treasury Compliance account (`0xB1E55ED`).                     |
-/// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT` | `to_freeze_account` was the Libra Root account (`0xA550C18`).                              |
+/// | `Errors::INVALID_ARGUMENT` | `AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT` | `to_freeze_account` was the Diem Root account (`0xA550C18`).                              |
 ///
 /// # Related Scripts
 /// * `Script::unfreeze_account`

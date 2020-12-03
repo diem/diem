@@ -1,34 +1,34 @@
 //! account: alice, 900000
 //! account: bob, 900000
 
-// Alice sends 200 Libra Coins to Bob
+// Alice sends 200 Diem Coins to Bob
 //! sender: alice
 //! args: {{bob}}
 //! gas-price: 0
 
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.DiemAccount;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main(account: &signer, receiver: address) {
-    let coins: Libra.Libra<Coin1.Coin1>;
-    let with_cap: LibraAccount.WithdrawCapability;
+    let coins: Diem.Diem<XUS.XUS>;
+    let with_cap: DiemAccount.WithdrawCapability;
 
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, move(receiver), 200, h"", h"");
-    LibraAccount.restore_withdraw_capability(move(with_cap));
+    with_cap = DiemAccount.extract_withdraw_capability(copy(account));
+    DiemAccount.pay_from<XUS.XUS>(&with_cap, move(receiver), 200, h"", h"");
+    DiemAccount.restore_withdraw_capability(move(with_cap));
 
     return;
 }
 
 
 
-// Alice checks that her balance is less than 999800 Libra Coins. (200 + gas)
+// Alice checks that her balance is less than 999800 Diem Coins. (200 + gas)
 //! new-transaction
 //! sender: alice
 
-import 0x1.LibraAccount;
-import 0x1.Coin1;
+import 0x1.DiemAccount;
+import 0x1.XUS;
 import 0x1.Signer;
 
 main(account: &signer) {
@@ -36,7 +36,7 @@ main(account: &signer) {
     let sender: address;
 
     sender = Signer.address_of(move(account));
-    balance = LibraAccount.balance<Coin1.Coin1>(move(sender));
+    balance = DiemAccount.balance<XUS.XUS>(move(sender));
     assert(move(balance) <= 999800, 42);
 
     return;
@@ -44,11 +44,11 @@ main(account: &signer) {
 
 
 
-// Bob checks that he has 90200 Libra Coins
+// Bob checks that he has 90200 Diem Coins
 //! new-transaction
 //! sender: bob
-import 0x1.LibraAccount;
-import 0x1.Coin1;
+import 0x1.DiemAccount;
+import 0x1.XUS;
 import 0x1.Signer;
 
 main(account: &signer) {
@@ -56,7 +56,7 @@ main(account: &signer) {
     let sender: address;
 
     sender = Signer.address_of(move(account));
-    balance = LibraAccount.balance<Coin1.Coin1>(move(sender));
+    balance = DiemAccount.balance<XUS.XUS>(move(sender));
     assert(move(balance) == 900200, 42);
 
     return;

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,9 +7,9 @@ use crate::{
     quorum_cert::QuorumCert,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
+use diem_crypto::hash::HashValue;
+use diem_types::block_info::BlockInfo;
 use executor_types::StateComputeResult;
-use libra_crypto::hash::HashValue;
-use libra_types::block_info::BlockInfo;
 use std::fmt::{Debug, Display, Formatter};
 
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides

@@ -6,11 +6,11 @@ custom_edit_url: https://github.com/libra/libra/edit/master/secure/json-rpc/READ
 # Secure JSON RPC
 
 The secure JSON RPC crate provides a lightweight and minimal JSON RPC client to talk to
-the JSON RPC service offered by Libra nodes. This is useful for various security-critical
-components (e.g., the key manager), as it allows interaction with the Libra blockchain in a
+the JSON RPC service offered by Diem nodes. This is useful for various security-critical
+components (e.g., the key manager), as it allows interaction with the Diem blockchain in a
 lightweight manner.
 
-Note: while a JSON RPC client implementation already exists in the Libra codebase, this
+Note: while a JSON RPC client implementation already exists in the Diem codebase, this
 aims to provide a simpler implementation with fewer dependencies.
 
 ## Overview

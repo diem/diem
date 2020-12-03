@@ -2,7 +2,7 @@
 
 ## Overview
 
-This specification describes several common data structures used across various Libra Payment Network (LPN) specifications.
+This specification describes several common data structures used across various Diem Payment Network (LPN) specifications.
 
 ## Terminology
 
@@ -15,7 +15,7 @@ Similar to all other LPN specifications, we use Rust to describe all data struct
 
 ### AccountAddress
 
-This represents a 128-bit Libra account address.
+This represents a 128-bit Diem account address.
 
 ```rust
 struct AccountAddress([u8; 16]);

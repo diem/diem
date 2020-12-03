@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{on_chain_config::OnChainConfig, transaction::SCRIPT_HASH_LENGTH};
@@ -55,7 +55,7 @@ struct VMPublishingOptionInner {
 }
 
 impl OnChainConfig for VMPublishingOption {
-    const IDENTIFIER: &'static str = "LibraTransactionPublishingOption";
+    const IDENTIFIER: &'static str = "DiemTransactionPublishingOption";
 
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
         let raw_publishing_option =

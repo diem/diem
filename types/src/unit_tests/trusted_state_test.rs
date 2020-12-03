@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     validator_verifier::{random_validator_verifier, ValidatorConsensusInfo, ValidatorVerifier},
     waypoint::Waypoint,
 };
-use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
+use diem_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use proptest::{
     collection::{size_range, vec, SizeRange},
     prelude::*,

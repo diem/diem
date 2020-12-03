@@ -1,15 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
-use language_e2e_tests::{
-    account::{self, Account},
-    common_transactions::peer_to_peer_txn,
-    current_function_name,
-    executor::FakeExecutor,
-    transaction_status_eq,
-};
-use libra_types::{
+use diem_types::{
     account_config::{self, ReceivedPaymentEvent, SentPaymentEvent},
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -17,12 +10,19 @@ use libra_types::{
     },
     vm_status::{known_locations, KeptVMStatus},
 };
+use language_e2e_tests::{
+    account::{self, Account},
+    common_transactions::peer_to_peer_txn,
+    current_function_name,
+    executor::FakeExecutor,
+    transaction_status_eq,
+};
 use std::{convert::TryFrom, time::Instant};
 use vm::file_format::{Bytecode, CompiledScript};
 
 #[test]
 fn single_peer_to_peer_with_event() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     executor.set_golden_file(current_function_name!());
@@ -51,13 +51,13 @@ fn single_peer_to_peer_with_event() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     let updated_receiver = executor
         .read_account_resource(receiver.account())
         .expect("receiver must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(receiver.account(), account::xus_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -79,7 +79,7 @@ fn single_peer_to_peer_with_event() {
 
 #[test]
 fn single_peer_to_peer_with_padding() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
@@ -113,7 +113,7 @@ fn single_peer_to_peer_with_padding() {
 
         Script::new(
             script_bytes,
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             vec![
                 TransactionArgument::Address(*receiver.address()),
                 TransactionArgument::U64(transfer_amount),
@@ -147,10 +147,10 @@ fn single_peer_to_peer_with_padding() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     let updated_receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(receiver.account(), account::xus_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
     assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -199,10 +199,10 @@ fn few_peer_to_peer_with_event() {
         }
 
         let original_sender_balance = executor
-            .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+            .read_balance_resource(sender.account(), account::xus_currency_code())
             .expect("sender balance must exist");
         let original_receiver_balance = executor
-            .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
+            .read_balance_resource(receiver.account(), account::xus_currency_code())
             .expect("receiver balcne must exist");
         executor.apply_write_set(txn_output.write_set());
 
@@ -213,13 +213,13 @@ fn few_peer_to_peer_with_event() {
             .read_account_resource(sender.account())
             .expect("sender must exist");
         let updated_sender_balance = executor
-            .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+            .read_balance_resource(sender.account(), account::xus_currency_code())
             .expect("sender balance must exist");
         let updated_receiver = executor
             .read_account_resource(receiver.account())
             .expect("receiver must exist");
         let updated_receiver_balance = executor
-            .read_balance_resource(receiver.account(), account::coin1_tmp_currency_code())
+            .read_balance_resource(receiver.account(), account::xus_currency_code())
             .expect("receiver balance must exist");
         assert_eq!(receiver_balance, updated_receiver_balance.coin());
         assert_eq!(sender_balance, updated_sender_balance.coin());
@@ -279,7 +279,7 @@ impl TxnInfo {
 }
 
 // Create a cyclic transfer around a slice of Accounts.
-// Each Account makes a transfer for the same amount to the next LibraAccount.
+// Each Account makes a transfer for the same amount to the next DiemAccount.
 fn create_cyclic_transfers(
     executor: &FakeExecutor,
     accounts: &[Account],
@@ -378,12 +378,12 @@ fn check_and_apply_transfer_output(
             .read_account_resource(&sender)
             .expect("sender must exist");
         let sender_balance = executor
-            .read_balance_resource(&sender, account::coin1_tmp_currency_code())
+            .read_balance_resource(&sender, account::xus_currency_code())
             .expect("sender balance must exist");
         let sender_initial_balance = sender_balance.coin();
         let sender_seq_num = sender_resource.sequence_number();
         let receiver_initial_balance = executor
-            .read_balance_resource(&receiver, account::coin1_tmp_currency_code())
+            .read_balance_resource(&receiver, account::xus_currency_code())
             .expect("receiver balance must exist")
             .coin();
 
@@ -398,10 +398,10 @@ fn check_and_apply_transfer_output(
             .read_account_resource(&sender)
             .expect("sender must exist");
         let updated_sender_balance = executor
-            .read_balance_resource(&sender, account::coin1_tmp_currency_code())
+            .read_balance_resource(&sender, account::xus_currency_code())
             .expect("sender balance must exist");
         let updated_receiver_balance = executor
-            .read_balance_resource(&receiver, account::coin1_tmp_currency_code())
+            .read_balance_resource(&receiver, account::xus_currency_code())
             .expect("receiver balance must exist");
         assert_eq!(receiver_balance, updated_receiver_balance.coin());
         assert_eq!(sender_balance, updated_sender_balance.coin());

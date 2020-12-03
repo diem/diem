@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Suppose we have the following data structure in a smart contract:
@@ -36,7 +36,7 @@
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
 use crate::account_address::AccountAddress;
-use libra_crypto::hash::HashValue;
+use diem_crypto::hash::HashValue;
 use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

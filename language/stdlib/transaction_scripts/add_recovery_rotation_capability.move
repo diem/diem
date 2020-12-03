@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraAccount;
+use 0x1::DiemAccount;
 use 0x1::RecoveryAddress;
 
 /// # Summary
@@ -9,7 +9,7 @@ use 0x1::RecoveryAddress;
 /// specified recovery account can rotate the sender account's authentication key.
 ///
 /// # Technical Description
-/// Adds the `LibraAccount::KeyRotationCapability` for the sending account
+/// Adds the `DiemAccount::KeyRotationCapability` for the sending account
 /// (`to_recover_account`) to the `RecoveryAddress::RecoveryAddress` resource under
 /// `recovery_address`. After this transaction has been executed successfully the account at
 /// `recovery_address` and the `to_recover_account` may rotate the authentication key of
@@ -29,12 +29,12 @@ use 0x1::RecoveryAddress;
 /// | Name                 | Type      | Description                                                                                                |
 /// | ------               | ------    | -------------                                                                                              |
 /// | `to_recover_account` | `&signer` | The signer reference of the sending account of this transaction.                                           |
-/// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `LibraAccount::KeyRotationCapability` will be stored. |
+/// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `DiemAccount::KeyRotationCapability` will be stored. |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                               | Description                                                                                     |
 /// | ----------------           | --------------                                             | -------------                                                                                   |
-/// | `Errors::INVALID_STATE`    | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `to_recover_account` has already delegated/extracted its `LibraAccount::KeyRotationCapability`. |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `to_recover_account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
 /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`                       | `recovery_address` does not have a `RecoveryAddress` resource published under it.               |
 /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION`        | `to_recover_account` and `recovery_address` do not belong to the same VASP.                     |
 ///
@@ -44,19 +44,19 @@ use 0x1::RecoveryAddress;
 
 fun add_recovery_rotation_capability(to_recover_account: &signer, recovery_address: address) {
     RecoveryAddress::add_rotation_capability(
-        LibraAccount::extract_key_rotation_capability(to_recover_account), recovery_address
+        DiemAccount::extract_key_rotation_capability(to_recover_account), recovery_address
     )
 }
 spec fun add_recovery_rotation_capability {
     use 0x1::Signer;
     use 0x1::Errors;
 
-    include LibraAccount::TransactionChecks{sender: to_recover_account}; // properties checked by the prologue.
-    include LibraAccount::ExtractKeyRotationCapabilityAbortsIf{account: to_recover_account};
-    include LibraAccount::ExtractKeyRotationCapabilityEnsures{account: to_recover_account};
+    include DiemAccount::TransactionChecks{sender: to_recover_account}; // properties checked by the prologue.
+    include DiemAccount::ExtractKeyRotationCapabilityAbortsIf{account: to_recover_account};
+    include DiemAccount::ExtractKeyRotationCapabilityEnsures{account: to_recover_account};
 
     let addr = Signer::spec_address_of(to_recover_account);
-    let rotation_cap = LibraAccount::spec_get_key_rotation_cap(addr);
+    let rotation_cap = DiemAccount::spec_get_key_rotation_cap(addr);
 
     include RecoveryAddress::AddRotationCapabilityAbortsIf{
         to_recover: rotation_cap

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 mod utils;
@@ -7,9 +7,9 @@ use crate::handlers::utils::{
     handle_rejection, reply_with_async_channel_writer, reply_with_lcs_bytes,
     send_size_prefixed_lcs_bytes, unwrap_or_500, LATENCY_HISTOGRAM,
 };
-use libra_crypto::hash::HashValue;
-use libra_types::transaction::Version;
-use libradb::backup::backup_handler::BackupHandler;
+use diem_crypto::hash::HashValue;
+use diem_types::transaction::Version;
+use diemdb::backup::backup_handler::BackupHandler;
 use warp::{filters::BoxedFilter, reply::Reply, Filter};
 
 static DB_STATE: &str = "db_state";

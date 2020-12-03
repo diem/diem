@@ -1,15 +1,15 @@
 [package]
 name = "bytecode-source-map"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-libra-types = { path = "../../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
@@ -20,4 +20,4 @@ serde = { version = "1.0.117", default-features = false }
 
 [features]
 default = []
-fuzzing = ["libra-types/fuzzing"]
+fuzzing = ["diem-types/fuzzing"]

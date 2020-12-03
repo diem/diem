@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This file contains the starting gas schedule published at genesis.
@@ -121,7 +121,7 @@ pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
         ),
         (Nop, GasCost::new(1, 1)),
     ];
-    // Note that the LibraVM is expecting the table sorted by instruction order.
+    // Note that the DiemVM is expecting the table sorted by instruction order.
     instrs.sort_by_key(|cost| instruction_key(&cost.0));
 
     let mut native_table = vec![

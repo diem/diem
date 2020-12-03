@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::prometheus::Prometheus;
@@ -23,14 +23,14 @@ impl<'a> PrometheusRangeView<'a> {
     pub fn avg_txns_per_block(&self) -> Option<f64> {
         self.query_avg(
             "txn_per_block",
-            "irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])".to_string(),
+            "irate(diem_consensus_num_txns_per_block_sum[1m])/irate(diem_consensus_num_txns_per_block_count[1m])".to_string(),
         )
     }
 
     pub fn avg_backup_bytes_per_second(&self) -> Option<f64> {
         self.query_avg(
             "backup_bytes_per_second",
-            "sum(irate(libra_backup_service_sent_bytes[1m])) by(peer_id)".to_string(),
+            "sum(irate(diem_backup_service_sent_bytes[1m])) by(peer_id)".to_string(),
         )
     }
 }

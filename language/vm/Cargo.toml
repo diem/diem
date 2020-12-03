@@ -1,10 +1,10 @@
 [package]
 name = "vm"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra vm"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem vm"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -16,19 +16,19 @@ mirai-annotations = "1.10.1"
 proptest = { version = "0.10.1", optional = true }
 proptest-derive = { version = "0.2.0", optional = true }
 ref-cast = "1.0.3"
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../move-core/types", version = "0.1.0" }
 num-variants = { path = "../../common/num-variants", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
-libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
+diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 move-core-types = { path = "../move-core/types", version = "0.1.0", features = ["fuzzing"] }
 serde_json = "1.0.60"
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "move-core-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "diem-proptest-helpers", "move-core-types/fuzzing"]

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -11,13 +11,13 @@ use crate::{
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,
 };
-use channel::libra_channel;
+use channel::diem_channel;
+use diem_config::config::NodeConfig;
+use diem_logger::prelude::*;
+use diem_mempool::ConsensusRequest;
+use diem_types::on_chain_config::OnChainConfigPayload;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
-use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_mempool::ConsensusRequest;
-use libra_types::on_chain_config::OnChainConfigPayload;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
@@ -30,8 +30,8 @@ pub fn start_consensus(
     network_events: ConsensusNetworkEvents,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
-    libra_db: Arc<dyn DbReader>,
-    reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    diem_db: Arc<dyn DbReader>,
+    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = runtime::Builder::new()
         .thread_name("consensus")
@@ -39,7 +39,7 @@ pub fn start_consensus(
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!");
-    let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
+    let storage = Arc::new(StorageWriteProxy::new(node_config, diem_db));
     let txn_manager = Arc::new(MempoolProxy::new(
         consensus_to_mempool_sender,
         node_config.consensus.mempool_poll_count,

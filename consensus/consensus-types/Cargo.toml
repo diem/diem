@@ -1,7 +1,7 @@
 [package]
 name = "consensus-types"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -14,18 +14,18 @@ serde = { version = "1.0.117", default-features = false }
 
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 
 [dev-dependencies]
 proptest = "0.10.1"
 
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-types/fuzzing", "libra-crypto/fuzzing"]
+fuzzing = ["proptest", "diem-types/fuzzing", "diem-crypto/fuzzing"]

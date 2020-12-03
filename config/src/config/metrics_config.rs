@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ impl Default for MetricsConfig {
     fn default() -> MetricsConfig {
         MetricsConfig {
             collection_interval_ms: 1000,
-            data_dir: PathBuf::from("/opt/libra/data"),
+            data_dir: PathBuf::from("/opt/diem/data"),
             enabled: false,
             dir: PathBuf::from("metrics"),
         }

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use proptest::sample::Index;
@@ -15,7 +15,7 @@ use std::iter::FromIterator;
 /// # Examples
 ///
 /// ```
-/// use libra_proptest_helpers::GrowingSubset;
+/// use diem_proptest_helpers::GrowingSubset;
 /// let items = vec![(1, "a"), (3, "c"), (2, "b"), (2, "d")];
 /// let mut subset: GrowingSubset<_, _> = items.into_iter().collect();
 ///

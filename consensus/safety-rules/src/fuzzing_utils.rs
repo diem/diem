@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::serializer::SafetyRulesInput;
@@ -10,13 +10,13 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{HashValue, TransactionAccumulatorHasher},
     test_utils::TEST_SEED,
     traits::{SigningKey, Uniform},
 };
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
@@ -251,8 +251,8 @@ pub mod fuzzing {
         block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
         vote_proposal::MaybeSignedVoteProposal,
     };
-    use libra_crypto::ed25519::Ed25519Signature;
-    use libra_types::epoch_change::EpochChangeProof;
+    use diem_crypto::ed25519::Ed25519Signature;
+    use diem_types::epoch_change::EpochChangeProof;
 
     pub fn fuzz_initialize(proof: EpochChangeProof) -> Result<(), Error> {
         let mut safety_rules = test_utils::test_safety_rules_uninitialized();

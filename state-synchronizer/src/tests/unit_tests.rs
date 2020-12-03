@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::request_manager::{PeerScoreUpdateType, RequestManager};
-use libra_config::config::{PeerNetworkId, UpstreamConfig};
+use diem_config::config::{PeerNetworkId, UpstreamConfig};
 use netcore::transport::ConnectionOrigin;
 use std::{collections::HashMap, time::Duration};
 

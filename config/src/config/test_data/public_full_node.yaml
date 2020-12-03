@@ -1,9 +1,9 @@
 base:
-    # Update this value to the location you want Libra to store its database
-    data_dir: "/opt/libra/data"
+    # Update this value to the location you want Diem to store its database
+    data_dir: "/opt/diem/data"
     role: "full_node"
     waypoint:
-        # Update this value to that which Libra publicly provides. Please regard the directions
+        # Update this value to that which Diem publicly provides. Please regard the directions
         # below on how to safely manage your genesis_file_location with respect to the waypoint.
         from_config: "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210"
 

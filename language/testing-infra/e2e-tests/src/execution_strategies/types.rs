@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-use libra_types::transaction::{SignedTransaction, TransactionOutput};
+use diem_types::transaction::{SignedTransaction, TransactionOutput};
 
 pub type Block<Txn> = Vec<Txn>;
 pub type ExecutorResult<T> = Result<Vec<TransactionOutput>, T>;

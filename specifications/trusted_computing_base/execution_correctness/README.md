@@ -1,9 +1,9 @@
-# Libra Execution Correctness Specification
+# Diem Execution Correctness Specification
 
 ## Abstract
 
-This specification outlines the design and implementation of Libra Execution Correctness (LEC): a secured service
-dedicated for executing transactions correctly (with the MOVE VM) and used by Consensus in the Libra payment network.
+This specification outlines the design and implementation of Diem Execution Correctness (LEC): a secured service
+dedicated for executing transactions correctly (with the MOVE VM) and used by Consensus in the Diem payment network.
 
 For those
 unfamiliar with the execution flow of TCB, we recommend reading the architecture of [Trusted Computing Base (TCB)](../TCB.md).
@@ -45,13 +45,13 @@ For example, in the above diagram, A was already committed at this point. The sy
 Since B conflicts with E, all of B's descendants and B itself are no longer valid and will be discarded.
 
 To ensure the correnctness of execution, i.e., the enforcement of the state-changing rule,
-a secure and audited execution service is necessary to guarantee this statement. In Libra Core, it is LEC that plays
+a secure and audited execution service is necessary to guarantee this statement. In Diem Core, it is LEC that plays
 this role, which is built on top of `Executor` library which has the following two jobs to help :
 
 * **execution**: Executor can accept transactions to execute based on a specific state merkle tree and generates a new speculative tree according to the changeset produced by the VM processing the transactions.
-* **commit**: Executor is the only module in Libra core that has write access to Storage. Once a new state has reached consensus across the quorum, it is Executor that commits the agreed state to Storage.
+* **commit**: Executor is the only module in Diem core that has write access to Storage. Once a new state has reached consensus across the quorum, it is Executor that commits the agreed state to Storage.
 
-Let's review the system flow chart to understand how LEC works with other Libra core services. The diagram below arguments the architecture of a part of Libra core system that relevant to LEC with numbered steps showing the interations between LEC and the other components.
+Let's review the system flow chart to understand how LEC works with other Diem core services. The diagram below arguments the architecture of a part of Diem core system that relevant to LEC with numbered steps showing the interations between LEC and the other components.
 
 ![LEC Architecture](execution_correctness.svg)
 
@@ -70,7 +70,7 @@ locally.
 6. LSR verifies the validity of the vote and sign it with `consensus_private_key`.
 7. LSR returns the signed vote to Consensus.
 8. At some later point in time, Consensus reaches the agreement on the vote, then it requests to commit the block to LEC.
-9. LEC sends the commit command to Storage with necessary data, persisting the change to the Libra blockchain.
+9. LEC sends the commit command to Storage with necessary data, persisting the change to the Diem blockchain.
 
 
 ## Data Structures
@@ -232,8 +232,8 @@ pub trait VMExecutor: Send {
 
 #### Storage
 
-Storage of Libra Core is implemented as `LibraDB`, a rocksdb based storage system highly customized for
-Libra. It stores all the required data consistutes the Libra blockchain. After executing a block, LEC will store the
+Storage of Diem Core is implemented as `DiemDB`, a rocksdb based storage system highly customized for
+Diem. It stores all the required data consistutes the Diem blockchain. After executing a block, LEC will store the
 speculative execution result in its own cache and commit it later to storage if consensus commands. The commit
 will persist the result into storage and make the execution effect live on chain. Since the commit, all the
 modification will immediately take effect and visible. LEC relies on two traits exposed by storage interface:
@@ -248,7 +248,7 @@ Trait DbReader {
 }
 
 /// Trait that is implemented by a DB that supports certain public (to client) write APIs
-/// expected of a Libra DB. This adds write APIs to DbReader.
+/// expected of a Diem DB. This adds write APIs to DbReader.
 pub trait DbWriter: Send + Sync {
     /// Persist transactions. Called by the executor module when either syncing nodes or committing
     /// blocks during normal operation.

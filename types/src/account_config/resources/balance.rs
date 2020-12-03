@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     access_path::AccessPath,
-    account_config::constants::{coin1_tmp_tag, ACCOUNT_MODULE_NAME, CORE_CODE_ADDRESS},
+    account_config::constants::{xus_tag, ACCOUNT_MODULE_NAME, CORE_CODE_ADDRESS},
 };
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
@@ -50,6 +50,6 @@ impl MoveResource for BalanceResource {
     const STRUCT_NAME: &'static str = "Balance";
 
     fn type_params() -> Vec<TypeTag> {
-        vec![coin1_tmp_tag()]
+        vec![xus_tag()]
     }
 }

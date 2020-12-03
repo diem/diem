@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! JSON RPC endpoint
@@ -20,7 +20,7 @@ mod counters;
 mod methods;
 mod runtime;
 
-pub use libra_json_rpc_types::{errors, response, views};
+pub use diem_json_rpc_types::{errors, response, views};
 
 pub use runtime::{bootstrap, bootstrap_from_config};
 

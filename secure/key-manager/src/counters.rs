@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_secure_push_metrics::{register_int_counter_vec, IntCounterVec};
+use diem_secure_push_metrics::{register_int_counter_vec, IntCounterVec};
 use once_cell::sync::Lazy;
 
 /// The metrics counter for the key manager.
 static COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_key_manager_state",
+        "diem_key_manager_state",
         "Outcome for key operations",
         &["key", "state"]
     )

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -11,9 +11,9 @@ use anyhow::Result;
 use consensus_types::{
     block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use libra_crypto::HashValue;
-use libra_infallible::Mutex;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_infallible::Mutex;
+use diem_types::{
     epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
@@ -223,7 +223,7 @@ impl PersistentLivenessStorage for MockStorage {
         Ok(EpochChangeProof::new(vec![lis], false))
     }
 
-    fn libra_db(&self) -> Arc<dyn DbReader> {
+    fn diem_db(&self) -> Arc<dyn DbReader> {
         unimplemented!()
     }
 }
@@ -287,7 +287,7 @@ impl PersistentLivenessStorage for EmptyStorage {
         unimplemented!()
     }
 
-    fn libra_db(&self) -> Arc<dyn DbReader> {
+    fn diem_db(&self) -> Arc<dyn DbReader> {
         unimplemented!()
     }
 }

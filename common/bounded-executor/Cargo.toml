@@ -1,17 +1,17 @@
 [package]
 name = "bounded-executor"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra bounded executor"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem bounded executor"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 futures = "0.3.8"
-libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 tokio = { version = "0.2.22", features = ["sync"] }
 
 [dev-dependencies]

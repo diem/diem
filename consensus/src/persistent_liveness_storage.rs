@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData, error::DbError};
@@ -6,15 +6,15 @@ use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use executor_types::ExecutedTrees;
-use libra_config::config::NodeConfig;
-use libra_crypto::HashValue;
-use libra_logger::prelude::*;
-use libra_trace::prelude::*;
-use libra_types::{
+use diem_config::config::NodeConfig;
+use diem_crypto::HashValue;
+use diem_logger::prelude::*;
+use diem_trace::prelude::*;
+use diem_types::{
     block_info::Round, epoch_change::EpochChangeProof, ledger_info::LedgerInfo,
     transaction::Version,
 };
+use executor_types::ExecutedTrees;
 use std::{cmp::max, collections::HashSet, sync::Arc};
 use storage_interface::DbReader;
 
@@ -47,8 +47,8 @@ pub trait PersistentLivenessStorage: Send + Sync {
     /// ValidatorVerifier.
     fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof>;
 
-    /// Returns a handle of the libradb.
-    fn libra_db(&self) -> Arc<dyn DbReader>;
+    /// Returns a handle of the diemdb.
+    fn diem_db(&self) -> Arc<dyn DbReader>;
 }
 
 #[derive(Clone)]
@@ -145,7 +145,7 @@ impl RootMetadata {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_empty() -> Self {
-        Self::new(0, *libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH, vec![])
+        Self::new(0, *diem_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH, vec![])
     }
 }
 
@@ -270,16 +270,16 @@ impl RecoveryData {
     }
 }
 
-/// The proxy we use to persist data in libra db storage service via grpc.
+/// The proxy we use to persist data in diem db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
-    libra_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn DbReader>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig, libra_db: Arc<dyn DbReader>) -> Self {
+    pub fn new(config: &NodeConfig, diem_db: Arc<dyn DbReader>) -> Self {
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
-        StorageWriteProxy { db, libra_db }
+        StorageWriteProxy { db, diem_db }
     }
 }
 
@@ -308,7 +308,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
         let startup_info = self
-            .libra_db
+            .diem_db
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
@@ -348,7 +348,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
 
         // find the block corresponding to storage latest ledger info
         let startup_info = self
-            .libra_db
+            .diem_db
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
@@ -408,13 +408,13 @@ impl PersistentLivenessStorage for StorageWriteProxy {
 
     fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof> {
         let (_, proofs, _) = self
-            .libra_db
+            .diem_db
             .get_state_proof(version)
             .map_err(DbError::from)?;
         Ok(proofs)
     }
 
-    fn libra_db(&self) -> Arc<dyn DbReader> {
-        self.libra_db.clone()
+    fn diem_db(&self) -> Arc<dyn DbReader> {
+        self.diem_db.clone()
     }
 }

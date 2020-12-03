@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Interface between Mempool and Network layers.
 
 use crate::counters;
 use channel::message_queues::QueueStyle;
+use diem_metrics::IntCounterVec;
+use diem_types::{transaction::SignedTransaction, PeerId};
 use fail::fail_point;
-use libra_metrics::IntCounterVec;
-use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
@@ -39,7 +39,7 @@ pub enum MempoolSyncMsg {
 }
 
 /// Protocol id for mempool direct-send calls
-pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/mempool/0.1.0";
+pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/diem/direct-send/0.1.0/mempool/0.1.0";
 
 /// The interface from Network to Mempool layer.
 ///

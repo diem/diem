@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -8,6 +8,7 @@ use std::{collections::HashMap, env, sync::Arc};
 use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
+use diem_logger::*;
 use futures::{future::try_join_all, lock::Mutex, Future, TryFuture};
 use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
@@ -15,7 +16,6 @@ use kube::{
     client::Client,
     Config,
 };
-use libra_logger::*;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -24,9 +24,9 @@ use crate::instance::{
     ApplicationConfig::{Fullnode, Validator, Vault, LSR},
     InstanceConfig,
 };
+use diem_config::config::DEFAULT_JSON_RPC_PORT;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
-use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use reqwest::Client as HttpClient;
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
@@ -82,14 +82,14 @@ macro_rules! JOB_TEMPLATE {
         "templates/job_template.yaml"
     };
 }
-macro_rules! LIBRA_NODE_SERVICE_TEMPLATE {
+macro_rules! DIEM_NODE_SERVICE_TEMPLATE {
     () => {
-        "templates/libra_node_service_template.yaml"
+        "templates/diem_node_service_template.yaml"
     };
 }
-macro_rules! LIBRA_NODE_SPEC_TEMPLATE {
+macro_rules! DIEM_NODE_SPEC_TEMPLATE {
     () => {
-        "templates/libra_node_spec_template.yaml"
+        "templates/diem_node_spec_template.yaml"
     };
 }
 macro_rules! LSR_SERVICE_TEMPLATE {
@@ -126,7 +126,7 @@ impl ClusterSwarmKube {
         let http_client = HttpClient::new();
         // This uses kubectl proxy locally to forward connections to kubernetes api server
         Command::new(KUBECTL_BIN).arg("proxy").spawn()?;
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move {
                 debug!("Running local kube pod healthcheck on {}", HEALTH_CHECK_URL);
                 reqwest::get(HEALTH_CHECK_URL).await?.text().await?;
@@ -154,7 +154,7 @@ impl ClusterSwarmKube {
 
     fn service_spec(&self, peer_id: String) -> Result<Service> {
         let service_yaml = format!(
-            include_str!(LIBRA_NODE_SERVICE_TEMPLATE!()),
+            include_str!(DIEM_NODE_SERVICE_TEMPLATE!()),
             peer_id = &peer_id
         );
         get_spec_instance_from_template(service_yaml)
@@ -192,7 +192,7 @@ impl ClusterSwarmKube {
         Ok((pod_spec, service_spec))
     }
 
-    fn libra_node_spec(
+    fn diem_node_spec(
         &self,
         pod_app: &str,
         pod_name: &str,
@@ -200,7 +200,7 @@ impl ClusterSwarmKube {
         image_tag: &str,
     ) -> Result<Pod> {
         let pod_yaml = format!(
-            include_str!(LIBRA_NODE_SPEC_TEMPLATE!()),
+            include_str!(DIEM_NODE_SPEC_TEMPLATE!()),
             pod_app = pod_app,
             pod_name = pod_name,
             image_tag = image_tag,
@@ -243,7 +243,7 @@ impl ClusterSwarmKube {
         back_off_limit: u32,
         killed: bool,
     ) -> Result<bool> {
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let job_name = job_name.to_string();
             Box::pin(async move {
@@ -352,7 +352,7 @@ impl ClusterSwarmKube {
     {
         debug!("Deleting {} {}", T::KIND, name);
         let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             let resource_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
@@ -474,7 +474,7 @@ impl ClusterSwarmKube {
     }
 
     pub async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move { self.allocate_node_impl(pod_name).await })
         })
         .await
@@ -529,8 +529,8 @@ impl ClusterSwarmKube {
         debug!("Creating pod {} on {:?}", pod_name, node);
         let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
-                self.libra_node_spec(
-                    "libra-validator",
+                self.diem_node_spec(
+                    "diem-validator",
                     pod_name.as_str(),
                     &node.name,
                     &validator_config.image_tag,
@@ -538,8 +538,8 @@ impl ClusterSwarmKube {
                 self.service_spec(pod_name.clone())?,
             ),
             Fullnode(fullnode_config) => (
-                self.libra_node_spec(
-                    "libra-fullnode",
+                self.diem_node_spec(
+                    "diem-fullnode",
                     pod_name.as_str(),
                     &node.name,
                     &fullnode_config.image_tag,
@@ -607,7 +607,7 @@ impl ClusterSwarmKube {
     }
 
     async fn remove_all_network_effects(&self) -> Result<()> {
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
         })
         .await
@@ -626,7 +626,7 @@ impl ClusterSwarmKube {
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let pod_names: Vec<String> = pod_api
             .list(&ListParams {
-                label_selector: Some("libra-node=true".to_string()),
+                label_selector: Some("diem-node=true".to_string()),
                 ..Default::default()
             })
             .await?
@@ -647,7 +647,7 @@ impl ClusterSwarmKube {
         let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let service_names: Vec<String> = service_api
             .list(&ListParams {
-                label_selector: Some("libra-node=true".to_string()),
+                label_selector: Some("diem-node=true".to_string()),
                 ..Default::default()
             })
             .await?
@@ -668,7 +668,7 @@ impl ClusterSwarmKube {
         let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let job_names: Vec<String> = job_api
             .list(&ListParams {
-                label_selector: Some("libra-node=true".to_string()),
+                label_selector: Some("diem-node=true".to_string()),
                 ..Default::default()
             })
             .await?
@@ -712,7 +712,7 @@ impl ClusterSwarmKube {
             input_tag = input_tag,
             pod_name = pod_name
         );
-        let dir = "/opt/libra/data/fluent-bit/";
+        let dir = "/opt/diem/data/fluent-bit/";
         self.put_file(
             node,
             pod_name,
@@ -736,7 +736,7 @@ impl ClusterSwarmKube {
         self.put_file(
             node,
             pod_name,
-            "/opt/libra/etc/genesis.blob",
+            "/opt/diem/etc/genesis.blob",
             genesis.as_slice(),
         )
         .await?;
@@ -792,7 +792,7 @@ impl ClusterSwarmKube {
             self.put_file(
                 node,
                 pod_name,
-                "/opt/libra/etc/node.yaml",
+                "/opt/diem/etc/node.yaml",
                 node_config.as_bytes(),
             )
             .await?;
@@ -816,7 +816,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     }
 
     async fn clean_data(&self, node: &str) -> Result<()> {
-        self.util_cmd("rm -rf /opt/libra/data/*", node, "clean-data")
+        self.util_cmd("rm -rf /opt/diem/data/*", node, "clean-data")
             .await
     }
 
@@ -836,7 +836,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     async fn put_file(&self, node: &str, pod_name: &str, path: &str, content: &[u8]) -> Result<()> {
         let bucket = "toro-cluster-test-flamegraphs";
         let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
-        libra_retrier::retry_async(k8s_retry_strategy(), || {
+        diem_retrier::retry_async(k8s_retry_strategy(), || {
             let run_id = &run_id;
             let content = content.to_vec();
             Box::pin(async move {
@@ -925,5 +925,5 @@ async fn acquire_and_execute<F: TryFuture>(semaphore: &Semaphore, f: F) -> F::Ou
 }
 
 fn k8s_retry_strategy() -> impl Iterator<Item = Duration> {
-    libra_retrier::exp_retry_strategy(1000, 5000, 30)
+    diem_retrier::exp_retry_strategy(1000, 5000, 30)
 }

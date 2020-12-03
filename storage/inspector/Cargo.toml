@@ -1,9 +1,9 @@
 [package]
-name = "libra-storage-inspector"
+name = "diem-storage-inspector"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -13,11 +13,11 @@ anyhow = "1.0.34"
 structopt = "0.3.21"
 tempfile = "3.1.0"
 
-libradb = { path = "../libradb", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diemdb = { path = "../diemdb", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

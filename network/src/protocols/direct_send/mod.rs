@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Implementation of DirectSend as per Libra wire protocol v1.
+//! Implementation of DirectSend as per Diem wire protocol v1.
 //!
 //! Design:
 //! -------
@@ -27,9 +27,9 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
+use diem_config::network_id::NetworkContext;
+use diem_logger::prelude::*;
 use futures::{sink::SinkExt, stream::StreamExt};
-use libra_config::network_id::NetworkContext;
-use libra_logger::prelude::*;
 use serde::Serialize;
 use std::{fmt::Debug, sync::Arc};
 

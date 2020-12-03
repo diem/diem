@@ -2,7 +2,7 @@
 
 **Description**
 
-A Libra account.
+A Diem account.
 
 
 ### Attributes

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -11,17 +11,17 @@ use crate::{
         mock_storage::MockStorage,
     },
 };
-use channel::{libra_channel, message_queues::QueueStyle};
-use futures::channel::mpsc;
-use libra_config::{
+use channel::{diem_channel, message_queues::QueueStyle};
+use diem_config::{
     config::{NodeConfig, PeerNetworkId, RoleType},
     network_id::{NetworkId, NodeNetworkId},
 };
-use libra_infallible::RwLock;
-use libra_types::{
+use diem_infallible::RwLock;
+use diem_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
     waypoint::Waypoint, PeerId,
 };
+use futures::channel::mpsc;
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::NewNetworkSender,
@@ -60,9 +60,9 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
 
     // mock network senders
     let (network_reqs_tx, _network_reqs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (connection_reqs_tx, _) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let network_sender = StateSynchronizerSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),

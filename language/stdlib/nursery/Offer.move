@@ -5,7 +5,7 @@ address 0x1 {
 /// single-signer transactions. As of this writing, ordinary transactions can only have
 /// a single signer, and Move code can only store to an address (via `move_to`) if it
 /// can supply a reference to a signer for the destination address (there are special case
-/// exceptions in Genesis and LibraAccount where there can temporarily be multiple signers).
+/// exceptions in Genesis and DiemAccount where there can temporarily be multiple signers).
 ///
 /// Offer solves this problem by providing an `Offer` resource.  To move a struct `T` from
 /// account A to B, account A first publishes an `Offer<T>` resource at `address_of(A)`,

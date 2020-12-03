@@ -8,16 +8,16 @@ use 0x1::RecoveryAddress;
 ///
 /// # Technical Description
 /// Rotates the authentication key of the `to_recover` account to `new_key` using the
-/// `LibraAccount::KeyRotationCapability` stored in the `RecoveryAddress::RecoveryAddress` resource
+/// `DiemAccount::KeyRotationCapability` stored in the `RecoveryAddress::RecoveryAddress` resource
 /// published under `recovery_address`. This transaction can be sent either by the `to_recover`
 /// account, or by the account where the `RecoveryAddress::RecoveryAddress` resource is published
-/// that contains `to_recover`'s `LibraAccount::KeyRotationCapability`.
+/// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name               | Type         | Description                                                                                                                    |
 /// | ------             | ------       | -------------                                                                                                                  |
 /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
-/// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `LibraAccount::KeyRotationCapability` is published. |
+/// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
 /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
 /// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
 ///
@@ -26,8 +26,8 @@ use 0x1::RecoveryAddress;
 /// | ----------------           | --------------                                | -------------                                                                                                                                        |
 /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
 /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `LibraAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key`
@@ -44,10 +44,10 @@ fun rotate_authentication_key_with_recovery_address(
 }
 spec fun rotate_authentication_key_with_recovery_address {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signer;
 
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
     include RecoveryAddress::RotateAuthenticationKeyEnsures;
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -361,12 +361,12 @@ fn has_compiled_module_magic_number(path: &str) -> bool {
         Err(_) => return false,
         Ok(f) => f,
     };
-    let mut magic = [0u8; BinaryConstants::LIBRA_MAGIC_SIZE];
+    let mut magic = [0u8; BinaryConstants::DIEM_MAGIC_SIZE];
     let num_bytes_read = match file.read(&mut magic) {
         Err(_) => return false,
         Ok(n) => n,
     };
-    num_bytes_read == BinaryConstants::LIBRA_MAGIC_SIZE && magic == BinaryConstants::LIBRA_MAGIC
+    num_bytes_read == BinaryConstants::DIEM_MAGIC_SIZE && magic == BinaryConstants::DIEM_MAGIC
 }
 
 pub fn path_to_string(path: &Path) -> anyhow::Result<String> {

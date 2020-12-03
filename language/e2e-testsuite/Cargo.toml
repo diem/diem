@@ -2,10 +2,10 @@
 name = "language-e2e-testsuite"
 version = "0.1.0"
 edition = "2018"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra language e2e tests"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem language e2e tests"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 
@@ -15,20 +15,20 @@ language-e2e-tests = { path = "../testing-infra/e2e-tests", version = "0.1.0" }
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 compiler = { path = "../compiler", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 move-core-types = { path = "../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../move-vm/runtime", version = "0.1.0" }
 move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
 transaction-builder = { path = "../transaction-builder", version = "0.1.0"}
 transaction-builder-generated = { path = "../../client/transaction-builder", version = "0.1.0"}
 vm = { path = "../vm", version = "0.1.0" }
-libra-vm = { path = "../libra-vm", version = "0.1.0" }
+diem-vm = { path = "../diem-vm", version = "0.1.0" }
 proptest = "0.10.1"
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
 compiled-stdlib = { path = "../stdlib/compiled",  version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-libra-writeset-generator = { path = "../libra-tools/writeset-transaction-generator", version = "0.1.0"}
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-writeset-generator = { path = "../diem-tools/writeset-transaction-generator", version = "0.1.0"}
 
 [features]
 default = ["transaction-builder-generated/fuzzing"]

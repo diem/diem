@@ -9,7 +9,7 @@ use 0x1::SharedEd25519PublicKey;
 /// # Technical Description
 /// Rotates the authentication key of the sending account to `public_key`,
 /// and publishes a `SharedEd25519PublicKey::SharedEd25519PublicKey` resource
-/// containing the 32-byte ed25519 `public_key` and the `LibraAccount::KeyRotationCapability` for
+/// containing the 32-byte ed25519 `public_key` and the `DiemAccount::KeyRotationCapability` for
 /// `account` under `account`.
 ///
 /// # Parameters
@@ -21,7 +21,7 @@ use 0x1::SharedEd25519PublicKey;
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                                               | Description                                                                                         |
 /// | ----------------            | --------------                                             | -------------                                                                                       |
-/// | `Errors::INVALID_STATE`     | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `LibraAccount::KeyRotationCapability` resource.       |
+/// | `Errors::INVALID_STATE`     | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability` resource.       |
 /// | `Errors::ALREADY_PUBLISHED` | `SharedEd25519PublicKey::ESHARED_KEY`                      | The `SharedEd25519PublicKey::SharedEd25519PublicKey` resource is already published under `account`. |
 /// | `Errors::INVALID_ARGUMENT`  | `SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY`            | `public_key` is an invalid ed25519 public key.                                                      |
 ///
@@ -33,9 +33,9 @@ fun publish_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) 
 }
 spec fun publish_shared_ed25519_public_key {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
 
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include SharedEd25519PublicKey::PublishAbortsIf{key: public_key};
     include SharedEd25519PublicKey::PublishEnsures{key: public_key};
 

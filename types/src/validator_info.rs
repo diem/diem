@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_address::AccountAddress, validator_config::ValidatorConfig};
-use libra_crypto::ed25519::Ed25519PublicKey;
+use diem_crypto::ed25519::Ed25519PublicKey;
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_network_address::{
+use diem_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     NetworkAddress,
 };

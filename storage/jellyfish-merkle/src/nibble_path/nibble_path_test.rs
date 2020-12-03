@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{arb_internal_nibble_path, skip_common_prefix, NibblePath};
-use libra_nibble::Nibble;
+use diem_nibble::Nibble;
 use proptest::prelude::*;
 
 #[test]

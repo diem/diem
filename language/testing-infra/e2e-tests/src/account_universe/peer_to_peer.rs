@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     account_universe::{AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse},
     common_transactions::peer_to_peer_txn,
 };
-use libra_types::{
+use diem_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_status::{known_locations, KeptVMStatus, StatusCode},
 };

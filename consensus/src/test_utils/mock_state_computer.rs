@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,12 +6,12 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
+use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
+use diem_infallible::Mutex;
+use diem_logger::prelude::*;
+use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error, StateComputeResult};
 use futures::channel::mpsc;
-use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
-use libra_infallible::Mutex;
-use libra_logger::prelude::*;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
 use std::{collections::HashMap, sync::Arc};
 use termion::color::*;
 

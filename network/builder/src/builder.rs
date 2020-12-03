@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Remotely authenticated vs. unauthenticated network end-points:
@@ -10,7 +10,7 @@
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
 use channel::{self, message_queues::QueueStyle};
-use libra_config::{
+use diem_config::{
     config::{
         DiscoveryMethod, NetworkConfig, RoleType, CONNECTION_BACKOFF_BASE,
         CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
@@ -19,13 +19,13 @@ use libra_config::{
     },
     network_id::NetworkContext,
 };
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_logger::prelude::*;
-use libra_metrics::IntCounterVec;
-use libra_network_address::NetworkAddress;
-use libra_network_address_encryption::Encryptor;
-use libra_types::{chain_id::ChainId, PeerId};
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_logger::prelude::*;
+use diem_metrics::IntCounterVec;
+use diem_network_address::NetworkAddress;
+use diem_network_address_encryption::Encryptor;
+use diem_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     logging::NetworkSchema,

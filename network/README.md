@@ -126,5 +126,5 @@ negotiation, etc.
         │   ├── health_checker         # protocol for health probing
         │   ├── network                # components for interaction with applications
         │   ├── rpc                    # protocol for remote procedure calls
-        │   └── wire                   # protocol for LibraNet handshakes and messaging
+        │   └── wire                   # protocol for DiemNet handshakes and messaging
         └── testutils                  # utilities for testing

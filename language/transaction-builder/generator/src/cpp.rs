@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::indent::{IndentConfig, IndentedWriter};
 
@@ -87,7 +87,7 @@ where
             self.out,
             r#"#pragma once
 
-#include "libra_types.hpp"
+#include "diem_types.hpp"
 "#
         )
     }
@@ -97,7 +97,7 @@ where
             self.out,
             r#"
 using namespace serde;
-using namespace libra_types;
+using namespace diem_types;
 "#
         )
     }

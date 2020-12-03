@@ -1,10 +1,10 @@
 [package]
 name = "smoke-test"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra smoke test"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem smoke test"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -27,27 +27,27 @@ cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-libra-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
-libra-key-manager = { path = "../../secure/key-manager", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
-libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
-libra-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
-libra-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
-libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
-libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
-libra-smoke-test-attribute = { path = "../smoke-test/attribute", version = "0.1.0" }
-libra-swarm = { path = "../libra-swarm", version = "0.1.0"}
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-trace = { path = "../../common/trace", version = "0.1.0" }
-libra-events-fetcher = { path = "../../language/libra-tools/libra-events-fetcher", version = "0.1.0" }
-libra-transaction-replay = { path = "../../language/libra-tools/transaction-replay", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
+diem-key-manager = { path = "../../secure/key-manager", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
+diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
+diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
+diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
+diem-secure-time = { path = "../../secure/time", version = "0.1.0" }
+diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+diem-smoke-test-attribute = { path = "../smoke-test/attribute", version = "0.1.0" }
+diem-swarm = { path = "../diem-swarm", version = "0.1.0"}
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-trace = { path = "../../common/trace", version = "0.1.0" }
+diem-events-fetcher = { path = "../../language/diem-tools/diem-events-fetcher", version = "0.1.0" }
+diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

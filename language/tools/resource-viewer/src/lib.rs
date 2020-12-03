@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,8 +7,8 @@ use crate::{
     resolver::Resolver,
 };
 use anyhow::{anyhow, Result};
-use libra_state_view::StateView;
-use libra_types::{
+use diem_state_view::StateView;
+use diem_types::{
     access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
     contract_event::ContractEvent,
 };

@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::error::Error;
-use libra_network_address::NetworkAddress;
+use diem_management::error::Error;
+use diem_network_address::NetworkAddress;
 use std::{
     io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
@@ -83,8 +83,8 @@ impl CheckEndpoint {
 #[cfg(test)]
 pub mod tests {
     use crate::test_helper::OperationalTool;
-    use libra_network_address::NetworkAddress;
-    use libra_types::chain_id::ChainId;
+    use diem_network_address::NetworkAddress;
+    use diem_types::chain_id::ChainId;
     use std::str::FromStr;
 
     #[test]

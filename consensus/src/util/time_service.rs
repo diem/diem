@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_logger::prelude::*;
 use futures::{Future, FutureExt, SinkExt};
-use libra_logger::prelude::*;
 use std::{pin::Pin, thread, time::Duration};
 
 use crate::counters;
@@ -115,7 +115,7 @@ impl TimeService for ClockTimeService {
     }
 
     fn get_current_timestamp(&self) -> Duration {
-        libra_infallible::duration_since_epoch()
+        diem_infallible::duration_since_epoch()
     }
 
     fn sleep(&self, t: Duration) {

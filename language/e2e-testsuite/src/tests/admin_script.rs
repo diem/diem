@@ -1,17 +1,17 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::{
+use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_types::{
     account_config,
     transaction::{authenticator::AuthenticationKey, Script, TransactionArgument},
     vm_status::StatusCode,
 };
 
 use compiler::Compiler;
-use libra_types::transaction::WriteSetPayload;
+use diem_types::transaction::WriteSetPayload;
 
 #[test]
 fn admin_script_rotate_key_single_signer_no_epoch() {
@@ -26,13 +26,13 @@ fn admin_script_rotate_key_single_signer_no_epoch() {
 
     let script_body = {
         let code = r#"
-import 0x1.LibraAccount;
+import 0x1.DiemAccount;
 
-main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
-  let rotate_cap: LibraAccount.KeyRotationCapability;
-  rotate_cap = LibraAccount.extract_key_rotation_capability(copy(account));
-  LibraAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
-  LibraAccount.restore_key_rotation_capability(move(rotate_cap));
+main(dr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
+  let rotate_cap: DiemAccount.KeyRotationCapability;
+  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
+  DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 
   return;
 }
@@ -47,7 +47,7 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
             .into_script_blob("file_name", code)
             .expect("Failed to compile")
     };
-    let account = Account::new_libra_root();
+    let account = Account::new_diem_root();
     let txn = account
         .transaction()
         .write_set(WriteSetPayload::Script {
@@ -64,7 +64,7 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
     let output = executor.execute_and_apply(txn);
 
     // The transaction should not trigger a reconfiguration.
-    let new_epoch_event_key = libra_types::on_chain_config::new_epoch_event_key();
+    let new_epoch_event_key = diem_types::on_chain_config::new_epoch_event_key();
     assert!(!output
         .events()
         .iter()
@@ -90,16 +90,16 @@ fn admin_script_rotate_key_single_signer_new_epoch() {
 
     let script_body = {
         let code = r#"
-import 0x1.LibraAccount;
-import 0x1.LibraConfig;
+import 0x1.DiemAccount;
+import 0x1.DiemConfig;
 
-main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
-  let rotate_cap: LibraAccount.KeyRotationCapability;
-  rotate_cap = LibraAccount.extract_key_rotation_capability(copy(account));
-  LibraAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
-  LibraAccount.restore_key_rotation_capability(move(rotate_cap));
+main(dr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
+  let rotate_cap: DiemAccount.KeyRotationCapability;
+  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
+  DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 
-  LibraConfig.reconfigure(move(lr_account));
+  DiemConfig.reconfigure(move(dr_account));
   return;
 }
 "#;
@@ -113,7 +113,7 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
             .into_script_blob("file_name", code)
             .expect("Failed to compile")
     };
-    let account = Account::new_libra_root();
+    let account = Account::new_diem_root();
     let txn = account
         .transaction()
         .write_set(WriteSetPayload::Script {
@@ -130,7 +130,7 @@ main(lr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
     let output = executor.execute_and_apply(txn);
 
     // The transaction should trigger a reconfiguration.
-    let new_epoch_event_key = libra_types::on_chain_config::new_epoch_event_key();
+    let new_epoch_event_key = diem_types::on_chain_config::new_epoch_event_key();
     assert!(output
         .events()
         .iter()
@@ -156,13 +156,13 @@ fn admin_script_rotate_key_multi_signer() {
 
     let script_body = {
         let code = r#"
-import 0x1.LibraAccount;
+import 0x1.DiemAccount;
 
 main(account: &signer, auth_key_prefix: vector<u8>) {
-  let rotate_cap: LibraAccount.KeyRotationCapability;
-  rotate_cap = LibraAccount.extract_key_rotation_capability(copy(account));
-  LibraAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
-  LibraAccount.restore_key_rotation_capability(move(rotate_cap));
+  let rotate_cap: DiemAccount.KeyRotationCapability;
+  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
+  DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 
   return;
 }
@@ -177,7 +177,7 @@ main(account: &signer, auth_key_prefix: vector<u8>) {
             .into_script_blob("file_name", code)
             .expect("Failed to compile")
     };
-    let account = Account::new_libra_root();
+    let account = Account::new_diem_root();
     let txn = account
         .transaction()
         .write_set(WriteSetPayload::Script {

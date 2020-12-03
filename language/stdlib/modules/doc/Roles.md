@@ -3,10 +3,10 @@
 
 # Module `0x1::Roles`
 
-This module defines role-based access control for the Libra framework.
+This module defines role-based access control for the Diem framework.
 
 Roles are associated with accounts and govern what operations are permitted by those accounts. A role
-is typically asserted on function entry using a statement like <code><a href="Roles.md#0x1_Roles_assert_libra_root">Self::assert_libra_root</a>(account)</code>. This
+is typically asserted on function entry using a statement like <code><a href="Roles.md#0x1_Roles_assert_diem_root">Self::assert_diem_root</a>(account)</code>. This
 module provides multiple assertion functions like this one, as well as the functions to setup roles.
 
 For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
@@ -14,7 +14,7 @@ For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
 
 -  [Resource `RoleId`](#0x1_Roles_RoleId)
 -  [Constants](#@Constants_0)
--  [Function `grant_libra_root_role`](#0x1_Roles_grant_libra_root_role)
+-  [Function `grant_diem_root_role`](#0x1_Roles_grant_diem_root_role)
 -  [Function `grant_treasury_compliance_role`](#0x1_Roles_grant_treasury_compliance_role)
 -  [Function `new_designated_dealer_role`](#0x1_Roles_new_designated_dealer_role)
 -  [Function `new_validator_role`](#0x1_Roles_new_validator_role)
@@ -23,7 +23,7 @@ For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
 -  [Function `new_child_vasp_role`](#0x1_Roles_new_child_vasp_role)
 -  [Function `grant_role`](#0x1_Roles_grant_role)
 -  [Function `has_role`](#0x1_Roles_has_role)
--  [Function `has_libra_root_role`](#0x1_Roles_has_libra_root_role)
+-  [Function `has_diem_root_role`](#0x1_Roles_has_diem_root_role)
 -  [Function `has_treasury_compliance_role`](#0x1_Roles_has_treasury_compliance_role)
 -  [Function `has_designated_dealer_role`](#0x1_Roles_has_designated_dealer_role)
 -  [Function `has_validator_role`](#0x1_Roles_has_validator_role)
@@ -32,7 +32,7 @@ For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
 -  [Function `has_child_VASP_role`](#0x1_Roles_has_child_VASP_role)
 -  [Function `get_role_id`](#0x1_Roles_get_role_id)
 -  [Function `can_hold_balance`](#0x1_Roles_can_hold_balance)
--  [Function `assert_libra_root`](#0x1_Roles_assert_libra_root)
+-  [Function `assert_diem_root`](#0x1_Roles_assert_diem_root)
 -  [Function `assert_treasury_compliance`](#0x1_Roles_assert_treasury_compliance)
 -  [Function `assert_parent_vasp_role`](#0x1_Roles_assert_parent_vasp_role)
 -  [Function `assert_child_vasp_role`](#0x1_Roles_assert_child_vasp_role)
@@ -48,8 +48,8 @@ For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
 
 
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
 <b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
 </code></pre>
 
@@ -89,12 +89,12 @@ to an account as a top-level resource, and is otherwise immovable.
 ## Constants
 
 
-<a name="0x1_Roles_ELIBRA_ROOT"></a>
+<a name="0x1_Roles_EDIEM_ROOT"></a>
 
-The signer didn't have the required Libra Root role
+The signer didn't have the required Diem Root role
 
 
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_ELIBRA_ROOT">ELIBRA_ROOT</a>: u64 = 1;
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_EDIEM_ROOT">EDIEM_ROOT</a>: u64 = 1;
 </code></pre>
 
 
@@ -123,6 +123,15 @@ The signer didn't have the required Treasury & Compliance role
 
 
 <pre><code><b>const</b> <a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Roles_DIEM_ROOT_ROLE_ID"></a>
+
+
+
+<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>: u64 = 0;
 </code></pre>
 
 
@@ -207,15 +216,6 @@ The signer didn't have the required Validator Operator role
 
 
 
-<a name="0x1_Roles_LIBRA_ROOT_ROLE_ID"></a>
-
-
-
-<pre><code><b>const</b> <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>: u64 = 0;
-</code></pre>
-
-
-
 <a name="0x1_Roles_PARENT_VASP_ROLE_ID"></a>
 
 
@@ -252,14 +252,14 @@ The signer didn't have the required Validator Operator role
 
 
 
-<a name="0x1_Roles_grant_libra_root_role"></a>
+<a name="0x1_Roles_grant_diem_root_role"></a>
 
-## Function `grant_libra_root_role`
+## Function `grant_diem_root_role`
 
-Publishes libra root role. Granted only in genesis.
+Publishes diem root role. Granted only in genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_libra_root_role">grant_libra_root_role</a>(lr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(dr_account: &signer)
 </code></pre>
 
 
@@ -268,15 +268,15 @@ Publishes libra root role. Granted only in genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_libra_root_role">grant_libra_root_role</a>(
-    lr_account: &signer,
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_diem_root_role">grant_diem_root_role</a>(
+    dr_account: &signer,
 ) {
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
-    // Checks actual <a href="Libra.md#0x1_Libra">Libra</a> root because <a href="Libra.md#0x1_Libra">Libra</a> root role is not set
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
+    // Checks actual <a href="Diem.md#0x1_Diem">Diem</a> root because <a href="Diem.md#0x1_Diem">Diem</a> root role is not set
     // until next line of code.
-    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
-    // Grant the role <b>to</b> the libra root account
-    <a href="Roles.md#0x1_Roles_grant_role">grant_role</a>(lr_account, <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>);
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_diem_root">CoreAddresses::assert_diem_root</a>(dr_account);
+    // Grant the role <b>to</b> the diem root account
+    <a href="Roles.md#0x1_Roles_grant_role">grant_role</a>(dr_account, <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>);
 }
 </code></pre>
 
@@ -289,9 +289,9 @@ Publishes libra root role. Granted only in genesis.
 
 
 
-<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
-<b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account), role_id: <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>};
+<pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account), role_id: <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>};
 </code></pre>
 
 
@@ -305,7 +305,7 @@ Publishes libra root role. Granted only in genesis.
 Publishes treasury compliance role. Granted only in genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, lr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, dr_account: &signer)
 </code></pre>
 
 
@@ -316,11 +316,11 @@ Publishes treasury compliance role. Granted only in genesis.
 
 <pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(
     treasury_compliance_account: &signer,
-    lr_account: &signer,
+    dr_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_treasury_compliance">CoreAddresses::assert_treasury_compliance</a>(treasury_compliance_account);
-    <a href="Roles.md#0x1_Roles_assert_libra_root">assert_libra_root</a>(lr_account);
+    <a href="Roles.md#0x1_Roles_assert_diem_root">assert_diem_root</a>(dr_account);
     // Grant the TC role <b>to</b> the treasury_compliance_account
     <a href="Roles.md#0x1_Roles_grant_role">grant_role</a>(treasury_compliance_account, <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>);
 }
@@ -335,9 +335,9 @@ Publishes treasury compliance role. Granted only in genesis.
 
 
 
-<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotTreasuryCompliance">CoreAddresses::AbortsIfNotTreasuryCompliance</a>{account: treasury_compliance_account};
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(treasury_compliance_account), role_id: <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>};
 </code></pre>
 
@@ -393,7 +393,7 @@ The <code>creating_account</code> must be treasury compliance.
 ## Function `new_validator_role`
 
 Publish a Validator <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> under <code>new_account</code>.
-The <code>creating_account</code> must be libra root.
+The <code>creating_account</code> must be diem root.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_role">new_validator_role</a>(creating_account: &signer, new_account: &signer)
@@ -409,7 +409,7 @@ The <code>creating_account</code> must be libra root.
     creating_account: &signer,
     new_account: &signer
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
-    <a href="Roles.md#0x1_Roles_assert_libra_root">assert_libra_root</a>(creating_account);
+    <a href="Roles.md#0x1_Roles_assert_diem_root">assert_diem_root</a>(creating_account);
     <a href="Roles.md#0x1_Roles_grant_role">grant_role</a>(new_account, <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>);
 }
 </code></pre>
@@ -423,7 +423,7 @@ The <code>creating_account</code> must be libra root.
 
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account};
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>{account: creating_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account), role_id: <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>};
 </code></pre>
 
@@ -436,7 +436,7 @@ The <code>creating_account</code> must be libra root.
 ## Function `new_validator_operator_role`
 
 Publish a ValidatorOperator <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> under <code>new_account</code>.
-The <code>creating_account</code> must be LibraRoot
+The <code>creating_account</code> must be DiemRoot
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(creating_account: &signer, new_account: &signer)
@@ -452,7 +452,7 @@ The <code>creating_account</code> must be LibraRoot
     creating_account: &signer,
     new_account: &signer,
 ) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
-    <a href="Roles.md#0x1_Roles_assert_libra_root">assert_libra_root</a>(creating_account);
+    <a href="Roles.md#0x1_Roles_assert_diem_root">assert_diem_root</a>(creating_account);
     <a href="Roles.md#0x1_Roles_grant_role">grant_role</a>(new_account, <a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>);
 }
 </code></pre>
@@ -466,7 +466,7 @@ The <code>creating_account</code> must be LibraRoot
 
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account};
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>{account: creating_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account), role_id: <a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>};
 </code></pre>
 
@@ -595,7 +595,7 @@ Helper function to grant a role.
 <b>include</b> <a href="Roles.md#0x1_Roles_GrantRole">GrantRole</a>{addr: <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)};
 <a name="0x1_Roles_addr$45"></a>
 <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>requires</b> role_id == <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+<b>requires</b> role_id == <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
 <b>requires</b> role_id == <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
 </code></pre>
 
@@ -645,13 +645,13 @@ Helper function to grant a role.
 
 </details>
 
-<a name="0x1_Roles_has_libra_root_role"></a>
+<a name="0x1_Roles_has_diem_root_role"></a>
 
-## Function `has_libra_root_role`
+## Function `has_diem_root_role`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(account: &signer): bool
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_has_diem_root_role">has_diem_root_role</a>(account: &signer): bool
 </code></pre>
 
 
@@ -660,8 +660,8 @@ Helper function to grant a role.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(account: &signer): bool <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
-    <a href="Roles.md#0x1_Roles_has_role">has_role</a>(account, <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_has_diem_root_role">has_diem_root_role</a>(account: &signer): bool <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
+    <a href="Roles.md#0x1_Roles_has_role">has_role</a>(account, <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>)
 }
 </code></pre>
 
@@ -842,7 +842,7 @@ Helper function to grant a role.
 
 ## Function `can_hold_balance`
 
-Return true if <code>addr</code> is allowed to receive and send <code><a href="Libra.md#0x1_Libra">Libra</a>&lt;T&gt;</code> for any T
+Return true if <code>addr</code> is allowed to receive and send <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;T&gt;</code> for any T
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_can_hold_balance">can_hold_balance</a>(account: &signer): bool
@@ -857,7 +857,7 @@ Return true if <code>addr</code> is allowed to receive and send <code><a href="L
 <pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_can_hold_balance">can_hold_balance</a>(account: &signer): bool <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
     // <a href="VASP.md#0x1_VASP">VASP</a> accounts and designated_dealers can hold balances.
     // Administrative accounts (`Validator`, `ValidatorOperator`, `TreasuryCompliance`, and
-    // `LibraRoot`) cannot.
+    // `DiemRoot`) cannot.
     <a href="Roles.md#0x1_Roles_has_parent_VASP_role">has_parent_VASP_role</a>(account) ||
     <a href="Roles.md#0x1_Roles_has_child_VASP_role">has_child_VASP_role</a>(account) ||
     <a href="Roles.md#0x1_Roles_has_designated_dealer_role">has_designated_dealer_role</a>(account)
@@ -868,14 +868,14 @@ Return true if <code>addr</code> is allowed to receive and send <code><a href="L
 
 </details>
 
-<a name="0x1_Roles_assert_libra_root"></a>
+<a name="0x1_Roles_assert_diem_root"></a>
 
-## Function `assert_libra_root`
+## Function `assert_diem_root`
 
-Assert that the account is libra root.
+Assert that the account is diem root.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_assert_libra_root">assert_libra_root</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_assert_diem_root">assert_diem_root</a>(account: &signer)
 </code></pre>
 
 
@@ -884,11 +884,11 @@ Assert that the account is libra root.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_assert_libra_root">assert_libra_root</a>(account: &signer) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(account);
+<pre><code><b>public</b> <b>fun</b> <a href="Roles.md#0x1_Roles_assert_diem_root">assert_diem_root</a>(account: &signer) <b>acquires</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> {
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_diem_root">CoreAddresses::assert_diem_root</a>(account);
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(<b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="Roles.md#0x1_Roles_EROLE_ID">EROLE_ID</a>));
-    <b>assert</b>(borrow_global&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>, <a href="Errors.md#0x1_Errors_requires_role">Errors::requires_role</a>(<a href="Roles.md#0x1_Roles_ELIBRA_ROOT">ELIBRA_ROOT</a>));
+    <b>assert</b>(borrow_global&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>, <a href="Errors.md#0x1_Errors_requires_role">Errors::requires_role</a>(<a href="Roles.md#0x1_Roles_EDIEM_ROOT">EDIEM_ROOT</a>));
 }
 </code></pre>
 
@@ -902,8 +902,8 @@ Assert that the account is libra root.
 
 
 <pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>;
 </code></pre>
 
 
@@ -1285,12 +1285,12 @@ applied to the functions in this module. While some of those conditions have alr
 included in individual function specifications, listing them here again gives additional
 assurance that that all requirements are covered.
 
-The LibraRoot role is only granted in genesis [[A1]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a></code> is only
-published through <code>grant_libra_root_role</code> which aborts if it is not invoked in genesis.
+The DiemRoot role is only granted in genesis [[A1]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a></code> is only
+published through <code>grant_diem_root_role</code> which aborts if it is not invoked in genesis.
 
 
-<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>} <b>to</b> * <b>except</b> grant_libra_root_role, grant_role;
-<b>apply</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a> <b>to</b> grant_libra_root_role;
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>} <b>to</b> * <b>except</b> grant_diem_root_role, grant_role;
+<b>apply</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a> <b>to</b> grant_diem_root_role;
 </code></pre>
 
 
@@ -1300,26 +1300,26 @@ published through <code>grant_treasury_compliance_role</code> which aborts if it
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="Roles.md#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>} <b>to</b> *
     <b>except</b> grant_treasury_compliance_role, grant_role;
-<b>apply</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a> <b>to</b> grant_treasury_compliance_role;
+<b>apply</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a> <b>to</b> grant_treasury_compliance_role;
 </code></pre>
 
 
-Validator roles are only granted by LibraRoot [[A3]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a></code> is only
-published through <code>new_validator_role</code> which aborts if <code>creating_account</code> does not have the LibraRoot role.
+Validator roles are only granted by DiemRoot [[A3]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a></code> is only
+published through <code>new_validator_role</code> which aborts if <code>creating_account</code> does not have the DiemRoot role.
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>} <b>to</b> * <b>except</b> new_validator_role, grant_role;
-<b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account} <b>to</b> new_validator_role;
+<b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>{account: creating_account} <b>to</b> new_validator_role;
 </code></pre>
 
 
-ValidatorOperator roles are only granted by LibraRoot [[A4]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a></code> is only
-published through <code>new_validator_operator_role</code> which aborts if <code>creating_account</code> does not have the LibraRoot role.
+ValidatorOperator roles are only granted by DiemRoot [[A4]][ROLE]. A new <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a></code> is only
+published through <code>new_validator_operator_role</code> which aborts if <code>creating_account</code> does not have the DiemRoot role.
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>} <b>to</b> *
     <b>except</b> new_validator_operator_role, grant_role;
-<b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account} <b>to</b> new_validator_operator_role;
+<b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>{account: creating_account} <b>to</b> new_validator_operator_role;
 </code></pre>
 
 
@@ -1352,14 +1352,14 @@ published through <code>new_child_vasp_role</code> which aborts if <code>creatin
 </code></pre>
 
 
-The LibraRoot role is globally unique [[B1]][ROLE], and is published at LIBRA_ROOT_ADDRESS [[C1]][ROLE].
-In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a></code> uniquely exists at <code>LIBRA_ROOT_ADDRESS</code>.
+The DiemRoot role is globally unique [[B1]][ROLE], and is published at DIEM_ROOT_ADDRESS [[C1]][ROLE].
+In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> with <code><a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a></code> uniquely exists at <code>DIEM_ROOT_ADDRESS</code>.
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
-  addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_diem_root_role_addr">spec_has_diem_root_role_addr</a>(addr):
+  addr == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
 <b>invariant</b> [<b>global</b>, isolated]
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; <a href="Roles.md#0x1_Roles_spec_has_diem_root_role_addr">spec_has_diem_root_role_addr</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 </code></pre>
 
 
@@ -1370,15 +1370,15 @@ In other words, a <code><a href="Roles.md#0x1_Roles_RoleId">RoleId</a></code> wi
 <pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
   addr == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
 <b>invariant</b> [<b>global</b>, isolated]
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt;
         <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>());
 </code></pre>
 
 
-LibraRoot cannot have balances [[D1]][ROLE].
+DiemRoot cannot have balances [[D1]][ROLE].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] <b>forall</b> addr: address <b>where</b> <a href="Roles.md#0x1_Roles_spec_has_diem_root_role_addr">spec_has_diem_root_role_addr</a>(addr):
     !<a href="Roles.md#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1449,9 +1449,9 @@ ChildVASP have balances [[D7]][ROLE].
 <b>define</b> <a href="Roles.md#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr: address, role_id: u64): bool {
     <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr) && <b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == role_id
 }
-<a name="0x1_Roles_spec_has_libra_root_role_addr"></a>
-<b>define</b> <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr: address): bool {
-    <a href="Roles.md#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>)
+<a name="0x1_Roles_spec_has_diem_root_role_addr"></a>
+<b>define</b> <a href="Roles.md#0x1_Roles_spec_has_diem_root_role_addr">spec_has_diem_root_role_addr</a>(addr: address): bool {
+    <a href="Roles.md#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a>)
 }
 <a name="0x1_Roles_spec_has_treasury_compliance_role_addr"></a>
 <b>define</b> <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr: address): bool {
@@ -1501,16 +1501,16 @@ ChildVASP have balances [[D7]][ROLE].
 
 
 
-<a name="0x1_Roles_AbortsIfNotLibraRoot"></a>
+<a name="0x1_Roles_AbortsIfNotDiemRoot"></a>
 
 
-<pre><code><b>schema</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
+<pre><code><b>schema</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a> {
     account: signer;
-    <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
+    <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>;
     <a name="0x1_Roles_addr$37"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id != <a href="Roles.md#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a> <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    <b>aborts_if</b> <b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id != <a href="Roles.md#0x1_Roles_DIEM_ROOT_ROLE_ID">DIEM_ROOT_ROLE_ID</a> <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 }
 </code></pre>
 

@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use serde::Serialize;
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;

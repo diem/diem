@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -78,7 +78,7 @@ impl Client {
 
         let resp = self
             .upgrade_request(ureq::delete(&self.url(path)))
-            .send_json(json!({ "message": "libra-secure", "sha": hash }));
+            .send_json(json!({ "message": "diem-secure", "sha": hash }));
 
         match resp.status() {
             200 => Ok(()),
@@ -153,10 +153,10 @@ impl Client {
     pub fn put(&self, path: &str, content: &str) -> Result<(), Error> {
         let json = match self.get_sha(path) {
             Ok(hash) => {
-                json!({ "content": content, "message": format!("[libra-management] {}", path), "sha": hash })
+                json!({ "content": content, "message": format!("[diem-management] {}", path), "sha": hash })
             }
             Err(Error::NotFound(_)) => {
-                json!({ "content": content, "message": format!("[libra-management] {}", path) })
+                json!({ "content": content, "message": format!("[diem-management] {}", path) })
             }
             Err(e) => return Err(e),
         };

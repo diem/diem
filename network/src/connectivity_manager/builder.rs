@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,13 +6,13 @@ use crate::{
     counters,
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
+use diem_config::network_id::NetworkContext;
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
-use libra_config::network_id::NetworkContext;
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,

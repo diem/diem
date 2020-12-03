@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Constants for the binary format.
@@ -23,11 +23,11 @@ use std::{
 pub enum BinaryConstants {}
 impl BinaryConstants {
     /// The blob that must start a binary.
-    pub const LIBRA_MAGIC_SIZE: usize = 4;
-    pub const LIBRA_MAGIC: [u8; BinaryConstants::LIBRA_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
-    /// The `LIBRA_MAGIC` size, 4 byte for major version and 1 byte
+    pub const DIEM_MAGIC_SIZE: usize = 4;
+    pub const DIEM_MAGIC: [u8; BinaryConstants::DIEM_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
+    /// The `DIEM_MAGIC` size, 4 byte for major version and 1 byte
     /// for table count.
-    pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 5;
+    pub const HEADER_SIZE: usize = BinaryConstants::DIEM_MAGIC_SIZE + 5;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
     pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;

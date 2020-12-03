@@ -1,7 +1,7 @@
 [package]
 name = "x-lint"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 description = "Lint engine for x"
 edition = "2018"
 publish = false
@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 guppy = "0.6.1"
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 once_cell = "1.4.1"
 toml = "0.5.7"
 serde = { version = "1.0.117", features = ["derive"] }

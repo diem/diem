@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 //! Loaded representation for runtime types.
 
-use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
+use diem_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},

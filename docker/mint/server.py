@@ -13,7 +13,7 @@ import flask
 import pexpect
 
 
-MAX_MINT = 10 ** 19  # 10 trillion libras
+MAX_MINT = 10 ** 19  # 10 trillion diems
 
 
 def create_client():
@@ -23,13 +23,13 @@ def create_client():
         ac_host = random.choice(ac_hosts)
         ac_port = os.environ['AC_PORT']
         url = "http://{}:{}".format(ac_host, ac_port)
-        waypoint = open("/opt/libra/etc/waypoint.txt", "r").readline()
+        waypoint = open("/opt/diem/etc/waypoint.txt", "r").readline()
         chain_id = os.environ['CFG_CHAIN_ID']
 
         print("Connecting to ac on: {}".format(url))
-        cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {} --chain-id {}".format(
+        cmd = "/opt/diem/bin/cli --url {} -m {} --waypoint {} --chain-id {}".format(
             url,
-            "/opt/libra/etc/mint.key",
+            "/opt/diem/etc/mint.key",
             waypoint,
             chain_id)
 
@@ -84,4 +84,4 @@ def send_transaction():
 
 @application.route("/-/healthy", methods=('GET',))
 def health_check():
-    return "libra-faucet:ok"
+    return "diem-faucet:ok"

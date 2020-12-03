@@ -1,10 +1,10 @@
 [package]
 name = "generate-key"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra generate key"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem generate key"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -13,6 +13,6 @@ edition = "2018"
 rand = "0.7.3"
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

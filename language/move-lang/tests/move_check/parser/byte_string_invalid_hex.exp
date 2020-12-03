@@ -1,8 +1,8 @@
 error: 
 
-   ┌── tests/move_check/parser/byte_string_invalid_hex.move:3:19 ───
+   ┌── tests/move_check/parser/byte_string_invalid_hex.move:3:18 ───
    │
- 3 │         b"libra \xG0"
-   │                   ^ Invalid hexadecimal character: 'G'
+ 3 │         b"diem \xG0"
+   │                  ^ Invalid hexadecimal character: 'G'
    │
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,8 +8,8 @@ use crate::{
     transaction::Version,
 };
 use anyhow::{ensure, format_err, Error, Result};
-use libra_crypto::hash::{CryptoHash, HashValue};
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto::hash::{CryptoHash, HashValue};
+use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt::{Display, Formatter},

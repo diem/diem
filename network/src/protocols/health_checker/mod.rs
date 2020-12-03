@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Protocol used to ensure peer liveness
@@ -31,14 +31,14 @@ use crate::{
 };
 use bytes::Bytes;
 use channel::message_queues::QueueStyle;
+use diem_config::network_id::NetworkContext;
+use diem_logger::prelude::*;
+use diem_metrics::IntCounterVec;
+use diem_types::PeerId;
 use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use libra_config::network_id::NetworkContext;
-use libra_logger::prelude::*;
-use libra_metrics::IntCounterVec;
-use libra_types::PeerId;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};

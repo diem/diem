@@ -1,20 +1,20 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::NodeConfig;
-use get_if_addrs::get_if_addrs;
-use libra_network_address::{NetworkAddress, Protocol};
-use libra_types::{
+use diem_network_address::{NetworkAddress, Protocol};
+use diem_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, Transaction},
 };
+use get_if_addrs::get_if_addrs;
 use std::net::{TcpListener, TcpStream};
 
 pub fn default_validator_owner_auth_key_from_name(name: &[u8]) -> AuthenticationKey {
     let salt = "validator_owner::";
     let mut name_in_bytes = salt.as_bytes().to_vec();
     name_in_bytes.extend_from_slice(name);
-    let hash = libra_crypto::HashValue::sha3_256_of(&name_in_bytes);
+    let hash = diem_crypto::HashValue::sha3_256_of(&name_in_bytes);
     AuthenticationKey::new(*hash.as_ref())
 }
 

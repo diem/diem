@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use libra_crypto::HashValue;
-use libra_infallible::Mutex;
-use libra_logger::warn;
-use libra_secure_net::NetworkClient;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_infallible::Mutex;
+use diem_logger::warn;
+use diem_secure_net::NetworkClient;
+use diem_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,

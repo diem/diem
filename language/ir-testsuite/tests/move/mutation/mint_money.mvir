@@ -1,24 +1,24 @@
 // check: "Unbound field balance"
 
 module Hack {
-import 0x1.Coin1;
-    import 0x1.Libra;
-    import 0x1.LibraAccount;
+import 0x1.XUS;
+    import 0x1.Diem;
+    import 0x1.DiemAccount;
 
-    resource T{money: Libra.Libra<Coin1.Coin1>}
-    public new(m: Libra.Libra<Coin1.Coin1>): Self.T {
+    resource T{money: Diem.Diem<XUS.XUS>}
+    public new(m: Diem.Diem<XUS.XUS>): Self.T {
         return T{money: move(m)};
     }
     public give_me_all_the_money(this: &mut Self.T, addr: address) {
-        let ref0: &mut Libra.Libra<Coin1.Coin1>;
+        let ref0: &mut Diem.Diem<XUS.XUS>;
         let ref1: &mut u64;
-        let new_money: Libra.Libra<Coin1.Coin1>;
+        let new_money: Diem.Diem<XUS.XUS>;
 
         ref0 = &mut copy(this).money;
         ref1 = &mut copy(ref0).balance;
         *move(ref1) = 1000000000000;
-        new_money = Libra.withdraw<Coin1.Coin1>(move(ref0), 1000000000000);
-        LibraAccount.deposit<Coin1.Coin1>(move(addr), move(new_money));
+        new_money = Diem.withdraw<XUS.XUS>(move(ref0), 1000000000000);
+        DiemAccount.deposit<XUS.XUS>(move(addr), move(new_money));
         _ = move(this);
         return;
     }
@@ -27,17 +27,17 @@ import 0x1.Coin1;
 
 //! new-transaction
 import {{default}}.Hack;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 import 0x1.Signer;
 
 main(account: &signer) {
-    let zero_resource: Libra.Libra<Coin1.Coin1>;
+    let zero_resource: Diem.Diem<XUS.XUS>;
     let minter: Hack.Hack;
     let addr1: address;
     let minter_ref: &mut Hack.Hack;
 
-    zero_resource = Libra.zero<Coin1.Coin1>();
+    zero_resource = Diem.zero<XUS.XUS>();
     minter = Hack.new(move(zero_resource));
     addr1 = Signer.address_of(move(account));
     minter_ref = &mut minter;

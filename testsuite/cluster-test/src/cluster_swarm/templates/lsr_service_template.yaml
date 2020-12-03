@@ -3,15 +3,15 @@ kind: Service
 metadata:
   name: {pod_name}
   labels:
-    app: libra-lsr
-    libra-node: "true"
+    app: diem-lsr
+    diem-node: "true"
     peer_id: {pod_name}
 spec:
   type: ClusterIP
   publishNotReadyAddresses: true
   selector:
-    app: libra-lsr
-    libra-node: "true"
+    app: diem-lsr
+    diem-node: "true"
     peer_id: {pod_name}
   ports:
   - name: safety-rules

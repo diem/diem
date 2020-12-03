@@ -377,9 +377,9 @@ jobs:
       - run:
           command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p language-benchmarks
       - run:
-          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p libra-fuzzer
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p diem-fuzzer
       - run:
-          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p libra-swarm
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p diem-swarm
       - run:
           command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p test-generation
       - run:

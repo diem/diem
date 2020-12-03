@@ -1,10 +1,10 @@
 [package]
-name = "libra-secure-storage"
+name = "diem-secure-storage"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 repository = "https://github.com/libra/libra"
-description = "Libra's Persistent, Secure Storage"
-homepage = "https://libra.org"
+description = "Diem's Persistent, Secure Storage"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -19,20 +19,20 @@ serde_json = "1.0.60"
 thiserror = "1.0.22"
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-github-client = { path = "github", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-secure-time = { path = "../time", version = "0.1.0" }
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-vault-client = { path = "vault", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-github-client = { path = "github", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-secure-time = { path = "../time", version = "0.1.0" }
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-vault-client = { path = "vault", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
 rand = "0.7.3"
 
 [features]
-fuzzing = ["libra-crypto/fuzzing"]
+fuzzing = ["diem-crypto/fuzzing"]
 testing = []

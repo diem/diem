@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -10,22 +10,22 @@ use crate::{
     StateSyncClient, StateSynchronizer,
 };
 use anyhow::{bail, Result};
-use channel::{libra_channel, message_queues::QueueStyle};
-use futures::{executor::block_on, future::FutureExt, StreamExt};
-use libra_config::{
+use channel::{diem_channel, message_queues::QueueStyle};
+use diem_config::{
     config::RoleType,
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_mempool::mocks::MockSharedMempool;
-use libra_network_address::{parse_memory, NetworkAddress, Protocol};
-use libra_types::{
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_mempool::mocks::MockSharedMempool;
+use diem_network_address::{parse_memory, NetworkAddress, Protocol};
+use diem_types::{
     chain_id::ChainId, ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
     transaction::TransactionListWithProof, validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
     waypoint::Waypoint, PeerId,
 };
+use futures::{executor::block_on, future::FutureExt, StreamExt};
 use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
 use network::{
     peer_manager::{
@@ -64,9 +64,9 @@ struct SynchronizerEnv {
     peer_ids: Vec<PeerId>,
     mempools: Vec<MockSharedMempool>,
     network_reqs_rxs:
-        HashMap<PeerId, libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
+        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     network_notifs_txs:
-        HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     multi_peer_ids: Vec<Vec<PeerId>>, // maps peer's synchronizer env index to that peer's PeerIds, to support node with multiple network IDs
 }
@@ -97,7 +97,7 @@ impl SynchronizerEnv {
     }
 
     fn new(num_peers: usize) -> Self {
-        ::libra_logger::Logger::init_for_testing();
+        ::diem_logger::Logger::init_for_testing();
         let runtime = Runtime::new().unwrap();
         let (signers, public_keys, network_keys, network_addrs) =
             SynchronizerEnvHelper::initial_setup(num_peers);
@@ -154,7 +154,7 @@ impl SynchronizerEnv {
         let new_peer_idx = self.synchronizers.len();
 
         // set up config
-        let mut config = libra_config::config::NodeConfig::default_for_validator();
+        let mut config = diem_config::config::NodeConfig::default_for_validator();
         config.base.role = role;
         config.state_sync.sync_request_timeout_ms = timeout_ms;
         config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
@@ -198,11 +198,11 @@ impl SynchronizerEnv {
                 // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
                 // msg delivery in test
                 let (network_reqs_tx, network_reqs_rx) =
-                    libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
                 let (connection_reqs_tx, _) =
-                    libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
                 let (network_notifs_tx, network_notifs_rx) =
-                    libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
                 let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
                 let network_sender = StateSynchronizerSender::new(
                     PeerManagerRequestSender::new(network_reqs_tx),

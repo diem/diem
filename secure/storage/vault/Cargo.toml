@@ -1,10 +1,10 @@
 [package]
-name = "libra-vault-client"
+name = "diem-vault-client"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 repository = "https://github.com/libra/libra"
-description = "Libra's Restful Vault Client"
-homepage = "https://libra.org"
+description = "Diem's Restful Vault Client"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -20,16 +20,16 @@ serde_json = "1.0.60"
 thiserror = "1.0.22"
 ureq = { version = "1.5.2", features = ["json", "native-tls"], default-features = false }
 
-libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }
-libra-types = { path = "../../../types", version = "0.1.0", optional = true }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
+diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-types = { path = "../../../types", version = "0.1.0", optional = true }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.10.1"
 
-libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
-fuzzing = ["proptest", "libra-proptest-helpers", "libra-types"]
+fuzzing = ["proptest", "diem-proptest-helpers", "diem-types"]

@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::hash::*;
 use bitvec::prelude::*;
-use libra_nibble::Nibble;
+use diem_nibble::Nibble;
 use proptest::{collection::vec, prelude::*};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Serialize;

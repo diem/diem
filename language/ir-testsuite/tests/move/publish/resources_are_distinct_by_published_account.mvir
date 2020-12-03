@@ -1,5 +1,5 @@
-module LibraAccount {
-    import 0x1.LibraAccount;
+module DiemAccount {
+    import 0x1.DiemAccount;
     import 0x1.Signer;
 
     resource T{sequence_number: u64}
@@ -33,7 +33,7 @@ module LibraAccount {
 
         sender = Signer.address_of(copy(account));
 
-        sequence_number = LibraAccount.sequence_number(copy(sender));
+        sequence_number = DiemAccount.sequence_number(copy(sender));
         assert(copy(sequence_number) == 1, 42);
 
         fake_ref = borrow_global_mut<T>(copy(sender));
@@ -47,7 +47,7 @@ module LibraAccount {
 
 //! new-transaction
 
-import {{default}}.LibraAccount as MyAccount;
+import {{default}}.DiemAccount as MyAccount;
 
 main(account: &signer) {
   MyAccount.test(move(account));

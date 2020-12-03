@@ -1,9 +1,9 @@
 [package]
-name = "libra-log-derive"
+name = "diem-log-derive"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -12,7 +12,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-libra-workspace-hack = { path = "../../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../workspace-hack", version = "0.1.0" }
 syn = { version = "1.0.53", features = ["extra-traits"] }
 quote = "1.0.7"
 proc-macro2 = "1.0.24"

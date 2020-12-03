@@ -1,16 +1,16 @@
 [package]
-name = "libra-secure-push-metrics"
+name = "diem-secure-push-metrics"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra libra-util"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem diem-util"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 ureq = { version = "1.5.2", features = ["json", "native-tls"], default-features = false }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-metrics-core = { path = "../../common/metrics-core", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-metrics-core = { path = "../../common/metrics-core", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

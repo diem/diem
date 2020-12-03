@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -10,7 +10,7 @@ use crate::instance::Instance;
 use anyhow::Result;
 
 use async_trait::async_trait;
-use libra_logger::debug;
+use diem_logger::debug;
 use std::{fmt, time::Duration};
 
 pub struct NetworkDelay {

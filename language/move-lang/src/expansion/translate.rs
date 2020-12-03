@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -214,7 +214,7 @@ fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) 
                 crate::command_line::SENDER
             );
             context.error(vec![(loc, msg)]);
-            Address::LIBRA_CORE
+            Address::DIEM_CORE
         }
     })
 }

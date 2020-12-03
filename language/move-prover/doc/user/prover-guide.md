@@ -3,11 +3,11 @@
 This is the user guide for the Move prover. This document does not describe the
 [Move specification language](spec-lang.md), but accompanies it.
 
-This guide is currently specific for the usage of the prover within the Libra repo.
+This guide is currently specific for the usage of the prover within the Diem repo.
 
 ## Running the Prover
 
-To run the Move prover while working in the Libra tree, we recommend to use `cargo run`. You can define an alias
+To run the Move prover while working in the Diem tree, we recommend to use `cargo run`. You can define an alias
 as below in your `.bashrc` (or other shell configuration) to simplify this:
 
 ```shell script
@@ -45,7 +45,7 @@ set an environment variable which contains a path to the default configuration f
 for example, to let the prover automatically find dependencies to the Move standard library, as shown below:
 
 ```shell script
-> echo "move_deps = [\"<path-to-libra>/language/stdlib/modules\"]" > ~/.mvprc
+> echo "move_deps = [\"<path-to-diem>/language/stdlib/modules\"]" > ~/.mvprc
 > export MOVE_PROVER_CONFIG=~/.mvprc
 ```
 

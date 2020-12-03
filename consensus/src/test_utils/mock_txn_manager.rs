@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{error::MempoolError, state_replication::TxnManager, txn_manager::MempoolProxy};
@@ -7,13 +7,13 @@ use consensus_types::{
     block::{block_test_utils::random_payload, Block},
     common::Payload,
 };
-use executor_types::StateComputeResult;
-use futures::channel::mpsc;
-use libra_mempool::ConsensusRequest;
-use libra_types::{
+use diem_mempool::ConsensusRequest;
+use diem_types::{
     transaction::TransactionStatus,
     vm_status::{KeptVMStatus, StatusCode},
 };
+use executor_types::StateComputeResult;
+use futures::channel::mpsc;
 use rand::Rng;
 
 #[derive(Clone)]

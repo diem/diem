@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements `JellyfishMerkleIterator`. Initialized with a version and a key, the
@@ -15,9 +15,9 @@ use crate::{
     TreeReader,
 };
 use anyhow::{format_err, Result};
-use libra_crypto::HashValue;
-use libra_nibble::Nibble;
-use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use diem_crypto::HashValue;
+use diem_nibble::Nibble;
+use diem_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use std::sync::Arc;
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It

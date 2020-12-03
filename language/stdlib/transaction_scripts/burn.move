@@ -1,5 +1,5 @@
 script {
-use 0x1::Libra;
+use 0x1::Diem;
 use 0x1::SlidingNonce;
 
 /// # Summary
@@ -11,21 +11,21 @@ use 0x1::SlidingNonce;
 ///
 /// # Technical Description
 /// This transaction permanently destroys all the coins of `Token` type
-/// stored in the `Libra::Preburn<Token>` resource published under the
+/// stored in the `Diem::Preburn<Token>` resource published under the
 /// `preburn_address` account address.
 ///
 /// This transaction will only succeed if the sending `account` has a
-/// `Libra::BurnCapability<Token>`, and a `Libra::Preburn<Token>` resource
+/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
 /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
 /// of this transaction the `total_value` field in the
-/// `Libra::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
 /// decremented by the value of the `to_burn` field of the preburn resource
 /// under `preburn_address` immediately before this transaction, and the
 /// `to_burn` field of the preburn resource will have a zero value.
 ///
 /// ## Events
-/// The successful execution of this transaction will emit a `Libra::BurnEvent` on the event handle
-/// held in the `Libra::CurrencyInfo<Token>` resource's `burn_events` published under
+/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
 /// `0xA550C18`.
 ///
 /// # Parameters
@@ -43,10 +43,10 @@ use 0x1::SlidingNonce;
 /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
 /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
 /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
-/// | `Errors::REQUIRES_CAPABILITY` | `Libra::EBURN_CAPABILITY`               | The sending `account` does not have a `Libra::BurnCapability<Token>` published under it.              |
-/// | `Errors::NOT_PUBLISHED`       | `Libra::EPREBURN`                       | The account at `preburn_address` does not have a `Libra::Preburn<Token>` resource published under it. |
-/// | `Errors::INVALID_STATE`       | `Libra::EPREBURN_EMPTY`                 | The `Libra::Preburn<Token>` resource is empty (has a value of 0).                                     |
-/// | `Errors::NOT_PUBLISHED`       | `Libra::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
 ///
 /// # Related Scripts
 /// * `Script::burn_txn_fees`
@@ -55,16 +55,16 @@ use 0x1::SlidingNonce;
 
 fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) {
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-    Libra::burn<Token>(account, preburn_address)
+    Diem::burn<Token>(account, preburn_address)
 }
 spec fun burn {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
 
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
-    include Libra::BurnAbortsIf<Token>;
-    include Libra::BurnEnsures<Token>;
+    include Diem::BurnAbortsIf<Token>;
+    include Diem::BurnEnsures<Token>;
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,
@@ -75,6 +75,6 @@ spec fun burn {
 
     /// **Access Control:**
     /// Only the account with the burn capability can burn coins [[H3]][PERMISSION].
-    include Libra::AbortsIfNoBurnCapability<Token>{account: account};
+    include Diem::AbortsIfNoBurnCapability<Token>{account: account};
 }
 }

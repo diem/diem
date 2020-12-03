@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use consensus_types::block::Block;
-use libra_crypto::HashValue;
-use libra_types::transaction::Transaction;
+use diem_crypto::HashValue;
+use diem_types::transaction::Transaction;
 
 mod execution_correctness;
 mod execution_correctness_manager;

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -7,12 +7,12 @@ mod error;
 pub use error::Error;
 
 use anyhow::Result;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::Ed25519Signature,
     hash::{TransactionAccumulatorHasher, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{
+use diem_types::{
     contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,

@@ -4,8 +4,8 @@ kind: Pod
 metadata:
   name: vault-{validator_index}
   labels:
-    app: libra-vault
-    libra-node: "true"
+    app: diem-vault
+    diem-node: "true"
     peer_id: vault-{validator_index}
 spec:
   hostNetwork: true
@@ -121,7 +121,7 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchExpressions:
-              - key: libra-node
+              - key: diem-node
                 operator: Exists
           topologyKey: "kubernetes.io/hostname"
   terminationGracePeriodSeconds: 5

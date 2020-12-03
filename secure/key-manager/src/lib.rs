@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! The purpose of KeyManager is to rotate consensus key (and eventually the network key). It is not
@@ -14,9 +14,9 @@
 //! evaluates the current time from the last reconfiguration and logs that delta with greater
 //! levels of severity depending on the delta.
 //!
-//! KeyManager talks to Libra via the LibraInterface that may either be a direct link into
-//! `LibraDB`/`Executor`, JSON-RPC, or some other concoction.
-//! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
+//! KeyManager talks to Diem via the DiemInterface that may either be a direct link into
+//! `DiemDB`/`Executor`, JSON-RPC, or some other concoction.
+//! KeyManager talks to its own storage through the `DiemSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
 use crate::{
@@ -25,24 +25,24 @@ use crate::{
         SUBMITTED_ROTATION_TRANSACTION, UNEXPECTED_ERROR_ENCOUNTERED, WAITING_ON_RECONFIGURATION,
         WAITING_ON_TRANSACTION_EXECUTION,
     },
-    libra_interface::LibraInterface,
+    diem_interface::DiemInterface,
     logging::{LogEntry, LogEvent, LogSchema},
 };
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
-use libra_logger::prelude::*;
-use libra_secure_storage::{CryptoStorage, KVStorage};
-use libra_secure_time::TimeService;
-use libra_types::{
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
+use diem_logger::prelude::*;
+use diem_secure_storage::{CryptoStorage, KVStorage};
+use diem_secure_time::TimeService;
+use diem_types::{
     account_address::AccountAddress,
-    account_config::COIN1_NAME,
+    account_config::XUS_NAME,
     chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use thiserror::Error;
 
 pub mod counters;
-pub mod libra_interface;
+pub mod diem_interface;
 pub mod logging;
 
 #[cfg(test)]
@@ -76,7 +76,7 @@ pub enum Error {
     #[error("Data does not exist: {0}")]
     DataDoesNotExist(String),
     #[error(
-        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {1}"
+        "The diem_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {1}"
     )]
     LivenessError(u64, u64),
     #[error("Unable to retrieve the account address: {0}, storage error: {1}")]
@@ -96,17 +96,17 @@ impl From<anyhow::Error> for Error {
     }
 }
 
-impl From<libra_secure_storage::Error> for Error {
-    fn from(error: libra_secure_storage::Error) -> Self {
+impl From<diem_secure_storage::Error> for Error {
+    fn from(error: diem_secure_storage::Error) -> Self {
         Error::StorageError(error.to_string())
     }
 }
 
 pub struct KeyManager<LI, S, T> {
-    libra: LI,
+    diem: LI,
     storage: S,
     time_service: T,
-    last_checked_libra_timestamp: u64,
+    last_checked_diem_timestamp: u64,
     rotation_period_secs: u64, // The frequency by which to rotate all keys
     sleep_period_secs: u64,    // The amount of time to sleep between key management checks
     txn_expiration_secs: u64,  // The time after which a rotation transaction expires
@@ -115,12 +115,12 @@ pub struct KeyManager<LI, S, T> {
 
 impl<LI, S, T> KeyManager<LI, S, T>
 where
-    LI: LibraInterface,
+    LI: DiemInterface,
     S: KVStorage + CryptoStorage,
     T: TimeService,
 {
     pub fn new(
-        libra: LI,
+        diem: LI,
         storage: S,
         time_service: T,
         rotation_period_secs: u64,
@@ -129,10 +129,10 @@ where
         chain_id: ChainId,
     ) -> Self {
         Self {
-            libra,
+            diem,
             storage,
             time_service,
-            last_checked_libra_timestamp: 0,
+            last_checked_diem_timestamp: 0,
             rotation_period_secs,
             sleep_period_secs,
             txn_expiration_secs,
@@ -191,7 +191,7 @@ where
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
-        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
+        let validator_config = self.diem.retrieve_validator_config(owner_account)?;
 
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         let config_key = validator_config.consensus_public_key;
@@ -204,8 +204,8 @@ where
 
     pub fn compare_info_to_config(&self) -> Result<(), Error> {
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
-        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
-        let validator_info = self.libra.retrieve_validator_info(owner_account)?;
+        let validator_config = self.diem.retrieve_validator_config(owner_account)?;
+        let validator_info = self.diem.retrieve_validator_info(owner_account)?;
 
         let info_key = validator_info.consensus_public_key();
         let config_key = validator_config.consensus_public_key;
@@ -218,16 +218,16 @@ where
 
     pub fn last_reconfiguration(&self) -> Result<u64, Error> {
         // Convert the time to seconds
-        Ok(self.libra.last_reconfiguration()? / 1_000_000)
+        Ok(self.diem.last_reconfiguration()? / 1_000_000)
     }
 
     pub fn last_rotation(&self) -> Result<u64, Error> {
         Ok(self.storage.get_public_key(CONSENSUS_KEY)?.last_update)
     }
 
-    pub fn libra_timestamp(&self) -> Result<u64, Error> {
+    pub fn diem_timestamp(&self) -> Result<u64, Error> {
         // Convert the time to seconds
-        Ok(self.libra.libra_timestamp()? / 1_000_000)
+        Ok(self.diem.diem_timestamp()? / 1_000_000)
     }
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
@@ -254,12 +254,12 @@ where
         info!(LogSchema::new(LogEntry::TransactionSubmitted).event(LogEvent::Pending));
 
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
-        let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
+        let seq_id = self.diem.retrieve_sequence_number(operator_account)?;
         let expiration = self.time_service.now() + self.txn_expiration_secs;
 
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
-        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
+        let validator_config = self.diem.retrieve_validator_config(owner_account)?;
 
         let txn = build_rotation_transaction(
             owner_account,
@@ -276,7 +276,7 @@ where
         let txn_signature = self.storage.sign(OPERATOR_KEY, &txn)?;
         let signed_txn = SignedTransaction::new(txn, operator_pubkey, txn_signature);
 
-        self.libra
+        self.diem
             .submit_transaction(Transaction::UserTransaction(signed_txn))?;
 
         info!(LogSchema::new(LogEntry::TransactionSubmitted).event(LogEvent::Success));
@@ -285,25 +285,25 @@ where
         Ok(consensus_key)
     }
 
-    /// Ensures that the libra_timestamp() value registered on-chain is strictly monotonically
+    /// Ensures that the diem_timestamp() value registered on-chain is strictly monotonically
     /// increasing.
     fn ensure_timestamp_progress(&mut self) -> Result<(), Error> {
-        let current_libra_timestamp = self.libra.libra_timestamp()?;
-        if current_libra_timestamp <= self.last_checked_libra_timestamp {
+        let current_diem_timestamp = self.diem.diem_timestamp()?;
+        if current_diem_timestamp <= self.last_checked_diem_timestamp {
             return Err(Error::LivenessError(
-                self.last_checked_libra_timestamp,
-                current_libra_timestamp,
+                self.last_checked_diem_timestamp,
+                current_diem_timestamp,
             ));
         }
 
-        self.last_checked_libra_timestamp = current_libra_timestamp;
+        self.last_checked_diem_timestamp = current_diem_timestamp;
         Ok(())
     }
 
     /// Evaluates the current status of the key manager by performing various state checks between
     /// secure storage and the blockchain.
     ///
-    /// Note: every time this function is called, the libra_timestamp registered on-chain must be
+    /// Note: every time this function is called, the diem_timestamp registered on-chain must be
     /// strictly monotonically increasing. This helps to ensure that the blockchain is making
     /// progress. Otherwise, if no progress is being made on-chain, a reconfiguration event is
     /// unlikely, and the key manager will be unable to rotate keys.
@@ -399,7 +399,7 @@ pub fn build_rotation_transaction(
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        COIN1_NAME.to_owned(),
+        XUS_NAME.to_owned(),
         expiration_timestamp_secs,
         chain_id,
     )

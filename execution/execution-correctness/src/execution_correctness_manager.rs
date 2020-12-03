@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -9,13 +9,13 @@ use crate::{
     serializer::{SerializerClient, SerializerService},
     thread::ThreadService,
 };
+use diem_config::config::{ExecutionCorrectnessService, NodeConfig};
+use diem_crypto::ed25519::Ed25519PrivateKey;
+use diem_global_constants::EXECUTION_KEY;
+use diem_infallible::Mutex;
+use diem_secure_storage::{CryptoStorage, Storage};
+use diem_vm::DiemVM;
 use executor::Executor;
-use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
-use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_global_constants::EXECUTION_KEY;
-use libra_infallible::Mutex;
-use libra_secure_storage::{CryptoStorage, Storage};
-use libra_vm::LibraVM;
 use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 use storage_client::StorageClient;
 
@@ -89,7 +89,7 @@ impl ExecutionCorrectnessManager {
         execution_prikey: Option<Ed25519PrivateKey>,
         timeout: u64,
     ) -> Self {
-        let block_executor = Box::new(Executor::<LibraVM>::new(
+        let block_executor = Box::new(Executor::<DiemVM>::new(
             StorageClient::new(&storage_address, timeout).into(),
         ));
         Self {
@@ -111,7 +111,7 @@ impl ExecutionCorrectnessManager {
         execution_prikey: Option<Ed25519PrivateKey>,
         timeout: u64,
     ) -> Self {
-        let block_executor = Box::new(Executor::<LibraVM>::new(
+        let block_executor = Box::new(Executor::<DiemVM>::new(
             StorageClient::new(&storage_address, timeout).into(),
         ));
         let serializer_service = SerializerService::new(block_executor, execution_prikey);

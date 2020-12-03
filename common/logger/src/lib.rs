@@ -1,19 +1,19 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This crates provides an API for logging in libra.
+//! This crates provides an API for logging in diem.
 //! # Instrumenting with Logs
 //! ## Basic instrumenting with Logs
 //!
 //! A set of logging macros (`info!`, `error!`, `warn!`, `debug!`, and `trace!`) is provided for
 //! emitting logs at different levels. All of these macros support the addition of providing
 //! structured data along with a formatted text message.  For guidelines on which level to use,
-//! see the [coding guidelines](https://developers.libra.org/docs/community/coding-guidelines#logging).
+//! see the [coding guidelines](https://developers.diem.com/docs/community/coding-guidelines#logging).
 //!
 //! The below examples do no type checking for structured log fields, and instead just serialize
 //! whatever is given.
 //! ```
-//! use libra_logger::info;
+//! use diem_logger::info;
 //!
 //! let world = "world!";
 //!
@@ -51,7 +51,7 @@
 //! trait for the struct as well as providing setters for all fields.
 //!
 //! ```
-//! use libra_logger::{info, Schema};
+//! use diem_logger::{info, Schema};
 //!
 //! #[derive(Schema)]
 //! struct LogSchema<'a> {
@@ -111,7 +111,7 @@
 //! `SampleRate` determines how often the sampled statement will occur.
 //!
 //! ```
-//! use libra_logger::{info, sample, sample::{SampleRate, Sampling}};
+//! use diem_logger::{info, sample, sample::{SampleRate, Sampling}};
 //! use std::time::Duration;
 //!
 //! // Sampled based on frequency of events, log only every 2 logs
@@ -126,7 +126,7 @@
 //! done by using the `Logger` type:
 //!
 //! ```
-//! use libra_logger::{Level, Logger};
+//! use diem_logger::{Level, Logger};
 //!
 //! Logger::builder().level(Level::Info).build();
 //! ```
@@ -135,9 +135,9 @@
 
 pub mod prelude {
     pub use crate::{
-        debug, error, event, info,
-        libra_logger::FileWriter,
-        sample,
+        debug,
+        diem_logger::FileWriter,
+        error, event, info, sample,
         sample::{SampleRate, Sampling},
         security::SecurityEvent,
         trace, warn,
@@ -145,10 +145,10 @@ pub mod prelude {
 }
 pub mod json_log;
 
+mod diem_logger;
 mod event;
 mod filter;
 mod kv;
-mod libra_logger;
 mod logger;
 mod macros;
 mod metadata;
@@ -157,15 +157,15 @@ pub mod sample;
 mod security;
 mod struct_log;
 
-pub use crate::libra_logger::{
-    LibraLogger, LibraLogger as Logger, LibraLoggerBuilder, Writer, CHANNEL_SIZE,
+pub use crate::diem_logger::{
+    DiemLogger, DiemLogger as Logger, DiemLoggerBuilder, Writer, CHANNEL_SIZE,
 };
 pub use event::Event;
 pub use filter::{Filter, LevelFilter};
 pub use metadata::{Level, Metadata};
 
+pub use diem_log_derive::Schema;
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
-pub use libra_log_derive::Schema;
 pub use security::SecurityEvent;
 
 mod counters;

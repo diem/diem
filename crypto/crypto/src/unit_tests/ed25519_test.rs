@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_curve25519_dalek as curve25519_dalek;
 #[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
 use vanilla_ed25519_dalek as ed25519_dalek;
 
-use crate as libra_crypto;
+use crate as diem_crypto;
 use crate::{
     ed25519::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
@@ -22,8 +22,8 @@ use core::{
 };
 use ed25519_dalek::ed25519::signature::{Signature as _, Verifier as _};
 
+use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use digest::Digest;
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
@@ -49,16 +49,16 @@ impl From<lcs::Error> for Error {
     }
 }
 
-impl From<libra_secure_net::Error> for Error {
-    fn from(error: libra_secure_net::Error) -> Self {
+impl From<diem_secure_net::Error> for Error {
+    fn from(error: diem_secure_net::Error) -> Self {
         Self::InternalError(error.to_string())
     }
 }
 
-impl From<libra_secure_storage::Error> for Error {
-    fn from(error: libra_secure_storage::Error) -> Self {
+impl From<diem_secure_storage::Error> for Error {
+    fn from(error: diem_secure_storage::Error) -> Self {
         match error {
-            libra_secure_storage::Error::PermissionDenied => {
+            diem_secure_storage::Error::PermissionDenied => {
                 // If a storage error is thrown that indicates a permission failure, we
                 // want to panic immediately to alert an operator that something has gone
                 // wrong. For example, this error is thrown when a storage (e.g., vault)
@@ -69,8 +69,8 @@ impl From<libra_secure_storage::Error> for Error {
                     error
                 );
             }
-            libra_secure_storage::Error::KeyVersionNotFound(_, _)
-            | libra_secure_storage::Error::KeyNotSet(_) => {
+            diem_secure_storage::Error::KeyVersionNotFound(_, _)
+            | diem_secure_storage::Error::KeyNotSet(_) => {
                 Self::SecureStorageMissingDataError(error.to_string())
             }
             _ => Self::SecureStorageUnexpectedError(error.to_string()),

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -7,7 +7,7 @@ use crate::{
     execution_strategies::types::{Block, Executor, ExecutorResult, PartitionStrategy},
     executor::FakeExecutor,
 };
-use libra_types::{transaction::SignedTransaction, vm_status::VMStatus};
+use diem_types::{transaction::SignedTransaction, vm_status::VMStatus};
 
 #[derive(Debug, Clone)]
 pub struct BasicStrategy;

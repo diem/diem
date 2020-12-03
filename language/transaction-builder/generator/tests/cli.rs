@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{io::Write, process::Command};
@@ -22,7 +22,7 @@ fn test_examples_in_readme() -> std::io::Result<()> {
         write!(&mut test_script, "{}", quotes.next().unwrap())?;
         write!(&mut test_script, "{}", quotes.next().unwrap())?;
         let output = Command::new("bash")
-            .current_dir("../../..") // root of Libra
+            .current_dir("../../..") // root of Diem
             .env("DEST", dir.path())
             .arg("-e")
             .arg("-x")
@@ -41,7 +41,7 @@ fn test_examples_in_readme() -> std::io::Result<()> {
     let mut test_script = std::fs::File::create(dir.path().join("test.sh"))?;
     write!(&mut test_script, "{}", quotes.next().unwrap())?;
     let output = Command::new("bash")
-        .current_dir("../../..") // root of Libra
+        .current_dir("../../..") // root of Diem
         .env("DEST", dir.path())
         .arg("-e")
         .arg("-x")

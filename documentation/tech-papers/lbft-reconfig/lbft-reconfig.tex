@@ -36,8 +36,8 @@
 \input{setup}
 
 \begin{document}
-\title{Reconfiguration of the Libra Blockchain by Self-Reflecting Transactions}
-\author{The LibraBFT Team}
+\title{Reconfiguration of the Diem Blockchain by Self-Reflecting Transactions}
+\author{The DiemBFT Team}
 \date{}
 \maketitle
 
@@ -46,9 +46,9 @@
 \newcommand{\myomit}[1]{}
 
 \begin{abstract}
-This report describes reconfiguration of LibraBFT - an extension to \LBFT to support reconfigure itself
+This report describes reconfiguration of DiemBFT - an extension to \LBFT to support reconfigure itself
  by embedding configuration-change transactions in the sequence.
-\LBFT addresses the fundamental consensus problem of the libra blockchain with fixed configuration setup,
+\LBFT addresses the fundamental consensus problem of the diem blockchain with fixed configuration setup,
 think of validator set, consensus keys, VM features, software version etc.
 Those are all like configuration of one \LBFT protocol instance. we want to support those configuration changes
 without human intervention which could be excessive work and error prone. Instead we present

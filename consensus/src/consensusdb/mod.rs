@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
@@ -15,8 +15,8 @@ use crate::{
 };
 use anyhow::Result;
 use consensus_types::{block::Block, quorum_cert::QuorumCert};
-use libra_crypto::HashValue;
-use libra_logger::prelude::*;
+use diem_crypto::HashValue;
+use diem_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{Options, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME};
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};

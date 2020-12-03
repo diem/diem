@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This file implements Libra transaction metadata types to allow
+//! This file implements Diem transaction metadata types to allow
 //! easy parsing and introspection into metadata, whether the transaction
 //! is using regular subaddressing, is subject to travel rule or corresponds
 //! to an on-chain payment refund.

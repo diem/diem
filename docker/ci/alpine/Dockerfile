@@ -1,10 +1,10 @@
 #while using circle we'll use circle's base image.
 FROM alpine:3.12.1@sha256:d7342993700f8cd7aba8496c2d0e57be0666e80b4c441925fc6f9361fa81d10e AS setup_ci_alpine
 
-WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
-COPY cargo-toolchain /libra/cargo-toolchain
-COPY scripts/dev_setup.sh /libra/scripts/dev_setup.sh
+WORKDIR /diem
+COPY rust-toolchain /diem/rust-toolchain
+COPY cargo-toolchain /diem/cargo-toolchain
+COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
 RUN apk add bash=5.0.17-r0 --no-cache
 
@@ -29,8 +29,8 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /libra/rust-toolchain )" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /libra/cargo-toolchain)" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
 
 #should be a no-op, but since sccache failes to execute, sccache is rebuilt.
 #RUN scripts/dev_setup.sh -b -p

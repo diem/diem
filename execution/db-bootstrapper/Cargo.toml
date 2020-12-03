@@ -1,10 +1,10 @@
 [package]
 name = "db-bootstrapper"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra DB-Bootstrapper."
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem DB-Bootstrapper."
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -15,11 +15,11 @@ structopt = "0.3.21"
 
 executor = { path = "../executor", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diemdb = { path = "../../storage/diemdb", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }

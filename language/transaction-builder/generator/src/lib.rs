@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::transaction::ScriptABI;
+use diem_types::transaction::ScriptABI;
 use serde_generate::CustomCode;
 use std::io::Read;
 
@@ -51,7 +51,7 @@ pub trait SourceInstaller {
     ) -> std::result::Result<(), Self::Error>;
 }
 
-/// How to read custom code to inject in Libra containers.
+/// How to read custom code to inject in Diem containers.
 pub fn read_custom_code_from_paths<'a, I>(package: &'a [&'a str], paths: I) -> CustomCode
 where
     I: Iterator<Item = std::path::PathBuf>,

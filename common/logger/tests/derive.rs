@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_log_derive::Schema;
+use diem_log_derive::Schema;
 
 #[test]
 fn simple() {
@@ -87,5 +87,5 @@ fn error_trait_object() {
         .debug_error(&debug_error)
         .display_error(&display_error);
 
-    ::libra_logger::info!(t);
+    ::diem_logger::info!(t);
 }

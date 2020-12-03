@@ -1,6 +1,6 @@
 [[env_vars]]
 key = "BASE_PATH"
-value = "libra-backup/backup1"
+value = "diem-backup/backup1"
 
 [commands]
 create_backup = '''

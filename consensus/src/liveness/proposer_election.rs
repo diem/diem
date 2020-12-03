@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
@@ -32,7 +32,7 @@ pub trait ProposerElection {
 // next continuously mutates a state and returns a u64-index
 pub(crate) fn next(state: &mut Vec<u8>) -> u64 {
     // state = SHA-3-256(state)
-    *state = libra_crypto::HashValue::sha3_256_of(state).to_vec();
+    *state = diem_crypto::HashValue::sha3_256_of(state).to_vec();
     let mut temp = [0u8; 8];
     temp.copy_from_slice(&state[..8]);
     // return state[0..8]

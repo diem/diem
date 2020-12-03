@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Serialization of transactions and modules.
@@ -285,7 +285,7 @@ fn serialize_table_index(
 }
 
 fn serialize_magic(binary: &mut BinaryData) -> Result<()> {
-    for byte in &BinaryConstants::LIBRA_MAGIC {
+    for byte in &BinaryConstants::DIEM_MAGIC {
         binary.push(*byte)?;
     }
     Ok(())

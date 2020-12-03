@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_infallible::RwLock;
-use libra_logger::{info, LibraLogger, Writer};
+use diem_infallible::RwLock;
+use diem_logger::{info, DiemLogger, Writer};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -20,7 +20,7 @@ impl Writer for VecWriter {
 fn verify_end_to_end() {
     let writer = VecWriter::default();
     let logs = writer.logs.clone();
-    LibraLogger::builder()
+    DiemLogger::builder()
         .is_async(false)
         .printer(Box::new(writer))
         .build();

@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
+use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use heck::{CamelCase, ShoutySnakeCase};
-use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
@@ -20,13 +20,13 @@ use std::{
 pub fn output(
     out: &mut dyn Write,
     serde_package_name: Option<String>,
-    libra_package_name: Option<String>,
+    diem_package_name: Option<String>,
     abis: &[ScriptABI],
 ) -> Result<()> {
     let mut emitter = PythonEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
         serde_package_name,
-        libra_package_name,
+        diem_package_name,
     };
     emitter.output_script_call_enum_with_imports(abis)?;
     emitter.output_additional_imports()?;
@@ -58,8 +58,8 @@ struct PythonEmitter<T> {
     out: IndentedWriter<T>,
     /// Package where to find the serde module (if any).
     serde_package_name: Option<String>,
-    /// Package where to find the libra module (if any).
-    libra_package_name: Option<String>,
+    /// Package where to find the diem module (if any).
+    diem_package_name: Option<String>,
 }
 
 impl<T> PythonEmitter<T>
@@ -70,8 +70,8 @@ where
         writeln!(
             self.out,
             r#"
-from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector)"#,
-            match &self.libra_package_name {
+from {}diem_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector)"#,
+            match &self.diem_package_name {
                 None => "".into(),
                 Some(package) => package.clone() + ".",
             },
@@ -83,7 +83,7 @@ from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument,
             self.out,
             r#"
 def encode_script(call: ScriptCall) -> Script:
-    """Build a Libra `Script` from a structured object `ScriptCall`.
+    """Build a Diem `Script` from a structured object `ScriptCall`.
     """
     helper = SCRIPT_ENCODER_MAP[call.__class__]
     return helper(call)
@@ -96,7 +96,7 @@ def encode_script(call: ScriptCall) -> Script:
             self.out,
             r#"
 def decode_script(script: Script) -> ScriptCall:
-    """Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
+    """Try to recognize a Diem `Script` and convert it into a structured object `ScriptCall`.
     """
     helper = SCRIPT_DECODER_MAP.get(script.code)
     if helper is None:
@@ -107,11 +107,11 @@ def decode_script(script: Script) -> ScriptCall:
     }
 
     fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let libra_types_module = match &self.libra_package_name {
-            None => "libra_types".into(),
-            Some(package) => format!("{}.libra_types", package),
+        let diem_types_module = match &self.diem_package_name {
+            None => "diem_types".into(),
+            Some(package) => format!("{}.diem_types", package),
         };
-        let external_definitions = crate::common::get_external_definitions(&libra_types_module);
+        let external_definitions = crate::common::get_external_definitions(&diem_types_module);
         let script_registry: BTreeMap<_, _> = vec![(
             "ScriptCall".to_string(),
             crate::common::make_abi_enum_container(abis),
@@ -388,19 +388,19 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
 pub struct Installer {
     install_dir: PathBuf,
     serde_package_name: Option<String>,
-    libra_package_name: Option<String>,
+    diem_package_name: Option<String>,
 }
 
 impl Installer {
     pub fn new(
         install_dir: PathBuf,
         serde_package_name: Option<String>,
-        libra_package_name: Option<String>,
+        diem_package_name: Option<String>,
     ) -> Self {
         Installer {
             install_dir,
             serde_package_name,
-            libra_package_name,
+            diem_package_name,
         }
     }
 
@@ -423,7 +423,7 @@ impl crate::SourceInstaller for Installer {
         output(
             &mut file,
             self.serde_package_name.clone(),
-            self.libra_package_name.clone(),
+            self.diem_package_name.clone(),
             abis,
         )?;
         Ok(())

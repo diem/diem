@@ -29,12 +29,12 @@ main<T>(account: &signer) {
 
 
 //! new-transaction
-//! type-args: 0x1::LibraAccount::LibraAccount
+//! type-args: 0x1::DiemAccount::DiemAccount
 import {{default}}.M;
-import 0x1.LibraAccount;
+import 0x1.DiemAccount;
 
 main<T>(account: &signer) {
-    assert(M.type_eq<T, LibraAccount.LibraAccount>(copy(account)), 100);
+    assert(M.type_eq<T, DiemAccount.DiemAccount>(copy(account)), 100);
     assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
 }
@@ -42,13 +42,13 @@ main<T>(account: &signer) {
 
 
 //! new-transaction
-//! type-args: 0x1::LibraAccount::Balance<0x1::LibraAccount::Balance<vector<u64>>>
+//! type-args: 0x1::DiemAccount::Balance<0x1::DiemAccount::Balance<vector<u64>>>
 import {{default}}.M;
-import 0x1.LibraAccount;
+import 0x1.DiemAccount;
 
 main<T>(account: &signer) {
-    assert(M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u64>>>>(copy(account)), 100);
-    assert(!M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u8>>>>(copy(account)), 101);
+    assert(M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u64>>>>(copy(account)), 100);
+    assert(!M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u8>>>>(copy(account)), 101);
     return;
 }
 // check: "Keep(EXECUTED)"

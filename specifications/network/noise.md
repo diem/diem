@@ -1,6 +1,6 @@
 # Noise Layer
 
-Communication between [LibraNet](spec.md) peers are encrypted and authenticated via the [Noise protocol framework](https://noiseprotocol.org/noise.html).
+Communication between [DiemNet](spec.md) peers are encrypted and authenticated via the [Noise protocol framework](https://noiseprotocol.org/noise.html).
 This specification documents how we make use of Noise to encrypt communications in three types of network:
 
 1. **Public Full Node Network (PFN)**. Full nodes can connect to validator-operated full nodes.
@@ -9,7 +9,7 @@ This specification documents how we make use of Noise to encrypt communications 
 
 ## NetworkAddress Protocol
 
-The Noise protocol is "pre-negotiated" in peers' advertised or configured [`NetworkAddress`](network-address.md)es. Canonical LibraNet addresses will include the following `Protocol` after the base transport `Protocol`s:
+The Noise protocol is "pre-negotiated" in peers' advertised or configured [`NetworkAddress`](network-address.md)es. Canonical DiemNet addresses will include the following `Protocol` after the base transport `Protocol`s:
 
 ```
 human-readable format: "/ln-noise-ik/<x25519-public-key>"

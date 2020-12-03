@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Interface between Consensus and Network layers.
@@ -12,8 +12,8 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use libra_metrics::IntCounterVec;
-use libra_types::{epoch_change::EpochChangeProof, PeerId};
+use diem_metrics::IntCounterVec;
+use diem_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
     constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,

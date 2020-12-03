@@ -1,20 +1,20 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! The purpose of the JsonRpcClient presented here is to provide a lightweight and secure
-//! JSON RPC client to talk to the JSON RPC service offered by Libra Full Nodes. This is useful
+//! JSON RPC client to talk to the JSON RPC service offered by Diem Full Nodes. This is useful
 //! for various security-critical components (e.g., the secure key manager), as it allows
-//! interaction with the Libra blockchain in a minimal and secure manner.
+//! interaction with the Diem blockchain in a minimal and secure manner.
 //!
-//! Note: While a JSON RPC client implementation already exists in the Libra codebase, this
+//! Note: While a JSON RPC client implementation already exists in the Diem codebase, this
 //! provides a simpler and (hopefully) more secure implementation with fewer dependencies.
 #![forbid(unsafe_code)]
 
-use hex::FromHexError;
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress, account_state::AccountState,
     account_state_blob::AccountStateBlob, transaction::SignedTransaction,
 };
+use hex::FromHexError;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{convert::TryFrom, env, io};
@@ -74,7 +74,7 @@ impl JsonRpcClient {
         Self { host }
     }
 
-    /// Submits a signed transaction to the Libra blockchain. This is done by sending a submit()
+    /// Submits a signed transaction to the Diem blockchain. This is done by sending a submit()
     /// request to the JSON RPC server using the given transaction.
     pub fn submit_transaction(&self, signed_transaction: SignedTransaction) -> Result<(), Error> {
         let method = "submit".into();
@@ -385,11 +385,10 @@ impl From<&Vec<u8>> for Bytes {
 mod test {
     use super::*;
     use anyhow::Result;
-    use futures::{channel::mpsc::channel, StreamExt};
-    use libra_config::utils;
-    use libra_crypto::HashValue;
-    use libra_json_rpc::test_bootstrap;
-    use libra_types::{
+    use diem_config::utils;
+    use diem_crypto::HashValue;
+    use diem_json_rpc::test_bootstrap;
+    use diem_types::{
         account_address::AccountAddress,
         account_state_blob::{AccountStateBlob, AccountStateWithProof},
         block_info::BlockInfo,
@@ -401,7 +400,8 @@ mod test {
         proof::{AccumulatorConsistencyProof, SparseMerkleProof},
         transaction::{TransactionListWithProof, TransactionWithProof, Version},
     };
-    use libradb::errors::LibraDbError::NotFound;
+    use diemdb::errors::DiemDbError::NotFound;
+    use futures::{channel::mpsc::channel, StreamExt};
     use std::{collections::BTreeMap, sync::Arc};
     use storage_interface::{DbReader, Order, StartupInfo, TreeState};
     use tokio::runtime::Runtime;
@@ -448,7 +448,7 @@ mod test {
         map.insert(account, account_state_with_proof);
 
         // Populate the test database with the test data and create the client/server
-        let mock_db = MockLibraDB::new(map);
+        let mock_db = MockDiemDB::new(map);
         let (client, _server) = create_client_and_server(mock_db, true);
 
         // Ensure the client returns the correct AccountState
@@ -470,7 +470,7 @@ mod test {
         map.insert(account, account_state_with_proof);
 
         // Populate the test database with the test data and create the client/server
-        let mock_db = MockLibraDB::new(map);
+        let mock_db = MockDiemDB::new(map);
         let (client, _server) = create_client_and_server(mock_db, true);
 
         // Ensure the client returns the latest AccountState (even though no version was specified)
@@ -504,7 +504,7 @@ mod test {
         map.insert(account, account_state_with_proof);
 
         // Populate the test database with the test data and create the client/server
-        let mock_db = MockLibraDB::new(map);
+        let mock_db = MockDiemDB::new(map);
         let (client, _server) = create_client_and_server(mock_db, true);
 
         // Ensure the client returns an error for the missing AccountState
@@ -516,7 +516,7 @@ mod test {
     /// and the server is a JSON server that serves the JSON RPC requests. The server communicates
     /// with the given database to handle each JSON RPC request. If mock_validator is set to true,
     /// the server is also given a mock vm validator to validate any submitted transactions.
-    fn create_client_and_server(db: MockLibraDB, mock_validator: bool) -> (JsonRpcClient, Runtime) {
+    fn create_client_and_server(db: MockDiemDB, mock_validator: bool) -> (JsonRpcClient, Runtime) {
         let address = "0.0.0.0";
         let port = utils::get_available_port();
         let host = format!("{}:{}", address, port);
@@ -545,18 +545,18 @@ mod test {
     }
 
     /// Returns an empty mock database for testing.
-    fn create_empty_mock_db() -> MockLibraDB {
-        MockLibraDB::new(BTreeMap::new())
+    fn create_empty_mock_db() -> MockDiemDB {
+        MockDiemDB::new(BTreeMap::new())
     }
 
-    // This offers a simple mock of LibraDB for testing.
+    // This offers a simple mock of DiemDB for testing.
     #[derive(Clone)]
-    pub struct MockLibraDB {
+    pub struct MockDiemDB {
         account_states_with_proof: BTreeMap<AccountAddress, AccountStateWithProof>,
     }
 
-    /// A mock libra database for test purposes.
-    impl MockLibraDB {
+    /// A mock diem database for test purposes.
+    impl MockDiemDB {
         pub fn new(
             account_states_with_proof: BTreeMap<AccountAddress, AccountStateWithProof>,
         ) -> Self {
@@ -568,7 +568,7 @@ mod test {
 
     /// We only require implementing a subset of these API calls for testing purposes. To keep
     /// our code as minimal as possible, the unimplemented API calls simply return an error.
-    impl DbReader for MockLibraDB {
+    impl DbReader for MockDiemDB {
         fn get_transactions(
             &self,
             _start_version: u64,
@@ -692,8 +692,8 @@ pub mod fuzzing {
         AccountStateResponse, AccountStateWithProofResponse, Bytes, SubmitTransactionResponse,
         TransactionView, TransactionViewResponse, VMStatusView,
     };
-    use libra_proptest_helpers::Index;
-    use libra_types::proptest_types::{arb_json_value, AccountInfoUniverse, AccountStateBlobGen};
+    use diem_proptest_helpers::Index;
+    use diem_types::proptest_types::{arb_json_value, AccountInfoUniverse, AccountStateBlobGen};
     use proptest::prelude::*;
     use ureq::Response;
 
@@ -823,8 +823,8 @@ pub mod fuzzing {
 
 #[cfg(test)]
 mod test_helpers {
-    use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-    use libra_types::{
+    use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+    use diem_types::{
         account_address::AccountAddress,
         account_config::{AccountResource, BalanceResource},
         account_state::AccountState,

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{NetworkAddress, ParseError};
@@ -6,7 +6,7 @@ use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
 };
-use libra_crypto::{compat::Sha3_256, hkdf::Hkdf};
+use diem_crypto::{compat::Sha3_256, hkdf::Hkdf};
 use move_core_types::account_address::AccountAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
@@ -40,19 +40,19 @@ pub const TEST_SHARED_VAL_NETADDR_KEY_VERSION: KeyVersion = 0;
 /// Note: modifying this salt is a backwards-incompatible protocol change.
 ///
 /// For readers, the HKDF salt is equal to the following hex string:
-/// `"dfc8ffcc7f62ea4e5b9bc41ee7969b44275419ebaad1db27d2a191b6d1db6d13"` which is
-/// also equal to the hash value `SHA3-256(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT")`.
+/// `"7ffda2ae982a2ebfab2a4da62f76fe33592c85e02445b875f02ded51a520ba2a"` which is
+/// also equal to the hash value `SHA3-256(b"DIEM_ENCRYPTED_NETWORK_ADDRESS_SALT")`.
 ///
 /// ```
-/// use libra_network_address::encrypted::HKDF_SALT;
-/// use libra_crypto::hash::HashValue;
+/// use diem_network_address::encrypted::HKDF_SALT;
+/// use diem_crypto::hash::HashValue;
 ///
-/// let derived_salt = HashValue::sha3_256_of(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT");
+/// let derived_salt = HashValue::sha3_256_of(b"DIEM_ENCRYPTED_NETWORK_ADDRESS_SALT");
 /// assert_eq!(HKDF_SALT.as_ref(), derived_salt.as_ref());
 /// ```
 pub const HKDF_SALT: [u8; 32] = [
-    0xdf, 0xc8, 0xff, 0xcc, 0x7f, 0x62, 0xea, 0x4e, 0x5b, 0x9b, 0xc4, 0x1e, 0xe7, 0x96, 0x9b, 0x44,
-    0x27, 0x54, 0x19, 0xeb, 0xaa, 0xd1, 0xdb, 0x27, 0xd2, 0xa1, 0x91, 0xb6, 0xd1, 0xdb, 0x6d, 0x13,
+    0x7f, 0xfd, 0xa2, 0xae, 0x98, 0x2a, 0x2e, 0xbf, 0xab, 0x2a, 0x4d, 0xa6, 0x2f, 0x76, 0xfe, 0x33,
+    0x59, 0x2c, 0x85, 0xe0, 0x24, 0x45, 0xb8, 0x75, 0xf0, 0x2d, 0xed, 0x51, 0xa5, 0x20, 0xba, 0x2a,
 ];
 
 /// An encrypted `NetworkAddress`.

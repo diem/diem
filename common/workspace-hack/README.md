@@ -1,4 +1,4 @@
-# libra-workspace-hack
+# diem-workspace-hack
 
 This crate is hack to unify 3rd party dependency crate features in order to
 have better compilation caching. Each time cargo is invoked, it computes

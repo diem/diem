@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::abstract_state::{AbstractValue, BorrowState};
-use libra_logger::debug;
+use diem_logger::debug;
 use rand::{rngs::StdRng, Rng};
 use std::collections::{HashMap, VecDeque};
 use vm::file_format::{Bytecode, Kind, Signature, SignatureToken};

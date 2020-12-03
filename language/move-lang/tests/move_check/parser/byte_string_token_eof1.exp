@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/parser/byte_string_token_eof1.move:3:9 ───
    │
- 3 │         b"libra\"
-   │         ^^^^^^^^^ Missing closing quote (") after byte string
+ 3 │         b"diem\"
+   │         ^^^^^^^^ Missing closing quote (") after byte string
    │
 

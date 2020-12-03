@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Client;
@@ -8,10 +8,10 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
-static LIBRA_VAULT: Lazy<Option<VaultRunner>> = Lazy::new(|| match VaultRunner::run() {
+static DIEM_VAULT: Lazy<Option<VaultRunner>> = Lazy::new(|| match VaultRunner::run() {
     Err(err) => {
         assert!(
-            std::env::var("LIBRA_REQUIRE_VAULT_TESTS").is_err(),
+            std::env::var("DIEM_REQUIRE_VAULT_TESTS").is_err(),
             "Vault is not running: {}",
             err
         );
@@ -24,7 +24,7 @@ static LIBRA_VAULT: Lazy<Option<VaultRunner>> = Lazy::new(|| match VaultRunner::
 /// This will return the vault host, if vault was started successfully. If vault is expected to be
 /// available, an assertion will cause this to fail.
 pub fn test_host_safe() -> Option<String> {
-    LIBRA_VAULT.as_ref().map(|v| v.host().to_string())
+    DIEM_VAULT.as_ref().map(|v| v.host().to_string())
 }
 
 /// This will return the vault host or panic.
@@ -128,7 +128,7 @@ fn run_vault() {
     let vr = VaultRunner::run();
     if let Err(err) = vr {
         assert!(
-            std::env::var("LIBRA_REQUIRE_VAULT_TESTS").is_err(),
+            std::env::var("DIEM_REQUIRE_VAULT_TESTS").is_err(),
             "Vault is not running: {}",
             err
         );

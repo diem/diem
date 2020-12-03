@@ -1,10 +1,10 @@
 [package]
 name = "debug-interface"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra debug interface"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem debug interface"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -16,6 +16,6 @@ tokio = { version = "0.2.22", features = ["full"] }
 reqwest = { version = "0.10.9", features = ["blocking", "json"], default_features = false }
 warp = "0.2.5"
 
-libra-logger = { path = "../logger", version = "0.1.0" }
-libra-metrics = { path = "../metrics", version = "0.1.0" }
-libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../logger", version = "0.1.0" }
+diem-metrics = { path = "../metrics", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

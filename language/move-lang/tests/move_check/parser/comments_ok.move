@@ -14,7 +14,7 @@ module M {
 
     // Comments in strings are not comments at all.
     fun str(): vector<u8> {
-        b"http://libra.org"
+        b"http://diem.com"
     }
 
     // This is a regular comment which appears where a doc comment would not be allowed.

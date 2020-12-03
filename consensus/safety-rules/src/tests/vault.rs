@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager};
-use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
-use libra_secure_storage::{KVStorage, Storage, VaultStorage};
-use libra_types::validator_signer::ValidatorSigner;
-use libra_vault_client::dev::{self, ROOT_TOKEN};
+use diem_crypto::{ed25519::Ed25519PrivateKey, Uniform};
+use diem_secure_storage::{KVStorage, Storage, VaultStorage};
+use diem_types::validator_signer::ValidatorSigner;
+use diem_vault_client::dev::{self, ROOT_TOKEN};
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
 /// depends on running Vault, which can be done by using the provided docker run script in

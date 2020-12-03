@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements a checker for verifying that
 //! - a constant's type only refers to primitive types
 //! - a constant's data serializes correctly for that type
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMResult, VMResult},

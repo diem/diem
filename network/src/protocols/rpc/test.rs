@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 //
 // NB: We run all tests serially because some tests need to inspect counters to verify certain code
@@ -14,9 +14,9 @@ use crate::{
     transport::ConnectionMetadata,
 };
 use anyhow::anyhow;
+use diem_config::network_id::NetworkContext;
+use diem_types::PeerId;
 use futures::future::join;
-use libra_config::network_id::NetworkContext;
-use libra_types::PeerId;
 use serial_test::serial;
 use std::sync::Arc;
 use tokio::runtime::{Handle, Runtime};
@@ -25,8 +25,8 @@ static RPC_PROTOCOL_A: ProtocolId = ProtocolId::ConsensusRpc;
 static RPC_PROTOCOL_B: ProtocolId = ProtocolId::HealthCheckerRpc;
 
 fn reset_counters() {
-    counters::LIBRA_NETWORK_RPC_MESSAGES.reset();
-    counters::LIBRA_NETWORK_RPC_BYTES.reset();
+    counters::DIEM_NETWORK_RPC_MESSAGES.reset();
+    counters::DIEM_NETWORK_RPC_BYTES.reset();
 }
 
 fn start_rpc_actor(
@@ -164,7 +164,7 @@ fn create_network_response(request_id: RequestId, raw_response: Bytes) -> Networ
 #[test]
 #[serial]
 fn outbound_rpc_success() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (
@@ -222,7 +222,7 @@ fn outbound_rpc_success() {
 #[test]
 #[serial]
 fn outbound_rpc_concurrent() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (
@@ -315,7 +315,7 @@ fn outbound_rpc_concurrent() {
 #[test]
 #[serial]
 fn outbound_rpc_timeout() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -357,7 +357,7 @@ fn outbound_rpc_timeout() {
 #[test]
 #[serial]
 fn outbound_cancellation_before_send() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, _peer_notifs_tx) =
@@ -395,7 +395,7 @@ fn outbound_cancellation_before_send() {
 #[test]
 #[serial]
 fn outbound_cancellation_before_recv() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -439,7 +439,7 @@ fn outbound_cancellation_before_recv() {
 #[test]
 #[serial]
 fn outbound_rpc_failed_request_delivery() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -477,7 +477,7 @@ fn outbound_rpc_failed_request_delivery() {
 #[test]
 #[serial]
 fn inbound_rpc_success() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (
@@ -528,7 +528,7 @@ fn inbound_rpc_success() {
 #[test]
 #[serial]
 fn inbound_rpc_concurrent() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (
@@ -609,7 +609,7 @@ fn inbound_rpc_concurrent() {
 #[test]
 #[serial]
 fn inbound_rpc_timeout() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (network_context, _rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
@@ -641,7 +641,7 @@ fn inbound_rpc_timeout() {
 #[test]
 #[serial]
 fn inbound_rpc_failed_response_delivery() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (
@@ -697,7 +697,7 @@ fn inbound_rpc_failed_response_delivery() {
 #[test]
 #[serial]
 fn inbound_rpc_failed_upstream_delivery() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (network_context, _rpc_requests_tx, rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
@@ -731,7 +731,7 @@ fn inbound_rpc_failed_upstream_delivery() {
 #[test]
 #[serial]
 fn concurrent_inbound_outbound() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements a checker for verifying that each vector in a CompiledModule contains
@@ -8,7 +8,7 @@
 //! - struct and field definitions are consistent
 //! - the handles in struct and function definitions point to the self module index
 //! - all struct and function handles pointing to the self module index have a definition
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use std::{collections::HashSet, hash::Hash};
 use vm::{

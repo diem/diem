@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,9 +7,9 @@ use crate::{
     quorum_cert::QuorumCert,
 };
 use anyhow::{bail, ensure, format_err};
-use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
-use libra_infallible::duration_since_epoch;
-use libra_types::{
+use diem_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
+use diem_infallible::duration_since_epoch;
+use diem_types::{
     account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
     epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,
     validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,

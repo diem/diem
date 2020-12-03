@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,11 +7,11 @@ use crate::{
     network_id::NetworkId,
     utils,
 };
-use libra_crypto::{x25519, Uniform};
-use libra_network_address::NetworkAddress;
-use libra_network_address_encryption::Encryptor;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
+use diem_crypto::{x25519, Uniform};
+use diem_network_address::NetworkAddress;
+use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
@@ -237,12 +237,12 @@ impl NetworkConfig {
         self.identity = Identity::from_config(identity_key, peer_id);
     }
 
-    /// Check that all seed peer addresses look like canonical LibraNet addresses
+    /// Check that all seed peer addresses look like canonical DiemNet addresses
     pub fn verify_seed_addrs(&self) -> Result<(), Error> {
         for (peer_id, addrs) in self.seed_addrs.iter() {
             for addr in addrs {
                 crate::config::invariant(
-                    addr.is_libranet_addr(),
+                    addr.is_diemnet_addr(),
                     format!(
                         "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
                         peer_id.short_str(),

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -11,11 +11,11 @@ mod unit_tests;
 use anyhow::Result;
 use bytecode_source_map::source_map::SourceMap;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use diem_types::{account_address::AccountAddress, account_config};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
-use libra_types::{account_address::AccountAddress, account_config};
 use move_ir_types::location::Loc;
 use std::mem;
 use vm::file_format::{CompiledModule, CompiledScript};

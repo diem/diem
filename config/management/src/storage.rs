@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519,
 };
-use libra_network_address_encryption::Encryptor;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_types::{
+use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, SignedTransaction, Transaction},
     waypoint::Waypoint,

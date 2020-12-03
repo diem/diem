@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Allow KiB, MiB consts
@@ -42,15 +42,15 @@ use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
 };
+use diem_logger::prelude::*;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::{
     executor::block_on,
     io::{AsyncRead, AsyncWrite},
     sink::{Sink, SinkExt},
     stream::{self, FuturesUnordered, Stream, StreamExt},
 };
-use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use netcore::{
     compat::IoCompat,
     transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
@@ -214,7 +214,7 @@ fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAd
 ///    `$TCP_NOISE_ADDR`  for
 ///    benchmarks `remote_tcp`, `remote_tcp+noise` and `remote_tcp+nodelay` respectively.
 fn socket_bench(c: &mut Criterion) {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
 
     let rt = Runtime::new().unwrap();
     let executor = rt.handle().clone();
@@ -372,7 +372,7 @@ fn bench_client_connection<F, T, S>(
 ///                         time:   [-9.0403% -4.6666% -0.6491%] (p = 0.06 > 0.05)
 ///                         thrpt:  [+0.6533% +4.8951% +9.9388%]
 fn connection_bench(c: &mut Criterion) {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let concurrency_param: Vec<u64> = vec![16, 32, 64, 128];
     let args = Args::from_env();
     let bench = if let Some(noise_addr) = args.tcp_noise_addr {

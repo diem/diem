@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Rust representation of a Move transaction script that can be executed on the Libra blockchain.
-//! Libra does not allow arbitrary transaction scripts; only scripts whose hashes are present in
+//! Rust representation of a Move transaction script that can be executed on the Diem blockchain.
+//! Diem does not allow arbitrary transaction scripts; only scripts whose hashes are present in
 //! the on-chain script allowlist. The genesis allowlist is derived from this file, and the
 //! `Stdlib` script enum will be modified to reflect changes in the on-chain allowlist as time goes
 //! on.
 
 use anyhow::{anyhow, Error, Result};
+use diem_crypto::HashValue;
+use diem_types::transaction::{ScriptABI, SCRIPT_HASH_LENGTH};
 use include_dir::{include_dir, Dir};
-use libra_crypto::HashValue;
-use libra_types::transaction::{ScriptABI, SCRIPT_HASH_LENGTH};
 use std::{convert::TryFrom, fmt, path::PathBuf};
 
 // This includes the script ABIs as binaries. We must use this hack to work around
@@ -18,7 +18,7 @@ use std::{convert::TryFrom, fmt, path::PathBuf};
 // produce these binaries at runtime.
 const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("transaction_scripts/abi");
 
-/// All of the Move transaction scripts that can be executed on the Libra blockchain
+/// All of the Move transaction scripts that can be executed on the Diem blockchain
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum StdlibScript {
     AddCurrencyToAccount,
@@ -52,7 +52,7 @@ pub enum StdlibScript {
     TieredMint,
     UnfreezeAccount,
     UpdateExchangeRate,
-    UpdateLibraVersion,
+    UpdateDiemVersion,
     UpdateMintingAbility,
     UpdateDualAttestationLimit,
     // ...add new scripts here
@@ -95,7 +95,7 @@ impl StdlibScript {
             TieredMint,
             UnfreezeAccount,
             UpdateExchangeRate,
-            UpdateLibraVersion,
+            UpdateDiemVersion,
             UpdateMintingAbility,
             UpdateDualAttestationLimit,
             // ...add new scripts here
@@ -103,7 +103,7 @@ impl StdlibScript {
     }
 
     /// Construct the allowlist of script hashes used to determine whether a transaction script can
-    /// be executed on the Libra blockchain
+    /// be executed on the Diem blockchain
     pub fn allowlist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         StdlibScript::all()
             .iter()
@@ -220,7 +220,7 @@ impl fmt::Display for StdlibScript {
                 TieredMint => "tiered_mint",
                 UpdateDualAttestationLimit => "update_dual_attestation_limit",
                 UnfreezeAccount => "unfreeze_account",
-                UpdateLibraVersion => "update_libra_version",
+                UpdateDiemVersion => "update_diem_version",
                 UpdateExchangeRate => "update_exchange_rate",
                 UpdateMintingAbility => "update_minting_ability",
             }

@@ -2,8 +2,8 @@ address 0x1 {
 
 module TestTransaction {
     use 0x1::Signer;
-    use 0x1::LibraAccount;
-    use 0x1::LibraTimestamp;
+    use 0x1::DiemAccount;
+    use 0x1::DiemTimestamp;
 
     spec module {
         pragma verify = true;
@@ -28,14 +28,14 @@ module TestTransaction {
     }
 
     fun exists_account(account: &signer) {
-        LibraTimestamp::assert_operating();
-        assert(LibraAccount::exists_at(Signer::address_of(account)), 1);
+        DiemTimestamp::assert_operating();
+        assert(DiemAccount::exists_at(Signer::address_of(account)), 1);
     }
     spec fun exists_account {
-        include LibraTimestamp::AbortsIfNotOperating;
+        include DiemTimestamp::AbortsIfNotOperating;
         // TODO: we can remove the following line once we have the feature to inject
         // the postconditions of the "prologue" functions as invariants
-        aborts_if !exists<LibraAccount::LibraAccount>(Signer::spec_address_of(account));
+        aborts_if !exists<DiemAccount::DiemAccount>(Signer::spec_address_of(account));
     }
 }
 }

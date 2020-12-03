@@ -1,7 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use compiler::Compiler;
+use diem_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
+use diem_types::{
+    account_config::{diem_root_address, treasury_compliance_account_address, xus_tag},
+    account_state::AccountState,
+    block_metadata::BlockMetadata,
+    transaction::{Script, Transaction, WriteSetPayload},
+    trusted_state::{TrustedState, TrustedStateChange},
+    validator_signer::ValidatorSigner,
+};
 use executor_test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     integration_test_impl::{
@@ -9,15 +18,6 @@ use executor_test_helpers::{
     },
 };
 use executor_types::BlockExecutor;
-use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
-use libra_types::{
-    account_config::{coin1_tmp_tag, libra_root_address, treasury_compliance_account_address},
-    account_state::AccountState,
-    block_metadata::BlockMetadata,
-    transaction::{Script, Transaction, WriteSetPayload},
-    trusted_state::{TrustedState, TrustedStateChange},
-    validator_signer::ValidatorSigner,
-};
 use std::convert::TryFrom;
 use transaction_builder::{
     encode_add_to_script_allow_list_script, encode_block_prologue_script,
@@ -26,7 +26,7 @@ use transaction_builder::{
 
 #[test]
 fn test_genesis() {
-    let path = libra_temppath::TempPath::new();
+    let path = diem_temppath::TempPath::new();
     path.create_as_dir().unwrap();
     let genesis = vm_genesis::test_genesis_transaction();
     let (_, db, _executor, waypoint) = create_db_and_executor(path.path(), &genesis);
@@ -41,12 +41,12 @@ fn test_genesis() {
     let li = li.ledger_info();
     assert_eq!(li.version(), 0);
 
-    let libra_root_account = db
+    let diem_root_account = db
         .reader
-        .get_account_state_with_proof(libra_root_address(), 0, 0)
+        .get_account_state_with_proof(diem_root_address(), 0, 0)
         .unwrap();
-    libra_root_account
-        .verify(li, 0, libra_root_address())
+    diem_root_account
+        .verify(li, 0, diem_root_address())
         .unwrap();
 }
 
@@ -55,7 +55,7 @@ fn test_reconfiguration() {
     // When executing a transaction emits a validator set change,
     // storage should propagate the new validator set
 
-    let path = libra_temppath::TempPath::new();
+    let path = diem_temppath::TempPath::new();
     path.create_as_dir().unwrap();
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
@@ -73,12 +73,12 @@ fn test_reconfiguration() {
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
         .unwrap();
-    let libra_root_account_state_with_proof = db
+    let diem_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
+        .get_account_state_with_proof(diem_root_address(), current_version, current_version)
         .unwrap();
     assert_eq!(
-        AccountState::try_from(&libra_root_account_state_with_proof.blob.unwrap())
+        AccountState::try_from(&diem_root_account_state_with_proof.blob.unwrap())
             .unwrap()
             .get_validator_set()
             .unwrap()
@@ -102,7 +102,7 @@ fn test_reconfiguration() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tmp_tag(),
+            xus_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -189,12 +189,12 @@ fn test_reconfiguration() {
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
         .unwrap();
-    let libra_root_account_state_with_proof = db
+    let diem_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
+        .get_account_state_with_proof(diem_root_address(), current_version, current_version)
         .unwrap();
     assert_eq!(
-        AccountState::try_from(&libra_root_account_state_with_proof.blob.unwrap())
+        AccountState::try_from(&diem_root_account_state_with_proof.blob.unwrap())
             .unwrap()
             .get_validator_set()
             .unwrap()
@@ -212,11 +212,11 @@ fn test_reconfiguration() {
     );
 
     // test validator's key in the validator set is as expected
-    let libra_root_account_state_with_proof = db
+    let diem_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
+        .get_account_state_with_proof(diem_root_address(), current_version, current_version)
         .unwrap();
-    let blob = &libra_root_account_state_with_proof.blob.unwrap();
+    let blob = &diem_root_account_state_with_proof.blob.unwrap();
     assert_eq!(
         AccountState::try_from(blob)
             .unwrap()
@@ -231,7 +231,7 @@ fn test_reconfiguration() {
 
 #[test]
 fn test_change_publishing_option_to_custom() {
-    let path = libra_temppath::TempPath::new();
+    let path = diem_temppath::TempPath::new();
     path.create_as_dir().unwrap();
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
@@ -241,7 +241,7 @@ fn test_change_publishing_option_to_custom() {
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
-    let genesis_account = libra_root_address();
+    let genesis_account = diem_root_address();
 
     let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
     let validator_account = signer.author();
@@ -255,7 +255,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tmp_tag(),
+            xus_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -289,17 +289,17 @@ fn test_change_publishing_option_to_custom() {
 
     let script_body = {
         let code = "
-    import 0x1.LibraTransactionPublishingOption;
+    import 0x1.DiemTransactionPublishingOption;
 
     main(account: &signer) {
-      LibraTransactionPublishingOption.set_open_script(move(account));
+      DiemTransactionPublishingOption.set_open_script(move(account));
 
       return;
     }
 ";
 
         let compiler = Compiler {
-            address: libra_types::account_config::CORE_CODE_ADDRESS,
+            address: diem_types::account_config::CORE_CODE_ADDRESS,
             extra_deps: vec![],
             ..Compiler::default()
         };
@@ -412,7 +412,7 @@ fn test_change_publishing_option_to_custom() {
 
 #[test]
 fn test_extend_allowlist() {
-    let path = libra_temppath::TempPath::new();
+    let path = diem_temppath::TempPath::new();
     path.create_as_dir().unwrap();
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
@@ -422,7 +422,7 @@ fn test_extend_allowlist() {
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
-    let genesis_account = libra_root_address();
+    let genesis_account = diem_root_address();
 
     let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
     let validator_account = signer.author();
@@ -436,7 +436,7 @@ fn test_extend_allowlist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tmp_tag(),
+            xus_tag(),
             validator_account,
             1_000_000,
             vec![],

@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::IntCounterVec;
+use diem_metrics::IntCounterVec;
 use std::{
     collections::{HashMap, VecDeque},
     fmt::{Debug, Formatter, Result},
@@ -168,7 +168,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
             // Remove empty per-key-queues every `POPS_PER_GC` successful dequeue
             // operations.
             //
-            // libra-channel never removes keys from its PerKeyQueue (without
+            // diem-channel never removes keys from its PerKeyQueue (without
             // this logic). This works fine for the validator network, where we
             // have a bounded set of peers that almost never changes; however,
             // this does not work for servicing public clients, where we can have

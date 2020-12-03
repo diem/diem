@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
-use libra_logger::json_log::JsonLogEntry;
+use diem_logger::json_log::JsonLogEntry;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
@@ -17,7 +17,7 @@ pub mod prelude {
     };
 }
 
-pub use trace::{is_selected, libra_trace_set, set_libra_trace};
+pub use trace::{diem_trace_set, is_selected, set_diem_trace};
 
 const TRACE_EVENT: &str = "trace_event";
 const TRACE_EDGE: &str = "trace_edge";
@@ -48,13 +48,13 @@ struct Source {
     pod_name: String,
 }
 
-pub struct LibraTraceClient {
+pub struct DiemTraceClient {
     client: Client,
     addr: String,
 }
 
-impl LibraTraceClient {
-    /// Create LibraTraceClient from a valid socket address.
+impl DiemTraceClient {
+    /// Create DiemTraceClient from a valid socket address.
     pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
         let client = Client::new();
         let addr = format!("http://{}:{}", address.as_ref(), port);
@@ -62,7 +62,7 @@ impl LibraTraceClient {
         Self { client, addr }
     }
 
-    pub async fn get_libra_trace(
+    pub async fn get_diem_trace(
         &self,
         start_time: DateTime<Utc>,
         duration: Duration,
@@ -78,7 +78,7 @@ impl LibraTraceClient {
                 "query": {
                     "bool": {
                         "must": [
-                            { "term": { "name":   "libra_trace"}}
+                            { "term": { "name":   "diem_trace"}}
                         ],
                         "filter": [
                             { "range": { "@timestamp": { "gte": start, "lte": end }}}

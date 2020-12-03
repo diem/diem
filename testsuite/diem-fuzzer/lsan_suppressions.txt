@@ -1,0 +1,4 @@
+leak:lazy_static
+leak:backtrace
+leak:libc
+leak:diem_mempool::tests::mocks::MockSharedMempool

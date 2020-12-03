@@ -44,10 +44,10 @@ fun rotate_dual_attestation_info(account: &signer, new_url: vector<u8>, new_key:
 }
 spec fun rotate_dual_attestation_info {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signer;
 
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include DualAttestation::RotateBaseUrlAbortsIf;
     include DualAttestation::RotateBaseUrlEnsures;
     include DualAttestation::RotateCompliancePublicKeyAbortsIf;

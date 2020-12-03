@@ -63,8 +63,8 @@ module TestPureFun {
             impure_f_2()
         }
 
-        define lr_x(): u64 {
-            get_x(CoreAddresses::LIBRA_ROOT_ADDRESS())
+        define dr_x(): u64 {
+            get_x(CoreAddresses::DIEM_ROOT_ADDRESS())
         }
     }
 

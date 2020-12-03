@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::DbReader;
 use anyhow::{format_err, Result};
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_state_view::{StateView, StateViewId};
-use libra_types::{
+use diem_state_view::{StateView, StateViewId};
+use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_state::AccountState,

@@ -1,10 +1,10 @@
 [package]
 name = "cluster-test"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra cluster test"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem cluster test"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -31,30 +31,30 @@ chrono = "0.4.19"
 toml = { version = "0.5.7", default-features = false }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
-libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
-libra-retrier = { path = "../../common/retrier", version = "0.1.0" }
+diem-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
+diem-retrier = { path = "../../common/retrier", version = "0.1.0" }
 num_cpus = "1.13.0"
 
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-libra-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
-libra-mempool = { path = "../../mempool", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
-libra-network-address-encryption = { path = "../../config/management/network-address-encryption", version = "0.1.0" }
-libra-node = { path = "../../libra-node", version = "0.1.0" }
-libra-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
-libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
-libra-swarm = { path = "../libra-swarm", version = "0.1.0" }
-libra-trace = {path = "../../common/trace", version = "0.1.0"}
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
+diem-mempool = { path = "../../mempool", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
+diem-network-address-encryption = { path = "../../config/management/network-address-encryption", version = "0.1.0" }
+diem-node = { path = "../../diem-node", version = "0.1.0" }
+diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
+diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+diem-swarm = { path = "../diem-swarm", version = "0.1.0" }
+diem-trace = {path = "../../common/trace", version = "0.1.0"}
+diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 network = { path = "../../network", version = "0.1.0" }
 network-builder = { path = "../../network/builder", version = "0.1.0" }
 seed-peer-generator = { path = "../../config/seed-peer-generator", version = "0.1.0" }

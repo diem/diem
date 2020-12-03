@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
@@ -6,8 +6,8 @@ use crate::test_helpers::{
     arb_hash_batch, arb_list_of_hash_batches, test_append_empty_impl, test_append_many_impl,
     MockHashStore, TestAccumulator,
 };
-use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
-use libra_types::proof::definition::LeafCount;
+use diem_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use diem_types::proof::definition::LeafCount;
 
 #[test]
 fn test_append_empty_on_empty() {

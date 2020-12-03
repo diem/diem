@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! The ConnectivityManager actor is responsible for ensuring that we are
@@ -31,17 +31,17 @@ use crate::{
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
+use diem_config::network_id::NetworkContext;
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_logger::prelude::*;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use libra_config::network_id::NetworkContext;
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use num_variants::NumVariants;
 use rand::{
     prelude::{SeedableRng, SmallRng},

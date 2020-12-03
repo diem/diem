@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -12,24 +12,24 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{bail, ensure, format_err, Result};
-use fail::fail_point;
-use futures::{
-    channel::{mpsc, oneshot},
-    stream::select_all,
-    StreamExt,
-};
-use libra_config::{
+use diem_config::{
     config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
     network_id::NodeNetworkId,
 };
-use libra_logger::prelude::*;
-use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
-use libra_types::{
+use diem_logger::prelude::*;
+use diem_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
+use diem_types::{
     contract_event::ContractEvent,
     epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
+};
+use fail::fail_point;
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::select_all,
+    StreamExt,
 };
 use network::protocols::network::Event;
 use std::{
@@ -472,7 +472,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
         counters::set_timestamp(
             counters::TimestampType::Real,
-            libra_infallible::duration_since_epoch().as_micros() as u64,
+            diem_infallible::duration_since_epoch().as_micros() as u64,
         );
         counters::EPOCH.set(local_epoch as i64);
         debug!(LogSchema::new(LogEntry::LocalState)

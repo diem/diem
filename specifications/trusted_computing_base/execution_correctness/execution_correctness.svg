@@ -136,7 +136,7 @@
         <path d="M 524 232 L 689 232 C 693.4183 232 697 235.58172 697 240 L 697 364 C 697 368.41828 693.4183 372 689 372 L 524 372 C 519.5817 372 516 368.41828 516 364 L 516 240 C 516 235.58172 519.5817 232 524 232 Z" fill="#ccc"/>
         <path d="M 524 232 L 689 232 C 693.4183 232 697 235.58172 697 240 L 697 364 C 697 368.41828 693.4183 372 689 372 L 524 372 C 519.5817 372 516 368.41828 516 364 L 516 240 C 516 235.58172 519.5817 232 524 232 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
         <text transform="translate(521 283.552)" fill="black">
-          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="20.46" y="15">Libra Safety Rules </tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="20.46" y="15">Diem Safety Rules </tspan>
           <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="66.244" y="33.448">(LSR)</tspan>
         </text>
       </g>

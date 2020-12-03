@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module has definition of various proofs.
@@ -14,8 +14,8 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err, Result};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::hash::TestOnlyHasher;
-use libra_crypto::{
+use diem_crypto::hash::TestOnlyHasher;
+use diem_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, TransactionAccumulatorHasher,
         SPARSE_MERKLE_PLACEHOLDER_HASH,

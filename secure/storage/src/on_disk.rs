@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use libra_secure_time::{RealTimeService, TimeService};
-use libra_temppath::TempPath;
+use diem_secure_time::{RealTimeService, TimeService};
+use diem_temppath::TempPath;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
@@ -17,7 +17,7 @@ use std::{
 /// intended for single threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission
 /// checks and simply offers a proof of concept to unblock building of applications without more
 /// complex data stores. Internally, it reads and writes all data to a file, which means that it
-/// must make copies of all key material which violates the Libra code base. It violates it because
+/// must make copies of all key material which violates the Diem code base. It violates it because
 /// the anticipation is that data stores would securely handle key material. This should not be used
 /// in production.
 pub type OnDiskStorage = OnDiskStorageInternal<RealTimeService>;

@@ -1,6 +1,6 @@
 [[env_vars]]
 key = "ACCOUNT"
-value = "libra-backup"
+value = "diem-backup"
 
 [[env_vars]]
 key = "FOLDER"

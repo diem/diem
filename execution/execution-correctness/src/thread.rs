@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This provides a runtime separation between ExecutionCorrectness and the rest without requiring the
@@ -8,8 +8,8 @@
 //! in testing correctness of the communication layer between ExecutionCorrectness and SafetyRules.
 
 use crate::remote_service::{self, RemoteService};
-use libra_config::utils;
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use diem_config::utils;
+use diem_crypto::ed25519::Ed25519PrivateKey;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     thread::{self, JoinHandle},

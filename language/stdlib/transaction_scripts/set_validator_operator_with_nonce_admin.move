@@ -6,7 +6,7 @@ use 0x1::ValidatorOperatorConfig;
 /// # Summary
 /// Sets the validator operator for a validator in the validator's configuration resource "locally"
 /// and does not reconfigure the system. Changes from this transaction will not picked up by the
-/// system until a reconfiguration of the system is triggered. May only be sent by the Libra Root
+/// system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 /// account as a write set transaction.
 ///
 /// # Technical Description
@@ -20,20 +20,20 @@ use 0x1::ValidatorOperatorConfig;
 /// # Parameters
 /// | Name               | Type         | Description                                                                                                  |
 /// | ------             | ------       | -------------                                                                                                |
-/// | `lr_account`       | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Libra Root signer. |
+/// | `dr_account`       | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
 /// | `account`          | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
-/// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Libra Root.                    |
+/// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
 /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                                             |
 /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.                 |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
 /// | ----------------           | --------------                                        | -------------                                                                                                                                                |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `lr_account`.                                                                                               |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `lr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `lr_account` is too far in the future.                                                                                                |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` lr_account` has been previously recorded.                                                                                            |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Libra Root account or Treasury Compliance account                                                                             |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | A `SlidingNonce` resource is not published under `dr_account`.                                                                                               |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                        | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not.                                                   |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                        | The `sliding_nonce` in `dr_account` is too far in the future.                                                                                                |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`               | The `sliding_nonce` in` dr_account` has been previously recorded.                                                                                            |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
 /// | `Errors::NOT_PUBLISHED`    | `ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG` | The `ValidatorOperatorConfig::ValidatorOperatorConfig` resource is not published under `operator_account`.                                                   |
 /// | 0                          | 0                                                     | The `human_name` field of the `ValidatorOperatorConfig::ValidatorOperatorConfig` resource under `operator_account` does not match the provided `human_name`. |
 /// | `Errors::REQUIRES_ROLE`    | `Roles::EVALIDATOR`                                   | `account` does not have a Validator account role.                                                                                                            |
@@ -50,26 +50,26 @@ use 0x1::ValidatorOperatorConfig;
 /// * `Script::set_validator_config_and_reconfigure`
 
 fun set_validator_operator_with_nonce_admin(
-    lr_account: &signer,
+    dr_account: &signer,
     account: &signer,
     sliding_nonce: u64,
     operator_name: vector<u8>,
     operator_account: address
 ) {
-    SlidingNonce::record_nonce_or_abort(lr_account, sliding_nonce);
+    SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
     assert(ValidatorOperatorConfig::get_human_name(operator_account) == operator_name, 0);
     ValidatorConfig::set_operator(account, operator_account);
 }
 
 spec fun set_validator_operator_with_nonce_admin {
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signer;
     use 0x1::Errors;
     use 0x1::Roles;
 
     let account_addr = Signer::address_of(account);
-    include LibraAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
-    include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
+    include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
+    include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
     // next is due to abort in get_human_name
     include ValidatorConfig::AbortsIfNoValidatorConfig{addr: account_addr};
     // TODO: use an error code from Errors.move instead of 0.
@@ -84,8 +84,8 @@ spec fun set_validator_operator_with_nonce_admin {
         Errors::REQUIRES_ROLE;
 
     /// **Access Control:**
-    /// Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
-    requires Roles::has_libra_root_role(lr_account); /// This is ensured by LibraAccount::writeset_prologue.
+    /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
+    requires Roles::has_diem_root_role(dr_account); /// This is ensured by DiemAccount::writeset_prologue.
     /// Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
     include Roles::AbortsIfNotValidator{validator_addr: account_addr};
 }

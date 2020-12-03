@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
@@ -8,20 +8,20 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{format_err, Result};
+use diem_config::{
+    config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
+    network_id::NodeNetworkId,
+};
+use diem_mempool::{CommitNotification, CommitResponse};
+use diem_types::{
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    waypoint::Waypoint,
+};
 use executor_types::ChunkExecutor;
 use futures::{
     channel::{mpsc, oneshot},
     future::Future,
     SinkExt,
-};
-use libra_config::{
-    config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
-    network_id::NodeNetworkId,
-};
-use libra_mempool::{CommitNotification, CommitResponse};
-use libra_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
-    waypoint::Waypoint,
 };
 use std::{
     boxed::Box,

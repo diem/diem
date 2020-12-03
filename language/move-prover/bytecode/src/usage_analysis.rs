@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
 };
-use libra_types::account_config;
+use diem_types::account_config;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use spec_lang::{
     env::{FunctionEnv, GlobalEnv, QualifiedId, StructId},
@@ -36,10 +36,10 @@ pub fn get_modified_memory<'env>(
 
 /// Get all closed types that may be packed by (1) genesis and (2) all transaction scripts.
 /// This makes some simplifying assumptions that are not correct in general, but hold for the
-/// current Libra Framework:
+/// current Diem Framework:
 /// - Transaction scripts have at most 1 type argument
-/// - The only values that can be bound to a transaction script type argument are Coin1 and
-///   LBR. Passing any other values will lead to an aborted transaction.
+/// - The only values that can be bound to a transaction script type argument are XUS and
+///   XDX. Passing any other values will lead to an aborted transaction.
 /// The first assumption is checked and will trigger an assert failure if violated. The second
 /// is unchecked, but would be a nice property for the prover.
 pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTreeSet<StructTag> {
@@ -57,19 +57,17 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
                         "Invariant violation: usage analysis should be run before calling this",
                     );
                 packed_types.extend(annotation.closed_types.clone());
-                // instantiate the tx script open types with Coin1, LBR
+                // instantiate the tx script open types with XUS, XDX
                 if is_script {
                     let num_type_parameters = func_env.get_type_parameters().len();
                     assert!(num_type_parameters <= 1, "Assuming that transaction scripts have <= 1 type parameters for simplicity. If there can be >1 type parameter, the code here must account for all permutations of type params");
 
                     if num_type_parameters == 1 {
-                        let coin_types: Vec<Type> = vec![
-                            account_config::coin1_tmp_tag(),
-                            account_config::lbr_type_tag(),
-                        ]
-                        .into_iter()
-                        .map(|t| Type::from_type_tag(t, env))
-                        .collect();
+                        let coin_types: Vec<Type> =
+                            vec![account_config::xus_tag(), account_config::xdx_type_tag()]
+                                .into_iter()
+                                .map(|t| Type::from_type_tag(t, env))
+                                .collect();
                         for open_ty in &annotation.open_types {
                             for coin_ty in &coin_types {
                                 match open_ty.instantiate(vec![coin_ty.clone()].as_slice()).into_type_tag(env) {

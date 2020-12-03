@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -10,23 +10,23 @@ use crate::{
     test_utils::{MockStateComputer, MockStorage, MockTransactionManager},
     util::time_service::ClockTimeService,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, diem_channel, message_queues::QueueStyle};
 use consensus_types::common::{Author, Payload, Round};
-use futures::channel::mpsc;
-use libra_config::{
+use diem_config::{
     config::{
         ConsensusProposerType::{self, RoundProposer},
         NodeConfig, WaypointConfig,
     },
     generator::{self, ValidatorSwarm},
 };
-use libra_mempool::mocks::MockSharedMempool;
-use libra_types::{
+use diem_mempool::mocks::MockSharedMempool;
+use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::{OnChainConfig, OnChainConfigPayload, ValidatorSet},
     validator_info::ValidatorInfo,
     waypoint::Waypoint,
 };
+use futures::channel::mpsc;
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
@@ -56,11 +56,11 @@ impl SMRNode {
         twin_id: TwinId,
     ) -> Self {
         let (network_reqs_tx, network_reqs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (consensus_tx, consensus_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_notifs_channel) = conn_notifs_channel::new();
         let network_sender = ConsensusNetworkSender::new(
@@ -84,7 +84,7 @@ impl SMRNode {
             consensus_to_mempool_sender,
         )));
         let (mut reconfig_sender, reconfig_events) =
-            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+            diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         let mut configs = HashMap::new();
         configs.insert(
             ValidatorSet::CONFIG_ID,

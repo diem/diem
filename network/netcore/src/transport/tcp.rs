@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! TCP Transport
 use crate::{compat::IoCompat, transport::Transport};
+use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress};
+use diem_types::PeerId;
 use futures::{
     future::{self, Either, Future},
     io::{AsyncRead, AsyncWrite},
     ready,
     stream::Stream,
 };
-use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress};
-use libra_types::PeerId;
 use std::{
     convert::TryFrom,
     fmt::Debug,
@@ -328,12 +328,12 @@ impl AsyncWrite for TcpSocket {
 mod test {
     use super::*;
     use crate::transport::{ConnectionOrigin, Transport, TransportExt};
+    use diem_types::PeerId;
     use futures::{
         future::{join, FutureExt},
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
-    use libra_types::PeerId;
     use tokio::runtime::Runtime;
 
     #[tokio::test]

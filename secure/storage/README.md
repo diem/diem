@@ -5,9 +5,9 @@ custom_edit_url: https://github.com/libra/libra/edit/master/secure/storage/READM
 ---
 # Secure Storage
 
-Secure storage provides a secure, persistent data store for sensitive data in the Libra
+Secure storage provides a secure, persistent data store for sensitive data in the Diem
 blockchain. Examples of sensitive data here include information required for safety and
-identity within Libra, such as cryptographic keys and consensus safety rules, as well as
+identity within Diem, such as cryptographic keys and consensus safety rules, as well as
 run-time configuration data.
 
 ## Overview
@@ -30,7 +30,7 @@ both `KVStorage` and `CryptoStorage`:
 Github repository.
 - `Vault`: The Vault secure storage implementation uses the Vault Storage Engine (an engine
 offered by HashiCorp: https://www.vaultproject.io/). The Vault secure storage implementation
-is the one primarily used in production environments by nodes in the Libra blockchain.
+is the one primarily used in production environments by nodes in the Diem blockchain.
 - `InMemory`: The InMemory secure storage implementation provides a simple in-memory storage
 engine. This engine should only be used for testing, as it does not offer any persistence, or
 security (i.e., data is simply held in DRAM and may be lost on a crash, or restart).

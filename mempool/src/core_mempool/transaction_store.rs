@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -14,9 +14,9 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema, TxnsLog},
 };
 use anyhow::{format_err, Result};
-use libra_config::config::MempoolConfig;
-use libra_logger::prelude::*;
-use libra_types::{
+use diem_config::config::MempoolConfig;
+use diem_logger::prelude::*;
+use diem_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::SignedTransaction,
@@ -385,7 +385,7 @@ impl TransactionStore {
         &mut self,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
     ) {
-        let now = libra_infallible::duration_since_epoch();
+        let now = diem_infallible::duration_since_epoch();
 
         self.gc(now, true, metrics_cache);
     }

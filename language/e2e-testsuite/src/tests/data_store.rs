@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::verify_module;
 use compiler::Compiler;
+use diem_types::{
+    transaction::{Module, SignedTransaction, Transaction, TransactionStatus},
+    vm_status::KeptVMStatus,
+};
 use language_e2e_tests::{
     account::AccountData, compile::compile_script_with_address, current_function_name,
     executor::FakeExecutor,
-};
-use libra_types::{
-    transaction::{Module, SignedTransaction, Transaction, TransactionStatus},
-    vm_status::KeptVMStatus,
 };
 use vm::CompiledModule;
 

@@ -3,7 +3,7 @@
 
 # Module `0x1::LCS`
 
-Utility for converting a Move value to its binary representation in LCS (Libra Canonical
+Utility for converting a Move value to its binary representation in LCS (Diem Canonical
 Serialization). LCS is the binary encoding for Move resources and other non-module values
 published on-chain. See https://github.com/libra/libra/tree/master/common/lcs for more
 details on LCS.
@@ -21,7 +21,7 @@ details on LCS.
 
 ## Function `to_bytes`
 
-Return the binary representation of <code>v</code> in LCS (Libra Canonical Serialization) format
+Return the binary representation of <code>v</code> in LCS (Diem Canonical Serialization) format
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="LCS.md#0x1_LCS_to_bytes">to_bytes</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;

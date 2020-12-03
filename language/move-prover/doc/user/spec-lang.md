@@ -21,7 +21,7 @@ quality assurance, where it is continuously improved for evolving objectives.
 
 This document describes the language only; see [here][PROVER_USAGE] for how to use the Move prover tool. The reader is
 expected to have basic knowledge of the Move language, as well as basic principles of pre/post condition specifications
-(see e.g. [this article][PRE_POST_REFERENCE]). For examples of specifications, we refer to the [Libra
+(see e.g. [this article][PRE_POST_REFERENCE]). For examples of specifications, we refer to the [Diem
 framework documentation][FRAMEWORK] which has specifications embedded.
 
 

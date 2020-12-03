@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! # Code generator for Move script builders
@@ -41,15 +41,15 @@ struct Options {
     #[structopt(long)]
     target_source_dir: Option<PathBuf>,
 
-    /// Also install the libra types described by the given YAML file, along with the LCS runtime.
+    /// Also install the diem types described by the given YAML file, along with the LCS runtime.
     #[structopt(long)]
-    with_libra_types: Option<PathBuf>,
+    with_diem_types: Option<PathBuf>,
 
     /// Module name for the transaction builders installed in the `target_source_dir`.
     /// * Rust crates may contain a version number, e.g. "test:1.2.0".
     /// * In Java, this is expected to be a package name, e.g. "com.test" to create Java files in `com/test`.
     /// * In Go, this is expected to be of the format "go_module/path/go_package_name",
-    /// and `libra_types` is assumed to be in "go_module/path/libra_types".
+    /// and `diem_types` is assumed to be in "go_module/path/diem_types".
     #[structopt(long)]
     module_name: Option<String>,
 
@@ -57,19 +57,19 @@ struct Options {
     #[structopt(long)]
     serde_package_name: Option<String>,
 
-    /// Optional version number for the `libra_types` module (useful in Rust).
-    /// If `--with-libra-types` is passed, this will be the version of the generated `libra_types` module.
+    /// Optional version number for the `diem_types` module (useful in Rust).
+    /// If `--with-diem-types` is passed, this will be the version of the generated `diem_types` module.
     #[structopt(long, default_value = "0.1.0")]
-    libra_version_number: String,
+    diem_version_number: String,
 
-    /// Optional package name (Python) or module path (Go) of the `libra_types` dependency.
+    /// Optional package name (Python) or module path (Go) of the `diem_types` dependency.
     #[structopt(long)]
-    libra_package_name: Option<String>,
+    diem_package_name: Option<String>,
 
-    /// Read custom code for Libra containers from the given file paths. Containers will be matched with file stems.
+    /// Read custom code for Diem containers from the given file paths. Containers will be matched with file stems.
     /// (e.g. `AddressAccount` <- `path/to/AddressAccount.py`)
     #[structopt(long)]
-    with_custom_libra_code: Vec<PathBuf>,
+    with_custom_diem_code: Vec<PathBuf>,
 }
 
 fn main() {
@@ -85,7 +85,7 @@ fn main() {
                 Language::Python3 => buildgen::python3::output(
                     &mut out,
                     options.serde_package_name.clone(),
-                    options.libra_package_name.clone(),
+                    options.diem_package_name.clone(),
                     &abis,
                 )
                 .unwrap(),
@@ -102,7 +102,7 @@ fn main() {
                     buildgen::golang::output(
                         &mut out,
                         options.serde_package_name.clone(),
-                        options.libra_package_name.clone(),
+                        options.diem_package_name.clone(),
                         options.module_name.as_deref().unwrap_or("main").to_string(),
                         &abis,
                     )
@@ -114,8 +114,8 @@ fn main() {
         Some(dir) => dir,
     };
 
-    // Libra types
-    if let Some(registry_file) = options.with_libra_types {
+    // Diem types
+    if let Some(registry_file) = options.with_diem_types {
         let installer: Box<dyn serdegen::SourceInstaller<Error = Box<dyn std::error::Error>>> =
             match options.language {
                 Language::Python3 => Box::new(serdegen::python3::Installer::new(
@@ -142,26 +142,26 @@ fn main() {
         let content =
             std::fs::read_to_string(registry_file).expect("registry file must be readable");
         let registry = serde_yaml::from_str::<Registry>(content.as_str()).unwrap();
-        let (libra_package_name, libra_package_path) = match options.language {
+        let (diem_package_name, diem_package_path) = match options.language {
             Language::Rust => (
-                if options.libra_version_number == "0.1.0" {
-                    "libra-types".to_string()
+                if options.diem_version_number == "0.1.0" {
+                    "diem-types".to_string()
                 } else {
-                    format!("libra-types:{}", options.libra_version_number)
+                    format!("diem-types:{}", options.diem_version_number)
                 },
-                vec!["libra-types"],
+                vec!["diem-types"],
             ),
-            Language::Java => ("org.libra.types".to_string(), vec!["org", "libra", "types"]),
-            Language::Go => ("libratypes".to_string(), vec!["libratypes"]),
-            _ => ("libra_types".to_string(), vec!["libra_types"]),
+            Language::Java => ("org.diem.types".to_string(), vec!["org", "diem", "types"]),
+            Language::Go => ("diemtypes".to_string(), vec!["diemtypes"]),
+            _ => ("diem_types".to_string(), vec!["diem_types"]),
         };
-        let custom_libra_code = buildgen::read_custom_code_from_paths(
-            &libra_package_path,
-            options.with_custom_libra_code.into_iter(),
+        let custom_diem_code = buildgen::read_custom_code_from_paths(
+            &diem_package_path,
+            options.with_custom_diem_code.into_iter(),
         );
-        let config = serdegen::CodeGeneratorConfig::new(libra_package_name)
+        let config = serdegen::CodeGeneratorConfig::new(diem_package_name)
             .with_encodings(vec![serdegen::Encoding::Lcs])
-            .with_custom_code(custom_libra_code);
+            .with_custom_code(custom_diem_code);
         installer.install_module(&config, &registry).unwrap();
     }
 
@@ -171,18 +171,18 @@ fn main() {
             Language::Python3 => Box::new(buildgen::python3::Installer::new(
                 install_dir,
                 options.serde_package_name,
-                options.libra_package_name,
+                options.diem_package_name,
             )),
             Language::Rust => Box::new(buildgen::rust::Installer::new(
                 install_dir,
-                options.libra_version_number,
+                options.diem_version_number,
             )),
             Language::Cpp => Box::new(buildgen::cpp::Installer::new(install_dir)),
             Language::Java => Box::new(buildgen::java::Installer::new(install_dir)),
             Language::Go => Box::new(buildgen::golang::Installer::new(
                 install_dir,
                 options.serde_package_name,
-                options.libra_package_name,
+                options.diem_package_name,
             )),
         };
 

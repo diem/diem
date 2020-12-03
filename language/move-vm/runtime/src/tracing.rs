@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(debug_assertions)]
@@ -6,7 +6,7 @@ use crate::debug::DebugContext;
 
 #[cfg(debug_assertions)]
 use ::{
-    libra_infallible::Mutex,
+    diem_infallible::Mutex,
     move_vm_types::values::Locals,
     once_cell::sync::Lazy,
     std::{

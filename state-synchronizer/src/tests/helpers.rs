@@ -1,18 +1,18 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, SynchronizerState,
 };
 use anyhow::Result;
-use libra_config::config::HANDSHAKE_VERSION;
-use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
-use libra_infallible::RwLock;
-use libra_network_address::{
+use diem_config::config::HANDSHAKE_VERSION;
+use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
+use diem_infallible::RwLock;
+use diem_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     NetworkAddress, Protocol,
 };
-use libra_types::{
+use diem_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
     transaction::TransactionListWithProof, validator_config::ValidatorConfig,

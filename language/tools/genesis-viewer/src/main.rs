@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use compiled_stdlib::StdLibOptions;
-use libra_types::{
+use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     contract_event::ContractEvent,

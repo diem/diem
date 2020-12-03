@@ -1,10 +1,10 @@
 [package]
 name = "network"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra network"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem network"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -28,19 +28,19 @@ tokio = { version = "0.2.22", features = ["full"] }
 tokio-retry = "0.2.0"
 tokio-util = { version = "0.3.1", features = ["codec"] }
 
-bitvec = { path = "../common/bitvec", version = "0.1.0", package = "libra-bitvec" }
+bitvec = { path = "../common/bitvec", version = "0.1.0", package = "diem-bitvec" }
 channel = { path = "../common/channel", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "../config", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
-libra-infallible = { path = "../common/infallible", version = "0.1.0" }
-libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-metrics = { path = "../common/metrics", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
-libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
-libra-types = { path = "../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../config", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+diem-infallible = { path = "../common/infallible", version = "0.1.0" }
+diem-logger = { path = "../common/logger", version = "0.1.0" }
+diem-metrics = { path = "../common/metrics", version = "0.1.0" }
+diem-network-address = { path = "../network/network-address", version = "0.1.0" }
+diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }
 netcore = { path = "../network/netcore", version = "0.1.0" }
 num-variants = { path = "../common/num-variants", version = "0.1.0" }
@@ -48,8 +48,8 @@ short-hex-str = { path = "../common/short-hex-str", version = "0.1.0" }
 
 [dev-dependencies]
 criterion = "0.3.3"
-libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
-libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+diem-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0" }
 network-builder = {path = "../network/builder", version = "0.1.0"}
 proptest = { version = "0.10.1", default-features = true }
@@ -60,8 +60,8 @@ socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.
 
 [features]
 default = []
-fuzzing = ["bitvec/fuzzing", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "libra-crypto/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
-testing = ["libra-config/testing", "memsocket/testing", "netcore/testing"]
+fuzzing = ["bitvec/fuzzing", "diem-proptest-helpers", "diem-types/fuzzing", "diem-network-address/fuzzing", "diem-crypto/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
+testing = ["diem-config/testing", "memsocket/testing", "netcore/testing"]
 
 [[bench]]
 name = "socket_bench"

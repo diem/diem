@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
     shared_mempool::{peer_manager::PeerManager, tasks, types::SharedMempool},
 };
-use libra_config::config::NodeConfig;
-use libra_infallible::{Mutex, RwLock};
-use libra_types::transaction::SignedTransaction;
+use diem_config::config::NodeConfig;
+use diem_infallible::{Mutex, RwLock};
+use diem_types::transaction::SignedTransaction;
 use proptest::{
     arbitrary::any,
     prelude::*,

@@ -1,23 +1,23 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{layout::Layout, storage_helper::StorageHelper, swarm_config::BuildSwarm};
-use libra_config::{
+use diem_config::{
     config::{
         DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService,
         SecureBackend, SeedAddresses, WaypointConfig, HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
-use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_management::constants::{COMMON_NS, LAYOUT};
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_temppath::TempPath;
-use libra_types::{chain_id::ChainId, waypoint::Waypoint};
+use diem_crypto::ed25519::Ed25519PrivateKey;
+use diem_management::constants::{COMMON_NS, LAYOUT};
+use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_temppath::TempPath;
+use diem_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::path::{Path, PathBuf};
 
-const LIBRA_ROOT_NS: &str = "libra_root";
-const LIBRA_ROOT_SHARED_NS: &str = "libra_root_shared";
+const DIEM_ROOT_NS: &str = "diem_root";
+const DIEM_ROOT_SHARED_NS: &str = "diem_root_shared";
 const OPERATOR_NS: &str = "_operator";
 const OPERATOR_SHARED_NS: &str = "_operator_shared";
 const OWNER_NS: &str = "_owner";
@@ -64,8 +64,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
     /// Association uploads the validator layout to shared storage.
     fn create_layout(&self) {
         let mut layout = Layout::default();
-        layout.libra_root = LIBRA_ROOT_SHARED_NS.into();
-        layout.treasury_compliance = LIBRA_ROOT_SHARED_NS.into();
+        layout.diem_root = DIEM_ROOT_SHARED_NS.into();
+        layout.treasury_compliance = DIEM_ROOT_SHARED_NS.into();
         layout.owners = (0..self.num_validators)
             .map(|i| (i.to_string() + OWNER_SHARED_NS))
             .collect();
@@ -78,15 +78,15 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         common_storage.set(LAYOUT, layout_value).unwrap();
     }
 
-    /// Root initializes libra root and treasury root keys.
+    /// Root initializes diem root and treasury root keys.
     fn create_root(&self) {
         self.storage_helper
-            .initialize_by_idx(LIBRA_ROOT_NS.into(), 0);
+            .initialize_by_idx(DIEM_ROOT_NS.into(), 0);
         self.storage_helper
-            .libra_root_key(LIBRA_ROOT_NS, LIBRA_ROOT_SHARED_NS)
+            .diem_root_key(DIEM_ROOT_NS, DIEM_ROOT_SHARED_NS)
             .unwrap();
         self.storage_helper
-            .treasury_compliance_key(LIBRA_ROOT_NS, LIBRA_ROOT_SHARED_NS)
+            .treasury_compliance_key(DIEM_ROOT_NS, DIEM_ROOT_SHARED_NS)
             .unwrap();
     }
 
@@ -207,10 +207,10 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.create_layout();
         self.create_root();
-        let libra_root_key = self
+        let diem_root_key = self
             .storage_helper
-            .storage(LIBRA_ROOT_NS.into())
-            .export_private_key(libra_global_constants::LIBRA_ROOT_KEY)
+            .storage(DIEM_ROOT_NS.into())
+            .export_private_key(diem_global_constants::DIEM_ROOT_KEY)
             .unwrap();
 
         // Upload both owner and operator keys to shared storage
@@ -236,7 +236,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
             self.finish_validator_config(i, config, waypoint);
         }
 
-        Ok((configs, libra_root_key))
+        Ok((configs, diem_root_key))
     }
 }
 
@@ -248,7 +248,7 @@ pub enum FullnodeType {
 
 pub struct FullnodeBuilder {
     validator_config_path: Vec<PathBuf>,
-    libra_root_key_path: PathBuf,
+    diem_root_key_path: PathBuf,
     template: NodeConfig,
     build_type: FullnodeType,
 }
@@ -256,13 +256,13 @@ pub struct FullnodeBuilder {
 impl FullnodeBuilder {
     pub fn new(
         validator_config_path: Vec<PathBuf>,
-        libra_root_key_path: PathBuf,
+        diem_root_key_path: PathBuf,
         template: NodeConfig,
         build_type: FullnodeType,
     ) -> Self {
         Self {
             validator_config_path,
-            libra_root_key_path,
+            diem_root_key_path,
             template,
             build_type,
         }
@@ -350,8 +350,8 @@ impl BuildSwarm for FullnodeBuilder {
             FullnodeType::ValidatorFullnode => self.build_vfn(),
             FullnodeType::PublicFullnode(num_nodes) => self.build_public_fn(num_nodes),
         }?;
-        let libra_root_key_path = generate_key::load_key(&self.libra_root_key_path);
-        Ok((configs, libra_root_key_path))
+        let diem_root_key_path = generate_key::load_key(&self.diem_root_key_path);
+        Ok((configs, diem_root_key_path))
     }
 }
 
@@ -370,37 +370,37 @@ pub fn test_config() -> (NodeConfig, Ed25519PrivateKey) {
         .identity_from_storage()
         .backend;
     let storage: Storage = std::convert::TryFrom::try_from(backend).unwrap();
-    let mut test = libra_config::config::TestConfig::new_with_temp_dir(Some(path));
+    let mut test = diem_config::config::TestConfig::new_with_temp_dir(Some(path));
     test.execution_key(
         storage
-            .export_private_key(libra_global_constants::EXECUTION_KEY)
+            .export_private_key(diem_global_constants::EXECUTION_KEY)
             .unwrap(),
     );
     test.operator_key(
         storage
-            .export_private_key(libra_global_constants::OPERATOR_KEY)
+            .export_private_key(diem_global_constants::OPERATOR_KEY)
             .unwrap(),
     );
     test.owner_key(
         storage
-            .export_private_key(libra_global_constants::OWNER_KEY)
+            .export_private_key(diem_global_constants::OWNER_KEY)
             .unwrap(),
     );
     config.test = Some(test);
 
     let owner_account = storage
-        .get(libra_global_constants::OWNER_ACCOUNT)
+        .get(diem_global_constants::OWNER_ACCOUNT)
         .unwrap()
         .value;
-    let mut sr_test = libra_config::config::SafetyRulesTestConfig::new(owner_account);
+    let mut sr_test = diem_config::config::SafetyRulesTestConfig::new(owner_account);
     sr_test.consensus_key(
         storage
-            .export_private_key(libra_global_constants::CONSENSUS_KEY)
+            .export_private_key(diem_global_constants::CONSENSUS_KEY)
             .unwrap(),
     );
     sr_test.execution_key(
         storage
-            .export_private_key(libra_global_constants::EXECUTION_KEY)
+            .export_private_key(diem_global_constants::EXECUTION_KEY)
             .unwrap(),
     );
     config.consensus.safety_rules.test = Some(sr_test);

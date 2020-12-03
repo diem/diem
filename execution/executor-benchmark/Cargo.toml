@@ -1,10 +1,10 @@
 [package]
 name = "executor-benchmark"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra executor benchmark"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem executor benchmark"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -17,15 +17,15 @@ structopt = "0.3.21"
 
 executor = { path = "../executor", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-vm= { path = "../../language/libra-vm", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diemdb = { path = "../../storage/diemdb", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-vm= { path = "../../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
@@ -33,4 +33,4 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 
 [features]
 default = []
-fuzzing = ["libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["diem-config/fuzzing", "diem-crypto/fuzzing", "diem-types/fuzzing"]

@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     CryptoStorage, Error, GetResponse, GitHubStorage, InMemoryStorage, KVStorage,
     NamespacedStorage, OnDiskStorage, PublicKeyResponse, VaultStorage,
 };
+use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use enum_dispatch::enum_dispatch;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use serde::{de::DeserializeOwned, Serialize};
 
-/// This is the Libra interface into secure storage. Any storage engine implementing this trait
+/// This is the Diem interface into secure storage. Any storage engine implementing this trait
 /// should support both key/value operations (e.g., get, set and create) and cryptographic key
 /// operations (e.g., generate_key, sign and rotate_key).
 

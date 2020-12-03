@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::global::Config as GlobalConfig, errors::*};
-use libra_crypto::HashValue;
-use libra_types::{account_address::AccountAddress, block_metadata::BlockMetadata};
+use diem_crypto::HashValue;
+use diem_types::{account_address::AccountAddress, block_metadata::BlockMetadata};
 use std::str::FromStr;
 
 #[derive(Debug)]

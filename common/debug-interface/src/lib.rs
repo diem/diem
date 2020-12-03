@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_logger::json_log::JsonLogEntry;
+use diem_logger::json_log::JsonLogEntry;
 use reqwest::blocking;
 use std::collections::HashMap;
 

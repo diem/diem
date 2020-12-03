@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
     logging::LogContext,
     session::Session,
 };
-use libra_logger::prelude::*;
+use diem_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,

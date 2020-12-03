@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
+use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use proptest::prelude::*;
 use std::{panic, rc::Rc};
 

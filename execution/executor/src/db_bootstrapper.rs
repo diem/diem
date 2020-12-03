@@ -1,25 +1,25 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use crate::Executor;
 use anyhow::{ensure, format_err, Result};
-use executor_types::BlockExecutor;
-use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
-use libra_logger::prelude::*;
-use libra_state_view::{StateView, StateViewId};
-use libra_types::{
+use diem_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
+use diem_logger::prelude::*;
+use diem_state_view::{StateView, StateViewId};
+use diem_types::{
     access_path::AccessPath,
-    account_config::libra_root_address,
+    account_config::diem_root_address,
     block_info::{BlockInfo, GENESIS_EPOCH, GENESIS_ROUND, GENESIS_TIMESTAMP_USECS},
+    diem_timestamp::DiemTimestampResource,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    libra_timestamp::LibraTimestampResource,
     on_chain_config::{config_address, ConfigurationResource},
     transaction::Transaction,
     waypoint::Waypoint,
 };
-use libra_vm::VMExecutor;
+use diem_vm::VMExecutor;
+use executor_types::BlockExecutor;
 use move_core_types::move_resource::MoveResource;
 use std::collections::btree_map::BTreeMap;
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
@@ -165,12 +165,12 @@ pub fn calculate_genesis<V: VMExecutor>(
 fn get_state_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
     let rsrc_bytes = &state_view
         .get(&AccessPath::new(
-            libra_root_address(),
-            LibraTimestampResource::resource_path(),
+            diem_root_address(),
+            DiemTimestampResource::resource_path(),
         ))?
-        .ok_or_else(|| format_err!("LibraTimestampResource missing."))?;
-    let rsrc = lcs::from_bytes::<LibraTimestampResource>(&rsrc_bytes)?;
-    Ok(rsrc.libra_timestamp.microseconds)
+        .ok_or_else(|| format_err!("DiemTimestampResource missing."))?;
+    let rsrc = lcs::from_bytes::<DiemTimestampResource>(&rsrc_bytes)?;
+    Ok(rsrc.diem_timestamp.microseconds)
 }
 
 fn get_state_epoch(state_view: &VerifiedStateView) -> Result<u64> {

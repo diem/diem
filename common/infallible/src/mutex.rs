@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::sync::{Mutex as StdMutex, MutexGuard};
@@ -18,7 +18,7 @@ impl<T> Mutex<T> {
     pub fn lock(&self) -> MutexGuard<'_, T> {
         self.0
             .lock()
-            .expect("libra cannot currently handle a poisoned lock")
+            .expect("diem cannot currently handle a poisoned lock")
     }
 }
 
@@ -29,7 +29,7 @@ mod tests {
     use std::{sync::Arc, thread};
 
     #[test]
-    fn test_libra_mutex() {
+    fn test_diem_mutex() {
         let a = 7u8;
         let mutex = Arc::new(Mutex::new(a));
         let mutex2 = mutex.clone();

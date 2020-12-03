@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
         parse_each_line_as,
     },
 };
-use libra_types::block_metadata::BlockMetadata;
+use diem_types::block_metadata::BlockMetadata;
 
 #[test]
 fn parse_simple_positive() {

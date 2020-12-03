@@ -1,18 +1,18 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-use libra_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
-use libra_infallible::RwLock;
-use libra_network_address::{
+use diem_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
+use diem_infallible::RwLock;
+use diem_network_address::{
     encrypted::{
         EncNetworkAddress, Key, KeyVersion, TEST_SHARED_VAL_NETADDR_KEY,
         TEST_SHARED_VAL_NETADDR_KEY_VERSION,
     },
     NetworkAddress,
 };
-use libra_secure_storage::{Error as StorageError, KVStorage, Storage};
+use diem_secure_storage::{Error as StorageError, KVStorage, Storage};
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ pub enum Error {
     #[error("Failed (de)serializing validator_network_address_keys")]
     LCSError(#[from] lcs::Error),
     #[error("NetworkAddress parse error {0}")]
-    ParseError(#[from] libra_network_address::ParseError),
+    ParseError(#[from] diem_network_address::ParseError),
     #[error("Failed reading validator_network_address_keys from storage")]
     StorageError(#[from] StorageError),
     #[error("The specified version does not exist in validator_network_address_keys: {0}")]
@@ -50,7 +50,7 @@ impl Encryptor {
     /// This generates an Encryptor for use in default / testing scenarios where (proper)
     /// encryption is not necessary.
     pub fn for_testing() -> Self {
-        let storage = Storage::InMemoryStorage(libra_secure_storage::InMemoryStorage::new());
+        let storage = Storage::InMemoryStorage(diem_secure_storage::InMemoryStorage::new());
         let mut encryptor = Encryptor::new(storage);
         encryptor.initialize_for_testing().unwrap();
         encryptor
@@ -141,7 +141,7 @@ impl Encryptor {
             Ok(keys) => {
                 *self.cached_keys.write() = Some(keys.clone());
             }
-            Err(err) => libra_logger::error!(
+            Err(err) => diem_logger::error!(
                 "Unable to read {} from storage: {}",
                 VALIDATOR_NETWORK_ADDRESS_KEYS,
                 err
@@ -162,7 +162,7 @@ impl Encryptor {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct StorageKey(
     #[serde(
-        serialize_with = "libra_secure_storage::to_base64",
+        serialize_with = "diem_secure_storage::to_base64",
         deserialize_with = "from_base64"
     )]
     Key,
@@ -205,7 +205,7 @@ impl Default for ValidatorKeys {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_secure_storage::InMemoryStorage;
+    use diem_secure_storage::InMemoryStorage;
     use rand::{rngs::OsRng, Rng, RngCore, SeedableRng};
 
     #[test]
@@ -215,7 +215,7 @@ mod tests {
         encryptor.initialize().unwrap();
 
         let mut rng = rand::rngs::StdRng::from_seed(OsRng.gen());
-        let mut key = [0; libra_network_address::encrypted::KEY_LEN];
+        let mut key = [0; diem_network_address::encrypted::KEY_LEN];
         rng.fill_bytes(&mut key);
         encryptor.add_key(0, key).unwrap();
         encryptor.set_current_version(0).unwrap();
@@ -268,7 +268,7 @@ mod tests {
     #[ignore]
     #[test]
     fn initializer() {
-        let storage = Storage::VaultStorage(libra_secure_storage::VaultStorage::new(
+        let storage = Storage::VaultStorage(diem_secure_storage::VaultStorage::new(
             "http://127.0.0.1:8200".to_string(),
             "root_token".to_string(),
             Some("network_address_encryption_keys".to_string()),
@@ -279,7 +279,7 @@ mod tests {
         let mut encryptor = Encryptor::new(storage);
         encryptor.initialize().unwrap();
         let mut rng = rand::rngs::StdRng::from_seed(OsRng.gen());
-        let mut key = [0; libra_network_address::encrypted::KEY_LEN];
+        let mut key = [0; diem_network_address::encrypted::KEY_LEN];
         rng.fill_bytes(&mut key);
         encryptor.add_key(0, key).unwrap();
         encryptor.set_current_version(0).unwrap();

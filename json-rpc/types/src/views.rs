@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
 use compiled_stdlib::transaction_scripts::StdlibScript;
-use libra_crypto::HashValue;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
         CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent,
+        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -143,10 +143,10 @@ pub enum EventDataView {
     },
     #[serde(rename = "mint")]
     Mint { amount: AmountView },
-    #[serde(rename = "to_lbr_exchange_rate_update")]
-    ToLBRExchangeRateUpdate {
+    #[serde(rename = "to_xdx_exchange_rate_update")]
+    ToXDXExchangeRateUpdate {
         currency_code: String,
-        new_to_lbr_exchange_rate: f32,
+        new_to_xdx_exchange_rate: f32,
     },
     #[serde(rename = "preburn")]
     Preburn {
@@ -258,11 +258,11 @@ impl TryFrom<ContractEvent> for EventDataView {
                 amount: amount_view,
                 preburn_address,
             }
-        } else if event.type_tag() == &TypeTag::Struct(ToLBRExchangeRateUpdateEvent::struct_tag()) {
-            let update_event = ToLBRExchangeRateUpdateEvent::try_from(&event)?;
-            EventDataView::ToLBRExchangeRateUpdate {
+        } else if event.type_tag() == &TypeTag::Struct(ToXDXExchangeRateUpdateEvent::struct_tag()) {
+            let update_event = ToXDXExchangeRateUpdateEvent::try_from(&event)?;
+            EventDataView::ToXDXExchangeRateUpdate {
                 currency_code: update_event.currency_code().to_string(),
-                new_to_lbr_exchange_rate: update_event.new_to_lbr_exchange_rate(),
+                new_to_xdx_exchange_rate: update_event.new_to_xdx_exchange_rate(),
             }
         } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
             let mint_event = MintEvent::try_from(&event)?;
@@ -351,7 +351,7 @@ pub struct MetadataView {
     pub chain_id: u8,
     pub script_hash_allow_list: Option<Vec<BytesView>>,
     pub module_publishing_allowed: Option<bool>,
-    pub libra_version: Option<u64>,
+    pub diem_version: Option<u64>,
     pub dual_attestation_limit: Option<u64>,
 }
 
@@ -724,7 +724,7 @@ pub struct CurrencyInfoView {
     pub code: String,
     pub scaling_factor: u64,
     pub fractional_part: u64,
-    pub to_lbr_exchange_rate: f32,
+    pub to_xdx_exchange_rate: f32,
     pub mint_events_key: BytesView,
     pub burn_events_key: BytesView,
     pub preburn_events_key: BytesView,
@@ -738,7 +738,7 @@ impl From<&CurrencyInfoResource> for CurrencyInfoView {
             code: info.currency_code().to_string(),
             scaling_factor: info.scaling_factor(),
             fractional_part: info.fractional_part(),
-            to_lbr_exchange_rate: info.exchange_rate(),
+            to_xdx_exchange_rate: info.exchange_rate(),
             mint_events_key: BytesView::from(info.mint_events().key().as_bytes()),
             burn_events_key: BytesView::from(info.burn_events().key().as_bytes()),
             preburn_events_key: BytesView::from(info.preburn_events().key().as_bytes()),

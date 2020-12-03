@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{logging::LogContext, native_functions::NativeFunction};
@@ -7,9 +7,9 @@ use bytecode_verifier::{
     CodeUnitVerifier, DependencyChecker, DuplicationChecker, InstructionConsistency,
     RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
-use libra_crypto::HashValue;
-use libra_infallible::Mutex;
-use libra_logger::prelude::*;
+use diem_crypto::HashValue;
+use diem_infallible::Mutex;
+use diem_logger::prelude::*;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},

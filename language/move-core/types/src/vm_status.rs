@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(clippy::unit_arg)]
@@ -318,7 +318,7 @@ pub mod known_locations {
     use once_cell::sync::Lazy;
 
     /// The name of the Account module.
-    pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
+    pub const ACCOUNT_MODULE_NAME: &str = "DiemAccount";
     /// The Identifier for the Account module.
     pub static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
         Lazy::new(|| Identifier::new(ACCOUNT_MODULE_NAME).unwrap());
@@ -330,16 +330,16 @@ pub mod known_locations {
         AbortLocation::Module(ACCOUNT_MODULE.clone())
     }
 
-    /// The name of the Libra module.
-    pub const LIBRA_MODULE_NAME: &str = "Libra";
-    /// The Identifier for the Libra module.
-    pub static LIBRA_MODULE_IDENTIFIER: Lazy<Identifier> =
-        Lazy::new(|| Identifier::new(LIBRA_MODULE_NAME).unwrap());
-    /// The ModuleId for the Libra module.
-    pub static LIBRA_MODULE: Lazy<ModuleId> =
-        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, LIBRA_MODULE_IDENTIFIER.clone()));
-    pub fn libra_module_abort() -> AbortLocation {
-        AbortLocation::Module(LIBRA_MODULE.clone())
+    /// The name of the Diem module.
+    pub const DIEM_MODULE_NAME: &str = "Diem";
+    /// The Identifier for the Diem module.
+    pub static DIEM_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(DIEM_MODULE_NAME).unwrap());
+    /// The ModuleId for the Diem module.
+    pub static DIEM_MODULE: Lazy<ModuleId> =
+        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, DIEM_MODULE_IDENTIFIER.clone()));
+    pub fn diem_module_abort() -> AbortLocation {
+        AbortLocation::Module(DIEM_MODULE.clone())
     }
 
     /// The name of the Designated Dealer module.

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -18,11 +18,11 @@ use crate::{
         GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions, RocksdbOpt,
     },
 };
+use diem_config::config::RocksdbConfig;
+use diem_temppath::TempPath;
+use diem_types::transaction::Version;
+use diemdb::DiemDB;
 use executor_test_helpers::integration_test_impl::test_execution_with_storage_impl;
-use libra_config::config::RocksdbConfig;
-use libra_temppath::TempPath;
-use libra_types::transaction::Version;
-use libradb::LibraDB;
 use proptest::prelude::*;
 use std::{convert::TryInto, sync::Arc};
 use storage_interface::DbReader;
@@ -30,7 +30,7 @@ use tokio::time::Duration;
 
 #[derive(Debug)]
 struct TestData {
-    db: Arc<LibraDB>,
+    db: Arc<DiemDB>,
     txn_start_ver: Version,
     state_snapshot_ver: Option<Version>,
     target_ver: Version,
@@ -146,7 +146,7 @@ fn test_end_to_end_impl(d: TestData) {
     .unwrap();
 
     // Check
-    let tgt_db = LibraDB::open(
+    let tgt_db = DiemDB::open(
         &tgt_db_dir,
         false, /* read_only */
         None,  /* pruner */

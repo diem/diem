@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use libra_github_client::Client;
-use libra_secure_time::{RealTimeService, TimeService};
+use diem_github_client::Client;
+use diem_secure_time::{RealTimeService, TimeService};
 use serde::{de::DeserializeOwned, Serialize};
 
 /// GitHubStorage leverages a GitHub repository to provide a file system approach to key / value

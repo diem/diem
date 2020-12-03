@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::HashValue;
-use libra_logger::Schema;
+use diem_crypto::HashValue;
+use diem_logger::Schema;
 use serde::Serialize;
 
 #[derive(Schema)]

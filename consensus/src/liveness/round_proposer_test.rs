@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::liveness::{
     proposer_election::ProposerElection, round_proposer_election::RoundProposer,
 };
 use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
-use libra_types::validator_signer::ValidatorSigner;
+use diem_types::validator_signer::ValidatorSigner;
 
 use consensus_types::common::{Author, Round};
 use std::collections::HashMap;

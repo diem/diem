@@ -1,20 +1,20 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     account_address::AccountAddress,
-    account_config::COIN1_NAME,
+    account_config::XUS_NAME,
     chain_id::ChainId,
     transaction::{
         GovernanceRole, RawTransaction, Script, SignedTransaction, Transaction, TransactionInfo,
         TransactionListWithProof, TransactionPayload, TransactionWithProof,
     },
 };
-use lcs::test_helpers::assert_canonical_encode_decode;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{self, Ed25519PrivateKey, Ed25519Signature},
     PrivateKey, Uniform,
 };
+use lcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
 use std::convert::TryFrom;
 
@@ -27,7 +27,7 @@ fn test_invalid_signature() {
             Script::new(vec![], vec![], vec![]),
             0,
             0,
-            COIN1_NAME.to_owned(),
+            XUS_NAME.to_owned(),
             0,
             ChainId::test(),
         ),
@@ -41,10 +41,10 @@ fn test_invalid_signature() {
 #[test]
 fn test_role_ordering() {
     use GovernanceRole::*;
-    assert!(LibraRoot.priority() > TreasuryCompliance.priority());
-    assert!(LibraRoot.priority() > Validator.priority());
-    assert!(LibraRoot.priority() > ValidatorOperator.priority());
-    assert!(LibraRoot.priority() > DesignatedDealer.priority());
+    assert!(DiemRoot.priority() > TreasuryCompliance.priority());
+    assert!(DiemRoot.priority() > Validator.priority());
+    assert!(DiemRoot.priority() > ValidatorOperator.priority());
+    assert!(DiemRoot.priority() > DesignatedDealer.priority());
 
     assert!(TreasuryCompliance.priority() > Validator.priority());
     assert!(TreasuryCompliance.priority() > ValidatorOperator.priority());

@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoStorage, Error, KVStorage, Storage};
 
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TestLibraCrypto, HashValue, PrivateKey, Signature,
+use diem_crypto::{
+    ed25519::Ed25519PrivateKey, test_utils::TestDiemCrypto, HashValue, PrivateKey, Signature,
     Uniform,
 };
 
@@ -163,7 +163,7 @@ fn test_import_key(storage: &mut Storage) {
 
     // Verify valid keys
 
-    let message = TestLibraCrypto("Hello, World".to_string());
+    let message = TestDiemCrypto("Hello, World".to_string());
     let message_signature = storage.sign(imported_key_name, &message).unwrap();
     message_signature
         .verify(&message, &imported_public_key)
@@ -279,7 +279,7 @@ fn test_create_sign_rotate_sign(storage: &mut Storage) {
     let public_key = storage.create_key(CRYPTO_NAME).unwrap();
 
     // Create then sign message and verify correct signature
-    let message = TestLibraCrypto("Hello, World".to_string());
+    let message = TestDiemCrypto("Hello, World".to_string());
     let message_signature = storage.sign(CRYPTO_NAME, &message).unwrap();
     assert!(message_signature.verify(&message, &public_key).is_ok());
 

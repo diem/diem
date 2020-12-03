@@ -1,18 +1,18 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_crypto::traits::SigningKey;
-use libra_types::account_config::{
+use diem_crypto::traits::SigningKey;
+use diem_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address, type_tag_for_currency_code,
-    COIN1_NAME,
+    XUS_NAME,
 };
 use std::{convert::From, fmt};
 
 #[derive(Debug)]
 pub enum Response {
     DDAccountNextSeqNum(u64),
-    SubmittedTxns(Vec<libra_types::transaction::SignedTransaction>),
+    SubmittedTxns(Vec<diem_types::transaction::SignedTransaction>),
 }
 
 impl std::fmt::Display for Response {
@@ -30,7 +30,7 @@ impl std::fmt::Display for Response {
 pub struct MintParams {
     pub amount: u64,
     pub currency_code: move_core_types::identifier::Identifier,
-    pub auth_key: libra_types::transaction::authenticator::AuthenticationKey,
+    pub auth_key: diem_types::transaction::authenticator::AuthenticationKey,
     pub return_txns: Option<bool>,
     pub is_designated_dealer: Option<bool>,
 }
@@ -43,8 +43,8 @@ impl MintParams {
     fn create_parent_vasp_account_script(
         &self,
         seq: u64,
-    ) -> libra_types::transaction::TransactionPayload {
-        libra_types::transaction::TransactionPayload::Script(
+    ) -> diem_types::transaction::TransactionPayload {
+        diem_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
                 self.currency_code(),
                 0, // sliding nonce
@@ -59,8 +59,8 @@ impl MintParams {
     fn create_designated_dealer_account_script(
         &self,
         seq: u64,
-    ) -> libra_types::transaction::TransactionPayload {
-        libra_types::transaction::TransactionPayload::Script(
+    ) -> diem_types::transaction::TransactionPayload {
+        diem_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_create_designated_dealer_script(
                 self.currency_code(),
                 0, // sliding nonce
@@ -72,8 +72,8 @@ impl MintParams {
         )
     }
 
-    fn p2p_script(&self) -> libra_types::transaction::TransactionPayload {
-        libra_types::transaction::TransactionPayload::Script(
+    fn p2p_script(&self) -> diem_types::transaction::TransactionPayload {
+        diem_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
                 self.currency_code(),
                 self.receiver(),
@@ -84,26 +84,26 @@ impl MintParams {
         )
     }
 
-    fn receiver(&self) -> libra_types::account_address::AccountAddress {
+    fn receiver(&self) -> diem_types::account_address::AccountAddress {
         self.auth_key.derived_address()
     }
 }
 
 pub struct Service {
-    chain_id: libra_types::chain_id::ChainId,
-    private_key: libra_crypto::ed25519::Ed25519PrivateKey,
-    client: libra_json_rpc_client::JsonRpcAsyncClient,
+    chain_id: diem_types::chain_id::ChainId,
+    private_key: diem_crypto::ed25519::Ed25519PrivateKey,
+    client: diem_json_rpc_client::JsonRpcAsyncClient,
 }
 
 impl Service {
     pub fn new(
         server_url: String,
-        chain_id: libra_types::chain_id::ChainId,
+        chain_id: diem_types::chain_id::ChainId,
         private_key_file: String,
     ) -> Self {
         let url = reqwest::Url::parse(server_url.as_str()).expect("invalid server url");
         let private_key = generate_key::load_key(private_key_file);
-        let client = libra_json_rpc_client::JsonRpcAsyncClient::new(url);
+        let client = diem_json_rpc_client::JsonRpcAsyncClient::new(url);
         Service {
             chain_id,
             private_key,
@@ -125,7 +125,7 @@ impl Service {
         }
         txns.push(self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?);
 
-        let mut batch = libra_json_rpc_client::JsonRpcBatch::new();
+        let mut batch = diem_json_rpc_client::JsonRpcBatch::new();
         for txn in &txns {
             batch.add_submit_request(txn.clone())?;
         }
@@ -141,18 +141,18 @@ impl Service {
 
     fn create_txn(
         &self,
-        payload: libra_types::transaction::TransactionPayload,
-        sender: libra_types::account_address::AccountAddress,
+        payload: diem_types::transaction::TransactionPayload,
+        sender: diem_types::account_address::AccountAddress,
         seq: u64,
-    ) -> Result<libra_types::transaction::SignedTransaction> {
-        libra_types::transaction::helpers::create_user_txn(
+    ) -> Result<diem_types::transaction::SignedTransaction> {
+        diem_types::transaction::helpers::create_user_txn(
             self,
             payload,
             sender,
             seq,
             1_000_000,
             0,
-            COIN1_NAME.to_owned(),
+            XUS_NAME.to_owned(),
             30,
             self.chain_id,
         )
@@ -160,7 +160,7 @@ impl Service {
 
     async fn sequences(
         &self,
-        receiver: libra_types::account_address::AccountAddress,
+        receiver: diem_types::account_address::AccountAddress,
     ) -> Result<(u64, u64, Option<u64>)> {
         let accounts = vec![
             treasury_compliance_account_address(),
@@ -199,15 +199,15 @@ impl Service {
     }
 }
 
-impl libra_types::transaction::helpers::TransactionSigner for Service {
+impl diem_types::transaction::helpers::TransactionSigner for Service {
     fn sign_txn(
         &self,
-        raw_txn: libra_types::transaction::RawTransaction,
-    ) -> Result<libra_types::transaction::SignedTransaction> {
+        raw_txn: diem_types::transaction::RawTransaction,
+    ) -> Result<diem_types::transaction::SignedTransaction> {
         let signature = self.private_key.sign(&raw_txn);
-        Ok(libra_types::transaction::SignedTransaction::new(
+        Ok(diem_types::transaction::SignedTransaction::new(
             raw_txn,
-            libra_crypto::ed25519::Ed25519PublicKey::from(&self.private_key),
+            diem_crypto::ed25519::Ed25519PublicKey::from(&self.private_key),
             signature,
         ))
     }

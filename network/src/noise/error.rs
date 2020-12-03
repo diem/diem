@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::noise::NoiseError;
-use libra_types::PeerId;
+use diem_crypto::noise::NoiseError;
+use diem_types::PeerId;
 use short_hex_str::ShortHexStr;
 use std::io;
 use thiserror::Error;

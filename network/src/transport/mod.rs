@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -9,20 +9,20 @@ use crate::{
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
     },
 };
+use diem_config::{
+    config::HANDSHAKE_VERSION,
+    network_id::{NetworkContext, NetworkId},
+};
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_logger::prelude::*;
+use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
+use diem_types::{chain_id::ChainId, PeerId};
 use futures::{
     future::{Future, FutureExt},
     io::{AsyncRead, AsyncWrite},
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use libra_config::{
-    config::HANDSHAKE_VERSION,
-    network_id::{NetworkContext, NetworkId},
-};
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_logger::prelude::*;
-use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
-use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
 use serde::{export::Formatter, Serialize};
 use std::{
@@ -52,14 +52,14 @@ pub const SUPPORTED_MESSAGING_PROTOCOL: MessagingProtocolVersion = MessagingProt
 /// Global connection-id generator.
 static CONNECTION_ID_GENERATOR: ConnectionIdGenerator = ConnectionIdGenerator::new();
 
-/// tcp::Transport with Libra-specific configuration applied.
-pub const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
+/// tcp::Transport with Diem-specific configuration applied.
+pub const DIEM_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.
     recv_buffer_size: None,
     send_buffer_size: None,
     ttl: None,
     keepalive: None,
-    // Use TCP_NODELAY for libra tcp connections.
+    // Use TCP_NODELAY for diem tcp connections.
     nodelay: Some(true),
 };
 
@@ -262,7 +262,7 @@ async fn upgrade_inbound<T: TSocket>(
         .await
         .map_err(|err| add_pp_addr(proxy_protocol_enabled, err, &addr))?;
 
-    // try to negotiate common libranet version and supported application protocols
+    // try to negotiate common diemnet version and supported application protocols
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|err| {
@@ -336,7 +336,7 @@ async fn upgrade_outbound<T: TSocket>(
     };
     let remote_handshake = exchange_handshake(&handshake_msg, &mut socket).await?;
 
-    // try to negotiate common libranet version and supported application protocols
+    // try to negotiate common diemnet version and supported application protocols
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|e| {
@@ -361,7 +361,7 @@ async fn upgrade_outbound<T: TSocket>(
     })
 }
 
-/// The common LibraNet Transport.
+/// The common DiemNet Transport.
 ///
 /// The base transport layer is pluggable, so long as it provides a reliable,
 /// ordered, connection-oriented, byte-stream abstraction (e.g., TCP). We currently
@@ -373,14 +373,14 @@ async fn upgrade_outbound<T: TSocket>(
 /// the `Handshake` protocol.
 // TODO(philiphayes): rework Transport trait, possibly include Upgrade trait.
 // ideas in this PR thread: https://github.com/libra/libra/pull/3478#issuecomment-617385633
-pub struct LibraNetTransport<TTransport> {
+pub struct DiemNetTransport<TTransport> {
     base_transport: TTransport,
     ctxt: Arc<UpgradeContext>,
     identity_pubkey: x25519::PublicKey,
     enable_proxy_protocol: bool,
 }
 
-impl<TTransport> LibraNetTransport<TTransport>
+impl<TTransport> DiemNetTransport<TTransport>
 where
     TTransport: Transport<Error = io::Error>,
     TTransport::Output: TSocket,
@@ -430,7 +430,7 @@ where
     fn parse_dial_addr(
         addr: &NetworkAddress,
     ) -> io::Result<(NetworkAddress, x25519::PublicKey, u8)> {
-        use libra_network_address::Protocol::*;
+        use diem_network_address::Protocol::*;
 
         let protos = addr.as_slice();
 
@@ -453,7 +453,7 @@ where
                 )
             })?;
 
-        // parse out the libranet protocols (noise ik and handshake)
+        // parse out the diemnet protocols (noise ik and handshake)
         match base_transport_suffix {
             [NoiseIK(pubkey), Handshake(version)] => {
                 let base_addr = NetworkAddress::try_from(base_transport_protos.to_vec())
@@ -500,7 +500,7 @@ where
     ) -> io::Result<
         impl Future<Output = io::Result<Connection<NoiseStream<TTransport::Output>>>> + Send + 'static,
     > {
-        // parse libranet protocols
+        // parse diemnet protocols
         // TODO(philiphayes): `Transport` trait should include parsing in `dial`?
         let (base_addr, pubkey, handshake_version) = Self::parse_dial_addr(&addr)?;
 
@@ -584,14 +584,14 @@ where
     }
 }
 
-// If using `LibraNetTransport` as a `Transport` trait, then all upgrade futures
+// If using `DiemNetTransport` as a `Transport` trait, then all upgrade futures
 // and listening streams must be boxed, since `upgrade_inbound` and `upgrade_outbound`
 // are async fns (and therefore unnamed types).
 //
 // TODO(philiphayes): We can change these `Pin<Box<dyn Future<..>>> to `impl Future<..>`
 // when/if this rust feature is stabilized: https://github.com/rust-lang/rust/issues/63063
 
-impl<TTransport: Transport> Transport for LibraNetTransport<TTransport>
+impl<TTransport: Transport> Transport for DiemNetTransport<TTransport>
 where
     TTransport: Transport<Error = io::Error> + Send + 'static,
     TTransport::Output: TSocket,

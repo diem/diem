@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::{Error, RootPath, SecureBackend};
-use libra_types::transaction::Transaction;
+use diem_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -121,8 +121,8 @@ pub struct RemoteExecutionService {
 #[cfg(test)]
 mod test {
     use super::*;
-    use libra_temppath::TempPath;
-    use libra_types::{
+    use diem_temppath::TempPath;
+    use diem_types::{
         transaction::{ChangeSet, Transaction, WriteSetPayload},
         write_set::WriteSetMut,
     };

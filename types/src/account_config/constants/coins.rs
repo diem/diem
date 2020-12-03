@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_config::constants::{from_currency_code_string, CORE_CODE_ADDRESS};
@@ -8,33 +8,33 @@ use move_core_types::{
 };
 use once_cell::sync::Lazy;
 
-pub const LBR_NAME: &str = "LBR";
-pub const COIN1_NAME: &str = "Coin1";
+pub const XDX_NAME: &str = "XDX";
+pub const XUS_NAME: &str = "XUS";
 
-pub fn coin1_tmp_tag() -> TypeTag {
+pub fn xus_tag() -> TypeTag {
     TypeTag::Struct(StructTag {
         address: CORE_CODE_ADDRESS,
-        module: from_currency_code_string(COIN1_NAME).unwrap(),
-        name: from_currency_code_string(COIN1_NAME).unwrap(),
+        module: from_currency_code_string(XUS_NAME).unwrap(),
+        name: from_currency_code_string(XUS_NAME).unwrap(),
         type_params: vec![],
     })
 }
 
-pub static LBR_MODULE: Lazy<ModuleId> =
-    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, Identifier::new(LBR_NAME).unwrap()));
-pub static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new(LBR_NAME).unwrap());
+pub static XDX_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, Identifier::new(XDX_NAME).unwrap()));
+pub static XDX_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new(XDX_NAME).unwrap());
 
-pub fn lbr_type_tag() -> TypeTag {
+pub fn xdx_type_tag() -> TypeTag {
     TypeTag::Struct(StructTag {
         address: CORE_CODE_ADDRESS,
-        module: from_currency_code_string(LBR_NAME).unwrap(),
-        name: from_currency_code_string(LBR_NAME).unwrap(),
+        module: from_currency_code_string(XDX_NAME).unwrap(),
+        name: from_currency_code_string(XDX_NAME).unwrap(),
         type_params: vec![],
     })
 }
 
-/// Return `Some(struct_name)` if `t` is a `StructTag` representing one of the current Libra coin
-/// types (LBR, Coin1), `None` otherwise.
+/// Return `Some(struct_name)` if `t` is a `StructTag` representing one of the current Diem coin
+/// types (XDX, XUS), `None` otherwise.
 pub fn coin_name(t: &TypeTag) -> Option<String> {
     match t {
         TypeTag::Struct(StructTag {
@@ -44,7 +44,7 @@ pub fn coin_name(t: &TypeTag) -> Option<String> {
             ..
         }) if *address == CORE_CODE_ADDRESS && module == name => {
             let name_str = name.to_string();
-            if name_str == LBR_NAME || name_str == COIN1_NAME {
+            if name_str == XDX_NAME || name_str == XUS_NAME {
                 Some(name_str)
             } else {
                 None
@@ -56,8 +56,8 @@ pub fn coin_name(t: &TypeTag) -> Option<String> {
 
 #[test]
 fn coin_names() {
-    assert!(coin_name(&coin1_tmp_tag()).unwrap() == COIN1_NAME);
-    assert!(coin_name(&lbr_type_tag()).unwrap() == LBR_NAME);
+    assert!(coin_name(&xus_tag()).unwrap() == XUS_NAME);
+    assert!(coin_name(&xdx_type_tag()).unwrap() == XDX_NAME);
 
     assert!(coin_name(&TypeTag::U64) == None);
     let bad_name = Identifier::new("NotACoin").unwrap();

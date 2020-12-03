@@ -1,18 +1,18 @@
 module M {
-    import 0x1.Coin1;
-    import 0x1.Libra;
+    import 0x1.XUS;
+    import 0x1.Diem;
     import 0x1.Signer;
     resource Foo<T: resource> { x: T }
-    resource CoinWrapper { f: Self.Foo<Libra.Libra<Coin1.Coin1>> }
+    resource CoinWrapper { f: Self.Foo<Diem.Diem<XUS.XUS>> }
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
     resource Inner { b: vector<u8> }
 
 
-    public coin_wrapper(account: &signer, c: Libra.Libra<Coin1.Coin1>) {
-        let foo: Self.Foo<Libra.Libra<Coin1.Coin1>>;
+    public coin_wrapper(account: &signer, c: Diem.Diem<XUS.XUS>) {
+        let foo: Self.Foo<Diem.Diem<XUS.XUS>>;
         let coin_wrapper: Self.CoinWrapper;
 
-        foo = Foo<Libra.Libra<Coin1.Coin1>> {x: move(c)};
+        foo = Foo<Diem.Diem<XUS.XUS>> {x: move(c)};
         coin_wrapper = CoinWrapper {f: move(foo)};
         move_to<CoinWrapper>(move(account), move(coin_wrapper));
         return;
@@ -33,15 +33,15 @@ module M {
     public get_coin_value(account: &signer): u64 acquires CoinWrapper {
         let sender: address;
         let coin_wrapper_ref: &Self.CoinWrapper;
-        let foo_ref: &Self.Foo<Libra.Libra<Coin1.Coin1>>;
-        let coin_ref: &Libra.Libra<Coin1.Coin1>;
+        let foo_ref: &Self.Foo<Diem.Diem<XUS.XUS>>;
+        let coin_ref: &Diem.Diem<XUS.XUS>;
 
         sender = Signer.address_of(copy(account));
         coin_wrapper_ref = borrow_global<CoinWrapper>(move(sender));
         foo_ref = &move(coin_wrapper_ref).f;
         coin_ref = &move(foo_ref).x;
 
-        return Libra.value<Coin1.Coin1>(move(coin_ref));
+        return Diem.value<XUS.XUS>(move(coin_ref));
     }
 
     public get_inner(account: &signer): vector<u8> acquires InnerWrapper {
@@ -59,31 +59,31 @@ module M {
     }
 
 
-    public destroy(account: &signer): Libra.Libra<Coin1.Coin1> acquires CoinWrapper {
+    public destroy(account: &signer): Diem.Diem<XUS.XUS> acquires CoinWrapper {
         let sender: address;
         let coin_wrapper: Self.CoinWrapper;
-        let f: Self.Foo<Libra.Libra<Coin1.Coin1>>;
-        let x: Libra.Libra<Coin1.Coin1>;
+        let f: Self.Foo<Diem.Diem<XUS.XUS>>;
+        let x: Diem.Diem<XUS.XUS>;
 
         sender = Signer.address_of(copy(account));
         coin_wrapper = move_from<CoinWrapper>(move(sender));
         CoinWrapper {f} = move(coin_wrapper);
-        Foo<Libra.Libra<Coin1.Coin1>> {x} = move(f);
+        Foo<Diem.Diem<XUS.XUS>> {x} = move(f);
         return move(x);
     }
 }
 
 //! new-transaction
 import {{default}}.M;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main(account: &signer) {
-  let coin: Libra.Libra<Coin1.Coin1>;
+  let coin: Diem.Diem<XUS.XUS>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
-  coin = Libra.zero<Coin1.Coin1>();
+  coin = Diem.zero<XUS.XUS>();
 
   M.coin_wrapper(copy(account), move(coin));
   M.inner_wrapper(copy(account), move(byte));
@@ -94,11 +94,11 @@ main(account: &signer) {
 
 //! new-transaction
 import {{default}}.M;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main(account: &signer) {
-  let coin: Libra.Libra<Coin1.Coin1>;
+  let coin: Diem.Diem<XUS.XUS>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
@@ -110,13 +110,13 @@ main(account: &signer) {
 
 //! new-transaction
 import {{default}}.M;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main(account: &signer) {
-  let coin: Libra.Libra<Coin1.Coin1>;
+  let coin: Diem.Diem<XUS.XUS>;
   coin = M.destroy(copy(account));
-  Libra.destroy_zero<Coin1.Coin1>(move(coin));
+  Diem.destroy_zero<XUS.XUS>(move(coin));
   return;
 }
 // check: "Keep(EXECUTED)"

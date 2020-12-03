@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 # build-aws-base.sh is a common script shared by mutiple build-aws.sh scripts
 
@@ -23,31 +23,31 @@ BUILD_PROJECTS=()
 
 while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
-    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules libra-tools)
+    BUILD_PROJECTS=(diem-validator diem-cluster-test diem-init diem-mint diem-safety-rules diem-tools)
     ;;
     # NOTE: This is used in land-blocking workflow `.github/workflows/land-blocking.yml`
     #       If you change the list of projects to be built for `--build-all-cti`, please
     #       change the list in `.github/actions/land-blocking/find-lbt-images.sh` as well
   --build-all-cti )
-    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-safety-rules)
+    BUILD_PROJECTS=(diem-validator diem-cluster-test diem-init diem-safety-rules)
     ;;
   --build-cluster-test )
-    BUILD_PROJECTS=(libra-cluster-test)
+    BUILD_PROJECTS=(diem-cluster-test)
     ;;
   --build-validator )
-    BUILD_PROJECTS=(libra-validator)
+    BUILD_PROJECTS=(diem-validator)
     ;;
   --build-init )
-    BUILD_PROJECTS=(libra-init)
+    BUILD_PROJECTS=(diem-init)
     ;;
   --build-mint )
-    BUILD_PROJECTS=(libra-mint)
+    BUILD_PROJECTS=(diem-mint)
     ;;
   --build-safety-rules )
-    BUILD_PROJECTS=(libra-safety-rules)
+    BUILD_PROJECTS=(diem-safety-rules)
     ;;
   --build-tools )
-    BUILD_PROJECTS=(libra-tools)
+    BUILD_PROJECTS=(diem-tools)
     ;;
   --version )
     shift;

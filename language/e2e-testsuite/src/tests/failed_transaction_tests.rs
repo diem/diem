@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
+use diem_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, DiemVM};
 use language_e2e_tests::{
     account, common_transactions::peer_to_peer_txn, current_function_name, executor::FakeExecutor,
 };
-use libra_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
-use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
 use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::gas_schedule::zero_cost_schedule;
@@ -18,7 +18,7 @@ fn failed_transaction_cleanup_test() {
     executor.add_account_data(&sender);
 
     let log_context = NoContextLog::new();
-    let libra_vm = LibraVM::new(executor.get_state_view());
+    let diem_vm = DiemVM::new(executor.get_state_view());
     let data_cache = StateViewCache::new(executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
@@ -31,13 +31,13 @@ fn failed_transaction_cleanup_test() {
     let gas_schedule = zero_cost_schedule();
 
     // TYPE_MISMATCH should be kept and charged.
-    let out1 = libra_vm.failed_transaction_cleanup(
+    let out1 = diem_vm.failed_transaction_cleanup(
         VMStatus::Error(StatusCode::TYPE_MISMATCH),
         &gas_schedule,
         gas_left,
         &txn_data,
         &data_cache,
-        &account::coin1_tmp_currency_code(),
+        &account::xus_currency_code(),
         &log_context,
     );
     assert!(!out1.write_set().is_empty());
@@ -50,13 +50,13 @@ fn failed_transaction_cleanup_test() {
     );
 
     // Invariant violations should be discarded and not charged.
-    let out2 = libra_vm.failed_transaction_cleanup(
+    let out2 = diem_vm.failed_transaction_cleanup(
         VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR),
         &gas_schedule,
         gas_left,
         &txn_data,
         &data_cache,
-        &account::coin1_tmp_currency_code(),
+        &account::xus_currency_code(),
         &log_context,
     );
     assert!(out2.write_set().is_empty());

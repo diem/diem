@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{epoch_state::EpochState, on_chain_config::ValidatorSet, transaction::Version};
-use libra_crypto::hash::HashValue;
+use diem_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use diem_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

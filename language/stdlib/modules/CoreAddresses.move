@@ -2,24 +2,24 @@ address 0x1 {
 
 /// Module providing well-known addresses and related logic.
 ///
-/// > Note: this module currently defines zero-argument functions like `Self::LIBRA_ROOT_ADDRESS()` using capitalization
+/// > Note: this module currently defines zero-argument functions like `Self::DIEM_ROOT_ADDRESS()` using capitalization
 /// > in the name, following the convention for constants. Eventually, those functions are planned to become actual
 /// > global constants, once the Move language supports this feature.
 module CoreAddresses {
     use 0x1::Errors;
     use 0x1::Signer;
 
-    /// The address of the Libra root account. This account is
+    /// The address of the Diem root account. This account is
     /// created in genesis, and cannot be changed. This address has
     /// ultimate authority over the permissions granted (or removed) from
     /// accounts on-chain.
-    public fun LIBRA_ROOT_ADDRESS(): address {
+    public fun DIEM_ROOT_ADDRESS(): address {
         0xA550C18
     }
 
-    /// The (singleton) address under which the `0x1::Libra::CurrencyInfo` resource for
+    /// The (singleton) address under which the `0x1::Diem::CurrencyInfo` resource for
     /// every registered currency is published. This is the same as the
-    /// `LIBRA_ROOT_ADDRESS` but there is no requirement that it must
+    /// `DIEM_ROOT_ADDRESS` but there is no requirement that it must
     /// be this from an operational viewpoint, so this is why this is separated out.
     public fun CURRENCY_INFO_ADDRESS(): address {
         0xA550C18
@@ -46,8 +46,8 @@ module CoreAddresses {
         0x1
     }
 
-    /// The operation can only be performed by the account at 0xA550C18 (Libra Root)
-    const ELIBRA_ROOT: u64 = 0;
+    /// The operation can only be performed by the account at 0xA550C18 (Diem Root)
+    const EDIEM_ROOT: u64 = 0;
     /// The operation can only be performed by the account at 0xB1E55ED (Treasury & Compliance)
     const ETREASURY_COMPLIANCE: u64 = 1;
     /// The operation can only be performed by the VM
@@ -55,19 +55,19 @@ module CoreAddresses {
     /// The operation can only be performed by the account where currencies are registered
     const ECURRENCY_INFO: u64 = 3;
 
-    /// Assert that the account is the Libra root address.
-    public fun assert_libra_root(account: &signer) {
-        assert(Signer::address_of(account) == LIBRA_ROOT_ADDRESS(), Errors::requires_address(ELIBRA_ROOT))
+    /// Assert that the account is the Diem root address.
+    public fun assert_diem_root(account: &signer) {
+        assert(Signer::address_of(account) == DIEM_ROOT_ADDRESS(), Errors::requires_address(EDIEM_ROOT))
     }
-    spec fun assert_libra_root {
+    spec fun assert_diem_root {
         pragma opaque;
-        include AbortsIfNotLibraRoot;
+        include AbortsIfNotDiemRoot;
     }
 
-    /// Specifies that a function aborts if the account does not have the Libra root address.
-    spec schema AbortsIfNotLibraRoot {
+    /// Specifies that a function aborts if the account does not have the Diem root address.
+    spec schema AbortsIfNotDiemRoot {
         account: signer;
-        aborts_if Signer::spec_address_of(account) != LIBRA_ROOT_ADDRESS()
+        aborts_if Signer::spec_address_of(account) != DIEM_ROOT_ADDRESS()
             with Errors::REQUIRES_ADDRESS;
     }
 

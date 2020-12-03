@@ -1,13 +1,13 @@
 address 0x1 {
 
 /// The ValidatorConfig resource holds information about a validator. Information
-/// is published and updated by Libra root in a `Self::ValidatorConfig` in preparation for
-/// later inclusion (by functions in LibraConfig) in a `LibraConfig::LibraConfig<LibraSystem>`
-/// struct (the `Self::ValidatorConfig` in a `LibraConfig::ValidatorInfo` which is a member
-/// of the `LibraSystem::LibraSystem.validators` vector).
+/// is published and updated by Diem root in a `Self::ValidatorConfig` in preparation for
+/// later inclusion (by functions in DiemConfig) in a `DiemConfig::DiemConfig<DiemSystem>`
+/// struct (the `Self::ValidatorConfig` in a `DiemConfig::ValidatorInfo` which is a member
+/// of the `DiemSystem::DiemSystem.validators` vector).
 
 module ValidatorConfig {
-    use 0x1::LibraTimestamp;
+    use 0x1::DiemTimestamp;
     use 0x1::Errors;
     use 0x1::Option::{Self, Option};
     use 0x1::Signature;
@@ -49,11 +49,11 @@ module ValidatorConfig {
     /// and the address of the validator operator.
     public fun publish(
         validator_account: &signer,
-        lr_account: &signer,
+        dr_account: &signer,
         human_name: vector<u8>,
     ) {
-        LibraTimestamp::assert_operating();
-        Roles::assert_libra_root(lr_account);
+        DiemTimestamp::assert_operating();
+        Roles::assert_diem_root(dr_account);
         Roles::assert_validator(validator_account);
         assert(
             !exists<ValidatorConfig>(Signer::address_of(validator_account)),
@@ -73,9 +73,9 @@ module ValidatorConfig {
 
     spec schema PublishAbortsIf {
         validator_addr: address;
-        lr_account: signer;
-        include LibraTimestamp::AbortsIfNotOperating;
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        dr_account: signer;
+        include DiemTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include Roles::AbortsIfNotValidator{validator_addr: validator_addr};
         aborts_if exists_config(validator_addr)
             with Errors::ALREADY_PUBLISHED;
@@ -169,7 +169,7 @@ module ValidatorConfig {
 
     /// Rotate the config in the validator_account.
     /// Once the config is set, it can not go back to `Option::none` - this is crucial for validity
-    /// of the LibraSystem's code.
+    /// of the DiemSystem's code.
     public fun set_config(
         validator_operator_account: &signer,
         validator_addr: address,
@@ -327,7 +327,7 @@ module ValidatorConfig {
 
     /// # Validity of Validators
 
-    /// See comment on `ValidatorConfig::set_config` -- LibraSystem depends on this.
+    /// See comment on `ValidatorConfig::set_config` -- DiemSystem depends on this.
     spec module {
         /// A validator stays valid once it becomes valid.
         invariant update [global]
@@ -343,7 +343,7 @@ module ValidatorConfig {
             Roles::spec_has_validator_role_addr(addr);
 
         /// LIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
-        /// in LibraSystem so we don't have to check whether every validator address has a validator role.
+        /// in DiemSystem so we don't have to check whether every validator address has a validator role.
         invariant [global] forall addr: address where exists_config(addr):
             Roles::spec_has_validator_role_addr(addr);
 

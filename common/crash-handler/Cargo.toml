@@ -1,10 +1,10 @@
 [package]
 name = "crash-handler"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra crash handler"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem crash handler"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -13,6 +13,6 @@ edition = "2018"
 backtrace = "0.3.55"
 toml = "0.5.7"
 
-libra-logger = { path = "../logger", version = "0.1.0" }
-libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../logger", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 serde = { version = "1.0.117", features = ["derive"] }

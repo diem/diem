@@ -1,16 +1,16 @@
 script {
-use 0x1::Libra;
+use 0x1::Diem;
 use 0x1::FixedPoint32;
 use 0x1::SlidingNonce;
 
 /// # Summary
-/// Update the rough on-chain exchange rate between a specified currency and LBR (as a conversion
-/// to micro-LBR). The transaction can only be sent by the Treasury Compliance account. After this
+/// Update the rough on-chain exchange rate between a specified currency and XDX (as a conversion
+/// to micro-XDX). The transaction can only be sent by the Treasury Compliance account. After this
 /// transaction the updated exchange rate will be used for normalization of gas prices, and for
 /// dual attestation checking.
 ///
 /// # Technical Description
-/// Updates the on-chain exchange rate from the given `Currency` to micro-LBR.  The exchange rate
+/// Updates the on-chain exchange rate from the given `Currency` to micro-XDX.  The exchange rate
 /// is given by `new_exchange_rate_numerator/new_exchange_rate_denominator`.
 ///
 /// # Parameters
@@ -19,8 +19,8 @@ use 0x1::SlidingNonce;
 /// | `Currency`                      | Type      | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
 /// | `tc_account`                    | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
 /// | `sliding_nonce`                 | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
-/// | `new_exchange_rate_numerator`   | `u64`     | The numerator for the new to micro-LBR exchange rate for `Currency`.                                                               |
-/// | `new_exchange_rate_denominator` | `u64`     | The denominator for the new to micro-LBR exchange rate for `Currency`.                                                             |
+/// | `new_exchange_rate_numerator`   | `u64`     | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
+/// | `new_exchange_rate_denominator` | `u64`     | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -50,14 +50,14 @@ fun update_exchange_rate<Currency>(
         new_exchange_rate_numerator,
         new_exchange_rate_denominator,
     );
-    Libra::update_lbr_exchange_rate<Currency>(tc_account, rate);
+    Diem::update_xdx_exchange_rate<Currency>(tc_account, rate);
 }
 spec fun update_exchange_rate {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Roles;
 
-    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
     include FixedPoint32::CreateFromRationalAbortsIf{
         numerator: new_exchange_rate_numerator,
@@ -67,7 +67,7 @@ spec fun update_exchange_rate {
         new_exchange_rate_numerator,
         new_exchange_rate_denominator
     );
-    include Libra::UpdateLBRExchangeRateAbortsIf<Currency>;
+    include Diem::UpdateXDXExchangeRateAbortsIf<Currency>;
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,

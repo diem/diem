@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //
@@ -12,11 +12,11 @@ use crate::{
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     testutils::fake_socket::{ReadOnlyTestSocket, ReadWriteTestSocket},
 };
+use diem_config::network_id::NetworkContext;
+use diem_crypto::{noise::NoiseSession, test_utils::TEST_SEED, x25519, Uniform as _};
+use diem_types::PeerId;
 use futures::{executor::block_on, future::join};
 use futures_util::io::AsyncReadExt;
-use libra_config::network_id::NetworkContext;
-use libra_crypto::{noise::NoiseSession, test_utils::TEST_SEED, x25519, Uniform as _};
-use libra_types::PeerId;
 use once_cell::sync::Lazy;
 use rand_core::SeedableRng;
 
@@ -101,7 +101,7 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     (init_msg, resp_msg)
 }
 
-pub fn generate_corpus(gen: &mut libra_proptest_helpers::ValueGenerator) -> Vec<u8> {
+pub fn generate_corpus(gen: &mut diem_proptest_helpers::ValueGenerator) -> Vec<u8> {
     let (init_msg, resp_msg) = generate_first_two_messages();
     // choose a random one
     let strategy = proptest::arbitrary::any::<bool>();

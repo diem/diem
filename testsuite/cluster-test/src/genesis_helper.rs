@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_genesis_tool::{command::Command, layout::Layout};
-use libra_management::{error::Error, secure_backend::DISK};
-use libra_network_address::NetworkAddress;
-use libra_operational_tool::command::Command as OperationalCommand;
-use libra_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_genesis_tool::{command::Command, layout::Layout};
+use diem_management::{error::Error, secure_backend::DISK};
+use diem_network_address::NetworkAddress;
+use diem_operational_tool::command::Command as OperationalCommand;
+use diem_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
 use std::path::Path;
 use structopt::StructOpt;
 use tokio::task::spawn_blocking;
@@ -22,7 +22,7 @@ impl GenesisHelper {
     pub async fn set_layout(&self, path: &str, namespace: &str) -> Result<Layout, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 set-layout
                 --path {path}
                 --shared-backend backend={backend};\
@@ -41,7 +41,7 @@ impl GenesisHelper {
             .expect("tokio spawn_blocking runtime error")
     }
 
-    pub async fn libra_root_key(
+    pub async fn diem_root_key(
         &self,
         validator_backend: &str,
         server: &str,
@@ -51,8 +51,8 @@ impl GenesisHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                libra-genesis-tool
-                libra-root-key
+                diem-genesis-tool
+                diem-root-key
                 --validator-backend backend={validator_backend};\
                     server={server};\
                     token={token_path};\
@@ -71,7 +71,7 @@ impl GenesisHelper {
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        spawn_blocking(|| command.libra_root_key())
+        spawn_blocking(|| command.diem_root_key())
             .await
             .expect("tokio spawn_blocking runtime error")
     }
@@ -86,7 +86,7 @@ impl GenesisHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 owner-key
                 --validator-backend backend={validator_backend};\
                     server={server};\
@@ -121,7 +121,7 @@ impl GenesisHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 operator-key
                 --validator-backend backend={validator_backend};\
                     server={server};\
@@ -156,7 +156,7 @@ impl GenesisHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 treasury-compliance-key
                 --validator-backend backend={validator_backend};\
                     server={server};\
@@ -195,7 +195,7 @@ impl GenesisHelper {
     ) -> Result<Transaction, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 validator-config
                 --owner-name {owner_name}
                 --validator-address {validator_address}
@@ -235,7 +235,7 @@ impl GenesisHelper {
     ) -> Result<String, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 set-operator
                 --operator-name {operator_name}
                 --shared-backend backend={backend};\
@@ -261,7 +261,7 @@ impl GenesisHelper {
     ) -> Result<Transaction, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 genesis
                 --chain-id {chain_id}
                 --shared-backend backend={backend};\
@@ -292,7 +292,7 @@ impl GenesisHelper {
 
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 insert-waypoint
                 --validator-backend backend={validator_backend};\
                     server={server};\
@@ -318,7 +318,7 @@ impl GenesisHelper {
     pub async fn create_waypoint(&self, chain_id: ChainId) -> Result<Waypoint, Error> {
         let args = format!(
             "
-                libra-genesis-tool
+                diem-genesis-tool
                 create-waypoint
                 --chain-id {chain_id}
                 --shared-backend backend={backend};\
@@ -345,7 +345,7 @@ impl GenesisHelper {
     ) -> Result<(), Error> {
         let args = format!(
             "
-                libra-operational-tool
+                diem-operational-tool
                 extract-private-key
                 --key-name {key_name}
                 --key-file {key_file}

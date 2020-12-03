@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::constants;
-use libra_secure_time::{RealTimeService, TimeService};
-use libra_types::{
+use diem_secure_time::{RealTimeService, TimeService};
+use diem_types::{
     account_address::AccountAddress,
     chain_id::ChainId,
     transaction::{RawTransaction, Script},

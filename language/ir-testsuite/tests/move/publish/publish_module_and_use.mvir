@@ -1,26 +1,26 @@
 module MoneyHolder {
-        import 0x1.Coin1;
-        import 0x1.Libra;
+        import 0x1.XUS;
+        import 0x1.Diem;
 
-        resource T { money: Libra.Libra<Coin1.Coin1> }
+        resource T { money: Diem.Diem<XUS.XUS> }
 
-        public new(m: Libra.Libra<Coin1.Coin1>): Self.T {
+        public new(m: Diem.Diem<XUS.XUS>): Self.T {
             return T{ money: move(m) };
         }
 
         public value(this :&Self.T): u64 {
-            let ref: &Libra.Libra<Coin1.Coin1>;
+            let ref: &Diem.Diem<XUS.XUS>;
             let val: u64;
             ref = &copy(this).money;
-            val = Libra.value<Coin1.Coin1>(move(ref));
+            val = Diem.value<XUS.XUS>(move(ref));
             _ = move(this);
             return move(val);
         }
 
         public destroy_t(t: Self.T) {
-            let money: Libra.Libra<Coin1.Coin1>;
+            let money: Diem.Diem<XUS.XUS>;
             T{ money } = move(t);
-            Libra.destroy_zero<Coin1.Coin1>(move(money));
+            Diem.destroy_zero<XUS.XUS>(move(money));
             return;
         }
 }
@@ -28,15 +28,15 @@ module MoneyHolder {
 //! new-transaction
 
 import {{default}}.MoneyHolder;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main() {
-    let coin: Libra.Libra<Coin1.Coin1>;
+    let coin: Diem.Diem<XUS.XUS>;
     let money_holder: MoneyHolder.T;
     let money_holder_ref: &MoneyHolder.T;
     let value: u64;
-    coin = Libra.zero<Coin1.Coin1>();
+    coin = Diem.zero<XUS.XUS>();
     money_holder = MoneyHolder.new(move(coin));
     money_holder_ref = &money_holder;
     value = MoneyHolder.value(move(money_holder_ref));

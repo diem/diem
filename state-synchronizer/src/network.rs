@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Interface between StateSynchronizer and Network layers.
 
 use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
 use channel::message_queues::QueueStyle;
-use libra_metrics::IntCounterVec;
-use libra_types::PeerId;
+use diem_metrics::IntCounterVec;
+use diem_types::PeerId;
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},

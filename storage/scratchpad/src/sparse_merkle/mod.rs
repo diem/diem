@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements an in-memory Sparse Merkle Tree that is similar to what we use in
@@ -68,11 +68,11 @@ mod node;
 mod sparse_merkle_test;
 
 use self::node::{LeafNode, LeafValue, Node, SparseMerkleNode};
-use libra_crypto::{
+use diem_crypto::{
     hash::{HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use diem_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 use std::sync::Arc;
 
 /// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.

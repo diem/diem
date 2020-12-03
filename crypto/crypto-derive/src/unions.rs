@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use proc_macro::TokenStream;
@@ -60,7 +60,7 @@ pub fn impl_enum_tryfrom(name: &Ident, variants: &DataEnum) -> proc_macro2::Toke
 
     quote! {
         impl core::convert::TryFrom<&[u8]> for #name {
-            type Error = libra_crypto::CryptoMaterialError;
+            type Error = diem_crypto::CryptoMaterialError;
             fn try_from(bytes: &[u8]) -> std::result::Result<#name, Self::Error> {
                 #try_chain
             }
@@ -88,7 +88,7 @@ pub fn impl_enum_valid_crypto_material(name: &Ident, variants: &DataEnum) -> Tok
 
     try_from.extend(quote! {
 
-        impl libra_crypto::ValidCryptoMaterial for #name {
+        impl diem_crypto::ValidCryptoMaterial for #name {
             fn to_bytes(&self) -> Vec<u8> {
                 match self {
                     #to_bytes_arms
@@ -153,7 +153,7 @@ pub fn impl_enum_publickey(
         }
     };
     res.extend(quote! {
-        impl libra_crypto::PublicKey for #name {
+        impl diem_crypto::PublicKey for #name {
             type PrivateKeyMaterial = #pkt;
         }
     });
@@ -167,7 +167,7 @@ pub fn impl_enum_privatekey(
 ) -> TokenStream {
     let pkt: syn::Type = public_key_type.parse().unwrap();
     let res = quote! {
-        impl libra_crypto::PrivateKey for #name {
+        impl diem_crypto::PrivateKey for #name {
             type PublicKeyMaterial = #pkt;
         }
     };
@@ -183,11 +183,11 @@ pub fn impl_enum_verifyingkey(
     let pkt: syn::Type = private_key_type.parse().unwrap();
     let st: syn::Type = signature_type.parse().unwrap();
     let res = quote! {
-        impl libra_crypto::VerifyingKey for #name {
+        impl diem_crypto::VerifyingKey for #name {
             type SigningKeyMaterial = #pkt;
             type SignatureMaterial = #st;
         }
-        impl libra_crypto::private::Sealed for #name {}
+        impl diem_crypto::private::Sealed for #name {}
     };
     res.into()
 }
@@ -214,11 +214,11 @@ pub fn impl_enum_signingkey(
         });
     }
     let res = quote! {
-        impl libra_crypto::SigningKey for #name {
+        impl diem_crypto::SigningKey for #name {
             type VerifyingKeyMaterial = #pkt;
             type SignatureMaterial = #st;
 
-            fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T) -> Self::SignatureMaterial {
+            fn sign<T: diem_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T) -> Self::SignatureMaterial {
                 match self {
                     #match_struct_arms
                 }
@@ -231,7 +231,7 @@ pub fn impl_enum_signingkey(
                 }
             }
         }
-        impl libra_crypto::private::Sealed for #name {}
+        impl diem_crypto::private::Sealed for #name {}
     };
     res.into()
 }
@@ -271,24 +271,24 @@ pub fn impl_enum_signature(
 
     res.extend(quote! {
 
-        impl libra_crypto::Signature for #name {
+        impl diem_crypto::Signature for #name {
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 
-            fn verify<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T, public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
+            fn verify<T: diem_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T, public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), diem_crypto::error::Error> {
                 match (self, public_key) {
                     #match_struct_arms
-                    _ => libra_crypto::error::bail!(
+                    _ => diem_crypto::error::bail!(
                         "provided the wrong alternative in {:?}!",
                         (self, public_key)
                     ),
                 }
             }
 
-            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
+            fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), diem_crypto::error::Error> {
                 match (self, public_key) {
                     #match_arms
-                    _ => libra_crypto::error::bail!(
+                    _ => diem_crypto::error::bail!(
                         "provided the wrong alternative in {:?}!",
                         (self, public_key)
                     ),
@@ -302,7 +302,7 @@ pub fn impl_enum_signature(
             }
         }
 
-        impl libra_crypto::private::Sealed for #name {}
+        impl diem_crypto::private::Sealed for #name {}
     });
     res.into()
 }

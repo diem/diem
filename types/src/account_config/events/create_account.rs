@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_address::AccountAddress, account_config, event::EventKey};
@@ -26,11 +26,11 @@ impl CreateAccountEvent {
     }
 
     pub fn event_key() -> EventKey {
-        EventKey::new_from_address(&account_config::libra_root_address(), 0)
+        EventKey::new_from_address(&account_config::diem_root_address(), 0)
     }
 }
 
 impl MoveResource for CreateAccountEvent {
-    const MODULE_NAME: &'static str = "LibraAccount";
+    const MODULE_NAME: &'static str = "DiemAccount";
     const STRUCT_NAME: &'static str = "CreateAccountEvent";
 }

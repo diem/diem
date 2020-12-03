@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
@@ -6,13 +6,13 @@ use crate::{
     peer::DisconnectReason,
     peer_manager::{conn_notifs_channel, ConnectionRequest},
 };
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::{diem_channel, message_queues::QueueStyle};
 use core::str::FromStr;
+use diem_config::{config::RoleType, network_id::NetworkId};
+use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use diem_logger::info;
+use diem_network_address::NetworkAddress;
 use futures::SinkExt;
-use libra_config::{config::RoleType, network_id::NetworkId};
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
-use libra_logger::info;
-use libra_network_address::NetworkAddress;
 use netcore::transport::ConnectionOrigin;
 use rand::rngs::StdRng;
 use std::{io, num::NonZeroUsize};
@@ -26,7 +26,7 @@ fn setup_conn_mgr(
     eligible_peers: Vec<PeerId>,
     seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
 ) -> (
-    libra_channel::Receiver<PeerId, ConnectionRequest>,
+    diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
@@ -52,13 +52,13 @@ fn setup_conn_mgr_with_context(
     seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
     seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
 ) -> (
-    libra_channel::Receiver<PeerId, ConnectionRequest>,
+    diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
     let (connection_reqs_tx, connection_reqs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
@@ -97,7 +97,7 @@ fn gen_peer() -> (
     let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
     let pubkeys: HashSet<_> = [pubkey].iter().copied().collect();
     let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-    let addr = addr.append_prod_protos(pubkey, libra_config::config::HANDSHAKE_VERSION);
+    let addr = addr.append_prod_protos(pubkey, diem_config::config::HANDSHAKE_VERSION);
     (peer_id, pubkey, pubkeys, addr)
 }
 
@@ -163,7 +163,7 @@ async fn send_notification_await_delivery(
 }
 
 async fn expect_disconnect_request(
-    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
+    connection_reqs_rx: &mut diem_channel::Receiver<PeerId, ConnectionRequest>,
     connection_notifs_tx: &mut conn_notifs_channel::Sender,
     peer_id: PeerId,
     address: NetworkAddress,
@@ -192,7 +192,7 @@ async fn expect_disconnect_request(
 }
 
 async fn expect_dial_request(
-    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
+    connection_reqs_rx: &mut diem_channel::Receiver<PeerId, ConnectionRequest>,
     connection_notifs_tx: &mut conn_notifs_channel::Sender,
     conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
@@ -231,7 +231,7 @@ async fn expect_dial_request(
 }
 
 async fn expect_num_dials(
-    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
+    connection_reqs_rx: &mut diem_channel::Receiver<PeerId, ConnectionRequest>,
     connection_notifs_tx: &mut conn_notifs_channel::Sender,
     conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
     num_expected: usize,
@@ -266,7 +266,7 @@ async fn expect_num_dials(
 
 #[test]
 fn connect_to_seeds_on_startup() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (seed_peer_id, _, _, seed_addr) = gen_peer();
     let seed_addrs: HashMap<_, _> = vec![(seed_peer_id, vec![seed_addr.clone()])]
@@ -377,7 +377,7 @@ fn connect_to_seeds_on_startup() {
 
 #[test]
 fn addr_change() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
@@ -492,7 +492,7 @@ fn addr_change() {
 
 #[test]
 fn lost_connection() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
@@ -566,7 +566,7 @@ fn lost_connection() {
 
 #[test]
 fn disconnect() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -648,7 +648,7 @@ fn disconnect() {
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -767,7 +767,7 @@ fn retry_on_failure() {
 // Tests that if we dial an already connected peer or disconnect from an already disconnected
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 fn no_op_requests() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -878,7 +878,7 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
@@ -963,7 +963,7 @@ fn backoff_on_failure() {
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1038,7 +1038,7 @@ fn multiple_addrs_basic() {
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1127,7 +1127,7 @@ fn multiple_addrs_wrapping() {
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1221,7 +1221,7 @@ fn multiple_addrs_shrinking() {
 
 #[test]
 fn public_connection_limit() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let mut seed_addrs: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
     let mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();
@@ -1278,7 +1278,7 @@ fn basic_update_eligible_peers() {
         PeerId::random(),
     ));
     let (connection_reqs_tx, _connection_reqs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (_connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (_ticker_tx, ticker_rx) = channel::new_test::<()>(0);

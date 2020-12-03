@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Error;
 use consensus_types::common::{Author, Round};
-use libra_logger::Schema;
-use libra_types::waypoint::Waypoint;
+use diem_logger::Schema;
+use diem_types::waypoint::Waypoint;
 use serde::Serialize;
 
 #[derive(Schema)]

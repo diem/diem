@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -64,7 +64,7 @@ impl Command for AccountCommandRecoverWallet {
         "<file_path>"
     }
     fn get_description(&self) -> &'static str {
-        "Recover Libra wallet from the file path"
+        "Recover Diem wallet from the file path"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         println!(">> Recovering Wallet");
@@ -78,7 +78,7 @@ impl Command for AccountCommandRecoverWallet {
                     println!("#{} address {}", data.index, hex::encode(data.address));
                 }
             }
-            Err(e) => report_error("Error recovering Libra wallet", e),
+            Err(e) => report_error("Error recovering Diem wallet", e),
         }
     }
 }
@@ -94,10 +94,10 @@ impl Command for AccountCommandWriteRecovery {
         "<file_path>"
     }
     fn get_description(&self) -> &'static str {
-        "Save Libra wallet mnemonic recovery seed to disk"
+        "Save Diem wallet mnemonic recovery seed to disk"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        println!(">> Saving Libra wallet mnemonic recovery seed to disk");
+        println!(">> Saving Diem wallet mnemonic recovery seed to disk");
         match client.write_recovery(&params) {
             Ok(_) => println!("Saved mnemonic seed to disk"),
             Err(e) => report_error("Error writing mnemonic recovery seed to file", e),

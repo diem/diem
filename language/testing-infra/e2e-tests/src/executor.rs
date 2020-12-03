@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Support for running the VM to execute and verify transactions.
@@ -10,9 +10,9 @@ use crate::{
     keygen::KeyGen,
 };
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use libra_crypto::HashValue;
-use libra_state_view::StateView;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_state_view::StateView;
+use diem_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
@@ -23,8 +23,8 @@ use libra_types::{
     vm_status::{KeptVMStatus, VMStatus},
     write_set::WriteSet,
 };
-use libra_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, LibraVMValidator,
+use diem_vm::{
+    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, DiemVMValidator,
     VMExecutor, VMValidator,
 };
 use move_core_types::{
@@ -44,7 +44,7 @@ static RNG_SEED: [u8; 32] = [9u8; 32];
 
 /// Provides an environment to run a VM instance.
 ///
-/// This struct is a mock in-memory implementation of the Libra executor.
+/// This struct is a mock in-memory implementation of the Diem executor.
 #[derive(Debug)]
 pub struct FakeExecutor {
     data_store: FakeDataStore,
@@ -223,7 +223,7 @@ impl FakeExecutor {
         &self,
         txn_block: Vec<SignedTransaction>,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-        LibraVM::execute_block_and_keep_vm_status(
+        DiemVM::execute_block_and_keep_vm_status(
             txn_block
                 .into_iter()
                 .map(Transaction::UserTransaction)
@@ -257,7 +257,7 @@ impl FakeExecutor {
         &self,
         txn_block: Vec<Transaction>,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        let output = LibraVM::execute_block(txn_block, &self.data_store);
+        let output = DiemVM::execute_block(txn_block, &self.data_store);
         if let Some(logger) = &self.executed_output {
             logger.log(format!("{:?}\n", output).as_str());
         }
@@ -281,7 +281,7 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> VMValidatorResult {
-        let vm = LibraVMValidator::new(self.get_state_view());
+        let vm = DiemVMValidator::new(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }
 

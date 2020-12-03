@@ -8,17 +8,17 @@ RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
 
-WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
+WORKDIR /diem
+COPY rust-toolchain /diem/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
-COPY cargo-toolchain /libra/cargo-toolchain
+COPY cargo-toolchain /diem/cargo-toolchain
 RUN rustup install $(cat cargo-toolchain)
 
 FROM toolchain AS builder
 
 ARG ENABLE_FAILPOINTS
-COPY . /libra
+COPY . /diem
 
 RUN ./docker/build-common.sh
 
@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y libssl1.1 openssh-client wget && apt-ge
 RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
 RUN mkdir /etc/cluster-test
 WORKDIR /etc/cluster-test
-COPY --from=builder /libra/target/release/cluster-test /usr/local/bin/cluster-test
+COPY --from=builder /diem/target/release/cluster-test /usr/local/bin/cluster-test
 ENTRYPOINT ["cluster-test"]
 ARG BUILD_DATE
 ARG GIT_REV

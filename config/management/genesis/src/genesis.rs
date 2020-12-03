@@ -1,13 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::layout::Layout;
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY};
-use libra_management::{
-    config::ConfigPath, constants, error::Error, secure_backend::SharedBackend,
-};
-use libra_types::{
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_global_constants::{DIEM_ROOT_KEY, OPERATOR_KEY, OWNER_KEY};
+use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use diem_types::{
     account_address,
     chain_id::ChainId,
     transaction::{Transaction, TransactionPayload},
@@ -31,7 +29,7 @@ pub struct Genesis {
 }
 
 impl Genesis {
-    fn config(&self) -> Result<libra_management::config::Config, Error> {
+    fn config(&self) -> Result<diem_management::config::Config, Error> {
         self.config
             .load()?
             .override_chain_id(self.chain_id)
@@ -40,20 +38,20 @@ impl Genesis {
 
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
-        let libra_root_key = self.libra_root_key(&layout)?;
+        let diem_root_key = self.diem_root_key(&layout)?;
         let treasury_compliance_key = self.treasury_compliance_key(&layout)?;
         let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let chain_id = self.config()?.chain_id;
         let script_policy = if chain_id == ChainId::test() {
-            Some(libra_types::on_chain_config::VMPublishingOption::open())
+            Some(diem_types::on_chain_config::VMPublishingOption::open())
         } else {
             None // allowlist containing only stdlib scripts
         };
 
         let genesis = vm_genesis::encode_genesis_transaction(
-            libra_root_key,
+            diem_root_key,
             treasury_compliance_key,
             &operator_assignments,
             &operator_registrations,
@@ -76,12 +74,12 @@ impl Genesis {
         Ok(genesis)
     }
 
-    /// Retrieves the libra root key from the remote storage. Note, at this point in time, genesis
-    /// only supports a single libra root key.
-    pub fn libra_root_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
+    /// Retrieves the diem root key from the remote storage. Note, at this point in time, genesis
+    /// only supports a single diem root key.
+    pub fn diem_root_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
         let config = self.config()?;
-        let storage = config.shared_backend_with_namespace(layout.libra_root.clone());
-        storage.ed25519_key(LIBRA_ROOT_KEY)
+        let storage = config.shared_backend_with_namespace(layout.diem_root.clone());
+        storage.ed25519_key(DIEM_ROOT_KEY)
     }
 
     /// Retrieves a layout from the remote storage.
@@ -152,7 +150,7 @@ impl Genesis {
     /// Retrieves the treasury root key from the remote storage.
     pub fn treasury_compliance_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
         let config = self.config()?;
-        let storage = config.shared_backend_with_namespace(layout.libra_root.clone());
-        storage.ed25519_key(libra_global_constants::TREASURY_COMPLIANCE_KEY)
+        let storage = config.shared_backend_with_namespace(layout.diem_root.clone());
+        storage.ed25519_key(diem_global_constants::TREASURY_COMPLIANCE_KEY)
     }
 }

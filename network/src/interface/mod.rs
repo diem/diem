@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module exposing generic network interface to a single connected peer.
@@ -23,15 +23,15 @@ use crate::{
     transport::Connection,
     ProtocolId,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, diem_channel, message_queues::QueueStyle};
+use diem_config::network_id::NetworkContext;
+use diem_logger::prelude::*;
+use diem_types::PeerId;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     stream::StreamExt,
     FutureExt, SinkExt,
 };
-use libra_config::network_id::NetworkContext;
-use libra_logger::prelude::*;
-use libra_types::PeerId;
 use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -74,8 +74,8 @@ where
         channel_size: usize,
         max_frame_size: usize,
     ) -> (
-        libra_channel::Sender<ProtocolId, NetworkRequest>,
-        libra_channel::Receiver<ProtocolId, NetworkNotification>,
+        diem_channel::Sender<ProtocolId, NetworkRequest>,
+        diem_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
         let peer_id = connection.metadata.remote_peer_id;
 
@@ -139,15 +139,15 @@ where
         executor.spawn(ds.start());
 
         // TODO: Add label for peer.
-        let (requests_tx, requests_rx) = libra_channel::new(
+        let (requests_tx, requests_rx) = diem_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).expect("libra_channel cannot be of size 0"),
+            NonZeroUsize::new(channel_size).expect("diem_channel cannot be of size 0"),
             Some(&counters::PENDING_NETWORK_REQUESTS),
         );
         // TODO: Add label for peer.
-        let (notifs_tx, notifs_rx) = libra_channel::new(
+        let (notifs_tx, notifs_rx) = diem_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).expect("libra_channel cannot be of size 0"),
+            NonZeroUsize::new(channel_size).expect("diem_channel cannot be of size 0"),
             Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
         );
 
@@ -237,7 +237,7 @@ where
     fn handle_rpc_notification(
         peer_id: PeerId,
         notif: RpcNotification,
-        mut notifs_tx: libra_channel::Sender<ProtocolId, NetworkNotification>,
+        mut notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
     ) {
         trace!("RpcNotification::{:?}", notif);
         match notif {
@@ -258,7 +258,7 @@ where
     fn handle_ds_notification(
         peer_id: PeerId,
         notif: DirectSendNotification,
-        mut notifs_tx: libra_channel::Sender<ProtocolId, NetworkNotification>,
+        mut notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
     ) {
         trace!("DirectSendNotification::{:?}", notif);
         match notif {

@@ -1,22 +1,22 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
     node::{LeafNode, LeafValue, SparseMerkleNode},
     AccountStatus, ProofRead, SparseMerkleTree,
 };
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleLeafNode, SparseMerkleProof},
 };
 use std::{collections::HashMap, sync::Arc};
 
 fn hash_internal(left_child: HashValue, right_child: HashValue) -> HashValue {
-    libra_types::proof::SparseMerkleInternalNode::new(left_child, right_child).hash()
+    diem_types::proof::SparseMerkleInternalNode::new(left_child, right_child).hash()
 }
 
 fn hash_leaf(key: HashValue, value_hash: HashValue) -> HashValue {

@@ -1,7 +1,7 @@
 
-<a name="@Overview_of_Libra_Transaction_Scripts_0"></a>
+<a name="@Overview_of_Diem_Transaction_Scripts_0"></a>
 
-# Overview of Libra Transaction Scripts
+# Overview of Diem Transaction Scripts
 
 
 -  [Introduction](#@Introduction_1)
@@ -47,7 +47,7 @@
         -  [Script update_exchange_rate](#@Script_update_exchange_rate_41)
         -  [Script update_minting_ability](#@Script_update_minting_ability_42)
     -  [System Administration](#@System_Administration_43)
-        -  [Script update_libra_version](#@Script_update_libra_version_44)
+        -  [Script update_diem_version](#@Script_update_diem_version_44)
         -  [Script add_to_script_allow_list](#@Script_add_to_script_allow_list_45)
 -  [Transaction Scripts](#@Transaction_Scripts_46)
     -  [Account Creation](#@Account_Creation_47)
@@ -88,7 +88,7 @@
         -  [Script `update_exchange_rate`](#update_exchange_rate)
         -  [Script `update_minting_ability`](#update_minting_ability)
     -  [System Administration](#@System_Administration_222)
-        -  [Script `update_libra_version`](#update_libra_version)
+        -  [Script `update_diem_version`](#update_diem_version)
         -  [Script `add_to_script_allow_list`](#add_to_script_allow_list)
     -  [Index](#@Index_231)
 
@@ -101,7 +101,7 @@
 
 On-chain state is updated via the execution of transaction scripts sent from
 accounts that exist on-chain. This page documents each allowed transaction
-script on Libra, and the common state changes that can be performed to the
+script on Diem, and the common state changes that can be performed to the
 blockchain via these transaction scripts along with their arguments and common
 error conditions.
 
@@ -147,7 +147,7 @@ Each Move abort error status consists of two pieces of data:
 
 The <code>abort_code</code> is a <code>u64</code> that is constructed from two values:
 1. The **error category** which is encoded in the lower 8 bits of the code. Error categories are
-declared in the <code><a href="../../modules/doc/Errors.md#0x1_Errors">Errors</a></code> module and are globally unique across the Libra framework. There is a limited
+declared in the <code><a href="../../modules/doc/Errors.md#0x1_Errors">Errors</a></code> module and are globally unique across the Diem framework. There is a limited
 fixed set of predefined categories, and the framework is guaranteed to use these consistently.
 2. The **error reason** which is encoded in the remaining 56 bits of the code. The reason is a unique
 number relative to the module which raised the error and can be used to obtain more information about
@@ -162,8 +162,8 @@ e.g.,
 
 | Error Category           | Error Reason                                | Description                                               |
 | ----------------         | --------------                              | -------------                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code> | <code>payer</code> doesn't hold a balance in <code>Currency</code>.             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>       | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code> | <code>payer</code> doesn't hold a balance in <code>Currency</code>.             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>       | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>. |
 
 For each of these tables, the **error categories should be considered stable**;
 any changes to these categories will be be well-publicized in advance. On the
@@ -242,7 +242,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#create_
 #### Script create_validator_operator_account
 
 
-Creates a Validator Operator account. This transaction can only be sent by the Libra
+Creates a Validator Operator account. This transaction can only be sent by the Diem
 Root account.
 
 Script documentation: <code><a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a></code>
@@ -254,7 +254,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#create_
 #### Script create_validator_account
 
 
-Creates a Validator account. This transaction can only be sent by the Libra
+Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
 Script documentation: <code><a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a></code>
@@ -298,7 +298,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#create_
 
 
 Adds a zero <code>Currency</code> balance to the sending <code>account</code>. This will enable <code>account</code> to
-send, receive, and hold <code><a href="../../modules/doc/Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Currency&gt;</code> coins. This transaction can be
+send, receive, and hold <code><a href="../../modules/doc/Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;Currency&gt;</code> coins. This transaction can be
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
@@ -356,7 +356,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#rotate_
 
 Rotates the sender's authentication key to the supplied new authentication key. May be sent by
 any account that has a sliding nonce resource published under it (usually this is Treasury
-Compliance or Libra Root accounts).
+Compliance or Diem Root accounts).
 
 Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a></code>
 
@@ -369,7 +369,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#rotate_
 
 
 Rotates the specified account's authentication key to the supplied new authentication key. May
-only be sent by the Libra Root account as a write set transaction.
+only be sent by the Diem Root account as a write set transaction.
 
 
 Script documentation: <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a></code>
@@ -455,7 +455,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#peer_to
 
 Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
-transaction can only be successfully called by the Libra Root account.
+transaction can only be successfully called by the Diem Root account.
 
 Script documentation: <code><a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a></code>
 
@@ -484,7 +484,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#registe
 
 This script removes a validator account from the validator set, and triggers a reconfiguration
 of the system to remove the validator from the system. This transaction can only be
-successfully called by the Libra Root account.
+successfully called by the Diem Root account.
 
 Script documentation: <code><a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a></code>
 
@@ -527,7 +527,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#set_val
 
 Sets the validator operator for a validator in the validator's configuration resource "locally"
 and does not reconfigure the system. Changes from this transaction will not picked up by the
-system until a reconfiguration of the system is triggered. May only be sent by the Libra Root
+system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 account as a write set transaction.
 
 Script documentation: <code><a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a></code>
@@ -592,7 +592,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#cancel_
 
 
 Burns the transaction fees collected in the <code>CoinType</code> currency so that the
-Libra association may reclaim the backing coins off-chain. May only be sent
+Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 Script documentation: <code><a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a></code>
@@ -621,7 +621,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#tiered_
 
 Freezes the account at <code>address</code>. The sending account of this transaction
 must be the Treasury Compliance account. The account being frozen cannot be
-the Libra Root or Treasury Compliance account. After the successful
+the Diem Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
@@ -649,7 +649,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#unfreez
 #### Script update_dual_attestation_limit
 
 
-Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
+Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
@@ -663,8 +663,8 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 #### Script update_exchange_rate
 
 
-Update the rough on-chain exchange rate between a specified currency and LBR (as a conversion
-to micro-LBR). The transaction can only be sent by the Treasury Compliance account. After this
+Update the rough on-chain exchange rate between a specified currency and XDX (as a conversion
+to micro-XDX). The transaction can only be sent by the Treasury Compliance account. After this
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
@@ -693,15 +693,15 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 ---
 
-<a name="@Script_update_libra_version_44"></a>
+<a name="@Script_update_diem_version_44"></a>
 
-#### Script update_libra_version
+#### Script update_diem_version
 
 
-Updates the Libra major version that is stored on-chain and is used by the VM.  This
-transaction can only be sent from the Libra Root account.
+Updates the Diem major version that is stored on-chain and is used by the VM.  This
+transaction can only be sent from the Diem Root account.
 
-Script documentation: <code><a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a></code>
+Script documentation: <code><a href="transaction_script_documentation.md#update_diem_version">update_diem_version</a></code>
 
 
 ---
@@ -712,7 +712,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#update_
 
 
 Adds a script hash to the transaction allowlist. This transaction
-can only be sent by the Libra Root account. Scripts with this hash can be
+can only be sent by the Diem Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
 Script documentation: <code><a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a></code>
@@ -740,7 +740,7 @@ Script documentation: <code><a href="transaction_script_documentation.md#add_to_
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -774,12 +774,12 @@ child accounts of the creating Parent VASP account.
 ###### Events
 
 Successful execution with a <code>child_initial_balance</code> greater than zero will emit:
-* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code> with the <code>payer</code> field being the Parent VASP's address,
+* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> with the <code>payer</code> field being the Parent VASP's address,
 and payee field being <code>child_address</code>. This is emitted on the Parent VASP's
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>sent_events</code> handle.
-* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">LibraAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address,
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle.
+* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address,
 and payee field being <code>child_address</code>. This is emitted on the new Child VASPS's
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> handle.
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
 
 
 <a name="@Parameters_51"></a>
@@ -802,15 +802,15 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 | Error Category              | Error Reason                                             | Description                                                                              |
 | ----------------            | --------------                                           | -------------                                                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>            | The <code>auth_key_prefix</code> was not of length 32.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>            | The <code>auth_key_prefix</code> was not of length 32.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EPARENT_VASP">Roles::EPARENT_VASP</a></code>                                    | The sending account wasn't a Parent VASP account.                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                                        | The <code>child_address</code> address is already taken.                                            |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../modules/doc/VASP.md#0x1_VASP_ETOO_MANY_CHILDREN">VASP::ETOO_MANY_CHILDREN</a></code>                               | The sending account has reached the maximum number of allowed child accounts.            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                                  | The <code>CoinType</code> is not a registered currency on-chain.                                    |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code>LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</code> | The withdrawal capability for the sending account has already been extracted.            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>              | The sending account doesn't have a balance in <code>CoinType</code>.                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>                    | The sending account doesn't have at least <code>child_initial_balance</code> of <code>CoinType</code> balance. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED">LibraAccount::ECANNOT_CREATE_AT_VM_RESERVED</a></code>            | The <code>child_address</code> is the reserved address 0x0.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                                  | The <code>CoinType</code> is not a registered currency on-chain.                                    |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code>DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</code> | The withdrawal capability for the sending account has already been extracted.            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>              | The sending account doesn't have a balance in <code>CoinType</code>.                                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>                    | The sending account doesn't have at least <code>child_initial_balance</code> of <code>CoinType</code> balance. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ECANNOT_CREATE_AT_VM_RESERVED">DiemAccount::ECANNOT_CREATE_AT_VM_RESERVED</a></code>            | The <code>child_address</code> is the reserved address 0x0.                                         |
 
 
 <a name="@Related_Scripts_53"></a>
@@ -840,7 +840,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
     add_all_currencies: bool,
     child_initial_balance: u64
 ) {
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_child_vasp_account">LibraAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_create_child_vasp_account">DiemAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
         parent_vasp,
         child_address,
         auth_key_prefix,
@@ -848,11 +848,11 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
     );
     // Give the newly created child `child_initial_balance` coins
     <b>if</b> (child_initial_balance &gt; 0) {
-        <b>let</b> vasp_withdrawal_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(parent_vasp);
-        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_pay_from">LibraAccount::pay_from</a>&lt;CoinType&gt;(
+        <b>let</b> vasp_withdrawal_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(parent_vasp);
+        <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_pay_from">DiemAccount::pay_from</a>&lt;CoinType&gt;(
             &vasp_withdrawal_cap, child_address, child_initial_balance, x"", x""
         );
-        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(vasp_withdrawal_cap);
+        <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_withdraw_capability">DiemAccount::restore_withdraw_capability</a>(vasp_withdrawal_cap);
     };
 }
 </code></pre>
@@ -866,31 +866,31 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: parent_vasp};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: parent_vasp};
 <a name="create_child_vasp_account_parent_addr$1"></a>
 <b>let</b> parent_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp);
 <a name="create_child_vasp_account_parent_cap$2"></a>
-<b>let</b> parent_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(parent_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateChildVASPAccountAbortsIf">LibraAccount::CreateChildVASPAccountAbortsIf</a>&lt;CoinType&gt;{
+<b>let</b> parent_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(parent_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateChildVASPAccountAbortsIf">DiemAccount::CreateChildVASPAccountAbortsIf</a>&lt;CoinType&gt;{
     parent: parent_vasp, new_account_address: child_address};
 <b>aborts_if</b> child_initial_balance &gt; max_u64() <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> (child_initial_balance &gt; 0) ==&gt;
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: parent_addr};
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: parent_addr};
 <b>include</b> (child_initial_balance &gt; 0) ==&gt;
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PayFromAbortsIfRestricted">LibraAccount::PayFromAbortsIfRestricted</a>&lt;CoinType&gt;{
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PayFromAbortsIfRestricted">DiemAccount::PayFromAbortsIfRestricted</a>&lt;CoinType&gt;{
         cap: parent_cap,
         payee: child_address,
         amount: child_initial_balance,
         metadata: x"",
         metadata_signature: x""
     };
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateChildVASPAccountEnsures">LibraAccount::CreateChildVASPAccountEnsures</a>&lt;CoinType&gt;{
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateChildVASPAccountEnsures">DiemAccount::CreateChildVASPAccountEnsures</a>&lt;CoinType&gt;{
     parent_addr: parent_addr,
     child_addr: child_address,
 };
-<b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(child_address) == child_initial_balance;
-<b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(parent_addr)
-    == <b>old</b>(<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(parent_addr)) - child_initial_balance;
+<b>ensures</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;CoinType&gt;(child_address) == child_initial_balance;
+<b>ensures</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;CoinType&gt;(parent_addr)
+    == <b>old</b>(<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;CoinType&gt;(parent_addr)) - child_initial_balance;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
@@ -921,7 +921,7 @@ Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -931,7 +931,7 @@ Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
 
 ##### Summary
 
-Creates a Validator Operator account. This transaction can only be sent by the Libra
+Creates a Validator Operator account. This transaction can only be sent by the Diem
 Root account.
 
 
@@ -951,7 +951,7 @@ This script does not assign the validator operator to any validator accounts but
 
 | Name                  | Type         | Description                                                                                     |
 | ------                | ------       | -------------                                                                                   |
-| <code>lr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Libra Root signer. |
+| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
 | <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
 | <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
 | <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
@@ -964,12 +964,12 @@ This script does not assign the validator operator to any validator accounts but
 
 | Error Category              | Error Reason                            | Description                                                                                |
 | ----------------            | --------------                          | -------------                                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                    | The sending account is not the Libra Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
@@ -986,7 +986,7 @@ This script does not assign the validator operator to any validator accounts but
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -996,15 +996,15 @@ This script does not assign the validator operator to any validator accounts but
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_validator_operator_account">LibraAccount::create_validator_operator_account</a>(
-        lr_account,
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_create_validator_operator_account">DiemAccount::create_validator_operator_account</a>(
+        dr_account,
         new_account_address,
         auth_key_prefix,
         human_name,
@@ -1019,19 +1019,19 @@ This script does not assign the validator operator to any validator accounts but
 <details>
 <summary>Specification</summary>
 
-Only Libra root may create Validator Operator accounts
-Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
+Only Diem root may create Validator Operator accounts
+Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
 Checks that above table includes all error categories.
 The verifier finds an abort that is not documented, and cannot occur in practice:
-* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a></code>. However, assert_libra_root checks the literal
-Libra root address before checking the role, and the role abort is unreachable in practice, since
-only Libra root has the Libra root role.
+* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
+Diem root address before checking the role, and the role abort is unreachable in practice, since
+only Diem root has the Diem root role.
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorOperatorAccountAbortsIf">LibraAccount::CreateValidatorOperatorAccountAbortsIf</a>;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorOperatorAccountEnsures">LibraAccount::CreateValidatorOperatorAccountEnsures</a>;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: dr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: dr_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateValidatorOperatorAccountAbortsIf">DiemAccount::CreateValidatorOperatorAccountAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateValidatorOperatorAccountEnsures">DiemAccount::CreateValidatorOperatorAccountEnsures</a>;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
@@ -1042,10 +1042,10 @@ only Libra root has the Libra root role.
 
 
 **Access Control:**
-Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
+Only the Diem Root account can create Validator Operator accounts [[A4]][ROLE].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 </code></pre>
 
 
@@ -1061,7 +1061,7 @@ Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -1071,7 +1071,7 @@ Only the Libra Root account can create Validator Operator accounts [[A4]][ROLE].
 
 ##### Summary
 
-Creates a Validator account. This transaction can only be sent by the Libra
+Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
 
@@ -1094,7 +1094,7 @@ but only creates the account.
 
 | Name                  | Type         | Description                                                                                     |
 | ------                | ------       | -------------                                                                                   |
-| <code>lr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Libra Root signer. |
+| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
 | <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
 | <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
 | <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
@@ -1107,12 +1107,12 @@ but only creates the account.
 
 | Error Category              | Error Reason                            | Description                                                                                |
 | ----------------            | --------------                          | -------------                                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                    | The sending account is not the Libra Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
@@ -1129,7 +1129,7 @@ but only creates the account.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1139,15 +1139,15 @@ but only creates the account.
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_validator_account">LibraAccount::create_validator_account</a>(
-        lr_account,
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_create_validator_account">DiemAccount::create_validator_account</a>(
+        dr_account,
         new_account_address,
         auth_key_prefix,
         human_name,
@@ -1162,19 +1162,19 @@ but only creates the account.
 <details>
 <summary>Specification</summary>
 
-Only Libra root may create Validator accounts
-Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
+Only Diem root may create Validator accounts
+Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
 Checks that above table includes all error categories.
 The verifier finds an abort that is not documented, and cannot occur in practice:
-* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a></code>. However, assert_libra_root checks the literal
-Libra root address before checking the role, and the role abort is unreachable in practice, since
-only Libra root has the Libra root role.
+* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a></code>. However, assert_diem_root checks the literal
+Diem root address before checking the role, and the role abort is unreachable in practice, since
+only Diem root has the Diem root role.
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorAccountAbortsIf">LibraAccount::CreateValidatorAccountAbortsIf</a>;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorAccountEnsures">LibraAccount::CreateValidatorAccountEnsures</a>;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: dr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: dr_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateValidatorAccountAbortsIf">DiemAccount::CreateValidatorAccountAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateValidatorAccountEnsures">DiemAccount::CreateValidatorAccountEnsures</a>;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
@@ -1185,10 +1185,10 @@ only Libra root has the Libra root role.
 
 
 **Access Control:**
-Only the Libra Root account can create Validator accounts [[A3]][ROLE].
+Only the Diem Root account can create Validator accounts [[A3]][ROLE].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 </code></pre>
 
 
@@ -1204,7 +1204,7 @@ Only the Libra Root account can create Validator accounts [[A3]][ROLE].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -1255,7 +1255,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                 | The <code>CoinType</code> is not a registered currency on-chain.                                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The <code>CoinType</code> is not a registered currency on-chain.                                      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
@@ -1289,7 +1289,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
     add_all_currencies: bool
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_parent_vasp_account">LibraAccount::create_parent_vasp_account</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_create_parent_vasp_account">DiemAccount::create_parent_vasp_account</a>&lt;CoinType&gt;(
         tc_account,
         new_account_address,
         auth_key_prefix,
@@ -1308,10 +1308,10 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: tc_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{account: tc_account, seq_nonce: sliding_nonce};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateParentVASPAccountAbortsIf">LibraAccount::CreateParentVASPAccountAbortsIf</a>&lt;CoinType&gt;{creator_account: tc_account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateParentVASPAccountEnsures">LibraAccount::CreateParentVASPAccountEnsures</a>&lt;CoinType&gt;;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateParentVASPAccountAbortsIf">DiemAccount::CreateParentVASPAccountAbortsIf</a>&lt;CoinType&gt;{creator_account: tc_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateParentVASPAccountEnsures">DiemAccount::CreateParentVASPAccountEnsures</a>&lt;CoinType&gt;;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -1341,7 +1341,7 @@ Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -1397,7 +1397,7 @@ account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>     | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>           | The sending account is not the Treasury Compliance account.                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                 | The <code>Currency</code> is not a registered currency on-chain.                                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The <code>Currency</code> is not a registered currency on-chain.                                      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
 
@@ -1428,7 +1428,7 @@ account.
     add_all_currencies: bool,
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;Currency&gt;(
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_create_designated_dealer">DiemAccount::create_designated_dealer</a>&lt;Currency&gt;(
         tc_account,
         addr,
         auth_key_prefix,
@@ -1447,11 +1447,11 @@ account.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: tc_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{account: tc_account, seq_nonce: sliding_nonce};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateDesignatedDealerAbortsIf">LibraAccount::CreateDesignatedDealerAbortsIf</a>&lt;Currency&gt;{
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateDesignatedDealerAbortsIf">DiemAccount::CreateDesignatedDealerAbortsIf</a>&lt;Currency&gt;{
     creator_account: tc_account, new_account_address: addr};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateDesignatedDealerEnsures">LibraAccount::CreateDesignatedDealerEnsures</a>&lt;Currency&gt;{new_account_address: addr};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateDesignatedDealerEnsures">DiemAccount::CreateDesignatedDealerEnsures</a>&lt;Currency&gt;{new_account_address: addr};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -1487,7 +1487,7 @@ Only the Treasury Compliance account can create Designated Dealer accounts [[A5]
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -1497,7 +1497,7 @@ Only the Treasury Compliance account can create Designated Dealer accounts [[A5]
 ##### Summary
 
 Adds a zero <code>Currency</code> balance to the sending <code>account</code>. This will enable <code>account</code> to
-send, receive, and hold <code><a href="../../modules/doc/Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Currency&gt;</code> coins. This transaction can be
+send, receive, and hold <code><a href="../../modules/doc/Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;Currency&gt;</code> coins. This transaction can be
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
@@ -1507,9 +1507,9 @@ successfully sent by any account that is allowed to hold balances
 ##### Technical Description
 
 After the successful execution of this transaction the sending account will have a
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;</code> resource with zero balance published under it. Only
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Currency&gt;</code> resource with zero balance published under it. Only
 accounts that can hold balances can send this transaction, the sending account cannot
-already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;</code> published under it.
+already have a <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Currency&gt;</code> published under it.
 
 
 <a name="@Parameters_77"></a>
@@ -1528,9 +1528,9 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 | Error Category              | Error Reason                             | Description                                                                |
 | ----------------            | --------------                           | -------------                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                  | The <code>Currency</code> is not a registered currency on-chain.                      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EROLE_CANT_STORE_BALANCE">LibraAccount::EROLE_CANT_STORE_BALANCE</a></code> | The sending <code>account</code>'s role does not permit balances.                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EADD_EXISTING_CURRENCY">LibraAccount::EADD_EXISTING_CURRENCY</a></code>   | A balance for <code>Currency</code> is already published under the sending <code>account</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                  | The <code>Currency</code> is not a registered currency on-chain.                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EROLE_CANT_STORE_BALANCE">DiemAccount::EROLE_CANT_STORE_BALANCE</a></code> | The sending <code>account</code>'s role does not permit balances.                     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EADD_EXISTING_CURRENCY">DiemAccount::EADD_EXISTING_CURRENCY</a></code>   | A balance for <code>Currency</code> is already published under the sending <code>account</code>. |
 
 
 <a name="@Related_Scripts_79"></a>
@@ -1552,7 +1552,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_add_currency">DiemAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
 
@@ -1565,9 +1565,9 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyAbortsIf">LibraAccount::AddCurrencyAbortsIf</a>&lt;Currency&gt;;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyEnsures">LibraAccount::AddCurrencyEnsures</a>&lt;Currency&gt;{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_AddCurrencyAbortsIf">DiemAccount::AddCurrencyAbortsIf</a>&lt;Currency&gt;;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_AddCurrencyEnsures">DiemAccount::AddCurrencyEnsures</a>&lt;Currency&gt;{addr: <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
@@ -1596,7 +1596,7 @@ and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROL
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
 </code></pre>
 
@@ -1616,7 +1616,7 @@ specified recovery account can rotate the sender account's authentication key.
 
 ##### Technical Description
 
-Adds the <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> for the sending account
+Adds the <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for the sending account
 (<code>to_recover_account</code>) to the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource under
 <code>recovery_address</code>. After this transaction has been executed successfully the account at
 <code>recovery_address</code> and the <code>to_recover_account</code> may rotate the authentication key of
@@ -1640,7 +1640,7 @@ resource stored under the account at <code>recovery_address</code>.
 | Name                 | Type      | Description                                                                                                |
 | ------               | ------    | -------------                                                                                              |
 | <code>to_recover_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction.                                           |
-| <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> will be stored. |
+| <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> will be stored. |
 
 
 <a name="@Common_Abort_Conditions_83"></a>
@@ -1649,7 +1649,7 @@ resource stored under the account at <code>recovery_address</code>.
 
 | Error Category             | Error Reason                                               | Description                                                                                     |
 | ----------------           | --------------                                             | -------------                                                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>to_recover_account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>to_recover_account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | <code>recovery_address</code> does not have a <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource published under it.               |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION</a></code>        | <code>to_recover_account</code> and <code>recovery_address</code> do not belong to the same VASP.                     |
 
@@ -1673,7 +1673,7 @@ resource stored under the account at <code>recovery_address</code>.
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(
-        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(to_recover_account), recovery_address
+        <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(to_recover_account), recovery_address
     )
 }
 </code></pre>
@@ -1687,13 +1687,13 @@ resource stored under the account at <code>recovery_address</code>.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: to_recover_account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>{account: to_recover_account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">LibraAccount::ExtractKeyRotationCapabilityEnsures</a>{account: to_recover_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: to_recover_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>{account: to_recover_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityEnsures">DiemAccount::ExtractKeyRotationCapabilityEnsures</a>{account: to_recover_account};
 <a name="add_recovery_rotation_capability_addr$1"></a>
 <b>let</b> addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account);
 <a name="add_recovery_rotation_capability_rotation_cap$2"></a>
-<b>let</b> rotation_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(addr);
+<b>let</b> rotation_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(addr);
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_AddRotationCapabilityAbortsIf">RecoveryAddress::AddRotationCapabilityAbortsIf</a>{
     to_recover: rotation_cap
 };
@@ -1738,7 +1738,7 @@ under the sender's account. Any account can send this transaction.
 
 Rotates the authentication key of the sending account to <code>public_key</code>,
 and publishes a <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource
-containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> for
+containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for
 <code>account</code> under <code>account</code>.
 
 
@@ -1758,7 +1758,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 | Error Category              | Error Reason                                               | Description                                                                                         |
 | ----------------            | --------------                                             | -------------                                                                                       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> resource.       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> resource.       |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_ESHARED_KEY">SharedEd25519PublicKey::ESHARED_KEY</a></code>                      | The <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource is already published under <code>account</code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code>            | <code>public_key</code> is an invalid ed25519 public key.                                                      |
 
@@ -1793,7 +1793,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishAbortsIf">SharedEd25519PublicKey::PublishAbortsIf</a>{key: public_key};
 <b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishEnsures">SharedEd25519PublicKey::PublishEnsures</a>{key: public_key};
 <b>aborts_with</b> [check]
@@ -1815,7 +1815,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">0x1::RecoveryAddress</a>;
 </code></pre>
 
@@ -1836,7 +1836,7 @@ each must be disjoint.
 ##### Technical Description
 
 Publishes a <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource under <code>account</code>. It then
-extracts the <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> for <code>account</code> and adds
+extracts the <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for <code>account</code> and adds
 it to the resource. After the successful execution of this transaction
 other accounts may add their key rotation to this resource so that <code>account</code>
 may be used as a recovery account for those accounts.
@@ -1857,7 +1857,7 @@ may be used as a recovery account for those accounts.
 
 | Error Category              | Error Reason                                               | Description                                                                                   |
 | ----------------            | --------------                                             | -------------                                                                                 |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>     | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.          |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ENOT_A_VASP">RecoveryAddress::ENOT_A_VASP</a></code>                             | <code>account</code> is not a VASP account.                                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">RecoveryAddress::EKEY_ROTATION_DEPENDENCY_CYCLE</a></code>          | A key rotation recovery cycle would be created by adding <code>account</code>'s key rotation capability. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
@@ -1881,7 +1881,7 @@ may be used as a recovery account for those accounts.
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_recovery_address">create_recovery_address</a>(account: &signer) {
-    <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_publish">RecoveryAddress::publish</a>(account, <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account))
+    <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_publish">RecoveryAddress::publish</a>(account, <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(account))
 }
 </code></pre>
 
@@ -1894,13 +1894,13 @@ may be used as a recovery account for those accounts.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">LibraAccount::ExtractKeyRotationCapabilityEnsures</a>;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityEnsures">DiemAccount::ExtractKeyRotationCapabilityEnsures</a>;
 <a name="create_recovery_address_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <a name="create_recovery_address_rotation_cap$2"></a>
-<b>let</b> rotation_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(account_addr);
+<b>let</b> rotation_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_PublishAbortsIf">RecoveryAddress::PublishAbortsIf</a>{
     recovery_account: account,
     rotation_cap: rotation_cap
@@ -1927,7 +1927,7 @@ may be used as a recovery account for those accounts.
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -1944,9 +1944,9 @@ be sent by any account.
 
 ##### Technical Description
 
-Rotate the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
+Rotate the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
 <code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
+its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_97"></a>
@@ -1965,8 +1965,8 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 | Error Category             | Error Reason                                               | Description                                                                              |
 | ----------------           | --------------                                             | -------------                                                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                         |
 
 
 <a name="@Related_Scripts_99"></a>
@@ -1988,9 +1988,9 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;) {
-    <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(key_rotation_capability);
+    <b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(account);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(key_rotation_capability);
 }
 </code></pre>
 
@@ -2003,20 +2003,20 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <a name="rotate_authentication_key_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
 <a name="rotate_authentication_key_key_rotation_capability$2"></a>
-<b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(account_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">LibraAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
+<b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
 
 
 This rotates the authentication key of <code>account</code> to <code>new_key</code>
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyEnsures">LibraAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyEnsures">DiemAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
@@ -2028,7 +2028,7 @@ The account can rotate its own authentication key unless
 it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
 </code></pre>
 
 
@@ -2044,7 +2044,7 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -2056,16 +2056,16 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 Rotates the sender's authentication key to the supplied new authentication key. May be sent by
 any account that has a sliding nonce resource published under it (usually this is Treasury
-Compliance or Libra Root accounts).
+Compliance or Diem Root accounts).
 
 
 <a name="@Technical_Description_101"></a>
 
 ##### Technical Description
 
-Rotates the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
+Rotates the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
 <code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
+its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_102"></a>
@@ -2089,8 +2089,8 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                             | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                             | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                    | The <code>sliding_nonce</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                           |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                           |
 
 
 <a name="@Related_Scripts_104"></a>
@@ -2113,9 +2113,9 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(key_rotation_capability);
+    <b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(account);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(key_rotation_capability);
 }
 </code></pre>
 
@@ -2128,21 +2128,21 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <a name="rotate_authentication_key_with_nonce_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
 <a name="rotate_authentication_key_with_nonce_key_rotation_capability$2"></a>
-<b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(account_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">LibraAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
+<b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
 
 
 This rotates the authentication key of <code>account</code> to <code>new_key</code>
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyEnsures">LibraAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyEnsures">DiemAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
@@ -2155,7 +2155,7 @@ The account can rotate its own authentication key unless
 it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
 </code></pre>
 
 
@@ -2171,7 +2171,7 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -2182,16 +2182,16 @@ it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 ##### Summary
 
 Rotates the specified account's authentication key to the supplied new authentication key. May
-only be sent by the Libra Root account as a write set transaction.
+only be sent by the Diem Root account as a write set transaction.
 
 
 <a name="@Technical_Description_106"></a>
 
 ##### Technical Description
 
-Rotate the <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
+Rotate the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
 <code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
+its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_107"></a>
@@ -2200,9 +2200,9 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 | Name            | Type         | Description                                                                                                  |
 | ------          | ------       | -------------                                                                                                |
-| <code>lr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Libra Root signer. |
+| <code>dr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
 | <code>account</code>       | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.                |
-| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Libra Root.                    |
+| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.                                                             |
 
 
@@ -2212,12 +2212,12 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 | Error Category             | Error Reason                                               | Description                                                                                                |
 | ----------------           | --------------                                             | -------------                                                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                             | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                             | The <code>sliding_nonce</code> in <code>lr_account</code> is too old and it's impossible to determine if it's duplicated or not. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                             | The <code>sliding_nonce</code> in <code>lr_account</code> is too far in the future.                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                    | The <code>sliding_nonce</code> in<code> lr_account</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.                       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                                           |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                             | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                             | The <code>sliding_nonce</code> in <code>dr_account</code> is too old and it's impossible to determine if it's duplicated or not. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                             | The <code>sliding_nonce</code> in <code>dr_account</code> is too far in the future.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                    | The <code>sliding_nonce</code> in<code> dr_account</code> has been previously recorded.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                                           |
 
 
 <a name="@Related_Scripts_109"></a>
@@ -2229,7 +2229,7 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2238,11 +2238,11 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
-    <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(key_rotation_capability);
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(account);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(key_rotation_capability);
 }
 </code></pre>
 
@@ -2255,21 +2255,21 @@ its <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotatio
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <a name="rotate_authentication_key_with_nonce_admin_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ account: lr_account, seq_nonce: sliding_nonce };
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ account: dr_account, seq_nonce: sliding_nonce };
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">DiemAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
 <a name="rotate_authentication_key_with_nonce_admin_key_rotation_capability$2"></a>
-<b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(account_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">LibraAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
+<b>let</b> key_rotation_capability = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_key_rotation_cap">DiemAccount::spec_get_key_rotation_cap</a>(account_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyAbortsIf">DiemAccount::RotateAuthenticationKeyAbortsIf</a>{cap: key_rotation_capability, new_authentication_key: new_key};
 </code></pre>
 
 
 This rotates the authentication key of <code>account</code> to <code>new_key</code>
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyEnsures">LibraAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_RotateAuthenticationKeyEnsures">DiemAccount::RotateAuthenticationKeyEnsures</a>{addr: account_addr, new_authentication_key: new_key};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
@@ -2278,19 +2278,19 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 
 **Access Control:**
-Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
+Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 
-<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
+<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(dr_account);
 </code></pre>
 
 
-This is ensured by LibraAccount::writeset_prologue.
+This is ensured by DiemAccount::writeset_prologue.
 The account can rotate its own authentication key unless
 it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AbortsIfDelegatedKeyRotationCapability">LibraAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
 </code></pre>
 
 
@@ -2325,10 +2325,10 @@ new authentication key. Only used for accounts that are part of a recovery addre
 ##### Technical Description
 
 Rotates the authentication key of the <code>to_recover</code> account to <code>new_key</code> using the
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> stored in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource
 published under <code>recovery_address</code>. This transaction can be sent either by the <code>to_recover</code>
 account, or by the account where the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published
-that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>.
+that contains <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_112"></a>
@@ -2338,7 +2338,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 | Name               | Type         | Description                                                                                                                    |
 | ------             | ------       | -------------                                                                                                                  |
 | <code>account</code>          | <code>&signer</code>    | Signer reference of the sending account of the transaction.                                                                    |
-| <code>recovery_address</code> | <code>address</code>    | Address where <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> that holds <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code> is published. |
+| <code>recovery_address</code> | <code>address</code>    | Address where <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> that holds <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> is published. |
 | <code>to_recover</code>       | <code>address</code>    | The address of the account whose authentication key will be updated.                                                           |
 | <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for the account at the <code>to_recover</code> address.                                                 |
 
@@ -2351,8 +2351,8 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 | ----------------           | --------------                                | -------------                                                                                                                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>          | <code>recovery_address</code> does not have a <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource published under it.                                                   |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">RecoveryAddress::ECANNOT_ROTATE_KEY</a></code>         | The address of <code>account</code> is not <code>recovery_address</code> or <code>to_recover</code>.                                                                                  |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">RecoveryAddress::EACCOUNT_NOT_RECOVERABLE</a></code>   | <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>  is not in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code>  resource published under <code>recovery_address</code>. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY">LibraAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">RecoveryAddress::EACCOUNT_NOT_RECOVERABLE</a></code>   | <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>  is not in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code>  resource published under <code>recovery_address</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                     |
 
 
 <a name="@Related_Scripts_114"></a>
@@ -2392,7 +2392,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/LibraAc
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf">RecoveryAddress::RotateAuthenticationKeyAbortsIf</a>;
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyEnsures">RecoveryAddress::RotateAuthenticationKeyEnsures</a>;
 <b>aborts_with</b> [check]
@@ -2518,7 +2518,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">DualAttestation::RotateBaseUrlAbortsIf</a>;
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">DualAttestation::RotateBaseUrlEnsures</a>;
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">DualAttestation::RotateCompliancePublicKeyAbortsIf</a>;
@@ -2624,7 +2624,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKeyAbortsIf">SharedEd25519PublicKey::RotateKeyAbortsIf</a>{new_public_key: public_key};
 <b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_RotateKeyEnsures">SharedEd25519PublicKey::RotateKeyEnsures</a>{new_public_key: public_key};
 <b>aborts_with</b> [check]
@@ -2651,7 +2651,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -2677,10 +2677,10 @@ Transfers <code>amount</code> coins of type <code>Currency</code> from <code>pay
 <code>metadata</code> and an (optional) <code>metadata_signature</code> on the message
 <code>metadata</code> | <code><a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(payer)</code> | <code>amount</code> | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DualAttestation::DOMAIN_SEPARATOR</a></code>.
 The <code>metadata</code> and <code>metadata_signature</code> parameters are only required if <code>amount</code> >=
-<code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microlibra_limit">DualAttestation::get_cur_microlibra_limit</a></code> LBR and <code>payer</code> and <code>payee</code> are distinct VASPs.
+<code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microdiem_limit">DualAttestation::get_cur_microdiem_limit</a></code> XDX and <code>payer</code> and <code>payee</code> are distinct VASPs.
 However, a transaction sender can opt in to dual attestation even when it is not required
 (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty <code>metadata_signature</code>.
-Standardized <code>metadata</code> LCS format can be found in <code>libra_types::transaction::metadata::Metadata</code>.
+Standardized <code>metadata</code> LCS format can be found in <code>diem_types::transaction::metadata::Metadata</code>.
 
 
 <a name="@Events_129"></a>
@@ -2688,8 +2688,8 @@ Standardized <code>metadata</code> LCS format can be found in <code>libra_types:
 ###### Events
 
 Successful execution of this script emits two events:
-* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code> on <code>payer</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>sent_events</code> handle; and
-* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">LibraAccount::ReceivedPaymentEvent</a></code> on <code>payee</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> handle.
+* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> on <code>payer</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle; and
+* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> on <code>payee</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
 
 
 <a name="@Parameters_130"></a>
@@ -2711,16 +2711,16 @@ Successful execution of this script emits two events:
 
 | Error Category             | Error Reason                                     | Description                                                                                                                         |
 | ----------------           | --------------                                   | -------------                                                                                                                       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>      | <code>payer</code> doesn't hold a balance in <code>Currency</code>.                                                                                       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>            | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>.                                                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO">LibraAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | <code>amount</code> is zero.                                                                                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST">LibraAccount::EPAYEE_DOES_NOT_EXIST</a></code>            | No account exists at the <code>payee</code> address.                                                                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | An account exists at <code>payee</code>, but it does not accept payments in <code>Currency</code>.                                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>      | <code>payer</code> doesn't hold a balance in <code>Currency</code>.                                                                                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>            | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>.                                                                           |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ECOIN_DEPOSIT_IS_ZERO">DiemAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | <code>amount</code> is zero.                                                                                                                   |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_DOES_NOT_EXIST">DiemAccount::EPAYEE_DOES_NOT_EXIST</a></code>            | No account exists at the <code>payee</code> address.                                                                                           |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | An account exists at <code>payee</code>, but it does not accept payments in <code>Currency</code>.                                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_EACCOUNT_FROZEN">AccountFreezing::EACCOUNT_FROZEN</a></code>               | The <code>payee</code> account is frozen.                                                                                                      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE">DualAttestation::EMALFORMED_METADATA_SIGNATURE</a></code> | <code>metadata_signature</code> is not 64 bytes.                                                                                               |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE">DualAttestation::EINVALID_METADATA_SIGNATURE</a></code>   | <code>metadata_signature</code> does not verify on the against the <code>payee'</code>s <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code> <code>compliance_public_key</code> public key. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS">LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS</a></code>       | <code>payer</code> has exceeded its daily withdrawal limits for the backing coins of LBR.                                                      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | <code>payee</code> has exceeded its daily deposit limits for LBR.                                                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EWITHDRAWAL_EXCEEDS_LIMITS">DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS</a></code>       | <code>payer</code> has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | <code>payee</code> has exceeded its daily deposit limits for XDX.                                                                              |
 
 
 <a name="@Related_Scripts_132"></a>
@@ -2748,11 +2748,11 @@ Successful execution of this script emits two events:
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) {
-    <b>let</b> payer_withdrawal_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(payer);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_pay_from">LibraAccount::pay_from</a>&lt;Currency&gt;(
+    <b>let</b> payer_withdrawal_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(payer);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_pay_from">DiemAccount::pay_from</a>&lt;Currency&gt;(
         &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
     );
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(payer_withdrawal_cap);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_withdraw_capability">DiemAccount::restore_withdraw_capability</a>(payer_withdrawal_cap);
 }
 </code></pre>
 
@@ -2765,13 +2765,13 @@ Successful execution of this script emits two events:
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: payer};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: payer};
 <a name="peer_to_peer_with_metadata_payer_addr$1"></a>
 <b>let</b> payer_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer);
 <a name="peer_to_peer_with_metadata_cap$2"></a>
-<b>let</b> cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(payer_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: payer_addr};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PayFromAbortsIf">LibraAccount::PayFromAbortsIf</a>&lt;Currency&gt;{cap: cap};
+<b>let</b> cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(payer_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: payer_addr};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">DiemAccount::PayFromAbortsIf</a>&lt;Currency&gt;{cap: cap};
 </code></pre>
 
 
@@ -2779,14 +2779,14 @@ The balances of payer and payee change by the correct amount.
 
 
 <pre><code><b>ensures</b> payer_addr != payee
-    ==&gt; <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payer_addr)
-    == <b>old</b>(<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payer_addr)) - amount;
+    ==&gt; <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payer_addr)
+    == <b>old</b>(<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payer_addr)) - amount;
 <b>ensures</b> payer_addr != payee
-    ==&gt; <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payee)
-    == <b>old</b>(<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payee)) + amount;
+    ==&gt; <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payee)
+    == <b>old</b>(<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payee)) + amount;
 <b>ensures</b> payer_addr == payee
-    ==&gt; <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payee)
-    == <b>old</b>(<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Currency&gt;(payee));
+    ==&gt; <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payee)
+    == <b>old</b>(<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Currency&gt;(payee));
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
@@ -2800,8 +2800,8 @@ Both the payer and the payee must hold the balances of the Currency. Only Design
 Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
 
 
-<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(payer_addr) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(payee) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Currency&gt;&gt;(payer_addr) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>aborts_if</b> !<b>exists</b>&lt;<a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Currency&gt;&gt;(payee) <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -2823,7 +2823,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem">0x1::DiemSystem</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 <b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
 </code></pre>
@@ -2836,7 +2836,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 
 Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
-transaction can only be successfully called by the Libra Root account.
+transaction can only be successfully called by the Diem Root account.
 
 
 <a name="@Technical_Description_135"></a>
@@ -2844,7 +2844,7 @@ transaction can only be successfully called by the Libra Root account.
 ##### Technical Description
 
 This script adds the account at <code>validator_address</code> to the validator set.
-This transaction emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> event and triggers a
+This transaction emits a <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> event and triggers a
 reconfiguration. Once the reconfiguration triggered by this script's
 execution has been performed, the account at the <code>validator_address</code> is
 considered to be a validator in the network.
@@ -2859,7 +2859,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
-| <code>lr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Libra Root signer.                                    |
+| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
 | <code>sliding_nonce</code>     | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                         |
 | <code>validator_name</code>    | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator. Must match the human name in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> for the validator. |
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be added to the validator set.                                                                    |
@@ -2871,16 +2871,16 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 | Error Category             | Error Reason                                  | Description                                                                                                                               |
 | ----------------           | --------------                                | -------------                                                                                                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                                                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                                                            |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.                                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                | The <code>sliding_nonce</code> is too far in the future.                                                                                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>       | The <code>sliding_nonce</code> has been previously recorded.                                                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>                  | The sending account is not the Libra Root account.                                                                                        |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                          | The sending account is not the Libra Root account.                                                                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                  | The sending account is not the Diem Root account.                                                                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                          | The sending account is not the Diem Root account.                                                                                        |
 | 0                          | 0                                             | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">LibraSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_EALREADY_A_VALIDATOR">LibraSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_EINVALID_PROSPECTIVE_VALIDATOR">DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_EALREADY_A_VALIDATOR">DiemSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
 
 
 <a name="@Related_Scripts_138"></a>
@@ -2896,7 +2896,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -2906,14 +2906,14 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
     validator_address: address
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
     <b>assert</b>(<a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
-    <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_add_validator">LibraSystem::add_validator</a>(lr_account, validator_address);
+    <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_add_validator">DiemSystem::add_validator</a>(dr_account, validator_address);
 }
 </code></pre>
 
@@ -2926,19 +2926,19 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: dr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: dr_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) != validator_name <b>with</b> 0;
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_AddValidatorAbortsIf">LibraSystem::AddValidatorAbortsIf</a>{validator_addr: validator_address};
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_AddValidatorEnsures">LibraSystem::AddValidatorEnsures</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_AddValidatorAbortsIf">DiemSystem::AddValidatorAbortsIf</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_AddValidatorEnsures">DiemSystem::AddValidatorEnsures</a>{validator_addr: validator_address};
 </code></pre>
 
 
-Reports INVALID_STATE because of is_operating() and !exists<LibraSystem::CapabilityHolder>.
+Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
 is_operating() is always true during transactions, and CapabilityHolder is published
 during initialization (Genesis).
-Reports REQUIRES_ROLE if lr_account is not Libra root, but that can't happen
+Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
 in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
@@ -2953,10 +2953,10 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Libra Root account can add Validators [[H13]][PERMISSION].
+Only the Diem Root account can add Validators [[H13]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 </code></pre>
 
 
@@ -2992,7 +2992,7 @@ validator.
 ##### Technical Description
 
 This updates the fields with corresponding names held in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>
-config resource held under <code>validator_account</code>. It does not emit a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code>
+config resource held under <code>validator_account</code>. It does not emit a <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code>
 so the copy of this config held in the validator set will not be updated, and the changes are
 only "locally" under the <code>validator_account</code> account address.
 
@@ -3072,7 +3072,7 @@ Access control rule is that only the validator operator for a validator may set
 call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: validator_operator_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: validator_operator_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a> {validator_addr: validator_account};
 <b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_account);
 <b>aborts_with</b> [check]
@@ -3104,7 +3104,7 @@ update the validator's configuration [[H14]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem">0x1::DiemSystem</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 <b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
 </code></pre>
@@ -3117,7 +3117,7 @@ update the validator's configuration [[H14]][PERMISSION].
 
 This script removes a validator account from the validator set, and triggers a reconfiguration
 of the system to remove the validator from the system. This transaction can only be
-successfully called by the Libra Root account.
+successfully called by the Diem Root account.
 
 
 <a name="@Technical_Description_145"></a>
@@ -3125,7 +3125,7 @@ successfully called by the Libra Root account.
 ##### Technical Description
 
 This script removes the account at <code>validator_address</code> from the validator set. This transaction
-emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> event. Once the reconfiguration triggered by this event
+emits a <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> event. Once the reconfiguration triggered by this event
 has been performed, the account at <code>validator_address</code> is no longer considered to be a
 validator in the network. This transaction will fail if the validator at <code>validator_address</code>
 is not in the validator set.
@@ -3137,7 +3137,7 @@ is not in the validator set.
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
-| <code>lr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Libra Root signer.                                    |
+| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
 | <code>sliding_nonce</code>     | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                         |
 | <code>validator_name</code>    | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator. Must match the human name in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> for the validator. |
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be removed from the validator set.                                                                |
@@ -3149,16 +3149,16 @@ is not in the validator set.
 
 | Error Category             | Error Reason                            | Description                                                                                     |
 | ----------------           | --------------                          | -------------                                                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                                  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                  |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                                   |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                               |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | The sending account is not the Libra Root account or Treasury Compliance account                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | The sending account is not the Diem Root account or Treasury Compliance account                |
 | 0                          | 0                                       | The provided <code>validator_name</code> does not match the already-recorded human name for the validator. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR">LibraSystem::ENOT_AN_ACTIVE_VALIDATOR</a></code> | The validator to be removed is not in the validator set.                                        |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                    | The sending account is not the Libra Root account.                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_ENOT_AN_ACTIVE_VALIDATOR">DiemSystem::ENOT_AN_ACTIVE_VALIDATOR</a></code> | The validator to be removed is not in the validator set.                                        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>            | The sending account is not the Diem Root account.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                    | The sending account is not the Diem Root account.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 
 
 <a name="@Related_Scripts_148"></a>
@@ -3174,7 +3174,7 @@ is not in the validator set.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -3184,15 +3184,15 @@ is not in the validator set.
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
     validator_address: address
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
     // TODO: Use an error code from <a href="../../modules/doc/Errors.md#0x1_Errors">Errors</a>.<b>move</b>
     <b>assert</b>(<a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
-    <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(lr_account, validator_address);
+    <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_remove_validator">DiemSystem::remove_validator</a>(dr_account, validator_address);
 }
 </code></pre>
 
@@ -3205,19 +3205,19 @@ is not in the validator set.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: lr_account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: dr_account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: dr_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) != validator_name <b>with</b> 0;
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_RemoveValidatorAbortsIf">LibraSystem::RemoveValidatorAbortsIf</a>{validator_addr: validator_address};
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_RemoveValidatorEnsures">LibraSystem::RemoveValidatorEnsures</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_RemoveValidatorAbortsIf">DiemSystem::RemoveValidatorAbortsIf</a>{validator_addr: validator_address};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_RemoveValidatorEnsures">DiemSystem::RemoveValidatorEnsures</a>{validator_addr: validator_address};
 </code></pre>
 
 
-Reports INVALID_STATE because of is_operating() and !exists<LibraSystem::CapabilityHolder>.
+Reports INVALID_STATE because of is_operating() and !exists<DiemSystem::CapabilityHolder>.
 is_operating() is always true during transactions, and CapabilityHolder is published
 during initialization (Genesis).
-Reports REQUIRES_ROLE if lr_account is not Libra root, but that can't happen
+Reports REQUIRES_ROLE if dr_account is not Diem root, but that can't happen
 in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
@@ -3232,10 +3232,10 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Libra Root account can remove Validators [[H13]][PERMISSION].
+Only the Diem Root account can remove Validators [[H13]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<pre><code><b>include</b> <a href="../../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 </code></pre>
 
 
@@ -3251,7 +3251,7 @@ Only the Libra Root account can remove Validators [[H13]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem">0x1::DiemSystem</a>;
 <b>use</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">0x1::ValidatorConfig</a>;
 </code></pre>
 
@@ -3271,7 +3271,7 @@ Validator Operator account that is already registered with a validator.
 ##### Technical Description
 
 This updates the fields with corresponding names held in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>
-config resource held under <code>validator_account</code>. It then emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> to
+config resource held under <code>validator_account</code>. It then emits a <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> to
 trigger a reconfiguration of the system.  This reconfiguration will update the validator set
 on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.
 
@@ -3299,7 +3299,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EVALIDATOR_OPERATOR">Roles::EVALIDATOR_OPERATOR</a></code>                   | <code>validator_operator_account</code> does not have a Validator Operator role.                                 |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER">ValidatorConfig::EINVALID_TRANSACTION_SENDER</a></code> | <code>validator_operator_account</code> is not the registered operator for the validator at <code>validator_address</code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_EINVALID_BLOCK_TIME">LibraConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 
 
 <a name="@Related_Scripts_153"></a>
@@ -3338,7 +3338,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
         validator_network_addresses,
         fullnode_network_addresses
     );
-    <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_update_config_and_reconfigure">LibraSystem::update_config_and_reconfigure</a>(validator_operator_account, validator_account);
+    <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_update_config_and_reconfigure">DiemSystem::update_config_and_reconfigure</a>(validator_operator_account, validator_account);
  }
 </code></pre>
 
@@ -3351,8 +3351,8 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: validator_operator_account};
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureEnsures">LibraSystem::UpdateConfigAndReconfigureEnsures</a>{validator_addr: validator_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: validator_operator_account};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEnsures">DiemSystem::UpdateConfigAndReconfigureEnsures</a>{validator_addr: validator_account};
 <b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_account);
 <b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_account)
     == <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
@@ -3361,21 +3361,21 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
                 fullnode_network_addresses,
 };
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a>{validator_addr: validator_account};
-<b>include</b> <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_UpdateConfigAndReconfigureAbortsIf">LibraSystem::UpdateConfigAndReconfigureAbortsIf</a>{validator_addr: validator_account};
+<b>include</b> <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">DiemSystem::UpdateConfigAndReconfigureAbortsIf</a>{validator_addr: validator_account};
 <a name="set_validator_config_and_reconfigure_is_validator_info_updated$1"></a>
 <b>let</b> is_validator_info_updated =
-    (<b>exists</b> v_info in <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_spec_get_validators">LibraSystem::spec_get_validators</a>():
+    (<b>exists</b> v_info in <a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_spec_get_validators">DiemSystem::spec_get_validators</a>():
         v_info.addr == validator_account
         && v_info.config != <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
                 consensus_pubkey,
                 validator_network_addresses,
                 fullnode_network_addresses,
            });
-<b>include</b> is_validator_info_updated ==&gt; <a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
+<b>include</b> is_validator_info_updated ==&gt; <a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">DiemConfig::ReconfigureAbortsIf</a>;
 </code></pre>
 
 
-This reports a possible INVALID_STATE abort, which comes from an assert in LibraConfig::reconfigure_
+This reports a possible INVALID_STATE abort, which comes from an assert in DiemConfig::reconfigure_
 that config.last_reconfiguration_time is not in the future. This is a system error that a user
 for which there is no useful recovery except to resubmit the transaction.
 
@@ -3436,7 +3436,7 @@ operator for the sending validator account. The account at <code>operator_accoun
 a Validator Operator role and have a <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code>
 resource published under it. The sending <code>account</code> must be a Validator and have a
 <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it. This script does not emit a
-<code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> and no reconfiguration of the system is initiated by this script.
+<code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> and no reconfiguration of the system is initiated by this script.
 
 
 <a name="@Parameters_156"></a>
@@ -3508,7 +3508,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 
 <pre><code><b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: account_addr};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
@@ -3516,7 +3516,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 </code></pre>
 
 
-Reports INVALID_STATE because of !exists<LibraSystem::CapabilityHolder>, but that can't happen
+Reports INVALID_STATE because of !exists<DiemSystem::CapabilityHolder>, but that can't happen
 because CapabilityHolder is published during initialization (Genesis).
 
 
@@ -3561,7 +3561,7 @@ Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 Sets the validator operator for a validator in the validator's configuration resource "locally"
 and does not reconfigure the system. Changes from this transaction will not picked up by the
-system until a reconfiguration of the system is triggered. May only be sent by the Libra Root
+system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 account as a write set transaction.
 
 
@@ -3583,9 +3583,9 @@ the system is initiated by this script.
 
 | Name               | Type         | Description                                                                                                  |
 | ------             | ------       | -------------                                                                                                |
-| <code>lr_account</code>       | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Libra Root signer. |
+| <code>dr_account</code>       | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
 | <code>account</code>          | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.                |
-| <code>sliding_nonce</code>    | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Libra Root.                    |
+| <code>sliding_nonce</code>    | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
 | <code>operator_name</code>    | <code>vector&lt;u8&gt;</code> | Validator operator's human name.                                                                             |
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.                 |
 
@@ -3596,11 +3596,11 @@ the system is initiated by this script.
 
 | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
 | ----------------           | --------------                                        | -------------                                                                                                                                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                                                                                               |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                        | The <code>sliding_nonce</code> in <code>lr_account</code> is too old and it's impossible to determine if it's duplicated or not.                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                        | The <code>sliding_nonce</code> in <code>lr_account</code> is too far in the future.                                                                                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>               | The <code>sliding_nonce</code> in<code> lr_account</code> has been previously recorded.                                                                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | The sending account is not the Libra Root account or Treasury Compliance account                                                                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                                                                               |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                        | The <code>sliding_nonce</code> in <code>dr_account</code> is too old and it's impossible to determine if it's duplicated or not.                                                   |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                        | The <code>sliding_nonce</code> in <code>dr_account</code> is too far in the future.                                                                                                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>               | The <code>sliding_nonce</code> in<code> dr_account</code> has been previously recorded.                                                                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                        | The sending account is not the Diem Root account or Treasury Compliance account                                                                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG</a></code> | The <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource is not published under <code>operator_account</code>.                                                   |
 | 0                          | 0                                                     | The <code>human_name</code> field of the <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource under <code>operator_account</code> does not match the provided <code>human_name</code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
@@ -3621,7 +3621,7 @@ the system is initiated by this script.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -3631,13 +3631,13 @@ the system is initiated by this script.
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     account: &signer,
     sliding_nonce: u64,
     operator_name: vector&lt;u8&gt;,
     operator_account: address
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
     <b>assert</b>(<a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) == operator_name, 0);
     <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(account, operator_account);
 }
@@ -3656,8 +3656,8 @@ the system is initiated by this script.
 
 
 <pre><code><b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: dr_account};
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: account_addr};
 <b>aborts_if</b> <a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) != operator_name <b>with</b> 0;
 <b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorAbortsIf">ValidatorConfig::SetOperatorAbortsIf</a>{validator_account: account, operator_addr: operator_account};
@@ -3671,14 +3671,14 @@ the system is initiated by this script.
 
 
 **Access Control:**
-Only the Libra Root account can process the admin scripts [[H9]][PERMISSION].
+Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 
-<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account);
+<pre><code><b>requires</b> <a href="../../modules/doc/Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(dr_account);
 </code></pre>
 
 
-This is ensured by LibraAccount::writeset_prologue.
+This is ensured by DiemAccount::writeset_prologue.
 Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
@@ -3704,7 +3704,7 @@ Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -3724,7 +3724,7 @@ in the specified currency.
 ##### Technical Description
 
 Moves the specified <code>amount</code> of coins in <code>Token</code> currency from the sending <code>account</code>'s
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;</code> to the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> published under the same
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Token&gt;</code> to the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> published under the same
 <code>account</code>. <code>account</code> must have both of these resources published under it at the start of this
 transaction in order for it to execute successfully.
 
@@ -3734,10 +3734,10 @@ transaction in order for it to execute successfully.
 ###### Events
 
 Successful execution of this script emits two events:
-* <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a> </code> on <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>sent_events</code>
+* <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a> </code> on <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code>
 handle with the <code>payee</code> and <code>payer</code> fields being <code>account</code>'s address; and
-* A <code><a href="../../modules/doc/Libra.md#0x1_Libra_PreburnEvent">Libra::PreburnEvent</a></code> with <code>Token</code>'s currency code on the
-<code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token</code>'s <code>preburn_events</code> handle for <code>Token</code> and with
+* A <code><a href="../../modules/doc/Diem.md#0x1_Diem_PreburnEvent">Diem::PreburnEvent</a></code> with <code>Token</code>'s currency code on the
+<code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token</code>'s <code>preburn_events</code> handle for <code>Token</code> and with
 <code>preburn_address</code> set to <code>account</code>'s address.
 
 
@@ -3758,12 +3758,12 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 | Error Category           | Error Reason                                             | Description                                                                             |
 | ----------------         | --------------                                           | -------------                                                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                                  | The <code>Token</code> is not a registered currency on-chain.                                      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code>LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</code> | The withdrawal capability for <code>account</code> has already been extracted.                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>                    | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Token</code>.                                  |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>              | <code>account</code> doesn't hold a balance in <code>Token</code>.                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN">Libra::EPREBURN</a></code>                                        | <code>account</code> doesn't have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under it.           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN_OCCUPIED">Libra::EPREBURN_OCCUPIED</a></code>                               | The <code>value</code> field in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource under the sender is non-zero. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                                  | The <code>Token</code> is not a registered currency on-chain.                                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code>DiemAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED</code> | The withdrawal capability for <code>account</code> has already been extracted.                     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>                    | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Token</code>.                                  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>              | <code>account</code> doesn't hold a balance in <code>Token</code>.                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                                        | <code>account</code> doesn't have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it.           |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN_OCCUPIED">Diem::EPREBURN_OCCUPIED</a></code>                               | The <code>value</code> field in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource under the sender is non-zero. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>  | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                                        | The <code>account</code> did not have a role assigned to it.                                       |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>  | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDESIGNATED_DEALER">Roles::EDESIGNATED_DEALER</a></code>                              | The <code>account</code> did not have the role of DesignatedDealer.                                |
 
@@ -3787,9 +3787,9 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
-    <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_preburn">LibraAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);
+    <b>let</b> withdraw_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(account);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_preburn">DiemAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_withdraw_capability">DiemAccount::restore_withdraw_capability</a>(withdraw_cap);
 }
 </code></pre>
 
@@ -3802,14 +3802,14 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <a name="preburn_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <a name="preburn_cap$2"></a>
-<b>let</b> cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(account_addr);
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnAbortsIf">LibraAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnEnsures">LibraAccount::PreburnEnsures</a>&lt;Token&gt;{dd_addr: account_addr, payer: account_addr};
+<b>let</b> cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(account_addr);
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">DiemAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnEnsures">DiemAccount::PreburnEnsures</a>&lt;Token&gt;{dd_addr: account_addr, payer: account_addr};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
@@ -3822,7 +3822,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoPreburn">Libra::AbortsIfNoPreburn</a>&lt;Token&gt;{preburn_address: account_addr};
+<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoPreburn">Diem::AbortsIfNoPreburn</a>&lt;Token&gt;{preburn_address: account_addr};
 </code></pre>
 
 
@@ -3838,7 +3838,7 @@ Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -3860,14 +3860,14 @@ Dealer, but there are no enforced requirements that it be one.
 ##### Technical Description
 
 This transaction permanently destroys all the coins of <code>Token</code> type
-stored in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under the
+stored in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under the
 <code>preburn_address</code> account address.
 
 This transaction will only succeed if the sending <code>account</code> has a
-<code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;</code>, and a <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource
+<code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code>, and a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource
 exists under <code>preburn_address</code>, with a non-zero <code>to_burn</code> field. After the successful execution
 of this transaction the <code>total_value</code> field in the
-<code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;</code> resource published under <code>0xA550C18</code> will be
+<code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource published under <code>0xA550C18</code> will be
 decremented by the value of the <code>to_burn</code> field of the preburn resource
 under <code>preburn_address</code> immediately before this transaction, and the
 <code>to_burn</code> field of the preburn resource will have a zero value.
@@ -3877,8 +3877,8 @@ under <code>preburn_address</code> immediately before this transaction, and the
 
 ###### Events
 
-The successful execution of this transaction will emit a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnEvent">Libra::BurnEvent</a></code> on the event handle
-held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;</code> resource's <code>burn_events</code> published under
+The successful execution of this transaction will emit a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
+held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource's <code>burn_events</code> published under
 <code>0xA550C18</code>.
 
 
@@ -3904,10 +3904,10 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.            |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EBURN_CAPABILITY">Libra::EBURN_CAPABILITY</a></code>               | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN">Libra::EPREBURN</a></code>                       | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under it. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN_EMPTY">Libra::EPREBURN_EMPTY</a></code>                 | The <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource is empty (has a value of 0).                                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                 | The specified <code>Token</code> is not a registered currency on-chain.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>               | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                       | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN_EMPTY">Diem::EPREBURN_EMPTY</a></code>                 | The <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource is empty (has a value of 0).                                     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The specified <code>Token</code> is not a registered currency on-chain.                                          |
 
 
 <a name="@Related_Scripts_176"></a>
@@ -3930,7 +3930,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <a href="../../modules/doc/Libra.md#0x1_Libra_burn">Libra::burn</a>&lt;Token&gt;(account, preburn_address)
+    <a href="../../modules/doc/Diem.md#0x1_Diem_burn">Diem::burn</a>&lt;Token&gt;(account, preburn_address)
 }
 </code></pre>
 
@@ -3943,10 +3943,10 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
-<b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_BurnAbortsIf">Libra::BurnAbortsIf</a>&lt;Token&gt;;
-<b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_BurnEnsures">Libra::BurnEnsures</a>&lt;Token&gt;;
+<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnAbortsIf">Diem::BurnAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnEnsures">Diem::BurnEnsures</a>&lt;Token&gt;;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
@@ -3960,7 +3960,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
+<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoBurnCapability">Diem::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
 </code></pre>
 
 
@@ -3976,7 +3976,7 @@ Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 </code></pre>
 
 
@@ -3994,13 +3994,13 @@ Can only be successfully sent by an account with Treasury Compliance role.
 
 ##### Technical Description
 
-Cancels and returns all coins held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource under the <code>preburn_address</code> and
-return the funds to the <code>preburn_address</code> account's <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;</code>.
-The transaction must be sent by an <code>account</code> with a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;</code>
+Cancels and returns all coins held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource under the <code>preburn_address</code> and
+return the funds to the <code>preburn_address</code> account's <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Token&gt;</code>.
+The transaction must be sent by an <code>account</code> with a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code>
 resource published under it. The account at <code>preburn_address</code> must have a
-<code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under it, and its value must be nonzero. The transaction removes
-the entire balance held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource, and returns it back to the account's
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;</code> under <code>preburn_address</code>. Due to this, the account at
+<code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it, and its value must be nonzero. The transaction removes
+the entire balance held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource, and returns it back to the account's
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Token&gt;</code> under <code>preburn_address</code>. Due to this, the account at
 <code>preburn_address</code> must already have a balance in the <code>Token</code> currency published
 before this script is called otherwise the transaction will fail.
 
@@ -4010,10 +4010,10 @@ before this script is called otherwise the transaction will fail.
 ###### Events
 
 The successful execution of this transaction will emit:
-* A <code><a href="../../modules/doc/Libra.md#0x1_Libra_CancelBurnEvent">Libra::CancelBurnEvent</a></code> on the event handle held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;</code>
+* A <code><a href="../../modules/doc/Diem.md#0x1_Diem_CancelBurnEvent">Diem::CancelBurnEvent</a></code> on the event handle held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code>
 resource's <code>burn_events</code> published under <code>0xA550C18</code>.
-* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">LibraAccount::ReceivedPaymentEvent</a></code> on the <code>preburn_address</code>'s
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> event handle with both the <code>payer</code> and <code>payee</code>
+* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> on the <code>preburn_address</code>'s
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> event handle with both the <code>payer</code> and <code>payee</code>
 being <code>preburn_address</code>.
 
 
@@ -4034,12 +4034,12 @@ being <code>preburn_address</code>.
 
 | Error Category                | Error Reason                                     | Description                                                                                           |
 | ----------------              | --------------                                   | -------------                                                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EBURN_CAPABILITY">Libra::EBURN_CAPABILITY</a></code>                        | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN">Libra::EPREBURN</a></code>                                | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource published under it. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>                          | The specified <code>Token</code> is not a registered currency on-chain.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO">LibraAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | The value held in the preburn resource was zero.                                                      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | The account at <code>preburn_address</code> doesn't have a balance resource for <code>Token</code>.                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | The depositing of the funds held in the prebun area would exceed the <code>account</code>'s account limits.      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                        | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                                | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                          | The specified <code>Token</code> is not a registered currency on-chain.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ECOIN_DEPOSIT_IS_ZERO">DiemAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | The value held in the preburn resource was zero.                                                      |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | The account at <code>preburn_address</code> doesn't have a balance resource for <code>Token</code>.                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | The depositing of the funds held in the prebun area would exceed the <code>account</code>'s account limits.      |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET</a></code> | The <code>account</code> does not have a compliance key set on it but dual attestion checking was performed.     |
 
 
@@ -4062,7 +4062,7 @@ being <code>preburn_address</code>.
 
 
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_cancel_burn">LibraAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address)
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_cancel_burn">DiemAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address)
 }
 </code></pre>
 
@@ -4075,19 +4075,19 @@ being <code>preburn_address</code>.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CancelBurnAbortsIf">LibraAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CancelBurnAbortsIf">DiemAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
 <a name="cancel_burn_preburn_value_at_addr$1"></a>
-<b>let</b> preburn_value_at_addr = <b>global</b>&lt;<a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;&gt;(preburn_address).to_burn.value;
+<b>let</b> preburn_value_at_addr = <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(preburn_address).to_burn.value;
 <a name="cancel_burn_total_preburn_value$2"></a>
 <b>let</b> total_preburn_value =
-    <b>global</b>&lt;<a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value;
+    <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value;
 <a name="cancel_burn_balance_at_addr$3"></a>
-<b>let</b> balance_at_addr = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;Token&gt;(preburn_address);
+<b>let</b> balance_at_addr = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
 </code></pre>
 
 
-The value stored at <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a></code> under <code>preburn_address</code> should become zero.
+The value stored at <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a></code> under <code>preburn_address</code> should become zero.
 
 
 <pre><code><b>ensures</b> preburn_value_at_addr == 0;
@@ -4118,7 +4118,7 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
+<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoBurnCapability">Diem::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
 </code></pre>
 
 
@@ -4144,7 +4144,7 @@ Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 ##### Summary
 
 Burns the transaction fees collected in the <code>CoinType</code> currency so that the
-Libra association may reclaim the backing coins off-chain. May only be sent
+Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 
@@ -4165,8 +4165,8 @@ account address will have a value of 0 after the successful execution of this sc
 
 ###### Events
 
-The successful execution of this transaction will emit a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnEvent">Libra::BurnEvent</a></code> on the event handle
-held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;CoinType&gt;</code> resource's <code>burn_events</code> published under
+The successful execution of this transaction will emit a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
+held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;</code> resource's <code>burn_events</code> published under
 <code>0xA550C18</code>.
 
 
@@ -4188,7 +4188,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | ----------------           | --------------                        | -------------                                               |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code> | The sending account is not the Treasury Compliance account. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_ETRANSACTION_FEE">TransactionFee::ETRANSACTION_FEE</a></code>    | <code>CoinType</code> is not an accepted transaction fee currency.     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECOIN">Libra::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECOIN">Diem::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
 
 
 <a name="@Related_Scripts_188"></a>
@@ -4226,7 +4226,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -4259,8 +4259,8 @@ receiver an authorized Designated Dealer account.
 ###### Events
 
 Successful execution of the transaction will emit two events:
-* A <code><a href="../../modules/doc/Libra.md#0x1_Libra_MintEvent">Libra::MintEvent</a></code> with the amount and currency code minted is emitted on the
-<code>mint_event_handle</code> in the stored <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;CoinType&gt;</code> resource stored under
+* A <code><a href="../../modules/doc/Diem.md#0x1_Diem_MintEvent">Diem::MintEvent</a></code> with the amount and currency code minted is emitted on the
+<code>mint_event_handle</code> in the stored <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;</code> resource stored under
 <code>0xA550C18</code>; and
 * A <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">DesignatedDealer::ReceivedMintEvent</a></code> with the amount, currency code, and Designated
 Dealer's address is emitted on the <code>mint_event_handle</code> in the stored <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a></code>
@@ -4297,9 +4297,9 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">DesignatedDealer::EDEALER</a></code>                  | <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a></code> or <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">DesignatedDealer::TierInfo</a>&lt;CoinType&gt;</code> resource does not exist at <code>designated_dealer_address</code>. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_TIER_INDEX">DesignatedDealer::EINVALID_TIER_INDEX</a></code>      | The <code>tier_index</code> is out of bounds.                                                                                           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER">DesignatedDealer::EINVALID_AMOUNT_FOR_TIER</a></code> | <code>mint_amount</code> exceeds the maximum allowed amount for <code>tier_index</code>.                                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EMINT_CAPABILITY">Libra::EMINT_CAPABILITY</a></code>                    | <code>tc_account</code> does not have a <code><a href="../../modules/doc/Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;</code> resource published under it.                                  |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EMINTING_NOT_ALLOWED">Libra::EMINTING_NOT_ALLOWED</a></code>                | Minting is not currently allowed for <code>CoinType</code> coins.                                                                       |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EMINT_CAPABILITY">Diem::EMINT_CAPABILITY</a></code>                    | <code>tc_account</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;</code> resource published under it.                                  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EMINTING_NOT_ALLOWED">Diem::EMINTING_NOT_ALLOWED</a></code>                | Minting is not currently allowed for <code>CoinType</code> coins.                                                                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
 
 
 <a name="@Related_Scripts_194"></a>
@@ -4328,7 +4328,7 @@ resource published under the <code>designated_dealer_address</code>.
     tier_index: u64
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_tiered_mint">LibraAccount::tiered_mint</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_tiered_mint">DiemAccount::tiered_mint</a>&lt;CoinType&gt;(
         tc_account, designated_dealer_address, mint_amount, tier_index
     );
 }
@@ -4343,10 +4343,10 @@ resource published under the <code>designated_dealer_address</code>.
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: tc_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{account: tc_account, seq_nonce: sliding_nonce};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintAbortsIf">LibraAccount::TieredMintAbortsIf</a>&lt;CoinType&gt;;
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintEnsures">LibraAccount::TieredMintEnsures</a>&lt;CoinType&gt;;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TieredMintAbortsIf">DiemAccount::TieredMintAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TieredMintEnsures">DiemAccount::TieredMintEnsures</a>&lt;CoinType&gt;;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -4390,7 +4390,7 @@ Only the Treasury Compliance account can mint [[H1]][PERMISSION].
 
 Freezes the account at <code>address</code>. The sending account of this transaction
 must be the Treasury Compliance account. The account being frozen cannot be
-the Libra Root or Treasury Compliance account. After the successful
+the Diem Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
@@ -4402,7 +4402,7 @@ account, and the frozen account may not send or receive coins.
 Sets the <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezingBit">AccountFreezing::FreezingBit</a></code> to <code><b>true</b></code> and emits a
 <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">AccountFreezing::FreezeAccountEvent</a></code>. The transaction sender must be the
 Treasury Compliance account, but the account at <code>to_freeze_account</code> must
-not be either <code>0xA550C18</code> (the Libra Root address), or <code>0xB1E55ED</code> (the
+not be either <code>0xA550C18</code> (the Diem Root address), or <code>0xB1E55ED</code> (the
 Treasury Compliance address). Note that this is a per-account property
 e.g., freezing a Parent VASP will not effect the status any of its child
 accounts and vice versa.
@@ -4442,7 +4442,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>        | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ETREASURY_COMPLIANCE">Roles::ETREASURY_COMPLIANCE</a></code>                | The sending account is not the Treasury Compliance account.                                |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_TC">AccountFreezing::ECANNOT_FREEZE_TC</a></code>         | <code>to_freeze_account</code> was the Treasury Compliance account (<code>0xB1E55ED</code>).                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT">AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT</a></code> | <code>to_freeze_account</code> was the Libra Root account (<code>0xA550C18</code>).                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_DIEM_ROOT">AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT</a></code> | <code>to_freeze_account</code> was the Diem Root account (<code>0xA550C18</code>).                              |
 
 
 <a name="@Related_Scripts_200"></a>
@@ -4582,7 +4582,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 ##### Summary
 
-Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
+Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
@@ -4591,8 +4591,8 @@ payments over this limit must be checked for dual attestation.
 
 ##### Technical Description
 
-Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
-<code>0xA550C18</code>. The amount is set in micro-LBR.
+Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
+<code>0xA550C18</code>. The amount is set in micro-XDX.
 
 
 <a name="@Parameters_209"></a>
@@ -4603,7 +4603,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 | ------                | ------    | -------------                                                                                             |
 | <code>tc_account</code>          | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
 | <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>new_micro_lbr_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
+| <code>new_micro_xdx_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
 
 
 <a name="@Common_Abort_Conditions_210"></a>
@@ -4627,7 +4627,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 * <code><a href="transaction_script_documentation.md#update_minting_ability">Script::update_minting_ability</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_xdx_limit: u64)
 </code></pre>
 
 
@@ -4639,10 +4639,10 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 <pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(
     tc_account: &signer,
     sliding_nonce: u64,
-    new_micro_lbr_limit: u64
+    new_micro_xdx_limit: u64
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_set_microlibra_limit">DualAttestation::set_microlibra_limit</a>(tc_account, new_micro_lbr_limit);
+    <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_set_microdiem_limit">DualAttestation::set_microdiem_limit</a>(tc_account, new_micro_xdx_limit);
 }
 </code></pre>
 
@@ -4659,8 +4659,8 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
-<b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/Diem.md#0x1_Diem">0x1::Diem</a>;
+<b>use</b> <a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -4670,8 +4670,8 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 
 ##### Summary
 
-Update the rough on-chain exchange rate between a specified currency and LBR (as a conversion
-to micro-LBR). The transaction can only be sent by the Treasury Compliance account. After this
+Update the rough on-chain exchange rate between a specified currency and XDX (as a conversion
+to micro-XDX). The transaction can only be sent by the Treasury Compliance account. After this
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
@@ -4680,7 +4680,7 @@ dual attestation checking.
 
 ##### Technical Description
 
-Updates the on-chain exchange rate from the given <code>Currency</code> to micro-LBR.  The exchange rate
+Updates the on-chain exchange rate from the given <code>Currency</code> to micro-XDX.  The exchange rate
 is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</code>.
 
 
@@ -4693,8 +4693,8 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code>Currency</code>                      | Type      | The Move type for the <code>Currency</code> whose exchange rate is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
 | <code>tc_account</code>                    | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
 | <code>sliding_nonce</code>                 | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for the transaction.                                                          |
-| <code>new_exchange_rate_numerator</code>   | <code>u64</code>     | The numerator for the new to micro-LBR exchange rate for <code>Currency</code>.                                                               |
-| <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-LBR exchange rate for <code>Currency</code>.                                                             |
+| <code>new_exchange_rate_numerator</code>   | <code>u64</code>     | The numerator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                               |
+| <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
 
 
 <a name="@Common_Abort_Conditions_215"></a>
@@ -4742,7 +4742,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
         new_exchange_rate_numerator,
         new_exchange_rate_denominator,
     );
-    <a href="../../modules/doc/Libra.md#0x1_Libra_update_lbr_exchange_rate">Libra::update_lbr_exchange_rate</a>&lt;Currency&gt;(tc_account, rate);
+    <a href="../../modules/doc/Diem.md#0x1_Diem_update_xdx_exchange_rate">Diem::update_xdx_exchange_rate</a>&lt;Currency&gt;(tc_account, rate);
 }
 </code></pre>
 
@@ -4755,7 +4755,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TransactionChecks">LibraAccount::TransactionChecks</a>{sender: tc_account};
+<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: tc_account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ account: tc_account, seq_nonce: sliding_nonce };
 <b>include</b> <a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32_CreateFromRationalAbortsIf">FixedPoint32::CreateFromRationalAbortsIf</a>{
     numerator: new_exchange_rate_numerator,
@@ -4766,7 +4766,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
     new_exchange_rate_numerator,
     new_exchange_rate_denominator
 );
-<b>include</b> <a href="../../modules/doc/Libra.md#0x1_Libra_UpdateLBRExchangeRateAbortsIf">Libra::UpdateLBRExchangeRateAbortsIf</a>&lt;Currency&gt;;
+<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_UpdateXDXExchangeRateAbortsIf">Diem::UpdateXDXExchangeRateAbortsIf</a>&lt;Currency&gt;;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
@@ -4796,7 +4796,7 @@ Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISS
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/Libra.md#0x1_Libra">0x1::Libra</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/Diem.md#0x1_Diem">0x1::Diem</a>;
 </code></pre>
 
 
@@ -4814,7 +4814,7 @@ no effect on coins already in circulation, and coins may still be removed from t
 
 ##### Technical Description
 
-This transaction sets the <code>can_mint</code> field of the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Currency&gt;</code> resource
+This transaction sets the <code>can_mint</code> field of the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Currency&gt;</code> resource
 published under <code>0xA550C18</code> to the value of <code>allow_minting</code>. Minting of coins if allowed if
 this field is set to <code><b>true</b></code> and minting of new coins in <code>Currency</code> is disallowed otherwise.
 This transaction needs to be sent by the Treasury Compliance account.
@@ -4827,7 +4827,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | Name            | Type      | Description                                                                                                                          |
 | ------          | ------    | -------------                                                                                                                        |
 | <code>Currency</code>      | Type      | The Move type for the <code>Currency</code> whose minting ability is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Libra Root account.                                                             |
+| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.                                                             |
 | <code>allow_minting</code> | <code>bool</code>    | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
@@ -4838,7 +4838,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | Error Category             | Error Reason                          | Description                                          |
 | ----------------           | --------------                        | -------------                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code> | <code>tc_account</code> is not the Treasury Compliance account. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECURRENCY_INFO">Libra::ECURRENCY_INFO</a></code>               | <code>Currency</code> is not a registered currency on-chain.    |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>               | <code>Currency</code> is not a registered currency on-chain.    |
 
 
 <a name="@Related_Scripts_221"></a>
@@ -4862,7 +4862,7 @@ This transaction needs to be sent by the Treasury Compliance account.
     tc_account: &signer,
     allow_minting: bool
 ) {
-    <a href="../../modules/doc/Libra.md#0x1_Libra_update_minting_ability">Libra::update_minting_ability</a>&lt;Currency&gt;(tc_account, allow_minting);
+    <a href="../../modules/doc/Diem.md#0x1_Diem_update_minting_ability">Diem::update_minting_ability</a>&lt;Currency&gt;(tc_account, allow_minting);
 }
 </code></pre>
 
@@ -4879,13 +4879,13 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 
 
-<a name="update_libra_version"></a>
+<a name="update_diem_version"></a>
 
-#### Script `update_libra_version`
+#### Script `update_diem_version`
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion">0x1::LibraVersion</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -4895,15 +4895,15 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ##### Summary
 
-Updates the Libra major version that is stored on-chain and is used by the VM.  This
-transaction can only be sent from the Libra Root account.
+Updates the Diem major version that is stored on-chain and is used by the VM.  This
+transaction can only be sent from the Diem Root account.
 
 
 <a name="@Technical_Description_224"></a>
 
 ##### Technical Description
 
-Updates the <code><a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion">LibraVersion</a></code> on-chain config and emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> to trigger
+Updates the <code><a href="../../modules/doc/DiemVersion.md#0x1_DiemVersion">DiemVersion</a></code> on-chain config and emits a <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> to trigger
 a reconfiguration of the system. The <code>major</code> version that is passed in must be strictly greater
 than the current major version held on-chain. The VM reads this information and can use it to
 preserve backwards compatibility with previous major versions of the VM.
@@ -4915,7 +4915,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 | Name            | Type      | Description                                                                |
 | ------          | ------    | -------------                                                              |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Libra Root account.   |
+| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.   |
 | <code>sliding_nonce</code> | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
 | <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
 
@@ -4930,11 +4930,11 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>       | The <code>sliding_nonce</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>                  | <code>account</code> is not the Libra Root account.                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">LibraVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code> | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                  | <code>account</code> is not the Diem Root account.                                                   |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">DiemVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code> | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_diem_version">update_diem_version</a>(account: &signer, sliding_nonce: u64, major: u64)
 </code></pre>
 
 
@@ -4943,9 +4943,9 @@ preserve backwards compatibility with previous major versions of the VM.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_diem_version">update_diem_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_set">LibraVersion::set</a>(account, major)
+    <a href="../../modules/doc/DiemVersion.md#0x1_DiemVersion_set">DiemVersion::set</a>(account, major)
 }
 </code></pre>
 
@@ -4962,7 +4962,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 
 
-<pre><code><b>use</b> <a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">0x1::LibraTransactionPublishingOption</a>;
+<pre><code><b>use</b> <a href="../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">0x1::DiemTransactionPublishingOption</a>;
 <b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
 </code></pre>
 
@@ -4973,7 +4973,7 @@ preserve backwards compatibility with previous major versions of the VM.
 ##### Summary
 
 Adds a script hash to the transaction allowlist. This transaction
-can only be sent by the Libra Root account. Scripts with this hash can be
+can only be sent by the Diem Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
 
@@ -4982,11 +4982,11 @@ sent afterward the successful execution of this script.
 ##### Technical Description
 
 
-The sending account (<code>lr_account</code>) must be the Libra Root account. The script allow
+The sending account (<code>dr_account</code>) must be the Diem Root account. The script allow
 list must not already hold the script <code>hash</code> being added. The <code>sliding_nonce</code> must be
-a valid nonce for the Libra Root account. After this transaction has executed
+a valid nonce for the Diem Root account. After this transaction has executed
 successfully a reconfiguration will be initiated, and the on-chain config
-<code><a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption">LibraTransactionPublishingOption::LibraTransactionPublishingOption</a></code>'s
+<code><a href="../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_DiemTransactionPublishingOption">DiemTransactionPublishingOption::DiemTransactionPublishingOption</a></code>'s
 <code>script_allow_list</code> field will contain the new script <code>hash</code> and transactions
 with this <code>hash</code> can be successfully sent to the network.
 
@@ -4997,7 +4997,7 @@ with this <code>hash</code> can be successfully sent to the network.
 
 | Name            | Type         | Description                                                                                     |
 | ------          | ------       | -------------                                                                                   |
-| <code>lr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Libra Root signer. |
+| <code>dr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
 | <code>hash</code>          | <code>vector&lt;u8&gt;</code> | The hash of the script to be added to the script allowlist.                                     |
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
 
@@ -5008,17 +5008,17 @@ with this <code>hash</code> can be successfully sent to the network.
 
 | Error Category             | Error Reason                                                           | Description                                                                                |
 | ----------------           | --------------                                                         | -------------                                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                                         | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>lr_account</code>.                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                                         | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                             |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                                         | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                                         | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                                | The <code>sliding_nonce</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>                                           | The sending account is not the Libra Root account.                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_ELIBRA_ROOT">Roles::ELIBRA_ROOT</a></code>                                                   | The sending account is not the Libra Root account.                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">LibraTransactionPublishingOption::EINVALID_SCRIPT_HASH</a></code>               | The script <code>hash</code> is an invalid length.                                                    |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">LibraTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code> | The on-chain allowlist already contains the script <code>hash</code>.                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                                           | The sending account is not the Diem Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                                                   | The sending account is not the Diem Root account.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EINVALID_SCRIPT_HASH">DiemTransactionPublishingOption::EINVALID_SCRIPT_HASH</a></code>               | The script <code>hash</code> is an invalid length.                                                    |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">DiemTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code> | The on-chain allowlist already contains the script <code>hash</code>.                                 |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(dr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
 </code></pre>
 
 
@@ -5027,9 +5027,9 @@ with this <code>hash</code> can be successfully sent to the network.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
-    <a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">LibraTransactionPublishingOption::add_to_script_allow_list</a>(lr_account, hash)
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_to_script_allow_list">add_to_script_allow_list</a>(dr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_add_to_script_allow_list">DiemTransactionPublishingOption::add_to_script_allow_list</a>(dr_account, hash)
 }
 </code></pre>
 
@@ -5048,23 +5048,21 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`0x1::AccountLimits`](../../modules/doc/AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](../../modules/doc/Authenticator.md#0x1_Authenticator)
 -  [`0x1::ChainId`](../../modules/doc/ChainId.md#0x1_ChainId)
--  [`0x1::Coin1`](../../modules/doc/Coin1.md#0x1_Coin1)
 -  [`0x1::CoreAddresses`](../../modules/doc/CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer)
+-  [`0x1::Diem`](../../modules/doc/Diem.md#0x1_Diem)
+-  [`0x1::DiemAccount`](../../modules/doc/DiemAccount.md#0x1_DiemAccount)
+-  [`0x1::DiemConfig`](../../modules/doc/DiemConfig.md#0x1_DiemConfig)
+-  [`0x1::DiemSystem`](../../modules/doc/DiemSystem.md#0x1_DiemSystem)
+-  [`0x1::DiemTimestamp`](../../modules/doc/DiemTimestamp.md#0x1_DiemTimestamp)
+-  [`0x1::DiemTransactionPublishingOption`](../../modules/doc/DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption)
+-  [`0x1::DiemVersion`](../../modules/doc/DiemVersion.md#0x1_DiemVersion)
 -  [`0x1::DualAttestation`](../../modules/doc/DualAttestation.md#0x1_DualAttestation)
 -  [`0x1::Errors`](../../modules/doc/Errors.md#0x1_Errors)
 -  [`0x1::Event`](../../modules/doc/Event.md#0x1_Event)
 -  [`0x1::FixedPoint32`](../../modules/doc/FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Hash`](../../modules/doc/Hash.md#0x1_Hash)
--  [`0x1::LBR`](../../modules/doc/LBR.md#0x1_LBR)
 -  [`0x1::LCS`](../../modules/doc/LCS.md#0x1_LCS)
--  [`0x1::Libra`](../../modules/doc/Libra.md#0x1_Libra)
--  [`0x1::LibraAccount`](../../modules/doc/LibraAccount.md#0x1_LibraAccount)
--  [`0x1::LibraConfig`](../../modules/doc/LibraConfig.md#0x1_LibraConfig)
--  [`0x1::LibraSystem`](../../modules/doc/LibraSystem.md#0x1_LibraSystem)
--  [`0x1::LibraTimestamp`](../../modules/doc/LibraTimestamp.md#0x1_LibraTimestamp)
--  [`0x1::LibraTransactionPublishingOption`](../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption)
--  [`0x1::LibraVersion`](../../modules/doc/LibraVersion.md#0x1_LibraVersion)
 -  [`0x1::Option`](../../modules/doc/Option.md#0x1_Option)
 -  [`0x1::RecoveryAddress`](../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress)
 -  [`0x1::RegisteredCurrencies`](../../modules/doc/RegisteredCurrencies.md#0x1_RegisteredCurrencies)
@@ -5078,6 +5076,8 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`0x1::ValidatorConfig`](../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [`0x1::Vector`](../../modules/doc/Vector.md#0x1_Vector)
+-  [`0x1::XDX`](../../modules/doc/XDX.md#0x1_XDX)
+-  [`0x1::XUS`](../../modules/doc/XUS.md#0x1_XUS)
 -  [`add_currency_to_account`](transaction_script_documentation.md#add_currency_to_account)
 -  [`add_recovery_rotation_capability`](transaction_script_documentation.md#add_recovery_rotation_capability)
 -  [`add_to_script_allow_list`](transaction_script_documentation.md#add_to_script_allow_list)
@@ -5108,9 +5108,9 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`set_validator_operator_with_nonce_admin`](transaction_script_documentation.md#set_validator_operator_with_nonce_admin)
 -  [`tiered_mint`](transaction_script_documentation.md#tiered_mint)
 -  [`unfreeze_account`](transaction_script_documentation.md#unfreeze_account)
+-  [`update_diem_version`](transaction_script_documentation.md#update_diem_version)
 -  [`update_dual_attestation_limit`](transaction_script_documentation.md#update_dual_attestation_limit)
 -  [`update_exchange_rate`](transaction_script_documentation.md#update_exchange_rate)
--  [`update_libra_version`](transaction_script_documentation.md#update_libra_version)
 -  [`update_minting_ability`](transaction_script_documentation.md#update_minting_ability)
 
 

@@ -8,17 +8,17 @@ RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
 
-WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
+WORKDIR /diem
+COPY rust-toolchain /diem/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
-COPY cargo-toolchain /libra/cargo-toolchain
+COPY cargo-toolchain /diem/cargo-toolchain
 RUN rustup install $(cat cargo-toolchain)
 
 FROM toolchain AS builder
 
 ARG ENABLE_FAILPOINTS
-COPY . /libra
+COPY . /diem
 
 RUN ./docker/build-common.sh
 
@@ -29,9 +29,9 @@ RUN apt-get update && apt-get -y install libssl1.1 wget busybox gettext-base && 
 RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
 RUN cd /usr/local/bin && wget "https://releases.hashicorp.com/vault/1.5.0/vault_1.5.0_linux_amd64.zip" -O- | busybox unzip - && chmod +x vault
 
-RUN mkdir -p /opt/libra/bin
-COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
-COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
+RUN mkdir -p /opt/diem/bin
+COPY --from=builder /diem/target/release/diem-genesis-tool /usr/local/bin
+COPY --from=builder /diem/target/release/diem-operational-tool /usr/local/bin
 
 ARG BUILD_DATE
 ARG GIT_REV

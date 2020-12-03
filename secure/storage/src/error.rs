@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
@@ -53,21 +53,21 @@ impl From<serde_json::Error> for Error {
     }
 }
 
-impl From<libra_vault_client::Error> for Error {
-    fn from(error: libra_vault_client::Error) -> Self {
+impl From<diem_vault_client::Error> for Error {
+    fn from(error: diem_vault_client::Error) -> Self {
         match error {
-            libra_vault_client::Error::NotFound(_, key) => Self::KeyNotSet(key),
-            libra_vault_client::Error::HttpError(403, _, _) => Self::PermissionDenied,
+            diem_vault_client::Error::NotFound(_, key) => Self::KeyNotSet(key),
+            diem_vault_client::Error::HttpError(403, _, _) => Self::PermissionDenied,
             _ => Self::InternalError(format!("{}", error)),
         }
     }
 }
 
-impl From<libra_github_client::Error> for Error {
-    fn from(error: libra_github_client::Error) -> Self {
+impl From<diem_github_client::Error> for Error {
+    fn from(error: diem_github_client::Error) -> Self {
         match error {
-            libra_github_client::Error::NotFound(key) => Self::KeyNotSet(key),
-            libra_github_client::Error::HttpError(403, _) => Self::PermissionDenied,
+            diem_github_client::Error::NotFound(key) => Self::KeyNotSet(key),
+            diem_github_client::Error::HttpError(403, _) => Self::PermissionDenied,
             _ => Self::InternalError(format!("{}", error)),
         }
     }

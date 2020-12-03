@@ -1,0 +1,24 @@
+[package]
+name = "diem-swarm"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem swarm"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.34"
+ctrlc = { version = "3.1.7", default-features = false }
+reqwest = { version = "0.10.9", features = ["blocking"], default-features = false }
+structopt = "0.3.21"
+thiserror = "1.0.22"
+diem-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"] }
+debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

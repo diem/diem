@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use libra_secure_time::{RealTimeService, TimeService};
+use diem_secure_time::{RealTimeService, TimeService};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission checks and simply
 /// is a proof of concept to unblock building of applications without more complex data stores.
 /// Internally, it retains all data, which means that it must make copies of all key material which
-/// violates the Libra code base. It violates it because the anticipation is that data stores would
+/// violates the Diem code base. It violates it because the anticipation is that data stores would
 /// securely handle key material. This should not be used in production.
 pub type InMemoryStorage = InMemoryStorageInternal<RealTimeService>;
 

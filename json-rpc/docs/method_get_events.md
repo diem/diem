@@ -16,7 +16,7 @@ Fetch the events for a given event stream.
 
 Note:
 1. For `sentpayment` and `receivedpayment` events, call [get_account](method_get_account.md) to get the event key of the event streams for a given user account.
-2. For currency related events, call [get_currencies](method_get_currencies.md) to get the event keys (for example: to LBR exchange rate change event key).
+2. For currency related events, call [get_currencies](method_get_currencies.md) to get the event keys (for example: to XDX exchange rate change event key).
 
 
 ### Returns
@@ -29,21 +29,21 @@ Returns array of [Event](type_event.md) objects
 
 ```
 //Request: get events associated with receivedpayment event stream key "00000000000000001668f6be25668c1a17cd8caf6b8d2f25" for account "1668f6be25668c1a17cd8caf6b8d2f25"
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["00000000000000001668f6be25668c1a17cd8caf6b8d2f25", 0, 10], "id":1}' https://testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["00000000000000001668f6be25668c1a17cd8caf6b8d2f25", 0, 10], "id":1}' https://testnet.diem.com/v1
 
 //Response
 {
   "id": 1,
   "jsonrpc": "2.0",
-  "libra_chain_id": 2,
-  "libra_ledger_timestampusec": 1596694876315159,
-  "libra_ledger_version": 3310435,
+  "diem_chain_id": 2,
+  "diem_ledger_timestampusec": 1596694876315159,
+  "diem_ledger_version": 3310435,
   "result": [
     {
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -58,7 +58,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -73,7 +73,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -88,7 +88,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -103,7 +103,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -118,7 +118,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -133,7 +133,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -148,7 +148,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -163,7 +163,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",
@@ -178,7 +178,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
       "data": {
         "amount": {
           "amount": 100000000,
-          "currency": "LBR"
+          "currency": "XDX"
         },
         "metadata": "",
         "receiver": "1668f6be25668c1a17cd8caf6b8d2f25",

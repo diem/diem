@@ -3,8 +3,8 @@ kind: Pod
 metadata:
   name: {pod_name}
   labels:
-    app: libra-lsr
-    libra-node: "true"
+    app: diem-lsr
+    diem-node: "true"
     peer_id: {pod_name}
 spec:
   hostNetwork: true
@@ -17,21 +17,21 @@ spec:
     - name: fluent-bit
       image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9
       imagePullPolicy: IfNotPresent
-      command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/libra/data/fluent-bit/fluent-bit.conf"]
+      command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/diem/data/fluent-bit/fluent-bit.conf"]
       volumeMounts:
-      - mountPath: /opt/libra/data
-        name: libra-data
+      - mountPath: /opt/diem/data
+        name: diem-data
     - name: main
-      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra/validator_tcb:{image_tag}
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/diem/validator_tcb:{image_tag}
       imagePullPolicy: Always
-      command: ["/opt/libra/bin/safety-rules", "/opt/libra/etc/node.yaml"]
+      command: ["/opt/diem/bin/safety-rules", "/opt/diem/etc/node.yaml"]
       ports:
         - containerPort: 6185
       volumeMounts:
-        - mountPath: /opt/libra/etc
+        - mountPath: /opt/diem/etc
           name: config-built
-        - mountPath: /opt/libra/data
-          name: libra-data
+        - mountPath: /opt/diem/data
+          name: diem-data
         - mountPath: /opt/vault
           name: vault-token
       env:
@@ -40,13 +40,13 @@ spec:
         - name: RUST_BACKTRACE
           value: "1"
         - name: PUSH_METRICS_ENDPOINT
-          value: "http://libra-testnet-prometheus-pushgateway:9091/metrics/job/safety_rules/instance/{pod_name}"
+          value: "http://diem-testnet-prometheus-pushgateway:9091/metrics/job/safety_rules/instance/{pod_name}"
   volumes:
     - name: config-built
       hostPath:
         path: /config
         type: DirectoryOrCreate
-    - name: libra-data
+    - name: diem-data
       hostPath:
         path: /data
         type: DirectoryOrCreate
@@ -60,7 +60,7 @@ spec:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchExpressions:
-              - key: libra-node
+              - key: diem-node
                 operator: Exists
           topologyKey: "kubernetes.io/hostname"
   terminationGracePeriodSeconds: 5

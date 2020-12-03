@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines traits and implementations of
 //! [cryptographic hash functions](https://en.wikipedia.org/wiki/Cryptographic_hash_function)
-//! for the Libra project.
+//! for the Diem project.
 //!
 //! It is designed to help authors protect against two types of real world attacks:
 //!
@@ -21,9 +21,9 @@
 //!    same input to the hash function and therefore the same hash. This
 //!    creates a collision.
 //!
-//! Regarding (1), this library makes it easy for Libra developers to create as
+//! Regarding (1), this library makes it easy for Diem developers to create as
 //! many new "hashable" Rust types as needed so that each Rust type hashed and signed
-//! in Libra has a unique meaning, that is, unambiguously captures the intent of a signer.
+//! in Diem has a unique meaning, that is, unambiguously captures the intent of a signer.
 //!
 //! Regarding (2), this library provides the `CryptoHasher` abstraction to easily manage
 //! cryptographic seeds for hashing. Hashing seeds aim to ensure that
@@ -31,16 +31,16 @@
 //! from another type.
 //!
 //! Finally, to prevent format ambiguity within a same type `MyNewStruct` and facilitate protocol
-//! specifications, we use [Libra Canonical Serialization (LCS)](../../libra_canonical_serialization/index.html)
+//! specifications, we use [Diem Canonical Serialization (LCS)](../../diem_canonical_serialization/index.html)
 //! as the recommended solution to write Rust values into a hasher.
 //!
 //! # Quick Start
 //!
 //! To obtain a `hash()` method for any new type `MyNewStruct`, it is (strongly) recommended to
-//! use the derive macros of `serde` and `libra_crypto_derive` as follows:
+//! use the derive macros of `serde` and `diem_crypto_derive` as follows:
 //! ```
-//! use libra_crypto::hash::CryptoHash;
-//! use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+//! use diem_crypto::hash::CryptoHash;
+//! use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
 //! use serde::{Deserialize, Serialize};
 //! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 //! struct MyNewStruct { /*...*/ }
@@ -63,7 +63,7 @@
 //! use the derive macro [`CryptoHasher`](https://doc.rust-lang.org/reference/procedural-macros.html).
 //!
 //! ```
-//! use libra_crypto_derive::CryptoHasher;
+//! use diem_crypto_derive::CryptoHasher;
 //! use serde::Deserialize;
 //! #[derive(Deserialize, CryptoHasher)]
 //! #[serde(rename = "OptionalCustomSerdeName")]
@@ -92,7 +92,7 @@
 //! **IMPORTANT:** Do NOT use this for new code unless you know what you are doing.
 //!
 //! ```
-//! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
+//! use diem_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //!
 //! let mut hasher = TestOnlyHasher::default();
 //! hasher.update("Test message".as_bytes());
@@ -101,7 +101,7 @@
 
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
-use libra_nibble::Nibble;
+use diem_nibble::Nibble;
 use mirai_annotations::*;
 use once_cell::sync::{Lazy, OnceCell};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -113,10 +113,10 @@ use static_assertions::const_assert;
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
-/// A prefix used to begin the salt of every libra hashable structure. The salt
+/// A prefix used to begin the salt of every diem hashable structure. The salt
 /// consists in this global prefix, concatenated with the specified
 /// serialization name of the struct.
-pub(crate) const LIBRA_HASH_PREFIX: &[u8] = b"LIBRA::";
+pub(crate) const DIEM_HASH_PREFIX: &[u8] = b"DIEM::";
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
 #[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -473,7 +473,7 @@ impl DefaultHasher {
     pub fn prefixed_hash(buffer: &[u8]) -> [u8; HashValue::LENGTH] {
         // The salt is initial material we prefix to actual value bytes for
         // domain separation. Its length is variable.
-        let salt: Vec<u8> = [LIBRA_HASH_PREFIX, buffer].concat();
+        let salt: Vec<u8> = [DIEM_HASH_PREFIX, buffer].concat();
         // The seed is a fixed-length hash of the salt, thereby preventing
         // suffix attacks on the domain separation bytes.
         HashValue::sha3_256_of(&salt[..]).hash
@@ -640,7 +640,7 @@ pub static GENESIS_BLOCK_ID: Lazy<HashValue> = Lazy::new(|| {
 ///
 /// # Example
 /// ```
-/// use libra_crypto::hash::TestOnlyHash;
+/// use diem_crypto::hash::TestOnlyHash;
 ///
 /// b"hello world".test_only_hash();
 /// ```

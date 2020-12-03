@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -32,7 +32,7 @@ use std::{
 ///
 /// ```
 /// use proptest::prelude::*;
-/// use libra_proptest_helpers::with_stack_size;
+/// use diem_proptest_helpers::with_stack_size;
 ///
 /// with_stack_size(4 * 1024 * 1024, || proptest!(|(x in 0usize..128)| {
 ///     // assertions go here

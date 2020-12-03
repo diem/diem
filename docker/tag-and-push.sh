@@ -1,10 +1,10 @@
 #!/bin/bash
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 # tag-and-push.sh is used tag an image with multiple tags and push them to the target repo. Use ":" as the separator
 # between multiple tags
 # Example:
-# SOURCE=libra_validator:latest TARGET_REPO=1234567890.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test TARGET_TAGS=master:master_39cnja0 tag-and-push.sh
+# SOURCE=diem_validator:latest TARGET_REPO=1234567890.dkr.ecr.us-west-2.amazonaws.com/diem_cluster_test TARGET_TAGS=master:master_39cnja0 tag-and-push.sh
 
 set -e
 

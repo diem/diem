@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Error;
+use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use enum_dispatch::enum_dispatch;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use serde::{Deserialize, Serialize};
 
 /// CryptoStorage provides an abstraction for secure generation and handling of cryptographic keys.
@@ -20,7 +20,7 @@ pub trait CryptoStorage {
     /// This is not intended to be used in production and the API may throw unimplemented if
     /// not used correctly. As this is purely a testing API, there is no defined behavior for
     /// importing a key for a given name if that name already exists.  It only exists to allow
-    /// Libra to be run in test environments where a set of deterministic keys must be generated.
+    /// Diem to be run in test environments where a set of deterministic keys must be generated.
     fn import_private_key(&mut self, name: &str, key: Ed25519PrivateKey) -> Result<(), Error>;
 
     /// Returns the Ed25519 private key stored at 'name' and identified by 'version', which is the
@@ -47,7 +47,7 @@ pub trait CryptoStorage {
     /// Signs the provided securely-hashable struct, using the 'named' private
     /// key.
     // The FQDNs on the next line help macros don't remove them
-    fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
+    fn sign<T: diem_crypto::hash::CryptoHash + serde::Serialize>(
         &self,
         name: &str,
         message: &T,
@@ -56,7 +56,7 @@ pub trait CryptoStorage {
     /// Signs the provided securely-hashable struct, using the 'named' and 'versioned' private key. This may fail
     /// even if the 'named' key exists but the version is not present.
     // The FQDNs on the next line help macros, don't remove them
-    fn sign_using_version<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
+    fn sign_using_version<T: diem_crypto::hash::CryptoHash + serde::Serialize>(
         &self,
         name: &str,
         version: Ed25519PublicKey,

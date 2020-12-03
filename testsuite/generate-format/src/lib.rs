@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! How and where to record the Serde format of interesting Libra types.
+//! How and where to record the Serde format of interesting Diem types.
 //! See API documentation with `cargo doc -p serde-reflection --open`
 
 use serde_reflection::Registry;
@@ -10,8 +10,8 @@ use structopt::{clap::arg_enum, StructOpt};
 
 /// Consensus messages.
 mod consensus;
-/// Libra transactions.
-mod libra;
+/// Diem transactions.
+mod diem;
 /// Analyze Serde formats to detect certain patterns.
 mod linter;
 /// Move ABI.
@@ -25,7 +25,7 @@ arg_enum! {
 #[derive(Debug, StructOpt, Clone, Copy)]
 /// A corpus of Rust types to trace, and optionally record on disk.
 pub enum Corpus {
-    Libra,
+    Diem,
     Consensus,
     Network,
     MoveABI,
@@ -44,7 +44,7 @@ impl Corpus {
     /// Compute the registry of formats.
     pub fn get_registry(self) -> Registry {
         let result = match self {
-            Corpus::Libra => libra::get_registry(),
+            Corpus::Diem => diem::get_registry(),
             Corpus::Consensus => consensus::get_registry(),
             Corpus::Network => network::get_registry(),
             Corpus::MoveABI => move_abi::get_registry(),
@@ -60,7 +60,7 @@ impl Corpus {
     /// Where to record this corpus on disk.
     pub fn output_file(self) -> Option<&'static str> {
         match self {
-            Corpus::Libra => libra::output_file(),
+            Corpus::Diem => diem::output_file(),
             Corpus::Consensus => consensus::output_file(),
             Corpus::Network => network::output_file(),
             Corpus::MoveABI => move_abi::output_file(),

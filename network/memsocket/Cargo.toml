@@ -1,10 +1,10 @@
 [package]
 name = "memsocket"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra memsocket"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem memsocket"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 edition = "2018"
 publish = false
@@ -13,8 +13,8 @@ publish = false
 futures = "0.3.8"
 bytes = "0.5.6"
 once_cell = "1.4.1"
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [features]
 default = []

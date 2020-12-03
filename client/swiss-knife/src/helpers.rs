@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     account_config::{from_currency_code_string, type_tag_for_currency_code},
 };

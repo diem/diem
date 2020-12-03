@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! # Metrics
@@ -59,14 +59,14 @@ pub use op_counters::{DurationHistogram, OpMetrics};
 mod unit_tests;
 
 // Re-export counter types from prometheus crate
-pub use libra_metrics_core::{
+pub use diem_metrics_core::{
     register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
     register_int_gauge, register_int_gauge_vec, Histogram, HistogramTimer, HistogramVec,
     IntCounter, IntCounterVec, IntGauge, IntGaugeVec,
 };
 
 use anyhow::Result;
-use libra_logger::prelude::*;
+use diem_logger::prelude::*;
 use once_cell::sync::Lazy;
 use prometheus::{proto::MetricType, Encoder, TextEncoder};
 use std::{
@@ -79,7 +79,7 @@ use std::{
 
 pub static NUM_METRICS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_metrics",
+        "diem_metrics",
         "Number of metrics in certain states",
         &["type"]
     )
@@ -101,7 +101,7 @@ fn get_metrics_file<P: AsRef<Path>>(dir_path: &P, file_name: &str) -> File {
 }
 
 pub fn gather_metrics() -> Vec<prometheus::proto::MetricFamily> {
-    let metric_families = libra_metrics_core::gather();
+    let metric_families = diem_metrics_core::gather();
     let mut total: u64 = 0;
     let mut families_over_1000: u64 = 0;
 

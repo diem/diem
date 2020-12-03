@@ -1,7 +1,7 @@
-# Libra Operational Tool
+# Diem Operational Tool
 
-The `libra-operational-tool` provides a tool for operators to perform maintenance functions
-on the Libra blockchain post-genesis.  The functionality of the tool is
+The `diem-operational-tool` provides a tool for operators to perform maintenance functions
+on the Diem blockchain post-genesis.  The functionality of the tool is
 dictated by the organization of nodes within the system:
 
 * Validator owners (OW) that have accounts on the blockchain. These accounts contain

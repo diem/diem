@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Don't forget to run this benchmark with AES-NI enable.
@@ -13,7 +13,7 @@ use criterion::{Benchmark, Criterion, Throughput};
 use rand::SeedableRng;
 use std::convert::TryFrom as _;
 
-use libra_crypto::{
+use diem_crypto::{
     noise::{handshake_init_msg_len, handshake_resp_msg_len, NoiseConfig, AES_GCM_TAGLEN},
     test_utils::TEST_SEED,
     x25519, Uniform as _, ValidCryptoMaterial as _,

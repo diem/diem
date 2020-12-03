@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use errmapgen::ErrorMapping;
@@ -616,7 +616,7 @@ fn explain_error(
     match error.into_vm_status() {
         VMStatus::MoveAbort(AbortLocation::Module(id), abort_code) => {
             // try to use move-explain to explain the abort
-            // TODO: this will only work for errors in the stdlib or Libra Framework. We should
+            // TODO: this will only work for errors in the stdlib or Diem Framework. We should
             // add code to build an ErrorMapping for modules in move_lib as well
             let error_descriptions: ErrorMapping =
                 lcs::from_bytes(compiled_stdlib::ERROR_DESCRIPTIONS)?;

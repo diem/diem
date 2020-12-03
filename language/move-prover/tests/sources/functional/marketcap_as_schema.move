@@ -16,7 +16,7 @@ module TestMarketCapWithSchemas {
         invariant module global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
     }
 
-    // A resource representing the Libra coin
+    // A resource representing the Diem coin
     resource struct T<X> {
         // The value of the coin. May be zero
         value: u64,
@@ -32,7 +32,7 @@ module TestMarketCapWithSchemas {
 
 
     resource struct MarketCap<X> {
-        // The sum of the values of all LibraCoin::T resources in the system
+        // The sum of the values of all DiemCoin::T resources in the system
         total_value: u128,
     }
 

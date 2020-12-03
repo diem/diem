@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This provides a execution separation between SafetyRules and Consensus without requiring the
@@ -11,7 +11,7 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     remote_service::{self, RemoteService},
 };
-use libra_config::utils;
+use diem_config::utils;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     thread::{self, JoinHandle},

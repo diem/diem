@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use crate::instance::{Instance, ValidatorGroup};
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
     Uniform,
 };
-use libra_types::{chain_id::ChainId, waypoint::Waypoint};
+use diem_types::{chain_id::ChainId, waypoint::Waypoint};
 use rand::prelude::*;
 use reqwest::Client;
 

@@ -1,6 +1,6 @@
 ---
 name: "\U0001F41B Bug report"
-about: Create a bug report to help improve Libra Core
+about: Create a bug report to help improve Diem Core
 title: "[Bug]"
 labels: bug
 assignees: ''
@@ -32,7 +32,7 @@ To report a security issue, please email security@libra.org. -->
 ## System information
 
 **Please complete the following information:**
-- <!-- Libra Version -->
+- <!-- Diem Version -->
 - <!-- Rust Version -->
 - <!-- Computer OS -->
 

@@ -1,4 +1,4 @@
-# Overview of Libra Transaction Scripts
+# Overview of Diem Transaction Scripts
 
 
 > {{move-toc}}
@@ -7,7 +7,7 @@
 
 On-chain state is updated via the execution of transaction scripts sent from
 accounts that exist on-chain. This page documents each allowed transaction
-script on Libra, and the common state changes that can be performed to the
+script on Diem, and the common state changes that can be performed to the
 blockchain via these transaction scripts along with their arguments and common
 error conditions.
 
@@ -45,7 +45,7 @@ Each Move abort error status consists of two pieces of data:
 
 The `abort_code` is a `u64` that is constructed from two values:
 1. The **error category** which is encoded in the lower 8 bits of the code. Error categories are
-   declared in the `Errors` module and are globally unique across the Libra framework. There is a limited
+   declared in the `Errors` module and are globally unique across the Diem framework. There is a limited
    fixed set of predefined categories, and the framework is guaranteed to use these consistently.
 2. The **error reason** which is encoded in the remaining 56 bits of the code. The reason is a unique
    number relative to the module which raised the error and can be used to obtain more information about
@@ -60,8 +60,8 @@ e.g.,
 
 | Error Category           | Error Reason                                | Description                                               |
 | ----------------         | --------------                              | -------------                                             |
-| `Errors::NOT_PUBLISHED`  | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY` | `payer` doesn't hold a balance in `Currency`.             |
-| `Errors::LIMIT_EXCEEDED` | `LibraAccount::EINSUFFICIENT_BALANCE`       | `amount` is greater than `payer`'s balance in `Currency`. |
+| `Errors::NOT_PUBLISHED`  | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY` | `payer` doesn't hold a balance in `Currency`.             |
+| `Errors::LIMIT_EXCEEDED` | `DiemAccount::EINSUFFICIENT_BALANCE`       | `amount` is greater than `payer`'s balance in `Currency`. |
 
 For each of these tables, the **error categories should be considered stable**;
 any changes to these categories will be be well-publicized in advance. On the
@@ -116,7 +116,7 @@ Script documentation: `create_child_vasp_account`
 ---
 #### Script create_validator_operator_account
 
-Creates a Validator Operator account. This transaction can only be sent by the Libra
+Creates a Validator Operator account. This transaction can only be sent by the Diem
 Root account.
 
 Script documentation: `create_validator_operator_account`
@@ -124,7 +124,7 @@ Script documentation: `create_validator_operator_account`
 ---
 #### Script create_validator_account
 
-Creates a Validator account. This transaction can only be sent by the Libra
+Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
 Script documentation: `create_validator_account`
@@ -152,7 +152,7 @@ Script documentation: `create_designated_dealer`
 #### Script add_currency_to_account
 
 Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
-send, receive, and hold `Libra::Libra<Currency>` coins. This transaction can be
+send, receive, and hold `Diem::Diem<Currency>` coins. This transaction can be
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
@@ -194,7 +194,7 @@ Script documentation: `rotate_authentication_key`
 
 Rotates the sender's authentication key to the supplied new authentication key. May be sent by
 any account that has a sliding nonce resource published under it (usually this is Treasury
-Compliance or Libra Root accounts).
+Compliance or Diem Root accounts).
 
 Script documentation: `rotate_authentication_key_with_nonce`
 
@@ -203,7 +203,7 @@ Script documentation: `rotate_authentication_key_with_nonce`
 #### Script rotate_authentication_key_with_nonce_admin
 
 Rotates the specified account's authentication key to the supplied new authentication key. May
-only be sent by the Libra Root account as a write set transaction.
+only be sent by the Diem Root account as a write set transaction.
 
 
 Script documentation: `rotate_authentication_key_with_nonce_admin`
@@ -261,7 +261,7 @@ Script documentation: `peer_to_peer_with_metadata`
 
 Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
-transaction can only be successfully called by the Libra Root account.
+transaction can only be successfully called by the Diem Root account.
 
 Script documentation: `add_validator_and_reconfigure`
 
@@ -282,7 +282,7 @@ Script documentation: `register_validator_config`
 
 This script removes a validator account from the validator set, and triggers a reconfiguration
 of the system to remove the validator from the system. This transaction can only be
-successfully called by the Libra Root account.
+successfully called by the Diem Root account.
 
 Script documentation: `remove_validator_and_reconfigure`
 
@@ -313,7 +313,7 @@ Script documentation: `set_validator_operator`
 
 Sets the validator operator for a validator in the validator's configuration resource "locally"
 and does not reconfigure the system. Changes from this transaction will not picked up by the
-system until a reconfiguration of the system is triggered. May only be sent by the Libra Root
+system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 account as a write set transaction.
 
 Script documentation: `set_validator_operator_with_nonce_admin`
@@ -358,7 +358,7 @@ Script documentation: `cancel_burn`
 #### Script burn_txn_fees
 
 Burns the transaction fees collected in the `CoinType` currency so that the
-Libra association may reclaim the backing coins off-chain. May only be sent
+Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 Script documentation: `burn_txn_fees`
@@ -379,7 +379,7 @@ Script documentation: `tiered_mint`
 
 Freezes the account at `address`. The sending account of this transaction
 must be the Treasury Compliance account. The account being frozen cannot be
-the Libra Root or Treasury Compliance account. After the successful
+the Diem Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
@@ -399,7 +399,7 @@ Script documentation: `unfreeze_account`
 ---
 #### Script update_dual_attestation_limit
 
-Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
+Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The transaction can
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
@@ -409,8 +409,8 @@ Script documentation: `update_dual_attestation_limit`
 ---
 #### Script update_exchange_rate
 
-Update the rough on-chain exchange rate between a specified currency and LBR (as a conversion
-to micro-LBR). The transaction can only be sent by the Treasury Compliance account. After this
+Update the rough on-chain exchange rate between a specified currency and XDX (as a conversion
+to micro-XDX). The transaction can only be sent by the Treasury Compliance account. After this
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
@@ -430,19 +430,19 @@ Script documentation: `update_minting_ability`
 ### System Administration
 
 ---
-#### Script update_libra_version
+#### Script update_diem_version
 
-Updates the Libra major version that is stored on-chain and is used by the VM.  This
-transaction can only be sent from the Libra Root account.
+Updates the Diem major version that is stored on-chain and is used by the VM.  This
+transaction can only be sent from the Diem Root account.
 
-Script documentation: `update_libra_version`
+Script documentation: `update_diem_version`
 
 
 ---
 #### Script add_to_script_allow_list
 
 Adds a script hash to the transaction allowlist. This transaction
-can only be sent by the Libra Root account. Scripts with this hash can be
+can only be sent by the Diem Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
 Script documentation: `add_to_script_allow_list`
@@ -534,7 +534,7 @@ Script documentation: `add_to_script_allow_list`
 ---
 ### System Administration
 
-> {{move-include update_libra_version}}
+> {{move-include update_diem_version}}
 ---
 > {{move-include add_to_script_allow_list}}
 

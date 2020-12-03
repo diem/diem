@@ -1,9 +1,9 @@
-# LibraDB Backup
+# DiemDB Backup
 
-Libra nodes runs on top of [LibraDB](../../storage/libradb) that serves the [core data stucture](../data_structure/spec.md) to other parts of the system. While the LibraDB is designed to provide efficient access to the recent history of the block chain, and append data to it, the LibraDB Backup is a concise data format to archive the full history of the chain, away from the running Libra validator network. It's useful in at least these situations:
+Diem nodes runs on top of [DiemDB](../../storage/diemdb) that serves the [core data stucture](../data_structure/spec.md) to other parts of the system. While the DiemDB is designed to provide efficient access to the recent history of the block chain, and append data to it, the DiemDB Backup is a concise data format to archive the full history of the chain, away from the running Diem validator network. It's useful in at least these situations:
 
-* In case a validator lost its LibraDB, restoring the full transaction history from a backup is supposed to be 10x or more faster than replying on synchronizing from a peer.
-* In case of a fatal bug in the software destroying the DB on every single Libra Node, we can recover the network using the backups. The backups are not likely to be corrupt at the same time because the format is 1. Different; 2. Simple.
+* In case a validator lost its DiemDB, restoring the full transaction history from a backup is supposed to be 10x or more faster than replying on synchronizing from a peer.
+* In case of a fatal bug in the software destroying the DB on every single Diem Node, we can recover the network using the backups. The backups are not likely to be corrupt at the same time because the format is 1. Different; 2. Simple.
 * If a fork ever happens, and we plan to make resolve and converge the branches,  this piece of history can still be archived in the form of backups.
 
 
@@ -23,13 +23,13 @@ pub type FileHandle = String;
 pub struct TextLine(String);
 ```
 
-A LibraDB **backup storage** stores **backups** and **metadata lines**.
+A DiemDB **backup storage** stores **backups** and **metadata lines**.
 
 Each of the **backups** contains information that reflects different aspects of the blockchain history. It is identified by its manifest file (human readable, in JSON), which can contain links to data files. Depending on the specific type of backup, the content differs. The backup system doesn’t care about how physically the storage organizes backups, it dumps backups as group of files (although it does try to hint the storage that the group are related to each other, see the [Backup Storage interface](#backup-storage-interface)), asking back one single FileHandle to identify the whole backup. The restore system takes `FileHandle`s pointing to manifests, it’s up to the human / external system to decide which manifests are relevant, probably based on the **metadata**.
 
 Among other purposes, **Metadata lines** mainly serve as an index of all the backups in the storage. After each backup is written to the storage, the backup system put in one line of metadata, containing the FileHandle it just got from the storage. One can get a complete picture of what's in a backup storage by looking at all the metadata lines. Similar to files in a backup, the backup system doesn't care about how the storage organizes the metadata lines, each line can be a separate file or a DB record.
 
-At this point we backup three essential types of the information, with which a LibraDB can be popped up and start supporting the functionality of a Validator or a Full Node. It describes below each of the backup types:
+At this point we backup three essential types of the information, with which a DiemDB can be popped up and start supporting the functionality of a Validator or a Full Node. It describes below each of the backup types:
 
 ### TransactionBackup
 
@@ -141,7 +141,7 @@ pub struct StateSnapshotBackup {
 }
 ```
 
-With a state tree at a certain version, transactions can be executed on top of that version. This is essential for a Libra node to start synchronizing new transactions from other nodes, as well as a Validator to proposal and commit blocks.
+With a state tree at a certain version, transactions can be executed on top of that version. This is essential for a Diem node to start synchronizing new transactions from other nodes, as well as a Validator to proposal and commit blocks.
 
 Note that it's possible to restore a DB from empty by applying all transactions from the beginning, without the need for a state snapshot, but it can be extremely painful when the blockchain grows big.
 
@@ -179,7 +179,7 @@ pub struct TransactionBackupMeta {
 
 ![Restore](../images/db_backup_restore_flow.png)
 
-It's shown above the intended structure of the Libra backup and restore workflow, discussed in detail by components below.
+It's shown above the intended structure of the Diem backup and restore workflow, discussed in detail by components below.
 
 ## Backup Storage interface
 
@@ -294,7 +294,7 @@ Example config for a S3 storage based on the aws-cli command line:
 ```toml
 [[env_vars]]
 key = "BUCKET_AND_PREFIX"
-value = "libra-backup/backup1"
+value = "diem-backup/backup1"
 
 [commands]
 create_backup = 'echo "$BACKUP_NAME"'
@@ -304,10 +304,10 @@ save_metadata_line= 'aws s3 cp - "s3://$BUCKET_AND_PREFIX/metadata/$FILE_NAME"'
 list_metadata_files = 'aws s3 ls s3://$BUCKET_AND_PREFIX/metadata/ | sed -ne "s/.* //p" | xargs -I{} echo s3://$BUCKET/metadata/{}'
 ```
 
-This will create a folder structure like the following in the s3 bucket libra-backup:
+This will create a folder structure like the following in the s3 bucket diem-backup:
 
 ```
-s3://libra-backup/backup1/
+s3://diem-backup/backup1/
   metadata/
     epoch_ending_0-0.meta
     state_snapshot_ver_0.meta
@@ -333,9 +333,9 @@ s3://libra-backup/backup1/
   ...
 ```
 
-## Backup service inside of a Libra Validator/Full node
+## Backup service inside of a Diem Validator/Full node
 
-Since the DB we are backing up from is likely to be already open (and actively operated on) by a Libra Validator / Full Node, access to the DB by the backup system is done in the same process, as the Backup Service. The service is open to localhost only, as a preliminary security measure, and is supposed to be accessed only by the `BackupController` described below. The protocol between them is deemed private to the Libra implementation and in reality its in LCS over HTTP.
+Since the DB we are backing up from is likely to be already open (and actively operated on) by a Diem Validator / Full Node, access to the DB by the backup system is done in the same process, as the Backup Service. The service is open to localhost only, as a preliminary security measure, and is supposed to be accessed only by the `BackupController` described below. The protocol between them is deemed private to the Diem implementation and in reality its in LCS over HTTP.
 
 ## Backup Controllers
 
@@ -345,12 +345,12 @@ A BackupCoordinator is implemented as well, which runs in the background and mon
 
 ## Restore Controllers
 
-Similar to the Backup controller, a RestoreController glues the functionality of a BackupStorage and the LibraDb. The difference is a RestoreController operates directly on an (potentially empty) DB, without the dependency on a running Node. A node is instead supposed to be started on top of a DB created by the controllers.
+Similar to the Backup controller, a RestoreController glues the functionality of a BackupStorage and the DiemDb. The difference is a RestoreController operates directly on an (potentially empty) DB, without the dependency on a running Node. A node is instead supposed to be started on top of a DB created by the controllers.
 
-To create a LibraDB from scratch, on top of which a validator can boot and join the network, one usually needs to pick a state snapshot at version V, and a target version T and do the following:
+To create a DiemDB from scratch, on top of which a validator can boot and join the network, one usually needs to pick a state snapshot at version V, and a target version T and do the following:
 
 1. Recover EpochEnding backup from epoch 0 all the way to the one which right precedes version T.
-3. (Optional, but supposed to do in Libra V1, since Libra nodes doesn't work on partial transaction history in V1.) Restore transactions from 0 to V to DB.
+3. (Optional, but supposed to do in Diem V1, since Diem nodes doesn't work on partial transaction history in V1.) Restore transactions from 0 to V to DB.
 2. Recover the state snapshot at version V.
 4. Replay transactions from version V+1 to T to recreate state at version T.
 

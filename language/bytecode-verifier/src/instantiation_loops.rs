@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This implements an algorithm that detects loops during the instantiation of generics.
@@ -12,7 +12,7 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
-use libra_types::vm_status::StatusCode;
+use diem_types::vm_status::StatusCode;
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},

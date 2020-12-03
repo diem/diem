@@ -1,10 +1,10 @@
 [package]
 name = "executor"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra executor"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem executor"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -20,17 +20,17 @@ serde = { version = "1.0.117", features = ["derive"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0"}
 executor-types = { path = "../executor-types", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
-libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
-libra-trace = { path = "../../common/trace", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-metrics = { path = "../../common/metrics", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
+diem-state-view = { path = "../../storage/state-view", version = "0.1.0" }
+diem-trace = { path = "../../common/trace", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
-libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 
@@ -43,15 +43,15 @@ rand = "0.7.3"
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 compiler = { path = "../../language/compiler", version = "0.1.0" }
 executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
-libra-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diemdb = { path = "../../storage/diemdb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0", features=["fuzzing"] }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["consensus-types/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing", "proptest", "storage-interface/fuzzing"]
-failpoints = ["fail/failpoints", "libra-vm/failpoints"]
+fuzzing = ["consensus-types/fuzzing", "diem-crypto/fuzzing", "diem-types/fuzzing", "proptest", "storage-interface/fuzzing"]
+failpoints = ["fail/failpoints", "diem-vm/failpoints"]

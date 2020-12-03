@@ -1,6 +1,6 @@
 address 0x1 {
 
-/// The `Genesis` module defines the Move initialization entry point of the Libra framework
+/// The `Genesis` module defines the Move initialization entry point of the Diem framework
 /// when executing from a fresh state.
 ///
 /// > TODO: Currently there are a few additional functions called from Rust during genesis.
@@ -8,25 +8,25 @@ address 0x1 {
 module Genesis {
     use 0x1::AccountFreezing;
     use 0x1::ChainId;
-    use 0x1::Coin1;
+    use 0x1::XUS;
     use 0x1::DualAttestation;
-    use 0x1::LBR;
-    use 0x1::Libra;
-    use 0x1::LibraAccount;
-    use 0x1::LibraBlock;
-    use 0x1::LibraConfig;
-    use 0x1::LibraSystem;
-    use 0x1::LibraTimestamp;
-    use 0x1::LibraTransactionPublishingOption;
-    use 0x1::LibraVersion;
+    use 0x1::XDX;
+    use 0x1::Diem;
+    use 0x1::DiemAccount;
+    use 0x1::DiemBlock;
+    use 0x1::DiemConfig;
+    use 0x1::DiemSystem;
+    use 0x1::DiemTimestamp;
+    use 0x1::DiemTransactionPublishingOption;
+    use 0x1::DiemVersion;
     use 0x1::TransactionFee;
-    use 0x1::LibraVMConfig;
+    use 0x1::DiemVMConfig;
 
-    /// Initializes the Libra framework.
+    /// Initializes the Diem framework.
     fun initialize(
-        lr_account: &signer,
+        dr_account: &signer,
         tc_account: &signer,
-        lr_auth_key: vector<u8>,
+        dr_auth_key: vector<u8>,
         tc_auth_key: vector<u8>,
         initial_script_allow_list: vector<vector<u8>>,
         is_open_module: bool,
@@ -35,63 +35,63 @@ module Genesis {
         chain_id: u8,
     ) {
 
-        LibraAccount::initialize(lr_account, x"00000000000000000000000000000000");
+        DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 
-        ChainId::initialize(lr_account, chain_id);
+        ChainId::initialize(dr_account, chain_id);
 
         // On-chain config setup
-        LibraConfig::initialize(lr_account);
+        DiemConfig::initialize(dr_account);
 
         // Currency setup
-        Libra::initialize(lr_account);
+        Diem::initialize(dr_account);
 
         // Currency setup
-        Coin1::initialize(lr_account, tc_account);
+        XUS::initialize(dr_account, tc_account);
 
-        LBR::initialize(
-            lr_account,
+        XDX::initialize(
+            dr_account,
             tc_account,
         );
 
-        AccountFreezing::initialize(lr_account);
+        AccountFreezing::initialize(dr_account);
 
         TransactionFee::initialize(tc_account);
 
-        LibraSystem::initialize_validator_set(
-            lr_account,
+        DiemSystem::initialize_validator_set(
+            dr_account,
         );
-        LibraVersion::initialize(
-            lr_account,
+        DiemVersion::initialize(
+            dr_account,
         );
         DualAttestation::initialize(
-            lr_account,
+            dr_account,
         );
-        LibraBlock::initialize_block_metadata(lr_account);
+        DiemBlock::initialize_block_metadata(dr_account);
 
-        let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
-        LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, lr_auth_key);
-        LibraAccount::restore_key_rotation_capability(lr_rotate_key_cap);
+        let dr_rotate_key_cap = DiemAccount::extract_key_rotation_capability(dr_account);
+        DiemAccount::rotate_authentication_key(&dr_rotate_key_cap, dr_auth_key);
+        DiemAccount::restore_key_rotation_capability(dr_rotate_key_cap);
 
-        LibraTransactionPublishingOption::initialize(
-            lr_account,
+        DiemTransactionPublishingOption::initialize(
+            dr_account,
             initial_script_allow_list,
             is_open_module,
         );
 
-        LibraVMConfig::initialize(
-            lr_account,
+        DiemVMConfig::initialize(
+            dr_account,
             instruction_schedule,
             native_schedule,
         );
 
-        let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
-        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
-        LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
+        let tc_rotate_key_cap = DiemAccount::extract_key_rotation_capability(tc_account);
+        DiemAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
+        DiemAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
         // After we have called this function, all invariants which are guarded by
-        // `LibraTimestamp::is_operating() ==> ...` will become active and a verification condition.
+        // `DiemTimestamp::is_operating() ==> ...` will become active and a verification condition.
         // See also discussion at function specification.
-        LibraTimestamp::set_time_has_started(lr_account);
+        DiemTimestamp::set_time_has_started(dr_account);
     }
 
     /// For verification of genesis, the goal is to prove that all the invariants which
@@ -105,7 +105,7 @@ module Genesis {
     /// > each module.
     spec fun initialize {
         /// Assume that this is called in genesis state (no timestamp).
-        requires LibraTimestamp::is_genesis();
+        requires DiemTimestamp::is_genesis();
     }
 
 }

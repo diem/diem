@@ -2,16 +2,16 @@
 //! account: Bob, 1000000
 
 //! sender: Alice
-import 0x1.LibraAccount;
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.DiemAccount;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main(account: &signer) {
-    let with_cap: LibraAccount.WithdrawCapability;
+    let with_cap: DiemAccount.WithdrawCapability;
 
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{bob}}, 42, h"", h"");
-    LibraAccount.restore_withdraw_capability(move(with_cap));
+    with_cap = DiemAccount.extract_withdraw_capability(copy(account));
+    DiemAccount.pay_from<XUS.XUS>(&with_cap, {{bob}}, 42, h"", h"");
+    DiemAccount.restore_withdraw_capability(move(with_cap));
 
     return;
 }

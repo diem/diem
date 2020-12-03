@@ -1,10 +1,10 @@
 module Test {
-    import 0x1.Coin1;
-    import 0x1.Libra;
+    import 0x1.XUS;
+    import 0x1.Diem;
     resource B{b: bool}
     resource T{ft: Self.B}
 
-    public t1(x: Libra.Libra<Coin1.Coin1>): Self.T {
+    public t1(x: Diem.Diem<XUS.XUS>): Self.T {
         return T{ft: move(x)};
     }
 

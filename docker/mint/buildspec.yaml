@@ -25,4 +25,4 @@ phases:
       # Tag and push the docker images
       - echo Logging in to Amazon ECR...
       - $(aws ecr get-login --no-include-email --region us-west-2)
-      - SOURCE=libra/faucet:latest TARGET_REPO=$LIBRA_MINT_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh
+      - SOURCE=diem/faucet:latest TARGET_REPO=$DIEM_MINT_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh

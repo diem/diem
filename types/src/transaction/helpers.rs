@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::Utc;
-use libra_crypto::{ed25519::*, test_utils::KeyPair, traits::SigningKey};
+use diem_crypto::{ed25519::*, test_utils::KeyPair, traits::SigningKey};
 
 pub fn create_unsigned_txn(
     payload: TransactionPayload,

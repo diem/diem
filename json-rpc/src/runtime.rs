@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,11 +7,11 @@ use crate::{
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
     response::JsonRpcResponse,
 };
+use diem_config::config::{NodeConfig, RoleType};
+use diem_logger::{debug, Level, Schema};
+use diem_mempool::MempoolClientSender;
+use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use futures::future::join_all;
-use libra_config::config::{NodeConfig, RoleType};
-use libra_logger::{debug, Level, Schema};
-use libra_mempool::MempoolClientSender;
-use libra_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use rand::{rngs::OsRng, RngCore};
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
@@ -66,7 +66,7 @@ macro_rules! log_response {
                 level = Level::Error
             }
         }
-        libra_logger::log!(
+        diem_logger::log!(
             level,
             RpcResponseLog {
                 trace_id: $trace_id,
@@ -85,7 +85,7 @@ pub fn bootstrap(
     batch_size_limit: u16,
     page_size_limit: u16,
     content_len_limit: usize,
-    libra_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
@@ -99,7 +99,7 @@ pub fn bootstrap(
 
     let registry = Arc::new(build_registry());
     let service = JsonRpcService::new(
-        libra_db,
+        diem_db,
         mp_sender,
         role,
         chain_id,
@@ -150,7 +150,7 @@ pub fn bootstrap(
 
     let health_route = warp::path!("-" / "healthy")
         .and(warp::path::end())
-        .map(|| "libra-node:ok");
+        .map(|| "diem-node:ok");
 
     let full_route = health_route.or(route_v1.or(route_root));
 
@@ -170,7 +170,7 @@ pub fn bootstrap(
 pub fn bootstrap_from_config(
     config: &NodeConfig,
     chain_id: ChainId,
-    libra_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     bootstrap(
@@ -178,7 +178,7 @@ pub fn bootstrap_from_config(
         config.json_rpc.batch_size_limit,
         config.json_rpc.page_size_limit,
         config.json_rpc.content_length_limit,
-        libra_db,
+        diem_db,
         mp_sender,
         config.base.role,
         chain_id,

@@ -5,7 +5,7 @@ address 0x2 {
 // the account address of each list node is actually the address bound to the key(name)
 module NameService {
     use 0x2::SortedLinkedList::{Self, EntryHandle};
-    use 0x1::LibraBlock;
+    use 0x1::DiemBlock;
     use 0x1::Signer;
     use 0x1::Vector;
 
@@ -31,7 +31,7 @@ module NameService {
 
     fun add_expirtation(account: &signer) acquires Expiration {
         let sender = Signer::address_of(account);
-        let current_block = LibraBlock::get_current_block_height();
+        let current_block = DiemBlock::get_current_block_height();
         if (!exists<Expiration>(sender)) {
             move_to<Expiration>(account, Expiration {expire_on_block_height: Vector::singleton(current_block + EXPIRE_AFTER())});
         } else {
@@ -90,7 +90,7 @@ module NameService {
     }
 
     public fun is_expired(entry: EntryHandle): bool acquires Expiration {
-        let current_block_height = LibraBlock::get_current_block_height();
+        let current_block_height = DiemBlock::get_current_block_height();
         current_block_height > expire_on_block_height(entry)
     }
 }

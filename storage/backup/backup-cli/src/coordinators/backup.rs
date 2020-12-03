@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,10 +13,10 @@ use crate::{
     utils::{backup_service_client::BackupServiceClient, GlobalBackupOpt},
 };
 use anyhow::{anyhow, ensure, Result};
+use diem_logger::prelude::*;
+use diem_types::transaction::Version;
+use diemdb::backup::backup_handler::DbState;
 use futures::{stream, Future, StreamExt};
-use libra_logger::prelude::*;
-use libra_types::transaction::Version;
-use libradb::backup::backup_handler::DbState;
 use std::{fmt::Debug, sync::Arc};
 use structopt::StructOpt;
 use tokio::{
@@ -85,7 +85,7 @@ impl BackupCoordinator {
         }
     }
     pub async fn run(&self) -> Result<()> {
-        // Connect to both the local Libra node and the backup storage.
+        // Connect to both the local Diem node and the backup storage.
         let backup_state =
             metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
                 .await?
@@ -159,7 +159,7 @@ impl BackupCoordinator {
                 }
             }
             Err(e) => warn!(
-                "Failed pulling DbState from local Libra node: {}. Will keep trying.",
+                "Failed pulling DbState from local Diem node: {}. Will keep trying.",
                 e
             ),
         };
@@ -339,7 +339,7 @@ fn get_next_snapshot(last_in_backup: Option<u64>, db_state: DbState, interval: u
 #[cfg(test)]
 mod tests {
     use crate::coordinators::backup::{get_batch_range, get_next_snapshot};
-    use libradb::backup::backup_handler::DbState;
+    use diemdb::backup::backup_handler::DbState;
 
     #[test]
     fn test_get_batch_range() {

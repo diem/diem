@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{config::CargoConfig, installer::install_if_needed, Result};
@@ -46,11 +46,11 @@ pub fn apply_sccache_if_possible<'a>(
             if !correct_location {
                 warn!("You will not benefit from sccache in this build!!!");
                 warn!(
-                    "To get the best experience, please move your libra source code to {} and your set your CARGO_HOME to be {}, simply export it in your .profile or .bash_rc",
+                    "To get the best experience, please move your diem source code to {} and your set your CARGO_HOME to be {}, simply export it in your .profile or .bash_rc",
                     &sccache_config.required_git_home, &sccache_config.required_cargo_home
                 );
                 warn!(
-                    "Current libra root is '{}',  and current CARGO_HOME is '{}'",
+                    "Current diem root is '{}',  and current CARGO_HOME is '{}'",
                     project_root().to_str().unwrap_or_default(),
                     var_os("CARGO_HOME").unwrap_or_default().to_string_lossy()
                 );

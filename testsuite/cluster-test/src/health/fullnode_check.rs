@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -35,7 +35,7 @@ impl FullNodeHealthCheck {
 async fn get_version(instance: &Instance) -> (&Instance, i64) {
     let res = instance
         .debug_interface_client()
-        .get_node_metric("libra_state_sync_version{type=committed}")
+        .get_node_metric("diem_state_sync_version{type=committed}")
         .await;
     let content = match res {
         Ok(res) => res.unwrap_or_default(),

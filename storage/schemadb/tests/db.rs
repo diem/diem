@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
@@ -79,14 +79,14 @@ fn get_column_families() -> Vec<ColumnFamilyName> {
     ]
 }
 
-fn open_db(dir: &libra_temppath::TempPath) -> DB {
+fn open_db(dir: &diem_temppath::TempPath) -> DB {
     let mut db_opts = rocksdb::Options::default();
     db_opts.create_if_missing(true);
     db_opts.create_missing_column_families(true);
     DB::open(&dir.path(), "test", get_column_families(), &db_opts).expect("Failed to open DB.")
 }
 
-fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
+fn open_db_read_only(dir: &diem_temppath::TempPath) -> DB {
     DB::open_readonly(
         &dir.path(),
         "test",
@@ -96,7 +96,7 @@ fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
     .expect("Failed to open DB.")
 }
 
-fn open_db_as_secondary(dir: &libra_temppath::TempPath, dir_sec: &libra_temppath::TempPath) -> DB {
+fn open_db_as_secondary(dir: &diem_temppath::TempPath, dir_sec: &diem_temppath::TempPath) -> DB {
     DB::open_as_secondary(
         &dir.path(),
         &dir_sec.path(),
@@ -108,13 +108,13 @@ fn open_db_as_secondary(dir: &libra_temppath::TempPath, dir_sec: &libra_temppath
 }
 
 struct TestDB {
-    _tmpdir: libra_temppath::TempPath,
+    _tmpdir: diem_temppath::TempPath,
     db: DB,
 }
 
 impl TestDB {
     fn new() -> Self {
-        let tmpdir = libra_temppath::TempPath::new();
+        let tmpdir = diem_temppath::TempPath::new();
         let db = open_db(&tmpdir);
 
         TestDB {
@@ -301,7 +301,7 @@ fn test_two_schema_batches() {
 
 #[test]
 fn test_reopen() {
-    let tmpdir = libra_temppath::TempPath::new();
+    let tmpdir = diem_temppath::TempPath::new();
     {
         let db = open_db(&tmpdir);
         db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();
@@ -321,7 +321,7 @@ fn test_reopen() {
 
 #[test]
 fn test_open_read_only() {
-    let tmpdir = libra_temppath::TempPath::new();
+    let tmpdir = diem_temppath::TempPath::new();
     {
         let db = open_db(&tmpdir);
         db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();
@@ -338,8 +338,8 @@ fn test_open_read_only() {
 
 #[test]
 fn test_open_as_secondary() {
-    let tmpdir = libra_temppath::TempPath::new();
-    let tmpdir_sec = libra_temppath::TempPath::new();
+    let tmpdir = diem_temppath::TempPath::new();
+    let tmpdir_sec = diem_temppath::TempPath::new();
 
     let db = open_db(&tmpdir);
     db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();

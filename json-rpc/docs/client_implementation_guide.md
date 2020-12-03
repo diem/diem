@@ -2,22 +2,22 @@
 
 ### Overview
 
-To implement a client connecting to Libra JSON-RPC APIs, you need consider the followings:
+To implement a client connecting to Diem JSON-RPC APIs, you need consider the followings:
 
-* [JSON-RPC client](#json-rpc-client): talks to Libra JSON-RPC server.
+* [JSON-RPC client](#json-rpc-client): talks to Diem JSON-RPC server.
 * [Testnet](#testnet): connect to testnet to do integration tests and confirm your client works as expected.
-* [Query Blockchain](#query-blockchain): read data from Libra blockchain.
-* [Submit Transaction](#submit-transaction): write data to Libra blockchain.
+* [Query Blockchain](#query-blockchain): read data from Diem blockchain.
+* [Submit Transaction](#submit-transaction): write data to Diem blockchain.
 * [Error handling](#error-handling): handle errors.
 
 ### JSON-RPC client
 
-Any JSON-RPC 2.0 client should be able to work with Libra JSON-RPC APIs.
-Libra JSON-RPC APIs extend to JSON-RPC 2.0 Spec for specific use case, check [Libra Extensions](./../json-rpc-spec.md#libra-extensions) for details, we will discuss more about them in [Error Handling](#error-handling) section.
+Any JSON-RPC 2.0 client should be able to work with Diem JSON-RPC APIs.
+Diem JSON-RPC APIs extend to JSON-RPC 2.0 Spec for specific use case, check [Diem Extensions](./../json-rpc-spec.md#diem-extensions) for details, we will discuss more about them in [Error Handling](#error-handling) section.
 
 ### Testnet
 
-A simplest way to validate your client works is connecting it to Testnet(https://testnet.libra.org/v1).
+A simplest way to validate your client works is connecting it to Testnet(https://testnet.diem.com/v1).
 For some query blockchain methods like [get_currencies](method_get_currencies.md) or [get_metadata](method_get_metadata.md), you don't need anything else other than a HTTP client to get back response from server.
 Try out [get_currencies example](method_get_currencies.md#example) on Testnet, and this can be the first query blockchain API you implement for your client.
 
@@ -28,7 +28,7 @@ Please follow [Testnet Faucet Service](service_testnet_faucet.md) to implement m
 
 ### Query Blockchain
 
-All the methods prefixed with `get_` listed at [here](./../json-rpc-spec.md#overview) are designed for querying Libra blockchain data.
+All the methods prefixed with `get_` listed at [here](./../json-rpc-spec.md#overview) are designed for querying Diem blockchain data.
 
 You may start with implementing [get_currencies](method_get_currencies.md), which is the simplest API that does not require any arguments and always responds to the same result on Testnet.
 
@@ -64,7 +64,7 @@ The following diagram shows the sequence of submit and wait for a peer to peer t
 #### Create local account
 
 A local account holds secrets of an onchain account: the private key.
-Maintaining the local account or keeping the secure of private key is out of a Libra client's scope. In this guide, we use [Libra Swiss Knife][6] to generate local account keys:
+Maintaining the local account or keeping the secure of private key is out of a Diem client's scope. In this guide, we use [Diem Swiss Knife][6] to generate local account keys:
 
 ``` shell
 # generate test keypair
@@ -73,8 +73,8 @@ cargo run -p swiss-knife -- generate-test-ed25519-keypair
 {
   "error_message": "",
   "data": {
-    "libra_account_address": "a74fd7c46952c497e75afb0a7932586d",
-    "libra_auth_key": "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d",
+    "diem_account_address": "a74fd7c46952c497e75afb0a7932586d",
+    "diem_auth_key": "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d",
     "private_key": "cd9a2c90296a210249128ae3c908611637b2e00efd4986670e252abf3fabd1a9",
     "public_key": "447fc3be296803c2303951c7816624c7566730a5cc6860a4a1bd3c04731569f5"
   }
@@ -83,7 +83,7 @@ cargo run -p swiss-knife -- generate-test-ed25519-keypair
 ```
 
 > To run this by yourself, clone https://github.com/libra/libra.git, and run `./scripts/dev_setup.sh` to setup dev env.
-> You can run the command in the above example at the root directory of libra codebase.
+> You can run the command in the above example at the root directory of diem codebase.
 
 
 #### Create and sign transaction
@@ -104,7 +104,7 @@ Here we give an example of how to create and sign transactions with option 1 in 
 ```Java
 
 ChainId testNetChainID = new ChainId((byte) 2); // Testnet chain id is static value
-String currencyCode = "Coin1";
+String currencyCode = "XUS";
 String account1_address = "a74fd7c46952c497e75afb0a7932586d";
 String account1_public_key = "447fc3be296803c2303951c7816624c7566730a5cc6860a4a1bd3c04731569f5";
 String account1_private_key = "cd9a2c90296a210249128ae3c908611637b2e00efd4986670e252abf3fabd1a9";
@@ -152,8 +152,8 @@ The following code does signing transaction:
 
 ```Java
 
-// sha3 hash "LIBRA::RawTransaction" bytes first, then concat with raw transaction bytes to create a message for signing.
-byte[] hash = concat(sha3Hash("LIBRA::RawTransaction".getBytes()), rawTxnBytes);
+// sha3 hash "DIEM::RawTransaction" bytes first, then concat with raw transaction bytes to create a message for signing.
+byte[] hash = concat(sha3Hash("DIEM::RawTransaction".getBytes()), rawTxnBytes);
 
 // [bouncycastle](https://www.bouncycastle.org/)'s Ed25519Signer
 Ed25519Signer signer = new Ed25519Signer();
@@ -170,7 +170,7 @@ String signedTxnData = bytesToHex(toLCS(st));
 
 ```
 
-For more details related to Libra crypto, please checkout [Crypto Spec](../../specifications/crypto/README.md).
+For more details related to Diem crypto, please checkout [Crypto Spec](../../specifications/crypto/README.md).
 
 When you implement above logic, you may extract `createRawTransaction` and `createSignedTransaction` methods and use the following data to confirm their logic is correct:
 
@@ -191,8 +191,8 @@ import com.novi.serde.Bytes;
 import com.novi.serde.Serializer;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
-import org.libra.stdlib.Helpers;
-import org.libra.types.*;
+import org.diem.stdlib.Helpers;
+import org.diem.types.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -280,7 +280,7 @@ If transaction has not been executed yet, server responses null:
 
 ```Java
 public Transaction waitForTransaction(String address, @Unsigned long sequence, String transactionHash,
-    @Unsigned long expirationTimeSec, int timeout) throws LibraException {
+    @Unsigned long expirationTimeSec, int timeout) throws DiemException {
 
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.SECOND, timeout);
@@ -291,12 +291,12 @@ public Transaction waitForTransaction(String address, @Unsigned long sequence, S
 
         if (accountTransaction != null) {
             if (!accountTransaction.getHash().equalsIgnoreCase(transactionHash)) {
-                throw new LibraException(
+                throw new DiemException(
                         String.format("found transaction, but hash does not match, given %s, but got %s",
                                 transactionHash, accountTransaction.getHash()));
             }
             if (!txn.getVmStatus() != null && "executed".equalsIgnoreCase(accountTransaction.getVmStatus().getType())) {
-                throw new LibraTransactionExecutionFailedException(
+                throw new DiemTransactionExecutionFailedException(
                         String.format("transaction execution failed: %s", accountTransaction.getVmStatus()));
             }
 
@@ -309,7 +309,7 @@ public Transaction waitForTransaction(String address, @Unsigned long sequence, S
         }
     }
 
-    throw new LibraWaitForTransactionTimeoutException(
+    throw new DiemWaitForTransactionTimeoutException(
             String.format("transaction not found within timeout period: %d (seconds)", timeout));
 }
 ```
@@ -324,7 +324,7 @@ We also should have a wait timeout for the case if the transaction is dropped so
 
 There are four general types errors you need consider:
 - Transport layer error, e.g. HTTP call failure.
-- JSON-RPC protocol error: e.g. server response non json data, or can't be parsed into [Libra JSON-RPC SPEC](./../json-rpc-spec.md) defined data structure, or missing result & error field.
+- JSON-RPC protocol error: e.g. server response non json data, or can't be parsed into [Diem JSON-RPC SPEC](./../json-rpc-spec.md) defined data structure, or missing result & error field.
 - JSON-RPC error: error returned from server.
 - Invalid arguments error: the caller of your client API may provide invalid arguments like invalid hex-encoded account address.
 
@@ -336,8 +336,8 @@ Distinguish above four types errors can help application developer to decide wha
    - Invalid request: it indicates client side error, either it's application code bug or the client (your code) bug. If you did well with handling invalid arguments, then it means your client code has bug.
    - Server error: this can be a server side bug, or important information related to submitted transaction validation or execution error.
 
-Other than general error handling, another type of error that client / application should pay attention to is server side stale response. This type problem happens when a Full Node is out of sync with the Libra network, or you connected to a sync delayed Full Node in a cluster of Full Nodes. To prevent these problems, we need:
-- Track server side data freshness, Libra JSON-RPC server will always respond `libra_ledger_version` and `libra_ledger_timestampusec` (see [Libra Extensions](./../json-rpc-spec.md#libra-extensions)) for clients to validate and track server side data freshness.
+Other than general error handling, another type of error that client / application should pay attention to is server side stale response. This type problem happens when a Full Node is out of sync with the Diem network, or you connected to a sync delayed Full Node in a cluster of Full Nodes. To prevent these problems, we need:
+- Track server side data freshness, Diem JSON-RPC server will always respond `diem_ledger_version` and `diem_ledger_timestampusec` (see [Diem Extensions](./../json-rpc-spec.md#diem-extensions)) for clients to validate and track server side data freshness.
 - Retry query / get methods calls when response is from a stale server.
 - Do not retry for submit transaction call, because the submitted transaction can be synced correctly even you submitted it to a stale server. You may receive a JSON-RPC error if submitted same transaction.
 
@@ -346,15 +346,15 @@ Other than general error handling, another type of error that client / applicati
 Once the above basic function works, you have a minimum client ready for usage.
 To make a production quality client, please checkout our [Client CHECKLIST](client_checklist.md).
 
-[1]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.SignedTransaction.html "SignedTransaction"
+[1]: https://developers.diem.com/docs/rustdocs/diem_types/transaction/struct.SignedTransaction.html "SignedTransaction"
 [2]: ../../language/transaction-builder/generator/README.md "Transaction Builder Generator"
-[3]: ./../../client/swiss-knife/README.md "Libra Swiss Knife"
-[4]: https://developers.libra.org/docs/rustdocs/libra_types/transaction/struct.RawTransaction.html "RawTransaction"
-[5]: https://developers.libra.org/docs/rustdocs/libra_canonical_serialization/index.html "LCS"
+[3]: ./../../client/swiss-knife/README.md "Diem Swiss Knife"
+[4]: https://developers.diem.com/docs/rustdocs/diem_types/transaction/struct.RawTransaction.html "RawTransaction"
+[5]: https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/index.html "LCS"
 [6]: ./../../client/swiss-knife#generate-a-ed25519-keypair "Swiss Knife Gen Keys"
 [7]: ./../../language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md#function-peer_to_peer_with_metadata-1 "P2P script doc"
 [8]: ./../../client/swiss-knife/README.md#examples-for-generate-raw-txn-and-generate-signed-txn-operations "Swiss Knife gen txn"
 [9]: ./../../client/swiss-knife/README.md#building-the-binary-in-a-release-optimized-mode "Swiss Knife binary"
 [10]: ../../language/transaction-builder/generator/README.md#supported-languages "Transaction Builder Generator supports"
-[11]: ./../../client/libra-dev/include/data.h "C binding head file"
+[11]: ./../../client/diem-dev/include/data.h "C binding head file"
 [12]: ../../language/transaction-builder/generator/README.md#java "Generate Java Txn Builder"

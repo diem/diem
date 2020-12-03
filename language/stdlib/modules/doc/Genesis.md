@@ -3,7 +3,7 @@
 
 # Module `0x1::Genesis`
 
-The <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> module defines the Move initialization entry point of the Libra framework
+The <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> module defines the Move initialization entry point of the Diem framework
 when executing from a fresh state.
 
 > TODO: Currently there are a few additional functions called from Rust during genesis.
@@ -15,19 +15,19 @@ when executing from a fresh state.
 
 <pre><code><b>use</b> <a href="AccountFreezing.md#0x1_AccountFreezing">0x1::AccountFreezing</a>;
 <b>use</b> <a href="ChainId.md#0x1_ChainId">0x1::ChainId</a>;
-<b>use</b> <a href="Coin1.md#0x1_Coin1">0x1::Coin1</a>;
+<b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
+<b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
+<b>use</b> <a href="DiemBlock.md#0x1_DiemBlock">0x1::DiemBlock</a>;
+<b>use</b> <a href="DiemConfig.md#0x1_DiemConfig">0x1::DiemConfig</a>;
+<b>use</b> <a href="DiemSystem.md#0x1_DiemSystem">0x1::DiemSystem</a>;
+<b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
+<b>use</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">0x1::DiemTransactionPublishingOption</a>;
+<b>use</b> <a href="DiemVMConfig.md#0x1_DiemVMConfig">0x1::DiemVMConfig</a>;
+<b>use</b> <a href="DiemVersion.md#0x1_DiemVersion">0x1::DiemVersion</a>;
 <b>use</b> <a href="DualAttestation.md#0x1_DualAttestation">0x1::DualAttestation</a>;
-<b>use</b> <a href="LBR.md#0x1_LBR">0x1::LBR</a>;
-<b>use</b> <a href="Libra.md#0x1_Libra">0x1::Libra</a>;
-<b>use</b> <a href="LibraAccount.md#0x1_LibraAccount">0x1::LibraAccount</a>;
-<b>use</b> <a href="LibraBlock.md#0x1_LibraBlock">0x1::LibraBlock</a>;
-<b>use</b> <a href="LibraConfig.md#0x1_LibraConfig">0x1::LibraConfig</a>;
-<b>use</b> <a href="LibraSystem.md#0x1_LibraSystem">0x1::LibraSystem</a>;
-<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
-<b>use</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">0x1::LibraTransactionPublishingOption</a>;
-<b>use</b> <a href="LibraVMConfig.md#0x1_LibraVMConfig">0x1::LibraVMConfig</a>;
-<b>use</b> <a href="LibraVersion.md#0x1_LibraVersion">0x1::LibraVersion</a>;
 <b>use</b> <a href="TransactionFee.md#0x1_TransactionFee">0x1::TransactionFee</a>;
+<b>use</b> <a href="XDX.md#0x1_XDX">0x1::XDX</a>;
+<b>use</b> <a href="XUS.md#0x1_XUS">0x1::XUS</a>;
 </code></pre>
 
 
@@ -36,10 +36,10 @@ when executing from a fresh state.
 
 ## Function `initialize`
 
-Initializes the Libra framework.
+Initializes the Diem framework.
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, lr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: &signer, tc_account: &signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
 </code></pre>
 
 
@@ -49,9 +49,9 @@ Initializes the Libra framework.
 
 
 <pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(
-    lr_account: &signer,
+    dr_account: &signer,
     tc_account: &signer,
-    lr_auth_key: vector&lt;u8&gt;,
+    dr_auth_key: vector&lt;u8&gt;,
     tc_auth_key: vector&lt;u8&gt;,
     initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
     is_open_module: bool,
@@ -60,63 +60,63 @@ Initializes the Libra framework.
     chain_id: u8,
 ) {
 
-    <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(lr_account, x"00000000000000000000000000000000");
+    <a href="DiemAccount.md#0x1_DiemAccount_initialize">DiemAccount::initialize</a>(dr_account, x"00000000000000000000000000000000");
 
-    <a href="ChainId.md#0x1_ChainId_initialize">ChainId::initialize</a>(lr_account, chain_id);
+    <a href="ChainId.md#0x1_ChainId_initialize">ChainId::initialize</a>(dr_account, chain_id);
 
     // On-chain config setup
-    <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(lr_account);
+    <a href="DiemConfig.md#0x1_DiemConfig_initialize">DiemConfig::initialize</a>(dr_account);
 
     // Currency setup
-    <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(lr_account);
+    <a href="Diem.md#0x1_Diem_initialize">Diem::initialize</a>(dr_account);
 
     // Currency setup
-    <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(lr_account, tc_account);
+    <a href="XUS.md#0x1_XUS_initialize">XUS::initialize</a>(dr_account, tc_account);
 
-    <a href="LBR.md#0x1_LBR_initialize">LBR::initialize</a>(
-        lr_account,
+    <a href="XDX.md#0x1_XDX_initialize">XDX::initialize</a>(
+        dr_account,
         tc_account,
     );
 
-    <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
+    <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(dr_account);
 
     <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account);
 
-    <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(
-        lr_account,
+    <a href="DiemSystem.md#0x1_DiemSystem_initialize_validator_set">DiemSystem::initialize_validator_set</a>(
+        dr_account,
     );
-    <a href="LibraVersion.md#0x1_LibraVersion_initialize">LibraVersion::initialize</a>(
-        lr_account,
+    <a href="DiemVersion.md#0x1_DiemVersion_initialize">DiemVersion::initialize</a>(
+        dr_account,
     );
     <a href="DualAttestation.md#0x1_DualAttestation_initialize">DualAttestation::initialize</a>(
-        lr_account,
+        dr_account,
     );
-    <a href="LibraBlock.md#0x1_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(lr_account);
+    <a href="DiemBlock.md#0x1_DiemBlock_initialize_block_metadata">DiemBlock::initialize_block_metadata</a>(dr_account);
 
-    <b>let</b> lr_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(lr_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&lr_rotate_key_cap, lr_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(lr_rotate_key_cap);
+    <b>let</b> dr_rotate_key_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(dr_account);
+    <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&dr_rotate_key_cap, dr_auth_key);
+    <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(dr_rotate_key_cap);
 
-    <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_initialize">LibraTransactionPublishingOption::initialize</a>(
-        lr_account,
+    <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_initialize">DiemTransactionPublishingOption::initialize</a>(
+        dr_account,
         initial_script_allow_list,
         is_open_module,
     );
 
-    <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">LibraVMConfig::initialize</a>(
-        lr_account,
+    <a href="DiemVMConfig.md#0x1_DiemVMConfig_initialize">DiemVMConfig::initialize</a>(
+        dr_account,
         instruction_schedule,
         native_schedule,
     );
 
-    <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, tc_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
+    <b>let</b> tc_rotate_key_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(tc_account);
+    <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, tc_auth_key);
+    <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
 
     // After we have called this function, all invariants which are guarded by
-    // `<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; ...` will become active and a verification condition.
+    // `<a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a>() ==&gt; ...` will become active and a verification condition.
     // See also discussion at function specification.
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_set_time_has_started">LibraTimestamp::set_time_has_started</a>(lr_account);
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_set_time_has_started">DiemTimestamp::set_time_has_started</a>(dr_account);
 }
 </code></pre>
 
@@ -140,7 +140,7 @@ be verified **together** with the module(s) which provides the invariant.
 Assume that this is called in genesis state (no timestamp).
 
 
-<pre><code><b>requires</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
+<pre><code><b>requires</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>();
 </code></pre>
 
 

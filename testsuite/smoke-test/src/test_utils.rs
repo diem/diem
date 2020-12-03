@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::smoke_test_environment::SmokeTestEnvironment;
 use cli::client_proxy::ClientProxy;
-use libra_config::config::{Identity, NodeConfig, SecureBackend};
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_types::account_address::AccountAddress;
+use diem_config::config::{Identity, NodeConfig, SecureBackend};
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_types::account_address::AccountAddress;
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf, str::FromStr};
 
@@ -22,10 +22,10 @@ pub fn compare_balances(
     let extracted_balances_dec: BTreeMap<_, _> = extracted_balances
         .into_iter()
         .map(|balance_str| {
-            let (currency_code, stripped_str) = if balance_str.ends_with("Coin1") {
-                ("Coin1", balance_str.trim_end_matches("Coin1"))
-            } else if balance_str.ends_with("LBR") {
-                ("LBR", balance_str.trim_end_matches("LBR"))
+            let (currency_code, stripped_str) = if balance_str.ends_with("XUS") {
+                ("XUS", balance_str.trim_end_matches("XUS"))
+            } else if balance_str.ends_with("XDX") {
+                ("XDX", balance_str.trim_end_matches("XDX"))
             } else {
                 panic!("Unexpected currency type returned for balance")
             };
@@ -74,29 +74,29 @@ pub fn wait_for_transaction_on_all_nodes(
 }
 
 /// This module provides useful functions for operating, handling and managing
-/// LibraSwarm instances. It is particularly useful for working with tests that
+/// DiemSwarm instances. It is particularly useful for working with tests that
 /// require a SmokeTestEnvironment, as it provides a generic interface across
-/// LibraSwarms, regardless of if the swarm is a validator swarm, validator full
+/// DiemSwarms, regardless of if the swarm is a validator swarm, validator full
 /// node swarm, or a public full node swarm.
-pub mod libra_swarm_utils {
+pub mod diem_swarm_utils {
     use crate::test_utils::fetch_backend_storage;
     use cli::client_proxy::ClientProxy;
-    use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
-    use libra_events_fetcher::LibraEventsFetcher;
-    use libra_key_manager::libra_interface::JsonRpcLibraInterface;
-    use libra_operational_tool::test_helper::OperationalTool;
-    use libra_secure_storage::{KVStorage, Storage};
-    use libra_swarm::swarm::LibraSwarm;
-    use libra_transaction_replay::LibraDebugger;
-    use libra_types::{chain_id::ChainId, waypoint::Waypoint};
+    use diem_config::config::{NodeConfig, SecureBackend, WaypointConfig};
+    use diem_events_fetcher::DiemEventsFetcher;
+    use diem_key_manager::diem_interface::JsonRpcDiemInterface;
+    use diem_operational_tool::test_helper::OperationalTool;
+    use diem_secure_storage::{KVStorage, Storage};
+    use diem_swarm::swarm::DiemSwarm;
+    use diem_transaction_replay::DiemDebugger;
+    use diem_types::{chain_id::ChainId, waypoint::Waypoint};
     use std::path::PathBuf;
 
     /// Returns a new client proxy connected to the given swarm at the specified
     /// node index.
     pub fn get_client_proxy(
-        swarm: &LibraSwarm,
+        swarm: &DiemSwarm,
         node_index: usize,
-        libra_root_key_path: &str,
+        diem_root_key_path: &str,
         mnemonic_file_path: PathBuf,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
@@ -112,9 +112,9 @@ pub mod libra_swarm_utils {
         ClientProxy::new(
             ChainId::test(),
             &format!("http://localhost:{}/v1", port),
-            &libra_root_key_path,
-            &libra_root_key_path,
-            &libra_root_key_path,
+            &diem_root_key_path,
+            &diem_root_key_path,
+            &diem_root_key_path,
             false,
             /* faucet server */ None,
             Some(mnemonic_file_path),
@@ -124,34 +124,34 @@ pub mod libra_swarm_utils {
         .unwrap()
     }
 
-    /// Returns a JSON RPC based Libra Interface pointing to a node at the given
+    /// Returns a JSON RPC based Diem Interface pointing to a node at the given
     /// node index.
-    pub fn get_json_rpc_libra_interface(
-        swarm: &LibraSwarm,
+    pub fn get_json_rpc_diem_interface(
+        swarm: &DiemSwarm,
         node_index: usize,
-    ) -> JsonRpcLibraInterface {
+    ) -> JsonRpcDiemInterface {
         let json_rpc_endpoint = format!("http://127.0.0.1:{}", swarm.get_client_port(node_index));
-        JsonRpcLibraInterface::new(json_rpc_endpoint)
+        JsonRpcDiemInterface::new(json_rpc_endpoint)
     }
 
-    /// Returns a Libra Debugger pointing to a node at the given node index.
-    pub fn get_libra_debugger(swarm: &LibraSwarm, node_index: usize) -> LibraDebugger {
+    /// Returns a Diem Debugger pointing to a node at the given node index.
+    pub fn get_diem_debugger(swarm: &DiemSwarm, node_index: usize) -> DiemDebugger {
         let (node_config, _) = load_node_config(swarm, node_index);
         let swarm_rpc_endpoint =
             format!("http://localhost:{}", node_config.json_rpc.address.port());
-        LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap()
+        DiemDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap()
     }
 
-    /// Returns a Libra Event Fetcher pointing to a node at the given node index.
-    pub fn get_libra_event_fetcher(swarm: &LibraSwarm, node_index: usize) -> LibraEventsFetcher {
+    /// Returns a Diem Event Fetcher pointing to a node at the given node index.
+    pub fn get_diem_event_fetcher(swarm: &DiemSwarm, node_index: usize) -> DiemEventsFetcher {
         let (node_config, _) = load_node_config(swarm, node_index);
         let swarm_rpc_endpoint =
             format!("http://localhost:{}", node_config.json_rpc.address.port());
-        LibraEventsFetcher::new(swarm_rpc_endpoint.as_str()).unwrap()
+        DiemEventsFetcher::new(swarm_rpc_endpoint.as_str()).unwrap()
     }
 
     /// Returns an operational tool pointing to a validator node at the given node index.
-    pub fn get_op_tool(swarm: &LibraSwarm, node_index: usize) -> OperationalTool {
+    pub fn get_op_tool(swarm: &DiemSwarm, node_index: usize) -> OperationalTool {
         OperationalTool::new(
             format!("http://127.0.0.1:{}", swarm.get_client_port(node_index)),
             ChainId::test(),
@@ -159,27 +159,27 @@ pub mod libra_swarm_utils {
     }
 
     /// Loads the nodes's storage backend identified by the node index in the given swarm.
-    pub fn load_backend_storage(swarm: &LibraSwarm, node_index: usize) -> SecureBackend {
+    pub fn load_backend_storage(swarm: &DiemSwarm, node_index: usize) -> SecureBackend {
         let (node_config, _) = load_node_config(swarm, node_index);
         fetch_backend_storage(&node_config, None)
     }
 
-    /// Loads the libra root's storage backend identified by the node index in the given swarm.
-    pub fn load_libra_root_storage(swarm: &LibraSwarm, node_index: usize) -> SecureBackend {
+    /// Loads the diem root's storage backend identified by the node index in the given swarm.
+    pub fn load_diem_root_storage(swarm: &DiemSwarm, node_index: usize) -> SecureBackend {
         let (node_config, _) = load_node_config(swarm, node_index);
-        fetch_backend_storage(&node_config, Some("libra_root".to_string()))
+        fetch_backend_storage(&node_config, Some("diem_root".to_string()))
     }
 
     /// Loads the node config for the validator at the specified index. Also returns the node
     /// config path.
-    pub fn load_node_config(swarm: &LibraSwarm, node_index: usize) -> (NodeConfig, PathBuf) {
+    pub fn load_node_config(swarm: &DiemSwarm, node_index: usize) -> (NodeConfig, PathBuf) {
         let node_config_path = swarm.config.config_files.get(node_index).unwrap();
         let node_config = NodeConfig::load(&node_config_path).unwrap();
         (node_config, node_config_path.clone())
     }
 
     /// Saves the node config for the node at the specified index in the given swarm.
-    pub fn save_node_config(node_config: &mut NodeConfig, swarm: &LibraSwarm, node_index: usize) {
+    pub fn save_node_config(node_config: &mut NodeConfig, swarm: &DiemSwarm, node_index: usize) {
         let node_config_path = swarm.config.config_files.get(node_index).unwrap();
         node_config.save(node_config_path).unwrap();
     }
@@ -188,10 +188,10 @@ pub mod libra_swarm_utils {
         let f = |backend: &SecureBackend| {
             let mut storage: Storage = backend.into();
             storage
-                .set(libra_global_constants::WAYPOINT, waypoint)
+                .set(diem_global_constants::WAYPOINT, waypoint)
                 .expect("Unable to write waypoint");
             storage
-                .set(libra_global_constants::GENESIS_WAYPOINT, waypoint)
+                .set(diem_global_constants::GENESIS_WAYPOINT, waypoint)
                 .expect("Unable to write waypoint");
         };
         let backend = &node_config.consensus.safety_rules.backend;

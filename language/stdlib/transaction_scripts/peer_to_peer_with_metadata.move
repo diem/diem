@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraAccount;
+use 0x1::DiemAccount;
 
 /// # Summary
 /// Transfers a given number of coins in a specified currency from one account to another.
@@ -15,15 +15,15 @@ use 0x1::LibraAccount;
 /// `metadata` and an (optional) `metadata_signature` on the message
 /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
-/// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct VASPs.
+/// `DualAttestation::get_cur_microdiem_limit` XDX and `payer` and `payee` are distinct VASPs.
 /// However, a transaction sender can opt in to dual attestation even when it is not required
 /// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
-/// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
+/// Standardized `metadata` LCS format can be found in `diem_types::transaction::metadata::Metadata`.
 ///
 /// ## Events
 /// Successful execution of this script emits two events:
-/// * A `LibraAccount::SentPaymentEvent` on `payer`'s `LibraAccount::LibraAccount` `sent_events` handle; and
-/// * A `LibraAccount::ReceivedPaymentEvent` on `payee`'s `LibraAccount::LibraAccount` `received_events` handle.
+/// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
+/// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
 ///
 /// # Parameters
 /// | Name                 | Type         | Description                                                                                                                  |
@@ -37,16 +37,16 @@ use 0x1::LibraAccount;
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                     | Description                                                                                                                         |
 /// | ----------------           | --------------                                   | -------------                                                                                                                       |
-/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
-/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
-/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
-/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
 /// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
 /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
 /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of LBR.                                                      |
-/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for LBR.                                                                              |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
 ///
 /// # Related Scripts
 /// * `Script::create_child_vasp_account`
@@ -60,32 +60,32 @@ fun peer_to_peer_with_metadata<Currency>(
     metadata: vector<u8>,
     metadata_signature: vector<u8>
 ) {
-    let payer_withdrawal_cap = LibraAccount::extract_withdraw_capability(payer);
-    LibraAccount::pay_from<Currency>(
+    let payer_withdrawal_cap = DiemAccount::extract_withdraw_capability(payer);
+    DiemAccount::pay_from<Currency>(
         &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
     );
-    LibraAccount::restore_withdraw_capability(payer_withdrawal_cap);
+    DiemAccount::restore_withdraw_capability(payer_withdrawal_cap);
 }
 spec fun peer_to_peer_with_metadata {
     use 0x1::Signer;
     use 0x1::Errors;
 
-    include LibraAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
     let payer_addr = Signer::spec_address_of(payer);
-    let cap = LibraAccount::spec_get_withdraw_cap(payer_addr);
-    include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};
-    include LibraAccount::PayFromAbortsIf<Currency>{cap: cap};
+    let cap = DiemAccount::spec_get_withdraw_cap(payer_addr);
+    include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};
+    include DiemAccount::PayFromAbortsIf<Currency>{cap: cap};
 
     /// The balances of payer and payee change by the correct amount.
     ensures payer_addr != payee
-        ==> LibraAccount::balance<Currency>(payer_addr)
-        == old(LibraAccount::balance<Currency>(payer_addr)) - amount;
+        ==> DiemAccount::balance<Currency>(payer_addr)
+        == old(DiemAccount::balance<Currency>(payer_addr)) - amount;
     ensures payer_addr != payee
-        ==> LibraAccount::balance<Currency>(payee)
-        == old(LibraAccount::balance<Currency>(payee)) + amount;
+        ==> DiemAccount::balance<Currency>(payee)
+        == old(DiemAccount::balance<Currency>(payee)) + amount;
     ensures payer_addr == payee
-        ==> LibraAccount::balance<Currency>(payee)
-        == old(LibraAccount::balance<Currency>(payee));
+        ==> DiemAccount::balance<Currency>(payee)
+        == old(DiemAccount::balance<Currency>(payee));
 
     aborts_with [check]
         Errors::NOT_PUBLISHED,
@@ -96,7 +96,7 @@ spec fun peer_to_peer_with_metadata {
     /// **Access Control:**
     /// Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
     /// Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
-    aborts_if !exists<LibraAccount::Balance<Currency>>(payer_addr) with Errors::NOT_PUBLISHED;
-    aborts_if !exists<LibraAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
+    aborts_if !exists<DiemAccount::Balance<Currency>>(payer_addr) with Errors::NOT_PUBLISHED;
+    aborts_if !exists<DiemAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
 }
 }

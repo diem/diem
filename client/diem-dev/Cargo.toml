@@ -1,0 +1,30 @@
+[package]
+name = "diem-dev"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem client"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+libc = "0.2.80"
+static_assertions = "1.1.0"
+
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+
+[dev-dependencies]
+rand = "0.7.3"
+
+[build-dependencies]
+bindgen = "0.54.0"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]

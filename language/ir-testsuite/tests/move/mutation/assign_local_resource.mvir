@@ -1,15 +1,15 @@
 // check: WRITEREF_RESOURCE_ERROR
 
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 main() {
-    let resource1: Libra.Libra<Coin1.Coin1>;
-    let resource_ref: &mut Libra.Libra<Coin1.Coin1>;
-    let resource2: Libra.Libra<Coin1.Coin1>;
+    let resource1: Diem.Diem<XUS.XUS>;
+    let resource_ref: &mut Diem.Diem<XUS.XUS>;
+    let resource2: Diem.Diem<XUS.XUS>;
 
-    resource1 = Libra.zero<Coin1.Coin1>();
+    resource1 = Diem.zero<XUS.XUS>();
     resource_ref  = &mut resource1;
-    resource2 = Libra.zero<Coin1.Coin1>();
+    resource2 = Diem.zero<XUS.XUS>();
     *move(resource_ref) = move(resource2);
     return;
 }

@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_secure_push_metrics::{
+use diem_secure_push_metrics::{
     register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramTimer,
     HistogramVec, IntCounterVec, IntGaugeVec,
 };
@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 
 pub static LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
-        "libra_safety_rules_latency",
+        "diem_safety_rules_latency",
         "Time to perform an operation",
         &["source", "field"]
     )
@@ -18,7 +18,7 @@ pub static LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
 
 static QUERY_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_safety_rules_queries",
+        "diem_safety_rules_queries",
         "Outcome of calling into LSR",
         &["method", "result"]
     )
@@ -27,7 +27,7 @@ static QUERY_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
 
 static STATE_GAUGE: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
-        "libra_safety_rules_state",
+        "diem_safety_rules_state",
         "Current internal state of LSR",
         &["field"]
     )

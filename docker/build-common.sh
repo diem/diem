@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
@@ -16,29 +16,29 @@ export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO
 
 # Build release binaries
 ${CARGO} ${CARGOFLAGS} build --release \
-         -p libra-genesis-tool \
-         -p libra-operational-tool \
-         -p libra-node \
-         -p libra-key-manager \
+         -p diem-genesis-tool \
+         -p diem-operational-tool \
+         -p diem-node \
+         -p diem-key-manager \
          -p safety-rules \
          -p db-bootstrapper \
          -p backup-cli \
          "$@"
 
-# Build and overwrite the libra-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
+# Build and overwrite the diem-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
 if [ "$ENABLE_FAILPOINTS" = "1" ]; then
-  echo "Building libra-node with failpoints feature"
-  (cd libra-node && ${CARGO} ${CARGOFLAGS} build --release --features failpoints "$@")
+  echo "Building diem-node with failpoints feature"
+  (cd diem-node && ${CARGO} ${CARGOFLAGS} build --release --features failpoints "$@")
 fi
 
 # These non-release binaries are built separately to avoid feature unification issues
 ${CARGO} ${CARGOFLAGS} build --release \
          -p cluster-test \
          -p cli \
-         -p libra-faucet \
+         -p diem-faucet \
          "$@"
 
 rm -rf target/release/{build,deps,incremental}
 
-STRIP_DIR=${STRIP_DIR:-/libra/target}
-find "$STRIP_DIR/release" -maxdepth 1 -executable -type f | grep -Ev 'libra-node|safety-rules' | xargs strip
+STRIP_DIR=${STRIP_DIR:-/diem/target}
+find "$STRIP_DIR/release" -maxdepth 1 -executable -type f | grep -Ev 'diem-node|safety-rules' | xargs strip

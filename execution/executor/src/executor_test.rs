@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
@@ -10,14 +10,14 @@ use crate::{
     },
     BlockExecutor, Executor,
 };
-use libra_crypto::HashValue;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{Transaction, TransactionListWithProof, Version},
 };
-use libradb::LibraDB;
+use diemdb::DiemDB;
 use proptest::prelude::*;
 use rand::Rng;
 use std::collections::BTreeMap;
@@ -41,16 +41,16 @@ fn execute_and_commit_block(
 }
 
 struct TestExecutor {
-    _path: libra_temppath::TempPath,
+    _path: diem_temppath::TempPath,
     db: DbReaderWriter,
     executor: Executor<MockVM>,
 }
 
 impl TestExecutor {
     fn new() -> TestExecutor {
-        let path = libra_temppath::TempPath::new();
+        let path = diem_temppath::TempPath::new();
         path.create_as_dir().unwrap();
-        let db = DbReaderWriter::new(LibraDB::new_for_test(path.path()));
+        let db = DbReaderWriter::new(DiemDB::new_for_test(path.path()));
         let genesis = vm_genesis::test_genesis_transaction();
         let waypoint = generate_waypoint::<MockVM>(&db, &genesis).unwrap();
         maybe_bootstrap::<MockVM>(&db, &genesis, waypoint).unwrap();

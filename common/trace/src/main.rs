@@ -1,18 +1,18 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use libra_logger::{info, LibraLogger};
-use libra_trace::{
+use diem_logger::{info, DiemLogger};
+use diem_trace::{
     trace::{random_node, trace_node},
-    LibraTraceClient,
+    DiemTraceClient,
 };
 use serde_json::Value;
 use std::env;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Libra Trace")]
+#[structopt(about = "Diem Trace")]
 struct Args {
     #[structopt(long, help = "Hostname of elastic search backend")]
     host: String,
@@ -22,13 +22,13 @@ struct Args {
 
     #[structopt(
         long,
-        help = "Start time to retrieve libra traces, format as yyyy-MM-ddTHH:mm:ss in UTC"
+        help = "Start time to retrieve diem traces, format as yyyy-MM-ddTHH:mm:ss in UTC"
     )]
     start: String,
 
     #[structopt(
         long,
-        help = "Time to retrieve libra traces for in seconds",
+        help = "Time to retrieve diem traces for in seconds",
         default_value = "5"
     )]
     duration: i64,
@@ -39,7 +39,7 @@ pub async fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-    LibraLogger::builder().is_async(true).build();
+    DiemLogger::builder().is_async(true).build();
 
     let args = Args::from_args();
 
@@ -48,8 +48,8 @@ pub async fn main() {
         Utc,
     );
     let duration = chrono::Duration::seconds(args.duration);
-    let libra_trace_client = LibraTraceClient::new(args.host, args.port);
-    let trace = match libra_trace_client.get_libra_trace(start, duration).await {
+    let diem_trace_client = DiemTraceClient::new(args.host, args.port);
+    let trace = match diem_trace_client.get_diem_trace(start, duration).await {
         Ok(trace) => Some(trace),
         Err(err) => {
             info!("Failed to capture traces from elastic search {}", err);

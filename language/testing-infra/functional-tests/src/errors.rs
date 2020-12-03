@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 pub use anyhow::{anyhow, bail, format_err, Error, Result};
-use libra_types::{transaction::TransactionOutput, vm_status::VMStatus};
+use diem_types::{transaction::TransactionOutput, vm_status::VMStatus};
 use thiserror::Error;
 
 /// Defines all errors in this crate.

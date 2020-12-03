@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use language_e2e_tests::{account, current_function_name, executor::FakeExecutor};
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     account_config,
     on_chain_config::VMPublishingOption,
     transaction::{Script, TransactionStatus},
     vm_status::KeptVMStatus,
 };
+use language_e2e_tests::{account, current_function_name, executor::FakeExecutor};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
@@ -60,7 +60,7 @@ fn script_code_unverifiable() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
@@ -136,7 +136,7 @@ fn script_none_existing_module_dep() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
@@ -212,7 +212,7 @@ fn script_non_existing_function_dep() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
@@ -289,7 +289,7 @@ fn script_bad_sig_function_dep() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
@@ -354,7 +354,7 @@ fn script_type_argument_module_does_not_exist() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());
@@ -419,7 +419,7 @@ fn script_nested_type_argument_module_does_not_exist() {
         .read_account_resource(sender.account())
         .expect("sender must exist");
     let updated_sender_balance = executor
-        .read_balance_resource(sender.account(), account::coin1_tmp_currency_code())
+        .read_balance_resource(sender.account(), account::xus_currency_code())
         .expect("sender balance must exist");
     assert_eq!(balance, updated_sender_balance.coin());
     assert_eq!(11, updated_sender.sequence_number());

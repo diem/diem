@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{test_utils, SafetyRulesManager};
-use libra_types::validator_signer::ValidatorSigner;
+use diem_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_reconnect() {

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage};
@@ -52,7 +52,7 @@ impl CryptoKVStorage for NamespacedStorage {}
 mod test {
     use super::*;
     use crate::OnDiskStorage;
-    use libra_temppath::TempPath;
+    use diem_temppath::TempPath;
 
     #[test]
     fn test_different_namespaces() {

@@ -1,10 +1,10 @@
 [package]
-name = "libra-workspace-hack"
+name = "diem-workspace-hack"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra workspace hack"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem workspace hack"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"

@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // This is necessary for the derive macros which rely on being used in a
 // context where the crypto crate is external
-use crate as libra_crypto;
+use crate as diem_crypto;
 use crate::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
@@ -11,7 +11,7 @@ use crate::{
     traits::*,
 };
 
-use libra_crypto_derive::{
+use diem_crypto_derive::{
     PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidCryptoMaterial, VerifyingKey,
 };
 use proptest::prelude::*;

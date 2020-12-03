@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! A model to test properties of common Libra transactions.
+//! A model to test properties of common Diem transactions.
 //!
-//! The structs and functions in this module together form a simplified *model* of how common Libra
+//! The structs and functions in this module together form a simplified *model* of how common Diem
 //! transactions should behave. This model is then used as an *oracle* for property-based tests --
 //! the results of executing transactions through the VM should match the results computed using
 //! this model.
@@ -23,12 +23,12 @@ pub use rotate_key::*;
 pub use universe::*;
 
 use crate::{
-    account::{self, coin1_tmp_currency_code, Account, AccountData},
+    account::{self, xus_currency_code, Account, AccountData},
     executor::FakeExecutor,
     gas_costs, transaction_status_eq,
 };
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_types::{
+use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use diem_types::{
     transaction::{SignedTransaction, TransactionStatus},
     vm_status::{known_locations, KeptVMStatus, StatusCode},
 };
@@ -129,7 +129,7 @@ pub struct AccountCurrent {
 
 impl AccountCurrent {
     fn new(initial_data: AccountData) -> Self {
-        let balance = initial_data.balance(&coin1_tmp_currency_code());
+        let balance = initial_data.balance(&xus_currency_code());
         let sequence_number = initial_data.sequence_number();
         let sent_events_count = initial_data.sent_events_count();
         let received_events_count = initial_data.received_events_count();
@@ -250,7 +250,7 @@ pub fn txn_one_account_result(
     gas_used: u64,
     low_gas_used: u64,
 ) -> (TransactionStatus, bool) {
-    // The transactions set the gas cost to 1 microlibra.
+    // The transactions set the gas cost to 1 microdiem.
     let enough_max_gas = sender.balance >= gas_costs::TXN_RESERVED * gas_price;
     // This means that we'll get through the main part of the transaction.
     let enough_to_transfer = sender.balance >= amount;
@@ -408,7 +408,7 @@ pub fn assert_accounts_match(
             .read_account_resource(&account.account())
             .expect("account resource must exist");
         let resource_balance = executor
-            .read_balance_resource(account.account(), account::coin1_tmp_currency_code())
+            .read_balance_resource(account.account(), account::xus_currency_code())
             .expect("account balance resource must exist");
         let auth_key = account.account().auth_key();
         prop_assert_eq!(

@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
-use libra_types::account_address::AccountAddress;
+use diem_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{
     ast::{

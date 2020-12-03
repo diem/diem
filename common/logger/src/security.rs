@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //!
@@ -6,7 +6,7 @@
 //! logs to detect malicious behavior from other validators.
 //!
 //! ```
-//! use libra_logger::{error, SecurityEvent};
+//! use diem_logger::{error, SecurityEvent};
 //!
 //! error!(
 //!     SecurityEvent::InvalidRetrievedBlock,

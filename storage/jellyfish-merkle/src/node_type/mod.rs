@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Node types of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree)
@@ -16,12 +16,12 @@ mod node_type_test;
 use crate::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT};
 use anyhow::{ensure, Context, Result};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_nibble::Nibble;
-use libra_types::{
+use diem_nibble::Nibble;
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
     transaction::Version,

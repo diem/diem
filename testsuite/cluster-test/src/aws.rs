@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 use anyhow::{anyhow, bail, format_err, Result};
-use libra_logger::{info, warn};
+use diem_logger::{info, warn};
 use rusoto_autoscaling::{
     AutoScalingGroupNamesType, Autoscaling, AutoscalingClient, SetDesiredCapacityType,
 };
@@ -39,7 +39,7 @@ pub async fn set_asg_size(
     let dispatcher = rusoto_core::HttpClient::new()
         .map_err(|e| anyhow!("Failed to create request dispatcher, met Error:{}", e))?;
     let asc = AutoscalingClient::new_with(dispatcher, credentials_provider, Region::UsWest2);
-    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 60), || {
+    diem_retrier::retry_async(diem_retrier::fixed_retry_strategy(10_000, 60), || {
         let asc = asc.clone();
         let set_desired_capacity_type = set_desired_capacity_type.clone();
         Box::pin(async move {
@@ -55,7 +55,7 @@ pub async fn set_asg_size(
     if !wait_for_completion {
         return Ok(());
     }
-    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 60), || {
+    diem_retrier::retry_async(diem_retrier::fixed_retry_strategy(10_000, 60), || {
         let asc_clone = asc.clone();
         Box::pin(async move {
             let mut total = 0;

@@ -4,13 +4,13 @@
     "sequence_number": 42,
     "max_gas_amount": 1000000,
     "gas_unit_price": 0,
-    "gas_currency_code": "LBR",
+    "gas_currency_code": "XDX",
     "chain_id": "TESTING",
     "expiration_timestamp_secs": 1593189628
   },
   "script_params": {
     "peer_to_peer_transfer": {
-      "coin_tag": "LBR",
+      "coin_tag": "XDX",
       "recipient_address": "0x71e931795d23e9634fd24a5992065f6b",
       "amount": 100,
       "metadata_hex_encoded": "",

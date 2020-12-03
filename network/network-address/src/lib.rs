@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::encrypted::{EncNetworkAddress, Key, KeyVersion};
-use libra_crypto::{
+use diem_crypto::{
     traits::{CryptoMaterialError, ValidCryptoMaterialStringExt},
     x25519,
 };
@@ -27,7 +27,7 @@ pub mod encrypted;
 
 const MAX_DNS_NAME_SIZE: usize = 255;
 
-/// Libra `NetworkAddress` is a compact, efficient, self-describing and
+/// Diem `NetworkAddress` is a compact, efficient, self-describing and
 /// future-proof network address represented as a stack of protocols. Essentially
 /// libp2p's [multiaddr](https://multiformats.io/multiaddr/) but using [`lcs`] to
 /// describe the binary format.
@@ -43,7 +43,7 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 /// 3. Perform a Noise IK handshake and assume the peer's static pubkey is
 ///    `<x25519-pubkey>`. After this step, we will have a secure, authenticated
 ///    connection with the peer.
-/// 4. Perform a LibraNet version negotiation handshake (version 1).
+/// 4. Perform a DiemNet version negotiation handshake (version 1).
 ///
 /// One key concept behind `NetworkAddress` is that it is fully self-describing,
 /// which allows us to easily "pre-negotiate" protocols while also allowing for
@@ -55,7 +55,7 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 /// transport protocol to use; in this sense, the secure transport protocol is
 /// "pre-negotiated" by the dialier selecting which advertised protocol to use.
 ///
-/// In addition, `NetworkAddress` is integrated with the LibraNet concept of a
+/// In addition, `NetworkAddress` is integrated with the DiemNet concept of a
 /// [`Transport`], which takes a `NetworkAddress` when dialing and peels off
 /// [`Protocols`] to establish a connection and perform initial handshakes.
 /// Similarly, the `Transport` takes `NetworkAddress` to listen on, which tells
@@ -84,7 +84,7 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 /// //               \  '-- uvarint number of protocols
 /// //                '-- length of encoded network address
 ///
-/// use libra_network_address::NetworkAddress;
+/// use diem_network_address::NetworkAddress;
 /// use lcs;
 /// use std::{str::FromStr, convert::TryFrom};
 ///
@@ -229,8 +229,8 @@ impl NetworkAddress {
     /// ### Example
     ///
     /// ```rust
-    /// use libra_crypto::{traits::ValidCryptoMaterialStringExt, x25519};
-    /// use libra_network_address::NetworkAddress;
+    /// use diem_crypto::{traits::ValidCryptoMaterialStringExt, x25519};
+    /// use diem_network_address::NetworkAddress;
     /// use std::str::FromStr;
     ///
     /// let pubkey_str = "080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120";
@@ -252,10 +252,10 @@ impl NetworkAddress {
             .push(Protocol::Handshake(handshake_version))
     }
 
-    /// Check that a `NetworkAddress` looks like a typical LibraNet address with
+    /// Check that a `NetworkAddress` looks like a typical DiemNet address with
     /// associated protocols.
     ///
-    /// "typical" LibraNet addresses begin with a transport protocol:
+    /// "typical" DiemNet addresses begin with a transport protocol:
     ///
     /// `"/ip4/<addr>/tcp/<port>"` or
     /// `"/ip6/<addr>/tcp/<port>"` or
@@ -271,15 +271,15 @@ impl NetworkAddress {
     /// ### Example
     ///
     /// ```rust
-    /// use libra_network_address::NetworkAddress;
+    /// use diem_network_address::NetworkAddress;
     /// use std::str::FromStr;
     ///
     /// let addr_str = "/ip4/1.2.3.4/tcp/6180/ln-noise-ik/080e287879c918794170e258bfaddd75acac5b3e350419044655e4983a487120/ln-handshake/0";
     /// let addr = NetworkAddress::from_str(addr_str).unwrap();
-    /// assert!(addr.is_libranet_addr());
+    /// assert!(addr.is_diemnet_addr());
     /// ```
-    pub fn is_libranet_addr(&self) -> bool {
-        parse_libranet_protos(self.as_slice()).is_some()
+    pub fn is_diemnet_addr(&self) -> bool {
+        parse_diemnet_protos(self.as_slice()).is_some()
     }
 
     /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
@@ -459,7 +459,7 @@ impl Arbitrary for NetworkAddress {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-pub fn arb_libranet_addr() -> impl Strategy<Value = NetworkAddress> {
+pub fn arb_diemnet_addr() -> impl Strategy<Value = NetworkAddress> {
     let arb_transport_protos = prop_oneof![
         any::<u16>().prop_map(|port| vec![Protocol::Memory(port)]),
         any::<(Ipv4Addr, u16)>()
@@ -473,12 +473,12 @@ pub fn arb_libranet_addr() -> impl Strategy<Value = NetworkAddress> {
         any::<(DnsName, u16)>()
             .prop_map(|(name, port)| vec![Protocol::Dns6(name), Protocol::Tcp(port)]),
     ];
-    let arb_libranet_protos = any::<(x25519::PublicKey, u8)>()
+    let arb_diemnet_protos = any::<(x25519::PublicKey, u8)>()
         .prop_map(|(pubkey, hs)| vec![Protocol::NoiseIK(pubkey), Protocol::Handshake(hs)]);
 
-    (arb_transport_protos, arb_libranet_protos).prop_map(
-        |(mut transport_protos, mut libranet_protos)| {
-            transport_protos.append(&mut libranet_protos);
+    (arb_transport_protos, arb_diemnet_protos).prop_map(
+        |(mut transport_protos, mut diemnet_protos)| {
+            transport_protos.append(&mut diemnet_protos);
             NetworkAddress::new(transport_protos)
         },
     )
@@ -747,10 +747,10 @@ pub fn parse_handshake(protos: &[Protocol]) -> Option<(u8, &[Protocol])> {
     }
 }
 
-/// parse canonical libranet protocols
+/// parse canonical diemnet protocols
 ///
-/// See: `NetworkAddress::is_libranet_addr(&self)`
-fn parse_libranet_protos(protos: &[Protocol]) -> Option<&[Protocol]> {
+/// See: `NetworkAddress::is_diemnet_addr(&self)`
+fn parse_diemnet_protos(protos: &[Protocol]) -> Option<&[Protocol]> {
     // parse base transport layer
     // ---
     // parse_ip_tcp
@@ -1029,18 +1029,18 @@ mod test {
         }
 
         #[test]
-        fn test_is_libranet_addr(addr in arb_libranet_addr()) {
-            assert!(addr.is_libranet_addr(), "addr.is_libranet_addr() = false; addr: '{}'", addr);
+        fn test_is_diemnet_addr(addr in arb_diemnet_addr()) {
+            assert!(addr.is_diemnet_addr(), "addr.is_diemnet_addr() = false; addr: '{}'", addr);
         }
 
         #[test]
-        fn test_is_not_libranet_addr_with_trailing(
-            addr in arb_libranet_addr(),
+        fn test_is_not_diemnet_addr_with_trailing(
+            addr in arb_diemnet_addr(),
             addr_suffix in any::<NetworkAddress>(),
         ) {
-            // A valid LibraNet addr w/ unexpected trailing protocols should not parse.
+            // A valid DiemNet addr w/ unexpected trailing protocols should not parse.
             let addr = addr.extend_from_slice(addr_suffix.as_slice());
-            assert!(!addr.is_libranet_addr(), "addr.is_libranet_addr() = true; addr: '{}'", addr);
+            assert!(!addr.is_diemnet_addr(), "addr.is_diemnet_addr() = true; addr: '{}'", addr);
         }
     }
 }

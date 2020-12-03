@@ -1,15 +1,15 @@
-This file is a checklist of requirement & technical details for a Libra client SDK implementation.
+This file is a checklist of requirement & technical details for a Diem client SDK implementation.
 
 # Basics
 
 - [ ] module structure:
-  - libra
-    - LibraClient: JSON-RPC APIs interface, should support application to do easy mock / stub development.
-    - jsonrpc: jsonrpc client interface, include plain data classes / structs defined in Libra JSON-RPC SPEC document.
+  - diem
+    - DiemClient: JSON-RPC APIs interface, should support application to do easy mock / stub development.
+    - jsonrpc: jsonrpc client interface, include plain data classes / structs defined in Diem JSON-RPC SPEC document.
       - types: data transfer object types for jsonrpc client, should match server side JSON-RPC spec data types.
     - stdlib: move stdlib script utils.
     - testnet: testnet utils, should include FaucetService for handling testnet mint.
-    - libra-types: Libra onchain data structure types.
+    - diem-types: Diem onchain data structure types.
     - utils:
       - signing
       - sha3 hashing, address parsing and converting, hex encoding / decoding
@@ -20,12 +20,12 @@ This file is a checklist of requirement & technical details for a Libra client S
   - batch requests and responses handling.
 - [ ] JSON-RPC client error handling should distinguish the following 3 type errors:
   - Transport layer error, e.g. HTTP call failure.
-  - JSON-RPC protocol error: e.g. server responds to non json data, or can't be parsed into [Libra JSON-RPC SPEC][1] defined data structure, or missing result & error field.
+  - JSON-RPC protocol error: e.g. server responds to non json data, or can't be parsed into [Diem JSON-RPC SPEC][1] defined data structure, or missing result & error field.
   - JSON-RPC error: error returned from server.
 - [ ] Supports https.
 - [ ] Client connection pool.
 - [ ] Handle stale responses:
-  - [ ] Parse libra_chain_id, libra_ledger_version and libra_ledger_tiemstamp in the JSONRPC response.
+  - [ ] Parse diem_chain_id, diem_ledger_version and diem_ledger_tiemstamp in the JSONRPC response.
   - [ ] client tracks latest server response block version and timestamp, raise error when received server response contains stale version / timestamp.
     - [ ] last known blockchain version <= response version: when connecting to a cluster of fullnodes, it is possible some fullnodes are behind the head couple versions.
     - [ ] last known blockchain timestamp <= response timestamp.
@@ -44,7 +44,7 @@ This file is a checklist of requirement & technical details for a Libra client S
 - [ ] Send request with "client sdk name / version" as HTTP User-Agent: this is for server to recognize client sdk version.
 - [ ] Decode transaction script bytes: it is possible we may add new transaction script without upgrading server, hence client decoding logic is important for client to recognize all transaction scripts.
     By upgrading client side move stdlib scripts (binary and generated type information code), we can decode latest move stdlib scripts executed on-chain.
-- [ ] Create transaction hash from signed transaction: hex-encode(sha3-256([]byte("LIBRA::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/libra-client-sdk-go/blob/master/libratypes/hash.go#L27))
+- [ ] Create transaction hash from signed transaction: hex-encode(sha3-256([]byte("DIEM::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/client-sdk-go/blob/master/diemtypes/hash.go#L27))
 - [ ] Client interface should prefer to use AccountAddress type instead of string address.
 
 
@@ -112,10 +112,10 @@ See [doc][5] for above concepts.
 - [ ] Async client
 - [ ] CLI connects to testnet for trying out features.
 
-[1]: https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md "Libra JSON-RPC SPEC"
+[1]: https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md "Diem JSON-RPC SPEC"
 [2]: https://github.com/libra/lip/blob/master/lips/lip-5.md "LIP-5"
 [3]: https://github.com/libra/libra/blob/master/language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md "P2P Transafer"
 [4]: https://github.com/libra/libra/tree/master/language/stdlib/transaction_scripts/doc "Move Stdlib scripts"
-[5]: https://github.com/libra/libra/blob/master/client/libra-dev/README.md "Libra Client Dev Doc"
+[5]: https://github.com/libra/libra/blob/master/client/diem-dev/README.md "Diem Client Dev Doc"
 [6]: https://github.com/libra/libra/blob/master/json-rpc/docs/service_testnet_faucet.md "Faucet service"
 [7]: https://github.com/libra/lip/blob/master/lips/lip-4.md "Transaction Metadata Specification"

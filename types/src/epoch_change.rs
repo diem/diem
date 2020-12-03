@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn verify_epoch_change_proof() {
         use crate::{ledger_info::LedgerInfo, validator_verifier::random_validator_verifier};
-        use libra_crypto::hash::HashValue;
+        use diem_crypto::hash::HashValue;
         use std::collections::BTreeMap;
 
         let all_epoch: Vec<u64> = (1..=10).collect();

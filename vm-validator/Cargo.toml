@@ -1,10 +1,10 @@
 [package]
 name = "vm-validator"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra vm validator"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem vm validator"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -13,22 +13,22 @@ edition = "2018"
 anyhow = "1.0.34"
 fail = "0.4.0"
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
-libra-state-view = { path = "../storage/state-view", version = "0.1.0" }
+diem-state-view = { path = "../storage/state-view", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
-libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.7.3"
 
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
-libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
-libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
+diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
+diemdb = { path = "../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
@@ -37,4 +37,4 @@ move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 [features]
 default = []
 failpoints = ["fail/failpoints"]
-fuzzing = ["libra-types/fuzzing", "libra-crypto/fuzzing", "libradb/fuzzing"]
+fuzzing = ["diem-types/fuzzing", "diem-crypto/fuzzing", "diemdb/fuzzing"]

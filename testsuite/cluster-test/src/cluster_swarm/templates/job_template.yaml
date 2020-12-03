@@ -4,7 +4,7 @@ metadata:
   name: {name}
   labels:
     app: {label}
-    libra-node: "true"
+    diem-node: "true"
 spec:
   template:
     metadata:
@@ -20,14 +20,14 @@ spec:
       - name: main
         image: {image}
         volumeMounts:
-          - mountPath: /opt/libra/data
+          - mountPath: /opt/diem/data
             name: data
-          - mountPath: /opt/libra/etc
+          - mountPath: /opt/diem/etc
             name: config
         imagePullPolicy: Always
         command: ["sh",  "-c", "{command}"]
         securityContext:
-          runAsUser: 0 # To get permissions to write to /opt/libra/data
+          runAsUser: 0 # To get permissions to write to /opt/diem/data
           privileged: true
           capabilities:
             add: ["SYS_ADMIN"]

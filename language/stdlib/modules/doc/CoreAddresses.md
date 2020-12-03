@@ -5,18 +5,18 @@
 
 Module providing well-known addresses and related logic.
 
-> Note: this module currently defines zero-argument functions like <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">Self::LIBRA_ROOT_ADDRESS</a>()</code> using capitalization
+> Note: this module currently defines zero-argument functions like <code><a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">Self::DIEM_ROOT_ADDRESS</a>()</code> using capitalization
 > in the name, following the convention for constants. Eventually, those functions are planned to become actual
 > global constants, once the Move language supports this feature.
 
 
 -  [Constants](#@Constants_0)
--  [Function `LIBRA_ROOT_ADDRESS`](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
+-  [Function `DIEM_ROOT_ADDRESS`](#0x1_CoreAddresses_DIEM_ROOT_ADDRESS)
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
 -  [Function `CORE_CODE_ADDRESS`](#0x1_CoreAddresses_CORE_CODE_ADDRESS)
--  [Function `assert_libra_root`](#0x1_CoreAddresses_assert_libra_root)
+-  [Function `assert_diem_root`](#0x1_CoreAddresses_assert_diem_root)
 -  [Function `assert_treasury_compliance`](#0x1_CoreAddresses_assert_treasury_compliance)
 -  [Function `assert_vm`](#0x1_CoreAddresses_assert_vm)
 -  [Function `assert_currency_info`](#0x1_CoreAddresses_assert_currency_info)
@@ -43,12 +43,12 @@ The operation can only be performed by the account where currencies are register
 
 
 
-<a name="0x1_CoreAddresses_ELIBRA_ROOT"></a>
+<a name="0x1_CoreAddresses_EDIEM_ROOT"></a>
 
-The operation can only be performed by the account at 0xA550C18 (Libra Root)
+The operation can only be performed by the account at 0xA550C18 (Diem Root)
 
 
-<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">ELIBRA_ROOT</a>: u64 = 0;
+<pre><code><b>const</b> <a href="CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">EDIEM_ROOT</a>: u64 = 0;
 </code></pre>
 
 
@@ -73,17 +73,17 @@ The operation can only be performed by the VM
 
 
 
-<a name="0x1_CoreAddresses_LIBRA_ROOT_ADDRESS"></a>
+<a name="0x1_CoreAddresses_DIEM_ROOT_ADDRESS"></a>
 
-## Function `LIBRA_ROOT_ADDRESS`
+## Function `DIEM_ROOT_ADDRESS`
 
-The address of the Libra root account. This account is
+The address of the Diem root account. This account is
 created in genesis, and cannot be changed. This address has
 ultimate authority over the permissions granted (or removed) from
 accounts on-chain.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>(): address
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">DIEM_ROOT_ADDRESS</a>(): address
 </code></pre>
 
 
@@ -92,7 +92,7 @@ accounts on-chain.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>(): address {
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">DIEM_ROOT_ADDRESS</a>(): address {
     0xA550C18
 }
 </code></pre>
@@ -105,9 +105,9 @@ accounts on-chain.
 
 ## Function `CURRENCY_INFO_ADDRESS`
 
-The (singleton) address under which the <code><a href="Libra.md#0x1_Libra_CurrencyInfo">0x1::Libra::CurrencyInfo</a></code> resource for
+The (singleton) address under which the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">0x1::Diem::CurrencyInfo</a></code> resource for
 every registered currency is published. This is the same as the
-<code>LIBRA_ROOT_ADDRESS</code> but there is no requirement that it must
+<code>DIEM_ROOT_ADDRESS</code> but there is no requirement that it must
 be this from an operational viewpoint, so this is why this is separated out.
 
 
@@ -210,14 +210,14 @@ account can be created at this address.
 
 </details>
 
-<a name="0x1_CoreAddresses_assert_libra_root"></a>
+<a name="0x1_CoreAddresses_assert_diem_root"></a>
 
-## Function `assert_libra_root`
+## Function `assert_diem_root`
 
-Assert that the account is the Libra root address.
+Assert that the account is the Diem root address.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">assert_libra_root</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_assert_diem_root">assert_diem_root</a>(account: &signer)
 </code></pre>
 
 
@@ -226,8 +226,8 @@ Assert that the account is the Libra root address.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">assert_libra_root</a>(account: &signer) {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>(), <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">ELIBRA_ROOT</a>))
+<pre><code><b>public</b> <b>fun</b> <a href="CoreAddresses.md#0x1_CoreAddresses_assert_diem_root">assert_diem_root</a>(account: &signer) {
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">DIEM_ROOT_ADDRESS</a>(), <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">EDIEM_ROOT</a>))
 }
 </code></pre>
 
@@ -241,19 +241,19 @@ Assert that the account is the Libra root address.
 
 
 <pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a>;
 </code></pre>
 
 
-Specifies that a function aborts if the account does not have the Libra root address.
+Specifies that a function aborts if the account does not have the Diem root address.
 
 
-<a name="0x1_CoreAddresses_AbortsIfNotLibraRoot"></a>
+<a name="0x1_CoreAddresses_AbortsIfNotDiemRoot"></a>
 
 
-<pre><code><b>schema</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
+<pre><code><b>schema</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">AbortsIfNotDiemRoot</a> {
     account: signer;
-    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>()
+    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">DIEM_ROOT_ADDRESS</a>()
         <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>;
 }
 </code></pre>

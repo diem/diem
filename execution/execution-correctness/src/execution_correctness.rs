@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::block::Block;
-use executor_types::{Error, StateComputeResult};
-use libra_crypto::HashValue;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
+use executor_types::{Error, StateComputeResult};
 
 /// Interface for ExecutionCorrectness.
 /// It is basically the same as BlockExecutor except some interfaces will return signature with result.

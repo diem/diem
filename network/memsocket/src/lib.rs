@@ -1,7 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use bytes::{buf::BufExt, Buf, Bytes};
+use diem_infallible::Mutex;
 use futures::{
     channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
     io::{AsyncRead, AsyncWrite, Error, ErrorKind, Result},
@@ -9,7 +10,6 @@ use futures::{
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
-use libra_infallible::Mutex;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, num::NonZeroU16, pin::Pin};
 

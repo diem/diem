@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::utils;
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub struct DebugInterfaceConfig {
     pub admission_control_node_debug_port: u16,
     pub address: String,
-    pub libra_trace: LibraTraceConfig,
+    pub diem_trace: DiemTraceConfig,
     pub metrics_server_port: u16,
     pub public_metrics_server_port: u16,
 }
@@ -22,7 +22,7 @@ impl Default for DebugInterfaceConfig {
             address: "0.0.0.0".to_string(),
             metrics_server_port: 9101,
             public_metrics_server_port: 9102,
-            libra_trace: LibraTraceConfig::default(),
+            diem_trace: DiemTraceConfig::default(),
         }
     }
 }
@@ -37,15 +37,15 @@ impl DebugInterfaceConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct LibraTraceConfig {
+pub struct DiemTraceConfig {
     pub sampling: HashMap<String, String>,
 }
 
-impl Default for LibraTraceConfig {
-    fn default() -> LibraTraceConfig {
+impl Default for DiemTraceConfig {
+    fn default() -> DiemTraceConfig {
         let mut map = HashMap::new();
         map.insert(String::from("txn"), String::from("1/100"));
         map.insert(String::from("block"), String::from("1/1"));
-        LibraTraceConfig { sampling: map }
+        DiemTraceConfig { sampling: map }
     }
 }

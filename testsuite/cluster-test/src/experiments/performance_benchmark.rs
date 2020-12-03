@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -12,13 +12,13 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use futures::{future::try_join_all, join, FutureExt};
-use libra_infallible::duration_since_epoch;
-use libra_logger::{info, warn};
-use libra_trace::{
+use diem_infallible::duration_since_epoch;
+use diem_logger::{info, warn};
+use diem_trace::{
     trace::{find_peer_with_stage, random_node, trace_node},
-    LibraTraceClient,
+    DiemTraceClient,
 };
+use futures::{future::try_join_all, join, FutureExt};
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde_json::Value;
 use std::{
@@ -39,7 +39,7 @@ pub struct PerformanceBenchmarkParams {
     pub percent_nodes_down: usize,
     #[structopt(long, help = "Whether benchmark should perform trace")]
     pub trace: bool,
-    #[structopt(long, help = "Whether benchmark should trace only one libra node")]
+    #[structopt(long, help = "Whether benchmark should trace only one diem node")]
     pub trace_single: bool,
     #[structopt(
         long,
@@ -220,9 +220,9 @@ impl Experiment for PerformanceBenchmark {
         let trace_log = self.use_logs_for_trace;
         if trace_log {
             let start = start + chrono::Duration::seconds(60);
-            let libra_trace_client = LibraTraceClient::new("elasticsearch-master", 9200);
-            trace = match libra_trace_client
-                .get_libra_trace(start, chrono::Duration::seconds(5))
+            let diem_trace_client = DiemTraceClient::new("elasticsearch-master", 9200);
+            trace = match diem_trace_client
+                .get_diem_trace(start, chrono::Duration::seconds(5))
                 .await
             {
                 Ok(trace) => Some(trace),
@@ -250,8 +250,8 @@ impl Experiment for PerformanceBenchmark {
             info!("Tracing {}", node);
             if self.trace_single {
                 let filter_peer =
-                    find_peer_with_stage(&events[..], &node, "libra_vm::execute_block_impl")
-                        .expect("Can not find peer with libra_vm::execute_block_impl")
+                    find_peer_with_stage(&events[..], &node, "diem_vm::execute_block_impl")
+                        .expect("Can not find peer with diem_vm::execute_block_impl")
                         .to_string();
                 events = events
                     .into_iter()
@@ -299,10 +299,10 @@ impl PerformanceBenchmark {
             .ok_or_else(|| anyhow!("No up validator."))?
             .clone();
 
-        const COMMAND: &str = "/opt/libra/bin/db-backup coordinator run \
+        const COMMAND: &str = "/opt/diem/bin/db-backup coordinator run \
             --transaction-batch-size 20000 \
             --state-snapshot-interval 1 \
-            local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX);";
+            local-fs --dir $(mktemp -d -t diem_backup_XXXXXXXX);";
 
         Ok(Some(tokio::spawn(async move {
             validator.exec(COMMAND, true).await.unwrap_or_else(|e| {

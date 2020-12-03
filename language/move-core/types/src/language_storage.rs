@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
 };
-use libra_crypto::hash::CryptoHash;
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto::hash::CryptoHash;
+use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

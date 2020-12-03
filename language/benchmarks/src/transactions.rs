@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use criterion::{BatchSize, Bencher};
+use diem_proptest_helpers::ValueGenerator;
+use diem_types::transaction::SignedTransaction;
 use language_e2e_tests::{
     account_universe::{log_balance_strategy, AUTransactionGen, AccountUniverseGen},
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
 };
-use libra_proptest_helpers::ValueGenerator;
-use libra_types::transaction::SignedTransaction;
 use proptest::{collection::vec, strategy::Strategy};
 
 /// Benchmarking support for transactions.

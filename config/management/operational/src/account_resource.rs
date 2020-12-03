@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, TransactionContext};
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_management::{error::Error, transaction::build_raw_transaction};
-use libra_types::{
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
+use diem_management::{error::Error, transaction::build_raw_transaction};
+use diem_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, Transaction},
 };
@@ -18,7 +18,7 @@ pub struct AccountResource {
     #[structopt(long, help = "Account address to display the account resource")]
     account_address: AccountAddress,
     #[structopt(flatten)]
-    config: libra_management::config::ConfigPath,
+    config: diem_management::config::ConfigPath,
     /// JSON-RPC Endpoint (e.g. http://localhost:8080)
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
@@ -56,7 +56,7 @@ pub struct RotateOperatorKey {
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
     #[structopt(flatten)]
-    validator_config: libra_management::validator_config::ValidatorConfig,
+    validator_config: diem_management::validator_config::ValidatorConfig,
     #[structopt(flatten)]
     auto_validate: AutoValidate,
 }

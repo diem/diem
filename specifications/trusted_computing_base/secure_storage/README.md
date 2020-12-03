@@ -2,7 +2,7 @@
 
 ## Overview
 
-Secure Storage encapsulates a design paradigm for the secure storage of sensitive data for the Libra blockchain. The type of data includes information required for safety and identity within the system, such as cryptographic keys and consensus safety rules.
+Secure Storage encapsulates a design paradigm for the secure storage of sensitive data for the Diem blockchain. The type of data includes information required for safety and identity within the system, such as cryptographic keys and consensus safety rules.
 
 ## Properties
 
@@ -147,8 +147,8 @@ Verifier      | Reads all (non-sensitive) data, displays it and compares to gene
 Management    | Reads all (non-sensitive) data, and writes some data to support genesis-building process
 KeyManager    | Automatically rotates consensus and networking keys
 SafetyRules   | Ensures consensus safety and has the role of signing all consensus messages
-ValidatorNode | Runs the Libra Validator services
-FullNode      | Runs the Libra Fullnode services
+ValidatorNode | Runs the Diem Validator services
+FullNode      | Runs the Diem Fullnode services
 
 ### Accessor capabilites
 

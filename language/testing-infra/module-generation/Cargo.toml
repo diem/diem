@@ -1,10 +1,10 @@
 [package]
 name = "module-generation"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra binary module generation"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem binary module generation"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -16,8 +16,8 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 
 [features]

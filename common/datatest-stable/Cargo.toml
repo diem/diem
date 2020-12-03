@@ -1,10 +1,10 @@
 [package]
 name = "datatest-stable"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra datatest stable"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem datatest stable"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -16,7 +16,7 @@ regex = "1.4.2"
 walkdir = "2.3.1"
 structopt = "0.3.21"
 termcolor = "1.1.2"
-libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 
 [[test]]
 name = "example"

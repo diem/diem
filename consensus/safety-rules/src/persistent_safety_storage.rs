@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,14 +7,14 @@ use crate::{
     Error,
 };
 use consensus_types::{common::Author, safety_data::SafetyData};
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
-use libra_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
-use libra_logger::prelude::*;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
-use libra_types::waypoint::Waypoint;
+use diem_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
+use diem_logger::prelude::*;
+use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
+use diem_types::waypoint::Waypoint;
 use serde::Serialize;
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
@@ -73,7 +73,7 @@ impl PersistentSafetyStorage {
         // inconsistencies or why they did not reset storage between rounds. Do not repeat the
         // checks again below, because it is just too strange to have a partially configured
         // storage.
-        if let Err(libra_secure_storage::Error::KeyAlreadyExists(_)) = result {
+        if let Err(diem_secure_storage::Error::KeyAlreadyExists(_)) = result {
             warn!("Attempted to re-initialize existing storage");
             return Ok(());
         }
@@ -186,9 +186,9 @@ impl PersistentSafetyStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_crypto::Uniform;
-    use libra_secure_storage::InMemoryStorage;
-    use libra_types::validator_signer::ValidatorSigner;
+    use diem_crypto::Uniform;
+    use diem_secure_storage::InMemoryStorage;
+    use diem_types::validator_signer::ValidatorSigner;
 
     #[test]
     fn test() {

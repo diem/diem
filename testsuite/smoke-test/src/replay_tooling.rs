@@ -1,28 +1,28 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_utils::{libra_swarm_utils::get_libra_debugger, setup_swarm_and_client_proxy},
+    test_utils::{diem_swarm_utils::get_diem_debugger, setup_swarm_and_client_proxy},
     workspace_builder,
 };
 
 #[test]
 fn test_replay_tooling() {
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
-    let json_debugger = get_libra_debugger(&env.validator_swarm, 0);
+    let json_debugger = get_diem_debugger(&env.validator_swarm, 0);
 
     client.create_next_account(false).unwrap();
     client.create_next_account(false).unwrap();
     client
-        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
+        .mint_coins(&["mintb", "0", "100", "XUS"], true)
         .unwrap();
 
     client
-        .mint_coins(&["mintb", "1", "100", "Coin1"], true)
+        .mint_coins(&["mintb", "1", "100", "XUS"], true)
         .unwrap();
 
     client
-        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
+        .transfer_coins(&["tb", "0", "1", "3", "XUS"], true)
         .unwrap();
 
     let txn = client
@@ -38,7 +38,7 @@ fn test_replay_tooling() {
 
     let (account, _) = client.get_account_address_from_parameter("0").unwrap();
     let script_path = workspace_builder::workspace_root()
-        .join("language/libra-tools/transaction-replay/examples/account_exists.move");
+        .join("language/diem-tools/transaction-replay/examples/account_exists.move");
 
     let bisect_result = json_debugger
         .bisect_transactions_by_script(script_path.to_str().unwrap(), account, 0, txn.version, None)

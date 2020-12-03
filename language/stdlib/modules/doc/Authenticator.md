@@ -3,7 +3,7 @@
 
 # Module `0x1::Authenticator`
 
-Move representation of the authenticator types used in Libra. The supported types are Ed25519 (single-sig)
+Move representation of the authenticator types used in Diem. The supported types are Ed25519 (single-sig)
 and MultiEd25519 (K-of-N multisig).
 
 

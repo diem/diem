@@ -1,11 +1,11 @@
 [package]
 name = "borrow-graph"
 version = "0.0.1"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 publish = false
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 mirai-annotations = "1.10.1"

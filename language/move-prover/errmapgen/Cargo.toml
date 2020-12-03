@@ -1,16 +1,16 @@
 [package]
 name = "errmapgen"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 publish = false
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-# libra dependencies
+# diem dependencies
 spec-lang = { path = "../spec-lang", version = "0.1.0" }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 

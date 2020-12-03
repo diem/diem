@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_types::{
+use diem_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     vm_status::{StatusCode, StatusType},
 };
@@ -223,7 +223,7 @@ impl JsonRpcError {
 #[cfg(test)]
 mod tests {
     use crate::errors::{is_internal_error, JsonRpcError, ServerCode, INTERNAL_ERRORS};
-    use libra_types::{
+    use diem_types::{
         mempool_status::{MempoolStatus, MempoolStatusCode},
         vm_status::StatusCode,
     };

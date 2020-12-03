@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -11,7 +11,7 @@ fn setup_log() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-    ::libra_logger::Logger::new().init();
+    ::diem_logger::Logger::new().init();
 }
 
 pub fn main() {

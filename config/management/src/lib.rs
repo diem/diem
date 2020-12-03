@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -12,7 +12,7 @@ pub mod validator_config;
 pub mod waypoint;
 
 pub mod constants {
-    use libra_types::account_config::COIN1_NAME;
+    use diem_types::account_config::XUS_NAME;
     pub const COMMON_NS: &str = "common";
     pub const LAYOUT: &str = "layout";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
@@ -20,7 +20,7 @@ pub mod constants {
 
     pub const GAS_UNIT_PRICE: u64 = 0;
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
-    pub const GAS_CURRENCY_CODE: &str = COIN1_NAME;
+    pub const GAS_CURRENCY_CODE: &str = XUS_NAME;
     pub const TXN_EXPIRATION_SECS: u64 = 3600;
 }
 
@@ -38,7 +38,7 @@ macro_rules! execute_command {
     };
 }
 
-use libra_crypto::ed25519::Ed25519PublicKey;
+use diem_crypto::ed25519::Ed25519PublicKey;
 use std::{convert::TryInto, fs, path::PathBuf};
 
 /// Reads a given ed25519 public key from file. Attempts to read the key using
@@ -54,6 +54,6 @@ pub fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
         key_data
             .as_slice()
             .try_into()
-            .map_err(|e: libra_crypto::CryptoMaterialError| e.to_string())
+            .map_err(|e: diem_crypto::CryptoMaterialError| e.to_string())
     }
 }

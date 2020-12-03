@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     execution_correctness::ExecutionCorrectness, tests::suite, ExecutionCorrectnessManager,
 };
-use executor_test_helpers::start_storage_service;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     Uniform,
 };
+use executor_test_helpers::start_storage_service;
 
 #[test]
 fn test() {

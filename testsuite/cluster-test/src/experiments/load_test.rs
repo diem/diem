@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -10,13 +10,13 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
+use diem_config::{config::NodeConfig, network_id::NetworkId};
+use diem_crypto::x25519;
+use diem_logger::info;
+use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
+use diem_network_address::NetworkAddress;
+use diem_types::{account_config::diem_root_address, chain_id::ChainId};
 use futures::{sink::SinkExt, StreamExt};
-use libra_config::{config::NodeConfig, network_id::NetworkId};
-use libra_crypto::x25519;
-use libra_logger::info;
-use libra_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
-use libra_network_address::NetworkAddress;
-use libra_types::{account_config::libra_root_address, chain_id::ChainId};
 use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
@@ -133,9 +133,9 @@ impl Experiment for LoadTest {
             let full_node_client = full_node.json_rpc_client();
             let mut sender = context
                 .tx_emitter
-                .load_libra_root_account(&full_node_client)
+                .load_diem_root_account(&full_node_client)
                 .await?;
-            let receiver = libra_root_address();
+            let receiver = diem_root_address();
             let dummy_tx = gen_transfer_txn_request(&mut sender, &receiver, 0, ChainId::test(), 0);
             let total_byte = dummy_tx.raw_txn_bytes_len() as u64 * stats.submitted;
             info!("Total tx emitter stats: {}, bytes: {}", stats, total_byte);
@@ -191,10 +191,10 @@ impl fmt::Display for LoadTest {
     }
 }
 
-// An actor that can participate in LibraNet
+// An actor that can participate in DiemNet
 // Connects to VFN via on-chain discovery and interact with it via mempool and state sync protocol
 // It is 'stubbed' in the sense that it has no real node components running and only network stubs
-// that interact with the remote VFN via LibraNet mempool and state sync protocol
+// that interact with the remote VFN via DiemNet mempool and state sync protocol
 struct StubbedNode {
     pub network_runtime: Runtime,
     pub mempool_handle: Option<(MempoolNetworkSender, MempoolNetworkEvents)>,
@@ -228,7 +228,7 @@ impl StubbedNode {
         );
 
         let mempool_handle = Some(network_builder.add_protocol_handler(
-            libra_mempool::network::network_endpoint_config(
+            diem_mempool::network::network_endpoint_config(
                 pfn_config.mempool.max_broadcasts_per_peer,
             ),
         ));
@@ -297,7 +297,7 @@ async fn mempool_load_test(
     let mut msg_num = 0_u64;
     let task_start = Instant::now();
     while Instant::now().duration_since(task_start) < duration {
-        let msg = libra_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
+        let msg = diem_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
             request_id: lcs::to_bytes("request_id")?,
             transactions: vec![], // TODO submit actual txns
         };

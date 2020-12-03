@@ -1,3 +1,3 @@
 # github actions
 
-These actions are custom for Libra Core workflows.
+These actions are custom for Diem Core workflows.

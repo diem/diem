@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! PendingVotes store pending votes observed for a fixed epoch and round.
@@ -10,9 +10,9 @@
 use consensus_types::{
     common::Author, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use libra_crypto::{hash::CryptoHash, HashValue};
-use libra_logger::prelude::*;
-use libra_types::{
+use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_logger::prelude::*;
+use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
@@ -233,8 +233,8 @@ impl fmt::Display for PendingVotes {
 mod tests {
     use super::{PendingVotes, VoteReceptionResult};
     use consensus_types::{vote::Vote, vote_data::VoteData};
-    use libra_crypto::HashValue;
-    use libra_types::{
+    use diem_crypto::HashValue;
+    use diem_types::{
         block_info::BlockInfo, ledger_info::LedgerInfo,
         validator_verifier::random_validator_verifier,
     };
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     /// Verify that votes are properly aggregated to QC based on their LedgerInfo digest
     fn test_qc_aggregation() {
-        ::libra_logger::Logger::init_for_testing();
+        ::diem_logger::Logger::init_for_testing();
 
         // set up 4 validators
         let (signers, validator) = random_validator_verifier(4, Some(2), false);
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     /// Verify that votes are properly aggregated to TC based on their rounds
     fn test_tc_aggregation() {
-        ::libra_logger::Logger::init_for_testing();
+        ::diem_logger::Logger::init_for_testing();
 
         // set up 4 validators
         let (signers, validator) = random_validator_verifier(4, Some(2), false);

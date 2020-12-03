@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Binary format for transactions and modules.
@@ -11,7 +11,7 @@
 //!
 //! Overall the binary format is structured in a number of sections:
 //! - **Header**: this must start at offset 0 in the binary. It contains a blob that starts every
-//! Libra binary, followed by the version of the VM used to compile the code, and last is the
+//! Diem binary, followed by the version of the VM used to compile the code, and last is the
 //! number of tables present in this binary.
 //! - **Table Specification**: it's a number of tuple of the form
 //! `(table type, starting_offset, byte_count)`. The number of entries is specified in the
@@ -207,7 +207,7 @@ pub const NO_TYPE_ARGUMENTS: SignatureIndex = SignatureIndex(0);
 /// The `address` is a reference to the account that holds the code and the `name` is used as a
 /// key in order to load the module.
 ///
-/// Modules live in the *code* namespace of an LibraAccount.
+/// Modules live in the *code* namespace of an DiemAccount.
 ///
 /// Modules introduce a scope made of all types defined in the module and all functions.
 /// Type definitions (fields) are private to the module. Outside the module a

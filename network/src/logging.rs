@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //!
 //! This module is to contain all networking logging information.
 //!
 //! ```
-//! use libra_config::network_id::NetworkContext;
-//! use libra_logger::info;
-//! use libra_network_address::NetworkAddress;
-//! use libra_types::PeerId;
+//! use diem_config::network_id::NetworkContext;
+//! use diem_logger::info;
+//! use diem_network_address::NetworkAddress;
+//! use diem_types::PeerId;
 //! use network::logging::NetworkSchema;
 //!
 //! info!(
@@ -25,10 +25,10 @@ use crate::{
     connectivity_manager::DiscoverySource,
     transport::{ConnectionId, ConnectionMetadata},
 };
-use libra_config::network_id::NetworkContext;
-use libra_logger::Schema;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
+use diem_config::network_id::NetworkContext;
+use diem_logger::Schema;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 
 #[derive(Schema)]

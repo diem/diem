@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
     },
     util::time_service::{ClockTimeService, TimeService},
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, diem_channel, message_queues::QueueStyle};
 use consensus_types::{
     block::{
         block_test_utils::{certificate_for_genesis, gen_test_certificate},
@@ -35,20 +35,20 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote_msg::VoteMsg,
 };
-use futures::{
-    channel::{mpsc, oneshot},
-    executor::block_on,
-    stream::select,
-    Stream, StreamExt,
-};
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, Uniform};
-use libra_secure_storage::Storage;
-use libra_types::{
+use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, Uniform};
+use diem_secure_storage::Storage;
+use diem_types::{
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier,
     waypoint::Waypoint,
+};
+use futures::{
+    channel::{mpsc, oneshot},
+    executor::block_on,
+    stream::select,
+    Stream, StreamExt,
 };
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
@@ -100,7 +100,7 @@ impl NodeSetup {
             let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
             let safety_storage = PersistentSafetyStorage::initialize(
-                Storage::from(libra_secure_storage::InMemoryStorage::new()),
+                Storage::from(diem_secure_storage::InMemoryStorage::new()),
                 signer.author(),
                 signer.private_key().clone(),
                 Ed25519PrivateKey::generate_for_testing(),
@@ -139,11 +139,11 @@ impl NodeSetup {
         };
         let validators = epoch_state.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (consensus_tx, consensus_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = ConsensusNetworkSender::new(
@@ -863,7 +863,7 @@ fn safety_rules_crash() {
 
     fn reset_safety_rules(node: &mut NodeSetup) {
         let safety_storage = PersistentSafetyStorage::initialize(
-            Storage::from(libra_secure_storage::InMemoryStorage::new()),
+            Storage::from(diem_secure_storage::InMemoryStorage::new()),
             node.signer.author(),
             node.signer.private_key().clone(),
             Ed25519PrivateKey::generate_for_testing(),

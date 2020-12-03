@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-use libra_operational_tool::command::{Command, ResultWrapper};
+use diem_operational_tool::command::{Command, ResultWrapper};
 use std::process::exit;
 use structopt::StructOpt;
 

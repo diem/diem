@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
@@ -59,8 +59,8 @@ static PACKAGE_STDLIB: Lazy<MovePackage> = Lazy::new(|| MovePackage {
     deps: vec![],
 });
 
-static PACKAGE_LIBRA: Lazy<MovePackage> = Lazy::new(|| MovePackage {
-    name: "libra",
+static PACKAGE_DIEM: Lazy<MovePackage> = Lazy::new(|| MovePackage {
+    name: "diem",
     sources: vec![SourceFilter {
         source_dir: &DIR_STDLIB,
         inclusion: None, // include everything
@@ -252,7 +252,7 @@ pub fn parse_mode_from_string(mode: &str) -> Result<Mode> {
     match mode {
         "bare" => Ok(Mode(vec![])),
         "stdlib" => Ok(Mode(vec![&*PACKAGE_STDLIB])),
-        "libra" => Ok(Mode(vec![&*PACKAGE_LIBRA])),
+        "diem" => Ok(Mode(vec![&*PACKAGE_DIEM])),
         _ => bail!("Invalid mode for dependency: {}", mode),
     }
 }

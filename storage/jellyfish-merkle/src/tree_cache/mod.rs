@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! A transaction can have multiple operations on state. For example, it might update values
@@ -74,8 +74,8 @@ use crate::{
     NodeStats, StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
 use anyhow::{bail, Result};
-use libra_crypto::HashValue;
-use libra_types::transaction::{Version, PRE_GENESIS_VERSION};
+use diem_crypto::HashValue;
+use diem_types::transaction::{Version, PRE_GENESIS_VERSION};
 use std::{
     collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet},
     convert::Into,

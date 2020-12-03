@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use x_lint::prelude::*;
 
-static LICENSE_HEADER: &str = "Copyright (c) The Libra Core Contributors\n\
+static LICENSE_HEADER: &str = "Copyright (c) The Diem Core Contributors\n\
                                SPDX-License-Identifier: Apache-2.0\n\
                                ";
 

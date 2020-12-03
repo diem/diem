@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module provides a generic set of traits for dealing with cryptographic primitives.
@@ -125,7 +125,7 @@ pub trait SigningKey:
     /// that we know how to serialize. There is no pre-hashing into a
     /// `HashValue` to be done by the caller.
     ///
-    /// Note: this assumes serialization is unfaillible. See libra_common::lcs::ser
+    /// Note: this assumes serialization is unfaillible. See diem_common::lcs::ser
     /// for a discussion of this assumption.
     fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> Self::SignatureMaterial;
 

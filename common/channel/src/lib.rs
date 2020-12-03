@@ -1,33 +1,33 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
 //! Provides an mpsc (multi-producer single-consumer) channel wrapped in an
-//! [`IntGauge`](libra_metrics::IntGauge) that counts the number of currently
+//! [`IntGauge`](diem_metrics::IntGauge) that counts the number of currently
 //! queued items. While there is only one [`channel::Receiver`], there can be
 //! many [`channel::Sender`]s, which are also cheap to clone.
 //!
-//! This channel differs from our other channel implementation, [`channel::libra_channel`],
+//! This channel differs from our other channel implementation, [`channel::diem_channel`],
 //! in that it is just a single queue (vs. different queues for different keys)
 //! with backpressure (senders will block if the queue is full instead of evicting
 //! another item in the queue) that only implements FIFO (vs. LIFO or KLAST).
 
+use diem_metrics::IntGauge;
 use futures::{
     channel::mpsc,
     sink::Sink,
     stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
-use libra_metrics::IntGauge;
 use std::pin::Pin;
 
 #[cfg(test)]
 mod test;
 
-pub mod libra_channel;
+pub mod diem_channel;
 #[cfg(test)]
-mod libra_channel_test;
+mod diem_channel_test;
 
 pub mod message_queues;
 #[cfg(test)]

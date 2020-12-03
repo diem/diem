@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::{register_int_counter, IntCounter};
+use diem_metrics::{register_int_counter, IntCounter};
 use once_cell::sync::Lazy;
 
 // Client counters

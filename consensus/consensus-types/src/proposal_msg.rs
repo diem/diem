@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Author, sync_info::SyncInfo};
 use anyhow::{ensure, format_err, Context, Result};
-use libra_types::validator_verifier::ValidatorVerifier;
+use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

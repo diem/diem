@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::COIN1_NAME,
+    account_config::XUS_NAME,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
     chain_id::ChainId,
@@ -16,7 +16,7 @@ use crate::{
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
     vm_status::KeptVMStatus,
 };
-use libra_crypto::{
+use diem_crypto::{
     ed25519::Ed25519PrivateKey,
     hash::{
         CryptoHash, TestOnlyHash, TestOnlyHasher, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
@@ -355,7 +355,7 @@ fn test_verify_account_state_and_event() {
             Script::new(vec![], vec![], vec![]),
             /* max_gas_amount = */ 0,
             /* gas_unit_price = */ 0,
-            /* gas_currency_code = */ COIN1_NAME.to_owned(),
+            /* gas_currency_code = */ XUS_NAME.to_owned(),
             /* expiration_timestamp_secs = */ 0,
             ChainId::test(),
         )

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -22,7 +22,7 @@ pub struct Args {
     #[structopt(flatten)]
     pub(crate) package_args: SelectedPackageArgs,
     #[structopt(long, short)]
-    /// Skip running expensive libra testsuite integration tests
+    /// Skip running expensive diem testsuite integration tests
     unit: bool,
     #[structopt(long)]
     /// Test only this package's library unit tests, skipping doctests

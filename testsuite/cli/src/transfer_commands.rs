@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -16,7 +16,7 @@ impl Command for TransferCommand {
     fn get_params_help(&self) -> &'static str {
         "\n\t<sender_account_address>|<sender_account_ref_id> \
          <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> \
-         [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 400_000)] \
+         [gas_unit_price_in_micro_diems (default=0)] [max_gas_amount_in_micro_diems (default 400_000)] \
          Suffix 'b' is for blocking. "
     }
     fn get_description(&self) -> &'static str {

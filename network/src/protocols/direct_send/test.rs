@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,10 +13,10 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
+use diem_config::network_id::NetworkContext;
+use diem_logger::debug;
+use diem_types::PeerId;
 use futures::{sink::SinkExt, stream::StreamExt};
-use libra_config::network_id::NetworkContext;
-use libra_logger::debug;
-use libra_types::PeerId;
 use once_cell::sync::Lazy;
 use serial_test::serial;
 use std::sync::Arc;
@@ -31,8 +31,8 @@ static MESSAGE_2: Lazy<Vec<u8>> = Lazy::new(|| Vec::from("Direct Send 2"));
 // surprising counter readings if tests are run in parallel. Since we use counter values in some
 // test cases, we run tests serially and reset counters in each test.
 fn reset_counters() {
-    counters::LIBRA_NETWORK_DIRECT_SEND_BYTES.reset();
-    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES.reset();
+    counters::DIEM_NETWORK_DIRECT_SEND_BYTES.reset();
+    counters::DIEM_NETWORK_DIRECT_SEND_MESSAGES.reset();
 }
 
 fn start_direct_send_actor(
@@ -102,7 +102,7 @@ async fn expect_send_message_request(
 #[test]
 #[serial]
 fn test_inbound_msg() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (_network_context, _ds_requests_tx, mut ds_notifs_rx, mut peer_notifs_tx, _peer_reqs_rx) =
@@ -182,7 +182,7 @@ fn test_outbound_msg() {
 #[test]
 #[serial]
 fn test_send_failure() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (network_context, mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =

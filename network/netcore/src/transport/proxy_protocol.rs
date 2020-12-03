@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! # An implementation of ProxyProtocol for HAProxy
@@ -15,8 +15,8 @@
 //! - An address space that doesn't match the size expected is rejected e.g. too big for IPv4
 //! - Address space that's larger than the current supported requests is rejected
 
+use diem_network_address::NetworkAddress;
 use futures::io::{AsyncRead, AsyncReadExt};
-use libra_network_address::NetworkAddress;
 use std::{
     convert::TryInto,
     io,

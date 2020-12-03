@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Convenience Network API for Libra
+//! Convenience Network API for Diem
 
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
@@ -13,16 +13,16 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel::libra_channel;
+use channel::diem_channel;
+use diem_logger::prelude::*;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::{
     channel::oneshot,
     future,
     stream::{FilterMap, FusedStream, Map, Select, Stream, StreamExt},
     task::{Context, Poll},
 };
-use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
@@ -83,12 +83,12 @@ pub struct NetworkEvents<TMessage> {
     #[pin]
     event_stream: Select<
         FilterMap<
-            libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+            diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
             future::Ready<Option<Event<TMessage>>>,
             fn(PeerManagerNotification) -> future::Ready<Option<Event<TMessage>>>,
         >,
         Map<
-            libra_channel::Receiver<PeerId, ConnectionNotification>,
+            diem_channel::Receiver<PeerId, ConnectionNotification>,
             fn(ConnectionNotification) -> Event<TMessage>,
         >,
     >,
@@ -98,15 +98,15 @@ pub struct NetworkEvents<TMessage> {
 /// Trait specifying the signature for `new()` `NetworkEvents`
 pub trait NewNetworkEvents {
     fn new(
-        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
+        peer_mgr_notifs_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        connection_notifs_rx: diem_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self;
 }
 
 impl<TMessage: Message> NewNetworkEvents for NetworkEvents<TMessage> {
     fn new(
-        peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionNotification>,
+        peer_mgr_notifs_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        connection_notifs_rx: diem_channel::Receiver<PeerId, ConnectionNotification>,
     ) -> Self {
         let data_event_stream = peer_mgr_notifs_rx.filter_map(
             peer_mgr_notif_to_event
@@ -197,7 +197,7 @@ impl<TMessage> FusedStream for NetworkEvents<TMessage> {
 /// keys.
 ///
 /// `NetworkSender` is in fact a thin wrapper around a `PeerManagerRequestSender`, which in turn is
-/// a thin wrapper on `libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>`,
+/// a thin wrapper on `diem_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>`,
 /// mostly focused on providing a more ergonomic API. However, network applications will usually
 /// provide their own thin wrapper around `NetworkSender` that narrows the API to the specific
 /// interface they need. For instance, `mempool` only requires direct-send functionality so its

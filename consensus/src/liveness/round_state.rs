@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -7,8 +7,8 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use consensus_types::{common::Round, sync_info::SyncInfo, vote::Vote};
-use libra_logger::{prelude::*, Schema};
-use libra_types::validator_verifier::ValidatorVerifier;
+use diem_logger::{prelude::*, Schema};
+use diem_types::validator_verifier::ValidatorVerifier;
 use serde::Serialize;
 use std::{fmt, sync::Arc, time::Duration};
 

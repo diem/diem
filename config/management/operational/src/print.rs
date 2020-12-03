@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
-use libra_types::{account_address::AccountAddress, waypoint::Waypoint};
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use diem_types::{account_address::AccountAddress, waypoint::Waypoint};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

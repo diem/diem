@@ -1,0 +1,49 @@
+[package]
+name = "diem-node"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem node"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+fail = "0.4.0"
+futures = "0.3.8"
+jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
+structopt = "0.3.21"
+tokio = { version = "0.2.22", features = ["full"] }
+
+backup-service = { path = "../storage/backup/backup-service", version = "0.1.0" }
+consensus = { path = "../consensus", version = "0.1.0" }
+crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
+debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+executor = { path = "../execution/executor", version = "0.1.0" }
+executor-types = { path = "../execution/executor-types", version = "0.1.0" }
+diem-config = { path = "../config", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diem-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-json-rpc = { path = "../json-rpc", version = "0.1.0" }
+diem-logger = { path = "../common/logger", version = "0.1.0" }
+diem-mempool = { path = "../mempool", version = "0.1.0" }
+diem-metrics = { path = "../common/metrics", version = "0.1.0" }
+diem-secure-storage = { path = "../secure/storage", version = "0.1.0" }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-trace = { path = "../common/trace", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diemdb = { path = "../storage/diemdb", version = "0.1.0" }
+network-builder = { path = "../network/builder", version = "0.1.0" }
+state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+storage-interface= { path = "../storage/storage-interface", version = "0.1.0" }
+storage-service = { path = "../storage/storage-service", version = "0.1.0" }
+subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
+
+[features]
+default = []
+assert-private-keys-not-cloneable = ["diem-crypto/assert-private-keys-not-cloneable"]
+failpoints = ["fail/failpoints", "consensus/failpoints", "executor/failpoints", "diem-json-rpc/failpoints", "diem-mempool/failpoints", "state-synchronizer/failpoints"]

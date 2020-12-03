@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -19,12 +19,12 @@ use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
 use bytecode_verifier::verify_module;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
+use diem_logger::{debug, error, info};
+use diem_state_view::StateView;
+use diem_types::{account_address::AccountAddress, vm_status::StatusCode};
+use diem_vm::DiemVM;
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
-use libra_logger::{debug, error, info};
-use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
-use libra_vm::LibraVM;
 use module_generation::generate_module;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
@@ -103,9 +103,9 @@ fn execute_function_in_module<S: StateView>(
         module.identifier_at(entry_name_idx)
     };
     {
-        let libra_vm = LibraVM::new(state_view);
+        let diem_vm = DiemVM::new(state_view);
 
-        let internals = libra_vm.internals();
+        let internals = diem_vm.internals();
 
         let log_context = NoContextLog::new();
         let gas_schedule = internals.gas_schedule(&log_context)?;

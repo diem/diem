@@ -18,12 +18,12 @@ for a high-level overview.
 ## Implementation Details
 
 This crate contains an implemented instance of the specifications for
-a LibraNet state synchronizer.
+a DiemNet state synchronizer.
 
 - `chunk_request` & `chunk_response`: definitions/implementation of state sync
-LibraNet messages
+DiemNet messages
 - `coordinator`: the main runtime that processes messages from consensus
-or LibraNet State Synchronizer network protocol
+or DiemNet State Synchronizer network protocol
 - `executor_proxy`: interface b/w state sync and storage/execution
 - `request_manager`: actor that handles managing per-peer information
 and sending chunk requests to advance local state based on per-peer info or network

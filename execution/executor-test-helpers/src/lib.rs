@@ -1,16 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod integration_test_impl;
 
-use executor::db_bootstrapper::{generate_waypoint, maybe_bootstrap};
-use executor_types::StateComputeResult;
-use libra_config::{config::NodeConfig, utils};
-use libra_crypto::{
+use diem_config::{config::NodeConfig, utils};
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     HashValue,
 };
-use libra_types::{
+use diem_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
@@ -20,8 +18,10 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
-use libra_vm::{LibraVM, VMExecutor};
-use libradb::LibraDB;
+use diem_vm::{DiemVM, VMExecutor};
+use diemdb::DiemDB;
+use executor::db_bootstrapper::{generate_waypoint, maybe_bootstrap};
+use executor_types::StateComputeResult;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
@@ -41,11 +41,11 @@ pub fn bootstrap_genesis<V: VMExecutor>(
 }
 
 pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>) {
-    let (mut config, _genesis_key) = libra_genesis_tool::test_config();
+    let (mut config, _genesis_key) = diem_genesis_tool::test_config();
     let server_port = utils::get_available_port();
     config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    bootstrap_genesis::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(&config.storage.dir()));
+    bootstrap_genesis::<DiemVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
     let handle = start_storage_service_with_db(&config, db.clone());
     (config, handle, db as Arc<dyn DbReader>)
 }

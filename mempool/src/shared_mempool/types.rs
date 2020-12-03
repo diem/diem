@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Objects used by/related to shared mempool
@@ -8,23 +8,23 @@ use crate::{
     shared_mempool::{network::MempoolNetworkSender, peer_manager::PeerManager},
 };
 use anyhow::Result;
-use channel::libra_channel::Receiver;
+use channel::diem_channel::Receiver;
+use diem_config::{
+    config::{MempoolConfig, PeerNetworkId},
+    network_id::NodeNetworkId,
+};
+use diem_infallible::{Mutex, RwLock};
+use diem_types::{
+    account_address::AccountAddress,
+    mempool_status::MempoolStatus,
+    on_chain_config::{ConfigID, DiemVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
+    transaction::SignedTransaction,
+    vm_status::DiscardedVMStatus,
+};
 use futures::{
     channel::{mpsc, mpsc::UnboundedSender, oneshot},
     future::Future,
     task::{Context, Poll},
-};
-use libra_config::{
-    config::{MempoolConfig, PeerNetworkId},
-    network_id::NodeNetworkId,
-};
-use libra_infallible::{Mutex, RwLock};
-use libra_types::{
-    account_address::AccountAddress,
-    mempool_status::MempoolStatus,
-    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
-    transaction::SignedTransaction,
-    vm_status::DiscardedVMStatus,
 };
 use std::{collections::HashMap, fmt, pin::Pin, sync::Arc, task::Waker, time::Instant};
 use storage_interface::DbReader;
@@ -245,7 +245,7 @@ pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;
 
 /// On-chain configs that mempool subscribes to for reconfiguration
-const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMConfig::CONFIG_ID];
+const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[DiemVersion::CONFIG_ID, VMConfig::CONFIG_ID];
 
 /// Creates mempool's subscription bundle for on-chain reconfiguration
 pub fn gen_mempool_reconfig_subscription(

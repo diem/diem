@@ -1,10 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common::Round;
-use libra_crypto::ed25519::Ed25519Signature;
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
-use libra_types::validator_signer::ValidatorSigner;
+use diem_crypto::ed25519::Ed25519Signature;
+use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

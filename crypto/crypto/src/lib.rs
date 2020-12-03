@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
-//! This feature gets turned on only if libra-crypto is compiled via MIRAI in a nightly build.
+//! This feature gets turned on only if diem-crypto is compiled via MIRAI in a nightly build.
 #![cfg_attr(mirai, allow(incomplete_features), feature(const_generics))]
 
 //! A library supplying various cryptographic primitives

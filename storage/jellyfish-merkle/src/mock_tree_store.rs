@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,8 +6,8 @@ use crate::{
     NodeBatch, StaleNodeIndex, TreeReader, TreeUpdateBatch, TreeWriter,
 };
 use anyhow::{bail, ensure, Result};
-use libra_infallible::RwLock;
-use libra_types::transaction::Version;
+use diem_infallible::RwLock;
+use diem_types::transaction::Version;
 use std::collections::{hash_map::Entry, BTreeSet, HashMap};
 
 #[derive(Default)]

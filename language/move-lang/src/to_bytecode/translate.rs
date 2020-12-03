@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{context::*, remove_fallthrough_jumps};
@@ -19,7 +19,7 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
 };
 use bytecode_source_map::source_map::SourceMap;
-use libra_types::account_address::AccountAddress as LibraAddress;
+use diem_types::account_address::AccountAddress as DiemAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -136,7 +136,7 @@ fn module(
         })
         .collect();
 
-    let addr = LibraAddress::new(ident.0.value.address.to_u8());
+    let addr = DiemAddress::new(ident.0.value.address.to_u8());
     let mname = ident.0.value.name.clone();
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
@@ -789,7 +789,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             code.push(sp(
                 loc,
                 match v.value {
-                    V::Address(a) => B::LdAddr(LibraAddress::new(a.to_u8())),
+                    V::Address(a) => B::LdAddr(DiemAddress::new(a.to_u8())),
                     V::Bytearray(bytes) => B::LdByteArray(bytes),
                     V::U8(u) => B::LdU8(u),
                     V::U64(u) => B::LdU64(u),

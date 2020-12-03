@@ -1,4 +1,4 @@
-//! type-args: 0x1::LibraAccount::Balance<bool, u8>
+//! type-args: 0x1::DiemAccount::Balance<bool, u8>
 main<T>() {
     return;
 }

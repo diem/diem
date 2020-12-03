@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -18,8 +18,8 @@ use consensus_types::{
     vote::Vote,
     vote_data::VoteData,
 };
-use libra_crypto::{HashValue, PrivateKey};
-use libra_types::{
+use diem_crypto::{HashValue, PrivateKey};
+use diem_types::{
     validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
 };
 use proptest::prelude::*;
@@ -109,7 +109,7 @@ proptest! {
             // recursion depth
             50)
     ){
-        let authors: HashSet<Author> = private_keys.iter().map(|private_key| libra_types::account_address::from_public_key(&private_key.public_key())).collect();
+        let authors: HashSet<Author> = private_keys.iter().map(|private_key| diem_types::account_address::from_public_key(&private_key.public_key())).collect();
         let block_store = build_empty_tree();
         for block in blocks {
             if block.round() > 0 && authors.contains(&block.author().unwrap()) {
@@ -248,7 +248,7 @@ fn test_path_from_root() {
 
 #[test]
 fn test_insert_vote() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     // Set up enough different authors to support different votes for the same block.
     let (signers, validator_verifier) = random_validator_verifier(11, Some(10), false);
     let my_signer = signers[10].clone();

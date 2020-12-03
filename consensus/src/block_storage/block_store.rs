@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -20,12 +20,12 @@ use consensus_types::{
     block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert, sync_info::SyncInfo,
     timeout_certificate::TimeoutCertificate,
 };
+use diem_crypto::HashValue;
+use diem_infallible::RwLock;
+use diem_logger::prelude::*;
+use diem_trace::prelude::*;
+use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use executor_types::{Error, StateComputeResult};
-use libra_crypto::HashValue;
-use libra_infallible::RwLock;
-use libra_logger::prelude::*;
-use libra_trace::prelude::*;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use std::{collections::vec_deque::VecDeque, sync::Arc, time::Duration};
 
 #[cfg(test)]

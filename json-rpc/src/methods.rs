@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
@@ -12,16 +12,14 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
-use fail::fail_point;
-use futures::{channel::oneshot, SinkExt};
-use libra_config::config::RoleType;
-use libra_crypto::hash::CryptoHash;
-use libra_mempool::MempoolClientSender;
-use libra_trace::prelude::*;
-use libra_types::{
+use diem_config::config::RoleType;
+use diem_crypto::hash::CryptoHash;
+use diem_mempool::MempoolClientSender;
+use diem_trace::prelude::*;
+use diem_types::{
     account_address::AccountAddress,
     account_config::{
-        from_currency_code_string, libra_root_address, resources::dual_attestation::Limit,
+        diem_root_address, from_currency_code_string, resources::dual_attestation::Limit,
         AccountResource,
     },
     account_state::AccountState,
@@ -31,6 +29,8 @@ use libra_types::{
     mempool_status::MempoolStatusCode,
     transaction::SignedTransaction,
 };
+use fail::fail_point;
+use futures::{channel::oneshot, SinkExt};
 use network::counters;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -307,10 +307,10 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
 
     let mut script_hash_allow_list: Option<Vec<BytesView>> = None;
     let mut module_publishing_allowed: Option<bool> = None;
-    let mut libra_version: Option<u64> = None;
+    let mut diem_version: Option<u64> = None;
     let mut dual_attestation_limit: Option<u64> = None;
     if version == request.version() {
-        if let Some(account) = service.get_account_state(libra_root_address(), version)? {
+        if let Some(account) = service.get_account_state(diem_root_address(), version)? {
             if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
                 script_hash_allow_list = Some(
                     vm_publishing_option
@@ -322,11 +322,11 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
 
                 module_publishing_allowed = Some(vm_publishing_option.is_open_module);
             }
-            if let Some(v) = account.get_libra_version()? {
-                libra_version = Some(v.major)
+            if let Some(v) = account.get_diem_version()? {
+                diem_version = Some(v.major)
             }
             if let Some(limit) = account.get_resource::<Limit>()? {
-                dual_attestation_limit = Some(limit.micro_lbr_limit)
+                dual_attestation_limit = Some(limit.micro_xdx_limit)
             }
         }
     }
@@ -337,7 +337,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
         chain_id,
         script_hash_allow_list,
         module_publishing_allowed,
-        libra_version,
+        diem_version,
         dual_attestation_limit,
     })
 }
@@ -510,7 +510,7 @@ async fn get_currencies(
     request: JsonRpcRequest,
 ) -> Result<Vec<CurrencyInfoView>> {
     if let Some(account_state) =
-        service.get_account_state(libra_root_address(), request.version())?
+        service.get_account_state(diem_root_address(), request.version())?
     {
         Ok(account_state
             .get_registered_currency_info_resources()?
@@ -635,7 +635,7 @@ async fn get_account_state_with_proof(
 
 /// Returns the number of peers this node is connected to
 async fn get_network_status(service: JsonRpcService, _request: JsonRpcRequest) -> Result<u64> {
-    let peers = counters::LIBRA_NETWORK_PEERS
+    let peers = counters::DIEM_NETWORK_PEERS
         .get_metric_with_label_values(&[service.role.as_str(), "connected"])?;
     Ok(peers.get() as u64)
 }
@@ -698,7 +698,7 @@ fn invalid_param(index: usize, name: &str) -> JsonRpcError {
         "include_events" => "boolean",
         "account address" => "hex-encoded string",
         "event key" => "hex-encoded string",
-        "data" => "hex-encoded string of LCS serialized Libra SignedTransaction type",
+        "data" => "hex-encoded string of LCS serialized Diem SignedTransaction type",
         "version" => "unsigned int64",
         "ledger version for proof" => "unsigned int64",
         _ => "unknown",

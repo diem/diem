@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
 use anyhow::bail;
+use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use heck::SnakeCase;
-use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde::{Deserialize, Serialize};
 use spec_lang::{

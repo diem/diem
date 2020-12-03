@@ -1,11 +1,11 @@
 
-<a name="@Libra_Framework_Modules_0"></a>
+<a name="@Diem_Framework_Modules_0"></a>
 
-# Libra Framework Modules
+# Diem Framework Modules
 
 
-This is the root document for the Libra framework module documentation. The Libra framework provides a set of Move
-modules which define the resources and functions available for the Libra blockchain. Each module is individually
+This is the root document for the Diem framework module documentation. The Diem framework provides a set of Move
+modules which define the resources and functions available for the Diem blockchain. Each module is individually
 documented here, together with its implementation and
 [formal specification](../../transaction_scripts/doc/spec_documentation.md).
 
@@ -13,7 +13,7 @@ Move modules are not directly called by clients, but instead are used to impleme
 For documentation of transaction scripts which constitute the client API, see
 [../../transaction_scripts/doc/transaction_script_documentation.md](../../transaction_scripts/doc/transaction_script_documentation.md).
 
-The Move modules in the Libra Framework can be bucketed in to a couple categories:
+The Move modules in the Diem Framework can be bucketed in to a couple categories:
 
 
 <a name="@Treasury_and_Compliance_1"></a>
@@ -25,9 +25,9 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 * <code><a href="DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a></code>
 * <code><a href="DualAttestation.md#0x1_DualAttestation">DualAttestation</a></code>
 
-* <code><a href="Coin1.md#0x1_Coin1">Coin1</a></code> (Note: name will be updated once final name has been determined)
-* <code><a href="LBR.md#0x1_LBR">LBR</a></code> (Note: will be updated once the LBR makeup has been determined)
-* <code><a href="Libra.md#0x1_Libra">Libra</a></code>
+* <code><a href="XUS.md#0x1_XUS">XUS</a></code> (Note: name will be updated once final name has been determined)
+* <code><a href="XDX.md#0x1_XDX">XDX</a></code> (Note: will be updated once the XDX makeup has been determined)
+* <code><a href="Diem.md#0x1_Diem">Diem</a></code>
 * <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code>
 
 
@@ -45,7 +45,7 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 
 ### Accounts and Access Control
 
-* <code><a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a></code>
+* <code><a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a></code>
 * <code><a href="Roles.md#0x1_Roles">Roles</a></code>
 * <code><a href="VASP.md#0x1_VASP">VASP</a></code>
 
@@ -55,22 +55,22 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 ### System Management
 
 * <code><a href="ChainId.md#0x1_ChainId">ChainId</a></code>
-* <code><a href="LibraBlock.md#0x1_LibraBlock">LibraBlock</a></code>
-* <code><a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a></code>
-* <code><a href="LibraTimestamp.md#0x1_LibraTimestamp">LibraTimestamp</a></code>
-* <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a></code>
-* <code><a href="LibraVersion.md#0x1_LibraVersion">LibraVersion</a></code>
-* <code><a href="LibraVMConfig.md#0x1_LibraVMConfig">LibraVMConfig</a></code>
+* <code><a href="DiemBlock.md#0x1_DiemBlock">DiemBlock</a></code>
+* <code><a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a></code>
+* <code><a href="DiemTimestamp.md#0x1_DiemTimestamp">DiemTimestamp</a></code>
+* <code><a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a></code>
+* <code><a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a></code>
+* <code><a href="DiemVMConfig.md#0x1_DiemVMConfig">DiemVMConfig</a></code>
 * <code><a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a></code>
-* <code><a href="LibraSystem.md#0x1_LibraSystem">LibraSystem</a></code>
+* <code><a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a></code>
 * <code><a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code>
 * <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></code>
 * <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> (Note: not published)
 
 
-<a name="@Module_Utility_Libraries_5"></a>
+<a name="@Module_Utility_Diemries_5"></a>
 
-### Module Utility Libraries
+### Module Utility Diemries
 
 * <code><a href="Errors.md#0x1_Errors">Errors</a></code>
 * <code><a href="CoreAddresses.md#0x1_CoreAddresses">CoreAddresses</a></code>
@@ -94,26 +94,24 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 -  [`0x1::AccountLimits`](AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
 -  [`0x1::ChainId`](ChainId.md#0x1_ChainId)
--  [`0x1::Coin1`](Coin1.md#0x1_Coin1)
 -  [`0x1::CoreAddresses`](CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](DesignatedDealer.md#0x1_DesignatedDealer)
+-  [`0x1::Diem`](Diem.md#0x1_Diem)
+-  [`0x1::DiemAccount`](DiemAccount.md#0x1_DiemAccount)
+-  [`0x1::DiemBlock`](DiemBlock.md#0x1_DiemBlock)
+-  [`0x1::DiemConfig`](DiemConfig.md#0x1_DiemConfig)
+-  [`0x1::DiemSystem`](DiemSystem.md#0x1_DiemSystem)
+-  [`0x1::DiemTimestamp`](DiemTimestamp.md#0x1_DiemTimestamp)
+-  [`0x1::DiemTransactionPublishingOption`](DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption)
+-  [`0x1::DiemVMConfig`](DiemVMConfig.md#0x1_DiemVMConfig)
+-  [`0x1::DiemVersion`](DiemVersion.md#0x1_DiemVersion)
 -  [`0x1::DualAttestation`](DualAttestation.md#0x1_DualAttestation)
 -  [`0x1::Errors`](Errors.md#0x1_Errors)
 -  [`0x1::Event`](Event.md#0x1_Event)
 -  [`0x1::FixedPoint32`](FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Genesis`](Genesis.md#0x1_Genesis)
 -  [`0x1::Hash`](Hash.md#0x1_Hash)
--  [`0x1::LBR`](LBR.md#0x1_LBR)
 -  [`0x1::LCS`](LCS.md#0x1_LCS)
--  [`0x1::Libra`](Libra.md#0x1_Libra)
--  [`0x1::LibraAccount`](LibraAccount.md#0x1_LibraAccount)
--  [`0x1::LibraBlock`](LibraBlock.md#0x1_LibraBlock)
--  [`0x1::LibraConfig`](LibraConfig.md#0x1_LibraConfig)
--  [`0x1::LibraSystem`](LibraSystem.md#0x1_LibraSystem)
--  [`0x1::LibraTimestamp`](LibraTimestamp.md#0x1_LibraTimestamp)
--  [`0x1::LibraTransactionPublishingOption`](LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption)
--  [`0x1::LibraVMConfig`](LibraVMConfig.md#0x1_LibraVMConfig)
--  [`0x1::LibraVersion`](LibraVersion.md#0x1_LibraVersion)
 -  [`0x1::Option`](Option.md#0x1_Option)
 -  [`0x1::RecoveryAddress`](RecoveryAddress.md#0x1_RecoveryAddress)
 -  [`0x1::RegisteredCurrencies`](RegisteredCurrencies.md#0x1_RegisteredCurrencies)
@@ -127,6 +125,8 @@ The Move modules in the Libra Framework can be bucketed in to a couple categorie
 -  [`0x1::ValidatorConfig`](ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [`0x1::Vector`](Vector.md#0x1_Vector)
+-  [`0x1::XDX`](XDX.md#0x1_XDX)
+-  [`0x1::XUS`](XUS.md#0x1_XUS)
 
 
 [//]: # ("File containing references which can be used from documentation")

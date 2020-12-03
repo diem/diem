@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::{
     types as jsonrpc, Client, Error, JsonRpcResponse, Request, Response, Retry, State,
     WaitForTransactionError,
 };
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use serde_json::{json, to_value, Value};
 use std::{
     convert::TryInto,
@@ -65,7 +65,7 @@ fn setup_with_server(inouts: Vec<(Value, Value)>) -> Client<Retry> {
         assert_eq!(request, req);
         Ok(warp::reply::json(&response))
     });
-    let port = libra_config::utils::get_available_port();
+    let port = diem_config::utils::get_available_port();
     let future = warp::serve(stub).bind(([127, 0, 0, 1], port));
     tokio::task::spawn(async move { future.await });
     let server_url = format!("http://localhost:{}", port);
@@ -98,7 +98,7 @@ async fn test_network_error() {
 
 #[tokio::test]
 async fn test_invalid_http_status() {
-    let client = Client::from_url("https://testnet.libra.org/unknown", Retry::default()).unwrap();
+    let client = Client::from_url("https://testnet.diem.com/unknown", Retry::default()).unwrap();
     assert_err!(client.get_metadata().await, Error::InvalidHTTPStatus{..}, false);
 }
 
@@ -116,9 +116,9 @@ async fn test_invalid_rpc_response() {
         json!({
             "id": 1,
             "jsonrpc": "1.0",
-            "libra_chain_id": 4,
-            "libra_ledger_timestampusec": 12112,
-            "libra_ledger_version": 1
+            "diem_chain_id": 4,
+            "diem_ledger_timestampusec": 12112,
+            "diem_ledger_version": 1
         }),
     );
 
@@ -135,9 +135,9 @@ async fn test_deserialize_result_error() {
             },
             "id": 1,
             "jsonrpc": "2.0",
-            "libra_chain_id": 4,
-            "libra_ledger_timestampusec": 12112,
-            "libra_ledger_version": 1
+            "diem_chain_id": 4,
+            "diem_ledger_timestampusec": 12112,
+            "diem_ledger_version": 1
         }),
     );
 
@@ -154,9 +154,9 @@ async fn test_jsonrpc_error() {
             },
             "id": 1,
             "jsonrpc": "2.0",
-            "libra_chain_id": 4,
-            "libra_ledger_timestampusec": 12112,
-            "libra_ledger_version": 1
+            "diem_chain_id": 4,
+            "diem_ledger_timestampusec": 12112,
+            "diem_ledger_version": 1
         }),
     );
 
@@ -170,9 +170,9 @@ async fn test_result_not_found() {
         json!({
             "id": 1,
             "jsonrpc": "2.0",
-            "libra_chain_id": 4,
-            "libra_ledger_timestampusec": 12112,
-            "libra_ledger_version": 1
+            "diem_chain_id": 4,
+            "diem_ledger_timestampusec": 12112,
+            "diem_ledger_version": 1
         }),
     );
 
@@ -490,7 +490,7 @@ async fn test_wait_for_transaction() {
     ]);
 
     let expiration_time_secs = (version_timestamp(10) / 1_000_000) as u64;
-    let txn_hash = "0895ced78e9f10c1351f248b9bda40cc9c8e6d4dbba823e08fe1cfacd582f171";
+    let txn_hash = "f55c91fdc36b9246c423258b74eb579a0972a86b3394e2cfdab528a37f18d1f9";
     client
         .wait_for_transaction(&address, seq, expiration_time_secs, txn_hash, None, None)
         .await
@@ -560,7 +560,7 @@ async fn test_wait_for_transaction_error_execution_failed() {
     );
 
     let expiration_time_secs = (version_timestamp(10) / 1_000_000) as u64;
-    let txn_hash = "0895ced78e9f10c1351f248b9bda40cc9c8e6d4dbba823e08fe1cfacd582f171";
+    let txn_hash = "f55c91fdc36b9246c423258b74eb579a0972a86b3394e2cfdab528a37f18d1f9";
     let err = client
         .wait_for_transaction(&address, seq, expiration_time_secs, txn_hash, None, None)
         .await;
@@ -583,7 +583,7 @@ async fn test_wait_for_transaction_error_txn_expired() {
 
     // expiration timestamp is from version 1, older than respond timestamp for version 2
     let expiration_time_secs = (version_timestamp(1) / 1_000_000) as u64;
-    let txn_hash = "0895ced78e9f10c1351f248b9bda40cc9c8e6d4dbba823e08fe1cfacd582f171";
+    let txn_hash = "f55c91fdc36b9246c423258b74eb579a0972a86b3394e2cfdab528a37f18d1f9";
     let err = client
         .wait_for_transaction(&address, seq, expiration_time_secs, txn_hash, None, None)
         .await;
@@ -605,7 +605,7 @@ async fn test_wait_for_transaction_error_timeout() {
 
     // expiration timestamp is from version 1, older than respond timestamp for version 2
     let expiration_time_secs = (version_timestamp(3) / 1_000_000) as u64;
-    let txn_hash = "0895ced78e9f10c1351f248b9bda40cc9c8e6d4dbba823e08fe1cfacd582f171";
+    let txn_hash = "f55c91fdc36b9246c423258b74eb579a0972a86b3394e2cfdab528a37f18d1f9";
     let err = client
         .wait_for_transaction(
             &address,
@@ -635,9 +635,9 @@ async fn test_chain_id_mismatch_error() {
                     },
                     "id": 1,
                     "jsonrpc": "2.0",
-                    "libra_chain_id": 9,
-                    "libra_ledger_timestampusec": 12112,
-                    "libra_ledger_version": 1
+                    "diem_chain_id": 9,
+                    "diem_ledger_timestampusec": 12112,
+                    "diem_ledger_version": 1
             }),
         ),
     ]);
@@ -694,7 +694,7 @@ async fn test_batch_send_requests_and_response_id_not_matched_error() {
         .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
         .await;
 
-    assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { libra_chain_id: 4, libra_ledger_version: 1, libra_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+    assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
     assert_err!(err, Error::UnexpectedError { .. }, true);
 }
 
@@ -715,7 +715,7 @@ async fn test_batch_send_requests_and_response_id_type_not_matched_error() {
         .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
         .await;
 
-    assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { libra_chain_id: 4, libra_ledger_version: 1, libra_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+    assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
     assert_err!(err, Error::UnexpectedError { .. }, true);
 }
 
@@ -736,7 +736,7 @@ async fn test_batch_send_requests_and_response_id_duplicated_error() {
         .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
         .await;
 
-    assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { libra_chain_id: 4, libra_ledger_version: 1, libra_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+    assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
     assert_err!(err, Error::UnexpectedError { .. }, true);
 }
 
@@ -757,7 +757,7 @@ async fn test_batch_send_requests_and_response_id_not_found_error() {
         .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
         .await;
 
-    assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { libra_chain_id: 4, libra_ledger_version: 1, libra_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+    assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
     assert_err!(err, Error::UnexpectedError { .. }, true);
 }
 
@@ -894,24 +894,24 @@ fn currencies_sample() -> Value {
         {
             "burn_events_key": "06000000000000000000000000000000000000000a550c18",
             "cancel_burn_events_key": "08000000000000000000000000000000000000000a550c18",
-            "code": "Coin1",
+            "code": "XUS",
             "exchange_rate_update_events_key": "09000000000000000000000000000000000000000a550c18",
             "fractional_part": 100,
             "mint_events_key": "05000000000000000000000000000000000000000a550c18",
             "preburn_events_key": "07000000000000000000000000000000000000000a550c18",
             "scaling_factor": 1000000,
-            "to_lbr_exchange_rate": 1.0,
+            "to_xdx_exchange_rate": 1.0,
         },
         {
             "burn_events_key": "0b000000000000000000000000000000000000000a550c18",
             "cancel_burn_events_key": "0d000000000000000000000000000000000000000a550c18",
-            "code": "LBR",
+            "code": "XDX",
             "exchange_rate_update_events_key": "0e000000000000000000000000000000000000000a550c18",
             "fractional_part": 1000,
             "mint_events_key": "0a000000000000000000000000000000000000000a550c18",
             "preburn_events_key": "0c000000000000000000000000000000000000000a550c18",
             "scaling_factor": 1000000,
-            "to_lbr_exchange_rate": 1.0
+            "to_xdx_exchange_rate": 1.0
         }
     ])
 }
@@ -922,7 +922,7 @@ fn events_sample() -> Value {
           "data": {
             "amount": {
               "amount": 3000000,
-              "currency": "LBR"
+              "currency": "XDX"
             },
             "metadata": "metadata",
             "receiver": "762cbea8b99911d49707d2b901e13425",
@@ -937,7 +937,7 @@ fn events_sample() -> Value {
           "data": {
             "amount": {
               "amount": 3000000,
-              "currency": "LBR"
+              "currency": "XDX"
             },
             "metadata": "metadata",
             "receiver": "762cbea8b99911d49707d2b901e13425",
@@ -960,17 +960,17 @@ fn custom_transaction_sample(vm_status_type: &str, events: Value) -> Value {
       "bytes": format!("00{}", signed_txn_hex_sample()),
       "events": events,
       "gas_used": 476,
-      "hash": "0895ced78e9f10c1351f248b9bda40cc9c8e6d4dbba823e08fe1cfacd582f171",
+      "hash": "f55c91fdc36b9246c423258b74eb579a0972a86b3394e2cfdab528a37f18d1f9",
       "transaction": {
         "chain_id": 4,
         "expiration_timestamp_secs": 1600152999,
-        "gas_currency": "LBR",
+        "gas_currency": "XDX",
         "gas_unit_price": 10,
         "max_gas_amount": 1000000,
         "public_key": "f4d854d7719c8ca6b454df278aa513c3e1f17ad6a38579ff0baa2bd50f5dd0e5",
         "script": {
           "amount": 3000000,
-          "currency": "LBR",
+          "currency": "XDX",
           "metadata": "metadata",
           "metadata_signature": "metadata_signature",
           "receiver": "762cbea8b99911d49707d2b901e13425",
@@ -1001,7 +1001,7 @@ fn signed_txn_sample() -> SignedTransaction {
 }
 
 fn signed_txn_hex_sample() -> String {
-    "876ff1d441cb0b352f438fcfbce8608f010000000000000001e101a11ceb0b010000000701000202020403061004160205181d0735610896011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000c4c696272614163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b05110202010700000000000000000000000000000001034c4252034c4252000403762cbea8b99911d49707d2b901e1342501c0c62d00000000000400040040420f00000000000000000000000000034c4252a765605f00000000040020f4d854d7719c8ca6b454df278aa513c3e1f17ad6a38579ff0baa2bd50f5dd0e54079358f2a818adcbfb7e9db3e9a560007881acfe6b62c29f1eedcc76b534024a574fcb95bf4c438da33eba8052b565c8d7e3f507225d2998849d6613f64fa6005".to_string()
+    "d360103577cf88c6a0e98235f7b65fd5000000000000000001e001a11ceb0b010000000701000202020403061004160205181d0735600895011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000b4469656d4163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b0511020201070000000000000000000000000000000105436f696e3105436f696e31000403bd51533250d3427ef3d1b1028c7b6efe01400d0300000000000400040040420f0000000000000000000000000005436f696e317371ca5f000000000400200b8ba5181a1838016877e636788f2e83b4177bfa59018548abe19131cc4f0e4a4020d6785e98e4a5994caa8fba6a2cd58188784bea242ea51ffe21849d87c5425a61efbb07922ee4ff5833f9554cf8f514a1d02e98ef0f2bef281ae2a4709c5400".to_string()
 }
 
 fn invalid_request_response() -> Value {
@@ -1016,9 +1016,9 @@ fn invalid_request_response_with_id(id: u64) -> Value {
             },
             "id": id,
             "jsonrpc": "2.0",
-            "libra_chain_id": 4,
-            "libra_ledger_timestampusec": version_timestamp(version),
-            "libra_ledger_version": version
+            "diem_chain_id": 4,
+            "diem_ledger_timestampusec": version_timestamp(version),
+            "diem_ledger_version": version
     })
 }
 
@@ -1036,9 +1036,9 @@ fn new_response_with_version_and_id(result: Value, version: u64, id: i32) -> Val
 
 fn new_response_with_version_and_json_id(result: Value, version: u64, id: Value) -> Value {
     to_value(JsonRpcResponse {
-        libra_chain_id: 4,
-        libra_ledger_version: version,
-        libra_ledger_timestampusec: version_timestamp(version),
+        diem_chain_id: 4,
+        diem_ledger_version: version,
+        diem_ledger_timestampusec: version_timestamp(version),
         jsonrpc: "2.0".to_string(),
         id: Some(id),
         result: Some(result),

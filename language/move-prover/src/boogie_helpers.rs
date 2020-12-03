@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Helpers for emitting Boogie code.
@@ -53,7 +53,7 @@ pub fn boogie_function_name(env: &FunctionEnv<'_>) -> String {
     // TODO: hack to deal with similar native functions in old/new library. We identify
     // whether the old or new version of the function is referenced by the number of type
     // parameters.
-    if name == "$LibraAccount_save_account" && env.get_type_parameters().len() == 1 {
+    if name == "$DiemAccount_save_account" && env.get_type_parameters().len() == 1 {
         name + "_OLD"
     } else {
         name

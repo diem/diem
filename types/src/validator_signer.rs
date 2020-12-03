@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
     test_utils::TEST_SEED,
@@ -78,7 +78,7 @@ impl ValidatorSigner {
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptests {
     use super::*;
-    use libra_crypto::Genesis;
+    use diem_crypto::Genesis;
     use proptest::{prelude::*, sample, strategy::LazyJust};
 
     #[allow(clippy::redundant_closure)]

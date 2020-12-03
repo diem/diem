@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{coin1_tmp_currency_code, Account, AccountData, AccountRoleSpecifier},
+    account::{xus_currency_code, Account, AccountData, AccountRoleSpecifier},
     account_universe::{
         txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
     common_transactions::create_account_txn,
     gas_costs,
 };
-use libra_proptest_helpers::Index;
-use libra_types::{
+use diem_proptest_helpers::Index;
+use diem_types::{
     account_config,
     transaction::{SignedTransaction, TransactionStatus},
     vm_status::{AbortLocation, KeptVMStatus, StatusCode},
@@ -43,7 +43,7 @@ impl AUTransactionGen for CreateAccountGen {
             &self.new_account,
             sender.sequence_number,
             self.amount,
-            account_config::coin1_tmp_tag(),
+            account_config::xus_tag(),
         );
 
         let mut gas_used = sender.create_account_gas_cost();
@@ -62,7 +62,7 @@ impl AUTransactionGen for CreateAccountGen {
             universe.add_account(AccountData::with_account(
                 self.new_account.clone(),
                 self.amount,
-                coin1_tmp_currency_code(),
+                xus_currency_code(),
                 0,
                 AccountRoleSpecifier::default(),
             ));
@@ -102,7 +102,7 @@ impl AUTransactionGen for CreateExistingAccountGen {
             receiver.account(),
             sender.sequence_number,
             self.amount,
-            account_config::coin1_tmp_tag(),
+            account_config::xus_tag(),
         );
 
         // This transaction should never work, but it will fail differently if there's not enough

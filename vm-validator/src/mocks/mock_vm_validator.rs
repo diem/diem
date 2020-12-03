@@ -1,16 +1,16 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::TransactionValidation;
 use anyhow::Result;
-use libra_state_view::StateView;
-use libra_types::{
+use diem_state_view::StateView;
+use diem_types::{
     account_address::AccountAddress,
     on_chain_config::OnChainConfigPayload,
     transaction::{GovernanceRole, SignedTransaction, VMValidatorResult},
     vm_status::StatusCode,
 };
-use libra_vm::VMValidator;
+use diem_vm::VMValidator;
 use std::convert::TryFrom;
 
 #[derive(Clone)]

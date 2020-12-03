@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
@@ -69,7 +69,7 @@ impl Experiment for CpuFlamegraph {
             .boxed();
         let run_id = env::var("RUN_ID")
             .map_err(|e| anyhow!("RUN_ID could not be read from the environment, Error:{}", e))?;
-        let filename = "libra-node-perf.svg";
+        let filename = "diem-node-perf.svg";
         let command = generate_perf_flamegraph_command(&filename, &run_id, self.duration_secs);
         let flame_graph = self.perf_instance.util_cmd(command, "generate-flamegraph");
         let flame_graph_future = tokio::time::delay_for(buffer)
@@ -104,7 +104,7 @@ fn generate_perf_flamegraph_command(filename: &str, run_id: &str, duration_secs:
         rm -rf /tmp/perf-data;
         mkdir /tmp/perf-data;
         cd /tmp/perf-data;
-        perf record -F 99 -p $(ps aux | grep libra-node | grep -v grep | awk '{{print $2}}') --output=perf.data --call-graph dwarf -- sleep {duration_secs};
+        perf record -F 99 -p $(ps aux | grep diem-node | grep -v grep | awk '{{print $2}}') --output=perf.data --call-graph dwarf -- sleep {duration_secs};
         perf script --input=perf.data | /usr/local/etc/FlameGraph/stackcollapse-perf.pl > out.perf-folded;
         /usr/local/etc/FlameGraph/flamegraph.pl out.perf-folded > {filename};
         aws s3 cp {filename} s3://toro-cluster-test-flamegraphs/flamegraphs/{run_id}/{filename};"#,

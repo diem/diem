@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::protocols::health_checker::{
     HealthChecker, HealthCheckerNetworkEvents, HealthCheckerNetworkSender,
 };
+use diem_config::network_id::NetworkContext;
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
-use libra_config::network_id::NetworkContext;
 use std::{sync::Arc, time::Duration};
 use tokio::{
     runtime::Handle,

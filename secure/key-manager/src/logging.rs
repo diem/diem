@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Error;
-use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_logger::Schema;
+use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_logger::Schema;
 use serde::Serialize;
 
 #[derive(Schema)]

@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
 use consensus_types::block::block_test_utils::certificate_for_genesis;
-use libra_temppath::TempPath;
+use diem_temppath::TempPath;
 
 #[test]
 fn test_put_get() {

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Processes that are directly spawned by shared mempool runtime initialization
@@ -17,17 +17,17 @@ use crate::{
 use ::network::protocols::network::Event;
 use anyhow::Result;
 use bounded_executor::BoundedExecutor;
-use channel::libra_channel;
+use channel::diem_channel;
+use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
+use diem_infallible::Mutex;
+use diem_logger::prelude::*;
+use diem_trace::prelude::*;
+use diem_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::{config::PeerNetworkId, network_id::NodeNetworkId};
-use libra_infallible::Mutex;
-use libra_logger::prelude::*;
-use libra_trace::prelude::*;
-use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     ops::Deref,
     sync::Arc,
@@ -47,7 +47,7 @@ pub(crate) async fn coordinator<V>(
     )>,
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
-    mut mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    mut mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) where
     V: TransactionValidation,
 {

@@ -1,14 +1,14 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{execution_correctness::ExecutionCorrectness, id_and_transactions_from_block};
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
-use executor_types::{BlockExecutor, Error, StateComputeResult};
-use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
-use libra_infallible::Mutex;
-use libra_types::{
+use diem_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
+use diem_infallible::Mutex;
+use diem_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
+use executor_types::{BlockExecutor, Error, StateComputeResult};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,11 +13,11 @@ use crate::{
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
+use diem_config::network_id::NetworkContext;
+use diem_network_address::NetworkAddress;
+use diem_proptest_helpers::ValueGenerator;
+use diem_types::PeerId;
 use futures::{executor::block_on, future, io::AsyncReadExt, sink::SinkExt, stream::StreamExt};
-use libra_config::network_id::NetworkContext;
-use libra_network_address::NetworkAddress;
-use libra_proptest_helpers::ValueGenerator;
-use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{compat::IoCompat, transport::ConnectionOrigin};
 use proptest::{arbitrary::any, collection::vec};

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     commands::{subcommand_execute, Command},
 };
 use chrono::{DateTime, Utc};
-use libra_types::waypoint::Waypoint;
+use diem_types::waypoint::Waypoint;
 use std::time::{Duration, UNIX_EPOCH};
 
 /// Major command for account related operations.
@@ -26,7 +26,7 @@ impl Command for DevCommand {
             Box::new(DevCommandExecute {}),
             Box::new(DevCommandUpgradeStdlib {}),
             Box::new(DevCommandGenWaypoint {}),
-            Box::new(DevCommandChangeLibraVersion {}),
+            Box::new(DevCommandChangeDiemVersion {}),
             Box::new(DevCommandEnableCustomScript {}),
             Box::new(AddToScriptAllowList {}),
         ];
@@ -175,19 +175,19 @@ impl Command for AddToScriptAllowList {
     }
 }
 
-pub struct DevCommandChangeLibraVersion {}
+pub struct DevCommandChangeDiemVersion {}
 
-impl Command for DevCommandChangeLibraVersion {
+impl Command for DevCommandChangeDiemVersion {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["change_libra_version", "v"]
+        vec!["change_diem_version", "v"]
     }
 
     fn get_params_help(&self) -> &'static str {
-        "<new_libra_version>"
+        "<new_diem_version>"
     }
 
     fn get_description(&self) -> &'static str {
-        "Change the libra_version stored on chain"
+        "Change the diem_version stored on chain"
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
@@ -195,7 +195,7 @@ impl Command for DevCommandChangeLibraVersion {
             println!("Invalid number of arguments");
             return;
         }
-        match client.change_libra_version(params, true) {
+        match client.change_diem_version(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

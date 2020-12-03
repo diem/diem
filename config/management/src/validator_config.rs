@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,13 +8,13 @@ use crate::{
     transaction::build_raw_transaction,
 };
 use core::str::FromStr;
-use libra_config::config::HANDSHAKE_VERSION;
-use libra_global_constants::{
+use diem_config::config::HANDSHAKE_VERSION;
+use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
-use libra_network_address::{NetworkAddress, Protocol};
-use libra_types::{chain_id::ChainId, transaction::Transaction};
+use diem_network_address::{NetworkAddress, Protocol};
+use diem_types::{chain_id::ChainId, transaction::Transaction};
 use std::net::{Ipv4Addr, ToSocketAddrs};
 use structopt::StructOpt;
 

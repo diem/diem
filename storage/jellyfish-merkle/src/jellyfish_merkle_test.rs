@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
@@ -7,9 +7,9 @@ use crate::test_helper::{
     arb_tree_with_index, test_get_range_proof, test_get_with_proof,
     test_get_with_proof_with_distinct_last_nibble,
 };
-use libra_crypto::HashValue;
-use libra_nibble::Nibble;
-use libra_types::transaction::PRE_GENESIS_VERSION;
+use diem_crypto::HashValue;
+use diem_nibble::Nibble;
+use diem_types::transaction::PRE_GENESIS_VERSION;
 use mock_tree_store::MockTreeStore;
 use proptest::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};

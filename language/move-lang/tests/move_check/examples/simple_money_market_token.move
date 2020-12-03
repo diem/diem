@@ -27,9 +27,9 @@ module Token {
         Coin { type: *&coin.type, value: amount }
     }
 
-    public fun join<ATy: copyable>(coin1_tmp: Coin<ATy>, coin2: Coin<ATy>): Coin<ATy> {
-        deposit(&mut coin1_tmp, coin2);
-        coin1_tmp
+    public fun join<ATy: copyable>(xus: Coin<ATy>, coin2: Coin<ATy>): Coin<ATy> {
+        deposit(&mut xus, coin2);
+        xus
     }
 
     public fun deposit<ATy: copyable>(coin: &mut Coin<ATy>, check: Coin<ATy>) {

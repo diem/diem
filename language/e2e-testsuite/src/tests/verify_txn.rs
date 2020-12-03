@@ -1,15 +1,10 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
-use language_e2e_tests::{
-    account::Account, assert_prologue_disparity, assert_prologue_parity,
-    compile::compile_module_with_address, current_function_name, executor::FakeExecutor, gas_costs,
-    transaction_status_eq,
-};
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::{
+use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_types::{
     account_address::AccountAddress,
     account_config,
     chain_id::ChainId,
@@ -17,6 +12,11 @@ use libra_types::{
     test_helpers::transaction_test_helpers,
     transaction::{Script, TransactionArgument, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode},
+};
+use language_e2e_tests::{
+    account::Account, assert_prologue_disparity, assert_prologue_parity,
+    compile::compile_module_with_address, current_function_name, executor::FakeExecutor, gas_costs,
+    transaction_status_eq,
 };
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
@@ -35,7 +35,7 @@ fn verify_signature() {
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_peer_to_peer_with_metadata_script(
-        account_config::coin1_tmp_tag(),
+        account_config::xus_tag(),
         *sender.address(),
         100,
         vec![],
@@ -65,7 +65,7 @@ fn verify_reserved_sender() {
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
     let program = encode_peer_to_peer_with_metadata_script(
-        account_config::coin1_tmp_tag(),
+        account_config::xus_tag(),
         *sender.address(),
         100,
         vec![],
@@ -115,7 +115,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -128,7 +128,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -151,7 +151,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(1)
@@ -168,7 +168,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(11)
@@ -185,7 +185,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -205,7 +205,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -227,7 +227,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -245,7 +245,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -263,7 +263,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args.clone(),
         ))
         .sequence_number(10)
@@ -281,7 +281,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args,
         ))
         .sequence_number(10)
@@ -299,7 +299,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
         ))
         .sequence_number(10)
@@ -322,7 +322,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             args,
         ))
         .sequence_number(10)
@@ -341,7 +341,7 @@ fn verify_simple_payment() {
         .transaction()
         .script(Script::new(
             p2p_script,
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             vec![],
         ))
         .sequence_number(10)
@@ -414,7 +414,7 @@ pub fn test_arbitrary_script_execution() {
 }
 
 #[test]
-pub fn test_publish_from_libra_root() {
+pub fn test_publish_from_diem_root() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
@@ -476,7 +476,7 @@ fn verify_expiration_time() {
         None, /* script */
         0,    /* expiration_time */
         0,    /* gas_unit_price */
-        account_config::COIN1_NAME.to_owned(),
+        account_config::XUS_NAME.to_owned(),
         None, /* max_gas_amount */
     );
     assert_prologue_parity!(
@@ -495,7 +495,7 @@ fn verify_expiration_time() {
         None, /* script */
         0,    /* expiration_time */
         0,    /* gas_unit_price */
-        account_config::COIN1_NAME.to_owned(),
+        account_config::XUS_NAME.to_owned(),
         None, /* max_gas_amount */
     );
     assert_prologue_parity!(
@@ -580,14 +580,14 @@ fn verify_gas_currency_code() {
 }
 
 #[test]
-pub fn test_no_publishing_libra_root_sender() {
+pub fn test_no_publishing_diem_root_sender() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
     executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_libra_root();
+    let sender = Account::new_diem_root();
 
     let module = String::from(
         "
@@ -847,7 +847,7 @@ fn test_module_dependency_fails_verification() {
         let m = good_module_uses_bad(*sender.address(), bad_module);
         let mut serialized_module = Vec::<u8>::new();
         m.serialize(&mut serialized_module).unwrap();
-        libra_types::transaction::Module::new(serialized_module)
+        diem_types::transaction::Module::new(serialized_module)
     };
 
     let txn = sender
@@ -1011,7 +1011,7 @@ fn test_module_transitive_dependency_fails_verification() {
             extra_deps: vec![good_module],
             ..Compiler::default()
         };
-        libra_types::transaction::Module::new(
+        diem_types::transaction::Module::new(
             compiler
                 .into_module_blob("file_name", module_code)
                 .expect("Module compilation failed"),
@@ -1112,7 +1112,7 @@ fn charge_gas_invalid_args() {
             StdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
-            vec![account_config::coin1_tmp_tag()],
+            vec![account_config::xus_tag()],
             // Don't pass any arguments
             vec![],
         ))

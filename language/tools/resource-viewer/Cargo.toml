@@ -1,19 +1,19 @@
 [package]
 name = "resource-viewer"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra genesis viewer"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem genesis viewer"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
-libra-types = { path = "../../../types", version = "0.1.0"  }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0"  }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }

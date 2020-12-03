@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::shared_mempool::{
@@ -6,9 +6,9 @@ use crate::shared_mempool::{
     types::{CommitNotification, ConsensusRequest},
 };
 use anyhow::Error;
-use libra_config::{config::PeerNetworkId, network_id::NetworkId};
-use libra_logger::Schema;
-use libra_types::{account_address::AccountAddress, on_chain_config::OnChainConfigPayload};
+use diem_config::{config::PeerNetworkId, network_id::NetworkId};
+use diem_logger::Schema;
+use diem_types::{account_address::AccountAddress, on_chain_config::OnChainConfigPayload};
 use serde::Serialize;
 use std::{fmt, time::SystemTime};
 

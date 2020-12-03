@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module implements the functionality to restore a `JellyfishMerkleTree` from small chunks
@@ -15,12 +15,12 @@ use crate::{
     NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
 use anyhow::{bail, ensure, format_err, Result};
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_nibble::Nibble;
-use libra_types::{
+use diem_nibble::Nibble;
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleRangeProof},
     transaction::Version,

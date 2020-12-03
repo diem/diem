@@ -4,7 +4,7 @@ address 0x1 {
 /// a given time period.
 module AccountLimits {
     use 0x1::Errors;
-    use 0x1::LibraTimestamp;
+    use 0x1::DiemTimestamp;
     use 0x1::Roles;
     use 0x1::Signer;
 
@@ -14,7 +14,7 @@ module AccountLimits {
 
     /// A resource specifying the account limits per-currency. There is a default
     /// "unlimited" `LimitsDefinition` resource for accounts published at
-    /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`, but other accounts may have
+    /// `CoreAddresses::DIEM_ROOT_ADDRESS()`, but other accounts may have
     /// different account limit definitons. In such cases, they will have a
     /// `LimitsDefinition` published under their (root) account.
     resource struct LimitsDefinition<CoinType> {
@@ -61,14 +61,14 @@ module AccountLimits {
 
     /// Grant a capability to call this module. This does not necessarily
     /// need to be a unique capability.
-    public fun grant_mutation_capability(lr_account: &signer): AccountLimitMutationCapability {
-        LibraTimestamp::assert_genesis();
-        Roles::assert_libra_root(lr_account);
+    public fun grant_mutation_capability(dr_account: &signer): AccountLimitMutationCapability {
+        DiemTimestamp::assert_genesis();
+        Roles::assert_diem_root(dr_account);
         AccountLimitMutationCapability{}
     }
     spec fun grant_mutation_capability {
-        include LibraTimestamp::AbortsIfNotGenesis;
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include DiemTimestamp::AbortsIfNotGenesis;
+        include Roles::AbortsIfNotDiemRoot{account: dr_account};
     }
 
     /// Determines if depositing `amount` of `CoinType` coins into the
@@ -140,11 +140,11 @@ module AccountLimits {
     /// Root accounts for multi-account entities will hold this resource at
     /// their root/parent account.
     public fun publish_window<CoinType>(
-        lr_account: &signer,
+        dr_account: &signer,
         to_limit: &signer,
         limit_address: address,
     ) {
-        Roles::assert_libra_root(lr_account);
+        Roles::assert_diem_root(dr_account);
         assert(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
         Roles::assert_parent_vasp_or_child_vasp(to_limit);
         assert(
@@ -166,13 +166,13 @@ module AccountLimits {
         include PublishWindowAbortsIf<CoinType>;
     }
     spec schema PublishWindowAbortsIf<CoinType> {
-        lr_account: signer;
+        dr_account: signer;
         to_limit: signer;
         limit_address: address;
         /// Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
         include Roles::AbortsIfNotParentVaspOrChildVasp{account: to_limit};
 
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include Roles::AbortsIfNotDiemRoot{account: dr_account};
         aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
         aborts_if exists<Window<CoinType>>(Signer::spec_address_of(to_limit)) with Errors::ALREADY_PUBLISHED;
     }
@@ -266,7 +266,7 @@ module AccountLimits {
     /// `limits_definition.time_period` has elapsed, resets the window and
     /// the inflow and outflow records.
     fun reset_window<CoinType>(window: &mut Window<CoinType>, limits_definition: &LimitsDefinition<CoinType>) {
-        let current_time = LibraTimestamp::now_microseconds();
+        let current_time = DiemTimestamp::now_microseconds();
         assert(window.window_start <= MAX_U64 - limits_definition.time_period, Errors::limit_exceeded(EWINDOW));
         if (current_time > window.window_start + limits_definition.time_period) {
             window.window_start = current_time;
@@ -282,7 +282,7 @@ module AccountLimits {
     spec schema ResetWindowAbortsIf<CoinType> {
         window: Window<CoinType>;
         limits_definition: LimitsDefinition<CoinType>;
-        include LibraTimestamp::AbortsIfNotOperating;
+        include DiemTimestamp::AbortsIfNotOperating;
         aborts_if window.window_start + limits_definition.time_period > max_u64() with Errors::LIMIT_EXCEEDED;
     }
     spec schema ResetWindowEnsures<CoinType> {
@@ -295,7 +295,7 @@ module AccountLimits {
             window: Window<CoinType>,
             limits_definition: LimitsDefinition<CoinType>
         ): bool {
-            LibraTimestamp::spec_now_microseconds() > window.window_start + limits_definition.time_period
+            DiemTimestamp::spec_now_microseconds() > window.window_start + limits_definition.time_period
         }
         define spec_window_reset_with_limits<CoinType>(
             window: Window<CoinType>,
@@ -305,7 +305,7 @@ module AccountLimits {
                 Window<CoinType>{
                     limit_address: window.limit_address,
                     tracked_balance: window.tracked_balance,
-                    window_start: LibraTimestamp::spec_now_microseconds(),
+                    window_start: DiemTimestamp::spec_now_microseconds(),
                     window_inflow: 0,
                     window_outflow: 0
                 }
@@ -515,7 +515,7 @@ module AccountLimits {
     }
 
     fun current_time(): u64 {
-        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
+        if (DiemTimestamp::is_genesis()) 0 else DiemTimestamp::now_microseconds()
     }
 
     // =================================================================

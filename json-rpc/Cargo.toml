@@ -1,10 +1,10 @@
 [package]
-name = "libra-json-rpc"
+name = "diem-json-rpc"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra rpc endpoint"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem rpc endpoint"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -25,18 +25,18 @@ reqwest = { version = "0.10.9", features = ["blocking", "json"], default_feature
 proptest = { version = "0.10.1", optional = true }
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "../config", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libradb = { path = "../storage/libradb", version = "0.1.0", optional = true }
-libra-json-rpc-types = { path = "./types", version = "0.1.0", package = "libra-json-rpc-types" }
-libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-mempool = { path = "../mempool", version = "0.1.0" }
-libra-metrics = { path = "../common/metrics", version = "0.1.0" }
-libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
-libra-trace = { path = "../common/trace", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
-libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../config", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diemdb = { path = "../storage/diemdb", version = "0.1.0", optional = true }
+diem-json-rpc-types = { path = "./types", version = "0.1.0", package = "diem-json-rpc-types" }
+diem-logger = { path = "../common/logger", version = "0.1.0" }
+diem-mempool = { path = "../mempool", version = "0.1.0" }
+diem-metrics = { path = "../common/metrics", version = "0.1.0" }
+diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+diem-trace = { path = "../common/trace", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
@@ -47,13 +47,13 @@ reqwest = { version = "0.10.9", features = ["blocking", "json"], default_feature
 rand = { version = "0.7.3" }
 
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
-libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
-libra-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
-libra-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0" }
-libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
-libra-proptest-helpers = { path = "../common/proptest-helpers" }
-libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
+diemdb = { path = "../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
+diem-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
+diem-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0" }
+diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../common/proptest-helpers" }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 compiled-stdlib = { path = "../language/stdlib/compiled",  version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
@@ -62,8 +62,8 @@ executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 move-vm-types = { path = "../language/move-vm/types", version = "0.1.0" }
 transaction-builder-generated = { path = "../client/transaction-builder", version = "0.1.0" }
-libra-node = { path = "../libra-node", version = "0.1.0" }
+diem-node = { path = "../diem-node", version = "0.1.0" }
 
 [features]
-fuzzing = ["proptest", "libra-mempool/fuzzing", "libradb/fuzzing", "libra-proptest-helpers", "libra-temppath", "reqwest"]
+fuzzing = ["proptest", "diem-mempool/fuzzing", "diemdb/fuzzing", "diem-proptest-helpers", "diem-temppath", "reqwest"]
 failpoints = ["fail/failpoints"]

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     spec_language_ast::{Condition, Invariant, SyntheticDefinition},
 };
 use anyhow::Result;
-use libra_types::account_address::AccountAddress;
+use diem_types::account_address::AccountAddress;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId, value::MoveValue};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};

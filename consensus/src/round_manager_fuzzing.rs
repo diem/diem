@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -16,10 +16,9 @@ use crate::{
     test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager},
     util::{mock_time_service::SimulatedTimeService, time_service::TimeService},
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, diem_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
-use futures::{channel::mpsc, executor::block_on};
-use libra_types::{
+use diem_types::{
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -28,6 +27,7 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
+use futures::{channel::mpsc, executor::block_on};
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::NewNetworkSender,
@@ -111,9 +111,9 @@ fn create_node_for_fuzzing() -> RoundManager {
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (connection_reqs_tx, _) =
-        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let network_sender = ConsensusNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),

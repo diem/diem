@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod cluster_swarm_kube;
@@ -12,7 +12,7 @@ pub trait ClusterSwarm: Send + Sync {
     /// Spawns a new instance.
     async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance>;
 
-    /// If deleting /opt/libra/data/* is required, call clean_date before calling
+    /// If deleting /opt/diem/data/* is required, call clean_date before calling
     /// spawn_new_instance.
     async fn clean_data(&self, node: &str) -> Result<()>;
 

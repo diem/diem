@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
+use diem_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
     fs::{self, File},
@@ -45,7 +45,7 @@ pub fn load_key<P: AsRef<Path>>(input_file: P) -> Ed25519PrivateKey {
 #[cfg(test)]
 mod test {
     use super::*;
-    use libra_temppath::TempPath;
+    use diem_temppath::TempPath;
 
     #[test]
     fn verify_test_create_and_load_key() {

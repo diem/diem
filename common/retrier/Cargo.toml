@@ -1,15 +1,15 @@
 [package]
-name = "libra-retrier"
+name = "diem-retrier"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra implementation for retries of operations"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem implementation for retries of operations"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-libra-workspace-hack = { path = "..//workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "..//workspace-hack", version = "0.1.0" }
 tokio = { version = "0.2.22", features = ["time"] }
-libra-logger = { path = "../../common/logger", version = "0.1.0"}
+diem-logger = { path = "../../common/logger", version = "0.1.0"}

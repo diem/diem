@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
     test_utils::KeyPair,
     traits::*,
 };
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use rand::{prelude::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 

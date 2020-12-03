@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -6,8 +6,8 @@
 //! This crate defines [`trait StateView`](StateView).
 
 use anyhow::Result;
-use libra_crypto::HashValue;
-use libra_types::{access_path::AccessPath, transaction::Version};
+use diem_crypto::HashValue;
+use diem_types::{access_path::AccessPath, transaction::Version};
 
 /// `StateView` is a trait that defines a read-only snapshot of the global state. It is passed to
 /// the VM for transaction execution, during which the VM is guaranteed to read anything at the

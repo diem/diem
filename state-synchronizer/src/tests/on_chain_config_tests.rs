@@ -1,8 +1,17 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
 use compiled_stdlib::transaction_scripts::StdlibScript;
+use diem_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
+use diem_types::{
+    account_config::{diem_root_address, xus_tag},
+    block_metadata::BlockMetadata,
+    on_chain_config::{OnChainConfig, VMPublishingOption},
+    transaction::{Transaction, WriteSetPayload},
+};
+use diem_vm::DiemVM;
+use diemdb::DiemDB;
 use executor::Executor;
 use executor_test_helpers::{
     bootstrap_genesis, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
@@ -10,15 +19,6 @@ use executor_test_helpers::{
 };
 use executor_types::BlockExecutor;
 use futures::{future::FutureExt, stream::StreamExt};
-use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
-use libra_types::{
-    account_config::{coin1_tmp_tag, libra_root_address},
-    block_metadata::BlockMetadata,
-    on_chain_config::{OnChainConfig, VMPublishingOption},
-    transaction::{Transaction, WriteSetPayload},
-};
-use libra_vm::LibraVM;
-use libradb::LibraDB;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
@@ -37,13 +37,13 @@ fn test_on_chain_config_pub_sub() {
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
     let genesis_key = vm_genesis::GENESIS_KEYPAIR.0.clone();
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
-    let db_path = libra_temppath::TempPath::new();
+    let db_path = diem_temppath::TempPath::new();
     db_path.create_as_dir().unwrap();
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(db_path.path()));
-    bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(db_path.path()));
+    bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
 
-    let mut block_executor = Box::new(Executor::<LibraVM>::new(db_rw.clone()));
-    let chunk_executor = Box::new(Executor::<LibraVM>::new(db_rw));
+    let mut block_executor = Box::new(Executor::<DiemVM>::new(db_rw.clone()));
+    let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw));
     let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
 
     assert!(
@@ -75,7 +75,7 @@ fn test_on_chain_config_pub_sub() {
     //////////////////////////////////////////////////
     // Case 2: publish if subscribed config changed //
     //////////////////////////////////////////////////
-    let genesis_account = libra_root_address();
+    let genesis_account = diem_root_address();
     let validator_account = validators[0].owner_address;
     let operator_key = validators[0].key.clone();
     let operator_public_key = operator_key.public_key();
@@ -145,7 +145,7 @@ fn test_on_chain_config_pub_sub() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_peer_to_peer_with_metadata_script(
-            coin1_tmp_tag(),
+            xus_tag(),
             validator_account,
             1_000_000,
             vec![],

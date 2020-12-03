@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,17 +8,17 @@ use crate::{
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
 use anyhow::{format_err, Result};
-use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::channel::{mpsc, oneshot};
-use libra_config::{
+use channel::{self, diem_channel, message_queues::QueueStyle};
+use diem_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use libra_infallible::{Mutex, RwLock};
-use libra_types::{
+use diem_infallible::{Mutex, RwLock};
+use diem_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},
 };
+use futures::channel::{mpsc, oneshot};
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
@@ -58,11 +58,11 @@ impl MockSharedMempool {
 
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
         let (network_reqs_tx, _network_reqs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_network_notifs_tx, network_notifs_rx) =
-            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_, conn_notifs_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
@@ -79,7 +79,7 @@ impl MockSharedMempool {
             Some(state_sync) => (None, state_sync),
         };
         let (_reconfig_event_publisher, reconfig_event_subscriber) =
-            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+            diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         let network_handles = vec![(
             NodeNetworkId::new(NetworkId::Validator, 0),
             network_sender,

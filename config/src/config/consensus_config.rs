@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::SafetyRulesConfig;
-use libra_types::{account_address::AccountAddress, block_info::Round};
+use diem_types::{account_address::AccountAddress, block_info::Round};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 

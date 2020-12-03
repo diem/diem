@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -55,7 +55,7 @@ fn build_global_config_1() {
     assert!(config.accounts.contains_key("default"));
     assert!(config.accounts.contains_key("alice"));
     let bob = config.accounts.get("bob").unwrap();
-    assert_eq!(bob.balance(IdentStr::new("Coin1").unwrap()), 2000);
+    assert_eq!(bob.balance(IdentStr::new("XUS").unwrap()), 2000);
     assert_eq!(bob.sequence_number(), 10);
 }
 
@@ -85,31 +85,31 @@ fn build_global_config_4() {
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 50);
+    assert_eq!(default.balance(IdentStr::new("XUS").unwrap()), 50);
 }
 
 #[rustfmt::skip]
 #[test]
 fn build_global_config_5() {
     let config = parse_and_build_config(r"
-        //! account: default, 50Coin1,
+        //! account: default, 50XUS,
     ").unwrap();
 
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
-    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 50);
+    assert_eq!(default.balance(IdentStr::new("XUS").unwrap()), 50);
 }
 
 #[rustfmt::skip]
 #[test]
 fn build_global_config_6() {
     let config = parse_and_build_config(r"
-        //! account: bob, 51Coin1,
+        //! account: bob, 51XUS,
     ").unwrap();
 
     assert_eq!(config.accounts.len(), 2);
     let default = config.accounts.get("bob").unwrap();
-    assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 51);
+    assert_eq!(default.balance(IdentStr::new("XUS").unwrap()), 51);
 }
 
 #[rustfmt::skip]

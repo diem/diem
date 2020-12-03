@@ -1,20 +1,20 @@
 ---
 id: contributing
-title: Contributing to Libra
+title: Contributing to Diem
 ---
 
-Our goal is to make contributing to the Libra project easy and transparent.
+Our goal is to make contributing to the Diem project easy and transparent.
 
-> **Note**: As the Libra Core project is currently an early-stage prototype, it
+> **Note**: As the Diem Core project is currently an early-stage prototype, it
 > is undergoing rapid development. While we welcome contributions, before
 > making substantial contributions be sure to discuss them in the Discourse
 > forum to ensure that they fit into the project roadmap.
 
 ## On Contributing
 
-### Libra Core
+### Diem Core
 
-To contribute to the Libra Core implementation, first start with the proper
+To contribute to the Diem Core implementation, first start with the proper
 development copy.
 
 To get the development installation with all the necessary dependencies for
@@ -32,17 +32,17 @@ cargo xtest
 #### Code Style, Hints, and Testing
 
 Refer to our [Coding
-Guidelines](https://developers.libra.org/docs/community/coding-guidelines) for
+Guidelines](https://developers.diem.com/docs/community/coding-guidelines) for
 detailed guidance about how to contribute to the project.
 
 #### Documentation
 
-Libra's developer website is also open source (the code can be found in this
-[repository](https://github.com/libra/libra/developers.libra.org/website/)).  It is built using
+Diem's developer website is also open source (the code can be found in this
+[repository](https://github.com/libra/libra/developers.diem.com/website/)).  It is built using
 [Docusaurus](https://docusaurus.io/):
 
 If you know Markdown, you can already contribute! How to contribute can be found in the [website
-repo](https://github.com/libra/developers.libra.org/website/CONTRIBUTING.md).
+repo](https://github.com/diem/developers.diem.com/website/CONTRIBUTING.md).
 
 ## Developer Workflow
 
@@ -167,8 +167,8 @@ able to be built and passes all checks performed by CI.
 
 ## Contributor License Agreement
 
-For pull request to be accepted by any Libra projects, a CLA must be signed.
-You will only need to do this once to work on any of Libra's open source
+For pull request to be accepted by any Diem projects, a CLA must be signed.
+You will only need to do this once to work on any of Diem's open source
 projects. Individuals contributing on their own behalf can sign the [Individual
 CLA](https://github.com/libra/libra/blob/master/documentation/contributing/individual-cla.pdf).
 If you are contributing on behalf of your employer, please ask them to sign the
@@ -177,6 +177,6 @@ CLA](https://github.com/libra/libra/blob/master/documentation/contributing/corpo
 
 ## Issues
 
-Libra uses [GitHub issues](https://github.com/libra/libra/issues) to track
+Diem uses [GitHub issues](https://github.com/libra/libra/issues) to track
 bugs. Please include necessary information and instructions to reproduce your
 issue.

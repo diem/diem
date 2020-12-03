@@ -1,11 +1,11 @@
 address 0x1 {
-/// The chain id distinguishes between different chains (e.g., testnet and the main Libra network).
+/// The chain id distinguishes between different chains (e.g., testnet and the main Diem network).
 /// One important role is to prevent transactions intended for one chain from being executed on another.
 /// This code provides a container for storing a chain id and functions to initialize and get it.
 module ChainId {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
-    use 0x1::LibraTimestamp;
+    use 0x1::DiemTimestamp;
     use 0x1::Signer;
 
     resource struct ChainId {
@@ -15,28 +15,28 @@ module ChainId {
     /// The `ChainId` resource was not in the required state
     const ECHAIN_ID: u64 = 0;
 
-    /// Publish the chain ID `id` of this Libra instance under the LibraRoot account
-    public fun initialize(lr_account: &signer, id: u8) {
-        LibraTimestamp::assert_genesis();
-        CoreAddresses::assert_libra_root(lr_account);
-        assert(!exists<ChainId>(Signer::address_of(lr_account)), Errors::already_published(ECHAIN_ID));
-        move_to(lr_account, ChainId { id })
+    /// Publish the chain ID `id` of this Diem instance under the DiemRoot account
+    public fun initialize(dr_account: &signer, id: u8) {
+        DiemTimestamp::assert_genesis();
+        CoreAddresses::assert_diem_root(dr_account);
+        assert(!exists<ChainId>(Signer::address_of(dr_account)), Errors::already_published(ECHAIN_ID));
+        move_to(dr_account, ChainId { id })
     }
 
     spec fun initialize {
         pragma opaque;
-        let lr_addr = Signer::address_of(lr_account);
-        modifies global<ChainId>(lr_addr);
-        include LibraTimestamp::AbortsIfNotGenesis;
-        include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
-        aborts_if exists<ChainId>(lr_addr) with Errors::ALREADY_PUBLISHED;
-        ensures exists<ChainId>(lr_addr);
+        let dr_addr = Signer::address_of(dr_account);
+        modifies global<ChainId>(dr_addr);
+        include DiemTimestamp::AbortsIfNotGenesis;
+        include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
+        aborts_if exists<ChainId>(dr_addr) with Errors::ALREADY_PUBLISHED;
+        ensures exists<ChainId>(dr_addr);
     }
 
-    /// Return the chain ID of this Libra instance
+    /// Return the chain ID of this Diem instance
     public fun get(): u8 acquires ChainId {
-        LibraTimestamp::assert_operating();
-        borrow_global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
+        DiemTimestamp::assert_operating();
+        borrow_global<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS()).id
     }
 
     // =================================================================
@@ -47,8 +47,8 @@ module ChainId {
     /// # Initialization
 
     spec module {
-        /// When Libra is operating, the chain id is always available.
-        invariant [global] LibraTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        /// When Diem is operating, the chain id is always available.
+        invariant [global] DiemTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         // Could also specify that ChainId is not stored on any other address, but it doesn't matter.
     }
@@ -56,7 +56,7 @@ module ChainId {
     /// # Helper Functions
 
     spec define spec_get_chain_id(): u8 {
-        global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
+        global<ChainId>(CoreAddresses::DIEM_ROOT_ADDRESS()).id
     }
 }
 }

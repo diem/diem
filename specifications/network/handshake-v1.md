@@ -1,10 +1,10 @@
 # Handshake Protocol (v1)
 
-The handshake protocol is used between two connecting peers during the initial connection establishment and upgrade process to negotiate the greatest common supported [LibraNet messaging protocol](messaging-v1.md) version and application protocol set.
+The handshake protocol is used between two connecting peers during the initial connection establishment and upgrade process to negotiate the greatest common supported [DiemNet messaging protocol](messaging-v1.md) version and application protocol set.
 
 ## NetworkAddress Protocol
 
-The handshake protocol version itself is "pre-negotiated" in peers' advertised or configured [`NetworkAddress`](network-address.md)es. Canonical LibraNet addresses will include the following `Protocol` after the `"/ln-noise-ik/<public-key>"` `Protocol`:
+The handshake protocol version itself is "pre-negotiated" in peers' advertised or configured [`NetworkAddress`](network-address.md)es. Canonical DiemNet addresses will include the following `Protocol` after the `"/ln-noise-ik/<public-key>"` `Protocol`:
 
 ```
 human-readable format: "/ln-handshake/<version>"
@@ -32,7 +32,7 @@ pub struct BitVec {
     inner: Vec<u8>,
 }
 
-/// Enum representing different versions of the Libra network protocol. These should be
+/// Enum representing different versions of the Diem network protocol. These should be
 /// listed from old to new, old having the smallest value.
 /// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
 pub enum MessagingProtocolVersion {
@@ -46,9 +46,9 @@ The `Handshake` protocol is currently symmetric, i.e., we follow the same upgrad
 
 * **`upgrade()`**
 
-  * Construct a `HandshakeMsg` according to the set of supported LibraNet messaging protocol versions and corresponding application protocols for each version.
+  * Construct a `HandshakeMsg` according to the set of supported DiemNet messaging protocol versions and corresponding application protocols for each version.
 
-    * Note: the `HandshakeMsg` is a _sorted_ map from `MessageProtocolVersion` to `SupportedProtocols` , where `SupportedProtocols` is a bit-vector with a position set if the corresponding `ProtocolId` (represented as a `u8`) is supported over the given LibraNet version.
+    * Note: the `HandshakeMsg` is a _sorted_ map from `MessageProtocolVersion` to `SupportedProtocols` , where `SupportedProtocols` is a bit-vector with a position set if the corresponding `ProtocolId` (represented as a `u8`) is supported over the given DiemNet version.
 
   * Serialize the `HandshakeMsg` into bytes and prepend the `u16` length-prefix.
   * Send the `u16` length-prefixed, serialized `HandshakeMsg` over the Noise-wrapped socket.

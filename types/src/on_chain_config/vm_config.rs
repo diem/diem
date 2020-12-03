@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::on_chain_config::OnChainConfig;
@@ -37,7 +37,7 @@ impl CostTableInner {
 }
 
 impl OnChainConfig for VMConfig {
-    const IDENTIFIER: &'static str = "LibraVMConfig";
+    const IDENTIFIER: &'static str = "DiemVMConfig";
 
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
         let raw_vm_config = lcs::from_bytes::<VMConfigInner>(&bytes).map_err(|e| {

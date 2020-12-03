@@ -1,10 +1,10 @@
 [package]
-name = "libra-types"
+name = "diem-types"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra types"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem types"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -27,12 +27,12 @@ thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
-libra-infallible = { path = "../common/infallible", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
-libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+diem-infallible = { path = "../common/infallible", version = "0.1.0" }
+diem-network-address = { path = "../network/network-address", version = "0.1.0" }
+diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 
 [dev-dependencies]
@@ -41,11 +41,11 @@ proptest = "0.10.1"
 proptest-derive = "0.2.0"
 serde_json = "1.0.60"
 
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
-libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0", features = ["fuzzing"]  }
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing", "libra-network-address/fuzzing", "move-core-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "diem-proptest-helpers", "diem-crypto/fuzzing", "diem-network-address/fuzzing", "move-core-types/fuzzing"]

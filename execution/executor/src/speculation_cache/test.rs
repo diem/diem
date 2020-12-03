@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_types::{block_info::BlockInfo, epoch_state::EpochState};
+use diem_types::{block_info::BlockInfo, epoch_state::EpochState};
 
 fn id(index: u64) -> HashValue {
     let bytes = index.to_be_bytes();

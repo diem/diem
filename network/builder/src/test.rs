@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
@@ -14,7 +14,7 @@ fn test_network_builder() {
 
 #[test]
 fn test_direct_send() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;
@@ -59,7 +59,7 @@ fn test_direct_send() {
 
 #[test]
 fn test_rpc() {
-    ::libra_logger::Logger::init_for_testing();
+    ::diem_logger::Logger::init_for_testing();
     let mut tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;

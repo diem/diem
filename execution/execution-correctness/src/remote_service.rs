@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::serializer::{
     ExecutionCorrectnessInput, SerializerClient, SerializerService, TSerializerClient,
 };
+use diem_crypto::ed25519::Ed25519PrivateKey;
+use diem_logger::warn;
+use diem_secure_net::{NetworkClient, NetworkServer};
+use diem_vm::DiemVM;
 use executor::Executor;
 use executor_types::Error;
-use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer};
-use libra_vm::LibraVM;
 use std::net::SocketAddr;
 use storage_client::StorageClient;
 
@@ -31,7 +31,7 @@ pub fn execute(
     prikey: Option<Ed25519PrivateKey>,
     network_timeout: u64,
 ) {
-    let block_executor = Box::new(Executor::<LibraVM>::new(
+    let block_executor = Box::new(Executor::<DiemVM>::new(
         StorageClient::new(&storage_addr, network_timeout).into(),
     ));
     let mut serializer_service = SerializerService::new(block_executor, prikey);

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -10,9 +10,9 @@ use crate::{
     thread::ThreadService,
     SafetyRules, TSafetyRules,
 };
-use libra_config::config::{SafetyRulesConfig, SafetyRulesService};
-use libra_infallible::RwLock;
-use libra_secure_storage::{KVStorage, Storage};
+use diem_config::config::{SafetyRulesConfig, SafetyRulesService};
+use diem_infallible::RwLock;
+use diem_secure_storage::{KVStorage, Storage};
 use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 
 pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {

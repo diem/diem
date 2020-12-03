@@ -1,5 +1,5 @@
 base:
-    data_dir: "/opt/libra/data"
+    data_dir: "/opt/diem/data"
     role: "validator"
     waypoint:
         from_storage:

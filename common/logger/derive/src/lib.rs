@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use proc_macro::TokenStream;
@@ -63,10 +63,10 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     // Calls to visit_pair
     let visitor = format_ident!("visitor");
-    let from_serde = quote! { ::libra_logger::Value::from_serde };
-    let from_display = quote! { ::libra_logger::Value::from_display };
-    let from_debug = quote! { ::libra_logger::Value::from_debug };
-    let key_new = quote! { ::libra_logger::Key::new };
+    let from_serde = quote! { ::diem_logger::Value::from_serde };
+    let from_display = quote! { ::diem_logger::Value::from_display };
+    let from_debug = quote! { ::diem_logger::Value::from_debug };
+    let key_new = quote! { ::diem_logger::Key::new };
     let visits = fields.iter().map(|f| {
         let ident = f.ident.as_ref().unwrap();
         let ident_str = ident.to_string();
@@ -95,8 +95,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
             #(#setters)*
         }
 
-        impl #impl_generics ::libra_logger::Schema for #name #ty_generics #where_clause {
-            fn visit(&self, visitor: &mut dyn ::libra_logger::Visitor) {
+        impl #impl_generics ::diem_logger::Schema for #name #ty_generics #where_clause {
+            fn visit(&self, visitor: &mut dyn ::diem_logger::Visitor) {
                 #(#visits)*
             }
         }

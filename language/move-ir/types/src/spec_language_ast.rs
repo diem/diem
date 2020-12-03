@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
     location::*,
 };
-use libra_types::account_address::AccountAddress;
+use diem_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 
 /// AST for the Move Prover specification language.

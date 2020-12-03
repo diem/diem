@@ -1,10 +1,10 @@
-import 0x1.Coin1;
-import 0x1.Libra;
+import 0x1.XUS;
+import 0x1.Diem;
 
 main() {
-    let z: Libra.Libra<Coin1.Coin1>;
-    z = Libra.zero<Coin1.Coin1>();
-    z = Libra.zero<Coin1.Coin1>();
+    let z: Diem.Diem<XUS.XUS>;
+    z = Diem.zero<XUS.XUS>();
+    z = Diem.zero<XUS.XUS>();
     return;
 }
 

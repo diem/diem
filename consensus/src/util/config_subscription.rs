@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use channel::libra_channel::Receiver;
-use libra_types::{
+use channel::diem_channel::Receiver;
+use diem_types::{
     account_config::NewEpochEvent,
     on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
 };

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -9,17 +9,17 @@ use crate::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::wire::handshake::v1::SupportedProtocols,
-    transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
+    transport::{self, Connection, DiemNetTransport, DIEM_TCP_TRANSPORT},
     ProtocolId,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
-use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
-use libra_crypto::x25519;
-use libra_infallible::RwLock;
-use libra_logger::prelude::*;
-use libra_metrics::IntCounterVec;
-use libra_network_address::NetworkAddress;
-use libra_types::{chain_id::ChainId, PeerId};
+use channel::{self, diem_channel, message_queues::QueueStyle};
+use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use diem_crypto::x25519;
+use diem_infallible::RwLock;
+use diem_logger::prelude::*;
+use diem_metrics::IntCounterVec;
+use diem_network_address::NetworkAddress;
+use diem_types::{chain_id::ChainId, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
 use netcore::transport::{
@@ -97,13 +97,13 @@ impl TransportContext {
 
 struct PeerManagerContext {
     // TODO(philiphayes): better support multiple listening addrs
-    pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
-    pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-    connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
-    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
+    pm_reqs_tx: diem_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+    pm_reqs_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
+    connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
     upstream_handlers:
-        HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+        HashMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
     max_concurrent_network_reqs: usize,
@@ -114,14 +114,14 @@ struct PeerManagerContext {
 
 impl PeerManagerContext {
     fn new(
-        pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
-        pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-        connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
-        connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
+        pm_reqs_tx: diem_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+        pm_reqs_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
+        connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
         upstream_handlers: HashMap<
             ProtocolId,
-            libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+            diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
         >,
         connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
@@ -149,7 +149,7 @@ impl PeerManagerContext {
     fn add_upstream_handler(
         &mut self,
         protocol_id: ProtocolId,
-        channel: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+        channel: diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     ) -> &mut Self {
         self.upstream_handlers.insert(protocol_id, channel);
         self
@@ -164,8 +164,8 @@ impl PeerManagerContext {
 
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 type MemoryPeerManager =
-    PeerManager<LibraNetTransport<MemoryTransport>, NoiseStream<memsocket::MemorySocket>>;
-type TcpPeerManager = PeerManager<LibraNetTransport<TcpTransport>, NoiseStream<TcpSocket>>;
+    PeerManager<DiemNetTransport<MemoryTransport>, NoiseStream<memsocket::MemorySocket>>;
+type TcpPeerManager = PeerManager<DiemNetTransport<TcpTransport>, NoiseStream<TcpSocket>>;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum State {
@@ -206,13 +206,13 @@ impl PeerManagerBuilder {
         inbound_connection_limit: usize,
     ) -> Self {
         // Setup channel to send requests to peer manager.
-        let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
+        let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
             QueueStyle::FIFO,
             NonZeroUsize::new(channel_size).unwrap(),
             Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
         );
         // Setup channel to send connection requests to peer manager.
-        let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
+        let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(
             QueueStyle::FIFO,
             NonZeroUsize::new(channel_size).unwrap(),
             None,
@@ -253,7 +253,7 @@ impl PeerManagerBuilder {
         self.listen_address.clone()
     }
 
-    pub fn connection_reqs_tx(&self) -> libra_channel::Sender<PeerId, ConnectionRequest> {
+    pub fn connection_reqs_tx(&self) -> diem_channel::Sender<PeerId, ConnectionRequest> {
         self.peer_manager_context
             .as_ref()
             .expect("Cannot access connection_reqs once PeerManager has been built")
@@ -273,7 +273,7 @@ impl PeerManagerBuilder {
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
-        use libra_network_address::Protocol::*;
+        use diem_network_address::Protocol::*;
 
         let transport_context = self
             .transport_context
@@ -291,8 +291,8 @@ impl PeerManagerBuilder {
         match self.listen_address.as_slice() {
             [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
                 self.tcp_peer_manager = Some(self.build_with_transport(
-                    LibraNetTransport::new(
-                        LIBRA_TCP_TRANSPORT.clone(),
+                    DiemNetTransport::new(
+                        DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
                         key,
                         maybe_trusted_peers,
@@ -307,7 +307,7 @@ impl PeerManagerBuilder {
             #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
             [Memory(_)] => {
                 self.memory_peer_manager = Some(self.build_with_transport(
-                    LibraNetTransport::new(
+                    DiemNetTransport::new(
                         MemoryTransport,
                         self.network_context.clone(),
                         key,
@@ -405,7 +405,7 @@ impl PeerManagerBuilder {
         counter: Option<&'static IntCounterVec>,
     ) -> (
         PeerManagerRequestSender,
-        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
         ConnectionRequestSender,
         conn_notifs_channel::Receiver,
     ) {
@@ -415,7 +415,7 @@ impl PeerManagerBuilder {
             .augment_direct_send_protocols(direct_send_protocols.clone())
             .augment_rpc_protocols(rpc_protocols.clone());
 
-        let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+        let (network_notifs_tx, network_notifs_rx) = diem_channel::new(
             queue_preference,
             NonZeroUsize::new(max_queue_size_per_peer).unwrap(),
             counter,

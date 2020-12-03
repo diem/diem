@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the structs transported during the network handshake protocol v1.
@@ -10,8 +10,8 @@
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
-use libra_config::network_id::NetworkId;
-use libra_types::chain_id::ChainId;
+use diem_config::network_id::NetworkId;
+use diem_types::chain_id::ChainId;
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 use thiserror::Error;
@@ -109,7 +109,7 @@ impl SupportedProtocols {
 // MessageProtocolVersion
 //
 
-/// Enum representing different versions of the Libra network protocol. These should be listed from
+/// Enum representing different versions of the Diem network protocol. These should be listed from
 /// old to new, old having the smallest value.
 /// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
@@ -140,16 +140,16 @@ impl fmt::Display for MessagingProtocolVersion {
 // HandshakeMsg
 //
 
-/// An enum to list the possible errors during the libra handshake negotiation
+/// An enum to list the possible errors during the diem handshake negotiation
 #[derive(Debug, Error)]
 pub enum HandshakeError {
-    #[error("libra-handshake: the received message has a different chain id: {0}, expected: {1}")]
+    #[error("diem-handshake: the received message has a different chain id: {0}, expected: {1}")]
     InvalidChainId(ChainId, ChainId),
     #[error(
-        "libra-handshake: the received message has an different network id: {0}, expected: {1}"
+        "diem-handshake: the received message has an different network id: {0}, expected: {1}"
     )]
     InvalidNetworkId(NetworkId, NetworkId),
-    #[error("libra-handshake: could not find an intersection of supported protocol with the peer")]
+    #[error("diem-handshake: could not find an intersection of supported protocol with the peer")]
     NoCommonProtocols,
 }
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 print_help()
@@ -13,7 +13,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--url https://testnet.libra.org/v1 --waypoint_url https://testnet.libra.org/waypoint.txt --chain-id TESTNET"
+RUN_PARAMS="--url https://testnet.diem.com/v1 --waypoint_url https://testnet.diem.com/waypoint.txt --chain-id TESTNET"
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do

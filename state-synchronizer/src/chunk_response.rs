@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{
+use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     transaction::{TransactionListWithProof, Version},
 };

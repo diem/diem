@@ -1,10 +1,10 @@
 [package]
 name = "netcore"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra netcore"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem netcore"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -17,13 +17,13 @@ serde = { version = "1.0.117", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 url = { version = "2.1.1" }
 
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-libra-network-address = { path = "../network-address", version = "0.1.0" }
-libra-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-network-address = { path = "../network-address", version = "0.1.0" }
+diem-types = { path = "../../types" }
 memsocket = { path = "../memsocket", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 
 [features]

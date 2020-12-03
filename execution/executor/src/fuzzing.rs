@@ -1,12 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Executor;
 use anyhow::Result;
-use executor_types::{BlockExecutor, ChunkExecutor};
-use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
-use libra_state_view::StateView;
-use libra_types::{
+use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
+use diem_state_view::StateView;
+use diem_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
@@ -20,7 +19,8 @@ use libra_types::{
     },
     vm_status::VMStatus,
 };
-use libra_vm::VMExecutor;
+use diem_vm::VMExecutor;
+use executor_types::{BlockExecutor, ChunkExecutor};
 use storage_interface::{DbReader, DbReaderWriter, DbWriter, Order, StartupInfo, TreeState};
 
 fn create_test_executor() -> Executor<FakeVM> {

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
     parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
     shared::unique_map::UniqueMap,
 };
-use libra_types::account_address::AccountAddress as LibraAddress;
+use diem_types::account_address::AccountAddress as DiemAddress;
 use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
 use std::{
@@ -277,7 +277,7 @@ fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
     use MoveValue as MV;
     use Value_ as V;
     match v_ {
-        V::Address(a) => MV::Address(LibraAddress::new(a.to_u8())),
+        V::Address(a) => MV::Address(DiemAddress::new(a.to_u8())),
         V::U8(u) => MV::U8(u),
         V::U64(u) => MV::U64(u),
         V::U128(u) => MV::U128(u),

@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document is intended to provide a specification for authenticated data structures used in the Libra protocol.
+This document is intended to provide a specification for authenticated data structures used in the Diem protocol.
 
-All data in the Libra Blockchain is stored in a single versioned database. A version number is an unsigned 64-bit integer that corresponds to the number of transactions the system has executed. At each version `i`, the database contains a tuple (T<sub>i</sub>, O<sub>i</sub> , S<sub>i</sub>) representing the transaction (T<sub>i</sub>), transaction output (O<sub>i</sub>), and ledger state (S<sub>i</sub>). Given a deterministic execution function `Apply`, the meaning of the tuple is: executing transaction T<sub>i</sub> against ledger state S<sub>i−1</sub> produces output O<sub>i</sub> and a new ledger state S<sub>i</sub>; that is, `Apply`(S<sub>i−1</sub>, T<sub>i</sub>) -> ⟨O<sub>i</sub> , S<sub>i</sub>⟩. The genesis transaction (T<sub>0</sub>) is applied on an empty database, which produces the genesis state (S<sub>0</sub>).
+All data in the Diem Blockchain is stored in a single versioned database. A version number is an unsigned 64-bit integer that corresponds to the number of transactions the system has executed. At each version `i`, the database contains a tuple (T<sub>i</sub>, O<sub>i</sub> , S<sub>i</sub>) representing the transaction (T<sub>i</sub>), transaction output (O<sub>i</sub>), and ledger state (S<sub>i</sub>). Given a deterministic execution function `Apply`, the meaning of the tuple is: executing transaction T<sub>i</sub> against ledger state S<sub>i−1</sub> produces output O<sub>i</sub> and a new ledger state S<sub>i</sub>; that is, `Apply`(S<sub>i−1</sub>, T<sub>i</sub>) -> ⟨O<sub>i</sub> , S<sub>i</sub>⟩. The genesis transaction (T<sub>0</sub>) is applied on an empty database, which produces the genesis state (S<sub>0</sub>).
 
 The format of transaction and the `Apply` function are specified in XXX. The remaining of this document specifies:
 
@@ -14,7 +14,7 @@ The format of transaction and the `Apply` function are specified in XXX. The rem
 
 ## Merkle Trees and Proofs
 
-Authenticated data structures in the Libra protocol are based on Merkle trees. Like all the other Merkle trees, the root hash of a tree is a short authenticator, which forms a binding commitment to the entire tree that holds a large data structure. When a client queries an untrusted server for a specific part of the tree, the server returns the result with a short proof, and the client is able to verify the result using the proof and the authenticator. In this section we describe specific Merkle trees used in the Libra protocol which form the basic building blocks.
+Authenticated data structures in the Diem protocol are based on Merkle trees. Like all the other Merkle trees, the root hash of a tree is a short authenticator, which forms a binding commitment to the entire tree that holds a large data structure. When a client queries an untrusted server for a specific part of the tree, the server returns the result with a short proof, and the client is able to verify the result using the proof and the authenticator. In this section we describe specific Merkle trees used in the Diem protocol which form the basic building blocks.
 
 ### Hash Function
 
@@ -128,7 +128,7 @@ fn verify_accumulator_proof(
 
 #### Definition
 
-The sparse Merkle tree used in Libra protocol stores a key-value map, where all the keys are 256-bit byte arrays and values are arbitrary objects that are serializable as binary blobs. Sparse Merkle tree is also a binary tree, and each leaf in the tree corresponds to an entry in the map. Unlike Merkle Accumulator where objects are immutable once appended, sparse Merkle tree supports updating existing entries as well as adding and removing entries.
+The sparse Merkle tree used in Diem protocol stores a key-value map, where all the keys are 256-bit byte arrays and values are arbitrary objects that are serializable as binary blobs. Sparse Merkle tree is also a binary tree, and each leaf in the tree corresponds to an entry in the map. Unlike Merkle Accumulator where objects are immutable once appended, sparse Merkle tree supports updating existing entries as well as adding and removing entries.
 
 Given a map of key-value pairs, the sparse Merkle tree is constructed as follows. Using a prefix tree, we can represent a set of 2<sup>256</sup> entries. For simplicity, 4-bit keys are used in the examples. The diagram below shows a tree with 3 entries, where the keys are `0b0100`, `0b1000` and `0b1011`.
 
@@ -183,7 +183,7 @@ trait SparseMerkleTree<T> {
 }
 ```
 
-It is also possible to delete an entry from the tree, but the Libra protocol does not utilize this functionality at the moment.
+It is also possible to delete an entry from the tree, but the Diem protocol does not utilize this functionality at the moment.
 
 #### Proof format and verification
 
@@ -280,13 +280,13 @@ fn verify_sparse_merkle_proof(
 }
 ```
 
-## Libra Data Structure
+## Diem Data Structure
 
-The previous section described Merkle accumulator and sparse Merkle tree that form the basic building blocks of authenticated data structure used in the Libra Payment Network (LPN). In this section we describe the specific objects that build LPN.
+The previous section described Merkle accumulator and sparse Merkle tree that form the basic building blocks of authenticated data structure used in the Diem Payment Network (LPN). In this section we describe the specific objects that build LPN.
 
 ### Ledger State
 
-The ledger state represents the ground truth about the Libra ecosystem, including the quantity of coins held by each user at a given version. Each validator must know the ledger state at the latest version in order to execute new transactions. Specifically, the ledger state is a map from `AccountAddress` to a binary blob `AccountStateBlob` that represents the state of an account.
+The ledger state represents the ground truth about the Diem ecosystem, including the quantity of coins held by each user at a given version. Each validator must know the ledger state at the latest version in order to execute new transactions. Specifically, the ledger state is a map from `AccountAddress` to a binary blob `AccountStateBlob` that represents the state of an account.
 
 Each `AccountAddress` is hashed to a 256-bit `HashValue`. Then each `(hash(address), account_state_blob)` tuple is inserted into a sparse Merkle tree as a key-value pair. Based on the properties of cryptographic hash functions, we can assume that the resulting sparse Merkle tree is balanced no matter how the addresses are generated. This sparse Merkle tree represents the entire ledger state and the root hash of this tree is the state root hash, which means the state root hash is the authenticator for any account state at the same version.
 
@@ -300,7 +300,7 @@ When the state tree is updated after the execution of a transaction and a new tr
 
 #### Accounts
 
-At the logical level, an account is a collection of Move resources and modules. At the physical level, an account is an ordered map of access paths to byte array values. TODO: link to definition of access path. When an account is stored in the ledger state, the ordered map is serialized using Libra Canonical Serialization (LCS) to create a binary blob `AccountStateBlob` that gets inserted into a sparse Merkle tree.
+At the logical level, an account is a collection of Move resources and modules. At the physical level, an account is an ordered map of access paths to byte array values. TODO: link to definition of access path. When an account is stored in the ledger state, the ordered map is serialized using Diem Canonical Serialization (LCS) to create a binary blob `AccountStateBlob` that gets inserted into a sparse Merkle tree.
 
 ```rust
 type Path = Vec<u8>;
@@ -371,9 +371,9 @@ type LedgerHistory = MerkleAccumulator<TransactionInfo>;
 
 Therefore, the root hash of the ledger history accumulator acts as the authenticator for all the `TransactionInfo` objects, which in turn authenticate everything that has happened on the Blockchain, including all the transactions, current and historical ledger state, and all the contract events that were emitted. When the network is running, the consensus protocol will periodically distributed signed `LedgerInfo` which contains the root hash. Clients can use this to verify anything linked to the root of the accumulator.
 
-## Examples of using authenticated data structure in Libra
+## Examples of using authenticated data structure in Diem
 
-In the previous sections, we have specified the basic building blocks such as Merkle accumulator and sparse Merkle tree, as well as how the Libra data structures are constructed based on these Merkle trees. Here we give a few concrete examples of how clients can utilize the data structures to authenticate the responses they get from the server.
+In the previous sections, we have specified the basic building blocks such as Merkle accumulator and sparse Merkle tree, as well as how the Diem data structures are constructed based on these Merkle trees. Here we give a few concrete examples of how clients can utilize the data structures to authenticate the responses they get from the server.
 
 In this section, we always assume that the client has obtained the latest `LedgerInfo`, as well as enough signatures on this `LedgerInfo`. Therefore the client knows the latest root hash of the ledger history accumulator, which is part of the `LedgerInfo` struct.
 

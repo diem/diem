@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::{diem_channel, message_queues::QueueStyle};
 use futures::{executor::block_on, stream::StreamExt};
 use std::{
     io::{Cursor, Write},
@@ -44,7 +44,7 @@ pub fn run(args: Args) {
     static NUM_POP: AtomicUsize = AtomicUsize::new(0);
     static IS_DONE: AtomicBool = AtomicBool::new(false);
 
-    let (mut sender, mut receiver) = libra_channel::new::<[u8; KEY_SIZE_BYTES], [u8; MSG_SIZE_BYTES]>(
+    let (mut sender, mut receiver) = diem_channel::new::<[u8; KEY_SIZE_BYTES], [u8; MSG_SIZE_BYTES]>(
         QueueStyle::FIFO,
         NonZeroUsize::new(args.max_queue_size).unwrap(),
         None,

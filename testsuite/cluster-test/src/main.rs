@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
@@ -7,8 +7,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use libra_logger::{info, warn};
-use libra_types::chain_id::ChainId;
+use diem_logger::{info, warn};
+use diem_types::chain_id::ChainId;
 use reqwest::Url;
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
@@ -29,12 +29,12 @@ use cluster_test::{
     suite::ExperimentSuite,
     tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter},
 };
+use diem_config::config::DEFAULT_JSON_RPC_PORT;
 use futures::{
     future::{join_all, FutureExt},
     select,
 };
 use itertools::zip;
-use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use std::cmp::min;
 use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
 
@@ -46,10 +46,7 @@ struct Args {
     #[structopt(short = "p", long, use_delimiter = true, requires = "swarm")]
     peers: Vec<String>,
 
-    #[structopt(
-        long,
-        help = "If set, tries to connect to a libra-swarm instead of aws"
-    )]
+    #[structopt(long, help = "If set, tries to connect to a diem-swarm instead of aws")]
     swarm: bool,
     #[structopt(
         long,
@@ -261,7 +258,7 @@ fn setup_log() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-    ::libra_logger::Logger::new().is_async(true).init();
+    ::diem_logger::Logger::new().is_async(true).init();
 }
 
 struct BasicSwarmUtil {
@@ -486,7 +483,7 @@ impl ClusterTestRunner {
         let cluster_swarm = ClusterSwarmKube::new()
             .await
             .map_err(|e| format_err!("Failed to initialize ClusterSwarmKube: {}", e))?;
-        let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
+        let prometheus_ip = "diem-testnet-prometheus-server.default.svc.cluster.local";
         let grafana_base_url = cluster_swarm
             .get_grafana_baseurl()
             .await

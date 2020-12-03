@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Errors that originate from the PeerManager module
 
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::channel::{mpsc, oneshot};
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

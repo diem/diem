@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Defines constants for enum type values
-//! See the following Libra JSON-RPC response type documents for more details:
+//! See the following Diem JSON-RPC response type documents for more details:
 //! * https://github.com/libra/libra/blob/master/json-rpc/docs/type_account.md#type-account
 //! * https://github.com/libra/libra/blob/master/json-rpc/docs/type_event.md#event-data
 //! * https://github.com/libra/libra/blob/master/json-rpc/docs/type_transaction.md#type-vmstatus
@@ -19,7 +19,7 @@ pub const EVENT_DATA_UNKNOWN: &str = "unknown";
 pub const EVENT_DATA_BURN: &str = "burn";
 pub const EVENT_DATA_CANCEL_BURN: &str = "cancelburn";
 pub const EVENT_DATA_MINT: &str = "mint";
-pub const EVENT_DATA_TO_LBR_EXCHANGE_RATE_UPDATE: &str = "to_lbr_exchange_rate_update";
+pub const EVENT_DATA_TO_XDX_EXCHANGE_RATE_UPDATE: &str = "to_xdx_exchange_rate_update";
 pub const EVENT_DATA_PREBURN: &str = "preburn";
 pub const EVENT_DATA_RECEIVED_PAYMENT: &str = "receivedpayment";
 pub const EVENT_DATA_SENT_PAYMENT: &str = "sentpayment";

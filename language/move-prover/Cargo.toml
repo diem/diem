@@ -1,13 +1,13 @@
 [package]
 name = "move-prover"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
+authors = ["Diem Association <opensource@diem.com>"]
 publish = false
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-# libra dependencies
+# diem dependencies
 move-lang = { path = "../move-lang", version = "0.0.1" }
 spec-lang = { path = "spec-lang", version = "0.1.0" }
 docgen = { path = "docgen", version = "0.1.0" }
@@ -15,9 +15,9 @@ abigen = { path = "abigen", version = "0.1.0" }
 errmapgen = { path = "errmapgen", version = "0.1.0" }
 bytecode = { path = "bytecode", version = "0.1.0"}
 vm = { path = "../vm", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1.0" }
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 

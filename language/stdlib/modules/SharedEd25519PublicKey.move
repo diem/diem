@@ -6,7 +6,7 @@ address 0x1 {
 module SharedEd25519PublicKey {
     use 0x1::Authenticator;
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signature;
     use 0x1::Signer;
 
@@ -16,7 +16,7 @@ module SharedEd25519PublicKey {
         /// 32 byte ed25519 public key
         key: vector<u8>,
         /// rotation capability for an account whose authentication key is always derived from `key`
-        rotation_cap: LibraAccount::KeyRotationCapability,
+        rotation_cap: DiemAccount::KeyRotationCapability,
     }
 
     /// The shared ed25519 public key is not valid ed25519 public key
@@ -32,7 +32,7 @@ module SharedEd25519PublicKey {
     public fun publish(account: &signer, key: vector<u8>) {
         let t = SharedEd25519PublicKey {
             key: x"",
-            rotation_cap: LibraAccount::extract_key_rotation_capability(account)
+            rotation_cap: DiemAccount::extract_key_rotation_capability(account)
         };
         rotate_key_(&mut t, key);
         assert(!exists_at(Signer::address_of(account)), Errors::already_published(ESHARED_KEY));
@@ -46,11 +46,11 @@ module SharedEd25519PublicKey {
         account: signer;
         key: vector<u8>;
         let addr = Signer::spec_address_of(account);
-        include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
+        include DiemAccount::ExtractKeyRotationCapabilityAbortsIf;
         include RotateKey_AbortsIf {
                 shared_key: SharedEd25519PublicKey {
                     key: x"",
-                    rotation_cap: LibraAccount::spec_get_key_rotation_cap(addr)
+                    rotation_cap: DiemAccount::spec_get_key_rotation_cap(addr)
                 },
                 new_public_key: key
         };
@@ -71,7 +71,7 @@ module SharedEd25519PublicKey {
             Signature::ed25519_validate_pubkey(copy new_public_key),
             Errors::invalid_argument(EMALFORMED_PUBLIC_KEY)
         );
-        LibraAccount::rotate_authentication_key(
+        DiemAccount::rotate_authentication_key(
             &shared_key.rotation_cap,
             Authenticator::ed25519_authentication_key(copy new_public_key)
         );
@@ -85,7 +85,7 @@ module SharedEd25519PublicKey {
         shared_key: SharedEd25519PublicKey;
         new_public_key: vector<u8>;
         aborts_if !Signature::ed25519_validate_pubkey(new_public_key) with Errors::INVALID_ARGUMENT;
-        include LibraAccount::RotateAuthenticationKeyAbortsIf {
+        include DiemAccount::RotateAuthenticationKeyAbortsIf {
             cap: shared_key.rotation_cap,
             new_authentication_key: Authenticator::spec_ed25519_authentication_key(new_public_key)
         };

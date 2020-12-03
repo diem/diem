@@ -1,10 +1,10 @@
 [package]
 name = "socket-bench-server"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra socket bench server"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem socket bench server"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -14,12 +14,12 @@ futures = "0.3.8"
 tokio = { version = "0.2.22", features = ["full"] }
 tokio-util = { version = "0.3.1", features = ["codec"] }
 
-libra-crypto = { path = "../../crypto/crypto" }
-libra-config = { path = "../../config" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
-libra-network-address = { path = "../network-address", version = "0.1.0" }
-libra-types = { path = "../../types" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-config = { path = "../../config" }
+diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-network-address = { path = "../network-address", version = "0.1.0" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../../network/memsocket", version = "0.1.0" }
 netcore = { path = "../../network/netcore", version = "0.1.0", features = ["fuzzing", "testing"] }
 network = { path = "../../network", version = "0.1.0", features = ["testing", "fuzzing"] }

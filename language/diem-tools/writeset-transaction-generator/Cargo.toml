@@ -1,0 +1,26 @@
+[package]
+name = "diem-writeset-generator"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Generating writesets used for incident management"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.34"
+structopt = "0.3.21"
+tempfile = "3.1.0"
+handlebars = "3.5.1"
+serde = { version = "1.0.117", default-features = false }
+serde_json = "1.0.60"
+
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
+stdlib = { path = "../../stdlib", version = "0.1.0" }
+move-lang = { path = "../../move-lang", version = "0.0.1" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }

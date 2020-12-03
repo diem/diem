@@ -1,10 +1,10 @@
 [package]
-name = "libra-crypto-derive"
+name = "diem-crypto-derive"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra custom derives for `libra-crypto`"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem custom derives for `diem-crypto`"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 edition = "2018"
 
@@ -12,7 +12,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 syn = { version = "1.0.53", features = ["derive"] }
 quote = "1.0.7"
 proc-macro2 = "1.0.24"

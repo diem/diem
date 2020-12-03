@@ -1,0 +1,25 @@
+[package]
+name = "diem-validator-interface"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Defines interfaces between the diem nodes and local move infrastructure"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.10.9", features = ["blocking", "json"] }
+anyhow = "1.0.34"
+diem-config = { path = "../../../config", version = "0.1.0" }
+diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
+diemdb = { path = "../../../storage/diemdb", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+storage-interface = { path = "../../../storage/storage-interface", version = "0.1.0" }
+scratchpad = { path = "../../../storage/scratchpad", version = "0.1.0" }
+diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }

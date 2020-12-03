@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
@@ -23,6 +23,6 @@ impl AdminTransactionEvent {
 }
 
 impl MoveResource for AdminTransactionEvent {
-    const MODULE_NAME: &'static str = "LibraAccount";
+    const MODULE_NAME: &'static str = "DiemAccount";
     const STRUCT_NAME: &'static str = "AdminTransactionEvent";
 }

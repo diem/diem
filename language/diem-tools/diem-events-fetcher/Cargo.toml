@@ -1,0 +1,25 @@
+[package]
+name = "diem-events-fetcher"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Generating writesets used for incident management"
+repository = "https://github.com/libra/libra"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.34"
+hex = "0.4.2"
+reqwest = { version = "0.10.9", features = ["blocking", "json"] }
+structopt = "0.3.21"
+futures = "0.3.8"
+tokio = { version = "0.2.22", features = ["full"] }
+
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
+diem-types = { path = "../../../types", version = "0.1.0" }
+lcs = { version = "0.1.0", package = "libra-canonical-serialization" }

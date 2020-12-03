@@ -1,19 +1,19 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
+use diem_config::network_id::NetworkContext;
+use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
+use diem_logger::prelude::*;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use futures::{
     future::Future,
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
-use libra_config::network_id::NetworkContext;
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
-use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,

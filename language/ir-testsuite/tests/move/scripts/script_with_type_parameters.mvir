@@ -1,4 +1,4 @@
-//! type-args: u64, u8, 0x1::LibraAccount::LibraAccount
+//! type-args: u64, u8, 0x1::DiemAccount::DiemAccount
 main<T1, T2: copyable, T3: resource>() {
     return;
 }

@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use heck::CamelCase;
-use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
 use std::collections::{BTreeMap, BTreeSet};
@@ -90,9 +90,9 @@ pub(crate) fn mangle_type(type_tag: &TypeTag) -> String {
     }
 }
 
-pub(crate) fn get_external_definitions(libra_types: &str) -> serde_generate::ExternalDefinitions {
+pub(crate) fn get_external_definitions(diem_types: &str) -> serde_generate::ExternalDefinitions {
     let definitions = vec![(
-        libra_types,
+        diem_types,
         vec!["AccountAddress", "TypeTag", "Script", "TransactionArgument"],
     )];
     definitions

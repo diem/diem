@@ -1,10 +1,10 @@
 [package]
 name = "subscription-service"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra subscription service"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem subscription service"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -12,6 +12,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.34"
 
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 channel = { path = "..//channel", version = "0.1.0" }

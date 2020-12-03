@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::PersistableConfig;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
+use diem_config::config::PersistableConfig;
+use diem_network_address::NetworkAddress;
+use diem_types::PeerId;
 use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 

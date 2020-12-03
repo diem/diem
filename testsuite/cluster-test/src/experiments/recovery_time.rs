@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -15,7 +15,7 @@ use crate::{
     tx_emitter::EmitJobRequest,
 };
 use async_trait::async_trait;
-use libra_logger::info;
+use diem_logger::info;
 use std::time::Instant;
 
 #[derive(StructOpt, Debug)]
@@ -80,7 +80,7 @@ impl Experiment for RecoveryTime {
         );
         while self
             .instance
-            .counter("libra_consensus_last_committed_round")
+            .counter("diem_consensus_last_committed_round")
             .is_err()
         {
             time::delay_for(Duration::from_secs(1)).await;

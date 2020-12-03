@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /// This module provides various indexes used by Mempool
@@ -7,8 +7,8 @@ use crate::{
     counters,
     logging::{LogEntry, LogSchema},
 };
-use libra_logger::prelude::*;
-use libra_types::{account_address::AccountAddress, transaction::GovernanceRole};
+use diem_logger::prelude::*;
+use diem_types::{account_address::AccountAddress, transaction::GovernanceRole};
 use rand::seq::SliceRandom;
 use std::{
     cmp::Ordering,

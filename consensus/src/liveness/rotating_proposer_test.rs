@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::liveness::{
     proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer,
 };
 use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
-use libra_types::validator_signer::ValidatorSigner;
+use diem_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_rotating_proposer() {

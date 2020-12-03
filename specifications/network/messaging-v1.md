@@ -1,14 +1,14 @@
 # Messaging Protocol (v1)
 
-This document defines the messages and protocols for [LibraNet](spec.md) v1.
+This document defines the messages and protocols for [DiemNet](spec.md) v1.
 
 ## Versioning
 
-The messaging protocol is versioned using the [`MessagingProtocolVersion`](handshake-v1.md#data-structures). This version is then negotiated in the [LibraNet handshake protocol](handshake-v1.md) during connection establishment and upgrade.
+The messaging protocol is versioned using the [`MessagingProtocolVersion`](handshake-v1.md#data-structures). This version is then negotiated in the [DiemNet handshake protocol](handshake-v1.md) during connection establishment and upgrade.
 
 ## Messages
 
-LibraNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [lcs]. All LibraNet endpoints must be able to handle receiving all of these messages.
+DiemNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [lcs]. All DiemNet endpoints must be able to handle receiving all of these messages.
 
 ```rust
 /// Most primitive message type set on the network. Note this can only support up to 127 message
@@ -96,7 +96,7 @@ The DirectSend protocol provides one-way fire-and-forget-style message delivery.
 
 The `RpcRequest` , `RpcResponse` and `DirectSendMsg` structs also have a `priority` field. The message priority is a best-effort signal on how to prioritize (higher means more urgent) the message on both the sending and receiving ends. In case of RPC, the receiver could respect the request priority and attach the same priority value to the outbound response.
 
-Pending inbound and outbound messages MAY be reordered and dropped according to their `priority`, though the LibraNet reference implementation does not currently respect `priority`.
+Pending inbound and outbound messages MAY be reordered and dropped according to their `priority`, though the DiemNet reference implementation does not currently respect `priority`.
 
 ## Errors
 
@@ -106,11 +106,11 @@ Responding to errors is not required. A message must be of at least length 2 in 
 
 ### Flow control
 
-LibraNet does not define any mechanism or policy for back-pressure/flow-control. Each end-point is free to implement a local policy to safe-guard against chatty neighbors by not issuing TCP window updates.
+DiemNet does not define any mechanism or policy for back-pressure/flow-control. Each end-point is free to implement a local policy to safe-guard against chatty neighbors by not issuing TCP window updates.
 
 ## Framing
 
-Each serialized LibraNet message is framed by a big-endian encoded `u32` (4-bytes) length prefix. These message frames are then sent over a Noise-wrapped socket (which has its own internal framing, encryption, and decryption). Consequently, a single message frame may span multiple Noise frames. Likewise, a single Noise frame may contain multiple message frames.
+Each serialized DiemNet message is framed by a big-endian encoded `u32` (4-bytes) length prefix. These message frames are then sent over a Noise-wrapped socket (which has its own internal framing, encryption, and decryption). Consequently, a single message frame may span multiple Noise frames. Likewise, a single Noise frame may contain multiple message frames.
 
 The serialized `NetworkMsg`s over-the-wire then look like a sequence of length-prefix + message pairs (ignoring crypto and framing from lower layers):
 

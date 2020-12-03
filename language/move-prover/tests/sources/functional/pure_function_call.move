@@ -7,16 +7,16 @@ module TestPureFun {
         x: u64,
     }
 
-    public fun init(lr_account: &signer): bool {
-        assert(Signer::address_of(lr_account) == 0xA550C18, 0);
-        move_to(lr_account, T { x: 2 });
+    public fun init(dr_account: &signer): bool {
+        assert(Signer::address_of(dr_account) == 0xA550C18, 0);
+        move_to(dr_account, T { x: 2 });
         false
     }
 
     spec fun init {
-        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::LIBRA_ROOT_ADDRESS();
-        aborts_if exists<T>(Signer::spec_address_of(lr_account));
-        ensures lr_x() == pure_f_2();
+        aborts_if Signer::spec_address_of(dr_account) != CoreAddresses::DIEM_ROOT_ADDRESS();
+        aborts_if exists<T>(Signer::spec_address_of(dr_account));
+        ensures dr_x() == pure_f_2();
     }
 
     public fun get_x(addr: address): u64 acquires T {
@@ -61,8 +61,8 @@ module TestPureFun {
     }
 
     spec module {
-        define lr_x(): u64 {
-            get_x(CoreAddresses::LIBRA_ROOT_ADDRESS())
+        define dr_x(): u64 {
+            get_x(CoreAddresses::DIEM_ROOT_ADDRESS())
         }
     }
 

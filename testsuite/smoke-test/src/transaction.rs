@@ -1,9 +1,9 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_utils::setup_swarm_and_client_proxy;
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
-use libra_types::{account_config::COIN1_NAME, transaction::authenticator::AuthenticationKey};
+use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
+use diem_types::{account_config::XUS_NAME, transaction::authenticator::AuthenticationKey};
 
 #[test]
 fn test_external_transaction_signer() {
@@ -28,7 +28,7 @@ fn test_external_transaction_signer() {
     // mint to the sender address
     client
         .mint_coins(
-            &["mintb", &format!("{}", sender_auth_key), "10", "Coin1"],
+            &["mintb", &format!("{}", sender_auth_key), "10", "XUS"],
             true,
         )
         .unwrap();
@@ -39,7 +39,7 @@ fn test_external_transaction_signer() {
                 "mintb",
                 &format!("{}", receiver_auth_key.unwrap()),
                 "1",
-                "Coin1",
+                "XUS",
             ],
             true,
         )
@@ -50,7 +50,7 @@ fn test_external_transaction_signer() {
         .get_sequence_number(&["sequence", &format!("{}", sender_address)])
         .unwrap();
 
-    let currency_code = COIN1_NAME;
+    let currency_code = XUS_NAME;
 
     let unsigned_txn = client
         .prepare_transfer_coins(
@@ -104,7 +104,7 @@ fn test_external_transaction_signer() {
             assert_eq!(p_max_gas_amount, max_gas_amount);
 
             assert_eq!(script.r#type, "peer_to_peer_with_metadata");
-            assert_eq!(script.type_arguments, vec!["Coin1"]);
+            assert_eq!(script.type_arguments, vec!["XUS"]);
             assert_eq!(
                 script.arguments,
                 vec![

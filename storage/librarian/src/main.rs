@@ -1,11 +1,11 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
 
 use anyhow::Result;
 
-use libra_types::{account_address::AccountAddress, event::EventKey};
-use libradb::librarian::Librarian;
+use diem_types::{account_address::AccountAddress, event::EventKey};
+use diemdb::librarian::Librarian;
 use serde::Serialize;
 use serde_json::to_string_pretty;
 use std::path::PathBuf;
@@ -14,10 +14,10 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(
     name = "Librarian",
-    about = "A command line tool that offers multiple data access commands for LibraDB"
+    about = "A command line tool that offers multiple data access commands for DiemDB"
 )]
 struct Opt {
-    /// The parent dir of libradb
+    /// The parent dir of diemdb
     #[structopt(long = "db", parse(from_os_str))]
     db_dir: PathBuf,
 

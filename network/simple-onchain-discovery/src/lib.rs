@@ -1,17 +1,17 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use channel::libra_channel::{self, Receiver};
-use futures::{sink::SinkExt, StreamExt};
-use libra_config::{config::RoleType, network_id::NetworkContext};
-use libra_crypto::x25519;
-use libra_logger::prelude::*;
-use libra_metrics::{
+use channel::diem_channel::{self, Receiver};
+use diem_config::{config::RoleType, network_id::NetworkContext};
+use diem_crypto::x25519;
+use diem_logger::prelude::*;
+use diem_metrics::{
     register_histogram, register_int_counter_vec, DurationHistogram, IntCounterVec,
 };
-use libra_network_address::NetworkAddress;
-use libra_network_address_encryption::{Encryptor, Error as EncryptorError};
-use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
+use diem_network_address::NetworkAddress;
+use diem_network_address_encryption::{Encryptor, Error as EncryptorError};
+use diem_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
+use futures::{sink::SinkExt, StreamExt};
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
     counters::inc_by_with_context,
@@ -51,7 +51,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 
 pub static DISCOVERY_COUNTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_simple_onchain_discovery_counts",
+        "diem_simple_onchain_discovery_counts",
         "Histogram of busy time of spent in event processing loop",
         &["role_type", "network_id", "peer_id", "metric"]
     )
@@ -64,7 +64,7 @@ pub struct ConfigurationChangeListener {
     network_context: Arc<NetworkContext>,
     encryptor: Encryptor,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-    reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 }
 
 pub fn gen_simple_discovery_reconfig_subscription(
@@ -142,7 +142,7 @@ impl ConfigurationChangeListener {
         network_context: Arc<NetworkContext>,
         encryptor: Encryptor,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
-        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+        reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         Self {
             network_context,

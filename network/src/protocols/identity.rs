@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Protocol used to exchange supported protocol information with a remote.
@@ -48,9 +48,9 @@ mod tests {
         },
         ProtocolId,
     };
+    use diem_config::network_id::NetworkId;
+    use diem_types::chain_id::ChainId;
     use futures::{executor::block_on, future::join};
-    use libra_config::network_id::NetworkId;
-    use libra_types::chain_id::ChainId;
     use memsocket::MemorySocket;
     use std::collections::BTreeMap;
 

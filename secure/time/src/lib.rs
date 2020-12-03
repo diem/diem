@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -35,7 +35,7 @@ impl RealTimeService {
 
 impl TimeService for RealTimeService {
     fn now(&self) -> u64 {
-        libra_infallible::duration_since_epoch().as_secs()
+        diem_infallible::duration_since_epoch().as_secs()
     }
 
     fn sleep(&self, seconds: u64) {

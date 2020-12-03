@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -6,8 +6,8 @@ use crate::{
     vault::{VaultEngine, VaultStorage},
     Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Storage,
 };
-use libra_crypto::{test_utils::TestLibraCrypto, Signature};
-use libra_vault_client::dev::{self, ROOT_TOKEN};
+use diem_crypto::{test_utils::TestDiemCrypto, Signature};
+use diem_vault_client::dev::{self, ROOT_TOKEN};
 
 /// VaultStorage namespace constants
 const VAULT_NAMESPACE_1: &str = "namespace_1";
@@ -45,7 +45,7 @@ const VAULT_TESTS: &[fn()] = &[
     test_vault_tokens,
 ];
 
-/// A test for verifying VaultStorage properly implements the LibraSecureStorage API and enforces
+/// A test for verifying VaultStorage properly implements the DiemSecureStorage API and enforces
 /// strict separation between unique namespaces. This test depends on running Vault, which can be
 /// done by using the provided docker run script in `docker/vault/run.sh`
 #[test]
@@ -257,7 +257,7 @@ fn test_vault_crypto_policies() {
         pubkey
     );
 
-    let message = TestLibraCrypto("Hello, World".to_string());
+    let message = TestDiemCrypto("Hello, World".to_string());
 
     // Verify exporter policy
     let exporter_token = storage.create_token(vec![&EXPORTER]).unwrap();

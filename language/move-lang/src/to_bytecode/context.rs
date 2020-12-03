@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
         ConstantName, FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName, Var,
     },
 };
-use libra_types::account_address::AccountAddress as LibraAddress;
+use diem_types::account_address::AccountAddress as DiemAddress;
 use move_ir_types::ast as IR;
 use std::{
     clone::Clone,
@@ -218,7 +218,7 @@ impl<'a> Context<'a> {
         let name = Self::translate_module_name(name);
         IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
-            LibraAddress::new(address.to_u8()),
+            DiemAddress::new(address.to_u8()),
         ))
     }
 

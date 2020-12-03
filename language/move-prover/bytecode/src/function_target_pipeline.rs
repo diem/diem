@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -115,13 +115,13 @@ impl FunctionTargetPipeline {
             // 1. callees is empty (common case)
             // 2. callees is nonempty and mid is part of a recursive or mutually recursive
             //    intra-module call cycle (possible in theory, but doesn't happen in the current
-            //    implementation of the Libra framework).
+            //    implementation of the Diem framework).
             to_remove.push(call_id);
             let func_env = env.get_function(call_id);
             if !callees.is_empty() {
                 // The right long-term thing to do here is to allow analysis in case (2) and ask the
                 // analysis processors to deal gracefully with the absence of summaries. But for
-                // now, we intentionally fail because recursion is not expected in Libra Framework
+                // now, we intentionally fail because recursion is not expected in Diem Framework
                 // code
                 unimplemented!("Recursion or mutual recursion detected in {:?}. Make sure that all analyses in  self.processors are prepared to handle recursion", func_env.get_identifier());
             }

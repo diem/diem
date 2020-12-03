@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use language_e2e_tests::{
-    account::Account, assert_prologue_parity, compile::compile_module_with_address,
-    current_function_name, executor::FakeExecutor, transaction_status_eq,
-};
-use libra_types::{
+use diem_types::{
     account_config::{self},
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
     vm_status::{KeptVMStatus, StatusCode},
+};
+use language_e2e_tests::{
+    account::Account, assert_prologue_parity, compile::compile_module_with_address,
+    current_function_name, executor::FakeExecutor, transaction_status_eq,
 };
 
 // A module with an address different from the sender's address should be rejected
@@ -152,7 +152,7 @@ pub fn test_publishing_no_modules_non_allowlist_script_proper_sender() {
     executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_libra_root();
+    let sender = Account::new_diem_root();
 
     let program = String::from(
         "
@@ -182,7 +182,7 @@ pub fn test_publishing_no_modules_proper_sender() {
     executor.set_golden_file(current_function_name!());
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_libra_root();
+    let sender = Account::new_diem_root();
 
     let program = String::from(
         "

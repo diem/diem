@@ -116,7 +116,7 @@ Thus, the sync up protocol of \texttt{StateSynchronizer} makes sure that both th
 \label{waypoint-motivation}
 A \emph{cold} node (the one that comes online for the first time, or after a long period of being disconnected), faces a problem of the initial syncup because it might no longer trust the old public keys of the historical validators it is aware of, which could have been compromised since then (the so called “long range attack”).
 
-\emph{Waypoints} can be used  as an off-chain mechanism for selecting the initial trusted set of validators and specific points in the accumulator history. Waypoints can be published by anyone. The Libra Association is also expected to publish waypoints on a regular basis (e.g., on \url{https://developers.libra.org}). Any waypoint selected by clients can be embedded within the nodes (clients / full nodes / validators) as a trusted “starting point”.
+\emph{Waypoints} can be used  as an off-chain mechanism for selecting the initial trusted set of validators and specific points in the accumulator history. Waypoints can be published by anyone. The Diem Association is also expected to publish waypoints on a regular basis (e.g., on \url{https://developers.diem.com}). Any waypoint selected by clients can be embedded within the nodes (clients / full nodes / validators) as a trusted “starting point”.
 
 The trusted points in history determined by the waypoints can be used in the following situations:
 \begin{itemize}

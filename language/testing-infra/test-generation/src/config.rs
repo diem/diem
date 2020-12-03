@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use module_generation::ModuleGeneratorOptions;
@@ -83,7 +83,7 @@ pub fn module_generation_settings() -> ModuleGeneratorOptions {
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "Bytecode Test Generator",
-    author = "Libra",
+    author = "Diem",
     about = "Tool for generating tests for the bytecode verifier and Move VM runtime."
 )]
 pub struct Args {

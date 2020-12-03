@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Tasks that are executed by coordinators (short-lived compared to coordinators)
@@ -16,17 +16,17 @@ use crate::{
     SubmissionStatus,
 };
 use anyhow::Result;
-use futures::{channel::oneshot, stream::FuturesUnordered};
-use libra_config::config::PeerNetworkId;
-use libra_infallible::{Mutex, RwLock};
-use libra_logger::prelude::*;
-use libra_metrics::HistogramTimer;
-use libra_types::{
+use diem_config::config::PeerNetworkId;
+use diem_infallible::{Mutex, RwLock};
+use diem_logger::prelude::*;
+use diem_metrics::HistogramTimer;
+use diem_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction,
     vm_status::DiscardedVMStatus,
 };
+use futures::{channel::oneshot, stream::FuturesUnordered};
 use rayon::prelude::*;
 use std::{
     cmp,
@@ -405,7 +405,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 let mut mempool = mempool.lock();
                 // gc before pulling block as extra protection against txns that may expire in consensus
                 // Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp
-                let curr_time = libra_infallible::duration_since_epoch();
+                let curr_time = diem_infallible::duration_since_epoch();
                 mempool.gc_by_expiration_time(curr_time);
                 let block_size = cmp::max(max_block_size, 1);
                 txns = mempool.get_block(block_size, exclude_transactions);

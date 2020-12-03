@@ -1,7 +1,7 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Implementation of the RPC protocol as per Libra wire protocol v1.
+//! Implementation of the RPC protocol as per Diem wire protocol v1.
 //!
 //! Design:
 //! -------
@@ -55,6 +55,9 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
+use diem_config::network_id::NetworkContext;
+use diem_logger::prelude::*;
+use diem_types::PeerId;
 use error::RpcError;
 use futures::{
     channel::oneshot,
@@ -63,9 +66,6 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
     task::Context,
 };
-use libra_config::network_id::NetworkContext;
-use libra_logger::prelude::*;
-use libra_types::PeerId;
 use serde::Serialize;
 use std::{collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 

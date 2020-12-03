@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters;
@@ -6,8 +6,8 @@ use anyhow::bail;
 use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
-use libra_crypto::HashValue;
-use libra_logger::prelude::*;
+use diem_crypto::HashValue;
+use diem_logger::prelude::*;
 use mirai_annotations::{checked_verify_eq, precondition};
 use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},

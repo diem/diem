@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -81,8 +81,8 @@ pub mod test_helper;
 mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
-use libra_crypto::HashValue;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,

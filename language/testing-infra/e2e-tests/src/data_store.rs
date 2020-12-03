@@ -1,19 +1,19 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Support for mocking the Libra data store.
+//! Support for mocking the Diem data store.
 
 use crate::account::AccountData;
 use anyhow::Result;
 use compiled_stdlib::StdLibOptions;
-use libra_state_view::StateView;
-use libra_types::{
+use diem_state_view::StateView;
+use diem_types::{
     access_path::AccessPath,
     on_chain_config::ConfigStorage,
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
-use libra_vm::data_cache::RemoteStorage;
+use diem_vm::data_cache::RemoteStorage;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},

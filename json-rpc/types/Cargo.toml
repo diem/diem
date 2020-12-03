@@ -1,10 +1,10 @@
 [package]
-name = "libra-json-rpc-types"
+name = "diem-json-rpc-types"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra JSONRPC Types"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem JSONRPC Types"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -18,9 +18,9 @@ prost = "0.6.1"
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 move-explain = { path = "../../language/tools/move-explain", version = "0.1.0" }
 

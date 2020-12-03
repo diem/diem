@@ -434,91 +434,91 @@ pub fun Signer::borrow_address(s: &signer): &address {
 }
 
 
-pub fun Libra::market_cap<$tv0>(): u128 {
+pub fun Diem::market_cap<$tv0>(): u128 {
      var $t0: address
-     var $t1: &Libra::Info<#0>
+     var $t1: &Diem::Info<#0>
      var $t2: &u128
      var $t3: u128
   0: $t0 := 0xa550c18
-  1: $t1 := borrow_global<Libra::Info<#0>>($t0)
-  2: $t2 := borrow_field<Libra::Info<#0>>.total_value($t1)
+  1: $t1 := borrow_global<Diem::Info<#0>>($t0)
+  2: $t2 := borrow_field<Diem::Info<#0>>.total_value($t1)
   3: $t3 := read_ref($t2)
   4: return $t3
 }
 
 
-pub fun Libra::preburn<$tv0>(preburn_ref: &mut Libra::Preburn<#0>, coin: Libra::T<#0>) {
+pub fun Diem::preburn<$tv0>(preburn_ref: &mut Diem::Preburn<#0>, coin: Diem::T<#0>) {
      var coin_value: u64
-     var market_cap: &mut Libra::Info<#0>
-     var $t4: &Libra::T<#0>
+     var market_cap: &mut Diem::Info<#0>
+     var $t4: &Diem::T<#0>
      var $t5: u64
-     var $t6: &mut Libra::Preburn<#0>
-     var $t7: &mut vector<Libra::T<#0>>
-     var $t8: Libra::T<#0>
+     var $t6: &mut Diem::Preburn<#0>
+     var $t7: &mut vector<Diem::T<#0>>
+     var $t8: Diem::T<#0>
      var $t9: address
-     var $t10: &mut Libra::Info<#0>
-     var $t11: &mut Libra::Info<#0>
+     var $t10: &mut Diem::Info<#0>
+     var $t11: &mut Diem::Info<#0>
      var $t12: &u64
      var $t13: u64
      var $t14: u64
      var $t15: u64
-     var $t16: &mut Libra::Info<#0>
+     var $t16: &mut Diem::Info<#0>
      var $t17: &mut u64
   0: $t4 := borrow_local(coin)
-  1: $t5 := Libra::value<#0>($t4)
+  1: $t5 := Diem::value<#0>($t4)
   2: coin_value := $t5
   3: $t6 := move(preburn_ref)
-  4: $t7 := borrow_field<Libra::Preburn<#0>>.requests($t6)
+  4: $t7 := borrow_field<Diem::Preburn<#0>>.requests($t6)
   5: $t8 := move(coin)
-  6: Vector::push_back<Libra::T<#0>>($t7, $t8)
+  6: Vector::push_back<Diem::T<#0>>($t7, $t8)
   7: $t9 := 0xa550c18
-  8: $t10 := borrow_global<Libra::Info<#0>>($t9)
+  8: $t10 := borrow_global<Diem::Info<#0>>($t9)
   9: market_cap := $t10
  10: $t11 := copy(market_cap)
- 11: $t12 := borrow_field<Libra::Info<#0>>.preburn_value($t11)
+ 11: $t12 := borrow_field<Diem::Info<#0>>.preburn_value($t11)
  12: $t13 := read_ref($t12)
  13: $t14 := copy(coin_value)
  14: $t15 := +($t13, $t14)
  15: $t16 := move(market_cap)
- 16: $t17 := borrow_field<Libra::Info<#0>>.preburn_value($t16)
+ 16: $t17 := borrow_field<Diem::Info<#0>>.preburn_value($t16)
  17: write_ref($t17, $t15)
  18: return ()
 }
 
 
-pub fun Libra::preburn_to<$tv0>(account: &signer, coin: Libra::T<#0>) {
+pub fun Diem::preburn_to<$tv0>(account: &signer, coin: Diem::T<#0>) {
      var $t2: &signer
      var $t3: address
-     var $t4: &mut Libra::Preburn<#0>
-     var $t5: Libra::T<#0>
+     var $t4: &mut Diem::Preburn<#0>
+     var $t5: Diem::T<#0>
   0: $t2 := move(account)
   1: $t3 := Signer::address_of($t2)
-  2: $t4 := borrow_global<Libra::Preburn<#0>>($t3)
+  2: $t4 := borrow_global<Diem::Preburn<#0>>($t3)
   3: $t5 := move(coin)
-  4: Libra::preburn<#0>($t4, $t5)
+  4: Diem::preburn<#0>($t4, $t5)
   5: return ()
 }
 
 
-pub fun Libra::preburn_value<$tv0>(): u64 {
+pub fun Diem::preburn_value<$tv0>(): u64 {
      var $t0: address
-     var $t1: &Libra::Info<#0>
+     var $t1: &Diem::Info<#0>
      var $t2: &u64
      var $t3: u64
   0: $t0 := 0xa550c18
-  1: $t1 := borrow_global<Libra::Info<#0>>($t0)
-  2: $t2 := borrow_field<Libra::Info<#0>>.preburn_value($t1)
+  1: $t1 := borrow_global<Diem::Info<#0>>($t0)
+  2: $t2 := borrow_field<Diem::Info<#0>>.preburn_value($t1)
   3: $t3 := read_ref($t2)
   4: return $t3
 }
 
 
-pub fun Libra::value<$tv0>(coin_ref: &Libra::T<#0>): u64 {
-     var $t1: &Libra::T<#0>
+pub fun Diem::value<$tv0>(coin_ref: &Diem::T<#0>): u64 {
+     var $t1: &Diem::T<#0>
      var $t2: &u64
      var $t3: u64
   0: $t1 := move(coin_ref)
-  1: $t2 := borrow_field<Libra::T<#0>>.value($t1)
+  1: $t2 := borrow_field<Diem::T<#0>>.value($t1)
   2: $t3 := read_ref($t2)
   3: return $t3
 }

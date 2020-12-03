@@ -1,10 +1,10 @@
 [package]
 name = "consensus"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra consensus"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem consensus"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -35,18 +35,18 @@ execution-correctness = { path = "../execution/execution-correctness", version =
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "../config", version = "0.1.0" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-mempool = { path = "../mempool", version = "0.1.0" }
-libra-metrics = { path = "../common/metrics", version = "0.1.0" }
-libra-infallible = { path = "../common/infallible", version = "0.1.0" }
-libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
-libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-trace = { path = "../common/trace", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
-libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
-libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../config", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+diem-logger = { path = "../common/logger", version = "0.1.0" }
+diem-mempool = { path = "../mempool", version = "0.1.0" }
+diem-metrics = { path = "../common/metrics", version = "0.1.0" }
+diem-infallible = { path = "../common/infallible", version = "0.1.0" }
+diem-secure-storage = { path = "../secure/storage", version = "0.1.0" }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-trace = { path = "../common/trace", version = "0.1.0" }
+diem-types = { path = "../types", version = "0.1.0" }
+diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 safety-rules = { path = "safety-rules", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
@@ -60,13 +60,13 @@ tempfile = "3.1.0"
 
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false, features = ["fuzzing"] }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
-libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
-libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
+diem-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
+diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
 safety-rules = { path = "safety-rules", version = "0.1.0", features = ["testing"] }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["proptest", "consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "safety-rules/testing"]
+fuzzing = ["proptest", "consensus-types/fuzzing", "diem-config/fuzzing", "diem-crypto/fuzzing", "diem-mempool/fuzzing", "diem-types/fuzzing", "safety-rules/testing"]
 failpoints = ["fail/failpoints"]

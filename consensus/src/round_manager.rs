@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -33,10 +33,10 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
+use diem_logger::prelude::*;
+use diem_trace::prelude::*;
+use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 use fail::fail_point;
-use libra_logger::prelude::*;
-use libra_trace::prelude::*;
-use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;

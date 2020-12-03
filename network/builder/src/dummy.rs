@@ -1,20 +1,20 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Integration tests for validator_network.
 
 use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
-use futures::{executor::block_on, StreamExt};
-use libra_config::{
+use diem_config::{
     config::{RoleType, NETWORK_CHANNEL_SIZE},
     network_id::{NetworkContext, NetworkId},
 };
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
-use libra_infallible::RwLock;
-use libra_metrics::IntCounterVec;
-use libra_network_address::NetworkAddress;
-use libra_types::{chain_id::ChainId, PeerId};
+use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use diem_infallible::RwLock;
+use diem_metrics::IntCounterVec;
+use diem_network_address::NetworkAddress;
+use diem_types::{chain_id::ChainId, PeerId};
+use futures::{executor::block_on, StreamExt};
 use netcore::transport::ConnectionOrigin;
 use network::{
     error::NetworkError,

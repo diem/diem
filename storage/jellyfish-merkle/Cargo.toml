@@ -1,10 +1,10 @@
 [package]
-name = "libra-jellyfish-merkle"
+name = "diem-jellyfish-merkle"
 version = "0.1.0"
-authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra jellyfish merkle"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem jellyfish merkle"
 repository = "https://github.com/libra/libra"
-homepage = "https://libra.org"
+homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
@@ -22,22 +22,22 @@ serde = { version = "1.0.117", features = ["derive"] }
 thiserror = "1.0.22"
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-libra-infallible = { path = "../../common/infallible", version = "0.1.0" }
-libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
+diem-nibble = { path = "../../common/nibble", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.7.3"
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
 
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-libra-nibble = { path = "../../common/nibble", version = "0.1.0", features = ["fuzzing"] }
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-nibble = { path = "../../common/nibble", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []
-fuzzing = ["proptest", "rand", "proptest-derive", "libra-crypto/fuzzing", "libra-types/fuzzing", "libra-nibble/fuzzing"]
+fuzzing = ["proptest", "rand", "proptest-derive", "diem-crypto/fuzzing", "diem-types/fuzzing", "diem-nibble/fuzzing"]

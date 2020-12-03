@@ -4,14 +4,14 @@ This guide describes the process for adding, removing, and changing the Move mod
 
 ## Overview
 
-Every state change in the Libra blockchain occurs via executing a Move *transaction script* embedded in a [SignedTransaction](../../types/src/transaction/mod.rs). A transaction script invokes procedures of Move *modules* that update published *resources*. The Move standard library consists of:
+Every state change in the Diem blockchain occurs via executing a Move *transaction script* embedded in a [SignedTransaction](../../types/src/transaction/mod.rs). A transaction script invokes procedures of Move *modules* that update published *resources*. The Move standard library consists of:
 
 1. The [modules](modules/) published in the genesis transaction.
-2. The authorized [transaction scripts](transaction_scripts/) that can be included in a Libra transaction. A transaction with an unauthorized script will be discarded by validators.
+2. The authorized [transaction scripts](transaction_scripts/) that can be included in a Diem transaction. A transaction with an unauthorized script will be discarded by validators.
 
 ## Environment Setup
 
-Start by following the general Libra setup advice [here](../../CONTRIBUTING.md). Nothing else is strictly required, but you may want to consider a Move syntax highlighter for your editor (asking it to interpret `.move` files as Rust source is a decent start).
+Start by following the general Diem setup advice [here](../../CONTRIBUTING.md). Nothing else is strictly required, but you may want to consider a Move syntax highlighter for your editor (asking it to interpret `.move` files as Rust source is a decent start).
 
 <!-- TODO: editor-specific suggestions, bash aliases -->
 
@@ -27,7 +27,7 @@ inside `stdlib` to compile all of the standard library modules, transaction scri
 
 Most tests for the standard library live [here](../move-lang/functional-tests) and can be run with `cargo test`.
 
-These tests use the Move functional testing framework, which we will briefly explain here (more details can be found in this [blog post](https://developers.libra.org/blog/2020/03/06/how-to-use-the-end-to-end-tests-framework-in-move).
+These tests use the Move functional testing framework, which we will briefly explain here (more details can be found in this [blog post](https://developers.diem.com/blog/2020/03/06/how-to-use-the-end-to-end-tests-framework-in-move).
 
 A functional test is a sequence of Move transaction scripts that are executed against the genesis state of the blockchain. Tests typically call functions of the module under test and then use `assert`s to check that the call had the expected effect. The framework includes directives for checking that a transaction executed successfully (`// check: EXECUTED`) or aborted (e.g., `// check: ABORTED`). In addition, there are configuration macros (written `//!`) for creating accounts with human-readable names (`//! account: alice`), begining a new transaction (`//! new-transaction`), and setting the sender of a transaction (`//! sender: alice`).
 
@@ -54,12 +54,12 @@ The functional testing framework is very convenient, but can't express all of th
 ## Coding conventions
 
 ### Naming
-- **Module names**: are camel case e.g., `LibraAccount`, `Libra`
+- **Module names**: are camel case e.g., `DiemAccount`, `Diem`
 - **Type names**: are camel case e.g., `WithdrawalCapability`, `KeyRotationCapability`
 - **Function names**: are lower snake case e.g., `register_currency`
 - **Constant names**: are upper snake case e.g., `TREASURY_COMPLIANCE_ADDRESS`
-- Generic types should be descriptive, or anti-descriptive where appropriate (e.g. `T` for the Vector generic type parameter, `LibraAccount` for the core `LibraAccount` resource, `deposit<CoinType>(t: CoinType)` for depositing a token in the `Libra` module). Most of the time the "main" type in a module should be the same name as the module e.g., `Libra::Libra`, `LibraAccount::LibraAccount`.
-- **Module file names**: are the same as the module name e.g., `LibraAccount.move`
+- Generic types should be descriptive, or anti-descriptive where appropriate (e.g. `T` for the Vector generic type parameter, `DiemAccount` for the core `DiemAccount` resource, `deposit<CoinType>(t: CoinType)` for depositing a token in the `Diem` module). Most of the time the "main" type in a module should be the same name as the module e.g., `Diem::Diem`, `DiemAccount::DiemAccount`.
+- **Module file names**: are the same as the module name e.g., `DiemAccount.move`
 - **Script file names**: should be lower snake case and named after the name of the “main” function in the script.
 - **Mixed file names**: If the file contains multiple modules and/or scripts, the file name should be lower_snake_case, where the name does not match any particular module/script inside.
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use move_ir_types::location::*;
@@ -24,7 +24,7 @@ pub const ADDRESS_LENGTH: usize = 16;
 pub struct Address([u8; ADDRESS_LENGTH]);
 
 impl Address {
-    pub const LIBRA_CORE: Address = Address::new([
+    pub const DIEM_CORE: Address = Address::new([
         0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,
     ]);
 

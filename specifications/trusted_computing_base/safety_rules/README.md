@@ -1,8 +1,8 @@
-# Libra Safety Rules
+# Diem Safety Rules
 
 ## Overview
 
-Libra Safety Rules (LSR) ensures that a validator running LSR will not become byzantine. This translates into the property that a committed transaction is irreversible. This property is known as "no-forks" and effectively means that consensus rounds are strictly linear and storage is append-only.  A fork occurs when two ledgers or committed blocks, LI1 and LI2, do not have a linear relationship, in other words, neither LI1 is a prefix of LI2 nor LI2 is a prefix of LI1.
+Diem Safety Rules (LSR) ensures that a validator running LSR will not become byzantine. This translates into the property that a committed transaction is irreversible. This property is known as "no-forks" and effectively means that consensus rounds are strictly linear and storage is append-only.  A fork occurs when two ledgers or committed blocks, LI1 and LI2, do not have a linear relationship, in other words, neither LI1 is a prefix of LI2 nor LI2 is a prefix of LI1.
 
 This specification builds on top of the [Consensus specification](../consensus/spec.md) and defines how to separate out the [Consensus safety rules](../consensus/spec.md#safety-rules) into a minimal software component that ensures that even a Byzantine validator would be unable to violate the "no-forks" property so long as LSR has not been compromised. In effect, this is the validator's consensus trusted computing base:
 
@@ -16,7 +16,7 @@ By maintaining the following properties, LSR ensures that consensus will observe
 2. A validator can only vote on a proposal if it extends from a certified block, or a proposal and its executed state that a quorum of voters have seen.
 3. A validator can only vote on a proposal if the output of that proposal extends its parent's executed state.
 4. The key used to sign proposals is used solely by LSR and in a way that would not violate the previous properties.
-5. Additionally, when combined with Libra Execution Correctness (LEC), ensures that the transactions are faithfully executed and committed.
+5. Additionally, when combined with Diem Execution Correctness (LEC), ensures that the transactions are faithfully executed and committed.
 
 ## Terms
 
@@ -189,9 +189,9 @@ Each `Vote` contains the executed state output, the resulting root hash of the b
 
 #### Property 4
 
-> Additionally, when combined with Libra Execution Correctness (LEC), ensures that the transactions are faithfully executed and committed to the blockchain.
+> Additionally, when combined with Diem Execution Correctness (LEC), ensures that the transactions are faithfully executed and committed to the blockchain.
 
-The validator node may be configured to leverage an additional process known as the Libra Execution Correctness (LEC). LEC is another TCB that runs in a more trusted fashion than consensus itself. Because consensus forwards all messages to LSR, LEC constructs and signs the `VoteProposal` with the `execution_key`. This informs LSR that the contents have not been tampered by processes running in a less trusted environment than LEC including consensus.
+The validator node may be configured to leverage an additional process known as the Diem Execution Correctness (LEC). LEC is another TCB that runs in a more trusted fashion than consensus itself. Because consensus forwards all messages to LSR, LEC constructs and signs the `VoteProposal` with the `execution_key`. This informs LSR that the contents have not been tampered by processes running in a less trusted environment than LEC including consensus.
 
 ### Proposing -- `sign_proposal`
 

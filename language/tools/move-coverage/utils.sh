@@ -1,4 +1,4 @@
-# Copyright (c) The Libra Core Contributors
+# Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 alias coverage_update="pkill cargo; cargo run --release --bin move-trace-conversion -- -f $HOME/trace -u trace.mvcov -o trace.mvcov; rm -rf $HOME/trace"

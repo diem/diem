@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Project and package linters that run queries on guppy.
@@ -188,7 +188,7 @@ impl PackageLinter for CrateNamesPaths {
     }
 }
 
-/// Ensure libra-workspace-hack is a dependency
+/// Ensure diem-workspace-hack is a dependency
 #[derive(Debug)]
 pub struct WorkspaceHack;
 
@@ -208,11 +208,11 @@ impl PackageLinter for WorkspaceHack {
         let pkg_graph = ctx.package_graph();
         let workspace_hack_id = pkg_graph
             .workspace()
-            .member_by_name("libra-workspace-hack")
-            .expect("can't find libra-workspace-hack package")
+            .member_by_name("diem-workspace-hack")
+            .expect("can't find diem-workspace-hack package")
             .id();
 
-        // libra-workspace-hack does not need to depend on itself
+        // diem-workspace-hack does not need to depend on itself
         if package.id() == workspace_hack_id {
             return Ok(RunStatus::Executed);
         }
@@ -222,7 +222,7 @@ impl PackageLinter for WorkspaceHack {
             .directly_depends_on(package.id(), workspace_hack_id)
             .expect("valid package ID");
         if has_links && !has_hack_dep {
-            out.write(LintLevel::Error, "missing libra-workspace-hack dependency");
+            out.write(LintLevel::Error, "missing diem-workspace-hack dependency");
         }
 
         Ok(RunStatus::Executed)

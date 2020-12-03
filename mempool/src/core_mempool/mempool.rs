@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! mempool is used to track transactions which have been submitted but not yet
@@ -13,10 +13,10 @@ use crate::{
     counters,
     logging::{LogEntry, LogSchema, TxnsLog},
 };
-use libra_config::config::NodeConfig;
-use libra_logger::prelude::*;
-use libra_trace::prelude::*;
-use libra_types::{
+use diem_config::config::NodeConfig;
+use diem_logger::prelude::*;
+use diem_trace::prelude::*;
+use diem_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::{GovernanceRole, SignedTransaction},
@@ -133,7 +133,7 @@ impl Mempool {
         }
 
         let expiration_time =
-            libra_infallible::duration_since_epoch() + self.system_transaction_timeout;
+            diem_infallible::duration_since_epoch() + self.system_transaction_timeout;
         if timeline_state != TimelineState::NonQualified {
             self.metrics_cache
                 .insert((txn.sender(), txn.sequence_number()), SystemTime::now());

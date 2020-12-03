@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
-use libra_config::config::{
+use diem_config::config::{
     RoleType, DEFAULT_BATCH_SIZE_LIMIT, DEFAULT_CONTENT_LENGTH_LIMIT, DEFAULT_PAGE_SIZE_LIMIT,
 };
-use libra_crypto::HashValue;
-use libra_mempool::MempoolClientSender;
-use libra_types::{
+use diem_crypto::HashValue;
+use diem_mempool::MempoolClientSender;
+use diem_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
@@ -37,7 +37,7 @@ use tokio::runtime::Runtime;
 /// Should only be used for unit-tests
 pub fn test_bootstrap(
     address: SocketAddr,
-    libra_db: Arc<dyn DbReader>,
+    diem_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     crate::bootstrap(
@@ -45,16 +45,16 @@ pub fn test_bootstrap(
         DEFAULT_BATCH_SIZE_LIMIT,
         DEFAULT_PAGE_SIZE_LIMIT,
         DEFAULT_CONTENT_LENGTH_LIMIT,
-        libra_db,
+        diem_db,
         mp_sender,
         RoleType::Validator,
         ChainId::test(),
     )
 }
 
-/// Lightweight mock of LibraDB
+/// Lightweight mock of DiemDB
 #[derive(Clone)]
-pub struct MockLibraDB {
+pub struct MockDiemDB {
     pub version: u64,
     pub genesis: HashMap<AccountAddress, AccountStateBlob>,
     pub all_accounts: HashMap<AccountAddress, AccountStateBlob>,
@@ -64,7 +64,7 @@ pub struct MockLibraDB {
     pub timestamps: Vec<u64>,
 }
 
-impl DbReader for MockLibraDB {
+impl DbReader for MockDiemDB {
     fn get_latest_account_state(
         &self,
         address: AccountAddress,

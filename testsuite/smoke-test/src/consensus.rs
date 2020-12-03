@@ -1,22 +1,20 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     operational_tooling::launch_swarm_with_op_tool_and_backend,
     smoke_test_environment::SmokeTestEnvironment,
     test_utils::{
-        libra_swarm_utils::{
-            get_op_tool, load_backend_storage, load_node_config, save_node_config,
-        },
+        diem_swarm_utils::{get_op_tool, load_backend_storage, load_node_config, save_node_config},
         wait_for_transaction_on_all_nodes,
     },
 };
-use libra_config::config::SecureBackend;
-use libra_global_constants::OWNER_ACCOUNT;
-use libra_network_address::NetworkAddress;
-use libra_secure_json_rpc::VMStatusView;
-use libra_secure_storage::{KVStorage, Storage};
-use libra_types::account_address::AccountAddress;
+use diem_config::config::SecureBackend;
+use diem_global_constants::OWNER_ACCOUNT;
+use diem_network_address::NetworkAddress;
+use diem_secure_json_rpc::VMStatusView;
+use diem_secure_storage::{KVStorage, Storage};
+use diem_types::account_address::AccountAddress;
 use std::{convert::TryInto, str::FromStr};
 
 #[test]

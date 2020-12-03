@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Context, Error};
@@ -6,7 +6,7 @@ use codespan::{ByteIndex, Span};
 use std::{fmt, str::FromStr};
 
 use crate::lexer::*;
-use libra_types::account_address::AccountAddress;
+use diem_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 

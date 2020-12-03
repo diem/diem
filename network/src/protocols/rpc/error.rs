@@ -1,12 +1,12 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Rpc protocol errors
 
 use crate::peer_manager::PeerManagerError;
 use anyhow::anyhow;
+use diem_types::PeerId;
 use futures::channel::{mpsc, oneshot};
-use libra_types::PeerId;
 use std::io;
 use thiserror::Error;
 

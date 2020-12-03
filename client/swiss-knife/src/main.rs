@@ -1,13 +1,13 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
+use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
     test_utils::KeyPair,
     Signature, SigningKey, Uniform, ValidCryptoMaterialStringExt,
 };
-use libra_types::{
+use diem_types::{
     chain_id::ChainId,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, SignedTransaction, Transaction,
@@ -53,7 +53,7 @@ enum Command {
 #[derive(Debug, StructOpt)]
 #[structopt(
     name = "swiss-knife",
-    about = "Tool for generating, serializing (LCS), hashing and signing Libra transactions. Additionally, contains tools for testing. Please refer to README.md for examples."
+    about = "Tool for generating, serializing (LCS), hashing and signing Diem transactions. Additionally, contains tools for testing. Please refer to README.md for examples."
 )]
 struct Opt {
     #[structopt(subcommand)]
@@ -121,7 +121,7 @@ struct TxnParams {
     pub sender_address: String,
     // Sequence number of this transaction corresponding to sender's account.
     pub sequence_number: u64,
-    // Chain ID of the Libra network this transaction is intended for
+    // Chain ID of the Diem network this transaction is intended for
     pub chain_id: String,
     // Maximal total gas specified by wallet to spend for this transaction.
     pub max_gas_amount: u64,
@@ -300,17 +300,17 @@ fn generate_signed_txn(request: GenerateSignedTxnRequest) -> GenerateSignedTxnRe
 struct GenerateKeypairResponse {
     pub private_key: String,
     pub public_key: String,
-    pub libra_auth_key: String,
-    pub libra_account_address: String,
+    pub diem_auth_key: String,
+    pub diem_account_address: String,
 }
 
 fn generate_key_pair(seed: Option<u64>) -> GenerateKeypairResponse {
     let mut rng = StdRng::seed_from_u64(seed.unwrap_or_else(rand::random));
     let keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
         Ed25519PrivateKey::generate(&mut rng).into();
-    let libra_auth_key = AuthenticationKey::ed25519(&keypair.public_key);
-    let libra_account_address: String = libra_auth_key.derived_address().to_string();
-    let libra_auth_key: String = libra_auth_key.to_string();
+    let diem_auth_key = AuthenticationKey::ed25519(&keypair.public_key);
+    let diem_account_address: String = diem_auth_key.derived_address().to_string();
+    let diem_auth_key: String = diem_auth_key.to_string();
     GenerateKeypairResponse {
         private_key: keypair
             .private_key
@@ -326,8 +326,8 @@ fn generate_key_pair(seed: Option<u64>) -> GenerateKeypairResponse {
                 helpers::exit_with_error(format!("Failed to encode public key : {}", err))
             })
             .unwrap(),
-        libra_auth_key,
-        libra_account_address,
+        diem_auth_key,
+        diem_account_address,
     }
 }
 

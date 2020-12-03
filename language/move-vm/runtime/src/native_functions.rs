@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
@@ -70,8 +70,8 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "Vector", "destroy_empty") => VectorDestroyEmpty,
             (&CORE_CODE_ADDRESS, "Vector", "swap") => VectorSwap,
             (&CORE_CODE_ADDRESS, "Event", "write_to_event_store") => AccountWriteEvent,
-            (&CORE_CODE_ADDRESS, "LibraAccount", "create_signer") => CreateSigner,
-            (&CORE_CODE_ADDRESS, "LibraAccount", "destroy_signer") => DestroySigner,
+            (&CORE_CODE_ADDRESS, "DiemAccount", "create_signer") => CreateSigner,
+            (&CORE_CODE_ADDRESS, "DiemAccount", "destroy_signer") => DestroySigner,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
             (&CORE_CODE_ADDRESS, "Signer", "borrow_address") => SignerBorrowAddress,

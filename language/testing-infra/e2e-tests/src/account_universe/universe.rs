@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Logic for account universes. This is not in the parent module to enforce privacy.
@@ -8,7 +8,7 @@ use crate::{
     account_universe::{default_num_accounts, default_num_transactions, AccountCurrent},
     executor::FakeExecutor,
 };
-use libra_proptest_helpers::{pick_slice_idxs, Index};
+use diem_proptest_helpers::{pick_slice_idxs, Index};
 use proptest::{
     collection::{vec, SizeRange},
     prelude::*,

@@ -6,7 +6,7 @@ custom_edit_url: https://github.com/libra/libra/edit/master/language/move-prover
 
 
 
-## Code under this subtree is experimental. It is out of scope for [the Libra Bug Bounty](https://hackerone.com/libra) until it is no longer marked experimental.
+## Code under this subtree is experimental. It is out of scope for [the Diem Bug Bounty](https://hackerone.com/diem) until it is no longer marked experimental.
 
 # The Move Prover
 
@@ -14,7 +14,7 @@ The Move Prover supports formal specification and verification of Move code. It 
 logical properties of Move smart contracts, while providing a user experience similar to a type checker or linter.
 It's purpose is to make contracts more *trustworthy*, specifically:
 
-- Protect massive assets managed by the Libra blockchain from smart contract bugs
+- Protect massive assets managed by the Diem blockchain from smart contract bugs
 - Protect against well-resourced adversaries
 - Anticipate justified regulator scrutiny and compliance requirements
 - Allow domain experts with mathematical background, but not necessarily software engineering background, to

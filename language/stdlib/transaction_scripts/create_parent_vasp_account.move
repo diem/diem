@@ -1,5 +1,5 @@
 script {
-use 0x1::LibraAccount;
+use 0x1::DiemAccount;
 use 0x1::SlidingNonce;
 
 /// # Summary
@@ -32,7 +32,7 @@ use 0x1::SlidingNonce;
 /// | `Errors::INVALID_ARGUMENT`  | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                          |
 /// | `Errors::REQUIRES_ADDRESS`  | `CoreAddresses::ETREASURY_COMPLIANCE`   | The sending account is not the Treasury Compliance account.                                |
 /// | `Errors::REQUIRES_ROLE`     | `Roles::ETREASURY_COMPLIANCE`           | The sending account is not the Treasury Compliance account.                                |
-/// | `Errors::NOT_PUBLISHED`     | `Libra::ECURRENCY_INFO`                 | The `CoinType` is not a registered currency on-chain.                                      |
+/// | `Errors::NOT_PUBLISHED`     | `Diem::ECURRENCY_INFO`                 | The `CoinType` is not a registered currency on-chain.                                      |
 /// | `Errors::ALREADY_PUBLISHED` | `Roles::EROLE_ID`                       | The `new_account_address` address is already taken.                                        |
 ///
 /// # Related Scripts
@@ -52,7 +52,7 @@ fun create_parent_vasp_account<CoinType>(
     add_all_currencies: bool
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-    LibraAccount::create_parent_vasp_account<CoinType>(
+    DiemAccount::create_parent_vasp_account<CoinType>(
         tc_account,
         new_account_address,
         auth_key_prefix,
@@ -65,10 +65,10 @@ spec fun create_parent_vasp_account {
     use 0x1::Errors;
     use 0x1::Roles;
 
-    include LibraAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
-    include LibraAccount::CreateParentVASPAccountAbortsIf<CoinType>{creator_account: tc_account};
-    include LibraAccount::CreateParentVASPAccountEnsures<CoinType>;
+    include DiemAccount::CreateParentVASPAccountAbortsIf<CoinType>{creator_account: tc_account};
+    include DiemAccount::CreateParentVASPAccountEnsures<CoinType>;
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,

@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{common::Round, safety_data::SafetyData};
-use libra_types::waypoint::Waypoint;
+use diem_types::waypoint::Waypoint;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

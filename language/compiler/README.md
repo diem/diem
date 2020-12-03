@@ -55,7 +55,7 @@ ARGS:
 > cargo build --bin compiler
 
 * This will build the compiler + verifier binary.
-* The binary can be found at `libra/target/debug/compiler`.
+* The binary can be found at `diem/target/debug/compiler`.
 * Alternatively, the binary can be run directly with `cargo run -p compiler`.
 
 To compile and verify `foo.mvir`, which contains a Move IR module:

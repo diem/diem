@@ -9,7 +9,7 @@ use 0x1::ValidatorConfig;
 ///
 /// # Technical Description
 /// This updates the fields with corresponding names held in the `ValidatorConfig::ValidatorConfig`
-/// config resource held under `validator_account`. It does not emit a `LibraConfig::NewEpochEvent`
+/// config resource held under `validator_account`. It does not emit a `DiemConfig::NewEpochEvent`
 /// so the copy of this config held in the validator set will not be updated, and the changes are
 /// only "locally" under the `validator_account` account address.
 ///
@@ -59,10 +59,10 @@ fun register_validator_config(
 /// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
 spec fun register_validator_config {
     use 0x1::Errors;
-    use 0x1::LibraAccount;
+    use 0x1::DiemAccount;
     use 0x1::Signer;
 
-    include LibraAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
+    include DiemAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
     include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
     ensures ValidatorConfig::is_valid(validator_account);
 

@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines all kinds of nodes in the Sparse Merkle Tree maintained in scratch pad.
@@ -17,12 +17,12 @@
 //!
 //! - An `EmptyNode` represents an empty subtree with zero leaf.
 
-use libra_crypto::{
+use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_infallible::RwLock;
-use libra_types::{
+use diem_infallible::RwLock;
+use diem_types::{
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
 };

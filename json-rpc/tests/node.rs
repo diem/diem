@@ -1,15 +1,15 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_config::config::NodeConfig;
-use libra_genesis_tool::{config_builder::ValidatorBuilder, swarm_config::BuildSwarm};
+use diem_config::config::NodeConfig;
+use diem_genesis_tool::{config_builder::ValidatorBuilder, swarm_config::BuildSwarm};
 
 pub struct Node {
     pub config: NodeConfig,
-    pub root_key: libra_crypto::ed25519::Ed25519PrivateKey,
-    node: libra_node::LibraHandle,
-    _temp_dir: libra_temppath::TempPath,
+    pub root_key: diem_crypto::ed25519::Ed25519PrivateKey,
+    node: diem_node::DiemHandle,
+    _temp_dir: diem_temppath::TempPath,
 }
 
 impl Drop for Node {
@@ -20,7 +20,7 @@ impl Drop for Node {
 
 impl Node {
     pub fn start() -> Result<Self> {
-        let temp_dir = libra_temppath::TempPath::new();
+        let temp_dir = diem_temppath::TempPath::new();
         temp_dir
             .create_as_dir()
             .expect("unable to create temporary config dir");
@@ -35,7 +35,7 @@ impl Node {
         config.set_data_dir(node_dir.to_path_buf());
         config.save(&config_path)?;
 
-        let node = libra_node::setup_environment(&config, None);
+        let node = diem_node::setup_environment(&config, None);
 
         Ok(Self {
             root_key,

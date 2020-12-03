@@ -29,8 +29,8 @@ a given time period.
 -  [Module Specification](#@Module_Specification_1)
 
 
-<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp">0x1::LibraTimestamp</a>;
+<pre><code><b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
 <b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
 </code></pre>
@@ -72,7 +72,7 @@ the operations can mutate account states.
 
 A resource specifying the account limits per-currency. There is a default
 "unlimited" <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource for accounts published at
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>, but other accounts may have
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()</code>, but other accounts may have
 different account limit definitons. In such cases, they will have a
 <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> published under their (root) account.
 
@@ -237,7 +237,7 @@ Grant a capability to call this module. This does not necessarily
 need to be a unique capability.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(lr_account: &signer): <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(dr_account: &signer): <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>
 </code></pre>
 
 
@@ -246,9 +246,9 @@ need to be a unique capability.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(lr_account: &signer): <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a> {
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
-    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(dr_account: &signer): <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a> {
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_assert_genesis">DiemTimestamp::assert_genesis</a>();
+    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>{}
 }
 </code></pre>
@@ -262,8 +262,8 @@ need to be a unique capability.
 
 
 
-<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 </code></pre>
 
 
@@ -442,7 +442,7 @@ Root accounts for multi-account entities will hold this resource at
 their root/parent account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(lr_account: &signer, to_limit: &signer, limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(dr_account: &signer, to_limit: &signer, limit_address: address)
 </code></pre>
 
 
@@ -452,11 +452,11 @@ their root/parent account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(
-    lr_account: &signer,
+    dr_account: &signer,
     to_limit: &signer,
     limit_address: address,
 ) {
-    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
+    <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_or_child_vasp">Roles::assert_parent_vasp_or_child_vasp</a>(to_limit);
     <b>assert</b>(
@@ -495,7 +495,7 @@ their root/parent account.
 
 
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishWindowAbortsIf">PublishWindowAbortsIf</a>&lt;CoinType&gt; {
-    lr_account: signer;
+    dr_account: signer;
     to_limit: signer;
     limit_address: address;
 }
@@ -507,7 +507,7 @@ Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROL
 
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishWindowAbortsIf">PublishWindowAbortsIf</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrChildVasp">Roles::AbortsIfNotParentVaspOrChildVasp</a>{account: to_limit};
-    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
@@ -702,7 +702,7 @@ the inflow and outflow records.
 
 
 <pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType&gt;(window: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, limits_definition: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;) {
-    <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
+    <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>();
     <b>assert</b>(window.window_start &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - limits_definition.time_period, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>if</b> (current_time &gt; window.window_start + limits_definition.time_period) {
         window.window_start = current_time;
@@ -735,7 +735,7 @@ the inflow and outflow records.
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt; {
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;;
-    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+    <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
     <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
@@ -763,7 +763,7 @@ the inflow and outflow records.
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;
 ): bool {
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; window.window_start + limits_definition.time_period
+    <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() &gt; window.window_start + limits_definition.time_period
 }
 <a name="0x1_AccountLimits_spec_window_reset_with_limits"></a>
 <b>define</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset_with_limits">spec_window_reset_with_limits</a>&lt;CoinType&gt;(
@@ -774,7 +774,7 @@ the inflow and outflow records.
         <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;{
             limit_address: window.limit_address,
             tracked_balance: window.tracked_balance,
-            window_start: <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>(),
+            window_start: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>(),
             window_inflow: 0,
             window_outflow: 0
         }
@@ -1276,7 +1276,7 @@ Checks whether the limits definition is unrestricted.
 
 
 <pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_current_time">current_time</a>(): u64 {
-    <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>()) 0 <b>else</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>()
+    <b>if</b> (<a href="DiemTimestamp.md#0x1_DiemTimestamp_is_genesis">DiemTimestamp::is_genesis</a>()) 0 <b>else</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>()
 }
 </code></pre>
 

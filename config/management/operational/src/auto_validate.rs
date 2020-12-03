@@ -1,8 +1,8 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{validate_transaction::ValidateTransaction, TransactionContext};
-use libra_management::error::Error;
+use diem_management::error::Error;
 use std::{thread::sleep, time};
 use structopt::StructOpt;
 

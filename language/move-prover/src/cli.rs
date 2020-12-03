@@ -1,4 +1,4 @@
-// Copyright (c) The Libra Core Contributors
+// Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
@@ -271,7 +271,7 @@ impl Options {
         let cli = App::new("mvp")
             .version("0.1.0")
             .about("The Move Prover")
-            .author("The Libra Core Contributors")
+            .author("The Diem Core Contributors")
             .arg(
                 Arg::with_name("config")
                     .short("c")
