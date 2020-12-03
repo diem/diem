@@ -381,7 +381,7 @@ async fn state_sync_load_test(
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
-        250,
+        1000,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,
@@ -397,13 +397,12 @@ async fn state_sync_load_test(
         let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
+
         if pending < NETWORK_CHANNEL_SIZE {
             bytes += lcs::to_bytes(&msg)?.len() as u64;
             sender.send_to(vfn, msg)?;
             pending += 1;
-            info!("hhhhh current pending {}", pending);
         }
-
         // await response from remote peer
         if let Some(response) = events.select_next_some().now_or_never() {
             if let Event::Message(_remote_peer, payload) = response {
@@ -415,11 +414,11 @@ async fn state_sync_load_test(
                     served_txns += temp;
                     msg_num += 1;
                     pending -= 1;
-                    info!("hhhhh22 pending {}, tx = {}", pending, temp);
                 }
             }
         }
     }
+
     Ok(StateSyncStats {
         served_txns,
         bytes,
