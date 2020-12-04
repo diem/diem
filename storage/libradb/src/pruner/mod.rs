@@ -47,6 +47,9 @@ pub(crate) struct Pruner {
     worker_thread: Option<JoinHandle<()>>,
     /// The sender side of the channel talking to the worker thread.
     command_sender: Mutex<Sender<Command>>,
+    /// On start up, we query and store where the stale node index starts, before a pruning
+    /// request hits beyond that, we don't need to wake the worker thread.
+    initial_least_readable_version: Version,
     /// (For tests) A way for the worker thread to inform the `Pruner` the pruning progress. If it
     /// sets this atomic value to `V`, all versions before `V` can no longer be accessed.
     #[allow(dead_code)]
@@ -57,7 +60,19 @@ impl Pruner {
     /// Creates a worker thread that waits on a channel for pruning commands.
     pub fn new(db: Arc<DB>, historical_versions_to_keep: u64) -> Self {
         let (command_sender, command_receiver) = channel();
-        let worker_progress = Arc::new(AtomicU64::new(0));
+
+        let initial_least_readable_version = {
+            let mut iter = db
+                .iter::<StaleNodeIndexSchema>(ReadOptions::default())
+                .expect("Create DB iter should succeed.");
+            iter.seek_to_first();
+            iter.next()
+                .transpose()
+                .expect("Seeking stale node index should succeed.")
+                .map_or(0, |(index, _)| index.stale_since_version)
+        };
+
+        let worker_progress = Arc::new(AtomicU64::new(initial_least_readable_version));
         let worker_progress_clone = Arc::clone(&worker_progress);
 
         LIBRA_STORAGE_PRUNE_WINDOW.set(historical_versions_to_keep as i64);
@@ -70,6 +85,7 @@ impl Pruner {
             historical_versions_to_keep,
             worker_thread: Some(worker_thread),
             command_sender: Mutex::new(command_sender),
+            initial_least_readable_version,
             worker_progress,
         }
     }
@@ -78,12 +94,14 @@ impl Pruner {
     pub fn wake(&self, latest_version: Version) {
         if latest_version > self.historical_versions_to_keep {
             let least_readable_version = latest_version - self.historical_versions_to_keep;
-            self.command_sender
-                .lock()
-                .send(Command::Prune {
-                    least_readable_version,
-                })
-                .expect("Receiver should not destruct prematurely.");
+            if least_readable_version > self.initial_least_readable_version {
+                self.command_sender
+                    .lock()
+                    .send(Command::Prune {
+                        least_readable_version,
+                    })
+                    .expect("Receiver should not destruct prematurely.");
+            }
         }
     }
 
