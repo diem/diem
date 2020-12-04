@@ -349,7 +349,7 @@ pub fn generate_interface_files(
         if separate_by_hash && Path::new(&file_path).is_file() {
             continue;
         }
-        std::fs::rename(tmp.path(), file_path)?;
+        std::fs::copy(tmp.path(), file_path)?;
     }
 
     Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
