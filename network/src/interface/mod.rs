@@ -14,10 +14,10 @@
 use crate::{
     constants, counters,
     logging::NetworkSchema,
-    peer::{Peer, PeerHandle, PeerNotification},
+    peer::{Peer, PeerHandle, PeerNotification, PeerRequest},
     peer_manager::TransportNotification,
     protocols::{
-        direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
+        direct_send::Message,
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
     transport::Connection,
@@ -84,16 +84,12 @@ where
             channel::new(channel_size, &counters::PENDING_PEER_REQUESTS);
         let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) =
             channel::new(channel_size, &counters::PENDING_PEER_RPC_NOTIFICATIONS);
-        let (peer_ds_notifs_tx, peer_ds_notifs_rx) = channel::new(
-            channel_size,
-            &counters::PENDING_PEER_DIRECT_SEND_NOTIFICATIONS,
-        );
         let (peer_notifs_tx, peer_notifs_rx) =
             channel::new(channel_size, &counters::PENDING_PEER_NETWORK_NOTIFICATIONS);
         let peer_handle = PeerHandle::new(
             network_context.clone(),
             connection.metadata.clone(),
-            peer_reqs_tx,
+            peer_reqs_tx.clone(),
         );
         let peer = Peer::new(
             Arc::clone(&network_context),
@@ -102,7 +98,6 @@ where
             peer_reqs_rx,
             peer_notifs_tx,
             peer_rpc_notifs_tx,
-            peer_ds_notifs_tx,
             max_frame_size,
         );
         executor.spawn(peer.start());
@@ -124,20 +119,6 @@ where
         );
         executor.spawn(rpc.start());
 
-        // Setup and start DirectSend actor.
-        let (ds_notifs_tx, ds_notifs_rx) =
-            channel::new(channel_size, &counters::PENDING_DIRECT_SEND_NOTIFICATIONS);
-        let (ds_reqs_tx, ds_reqs_rx) =
-            channel::new(channel_size, &counters::PENDING_DIRECT_SEND_REQUESTS);
-        let ds = DirectSend::new(
-            network_context.clone(),
-            peer_handle.clone(),
-            ds_reqs_rx,
-            ds_notifs_tx,
-            peer_ds_notifs_rx,
-        );
-        executor.spawn(ds.start());
-
         // TODO: Add label for peer.
         let (requests_tx, requests_rx) = diem_channel::new(
             QueueStyle::FIFO,
@@ -158,18 +139,16 @@ where
             futures::future::ready(())
         }));
 
-        // Handle notifications from DirectSend actor.
-        let inbound_ds_notifs_tx = notifs_tx;
-        executor.spawn(ds_notifs_rx.for_each(move |notif| {
-            Self::handle_ds_notification(peer_id, notif, inbound_ds_notifs_tx.clone());
-            futures::future::ready(())
-        }));
-
         // Handle notifications from Peer actor.
+        let inbound_notifs_tx = notifs_tx;
         let connection_notifs_tx = connection_notifs_tx;
         executor.spawn(
             peer_notifs_rx.for_each_concurrent(max_concurrent_notifs, move |notif| {
-                Self::handle_peer_notification(notif, connection_notifs_tx.clone())
+                Self::handle_peer_notification(
+                    notif,
+                    inbound_notifs_tx.clone(),
+                    connection_notifs_tx.clone(),
+                )
             }),
         );
 
@@ -181,7 +160,7 @@ where
                         peer_id,
                         req,
                         rpc_reqs_tx.clone(),
-                        ds_reqs_tx.clone(),
+                        peer_reqs_tx.clone(),
                     )
                 })
                 .then(|_| async move {
@@ -206,7 +185,7 @@ where
         peer_id: PeerId,
         req: NetworkRequest,
         mut rpc_reqs_tx: channel::Sender<OutboundRpcRequest>,
-        mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
+        mut peer_reqs_tx: channel::Sender<PeerRequest>,
     ) {
         match req {
             NetworkRequest::SendRpc(req) => {
@@ -221,7 +200,7 @@ where
                 }
             }
             NetworkRequest::SendMessage(msg) => {
-                if let Err(e) = ds_reqs_tx.send(DirectSendRequest::SendMessage(msg)).await {
+                if let Err(e) = peer_reqs_tx.send(PeerRequest::SendDirectSend(msg)).await {
                     error!(
                         remote_peer = peer_id,
                         error = %e,
@@ -255,31 +234,9 @@ where
         }
     }
 
-    fn handle_ds_notification(
-        peer_id: PeerId,
-        notif: DirectSendNotification,
-        mut notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
-    ) {
-        trace!("DirectSendNotification::{:?}", notif);
-        match notif {
-            DirectSendNotification::RecvMessage(msg) => {
-                if let Err(e) =
-                    notifs_tx.push(msg.protocol_id, NetworkNotification::RecvMessage(msg))
-                {
-                    warn!(
-                        remote_peer = peer_id,
-                        error = e.to_string(),
-                        "Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}",
-                        peer_id.short_str(),
-                        e
-                    );
-                }
-            }
-        }
-    }
-
     async fn handle_peer_notification(
         notif: PeerNotification,
+        mut inbound_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
         mut connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
     ) {
         match notif {
@@ -294,6 +251,16 @@ where
                         error = err.to_string(),
                         "Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}",
                         err
+                    );
+                }
+            }
+            PeerNotification::RecvDirectSend(message) => {
+                let protocol_id = message.protocol_id;
+                let notif = NetworkNotification::RecvMessage(message);
+                if let Err(e) = inbound_notifs_tx.push(protocol_id, notif) {
+                    warn!(
+                        error = e.to_string(),
+                        "Failed to push RecvDirectSend to PeerManager. Error: {:?}", e
                     );
                 }
             }

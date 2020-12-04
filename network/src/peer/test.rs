@@ -4,24 +4,27 @@
 use crate::{
     constants::MAX_FRAME_SIZE,
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
-    protocols::wire::{
-        handshake::v1::MessagingProtocolVersion,
-        messaging::v1::{DirectSendMsg, NetworkMessage, NetworkMessageSink, NetworkMessageStream},
+    protocols::{
+        direct_send::Message,
+        wire::{
+            handshake::v1::MessagingProtocolVersion,
+            messaging::v1::{
+                DirectSendMsg, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
+            },
+        },
     },
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
+use bytes::Bytes;
 use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
-use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
+use futures::{future, io::AsyncWriteExt, stream::StreamExt, SinkExt};
 use memsocket::MemorySocket;
 use netcore::transport::ConnectionOrigin;
-use std::{str::FromStr, time::Duration};
-use tokio::{
-    runtime::{Handle, Runtime},
-    time::timeout,
-};
+use std::str::FromStr;
+use tokio::runtime::{Handle, Runtime};
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
@@ -34,13 +37,11 @@ fn build_test_peer(
     MemorySocket,
     channel::Receiver<PeerNotification>,
     channel::Receiver<PeerNotification>,
-    channel::Receiver<PeerNotification>,
 ) {
     let (a, b) = MemorySocket::new_pair();
     let peer_id = PeerId::random();
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(1);
     let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new_test(1);
-    let (peer_direct_send_notifs_tx, peer_direct_send_notifs_rx) = channel::new_test(1);
     let (peer_req_tx, peer_req_rx) = channel::new_test(0);
     let connection = Connection {
         metadata: ConnectionMetadata::new(
@@ -62,19 +63,11 @@ fn build_test_peer(
         peer_req_rx,
         peer_notifs_tx,
         peer_rpc_notifs_tx,
-        peer_direct_send_notifs_tx,
         MAX_FRAME_SIZE,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 
-    (
-        peer,
-        peer_handle,
-        b,
-        peer_notifs_rx,
-        peer_rpc_notifs_rx,
-        peer_direct_send_notifs_rx,
-    )
+    (peer, peer_handle, b, peer_notifs_rx, peer_rpc_notifs_rx)
 }
 
 fn build_test_connected_peers(
@@ -85,32 +78,18 @@ fn build_test_connected_peers(
         PeerHandle,
         channel::Receiver<PeerNotification>,
         channel::Receiver<PeerNotification>,
-        channel::Receiver<PeerNotification>,
     ),
     (
         Peer<MemorySocket>,
         PeerHandle,
         channel::Receiver<PeerNotification>,
         channel::Receiver<PeerNotification>,
-        channel::Receiver<PeerNotification>,
     ),
 ) {
-    let (
-        peer_a,
-        peer_handle_a,
-        connection_a,
-        peer_notifs_rx_a,
-        peer_rpc_notifs_rx_a,
-        peer_direct_send_notifs_rx_a,
-    ) = build_test_peer(executor.clone(), ConnectionOrigin::Inbound);
-    let (
-        mut peer_b,
-        peer_handle_b,
-        _connection_b,
-        peer_notifs_rx_b,
-        peer_rpc_notifs_rx_b,
-        peer_direct_send_notifs_rx_b,
-    ) = build_test_peer(executor, ConnectionOrigin::Outbound);
+    let (peer_a, peer_handle_a, connection_a, peer_notifs_rx_a, peer_rpc_notifs_rx_a) =
+        build_test_peer(executor.clone(), ConnectionOrigin::Inbound);
+    let (mut peer_b, peer_handle_b, _connection_b, peer_notifs_rx_b, peer_rpc_notifs_rx_b) =
+        build_test_peer(executor, ConnectionOrigin::Outbound);
     // Make sure both peers are connected
     peer_b.connection = Some(connection_a);
     (
@@ -119,25 +98,14 @@ fn build_test_connected_peers(
             peer_handle_a,
             peer_notifs_rx_a,
             peer_rpc_notifs_rx_a,
-            peer_direct_send_notifs_rx_a,
         ),
         (
             peer_b,
             peer_handle_b,
             peer_notifs_rx_b,
             peer_rpc_notifs_rx_b,
-            peer_direct_send_notifs_rx_b,
         ),
     )
-}
-
-async fn assert_new_message_event(peer_notifs_rx: &mut channel::Receiver<PeerNotification>) {
-    let event = peer_notifs_rx.next().await;
-    assert!(
-        matches!(event, Some(PeerNotification::NewMessage(_))),
-        "Expected NewMessage event. Received: {:?}",
-        event
-    );
 }
 
 async fn assert_peer_disconnected_event(
@@ -150,70 +118,68 @@ async fn assert_peer_disconnected_event(
             assert_eq!(conn_info.remote_peer_id, peer_id);
             assert_eq!(actual_reason, reason);
         }
-        event => {
-            panic!(
-                "Expected a Requested PeerDisconnected, received: {:?}",
-                event
-            );
-        }
+        event => panic!("Expected a PeerDisconnected, received: {:?}", event),
     }
 }
 
+// Sending an outbound DirectSend should write it to the wire.
 #[test]
 fn peer_send_message() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (
-        peer,
-        mut peer_handle,
-        connection,
-        _peer_notifs_rx,
-        _peer_rpc_notifs_rx,
-        _peer_direct_send_notifs_rx,
-    ) = build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (peer, mut peer_handle, connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
-    let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
+    let send_msg = Message {
+        protocol_id: PROTOCOL,
+        mdata: Bytes::from("hello world"),
+    };
+    let recv_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: PROTOCOL,
         priority: 0,
         raw_msg: Vec::from("hello world"),
     });
-    let recv_msg = send_msg.clone();
-
-    let server = async move {
-        // The client should then send the network message.
-        let mut connection = NetworkMessageStream::new(connection, MAX_FRAME_SIZE);
-        let msg = connection.next().await.unwrap().unwrap();
-        assert_eq!(msg, recv_msg);
-    };
 
     let client = async move {
-        peer_handle.send_message(send_msg, PROTOCOL).await.unwrap();
+        // The client should then send the network message.
+        let mut connection = NetworkMessageStream::new(connection, MAX_FRAME_SIZE);
+        for _ in 0..30 {
+            let msg = connection.next().await.unwrap().unwrap();
+            assert_eq!(msg, recv_msg);
+        }
     };
-    rt.spawn(peer.start());
-    rt.block_on(join(server, client));
+
+    let server = async move {
+        for _ in 0..30 {
+            peer_handle
+                .send_direct_send(send_msg.clone())
+                .await
+                .unwrap();
+        }
+    };
+    rt.block_on(future::join3(peer.start(), server, client));
 }
 
+// Reading an inbound DirectSendMsg off the wire should notify the PeerManager of
+// an inbound DirectSend.
 #[test]
 fn peer_recv_message() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (
-        peer,
-        _peer_handle,
-        connection,
-        _peer_notifs_rx,
-        _peer_rpc_notifs_rx,
-        mut peer_direct_send_notifs_rx,
-    ) = build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (peer, _peer_handle, connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: PROTOCOL,
         priority: 0,
         raw_msg: Vec::from("hello world"),
     });
-    let recv_msg = send_msg.clone();
+    let recv_msg = PeerNotification::RecvDirectSend(Message {
+        protocol_id: PROTOCOL,
+        mdata: Bytes::from("hello world"),
+    });
 
-    let server = async move {
+    let client = async move {
         let mut connection = NetworkMessageSink::new(connection, MAX_FRAME_SIZE);
         for _ in 0..30 {
             // The client should then send the network message.
@@ -223,66 +189,47 @@ fn peer_recv_message() {
         connection.close().await.unwrap();
     };
 
-    let client = async move {
+    let server = async move {
         for _ in 0..30 {
             // Wait to receive notification of DirectSendMsg from Peer.
-            let received = peer_direct_send_notifs_rx.next().await.unwrap();
-            assert!(
-                matches!(received, PeerNotification::NewMessage(received_msg) if received_msg == recv_msg)
-            );
+            let received = peer_notifs_rx.next().await.unwrap();
+            assert_eq!(recv_msg, received);
         }
     };
-    rt.spawn(peer.start());
-    rt.block_on(join(server, client));
+    rt.block_on(future::join3(peer.start(), server, client));
 }
 
-// Test that if two peers request to open a substream with each other simultaneously that
-// we won't deadlock.
+// Two connected Peer actors should be able to send/recv a DirectSend from each
+// other and then shutdown gracefully.
 #[test]
-fn peer_open_substream_simultaneous() {
+fn peers_send_message_concurrent() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
-        (
-            peer_a,
-            mut peer_handle_a,
-            mut peer_notifs_rx_a,
-            _peer_rpc_notifs_rx_a,
-            mut peer_direct_send_notifs_rx_a,
-        ),
-        (
-            peer_b,
-            mut peer_handle_b,
-            mut peer_notifs_rx_b,
-            _peer_rpc_notifs_rx_b,
-            mut peer_direct_send_notifs_rx_b,
-        ),
+        (peer_a, mut peer_handle_a, mut peer_notifs_rx_a, _peer_rpc_notifs_rx_a),
+        (peer_b, mut peer_handle_b, mut peer_notifs_rx_b, _peer_rpc_notifs_rx_b),
     ) = build_test_connected_peers(rt.handle().clone());
 
     let test = async move {
-        let msg_a = NetworkMessage::DirectSendMsg(DirectSendMsg {
+        let msg_a = Message {
             protocol_id: PROTOCOL,
-            priority: 0,
-            raw_msg: Vec::from("hello world"),
-        });
-        let msg_b = NetworkMessage::DirectSendMsg(DirectSendMsg {
+            mdata: Bytes::from("hello world"),
+        };
+        let msg_b = Message {
             protocol_id: PROTOCOL,
-            priority: 0,
-            raw_msg: Vec::from("namaste"),
-        });
+            mdata: Bytes::from("namaste"),
+        };
 
-        // Send open substream requests to both peer_a and peer_b
-        let send_msg_a = peer_handle_a.send_message(msg_a, PROTOCOL);
-        let send_msg_b = peer_handle_b.send_message(msg_b, PROTOCOL);
-        // These both should complete, but in the event they deadlock wrap them in a timeout
-        let timeout_a = timeout(Duration::from_secs(10), send_msg_a);
-        let timeout_b = timeout(Duration::from_secs(10), send_msg_b);
-        timeout_a.await.unwrap().unwrap();
-        timeout_b.await.unwrap().unwrap();
+        // Peer A -> msg_a -> Peer B
+        peer_handle_a.send_direct_send(msg_a.clone()).await.unwrap();
+        // Peer A <- msg_b <- Peer B
+        peer_handle_b.send_direct_send(msg_b.clone()).await.unwrap();
 
-        // Check that we received the new inbound substream for both peers
-        assert_new_message_event(&mut peer_direct_send_notifs_rx_a).await;
-        assert_new_message_event(&mut peer_direct_send_notifs_rx_b).await;
+        // Check that each peer received the other's message
+        let notif_a = peer_notifs_rx_a.next().await;
+        let notif_b = peer_notifs_rx_b.next().await;
+        assert_eq!(notif_a, Some(PeerNotification::RecvDirectSend(msg_b)));
+        assert_eq!(notif_b, Some(PeerNotification::RecvDirectSend(msg_a)));
 
         // Shut one peers and the other should shutdown due to ConnectionLost
         peer_handle_a.disconnect().await;
@@ -302,23 +249,16 @@ fn peer_open_substream_simultaneous() {
         .await;
     };
 
-    rt.spawn(peer_a.start());
-    rt.spawn(peer_b.start());
-    rt.block_on(test);
+    rt.block_on(future::join3(peer_a.start(), peer_b.start(), test));
 }
 
+// PeerManager can request a Peer to shutdown.
 #[test]
 fn peer_disconnect_request() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (
-        peer,
-        mut peer_handle,
-        _connection,
-        mut peer_notifs_rx,
-        _peer_rpc_notifs_rx,
-        _peer_direct_send_notifs_rx,
-    ) = build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (peer, mut peer_handle, _connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let test = async move {
         peer_handle.disconnect().await;
@@ -330,21 +270,16 @@ fn peer_disconnect_request() {
         .await;
     };
 
-    rt.block_on(join(test, peer.start()));
+    rt.block_on(future::join(peer.start(), test));
 }
 
+// Peer will shutdown if the underlying connection is lost.
 #[test]
 fn peer_disconnect_connection_lost() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (
-        peer,
-        peer_handle,
-        mut connection,
-        mut peer_notifs_rx,
-        _peer_rpc_notifs_rx,
-        _peer_direct_send_notifs_rx,
-    ) = build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (peer, peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let test = async move {
         connection.close().await.unwrap();
@@ -355,25 +290,19 @@ fn peer_disconnect_connection_lost() {
         )
         .await;
     };
-    rt.block_on(join(test, peer.start()));
+    rt.block_on(future::join(peer.start(), test));
 }
 
 #[test]
 fn peer_terminates_when_request_tx_has_dropped() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (
-        peer,
-        peer_handle,
-        _connection,
-        _peer_notifs_rx,
-        _peer_rpc_notifs_rx,
-        _peer_direct_send_notifs_rx,
-    ) = build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
-    // Perform yamux handshake in a different task.
+    let (peer, peer_handle, _connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+
     let drop = async move {
         // Drop peer handle.
         drop(peer_handle);
     };
-    rt.block_on(join(peer.start(), drop));
+    rt.block_on(future::join(peer.start(), drop));
 }

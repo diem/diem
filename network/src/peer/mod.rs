@@ -1,20 +1,28 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! The Peer actor owns the underlying connection and is responsible for listening for
-//! and opening substreams as well as negotiating particular protocols on those substreams.
+//! Peer manages a single connection to a remote peer after the initial connection
+//! establishment and handshake, including sending and receiving `NetworkMessage`s
+//! over-the-wire, maintaining a completion queue of pending RPC requests, and
+//! eventually shutting down when the PeerManager requests it or the connection
+//! is lost.
+
 use crate::{
-    counters,
-    counters::inc_by_with_context,
+    counters::{self, inc_by_with_context, RECEIVED_LABEL, SENT_LABEL},
     logging::NetworkSchema,
     peer_manager::PeerManagerError,
-    protocols::wire::messaging::v1::{
-        ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream, ReadError, WriteError,
+    protocols::{
+        direct_send::Message,
+        wire::messaging::v1::{
+            DirectSendMsg, ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
+            Priority, ReadError, WriteError,
+        },
     },
     transport,
     transport::{Connection, ConnectionMetadata},
     ProtocolId,
 };
+use bytes::Bytes;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_types::PeerId;
@@ -38,6 +46,9 @@ pub mod fuzzing;
 
 #[derive(Debug)]
 pub enum PeerRequest {
+    // Temporary message type until we can remove NetworkProvider and use the
+    // diem_channel::Receiver<ProtocolId, NetworkRequest> directly.
+    SendDirectSend(Message),
     SendMessage(
         NetworkMessage,
         ProtocolId,
@@ -65,8 +76,11 @@ impl std::fmt::Display for DisconnectReason {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PeerNotification {
+    // Temporary message type until we can remove NetworkProvider and use the
+    // diem_channel::Sender<ProtocolId, NetworkNotification> directly.
+    RecvDirectSend(Message),
     NewMessage(NetworkMessage),
     PeerDisconnected(ConnectionMetadata, DisconnectReason),
 }
@@ -89,10 +103,8 @@ pub struct Peer<TSocket> {
     requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
     peer_notifs_tx: channel::Sender<PeerNotification>,
-    /// Channel to notify about new inbound RPC substreams.
+    /// Channel to notify about new inbound RPCs.
     rpc_notifs_tx: channel::Sender<PeerNotification>,
-    /// Channel to notify about new inbound DirectSend substreams.
-    direct_send_notifs_tx: channel::Sender<PeerNotification>,
     /// Flag to indicate if the actor is being shut down.
     state: State,
     /// The maximum size of an inbound or outbound request frame
@@ -111,7 +123,6 @@ where
         requests_rx: channel::Receiver<PeerRequest>,
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
-        direct_send_notifs_tx: channel::Sender<PeerNotification>,
         max_frame_size: usize,
     ) -> Self {
         let Connection {
@@ -126,7 +137,6 @@ where
             requests_rx,
             peer_notifs_tx,
             rpc_notifs_tx,
-            direct_send_notifs_tx,
             state: State::Connected,
             max_frame_size,
         }
@@ -169,9 +179,9 @@ where
             match self.state {
                 State::Connected => {
                     futures::select! {
-                        maybe_req = self.requests_rx.next() => {
-                            if let Some(request) = maybe_req {
-                                self.handle_request(request, &mut write_reqs_tx).await;
+                        maybe_request = self.requests_rx.next() => {
+                            if let Some(request) = maybe_request {
+                                self.handle_outbound_request(request, &mut write_reqs_tx).await;
                             } else {
                                 // This branch will only be taken if all PeerRequest senders for this Peer
                                 // get dropped.
@@ -396,22 +406,8 @@ where
         };
 
         match message {
-            NetworkMessage::DirectSendMsg(_) => {
-                let notif = PeerNotification::NewMessage(message);
-                self.direct_send_notifs_tx
-                    .send(notif)
-                    .await
-                    .map_err(|err| {
-                        warn!(
-                            NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata),
-                            error = ?err,
-                            "{} Failed to send notification to DirectSend actor. Error: {:?}",
-                            self.network_context,
-                            err
-                        );
-                        err
-                    })?;
+            NetworkMessage::DirectSendMsg(message) => {
+                self.handle_inbound_direct_send(message).await
             }
             NetworkMessage::Error(error_msg) => {
                 warn!(
@@ -442,7 +438,44 @@ where
         Ok(())
     }
 
-    async fn handle_request<'a>(
+    /// Handle an inbound DirectSendMsg from the remote peer. There's not much to
+    /// do here other than bump some counters and forward the message up to the
+    /// PeerManager.
+    async fn handle_inbound_direct_send(&mut self, message: DirectSendMsg) {
+        let peer_id = self.remote_peer_id();
+        let protocol_id = message.protocol_id;
+        let data = message.raw_msg;
+
+        trace!(
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+            protocol_id = protocol_id,
+            "{} DirectSend: Received inbound message from peer {} for protocol {:?}",
+            self.network_context,
+            peer_id.short_str(),
+            protocol_id
+        );
+
+        counters::direct_send_messages(&self.network_context, RECEIVED_LABEL).inc();
+        counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
+            .inc_by(data.len() as u64);
+
+        let notif = PeerNotification::RecvDirectSend(Message {
+            protocol_id,
+            mdata: Bytes::from(data),
+        });
+
+        if let Err(err) = self.peer_notifs_tx.send(notif).await {
+            warn!(
+                NetworkSchema::new(&self.network_context),
+                error = ?err,
+                "{} Failed to notify PeerManager about inbound DirectSend message. Error: {:?}",
+                self.network_context,
+                err
+            );
+        }
+    }
+
+    async fn handle_outbound_request<'a>(
         &'a mut self,
         request: PeerRequest,
         write_reqs_tx: &mut channel::Sender<(
@@ -456,6 +489,37 @@ where
             request
         );
         match request {
+            // To send an outbound DirectSendMsg, we just bump some counters and
+            // push it onto our outbound writer queue.
+            PeerRequest::SendDirectSend(message) => {
+                let message_len = message.mdata.len();
+                let protocol_id = message.protocol_id;
+                let message = NetworkMessage::DirectSendMsg(DirectSendMsg {
+                    protocol_id,
+                    priority: Priority::default(),
+                    raw_msg: Vec::from(message.mdata.as_ref()),
+                });
+                let (ack_tx, _ack_rx) = oneshot::channel();
+
+                match write_reqs_tx.send((message, ack_tx)).await {
+                    Ok(_) => {
+                        counters::direct_send_messages(&self.network_context, SENT_LABEL).inc();
+                        counters::direct_send_bytes(&self.network_context, SENT_LABEL)
+                            .inc_by(message_len as u64);
+                    }
+                    Err(e) => {
+                        warn!(
+                            NetworkSchema::new(&self.network_context)
+                                .connection_metadata(&self.connection_metadata),
+                            error = ?e,
+                            "Failed to send direct send message for protocol {} to peer: {}. Error: {:?}",
+                            protocol_id,
+                            self.remote_peer_id().short_str(),
+                            e,
+                        );
+                    }
+                }
+            }
             PeerRequest::SendMessage(message, protocol, channel) => {
                 if let Err(e) = write_reqs_tx.send((message, channel)).await {
                     inc_by_with_context(
@@ -536,6 +600,13 @@ impl PeerHandle {
             // The send_message request can get dropped/canceled if the peer
             // connection is in the process of shutting down.
             .map_err(|_| PeerManagerError::NotConnected(self.peer_id()))?
+    }
+
+    pub async fn send_direct_send(&mut self, message: Message) -> Result<(), PeerManagerError> {
+        self.sender
+            .send(PeerRequest::SendDirectSend(message))
+            .await?;
+        Ok(())
     }
 
     pub async fn disconnect(&mut self) {
