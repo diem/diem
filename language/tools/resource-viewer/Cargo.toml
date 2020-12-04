@@ -19,7 +19,7 @@ move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 compiled-stdlib = { path = "../../stdlib/compiled",  version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
-serde_json = "1.0.59"
+serde_json = "1.0.60"
 serde = { version = "1.0.117", features = ["derive", "rc"] }
 
 anyhow = "1.0.34"

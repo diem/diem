@@ -21,7 +21,7 @@ proptest = { version = "0.10.1", default-features = false, optional = true }
 proptest-derive = { version = "0.2.0", default-features = false, optional = true }
 rand = "0.7.3"
 serde = { version = "1.0.117", default-features = false }
-serde_json = "1.0.59"
+serde_json = "1.0.60"
 serde_bytes = "0.11.5"
 thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
@@ -39,7 +39,7 @@ move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 regex = "1.4.2"
 proptest = "0.10.1"
 proptest-derive = "0.2.0"
-serde_json = "1.0.59"
+serde_json = "1.0.60"
 
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }

@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.34"
 structopt = "0.3.21"
 serde = "1.0.117"
-serde_json = "1.0.59"
+serde_json = "1.0.60"
 
 libradb = { path = "../libradb", version = "0.1.0", features = ["librarian"] }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

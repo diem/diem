@@ -31,7 +31,7 @@ move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 transaction-builder-generated = { path = "../transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-serde_json = "1.0.59"
+serde_json = "1.0.60"
 tempfile = "3.1.0"
 
 libra-config = { path = "../../config", version = "0.1.0" }
