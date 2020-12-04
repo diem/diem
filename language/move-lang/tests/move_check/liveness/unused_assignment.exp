@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/liveness/unused_assignment.move:3:13 ───
    │
  3 │         let x = 0;
-   │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+   │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
    │
 
 error: 
@@ -11,7 +11,7 @@ error:
    ┌── tests/move_check/liveness/unused_assignment.move:7:13 ───
    │
  7 │         let x = 0;
-   │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+   │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
    │
 
 error: 
@@ -19,7 +19,7 @@ error:
    ┌── tests/move_check/liveness/unused_assignment.move:8:9 ───
    │
  8 │         x = 0;
-   │         ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+   │         ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
    │
 
 error: 
@@ -27,7 +27,7 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:13:17 ───
     │
  13 │             let x = 0;
-    │                 ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │                 ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
@@ -35,7 +35,7 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:21:13 ───
     │
  21 │             x = 0;
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
@@ -43,7 +43,7 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:26:13 ───
     │
  26 │         let x = 0;
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
@@ -51,7 +51,7 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:28:13 ───
     │
  28 │             x = 1;
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
@@ -59,7 +59,7 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:30:13 ───
     │
  30 │             x = 2;
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
@@ -67,6 +67,6 @@ error:
     ┌── tests/move_check/liveness/unused_assignment.move:41:13 ───
     │
  41 │             x = 1;
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 

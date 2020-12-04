@@ -14,12 +14,12 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:7:14 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:9:14 ───
    │
- 7 │         let (_, _):(R, R);
+ 9 │         let (_, _):(R, R);
    │              ^ Cannot ignore resource values. The value must be used
    ·
- 7 │         let (_, _):(R, R);
+ 9 │         let (_, _):(R, R);
    │                     - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}
@@ -28,12 +28,12 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:7:17 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:9:17 ───
    │
- 7 │         let (_, _):(R, R);
+ 9 │         let (_, _):(R, R);
    │                 ^ Cannot ignore resource values. The value must be used
    ·
- 7 │         let (_, _):(R, R);
+ 9 │         let (_, _):(R, R);
    │                        - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}

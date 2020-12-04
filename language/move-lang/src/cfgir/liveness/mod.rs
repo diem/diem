@@ -294,11 +294,17 @@ mod last_usage {
                     match display_var(v.value()) {
                         DisplayVar::Tmp => (),
                         DisplayVar::Orig(v_str) => {
-                            if !v_str.starts_with('_') {
+                            if !v.starts_with_underscore() {
+                                let verb = if context.is_resourceful(&v) {
+                                    // do not suggest prefixing for resource bindings
+                                    "replacing"
+                                } else {
+                                    "replacing / prefixing"
+                                };
                                 let msg = format!(
                                     "Unused assignment or binding for local '{}'. \
-                                    Consider removing or replacing it with '_'",
-                                    v_str
+                                    Consider removing or {} it with '_'",
+                                    v_str, verb
                                 );
                                 context.error(vec![(l.loc, msg)]);
                             }

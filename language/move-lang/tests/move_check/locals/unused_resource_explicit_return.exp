@@ -74,7 +74,7 @@ error:
     ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:13 ───
     │
  33 │         let x = &R{};
-    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 

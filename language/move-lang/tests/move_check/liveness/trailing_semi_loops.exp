@@ -112,7 +112,7 @@ error:
     ┌── tests/move_check/liveness/trailing_semi_loops.move:76:17 ───
     │
  76 │                 x = 2;
-    │                 ^ Unused assignment or binding for local 'x'. Consider removing or replacing it with '_'
+    │                 ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
     │
 
 error: 
