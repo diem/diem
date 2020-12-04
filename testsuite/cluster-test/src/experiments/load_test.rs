@@ -30,6 +30,7 @@ use std::{
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
 use network::constants::NETWORK_CHANNEL_SIZE;
+use tokio::time;
 
 const EXPERIMENT_BUFFER_SECS: u64 = 900;
 
@@ -386,7 +387,7 @@ async fn state_sync_load_test(
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
-        250,
+        1000,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,
@@ -420,6 +421,21 @@ async fn state_sync_load_test(
                     msg_num += 1;
                     pending -= 1;
                 }
+            }
+        }
+    }
+    time::delay_for(Duration::from_secs(10)).await;
+    while let Some(response) = events.select_next_some().now_or_never() {
+        if let Event::Message(_remote_peer, payload) = response {
+            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
+                chunk_response,
+            ) = payload
+            {
+                let temp = chunk_response.txn_list_with_proof.transactions.len() as u64;
+                served_txns += temp;
+                msg_num += 1;
+                pending -= 1;
+                info!("hhhhhhh pending {}", pending);
             }
         }
     }
