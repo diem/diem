@@ -1,5 +1,5 @@
 #while using circle we'll use circle's base image.
-FROM archlinux:20200705@sha256:ce7ccce2c458b875f66a0e33d492ccc2f5495dbf21a7fc9acd261f8f980d4fd5 AS setup_ci_arch
+FROM archlinux:20200908@sha256:7d1c7dd23c246895a34d6e8aa31eb29be573de2ce39b3e88315068e6d6cb5337 AS setup_ci_arch
 
 WORKDIR /libra
 COPY rust-toolchain /libra/rust-toolchain
