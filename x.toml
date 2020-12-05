@@ -196,12 +196,6 @@ mark-changed = []
 globs = ["libra.png", ".assets/libra.png", "storage/data.png"]
 mark-changed = []
 
-[[determinator.path-rule]]
-# This file is a bit of a special one -- it is only invoked by developers, not by CI. It should probably be migrated to
-# x.
-globs = ["language/test.sh"]
-mark-changed = []
-
 [[determinator.package-rule]]
 # x controls the build process, so if it changes, build everything.
 on-affected = ["x"]
