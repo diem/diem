@@ -13,7 +13,7 @@ use quote::quote;
 pub fn smoke_test(_: TokenStream, input: TokenStream) -> proc_macro::TokenStream {
     let input = proc_macro2::TokenStream::from(input);
     let output = quote! {
-        rusty_fork_test! {
+        ::rusty_fork::rusty_fork_test! {
             #![rusty_fork(timeout_ms = 120000)] // 2 minute timeout
             #[test]
             #input

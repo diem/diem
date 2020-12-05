@@ -15,7 +15,6 @@ use libra_secure_storage::{CryptoStorage, Storage};
 use libra_secure_time::RealTimeService;
 use libra_smoke_test_attribute::smoke_test;
 use libra_types::chain_id::ChainId;
-use rusty_fork::rusty_fork_test;
 use std::{convert::TryInto, thread, thread::sleep, time::Duration};
 
 #[smoke_test]
