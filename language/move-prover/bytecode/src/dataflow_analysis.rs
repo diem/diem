@@ -8,7 +8,10 @@ use crate::{
     stackless_bytecode::Bytecode,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    ops::{Deref, DerefMut},
+};
 use vm::file_format::CodeOffset;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,13 +37,33 @@ pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct SetDomain<Elem: Clone + Ord + Sized>(pub BTreeSet<Elem>);
 
+impl<E: Clone + Ord + Sized> Default for SetDomain<E> {
+    fn default() -> Self {
+        Self(BTreeSet::new())
+    }
+}
+
+impl<E: Clone + Ord + Sized> Deref for SetDomain<E> {
+    type Target = BTreeSet<E>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<E: Clone + Ord + Sized> DerefMut for SetDomain<E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             JoinResult::Unchanged
         } else {
-            for e in other.0.iter() {
-                self.0.insert(e.clone());
+            for e in other.iter() {
+                self.insert(e.clone());
             }
             JoinResult::Changed
         }
@@ -48,16 +71,21 @@ impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct MapDomain<K, V: AbstractDomain>(pub BTreeMap<K, V>);
+pub struct MapDomain<K: Ord, V: AbstractDomain>(pub BTreeMap<K, V>);
+
+impl<K: Ord, V: AbstractDomain> Default for MapDomain<K, V> {
+    fn default() -> Self {
+        Self(BTreeMap::new())
+    }
+}
 
 impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
     fn join(&mut self, other: &Self) -> JoinResult {
-        if self.0 == other.0 {
+        if self == other {
             JoinResult::Unchanged
         } else {
-            for (k, v1) in other.0.iter() {
-                self.0
-                    .entry(k.clone())
+            for (k, v1) in other.iter() {
+                self.entry(k.clone())
                     .and_modify(|v2| {
                         v2.join(&v1);
                     })
@@ -65,6 +93,20 @@ impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> AbstractDomain for MapDomai
             }
             JoinResult::Changed
         }
+    }
+}
+
+impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> Deref for MapDomain<K, V> {
+    type Target = BTreeMap<K, V>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> DerefMut for MapDomain<K, V> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -107,7 +149,7 @@ pub trait TransferFunctions {
 
 pub trait DataflowAnalysis: TransferFunctions {
     fn analyze_function(
-        &mut self,
+        &self,
         initial_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,

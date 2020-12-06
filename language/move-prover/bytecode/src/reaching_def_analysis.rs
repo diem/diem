@@ -113,7 +113,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             data
         } else {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
-            let mut analyzer = ReachingDefAnalysis {
+            let analyzer = ReachingDefAnalysis {
                 target: FunctionTarget::new(func_env, &data),
             };
             let block_state_map = analyzer.analyze_function(

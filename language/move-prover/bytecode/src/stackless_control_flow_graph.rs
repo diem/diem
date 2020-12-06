@@ -21,6 +21,7 @@ struct BasicBlock {
 pub struct StacklessControlFlowGraph {
     entry_block_ids: Vec<BlockId>,
     blocks: Map<BlockId, BasicBlock>,
+    backward: bool,
 }
 
 const ENTRY_BLOCK_ID: BlockId = 0;
@@ -30,6 +31,7 @@ impl StacklessControlFlowGraph {
         Self {
             entry_block_ids: vec![ENTRY_BLOCK_ID],
             blocks: Self::collect_blocks(code),
+            backward: false,
         }
     }
 
@@ -68,6 +70,7 @@ impl StacklessControlFlowGraph {
                     )
                 })
                 .collect(),
+            backward: true,
         }
     }
 
@@ -147,6 +150,23 @@ impl StacklessControlFlowGraph {
 
     pub fn entry_blocks(&self) -> Vec<BlockId> {
         self.entry_block_ids.clone()
+    }
+
+    pub fn exit_blocks(&self, code: &[Bytecode]) -> Vec<BlockId> {
+        if self.backward {
+            vec![ENTRY_BLOCK_ID]
+        } else {
+            self.blocks
+                .iter()
+                .filter_map(|(block_id, block)| {
+                    if code[block.upper as usize].is_exit() {
+                        Some(*block_id)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        }
     }
 
     pub fn instr_indexes(

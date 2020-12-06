@@ -250,7 +250,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             BorrowAnnotation(BTreeMap::new())
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
-            let mut analyzer = BorrowAnalysis::new(&func_target);
+            let analyzer = BorrowAnalysis::new(&func_target);
             let result = analyzer.analyze(&data.code);
             let propagator = PropagateSplicedAnalysis::new(result);
             BorrowAnnotation(propagator.run(&data.code))
@@ -284,7 +284,7 @@ impl<'a> BorrowAnalysis<'a> {
         }
     }
 
-    fn analyze(&mut self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
+    fn analyze(&self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
         let cfg = StacklessControlFlowGraph::new_forward(instrs);
 
         let mut state = BorrowInfo::default();
@@ -522,7 +522,7 @@ impl PropagateSplicedAnalysis {
         Self { borrow }
     }
 
-    fn run(mut self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
+    fn run(self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
         let cfg = StacklessControlFlowGraph::new_backward(instrs);
         let state_map = self.analyze_function(SplicedState::default(), instrs, &cfg);
         let mut data = self.state_per_instruction(state_map, instrs, &cfg, |before, after| {

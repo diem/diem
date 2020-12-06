@@ -106,7 +106,7 @@ impl LiveVarAnalysisProcessor {
         code: &[Bytecode],
     ) -> BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset> {
         let cfg = StacklessControlFlowGraph::new_backward(&code);
-        let mut analyzer = LiveVarAnalysis::new(&func_target);
+        let analyzer = LiveVarAnalysis::new(&func_target);
         let state_map = analyzer.analyze_function(
             LiveVarState {
                 livevars: BTreeSet::new(),

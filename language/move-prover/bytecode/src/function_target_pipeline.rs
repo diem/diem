@@ -52,10 +52,14 @@ impl FunctionTargetsHolder {
     /// Gets a function target for read-only consumption.
     pub fn get_target<'env>(&'env self, func_env: &'env FunctionEnv<'env>) -> FunctionTarget<'env> {
         let data = self
-            .targets
-            .get(&func_env.get_qualified_id())
+            .get_target_data(&func_env.get_qualified_id())
             .expect("function target exists");
-        FunctionTarget::new(func_env, data)
+        FunctionTarget::new(func_env, &data)
+    }
+
+    /// Gets function target data for a qualfied function identifier
+    pub fn get_target_data(&self, id: &QualifiedId<FunId>) -> Option<&FunctionTargetData> {
+        self.targets.get(id)
     }
 
     /// Processes the function target data for given function.

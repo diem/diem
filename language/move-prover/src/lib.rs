@@ -19,6 +19,7 @@ use bytecode::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
+    packed_types_analysis::{self, PackedTypesProcessor},
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{Bytecode, Operation},
     test_instrumenter::TestInstrumenter,
@@ -230,7 +231,7 @@ fn run_packed_types_gen(
 ) -> anyhow::Result<()> {
     let checking_elapsed = now.elapsed();
     info!("generating packed_types");
-    let packed_types = usage_analysis::get_packed_types(&env, &targets);
+    let packed_types = packed_types_analysis::get_packed_types(&env, &targets);
     info!("found {:?} packed types", packed_types.len());
     let mut access_path_type_map = BTreeMap::new();
     for ty in packed_types {
@@ -353,6 +354,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     res.add_processor(CleanAndOptimizeProcessor::new());
     res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
     res.add_processor(UsageProcessor::new());
+    res.add_processor(PackedTypesProcessor::new());
 
     res
 }
