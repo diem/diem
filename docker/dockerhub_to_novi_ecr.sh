@@ -60,39 +60,21 @@ docker pull --disable-content-trust=false docker.io/libra/client:"$DOCKERHUB_TAG
 
 export DOCKER_CONTENT_TRUST=0
 
-#Push to existing locations
-docker tag libra/init:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_init:"$OUTPUT_TAG"
-docker tag libra/faucet:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_faucet:"$OUTPUT_TAG"
-docker tag libra/tools:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_tools:"$OUTPUT_TAG"
-docker tag libra/validator:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_validator:"$OUTPUT_TAG"
-docker tag libra/validator_tcb:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_safety_rules:"$OUTPUT_TAG"
-docker tag libra/cluster_test:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_cluster_test:"$OUTPUT_TAG"
-docker tag libra/client:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra_client:"$OUTPUT_TAG"
-
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_init:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_faucet:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_tools:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_validator:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_safety_rules:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_cluster_test:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra_client:"$OUTPUT_TAG"
-
-
 #Push the proper locations to novi ecr.
-docker tag libra/init:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/init:"$OUTPUT_TAG"
-docker tag libra/faucet:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/faucet:"$OUTPUT_TAG"
-docker tag libra/tools:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/tools:"$OUTPUT_TAG"
-docker tag libra/validator:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/validator:"$OUTPUT_TAG"
-docker tag libra/validator_tcb:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/validator_tcb:"$OUTPUT_TAG"
-docker tag libra/cluster_test:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/cluster_test:"$OUTPUT_TAG"
-docker tag libra/client:"$DOCKERHUB_TAG" "$TARGET_REPO"/libra/client:"$OUTPUT_TAG"
+docker tag libra/init:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/init:"$OUTPUT_TAG"
+docker tag libra/faucet:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/faucet:"$OUTPUT_TAG"
+docker tag libra/tools:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/tools:"$OUTPUT_TAG"
+docker tag libra/validator:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/validator:"$OUTPUT_TAG"
+docker tag libra/validator_tcb:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/validator_tcb:"$OUTPUT_TAG"
+docker tag libra/cluster_test:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/cluster_test:"$OUTPUT_TAG"
+docker tag libra/client:"$DOCKERHUB_TAG" "$TARGET_REPO"/diem/client:"$OUTPUT_TAG"
 
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/init:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/faucet:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/tools:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/validator:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/validator_tcb:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/cluster_test:"$OUTPUT_TAG"
-docker push --disable-content-trust=true "$TARGET_REPO"/libra/client:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/init:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/faucet:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/tools:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/validator:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/validator_tcb:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/cluster_test:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/client:"$OUTPUT_TAG"
 
 set +x
