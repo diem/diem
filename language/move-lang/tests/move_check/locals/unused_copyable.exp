@@ -19,6 +19,6 @@ error:
    ┌── tests/move_check/locals/unused_copyable.move:9:13 ───
    │
  9 │         let s = S{};
-   │             ^ Unused assignment or binding for local 's'. Consider removing or replacing / prefixing it with '_'
+   │             ^ Unused assignment or binding for local 's'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_s')
    │
 

@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/locals/unused_resource.move:5:13 ───
    │
  5 │         let r = R{};
-   │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
    │
 
 error: 
@@ -33,7 +33,7 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:15:21 ───
     │
  15 │         if (cond) { r = R{}; };
-    │                     ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │                     ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
     │
 
 error: 
@@ -52,7 +52,7 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:20:29 ───
     │
  20 │         if (cond) {} else { r = R{}; };
-    │                             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │                             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
     │
 
 error: 
@@ -71,7 +71,7 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:25:24 ───
     │
  25 │         while (cond) { r = R{} };
-    │                        ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │                        ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
     │
 
 error: 
@@ -101,7 +101,7 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:29:20 ───
     │
  29 │         loop { let r = R{}; }
-    │                    ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │                    ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
     │
 
 error: 

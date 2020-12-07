@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/translated_ir_tests/move/commands/use_before_assign.move:4:9 ───
    │
  4 │     let y = x;
-   │         ^ Unused assignment or binding for local 'y'. Consider removing or replacing / prefixing it with '_'
+   │         ^ Unused assignment or binding for local 'y'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_y')
    │
 
 error: 

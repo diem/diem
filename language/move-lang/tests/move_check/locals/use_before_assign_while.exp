@@ -47,6 +47,6 @@ error:
     ┌── tests/move_check/locals/use_before_assign_while.move:19:60 ───
     │
  19 │         while (cond) { let y = &x; _ = move y; if (cond) { x = 0 }; break }
-    │                                                            ^ Unused assignment or binding for local 'x'. Consider removing or replacing / prefixing it with '_'
+    │                                                            ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
     │
 

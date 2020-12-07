@@ -3,7 +3,7 @@ error:
    ┌── tests/move_check/locals/assign_resource.move:5:13 ───
    │
  5 │         let r = R{};
-   │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
    │
 
 error: 
@@ -55,7 +55,7 @@ error:
     ┌── tests/move_check/locals/assign_resource.move:29:13 ───
     │
  29 │         let r = R{};
-    │             ^ Unused assignment or binding for local 'r'. Consider removing or replacing it with '_'
+    │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
     │
 
 error: 
