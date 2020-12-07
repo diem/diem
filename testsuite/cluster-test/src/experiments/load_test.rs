@@ -12,7 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_crypto::x25519;
-use diem_logger::info;
+use diem_logger::*;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
 use diem_network_address::NetworkAddress;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
@@ -29,6 +29,7 @@ use std::{
 };
 use structopt::StructOpt;
 use tokio::runtime::{Builder, Runtime};
+use std::ops::Add;
 
 const EXPERIMENT_BUFFER_SECS: u64 = 900;
 
@@ -45,6 +46,8 @@ pub struct LoadTestParams {
         help = "duration (in seconds) to run load test for. All specified components (mempool, state sync) will be load tested simultaneously"
     )]
     pub duration: u64,
+    #[structopt(long, default_value = "1", help = "Number of stubbed nodes")]
+    pub num_stubbed: usize,
 }
 
 pub struct LoadTest {
@@ -52,6 +55,7 @@ pub struct LoadTest {
     state_sync: bool,
     emit_txn: bool,
     duration: u64,
+    num_stubbed: usize,
 }
 
 impl ExperimentParam for LoadTestParams {
@@ -62,6 +66,7 @@ impl ExperimentParam for LoadTestParams {
             state_sync: self.state_sync,
             emit_txn: self.emit_txn,
             duration: self.duration,
+            num_stubbed: self.num_stubbed,
         }
     }
 }
@@ -75,14 +80,29 @@ impl Experiment for LoadTest {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         // spin up StubbedNode
         let vfn = context.cluster.random_fullnode_instance();
+        info!("Node {:?} is selected", vfn.peer_name());
         let vfn_endpoint = format!("http://{}:{}/v1", vfn.ip(), vfn.ac_port());
-
-        let mut stubbed_node = StubbedNode::launch(vfn_endpoint).await;
-
+        let mut stubbed_node = get_stubbed_nodes(vfn_endpoint, self.num_stubbed).await;
         let mut emit_job = None;
-        let mut mempool_task = None;
-        let mut state_sync_task = None;
+        let mut mempool_handlers: Vec<_> = vec![];
+        let mut state_sync_handlers: Vec<_> = vec![];
+        let mut mempool_task = vec![];
+        let mut state_sync_task = vec![];
         let duration = Duration::from_secs(self.duration);
+        let mut index = 0;
+        while index < stubbed_node.len() {
+            mempool_handlers.push(
+                stubbed_node[index].mempool_handle
+                    .take()
+                    .expect("missing mempool network handles"),
+            );
+            state_sync_handlers.push(
+                stubbed_node[index].state_sync_handle
+                    .take()
+                    .expect("missing state sync network handles"),
+            );
+            index += 1;
+        }
 
         if self.emit_txn {
             // emit txns to JSON RPC
@@ -101,28 +121,24 @@ impl Experiment for LoadTest {
 
         if self.mempool {
             // spawn mempool load test
-            let (mempool_sender, mempool_events) = stubbed_node
-                .mempool_handle
-                .take()
-                .expect("missing mempool network handles");
-            mempool_task = Some(tokio::task::spawn(mempool_load_test(
-                duration,
-                mempool_sender,
-                mempool_events,
-            )));
+            for (mempool_sender, mempool_events) in mempool_handlers {
+                mempool_task.push(Some(tokio::task::spawn(mempool_load_test(
+                    duration,
+                    mempool_sender,
+                    mempool_events,
+                ))));
+            }
         }
 
         if self.state_sync {
             // spawn state sync load test
-            let (state_sync_sender, state_sync_events) = stubbed_node
-                .state_sync_handle
-                .take()
-                .expect("missing state sync network handles");
-            state_sync_task = Some(tokio::task::spawn(state_sync_load_test(
-                duration,
-                state_sync_sender,
-                state_sync_events,
-            )));
+            for (state_sync_sender, state_sync_events) in state_sync_handlers {
+                state_sync_task.push(Some(tokio::task::spawn(state_sync_load_test(
+                    duration,
+                    state_sync_sender,
+                    state_sync_events,
+                ))));
+            }
         }
 
         // await on all spawned tasks
@@ -146,21 +162,35 @@ impl Experiment for LoadTest {
             );
         }
 
-        if let Some(t) = mempool_task {
-            let stats = t.await?.expect("failed mempool load test task");
-            info!("Total mempool stats: {}", stats);
+        let mut mempool_stats: Option<MempoolStats> = None;
+        for task in mempool_task {
+            if let Some(t) = task {
+                let stats = t.await?.expect("failed mempool load test task");
+                let cur = &stats + &mempool_stats.unwrap_or_default();
+                mempool_stats = Some(cur);
+            }
+        }
+        if let Some(s) = mempool_stats {
+            info!("Total mempool stats: {}", s);
             info!(
                 "Average rate: {}",
-                stats.rate(Duration::from_secs(self.duration))
+                s.rate(Duration::from_secs(self.duration))
             );
         }
 
-        if let Some(t) = state_sync_task {
-            let stats = t.await?.expect("failed state sync load test task");
-            info!("Total state sync stats: {}", stats);
+        let mut state_sync_stats: Option<StateSyncStats> = None;
+        for task in state_sync_task {
+            if let Some(t) = task {
+                let stats = t.await?.expect("failed state sync load test task");
+                let cur = &stats + &state_sync_stats.unwrap_or_default();
+                state_sync_stats = Some(cur);
+            }
+        }
+        if let Some(s) = state_sync_stats {
+            info!("Total state sync stats: {}", s);
             info!(
                 "Average rate: {}",
-                stats.rate(Duration::from_secs(self.duration))
+                s.rate(Duration::from_secs(self.duration))
             );
         }
 
@@ -168,11 +198,8 @@ impl Experiment for LoadTest {
         // We cannot drop a runtime in an async context where blocking is not allowed - otherwise,
         // this thread will panic.
         tokio::task::spawn_blocking(move || {
-            drop(stubbed_node);
-        })
-        .await?;
-
-        // TODO log per-component experiment results
+            for _n in stubbed_node {}
+        }).await?;
 
         Ok(())
     }
@@ -191,6 +218,14 @@ impl fmt::Display for LoadTest {
     }
 }
 
+async fn get_stubbed_nodes(endpoint: String, num_of_nodes: usize) -> Vec<StubbedNode> {
+    let mut nodes = vec![];
+    for i in 0..num_of_nodes {
+        nodes.push(StubbedNode::launch(endpoint.clone(), i).await);
+    }
+    nodes
+}
+
 // An actor that can participate in DiemNet
 // Connects to VFN via on-chain discovery and interact with it via mempool and state sync protocol
 // It is 'stubbed' in the sense that it has no real node components running and only network stubs
@@ -202,13 +237,13 @@ struct StubbedNode {
 }
 
 impl StubbedNode {
-    async fn launch(node_endpoint: String) -> Self {
+    async fn launch(node_endpoint: String, index: usize) -> Self {
         // generate seed peers config from querying node endpoint
         let seed_peers = seed_peer_generator::utils::gen_seed_peer_config(node_endpoint);
 
         // build sparse network runner
 
-        let pfn_config = NodeConfig::default_for_public_full_node();
+        let mut pfn_config = NodeConfig::default_for_public_full_node();
 
         // some sanity checks on the network the stubbed node will be running in
         assert_eq!(
@@ -216,7 +251,10 @@ impl StubbedNode {
             1,
             "expected only one fn network for PFN"
         );
-        let network_config = &pfn_config.full_node_networks[0];
+        let network_config = &mut pfn_config.full_node_networks[0];
+        network_config.listen_address = format!("/ip4/127.0.0.1/tcp/{}", 6180 + index)
+            .parse()
+            .unwrap();
         assert_eq!(network_config.network_id, NetworkId::Public);
 
         let mut network_builder =
@@ -270,7 +308,7 @@ impl StubbedNode {
                 .await
                 .expect("failed to send conn req");
         }
-
+        
         Self {
             network_runtime,
             mempool_handle,
@@ -337,6 +375,18 @@ impl MempoolStats {
             bytes: self.bytes / window.as_secs(),
             tx_num: self.tx_num / window.as_secs(),
             msg_num: self.msg_num / window.as_secs(),
+        }
+    }
+}
+
+impl Add for &MempoolStats {
+    type Output = MempoolStats;
+
+    fn add(self, other: &MempoolStats) -> MempoolStats {
+        MempoolStats {
+            bytes: self.bytes + other.bytes,
+            tx_num: self.tx_num + other.tx_num,
+            msg_num: self.msg_num + other.msg_num,
         }
     }
 }
@@ -428,6 +478,18 @@ pub struct StateSyncStatsRate {
     pub served_txns: u64,
     pub bytes: u64,
     pub msg_num: u64,
+}
+
+impl Add for &StateSyncStats {
+    type Output = StateSyncStats;
+
+    fn add(self, other: &StateSyncStats) -> StateSyncStats {
+        StateSyncStats {
+            served_txns: self.served_txns + other.served_txns,
+            bytes: self.bytes + other.bytes,
+            msg_num: self.msg_num + other.msg_num,
+        }
+    }
 }
 
 impl StateSyncStats {
