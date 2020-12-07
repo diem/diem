@@ -91,16 +91,12 @@ pub mod tests {
     fn test_check_endpoint() {
         let op_tool = OperationalTool::new("unused-host".into(), ChainId::test());
 
-        // Check invalid DNS
-        let addr = NetworkAddress::from_str("/dns4/libra/tcp/80").unwrap();
+        // Ensure endpoint doesn't respond with data
+        let addr = NetworkAddress::from_str("/dns4/diem/tcp/80").unwrap();
         op_tool.check_endpoint(addr).unwrap_err();
 
-        // Check if endpoint responded with data
-        let addr = NetworkAddress::from_str("/dns4/libra.org/tcp/80").unwrap();
-        op_tool.check_endpoint(addr).unwrap_err();
-
-        // Check bad port
-        let addr = NetworkAddress::from_str("/dns4/libra.org/tcp/6180").unwrap();
+        // Check connection refused (bad port)
+        let addr = NetworkAddress::from_str("/dns4/diem/tcp/9999").unwrap();
         op_tool.check_endpoint(addr).unwrap_err();
     }
 }
