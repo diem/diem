@@ -6182,6 +6182,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
 
 [[package]]
+name = "smawk"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1bc737c97d093feb72e67f4926d9b22d717ce8580cd25f0ce86d74e859c466d"
+
+[[package]]
 name = "smoke-test"
 version = "0.1.0"
 dependencies = [
@@ -6747,6 +6753,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "textwrap"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1bca196a5c5a7bc57a5c92809cf5670e16bcbca3bf0d09ef47150bf97221f6f"
+dependencies = [
+ "smawk",
+ "unicode-width",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7042,7 +7058,7 @@ dependencies = [
  "serde_yaml",
  "structopt 0.3.21",
  "tempfile",
- "textwrap 0.12.1",
+ "textwrap 0.13.0",
  "which 4.0.2",
 ]
 
