@@ -469,8 +469,11 @@ impl<R: RetryStrategy> Client<R> {
             .send()
             .await
             .map_err(Error::NetworkError)?;
-        if resp.status() != 200 {
-            return Err(Error::InvalidHTTPStatus(format!("{:#?}", resp)));
+        if !resp.status().is_success() {
+            return Err(Error::InvalidHTTPStatus(
+                format!("{:#?}", resp),
+                resp.status(),
+            ));
         }
         resp.json().await.map_err(Error::InvalidHTTPResponse)
     }

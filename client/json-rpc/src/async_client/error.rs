@@ -8,7 +8,7 @@ pub enum Error {
     // Error when send http request failed
     NetworkError(reqwest::Error),
     // Response http status is not 200
-    InvalidHTTPStatus(String), // reqwest::Response),
+    InvalidHTTPStatus(String, reqwest::StatusCode),
     // Response body can't be decoded as json-rpc response
     InvalidHTTPResponse(reqwest::Error),
     // Decoded JSON-RPC does not match JSON-RPC spec
