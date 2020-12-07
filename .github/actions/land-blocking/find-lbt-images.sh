@@ -2,9 +2,9 @@
 # Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-# adapted from --build-all-cti option from libra/docker/build-aws.sh, which is how
+# adapted from --build-all-cti option from diem/docker/build-aws.sh, which is how
 # land blocking test builds images before running cluster-test
-REPOS=(libra/validator libra/cluster_test libra/init libra/validator_tcb)
+REPOS=(diem/validator diem/cluster_test diem/init diem/validator_tcb)
 # the number of commits backwards we want to look
 END=50
 
