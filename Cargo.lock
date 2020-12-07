@@ -4886,11 +4886,11 @@ dependencies = [
 
 [[package]]
 name = "polyval"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5884790f1ce3553ad55fec37b5aaac5882e0e845a2612df744d6c85c9bf046c"
+checksum = "b3fd900a291ceb8b99799cc8cd3d1d3403a51721e015bc533528b2ceafcc443c"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "universal-hash",
 ]
 
