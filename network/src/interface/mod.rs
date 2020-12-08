@@ -76,7 +76,7 @@ where
         max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
-        inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
+        inbound_rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,

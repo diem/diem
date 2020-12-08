@@ -116,7 +116,7 @@ pub struct Peer<TSocket> {
     /// Currently, requests are only a single frame
     max_frame_size: usize,
     /// Inbound request rate limiter
-    inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
+    inbound_rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -131,7 +131,7 @@ where
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
         max_frame_size: usize,
-        inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
+        inbound_rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -178,7 +178,7 @@ where
             ip_addr,
             IoCompat::new(read_socket),
             self.max_frame_size,
-            Some(self.inbound_rate_limiter.clone()),
+            self.inbound_rate_limiter.clone(),
         )
         .fuse();
         let writer = NetworkMessageSink::new(IoCompat::new(write_socket), self.max_frame_size);

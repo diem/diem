@@ -18,14 +18,6 @@ pub enum RateLimitError {
     MessageTooLarge,
 }
 
-/// Provides a maximum throttle for testing and "fully open" purposes
-/// TODO: Can we just make an implementation that doesn't do anything instead?
-pub fn allow_all_keyed<Key: Hash + Clone + Eq>() -> Arc<RateLimiter<Key>> {
-    let max = NonZeroU32::new(u32::MAX).unwrap();
-    let quota = Quota::per_second(max);
-    Arc::new(governor::RateLimiter::keyed(quota))
-}
-
 /// Provides a per second throttle with arbitrary keys
 pub fn new_per_second_keyed<Key: Hash + Clone + Eq>(
     max_burst: NonZeroU32,

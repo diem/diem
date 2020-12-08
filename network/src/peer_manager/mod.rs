@@ -292,7 +292,7 @@ where
     /// Inbound connection limit separate of outbound connections
     inbound_connection_limit: usize,
     /// Inbound request rate limiter
-    inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
+    inbound_rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -361,7 +361,10 @@ where
             max_frame_size,
             inbound_connection_limit,
             // FIXME: Use a config configured quota
-            inbound_rate_limiter: rate_limiter::new_per_second_keyed(default_rate, default_rate),
+            inbound_rate_limiter: Some(rate_limiter::new_per_second_keyed(
+                default_rate,
+                default_rate,
+            )),
         }
     }
 

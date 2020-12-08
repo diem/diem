@@ -13,7 +13,6 @@ use crate::{
             },
         },
     },
-    rate_limiter,
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
@@ -57,7 +56,6 @@ fn build_test_peer(
     };
     let connection_metadata = connection.metadata.clone();
 
-    let rate_limiter = rate_limiter::allow_all_keyed();
     let peer = Peer::new(
         NetworkContext::mock(),
         executor,
@@ -66,7 +64,7 @@ fn build_test_peer(
         peer_notifs_tx,
         peer_rpc_notifs_tx,
         MAX_FRAME_SIZE,
-        rate_limiter,
+        None,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 

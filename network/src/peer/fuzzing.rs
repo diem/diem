@@ -8,7 +8,6 @@ use crate::{
         handshake::v1::{MessagingProtocolVersion, SupportedProtocols},
         messaging::v1::{NetworkMessage, NetworkMessageSink},
     },
-    rate_limiter,
     testutils::fake_socket::ReadOnlyTestSocketVec,
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
@@ -102,8 +101,6 @@ pub fn fuzz(data: &[u8]) {
     let max_concurrent_notifs = 8;
     let channel_size = 8;
 
-    let inbound_rate_limiter = rate_limiter::allow_all_keyed();
-
     // Spin up a new `Peer` actor through the `NetworkProvider` interface.
     let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
         network_context,
@@ -114,7 +111,7 @@ pub fn fuzz(data: &[u8]) {
         max_concurrent_notifs,
         channel_size,
         MAX_FRAME_SIZE,
-        inbound_rate_limiter,
+        None,
     );
 
     rt.block_on(async move {
