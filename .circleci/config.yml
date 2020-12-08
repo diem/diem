@@ -9,7 +9,7 @@ aliases:
       only:
         - auto
         - canary
-  - &working_directory /opt/git/libra
+  - &working_directory /opt/git/diem
   - &image libra/build_environment:circleci-2
 
 version: 2.1
