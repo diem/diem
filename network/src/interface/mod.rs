@@ -20,6 +20,7 @@ use crate::{
         direct_send::Message,
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
+    rate_limiter::RateLimiter,
     transport::Connection,
     ProtocolId,
 };
@@ -32,7 +33,6 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt,
 };
-use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use std::{
     fmt::Debug, marker::PhantomData, net::IpAddr, num::NonZeroUsize, sync::Arc, time::Duration,
 };
@@ -76,9 +76,7 @@ where
         max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
-        inbound_rate_limiter: Arc<
-            RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>,
-        >,
+        inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,

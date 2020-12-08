@@ -55,7 +55,7 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
-use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
+use crate::rate_limiter::RateLimiter;
 use serde::export::Formatter;
 use std::{net::IpAddr, num::NonZeroU32};
 
@@ -291,8 +291,8 @@ where
     max_frame_size: usize,
     /// Inbound connection limit separate of outbound connections
     inbound_connection_limit: usize,
-    /// Inbound request rate limiter TODO: adjust state store and clock
-    inbound_rate_limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
+    /// Inbound request rate limiter
+    inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>

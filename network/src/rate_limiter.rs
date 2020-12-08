@@ -4,9 +4,11 @@
 use diem_logger::prelude::*;
 use governor::{
     clock::DefaultClock, state::keyed::DefaultKeyedStateStore, NegativeMultiDecision, Quota,
-    RateLimiter,
 };
 use std::{hash::Hash, num::NonZeroU32, sync::Arc};
+
+/// Rate Limiter type to get rid of underlying store and clock impl
+pub type RateLimiter<Key> = governor::RateLimiter<Key, DefaultKeyedStateStore<Key>, DefaultClock>;
 
 /// Directives for the synchronous usage of Rate limiting, the service using it could choose to
 /// drop the messages anyways in all situations.
@@ -18,8 +20,7 @@ pub enum RateLimitError {
 
 /// Provides a maximum throttle for testing and "fully open" purposes
 /// TODO: Can we just make an implementation that doesn't do anything instead?
-pub fn allow_all_keyed<Key: Hash + Clone + Eq>(
-) -> Arc<RateLimiter<Key, DefaultKeyedStateStore<Key>, DefaultClock>> {
+pub fn allow_all_keyed<Key: Hash + Clone + Eq>() -> Arc<RateLimiter<Key>> {
     let max = NonZeroU32::new(u32::MAX).unwrap();
     let quota = Quota::per_second(max);
     Arc::new(governor::RateLimiter::keyed(quota))
@@ -29,18 +30,14 @@ pub fn allow_all_keyed<Key: Hash + Clone + Eq>(
 pub fn new_per_second_keyed<Key: Hash + Clone + Eq>(
     max_burst: NonZeroU32,
     max_rate: NonZeroU32,
-) -> Arc<RateLimiter<Key, DefaultKeyedStateStore<Key>, DefaultClock>> {
+) -> Arc<RateLimiter<Key>> {
     let quota = Quota::per_second(max_rate).allow_burst(max_burst);
     Arc::new(governor::RateLimiter::keyed(quota))
 }
 
 /// Rate limits a message based on it's length
-pub fn rate_limit_msg<
-    Key: Hash + Clone + Eq,
-    S: governor::state::StateStore + governor::state::StateStore<Key = Key>,
-    C: governor::clock::Clock,
->(
-    rate_limiter: &RateLimiter<Key, S, C>,
+pub fn rate_limit_msg<Key: Hash + Clone + Eq>(
+    rate_limiter: &RateLimiter<Key>,
     key: &Key,
     msg_length: usize,
 ) -> Result<(), RateLimitError> {

@@ -18,6 +18,7 @@ use crate::{
             Priority, ReadError, WriteError,
         },
     },
+    rate_limiter::RateLimiter,
     transport,
     transport::{Connection, ConnectionMetadata},
     ProtocolId,
@@ -33,7 +34,6 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt, TryFutureExt,
 };
-use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
 use std::{
@@ -116,7 +116,7 @@ pub struct Peer<TSocket> {
     /// Currently, requests are only a single frame
     max_frame_size: usize,
     /// Inbound request rate limiter
-    inbound_rate_limiter: Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
+    inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -131,9 +131,7 @@ where
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
         max_frame_size: usize,
-        inbound_rate_limiter: Arc<
-            RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>,
-        >,
+        inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,

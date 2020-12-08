@@ -9,14 +9,16 @@
 //! describes in greater detail how these messages are sent and received
 //! over-the-wire.
 
-use crate::{protocols::wire::handshake::v1::ProtocolId, rate_limiter::rate_limit_msg};
+use crate::{
+    protocols::wire::handshake::v1::ProtocolId,
+    rate_limiter::{rate_limit_msg, RateLimiter},
+};
 use bytes::Bytes;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     sink::Sink,
     stream::Stream,
 };
-use governor::{clock::DefaultClock, state::keyed::DefaultKeyedStateStore, RateLimiter};
 use netcore::compat::IoCompat;
 use pin_project::pin_project;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -160,7 +162,7 @@ pub struct NetworkMessageStream<TReadSocket: AsyncRead> {
     ip_addr: IpAddr,
     #[pin]
     framed_read: FramedRead<IoCompat<TReadSocket>, LengthDelimitedCodec>,
-    rate_limiter: Option<Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>>,
+    rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
 }
 
 impl<TReadSocket: AsyncRead> NetworkMessageStream<TReadSocket> {
@@ -177,9 +179,7 @@ impl<TReadSocket: AsyncRead> NetworkMessageStream<TReadSocket> {
         ip_addr: IpAddr,
         socket: TReadSocket,
         max_frame_size: usize,
-        rate_limiter: Option<
-            Arc<RateLimiter<IpAddr, DefaultKeyedStateStore<IpAddr>, DefaultClock>>,
-        >,
+        rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
     ) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
         let compat_socket = IoCompat::new(socket);
