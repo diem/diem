@@ -12,6 +12,17 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+
+# 2020-12-07 Add a `X-Diem-Chain-Id`, `X-Diem-Ledger-Version` and `X-Diem-Ledger-TimestampUsec` to http response header
+
+The added headers are same with JSON-RPC response json same name fields. They are added for client to know chain id and server's latest block version and timestamp without decoding body json.
+
+* `X-Diem-Chain-Id`: chain id of server
+* `X-Diem-Ledger-Version`: the latest ledger version when the request hit server.
+* `X-Diem-Ledger-TimestampUsec`: the latest ledger version's timestamp in usec when the request hit server.
+
+All values are string type.
+
 # 2020-11-09 Add a `get_transactions_with_proofs` API
 
 This allows to create verifying clients that do not need to blindly trust the fullnode they connect to.

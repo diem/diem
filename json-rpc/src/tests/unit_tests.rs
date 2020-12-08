@@ -933,6 +933,27 @@ fn test_json_rpc_protocol_invalid_requests() {
     for (name, request, expected) in calls {
         let resp = client.post(&url).json(&request).send().unwrap();
         assert_eq!(resp.status(), 200);
+        let headers = resp.headers().clone();
+        assert_eq!(
+            headers.get("X-Diem-Chain-Id").unwrap().to_str().unwrap(),
+            "4"
+        );
+        assert_eq!(
+            headers
+                .get("X-Diem-Ledger-Version")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            version.to_string()
+        );
+        assert_eq!(
+            headers
+                .get("X-Diem-Ledger-TimestampUsec")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            timestamp.to_string()
+        );
 
         let resp_json: serde_json::Value = resp.json().unwrap();
         assert_eq!(expected, resp_json, "test: {}", name);

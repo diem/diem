@@ -93,3 +93,13 @@ Allows:
 * Origin: any
 * Request-Method: POST
 * Request-Headers: content-type
+
+## HTTP Response Headers Extensions
+
+All Diem JSON-RPC server responses include the following headers:
+
+* `X-Diem-Chain-Id`: network chain id, e.g. testnet chain id is 2
+* `X-Diem-Ledger-Version`: server-side latest ledger version number
+* `X-Diem-Ledger-TimestampUsec`: server-side latest ledger timestamp microseconds
+
+These headers are similar with [Diem extensions](#diem-extensions), except the value type is all string.

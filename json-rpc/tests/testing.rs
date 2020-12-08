@@ -240,12 +240,34 @@ impl Env {
             .send()
             .expect("request success");
         assert_eq!(resp.status(), 200);
-
+        let headers = resp.headers().clone();
         let json: serde_json::Value = resp.json().unwrap();
         if !self.allow_execution_failures {
             assert_eq!(json.get("error"), None);
         }
-        serde_json::from_value(json).expect("should be valid JsonRpcResponse")
+        let rpc_resp: JsonRpcResponse =
+            serde_json::from_value(json).expect("should be valid JsonRpcResponse");
+        assert_eq!(
+            headers.get("X-Diem-Chain-Id").unwrap().to_str().unwrap(),
+            rpc_resp.diem_chain_id.to_string()
+        );
+        assert_eq!(
+            headers
+                .get("X-Diem-Ledger-Version")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            rpc_resp.diem_ledger_version.to_string()
+        );
+        assert_eq!(
+            headers
+                .get("X-Diem-Ledger-TimestampUsec")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            rpc_resp.diem_ledger_timestampusec.to_string()
+        );
+        rpc_resp
     }
 
     pub fn send_request(&self, request: Value) -> Value {

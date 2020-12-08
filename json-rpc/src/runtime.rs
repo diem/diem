@@ -5,7 +5,7 @@ use crate::{
     counters,
     errors::{is_internal_error, JsonRpcError},
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
-    response::JsonRpcResponse,
+    response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
 };
 use diem_config::config::{NodeConfig, RoleType};
 use diem_logger::{debug, Level, Schema};
@@ -20,7 +20,7 @@ use tokio::runtime::{Builder, Runtime};
 use warp::{
     http::header,
     reject::{self, Reject},
-    Filter,
+    Filter, Reply,
 };
 
 // Counter labels for runtime metrics
@@ -192,7 +192,7 @@ pub(crate) async fn rpc_endpoint(
     data: Value,
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
-) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+) -> Result<warp::reply::Response, warp::Rejection> {
     let label = match data {
         Value::Array(_) => LABEL_BATCH,
         _ => LABEL_SINGLE,
@@ -210,7 +210,7 @@ async fn rpc_endpoint_without_metrics(
     data: Value,
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
-) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+) -> Result<warp::reply::Response, warp::Rejection> {
     // take snapshot of latest version of DB to be used across all requests, especially for batched requests
     let ledger_info = service
         .get_latest_ledger_info()
@@ -222,6 +222,9 @@ async fn rpc_endpoint_without_metrics(
         trace_id: trace_id.clone(),
         request: data.clone(),
     });
+    let chain_id = service.chain_id();
+    let latest_ledger_version = ledger_info.ledger_info().version();
+    let latest_ledger_timestamp_usecs = ledger_info.ledger_info().timestamp_usecs();
 
     let resp = Ok(if let Value::Array(requests) = data {
         match service.validate_batch_size_limit(requests.len()) {
@@ -245,9 +248,9 @@ async fn rpc_endpoint_without_metrics(
             }
             Err(err) => {
                 let mut resp = JsonRpcResponse::new(
-                    service.chain_id(),
-                    ledger_info.ledger_info().version(),
-                    ledger_info.ledger_info().timestamp_usecs(),
+                    chain_id,
+                    latest_ledger_version,
+                    latest_ledger_timestamp_usecs,
                 );
                 set_response_error(&mut resp, err, LABEL_BATCH, "unknown");
                 log_response!(trace_id.clone(), &resp, true);
@@ -271,7 +274,23 @@ async fn rpc_endpoint_without_metrics(
         warp::reply::json(&resp)
     });
 
-    Ok(Box::new(resp) as Box<dyn warp::Reply>)
+    let mut http_response = resp.into_response();
+    let headers = http_response.headers_mut();
+
+    headers.insert(
+        X_DIEM_CHAIN_ID,
+        header::HeaderValue::from_str(&chain_id.id().to_string()).unwrap(),
+    );
+    headers.insert(
+        X_DIEM_VERSION_ID,
+        header::HeaderValue::from_str(&latest_ledger_version.to_string()).unwrap(),
+    );
+    headers.insert(
+        X_DIEM_TIMESTAMP_USEC_ID,
+        header::HeaderValue::from_str(&latest_ledger_timestamp_usecs.to_string()).unwrap(),
+    );
+
+    Ok(http_response)
 }
 
 /// Handler of single RPC request
