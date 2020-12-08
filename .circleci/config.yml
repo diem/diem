@@ -345,7 +345,7 @@ jobs:
           command: cargo xclippy --workspace --all-targets
       - run:
           name: cargo clippy tcb
-          command: cargo xclippy -p diem-secure-json-rpc -p diem-key-manager -p diem-secure-net -p diem-secure-push-metrics -p diem-secure-storage -p diem-secure-time -p safety-rules  -p execution-correctness
+          command: cargo xclippy -p safety-rules  -p execution-correctness
       - run:
           name: cargo fmt
           command: cargo xfmt --check
