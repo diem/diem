@@ -23,6 +23,7 @@ mod fmt;
 mod generate_summaries;
 mod installer;
 mod lint;
+mod playground;
 mod test;
 mod tools;
 mod utils;
@@ -72,6 +73,8 @@ enum Command {
     #[structopt(name = "lint")]
     /// Run lints
     Lint(lint::Args),
+    /// Run playground code
+    Playground(playground::Args),
     #[structopt(name = "generate-summaries")]
     /// Generate build summaries for important subsets
     GenerateSummaries(generate_summaries::Args),
@@ -116,6 +119,7 @@ fn main() -> Result<()> {
         Command::Fmt(args) => fmt::run(args, xctx),
         Command::Bench(args) => bench::run(args, xctx),
         Command::Lint(args) => lint::run(args, xctx),
+        Command::Playground(args) => playground::run(args, xctx),
         Command::GenerateSummaries(args) => generate_summaries::run(args, xctx),
         Command::DiffSummary(args) => diff_summary::run(args, xctx),
     }
