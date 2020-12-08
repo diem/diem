@@ -1,14 +1,10 @@
 [package]
-name = "move-lang-ir-utils"
+name = "move-lang-test-utils"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-publish = false
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+datatest-stable = { path = "../../../common/datatest-stable" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-structopt = "0.3.21"
-move-lang = { path = ".." }
-move-lang-test-utils = { path = "../test-utils" }
-regex = "1.4.2"

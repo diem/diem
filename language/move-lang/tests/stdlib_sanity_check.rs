@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_lang::{command_line::read_bool_env_var, move_compile, shared::Address};
+use move_lang_test_utils::*;
 use std::{fs, path::Path};
-
-use move_lang::test_utils::*;
 
 const OUT_EXT: &str = "out";
 

@@ -3,7 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::{ir_translation::fix_syntax_and_write, test_utils::*};
+use move_lang::ir_translation::fix_syntax_and_write;
+use move_lang_test_utils::*;
 use regex::Regex;
 use std::{fs, path::Path};
 use structopt::*;

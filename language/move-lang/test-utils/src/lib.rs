@@ -7,6 +7,7 @@ pub struct StringError(String);
 
 pub const SENDER: &str = "0x8675309";
 
+// These paths are relative to the move-lang directory.
 pub const STD_LIB_DIR: &str = "../stdlib/modules";
 pub const STD_LIB_COMPILED_DIR: &str = "../stdlib/compiled/stdlib";
 pub const FUNCTIONAL_TEST_DIR: &str = "functional-tests/tests";

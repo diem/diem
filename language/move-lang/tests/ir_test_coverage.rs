@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_lang::test_utils::*;
+use move_lang_test_utils::*;
 use std::{collections::HashSet, path::Path};
 
 #[test]

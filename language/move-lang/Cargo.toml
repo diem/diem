@@ -15,7 +15,6 @@ regex = "1.4.2"
 structopt = "0.3.21"
 difference = "2.0.0"
 petgraph = "0.5.1"
-datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 walkdir = "2.3.1"
 tempfile = "3.1.0"
 
@@ -29,6 +28,9 @@ ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
+
+[dev-dependencies]
+move-lang-test-utils = { path = "test-utils" }
 
 [[test]]
 name = "move_check_testsuite"

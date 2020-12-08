@@ -4101,7 +4101,6 @@ dependencies = [
  "bytecode-verifier",
  "codespan",
  "codespan-reporting",
- "datatest-stable",
  "diem-types",
  "diem-workspace-hack",
  "difference",
@@ -4110,6 +4109,7 @@ dependencies = [
  "libra-canonical-serialization",
  "move-core-types",
  "move-ir-types",
+ "move-lang-test-utils",
  "petgraph",
  "regex",
  "structopt 0.3.21",
@@ -4137,8 +4137,17 @@ version = "0.1.0"
 dependencies = [
  "diem-workspace-hack",
  "move-lang",
+ "move-lang-test-utils",
  "regex",
  "structopt 0.3.21",
+]
+
+[[package]]
+name = "move-lang-test-utils"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "diem-workspace-hack",
 ]
 
 [[package]]
