@@ -30,7 +30,7 @@ serde = { version = "1.0.117", features = ["derive"] }
 
 [dev-dependencies]
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
-test-utils = { path = "../test-utils", version = "0.1.0" }
+move-prover-test-utils = { path = "../test-utils", version = "0.1.0" }
 
 [[test]]
 name = "testsuite"

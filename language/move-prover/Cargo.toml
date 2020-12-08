@@ -45,7 +45,7 @@ toml = "0.5.7"
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-test-utils = { path = "test-utils", version = "0.1.0" }
+move-prover-test-utils = { path = "test-utils", version = "0.1.0" }
 shell-words = "1.0.0"
 
 [[test]]

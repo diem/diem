@@ -9,7 +9,9 @@ use anyhow::anyhow;
 use diem_temppath::TempPath;
 use itertools::Itertools;
 use move_prover::{cli::Options, run_move_prover};
-use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
+use move_prover_test_utils::{
+    baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var,
+};
 
 #[allow(unused_imports)]
 use log::{debug, warn};

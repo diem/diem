@@ -23,4 +23,3 @@ serde = { version = "1.0.117", features = ["derive"] }
 codespan-reporting = "0.8.0"
 move-prover = { path = "..", version = "0.1.0" }
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
-test-utils = { path = "../test-utils", version = "0.1.0" }

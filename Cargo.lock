@@ -25,9 +25,9 @@ dependencies = [
  "log",
  "move-core-types",
  "move-prover",
+ "move-prover-test-utils",
  "serde",
  "spec-lang",
- "test-utils",
 ]
 
 [[package]]
@@ -503,9 +503,9 @@ dependencies = [
  "itertools 0.9.0",
  "log",
  "move-core-types",
+ "move-prover-test-utils",
  "num 0.3.1",
  "spec-lang",
- "test-utils",
  "vm",
 ]
 
@@ -2452,12 +2452,12 @@ dependencies = [
  "itertools 0.9.0",
  "log",
  "move-prover",
+ "move-prover-test-utils",
  "num 0.3.1",
  "once_cell",
  "regex",
  "serde",
  "spec-lang",
- "test-utils",
 ]
 
 [[package]]
@@ -2587,7 +2587,6 @@ dependencies = [
  "move-prover",
  "serde",
  "spec-lang",
- "test-utils",
 ]
 
 [[package]]
@@ -4157,6 +4156,7 @@ dependencies = [
  "log",
  "move-ir-types",
  "move-lang",
+ "move-prover-test-utils",
  "num 0.3.1",
  "once_cell",
  "pretty",
@@ -4167,10 +4167,19 @@ dependencies = [
  "shell-words",
  "simplelog",
  "spec-lang",
- "test-utils",
  "tokio",
  "toml",
  "vm",
+]
+
+[[package]]
+name = "move-prover-test-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-workspace-hack",
+ "prettydiff",
+ "regex",
 ]
 
 [[package]]
@@ -6279,11 +6288,11 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "move-lang",
+ "move-prover-test-utils",
  "num 0.3.1",
  "once_cell",
  "regex",
  "serde",
- "test-utils",
  "vm",
 ]
 
@@ -6719,16 +6728,6 @@ dependencies = [
  "rand 0.7.3",
  "structopt 0.3.21",
  "vm",
-]
-
-[[package]]
-name = "test-utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "diem-workspace-hack",
- "prettydiff",
- "regex",
 ]
 
 [[package]]
