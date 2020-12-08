@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{utils::project_root, Result};
+use anyhow::Context;
 use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
@@ -177,8 +178,11 @@ pub struct CargoConfig {
 
 impl Config {
     pub fn from_file(f: impl AsRef<Path>) -> Result<Self> {
-        let contents = fs::read(f)?;
-        Self::from_toml(&contents).map_err(Into::into)
+        let f = f.as_ref();
+        let contents =
+            fs::read(f).with_context(|| format!("could not read config file {}", f.display()))?;
+        Self::from_toml(&contents)
+            .with_context(|| format!("could not parse config file {}", f.display()))
     }
 
     pub fn from_toml(bytes: &[u8]) -> Result<Self> {
