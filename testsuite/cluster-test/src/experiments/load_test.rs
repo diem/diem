@@ -16,7 +16,7 @@ use diem_logger::info;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
 use diem_network_address::NetworkAddress;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
-use futures::{sink::SinkExt, StreamExt};
+use futures::{sink::SinkExt, StreamExt, FutureExt};
 use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
