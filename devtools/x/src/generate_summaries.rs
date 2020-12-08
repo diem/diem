@@ -58,7 +58,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     for (name, subset_config) in &workspace_config.subsets {
         // TODO: cache these next to PackageGraph?
         let feature_query = pkg_graph
-            .query_workspace_paths(subset_config.members.iter().map(|path| path.as_path()))
+            .query_workspace_names(&subset_config.members)
             .with_context(|| format!("error while querying workspace paths for {}", name))?
             .to_feature_query(default_filter());
         write_summary(name, feature_query, &default_opts, &out_dir)?;

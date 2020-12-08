@@ -162,24 +162,24 @@ members = [
 [workspace.subsets.lsr]
 # The Diem safety rules TCB.
 members = [
-    "consensus/safety-rules",
+    "safety-rules",
 ]
 
 [workspace.subsets.lec]
 # The Diem execution correctness TCB.
 members = [
-    "execution/execution-correctness",
+    "execution-correctness",
 ]
 
 [workspace.subsets.release]
 # The Diem release binaries
 members = [
-    "config/management/genesis",
-    "consensus/safety-rules",
-    "execution/db-bootstrapper",
+    "backup-cli",
+    "db-bootstrapper",
+    "diem-genesis-tool",
+    "diem-key-manager",
     "diem-node",
-    "secure/key-manager",
-    "storage/backup/backup-cli",
+    "safety-rules",
 ]
 
 # ---

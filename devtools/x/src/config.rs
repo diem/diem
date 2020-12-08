@@ -7,7 +7,7 @@ use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     fs,
     path::{Path, PathBuf},
 };
@@ -154,7 +154,7 @@ pub struct TestOnlyConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct SubsetConfig {
     /// The members in this subset
-    pub members: HashSet<PathBuf>,
+    pub members: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
