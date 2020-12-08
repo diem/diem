@@ -45,7 +45,9 @@ fn test_ir_test_coverage() {
             MOVE_EXTENSION, TODO_EXTENSION
         ));
         msg.push_str("Running the following tool may help with the migration:\n");
-        msg.push_str("  cargo run -p move-lang --bin ir-test-translation -- -d <dir_name>\n\n");
+        msg.push_str(
+            "  cargo run -p move-lang-ir-utils --bin ir-test-translation -- -d <dir_name>\n\n",
+        );
         panic!(msg)
     }
 }

@@ -4132,6 +4132,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-lang-ir-utils"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+ "move-lang",
+ "regex",
+ "structopt 0.3.21",
+]
+
+[[package]]
 name = "move-prover"
 version = "0.1.0"
 dependencies = [

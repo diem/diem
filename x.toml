@@ -130,6 +130,7 @@ members = [
     "language/testing-infra/module-generation",
     "language/ir-testsuite",
     "language/move-lang/functional-tests",
+    "language/move-lang/ir-utils",
     "language/move-prover/test-utils",
     "language/move-vm/integration-tests",
     "language/vm/serializer-tests",
