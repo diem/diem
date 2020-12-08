@@ -15,6 +15,8 @@ use std::{
 };
 use vm::{normalized::Module, CompiledModule};
 
+pub mod utils;
+
 pub const STD_LIB_DIR: &str = "modules";
 pub const MOVE_EXTENSION: &str = "move";
 pub const ERROR_DESC_EXTENSION: &str = "errmap";
@@ -92,7 +94,7 @@ where
 
 pub fn stdlib_files() -> Vec<String> {
     let path = path_in_crate(STD_LIB_DIR);
-    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    let dirfiles = utils::iterate_directory(&path);
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()
@@ -101,7 +103,7 @@ pub fn stdlib_files() -> Vec<String> {
 pub fn stdlib_bytecode_files() -> Vec<String> {
     let path = path_in_crate(COMPILED_OUTPUT_PATH);
     let names = stdlib_files();
-    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    let dirfiles = utils::iterate_directory(&path);
     let res: Vec<String> = filter_move_bytecode_files(dirfiles)
         .filter(|path| {
             for name in &names {
@@ -134,7 +136,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
 
 pub fn script_files() -> Vec<String> {
     let path = path_in_crate(TRANSACTION_SCRIPTS);
-    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    let dirfiles = utils::iterate_directory(&path);
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()

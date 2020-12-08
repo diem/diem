@@ -112,6 +112,7 @@ features = ["fuzzing"]
 [workspace.test-only]
 members = [
     "common/channel/many-keys-stress-test",
+    "common/datatest-stable",
     "common/diemdoc",
     "common/proptest-helpers",
     "common/retrier",

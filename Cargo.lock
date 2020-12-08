@@ -4101,6 +4101,7 @@ dependencies = [
  "bytecode-verifier",
  "codespan",
  "codespan-reporting",
+ "datatest-stable",
  "diem-types",
  "diem-workspace-hack",
  "difference",
@@ -6416,6 +6417,7 @@ dependencies = [
  "sha2",
  "transaction-builder-generator",
  "vm",
+ "walkdir",
 ]
 
 [[package]]

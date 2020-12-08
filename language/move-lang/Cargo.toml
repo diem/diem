@@ -31,6 +31,7 @@ lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
 
 [dev-dependencies]
 move-lang-test-utils = { path = "test-utils" }
+datatest-stable = { path = "../../common/datatest-stable" }
 
 [[test]]
 name = "move_check_testsuite"

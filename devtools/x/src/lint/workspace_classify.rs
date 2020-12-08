@@ -84,10 +84,32 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
             }
             (None, WorkspaceStatus::Dependency, true) => {
                 // Library, dependency of default members and listed in test-only.
-                let msg = indoc!(
-                    "library package, dependency of default members and test-only:
-                    * remove from test-only if production code
-                    * otherwise, ensure it is not a dependency of default members"
+
+                // For a better error message, look at what immediately depends on the package and
+                // is in default members.
+                let mut reverse_deps = package
+                    .reverse_direct_links()
+                    .filter_map(|link| {
+                        if !link.dev_only()
+                            && default_members.status_of(link.from().id())
+                                != WorkspaceStatus::Absent
+                        {
+                            Some(link.from().name())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                reverse_deps.sort_unstable();
+                let reverse_str = reverse_deps.join(", ");
+                let msg = format!(
+                    "{} {}",
+                    indoc!(
+                        "library package, dependency of default members and test-only:
+                        * remove from test-only if production code
+                        * otherwise, ensure it is not a dependency of default members:",
+                    ),
+                    reverse_str,
                 );
                 out.write(LintLevel::Error, msg);
             }
