@@ -10,9 +10,7 @@ pub mod content;
 pub mod file_path;
 pub mod package;
 pub mod project;
-mod runner;
-
-pub use runner::*;
+pub mod runner;
 
 use guppy::PackageId;
 use std::{borrow::Cow, fmt, path::Path};
@@ -190,6 +188,7 @@ pub mod prelude {
         file_path::{FilePathContext, FilePathLinter},
         package::{PackageContext, PackageLinter},
         project::{ProjectContext, ProjectLinter},
+        runner::{LintEngine, LintEngineConfig, LintResults},
         LintFormatter, LintKind, LintLevel, LintMessage, LintSource, Linter, RunStatus, SkipReason,
     };
     pub use x_core::{Result, SystemError};

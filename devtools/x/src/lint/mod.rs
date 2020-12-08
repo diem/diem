@@ -4,7 +4,7 @@
 use crate::context::XContext;
 use anyhow::anyhow;
 use structopt::StructOpt;
-use x_lint::{prelude::*, LintEngineConfig};
+use x_lint::prelude::*;
 
 mod allowed_paths;
 mod determinator;
