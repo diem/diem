@@ -111,7 +111,7 @@ impl DiemLoggerBuilder {
         Self {
             channel_size: CHANNEL_SIZE,
             level: Level::Info,
-            remote_level: Level::Info,
+            remote_level: Level::Debug,
             address: None,
             printer: Some(Box::new(StderrWriter)),
             is_async: false,
