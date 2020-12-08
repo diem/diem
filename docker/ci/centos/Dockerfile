@@ -1,5 +1,5 @@
 #while using circle we'll use circle's base image.
-FROM centos:8@sha256:fc4a234b91cc4b542bac8a6ad23b2ddcee60ae68fc4dbd4a52efb5f1b0baad71 AS setup_ci_centos
+FROM centos:8@sha256:dbbacecc49b088458781c16f3775f2a2ec7521079034a7ba499c8b0bb7f86875 AS setup_ci_centos
 
 WORKDIR /diem
 COPY rust-toolchain /diem/rust-toolchain
