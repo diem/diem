@@ -12,7 +12,7 @@ use crate::{
     ledger_counters::{LedgerCounter, LedgerCounterBumps},
     schema::{
         event::EventSchema, event_accumulator::EventAccumulatorSchema,
-        event_by_key::EventByKeySchema,
+        event_by_key::EventByKeySchema, event_by_version::EventByVersionSchema,
     },
 };
 use accumulator::{HashReader, MerkleAccumulator};
@@ -102,45 +102,28 @@ impl EventStore {
         ledger_version: Version,
         event_key: &EventKey,
     ) -> Result<Option<u64>> {
-        let mut iter = self.db.iter::<EventByKeySchema>(ReadOptions::default())?;
-        iter.seek_for_prev(&(*event_key, u64::max_value()));
-        if let Some(res) = iter.next() {
-            let ((key, mut seq), (ver, _idx)) = res?;
-            if key == *event_key {
-                if ver <= ledger_version {
-                    return Ok(Some(seq));
-                }
+        let mut iter = self
+            .db
+            .iter::<EventByVersionSchema>(ReadOptions::default())?;
+        iter.seek_for_prev(&(*event_key, ledger_version, u64::max_value()));
 
-                // Queries tend to base on very recent ledger infos, so first try to linear search
-                // from the most recent end, for limited tries.
-                // TODO: Optimize: Physical store use reverse order.
-                let mut n_try_recent = 10;
-                #[cfg(test)]
-                let mut n_try_recent = 1;
-                while seq > 0 && n_try_recent > 0 {
-                    seq -= 1;
-                    n_try_recent -= 1;
-                    let ver = self.get_txn_ver_by_seq_num(event_key, seq)?;
-                    if ver <= ledger_version {
-                        return Ok(Some(seq));
-                    }
-                }
+        Ok(iter.next().transpose()?.and_then(
+            |((key, _version, seq), _idx)| if &key == event_key { Some(seq) } else { None },
+        ))
+    }
 
-                // Fall back to binary search if the above short linear search didn't work out.
-                let (mut begin, mut end) = (0, seq);
-                while begin < end {
-                    let mid = end - (end - begin) / 2;
-                    let ver = self.get_txn_ver_by_seq_num(event_key, mid)?;
-                    if ver <= ledger_version {
-                        begin = mid;
-                    } else {
-                        end = mid - 1;
-                    }
-                }
-                return Ok(Some(begin));
-            }
-        }
-        Ok(None)
+    /// Get the next sequence number for specified event key.
+    /// Returns 0 if there's no events already in the event stream.
+    pub fn get_next_sequence_number(
+        &self,
+        ledger_version: Version,
+        event_key: &EventKey,
+    ) -> Result<u64> {
+        self.get_latest_sequence_number(ledger_version, event_key)?
+            .map_or(Ok(0), |seq| {
+                seq.checked_add(1)
+                    .ok_or_else(|| format_err!("Seq num overflowed."))
+            })
     }
 
     /// Given `event_key` and `start_seq_num`, returns events identified by transaction version and
@@ -193,7 +176,7 @@ impl EventStore {
         cs.counter_bumps(version)
             .bump(LedgerCounter::EventsCreated, events.len());
 
-        // EventSchema and EventByKeySchema updates
+        // Event table and indices updates
         events
             .iter()
             .enumerate()
@@ -202,6 +185,10 @@ impl EventStore {
                 cs.batch.put::<EventByKeySchema>(
                     &(*event.key(), event.sequence_number()),
                     &(version, idx as u64),
+                )?;
+                cs.batch.put::<EventByVersionSchema>(
+                    &(*event.key(), version, event.sequence_number()),
+                    &(idx as u64),
                 )?;
                 Ok(())
             })

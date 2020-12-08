@@ -166,7 +166,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_get_events_by_access_path(
+    fn test_index_get(
         mut universe in any_with::<AccountInfoUniverse>(3),
         gen_batches in vec(vec((any::<Index>(), any::<ContractEventGen>()), 0..=2), 0..100),
     ) {
@@ -179,11 +179,11 @@ proptest! {
             })
             .collect();
 
-        test_get_events_by_access_path_impl(event_batches);
+        test_index_get_impl(event_batches);
     }
 }
 
-fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
+fn test_index_get_impl(event_batches: Vec<Vec<ContractEvent>>) {
     // Put into db.
     let tmp_dir = TempPath::new();
     let db = DiemDB::new_for_test(&tmp_dir);
@@ -198,17 +198,59 @@ fn test_get_events_by_access_path_impl(event_batches: Vec<Vec<ContractEvent>>) {
 
     // Calculate expected event sequence per access_path.
     let mut events_by_event_key = HashMap::new();
-    event_batches.into_iter().for_each(|batch| {
-        batch.into_iter().for_each(|e| {
-            let mut events = events_by_event_key.entry(*e.key()).or_insert_with(Vec::new);
-            assert_eq!(events.len() as u64, e.sequence_number());
-            events.push(e);
-        })
-    });
+    event_batches
+        .into_iter()
+        .enumerate()
+        .for_each(|(ver, batch)| {
+            batch.into_iter().for_each(|e| {
+                let mut events_and_versions =
+                    events_by_event_key.entry(*e.key()).or_insert_with(Vec::new);
+                assert_eq!(events_and_versions.len() as u64, e.sequence_number());
+                events_and_versions.push((e, ver as Version));
+            })
+        });
 
     // Fetch and check.
-    events_by_event_key.into_iter().for_each(|(path, events)| {
-        let traversed = traverse_events_by_key(&store, &path, ledger_version_plus_one);
-        assert_eq!(events, traversed);
-    });
+    events_by_event_key
+        .into_iter()
+        .for_each(|(path, events_and_versions)| {
+            // Check sequence number
+            let mut prev_ver = 0;
+            let mut iter = events_and_versions.iter().enumerate().peekable();
+            while let Some((mut seq, (_, ver))) = iter.next() {
+                let mid = prev_ver + (*ver - prev_ver) / 2;
+                if mid < *ver {
+                    assert_eq!(
+                        store.get_next_sequence_number(mid, &path).unwrap(),
+                        seq as u64,
+                        "next_seq equals this since last seq bump.",
+                    );
+                }
+                // possible multiple emits of the event in the same version
+                let mut last_seq_in_same_version = seq;
+                while let Some((next_seq, (_, next_ver))) = iter.peek() {
+                    if next_ver != ver {
+                        break;
+                    }
+                    last_seq_in_same_version = *next_seq;
+                    iter.next();
+                }
+
+                assert_eq!(
+                    store.get_latest_sequence_number(*ver, &path).unwrap(),
+                    Some(last_seq_in_same_version as u64),
+                    "latest_seq equals this at its version.",
+                );
+
+                prev_ver = *ver;
+            }
+
+            // Fetch by key
+            let events = events_and_versions
+                .into_iter()
+                .map(|(e, _)| e)
+                .collect::<Vec<_>>();
+            let traversed = traverse_events_by_key(&store, &path, ledger_version_plus_one);
+            assert_eq!(events, traversed);
+        });
 }
