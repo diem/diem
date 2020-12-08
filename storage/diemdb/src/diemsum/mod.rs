@@ -14,11 +14,11 @@ use diem_types::{
 use std::{convert::AsRef, path::Path};
 use storage_interface::{DbReader, StartupInfo};
 
-pub struct Librarian {
+pub struct Diemsum {
     db: DiemDB,
 }
 
-impl Librarian {
+impl Diemsum {
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
         let db = DiemDB::open(
             db_root_path,
@@ -26,7 +26,7 @@ impl Librarian {
             None, /* no prune_window */
             RocksdbConfig::default(),
         )?;
-        Ok(Librarian { db })
+        Ok(Diemsum { db })
     }
 
     pub fn get_startup_info(&self) -> Result<StartupInfo> {

@@ -5,7 +5,7 @@
 use anyhow::Result;
 
 use diem_types::{account_address::AccountAddress, event::EventKey};
-use diemdb::librarian::Librarian;
+use diemdb::diemsum::Diemsum;
 use serde::Serialize;
 use serde_json::to_string_pretty;
 use std::path::PathBuf;
@@ -13,7 +13,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(
-    name = "Librarian",
+    name = "Diemsum",
     about = "A command line tool that offers multiple data access commands for DiemDB"
 )]
 struct Opt {
@@ -120,15 +120,15 @@ fn main() {
 
 fn run_cmd() -> Result<()> {
     let opt = Opt::from_args();
-    let librarian = Librarian::new(opt.db_dir)?;
+    let diemsum = Diemsum::new(opt.db_dir)?;
     let is_json = opt.json;
     match opt.cmd {
         Command::Status => {
-            print(librarian.get_startup_info()?, is_json)?;
+            print(diemsum.get_startup_info()?, is_json)?;
         }
         Command::Txn(txn_op) => match txn_op {
             TxnOp::Get { version } => {
-                print(&librarian.get_txn_by_version(version)?, is_json)?;
+                print(&diemsum.get_txn_by_version(version)?, is_json)?;
             }
             TxnOp::Scan {
                 from_version,
@@ -136,10 +136,10 @@ fn run_cmd() -> Result<()> {
             } => {
                 let to_version = match to_version {
                     Some(to_version) => to_version,
-                    None => librarian.get_committed_version()?,
+                    None => diemsum.get_committed_version()?,
                 };
                 print(
-                    librarian.scan_txn_by_version(from_version, to_version)?,
+                    diemsum.scan_txn_by_version(from_version, to_version)?,
                     is_json,
                 )?;
             }
@@ -149,7 +149,7 @@ fn run_cmd() -> Result<()> {
             match account_cmd.account_op {
                 AccountOp::Get { version } => {
                     print(
-                        librarian.get_account_state_by_version(address, version)?,
+                        diemsum.get_account_state_by_version(address, version)?,
                         is_json,
                     )?;
                 }
@@ -161,7 +161,7 @@ fn run_cmd() -> Result<()> {
                 event_op,
             } => match event_op {
                 EventOp::Get { seq } => {
-                    print(librarian.scan_events_by_seq(&event_key, seq, seq)?, is_json)?;
+                    print(diemsum.scan_events_by_seq(&event_key, seq, seq)?, is_json)?;
                 }
                 EventOp::Scan { from_seq, to_seq } => {
                     let to_seq = match to_seq {
@@ -169,13 +169,13 @@ fn run_cmd() -> Result<()> {
                         None => u64::max_value(),
                     };
                     print(
-                        librarian.scan_events_by_seq(&event_key, from_seq, to_seq)?,
+                        diemsum.scan_events_by_seq(&event_key, from_seq, to_seq)?,
                         is_json,
                     )?;
                 }
             },
             EventCmd::EventByVersion { version } => {
-                print(librarian.get_events_by_version(version)?, is_json)?;
+                print(diemsum.get_events_by_version(version)?, is_json)?;
             }
         },
     }

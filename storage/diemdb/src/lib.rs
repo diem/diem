@@ -9,8 +9,8 @@
 //! It relays read/write operations on the physical storage via [`schemadb`] to the underlying
 //! Key-Value storage system, and implements diem data structures on top of it.
 
-#[cfg(any(feature = "librarian"))]
-pub mod librarian;
+#[cfg(any(feature = "diemsum"))]
+pub mod diemsum;
 // Used in this and other crates for testing.
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helper;

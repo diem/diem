@@ -2324,6 +2324,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "diemsum"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "diemdb",
+ "serde",
+ "serde_json",
+ "storage-interface",
+ "structopt 0.3.21",
+]
+
+[[package]]
 name = "difference"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3764,21 +3779,6 @@ checksum = "7d8dddda30939e963210412740c920779b3b57d0b8ab58d94d562cc433d621f1"
 dependencies = [
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "librarian"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "diem-crypto",
- "diem-types",
- "diem-workspace-hack",
- "diemdb",
- "serde",
- "serde_json",
- "storage-interface",
- "structopt 0.3.21",
 ]
 
 [[package]]

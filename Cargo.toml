@@ -124,9 +124,9 @@ members = [
     "storage/backup/backup-cli",
     "storage/backup/backup-service",
     "storage/diemdb",
+    "storage/diemsum",
     "storage/inspector",
     "storage/jellyfish-merkle",
-    "storage/librarian",
     "storage/schemadb",
     "storage/scratchpad",
     "storage/state-view",
@@ -180,8 +180,8 @@ default-members = [
     "diem-node",
     "secure/key-manager",
     "storage/backup/backup-cli",
+    "storage/diemsum",
     "storage/inspector",
-    "storage/librarian",
 ]
 
 [profile.release]
