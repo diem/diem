@@ -120,6 +120,7 @@ impl DiemDB {
             EPOCH_BY_VERSION_CF_NAME,
             EVENT_ACCUMULATOR_CF_NAME,
             EVENT_BY_KEY_CF_NAME,
+            EVENT_BY_VERSION_CF_NAME,
             EVENT_CF_NAME,
             JELLYFISH_MERKLE_NODE_CF_NAME,
             LEDGER_COUNTERS_CF_NAME,

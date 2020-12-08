@@ -10,6 +10,7 @@ pub(crate) mod epoch_by_version;
 pub(crate) mod event;
 pub(crate) mod event_accumulator;
 pub(crate) mod event_by_key;
+pub(crate) mod event_by_version;
 pub(crate) mod jellyfish_merkle_node;
 pub(crate) mod ledger_counters;
 pub(crate) mod ledger_info;
@@ -25,6 +26,7 @@ use schemadb::ColumnFamilyName;
 pub(super) const EPOCH_BY_VERSION_CF_NAME: ColumnFamilyName = "epoch_by_version";
 pub(super) const EVENT_ACCUMULATOR_CF_NAME: ColumnFamilyName = "event_accumulator";
 pub(super) const EVENT_BY_KEY_CF_NAME: ColumnFamilyName = "event_by_key";
+pub(super) const EVENT_BY_VERSION_CF_NAME: ColumnFamilyName = "event_by_version";
 pub(super) const EVENT_CF_NAME: ColumnFamilyName = "event";
 pub(super) const JELLYFISH_MERKLE_NODE_CF_NAME: ColumnFamilyName = "jellyfish_merkle_node";
 pub(super) const LEDGER_COUNTERS_CF_NAME: ColumnFamilyName = "ledger_counters";
@@ -72,6 +74,7 @@ pub mod fuzzing {
             decode_key_value!(super::event::EventSchema, data);
             decode_key_value!(super::event_accumulator::EventAccumulatorSchema, data);
             decode_key_value!(super::event_by_key::EventByKeySchema, data);
+            decode_key_value!(super::event_by_version::EventByVersionSchema, data);
             decode_key_value!(
                 super::jellyfish_merkle_node::JellyfishMerkleNodeSchema,
                 data
