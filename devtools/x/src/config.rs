@@ -145,8 +145,8 @@ pub struct OverlayConfig {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct TestOnlyConfig {
-    /// A list of test-only members
-    pub members: HashSet<PathBuf>,
+    /// A list of test-only workspace names
+    pub members: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

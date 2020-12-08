@@ -34,7 +34,10 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::IrrelevantBuildDeps,
         &guppy::OverlayFeatures::new(&workspace_config.overlay),
         &guppy::WorkspaceHack,
-        &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
+        &workspace_classify::DefaultOrTestOnly::new(
+            xctx.core().package_graph()?,
+            &workspace_config.test_only,
+        )?,
     ];
 
     let file_path_linters: &[&dyn FilePathLinter] = &[

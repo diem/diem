@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::TestOnlyConfig;
-use guppy::graph::{BuildTargetId, BuildTargetKind};
+use anyhow::Context;
+use guppy::graph::{BuildTargetId, BuildTargetKind, PackageGraph, PackageSet};
 use indoc::indoc;
 use x_core::WorkspaceStatus;
 use x_lint::prelude::*;
@@ -10,12 +11,15 @@ use x_lint::prelude::*;
 /// Ensure that every package in the workspace is classified as either a default member or test-only.
 #[derive(Debug)]
 pub struct DefaultOrTestOnly<'cfg> {
-    config: &'cfg TestOnlyConfig,
+    test_only: PackageSet<'cfg>,
 }
 
 impl<'cfg> DefaultOrTestOnly<'cfg> {
-    pub fn new(config: &'cfg TestOnlyConfig) -> Self {
-        Self { config }
+    pub fn new(package_graph: &'cfg PackageGraph, config: &TestOnlyConfig) -> crate::Result<Self> {
+        let test_only = package_graph
+            .resolve_workspace_names(&config.members)
+            .with_context(|| "error while initializing default-or-test-only lint")?;
+        Ok(Self { test_only })
     }
 }
 
@@ -64,7 +68,10 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
             .next();
 
         let status = default_members.status_of(package.id());
-        let test_only = self.config.members.contains(ctx.workspace_path());
+        let test_only = self
+            .test_only
+            .contains(package.id())
+            .expect("package is known");
 
         match (binary_kind, status, test_only) {
             (None, WorkspaceStatus::Absent, false) => {
