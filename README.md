@@ -7,9 +7,10 @@
 ---
 
 [![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://developers.diem.com/docs/rustdocs/)
-[![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
+[![CircleCI](https://circleci.com/gh/diem/diem.svg?style=shield)](https://circleci.com/gh/diem/diem)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
-[![codecov](https://codecov.io/gh/libra/libra/branch/master/graph/badge.svg)](https://codecov.io/gh/libra/libra)
+[![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
+[![codecov](https://codecov.io/gh/diem/diem/branch/master/graph/badge.svg)](https://codecov.io/gh/diem/diem)
 
 Diem Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
@@ -66,4 +67,4 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 
 ## License
 
-Diem Core is licensed as [Apache 2.0](https://github.com/libra/libra/blob/master/LICENSE).
+Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/master/LICENSE).

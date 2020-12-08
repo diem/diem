@@ -865,7 +865,7 @@ jobs:
           command: |
             set -x
             SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
-            PREFIX="ci-artifacts.libra.org/coverage";
+            PREFIX="ci-artifacts.diem.com/coverage";
             #Push grcov
             aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
             aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
