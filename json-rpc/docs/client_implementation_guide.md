@@ -82,7 +82,7 @@ cargo run -p swiss-knife -- generate-test-ed25519-keypair
 
 ```
 
-> To run this by yourself, clone https://github.com/libra/libra.git, and run `./scripts/dev_setup.sh` to setup dev env.
+> To run this by yourself, clone https://github.com/diem/diem.git, and run `./scripts/dev_setup.sh` to setup dev env.
 > You can run the command in the above example at the root directory of diem codebase.
 
 

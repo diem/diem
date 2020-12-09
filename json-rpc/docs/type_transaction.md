@@ -20,7 +20,7 @@ A transaction on the blockchain.
 
 Note:
 * For the gas_used, internally within the VM we scale the gas units down by 1000 in order to allow granularity of costing for instruction, but without having to use floating point numbers, but we do round-up the gas used to the nearest "1" when we convert back out.
-* Formula to create hash for a signed transaction before it is executed: hex-encode(sha3-256([]byte("DIEM::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/client-sdk-go/blob/master/diemtypes/hash.go#L27))
+* Formula to create hash for a signed transaction before it is executed: hex-encode(sha3-256([]byte("DIEM::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/diem/client-sdk-go/blob/master/diemtypes/hash.go#L27))
 
 
 ### Example

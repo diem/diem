@@ -20,9 +20,9 @@ List of released stable methods (unless specifically mentioned, all parameters a
 
 ## Official Client SDKs
 
-* [Go] (https://github.com/libra/client-sdk-go)
-* [Java] (https://github.com/libra/client-sdk-java)
-* [Python] (https://github.com/libra/client-sdk-python)
+* [Go] (https://github.com/diem/client-sdk-go)
+* [Java] (https://github.com/diem/client-sdk-java)
+* [Python] (https://github.com/diem/client-sdk-python)
 
 
 ## JSON-RPC specification
