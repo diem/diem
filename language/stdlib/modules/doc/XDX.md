@@ -9,7 +9,7 @@ Once the component makeup of the XDX has been chosen the
 <code><a href="XDX.md#0x1_XDX_Reserve">Reserve</a></code> will be updated to hold the backing coins in the correct ratios.
 
 
--  [Resource `XDX`](#0x1_XDX_XDX)
+-  [Struct `XDX`](#0x1_XDX_XDX)
 -  [Resource `Reserve`](#0x1_XDX_Reserve)
 -  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_XDX_initialize)
@@ -32,12 +32,12 @@ Once the component makeup of the XDX has been chosen the
 
 <a name="0x1_XDX_XDX"></a>
 
-## Resource `XDX`
+## Struct `XDX`
 
 The type tag representing the <code><a href="XDX.md#0x1_XDX">XDX</a></code> currency on-chain.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="XDX.md#0x1_XDX">XDX</a>
+<pre><code><b>struct</b> <a href="XDX.md#0x1_XDX">XDX</a>
 </code></pre>
 
 

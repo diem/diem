@@ -13,7 +13,7 @@ module XDX {
     use 0x1::DiemTimestamp;
 
     /// The type tag representing the `XDX` currency on-chain.
-    resource struct XDX { }
+    struct XDX { }
 
     /// Note: Currently only holds the mint, burn, and preburn capabilities for
     /// XDX. Once the makeup of the XDX has been determined this resource will
