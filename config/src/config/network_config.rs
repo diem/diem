@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
+    num::NonZeroU32,
     string::ToString,
 };
 
@@ -41,6 +42,9 @@ pub const MAX_FULLNODE_OUTBOUND_CONNECTIONS: usize = 3;
 pub const MAX_INBOUND_CONNECTIONS: usize = 100;
 pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024; /* 8 MiB */
 pub const CONNECTION_BACKOFF_BASE: u64 = 2;
+pub static DEFAULT_IP_THROTTLE_RATE: u32 = 50 * 1024; /* 50 KiB */
+// This value can't be lower than the `MAX_FRAME_SIZE` or messages aren't guaranteed to make it through
+pub static DEFAULT_IP_THROTTLE_BURST: u32 = MAX_FRAME_SIZE as u32;
 
 pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
@@ -96,6 +100,10 @@ pub struct NetworkConfig {
     pub max_outbound_connections: usize,
     // Maximum number of outbound connections, limited by PeerManager
     pub max_inbound_connections: usize,
+    // Default constant throughput in bytes/s for rate limiting
+    pub default_throttle_rate: NonZeroU32,
+    // Default burst in bytes for rate limiting.  Can't be lower than `MAX_FRAME_SIZE`
+    pub default_throttle_burst: NonZeroU32,
 }
 
 impl Default for NetworkConfig {
@@ -128,6 +136,8 @@ impl NetworkConfig {
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             max_outbound_connections: MAX_FULLNODE_OUTBOUND_CONNECTIONS,
             max_inbound_connections: MAX_INBOUND_CONNECTIONS,
+            default_throttle_burst: NonZeroU32::new(DEFAULT_IP_THROTTLE_BURST).unwrap(),
+            default_throttle_rate: NonZeroU32::new(DEFAULT_IP_THROTTLE_RATE).unwrap(),
         };
         config.prepare_identity();
         config

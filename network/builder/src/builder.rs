@@ -13,9 +13,10 @@ use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
         DiscoveryMethod, NetworkConfig, RoleType, CONNECTION_BACKOFF_BASE,
-        CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
-        MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
-        MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
+        CONNECTIVITY_CHECK_INTERVAL_MS, DEFAULT_IP_THROTTLE_BURST, DEFAULT_IP_THROTTLE_RATE,
+        MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS,
+        MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS,
+        NETWORK_CHANNEL_SIZE,
     },
     network_id::NetworkContext,
 };
@@ -45,6 +46,7 @@ use network_simple_onchain_discovery::{
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
+    num::NonZeroU32,
     sync::Arc,
 };
 use subscription_service::ReconfigSubscription;
@@ -91,6 +93,8 @@ impl NetworkBuilder {
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
         inbound_connection_limit: usize,
+        throttle_rate: NonZeroU32,
+        throttle_burst: NonZeroU32,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -106,6 +110,8 @@ impl NetworkBuilder {
             max_frame_size,
             enable_proxy_protocol,
             inbound_connection_limit,
+            throttle_rate,
+            throttle_burst,
         );
 
         NetworkBuilder {
@@ -141,6 +147,8 @@ impl NetworkBuilder {
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
+            NonZeroU32::new(DEFAULT_IP_THROTTLE_RATE).unwrap(),
+            NonZeroU32::new(DEFAULT_IP_THROTTLE_BURST).unwrap(),
         );
 
         builder.add_connectivity_manager(
@@ -188,6 +196,8 @@ impl NetworkBuilder {
             config.max_concurrent_network_reqs,
             config.max_concurrent_network_notifs,
             config.max_inbound_connections,
+            config.default_throttle_rate,
+            config.default_throttle_burst,
         );
 
         network_builder.add_connection_monitoring(

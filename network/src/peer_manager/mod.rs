@@ -19,7 +19,7 @@ use crate::{
         direct_send::Message,
         rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
     },
-    rate_limiter, transport,
+    transport,
     transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
@@ -57,7 +57,7 @@ mod tests;
 pub use self::error::PeerManagerError;
 use crate::rate_limiter::RateLimiter;
 use serde::export::Formatter;
-use std::{net::IpAddr, num::NonZeroU32};
+use std::net::IpAddr;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
@@ -319,6 +319,7 @@ where
         max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         inbound_connection_limit: usize,
+        inbound_rate_limiter: Option<Arc<RateLimiter<IpAddr>>>,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
@@ -338,7 +339,6 @@ where
                 transport_notifs_tx_clone,
             )
         });
-        let default_rate = NonZeroU32::new(102_400).unwrap(); // 100 KiB
 
         Self {
             network_context,
@@ -360,11 +360,7 @@ where
             channel_size,
             max_frame_size,
             inbound_connection_limit,
-            // FIXME: Use a config configured quota
-            inbound_rate_limiter: Some(rate_limiter::new_per_second_keyed(
-                default_rate,
-                default_rate,
-            )),
+            inbound_rate_limiter,
         }
     }
 

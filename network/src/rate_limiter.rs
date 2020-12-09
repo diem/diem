@@ -20,10 +20,10 @@ pub enum RateLimitError {
 
 /// Provides a per second throttle with arbitrary keys
 pub fn new_per_second_keyed<Key: Hash + Clone + Eq>(
-    max_burst: NonZeroU32,
-    max_rate: NonZeroU32,
+    throttle_rate: NonZeroU32,
+    throttle_burst: NonZeroU32,
 ) -> Arc<RateLimiter<Key>> {
-    let quota = Quota::per_second(max_rate).allow_burst(max_burst);
+    let quota = Quota::per_second(throttle_rate).allow_burst(throttle_burst);
     Arc::new(governor::RateLimiter::keyed(quota))
 }
 

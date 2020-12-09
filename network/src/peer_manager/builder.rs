@@ -9,6 +9,7 @@ use crate::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::wire::handshake::v1::SupportedProtocols,
+    rate_limiter::{new_per_second_keyed, RateLimiter},
     transport::{self, Connection, DiemNetTransport, DIEM_TCP_TRANSPORT},
     ProtocolId,
 };
@@ -30,7 +31,8 @@ use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
     fmt::Debug,
-    num::NonZeroUsize,
+    net::IpAddr,
+    num::{NonZeroU32, NonZeroUsize},
     sync::Arc,
 };
 use tokio::runtime::Handle;
@@ -188,6 +190,7 @@ pub struct PeerManagerBuilder {
     state: State,
     max_frame_size: usize,
     enable_proxy_protocol: bool,
+    inbound_rate_limiter: Arc<RateLimiter<IpAddr>>,
 }
 
 impl PeerManagerBuilder {
@@ -204,6 +207,8 @@ impl PeerManagerBuilder {
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
+        throttle_rate: NonZeroU32,
+        throttle_burst: NonZeroU32,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -246,6 +251,7 @@ impl PeerManagerBuilder {
             state: State::CREATED,
             max_frame_size,
             enable_proxy_protocol,
+            inbound_rate_limiter: new_per_second_keyed(throttle_rate, throttle_burst),
         }
     }
 
@@ -362,6 +368,7 @@ impl PeerManagerBuilder {
             pm_context.channel_size,
             self.max_frame_size,
             pm_context.inbound_connection_limit,
+            Some(self.inbound_rate_limiter.clone()),
         );
 
         // PeerManager constructor appends a public key to the listen_address.

@@ -105,6 +105,7 @@ fn build_test_peer_manager(
         constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         constants::MAX_FRAME_SIZE,
         MAX_INBOUND_CONNECTIONS,
+        None,
     );
 
     (
