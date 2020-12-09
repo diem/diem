@@ -412,7 +412,7 @@ async fn state_sync_load_test(
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
-        250,
+        1000,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,
@@ -425,7 +425,7 @@ async fn state_sync_load_test(
     let mut msg_num = 0_u64;
     let mut pending = 0_usize;
     while Instant::now().duration_since(task_start) < duration {
-        if pending == 0 {
+        if pending < debug as usize {
             let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
                 chunk_request.clone(),
             ));
