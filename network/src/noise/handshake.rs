@@ -11,6 +11,7 @@
 //! [stream]: network::noise::stream
 
 use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
+use crate::transport::TrustLevel;
 use diem_config::network_id::NetworkContext;
 use diem_crypto::{noise, x25519};
 use diem_infallible::{duration_since_epoch, RwLock};
@@ -182,7 +183,7 @@ impl NoiseUpgrader {
                     .await?
             }
             ConnectionOrigin::Inbound => {
-                let (socket, _peer_id) = self.upgrade_inbound(socket).await?;
+                let (socket, _peer_id, _) = self.upgrade_inbound(socket).await?;
                 socket
             }
         };
@@ -298,7 +299,7 @@ impl NoiseUpgrader {
     pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
-    ) -> Result<(NoiseStream<TSocket>, PeerId), NoiseHandshakeError>
+    ) -> Result<(NoiseStream<TSocket>, PeerId, TrustLevel), NoiseHandshakeError>
     where
         TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
@@ -347,7 +348,7 @@ impl NoiseUpgrader {
             .map_err(|err| NoiseHandshakeError::ServerParseClient(remote_peer_short, err))?;
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
-        if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
+        let trust_level = if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
             match trusted_peers.read().get(&remote_peer_id) {
                 Some(remote_pubkey_set) => {
                     if !remote_pubkey_set.contains(&remote_public_key) {
@@ -364,6 +365,7 @@ impl NoiseUpgrader {
                     ))
                 }
             };
+            TrustLevel::Trusted
         } else {
             // if not, verify that their peerid is constructed correctly from their public key
             let derived_remote_peer_id = PeerId::from_identity_public_key(remote_public_key);
@@ -374,7 +376,8 @@ impl NoiseUpgrader {
                     derived_remote_peer_id,
                 ));
             }
-        }
+            TrustLevel::Untrusted
+        };
 
         // if on a mutually authenticated network,
         // the payload should contain a u64 client timestamp
@@ -430,7 +433,7 @@ impl NoiseUpgrader {
             self.network_context,
             remote_peer_short,
         );
-        Ok((NoiseStream::new(socket, session), remote_peer_id))
+        Ok((NoiseStream::new(socket, session), remote_peer_id, trust_level))
     }
 }
 
@@ -513,7 +516,7 @@ mod test {
         server_public_key: x25519::PublicKey,
     ) -> (
         Result<NoiseStream<MemorySocket>, NoiseHandshakeError>,
-        Result<(NoiseStream<MemorySocket>, PeerId), NoiseHandshakeError>,
+        Result<(NoiseStream<MemorySocket>, PeerId, TrustLevel), NoiseHandshakeError>,
     ) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
@@ -584,7 +587,7 @@ mod test {
 
         let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
         let client_stream = client_res.unwrap();
-        let (server_stream, _) = server_res.unwrap();
+        let (server_stream, _, _) = server_res.unwrap();
 
         assert_eq!(client_stream.get_remote_static(), server_public_key);
         assert_eq!(server_stream.get_remote_static(), client_public_key);

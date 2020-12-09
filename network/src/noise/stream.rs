@@ -608,7 +608,7 @@ mod test {
 
         //
         let client_session = client_session.unwrap();
-        let (server_session, _) = server_session.unwrap();
+        let (server_session, _, _) = server_session.unwrap();
         (client_session, server_session)
     }
 
@@ -714,7 +714,7 @@ mod test {
 
         // get session
         let mut client = client.unwrap();
-        let (mut server, _) = server.unwrap();
+        let (mut server, _, _) = server.unwrap();
 
         // test send and receive
         block_on(client.write_all(b"The Name of the Wind")).unwrap();

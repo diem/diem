@@ -68,7 +68,7 @@
 //!
 //! let mut client_session = client_session
 //!     .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-//! let (mut server_session, _client_peer_id) = server_session
+//! let (mut server_session, _client_peer_id, _trust_level) = server_session
 //!     .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
 //!
 //! // client -> server

@@ -15,7 +15,7 @@ use crate::{
             },
         },
     },
-    transport::{Connection, ConnectionId, ConnectionMetadata},
+    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -59,6 +59,7 @@ fn build_test_peer(
             origin,
             MessagingProtocolVersion::V1,
             [].iter().into(),
+            TrustLevel::Untrusted,
         ),
         socket: a,
     };

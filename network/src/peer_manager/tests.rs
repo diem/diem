@@ -13,7 +13,7 @@ use crate::{
         messaging::v1::{ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream},
     },
     transport,
-    transport::{Connection, ConnectionId, ConnectionMetadata},
+    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
     ProtocolId,
 };
 use anyhow::anyhow;
@@ -51,6 +51,7 @@ pub fn build_test_transport(
                     origin,
                     MessagingProtocolVersion::V1,
                     [TEST_PROTOCOL].iter().into(),
+                    TrustLevel::Untrusted,
                 ),
             })
         })
@@ -229,6 +230,7 @@ fn create_connection<TSocket: transport::TSocket>(
             origin,
             MessagingProtocolVersion::V1,
             [TEST_PROTOCOL].iter().into(),
+            TrustLevel::Untrusted,
         ),
     }
 }
@@ -553,6 +555,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
                 ConnectionOrigin::Inbound,
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
+                TrustLevel::Untrusted,
             ),
             DisconnectReason::ConnectionLost,
         );
@@ -610,6 +613,7 @@ fn test_dial_disconnect() {
                 ConnectionOrigin::Outbound,
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
+                TrustLevel::Untrusted,
             ),
             DisconnectReason::Requested,
         );

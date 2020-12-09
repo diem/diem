@@ -91,7 +91,7 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
 
     // take result
     let initiator_session = initiator_session.unwrap();
-    let (responder_session, peer_id) = responder_session.unwrap();
+    let (responder_session, peer_id, _) = responder_session.unwrap();
 
     // some sanity checks
     assert_eq!(initiator_session.get_remote_static(), responder_public_key);
