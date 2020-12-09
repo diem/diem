@@ -183,7 +183,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
             //
             // See: common/channel/src/bin/many_keys_stress_test.rs
             //
-            // For more context, see: https://github.com/libra/libra/issues/5543
+            // For more context, see: https://github.com/diem/diem/issues/5543
             self.num_popped_since_gc += 1;
             if self.num_popped_since_gc >= POPS_PER_GC {
                 self.num_popped_since_gc = 0;

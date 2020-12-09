@@ -1,7 +1,7 @@
 ---
 id: consensus
 title: Consensus
-custom_edit_url: https://github.com/libra/libra/edit/master/consensus/README.md
+custom_edit_url: https://github.com/diem/diem/edit/master/consensus/README.md
 ---
 
 

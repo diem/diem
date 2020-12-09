@@ -113,7 +113,7 @@ on-chain. These statuses and errors can be categorized into two buckets:
 
 There are also a number of statuses that can be returned at the time of
 submission of the transaction to the system through JSON-RPC, these are detailed in the
-[JSON-RPC specification](https://github.com/libra/libra/blob/master/json-rpc/docs/method_submit.md#errors).
+[JSON-RPC specification](https://github.com/diem/diem/blob/master/json-rpc/docs/method_submit.md#errors).
 
 
 <a name="@Predefined_Statuses_2"></a>
@@ -179,11 +179,11 @@ to these may occur without notice, but changes are not expected to be common.
 The abort conditions detailed in each transaction script are not meant to
 be complete, but the list of error categories are. Additionally, any abort conditions
 raised will have a human readable explanation attached to it (if possible) in the
-[response](https://github.com/libra/libra/blob/master/json-rpc/docs/type_transaction.md#type-moveabortexplanation)
+[response](https://github.com/diem/diem/blob/master/json-rpc/docs/type_transaction.md#type-moveabortexplanation)
 from a
-[JSON-RPC query for a committed transaction](https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md).
+[JSON-RPC query for a committed transaction](https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md).
 These explanations are based off of the human-understandable explanations provided by the
-[Move Explain](https://github.com/libra/libra/tree/master/language/tools/move-explain)
+[Move Explain](https://github.com/diem/diem/tree/master/language/tools/move-explain)
 tool which can also be called on the command-line.
 
 

@@ -9,7 +9,7 @@ assignees: ''
 
 # 🐛 Bug
 
-If you're looking to report an issue with the Diem Core project go to https://github.com/libra/libra
+If you're looking to report an issue with the Diem Core project go to https://github.com/diem/diem
 
 <!-- A clear and concise description of what the bug is.
 

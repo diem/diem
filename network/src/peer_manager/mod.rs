@@ -482,7 +482,7 @@ where
                 }
             }
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
-                // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
+                // See: https://github.com/diem/diem/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
                 info!(
                     NetworkSchema::new(&self.network_context)

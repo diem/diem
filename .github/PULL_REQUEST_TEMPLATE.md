@@ -8,7 +8,7 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 (Write your motivation for proposed changes here.)
 
-### Have you read the [Contributing Guidelines on pull requests](https://github.com/libra/libra/blob/master/CONTRIBUTING.md#pull-requests)?
+### Have you read the [Contributing Guidelines on pull requests](https://github.com/diem/diem/blob/master/CONTRIBUTING.md#pull-requests)?
 
 (Write your answer here.)
 
@@ -18,4 +18,4 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 ## Related PRs
 
-(If this PR adds or changes functionality, please take some time to update the docs at https://github.com/libra/libra/developers.libra.org, and link to your PR here.)
+(If this PR adds or changes functionality, please take some time to update the docs at https://github.com/diem/diem/developers.libra.org, and link to your PR here.)

@@ -10,7 +10,7 @@ $ cargo install --path diem/language/tools/move-cli
 ```
 or
 ```shell
-$ cargo install --git https://github.com/libra/libra move-cli
+$ cargo install --git https://github.com/diem/diem move-cli
 ```
 
 This will install the `move` binary in your Cargo binary directory. On
@@ -432,19 +432,19 @@ are the following:
 * **stdlib:** This includes a small set of utility modules published under the
   `0x1` address. **This is the default mode if no mode is supplied**. The set of
   Move modules that are included in this mode are the following:
-  [`Debug`](https://github.com/libra/libra/blob/master/language/stdlib/nursery/Debug.move),
-  [`Errors`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Errors.move),
-  [`Event`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Event.move),
-  [`FixedPoint32`](https://github.com/libra/libra/blob/master/language/stdlib/modules/FixedPoint32.move),
-  [`Hash`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Hash.move),
-  [`LCS`](https://github.com/libra/libra/blob/master/language/stdlib/modules/LCS.move),
-  [`Option`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Option.move),
-  [`Vector`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Vector.move), and
-  [`Signer`](https://github.com/libra/libra/blob/master/language/stdlib/modules/Signer.move).
+  [`Debug`](https://github.com/diem/diem/blob/master/language/stdlib/nursery/Debug.move),
+  [`Errors`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Errors.move),
+  [`Event`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Event.move),
+  [`FixedPoint32`](https://github.com/diem/diem/blob/master/language/stdlib/modules/FixedPoint32.move),
+  [`Hash`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Hash.move),
+  [`LCS`](https://github.com/diem/diem/blob/master/language/stdlib/modules/LCS.move),
+  [`Option`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Option.move),
+  [`Vector`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Vector.move), and
+  [`Signer`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Signer.move).
 
 * **diem:** This includes all of the modules in the `stdlib` mode, along with
   all of the other modules that comprise the Diem Framework as defined
-  [here](https://github.com/libra/libra/blob/master/language/stdlib/modules/doc/overview.md).
+  [here](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/overview.md).
 
 ### Running with genesis state
 

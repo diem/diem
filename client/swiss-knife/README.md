@@ -16,7 +16,7 @@ The `sample_inputs` folder contains a list of sample json inputs for various ope
 ## Examples for generate-raw-txn and generate-signed-txn operations
 
 ```
-# Generate a peer_to_peer_transafer raw transaction (https://github.com/libra/libra/blob/1f86705b/language/transaction-builder/src/generated.rs#L447)
+# Generate a peer_to_peer_transafer raw transaction (https://github.com/diem/diem/blob/1f86705b/language/transaction-builder/src/generated.rs#L447)
 # For the txn_params json schema, look at the `struct TxnParams`
 # For the script_params json schema, look at the `struct MoveScriptParams`
 # Note about chain_id: For chain_id parameter, refer to the `enum NamedChain` in `chain_id.rs`. Also, please note that the numeric representation of the chain id ("0", "1", "2", etc.) can also be passed to the chain_id
@@ -42,7 +42,7 @@ $ cargo run -p swiss-knife -- generate-signed-txn < sample_inputs/generate_signe
   }
 }
 
-# Generate a preburn raw transaction (https://github.com/libra/libra/blob/1f86705b/language/transaction-builder/src/generated.rs#L480)
+# Generate a preburn raw transaction (https://github.com/diem/diem/blob/1f86705b/language/transaction-builder/src/generated.rs#L480)
 $ cargo run -p swiss-knife -- generate-raw-txn < sample_inputs/generate_raw_txn_preburn.json
 
 {

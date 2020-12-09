@@ -5,7 +5,7 @@
 
 Utility for converting a Move value to its binary representation in LCS (Diem Canonical
 Serialization). LCS is the binary encoding for Move resources and other non-module values
-published on-chain. See https://github.com/libra/libra/tree/master/common/lcs for more
+published on-chain. See https://github.com/diem/diem/tree/master/common/lcs for more
 details on LCS.
 
 

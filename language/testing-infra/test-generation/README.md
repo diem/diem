@@ -1,7 +1,7 @@
 ---
 id: bytecode-test-generation
 title: Bytecode Test Generation Tool
-custom_edit_url: https://github.com/libra/libra/edit/master/language/testing-infra/test-generation/README.md
+custom_edit_url: https://github.com/diem/diem/edit/master/language/testing-infra/test-generation/README.md
 ---
 
 # Bytecode Test Generation Tool

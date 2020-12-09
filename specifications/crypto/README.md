@@ -130,7 +130,7 @@ moment, suffice to say that for every Diem data structure, we also define
 and specify a domain separator.
 
 More specifically, the domain separator [starts with a
-prefix](https://github.com/libra/libra/blob/ca14568db9df8c7008dfc6698392ef479e013cf6/crypto/crypto/src/hash.rs#L114-L117)
+prefix](https://github.com/diem/diem/blob/ca14568db9df8c7008dfc6698392ef479e013cf6/crypto/crypto/src/hash.rs#L114-L117)
 defined as an ASCII-encoded byte-string:
 
 ```rust
@@ -147,7 +147,7 @@ Note that while the serialization name coincides with the name of the structure
 in Rust for many such types, it is overridable, and we expect such overrides to
 occur over time, at least for the purpose of versioning. Our serialization
 library includes tooling to [extract the latest serialization
-specification](https://github.com/libra/libra/tree/master/testsuite/generate-format/tests/staged),
+specification](https://github.com/diem/diem/tree/master/testsuite/generate-format/tests/staged),
 including the trace name, from code, and developers are advised to look for
 changes therein across Diem releases.
 
@@ -215,7 +215,7 @@ multi-signatures, with signer accountability. This type of signature supports K
 out-of N semantics, for K ≤ N ≤ 32.
 
 The implementation, exposed as a Move standard library module
-[(Authenticator)](https://github.com/libra/libra/blob/master/language/stdlib/modules/Authenticator.move),
+[(Authenticator)](https://github.com/diem/diem/blob/master/language/stdlib/modules/Authenticator.move),
 is currently simply a multiple-signature container —rather than a distinct
 signing scheme (e.g. MuSig). Nonetheless, we plan to improve it in further
 LIPs, while expanding the scope of threshold signing.

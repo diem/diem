@@ -1,7 +1,7 @@
 ---
 id: secure_json_rpc
 title: Secure JSON RPC
-custom_edit_url: https://github.com/libra/libra/edit/master/secure/json-rpc/README.md
+custom_edit_url: https://github.com/diem/diem/edit/master/secure/json-rpc/README.md
 ---
 # Secure JSON RPC
 

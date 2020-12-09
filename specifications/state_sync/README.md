@@ -44,7 +44,7 @@ they rely only on the state synchronizer to discover and sync to a more recent
 ledger state.
 
 3. [Waypoint sync](#waypoint-sync): When a node starts up, it can specify a waypoint
-to sync its local state to - see section 3.4 in [this paper](https://github.com/libra/libra/blob/master/documentation/tech-papers/lbft-verification/lbft-verification.pdf) for more context and
+to sync its local state to - see section 3.4 in [this paper](https://github.com/diem/diem/blob/master/documentation/tech-papers/lbft-verification/lbft-verification.pdf) for more context and
 motivation for waypoint sync, as this specification primarily focuses on
 the technical requirements for the waypoint sync protocol. Waypoint sync
 happens at node initialization and must be completed before the node participates
@@ -280,7 +280,7 @@ fn send_to(recipient: PeerId, message: StateSynchronizerMsg)
 
 ### Consensus
 
-State synchronizer processes consensus's  [`StateComputer::sync_to` calls](https://github.com/libra/libra/tree/master/specifications/consensus#statecomputer)
+State synchronizer processes consensus's  [`StateComputer::sync_to` calls](https://github.com/diem/diem/tree/master/specifications/consensus#statecomputer)
 by going through the [validator sync protocol](#validator-sync), and notifies
 consensus once the ledger state has reached the version in the ledger info
 in consensus' request.
@@ -295,7 +295,7 @@ Implementing and coordinating this interaction is an implementation detail.
 
 ### Execution
 
-State synchronizer uses execution's [`ChunkExecutor` interface](https://github.com/libra/libra/tree/master/specifications/trusted_computing_base/execution_correctness#executor-interface)
+State synchronizer uses execution's [`ChunkExecutor` interface](https://github.com/diem/diem/tree/master/specifications/trusted_computing_base/execution_correctness#executor-interface)
 to execute and store transactions to storage
 
 ### Storage

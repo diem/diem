@@ -268,7 +268,7 @@ jobs:
                 body = "Cluster Test runner failed.";
                 console.error(err);
               }
-              body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
+              body += " See https://github.com/diem/diem/actions/runs/${{github.run_id}}";
               // Post comment on PR then fail this workflow
               should_fail = true;
             }

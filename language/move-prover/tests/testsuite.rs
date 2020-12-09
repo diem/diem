@@ -45,7 +45,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         if !NOT_CONFIGURED_WARNED.compare_and_swap(false, true, Ordering::Relaxed) {
             warn!(
                 "Prover tools are not configured, verification tests will be skipped. \
-        See https://github.com/libra/libra/tree/master/language/move-prover/doc/user/install.md \
+        See https://github.com/diem/diem/tree/master/language/move-prover/doc/user/install.md \
         for instructions."
             );
         }

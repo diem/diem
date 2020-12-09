@@ -20,7 +20,7 @@ development copy.
 To get the development installation with all the necessary dependencies for
 linting, testing, and building the documentation, run the following:
 ```bash
-git clone https://github.com/libra/libra.git
+git clone https://github.com/diem/diem.git
 cd libra
 ./scripts/dev_setup.sh
 cargo build
@@ -38,7 +38,7 @@ detailed guidance about how to contribute to the project.
 #### Documentation
 
 Diem's developer website is also open source (the code can be found in this
-[repository](https://github.com/libra/libra/developers.diem.com/website/)).  It is built using
+[repository](https://github.com/diem/diem/developers.diem.com/website/)).  It is built using
 [Docusaurus](https://docusaurus.io/):
 
 If you know Markdown, you can already contribute! How to contribute can be found in the [website
@@ -170,13 +170,13 @@ able to be built and passes all checks performed by CI.
 For pull request to be accepted by any Diem projects, a CLA must be signed.
 You will only need to do this once to work on any of Diem's open source
 projects. Individuals contributing on their own behalf can sign the [Individual
-CLA](https://github.com/libra/libra/blob/master/documentation/contributing/individual-cla.pdf).
+CLA](https://github.com/diem/diem/blob/master/documentation/contributing/individual-cla.pdf).
 If you are contributing on behalf of your employer, please ask them to sign the
 [Corporate
-CLA](https://github.com/libra/libra/blob/master/documentation/contributing/corporate-cla.pdf).
+CLA](https://github.com/diem/diem/blob/master/documentation/contributing/corporate-cla.pdf).
 
 ## Issues
 
-Diem uses [GitHub issues](https://github.com/libra/libra/issues) to track
+Diem uses [GitHub issues](https://github.com/diem/diem/issues) to track
 bugs. Please include necessary information and instructions to reproduce your
 issue.

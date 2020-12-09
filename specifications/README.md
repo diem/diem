@@ -6,7 +6,7 @@ This document describes the protocol specifications for the Diem Payment Network
 * Developers who work on supporting transaction validation and interface with the validation protocols.
 * Those interested in improving the protocol specifications and/or understanding the LPN in more detail.
 
-The reference implementations for all LPN specifications is [Diem Core](https://github.com/libra/libra). Diem Core is maintained by the open-source developer community on behalf of the [Diem Association](https://diem.com/en-US/association/). After the initial launch of the LPN, all specification changes will be proposed via the Diem Improvement Proposals (LIP) process - which is not yet finalized and public. For expedience prior to the launch of the LPN, changes to the specification will be made directly in the documentation and code.
+The reference implementations for all LPN specifications is [Diem Core](https://github.com/diem/diem). Diem Core is maintained by the open-source developer community on behalf of the [Diem Association](https://diem.com/en-US/association/). After the initial launch of the LPN, all specification changes will be proposed via the Diem Improvement Proposals (LIP) process - which is not yet finalized and public. For expedience prior to the launch of the LPN, changes to the specification will be made directly in the documentation and code.
 
 ## Overview
 
@@ -66,7 +66,7 @@ The LPN specifications are designed to support upgrades over time via the Diem I
 
 The process for upgrading the LPN specifications is as follows:
 
-1. **Seed an idea**. A Contributor should socialize their idea with the Diem developer community and Maintainers. They might create a [GitHub issue](https://github.com/libra/libra/issues) or use another means of gathering feedback.
+1. **Seed an idea**. A Contributor should socialize their idea with the Diem developer community and Maintainers. They might create a [GitHub issue](https://github.com/diem/diem/issues) or use another means of gathering feedback.
 
 2. **[Standard LIP](https://dip.diem.com/overview)**. A Contributor proposes a new standard LIP that modifies an existing specification(s) or proposes a new specification. If the standard LIP reaches the "Accepted" status, the proposed changes will be set in the new specification version as well as implemented in the Diem Core master branch. Other implementations of the protocol must follow these changes as well.
 
