@@ -415,7 +415,7 @@ async fn state_sync_load_test(
         1000,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
-            timeout_ms: 10_000,
+            timeout_ms: 50_000,
         },
     );
 
