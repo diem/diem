@@ -246,22 +246,23 @@ async fn upgrade_inbound<T: TSocket>(
     };
 
     // try authenticating via noise handshake
-    let (mut socket, remote_peer_id, trust_level) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
-        if err.should_security_log() {
-            sample!(
-                SampleRate::Duration(Duration::from_secs(15)),
-                error!(
-                    SecurityEvent::NoiseHandshake,
-                    NetworkSchema::new(&ctxt.noise.network_context)
-                        .network_address(&addr)
-                        .connection_origin(&origin),
-                    error = %err,
-                )
-            );
-        }
-        let err = io::Error::new(io::ErrorKind::Other, err);
-        add_pp_addr(proxy_protocol_enabled, err, &addr)
-    })?;
+    let (mut socket, remote_peer_id, trust_level) =
+        ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
+            if err.should_security_log() {
+                sample!(
+                    SampleRate::Duration(Duration::from_secs(15)),
+                    error!(
+                        SecurityEvent::NoiseHandshake,
+                        NetworkSchema::new(&ctxt.noise.network_context)
+                            .network_address(&addr)
+                            .connection_origin(&origin),
+                        error = %err,
+                    )
+                );
+            }
+            let err = io::Error::new(io::ErrorKind::Other, err);
+            add_pp_addr(proxy_protocol_enabled, err, &addr)
+        })?;
     let remote_pubkey = socket.get_remote_static();
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
 
@@ -421,7 +422,7 @@ where
         // TODO(mimoo): should we build this based on the networkid, and not on trusted peers
         let auth_mode = match trusted_peers.as_ref() {
             Some(trusted_peers) => HandshakeAuthMode::mutual(trusted_peers.clone()),
-            None => HandshakeAuthMode::ServerOnly,
+            None => HandshakeAuthMode::server_only(),
         };
         let identity_pubkey = identity_key.public_key();
         let network_id = network_context.network_id().clone();

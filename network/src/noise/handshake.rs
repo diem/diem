@@ -10,8 +10,10 @@
 //!
 //! [stream]: network::noise::stream
 
-use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
-use crate::transport::TrustLevel;
+use crate::{
+    noise::{error::NoiseHandshakeError, stream::NoiseStream},
+    transport::TrustLevel,
+};
 use diem_config::network_id::NetworkContext;
 use diem_crypto::{noise, x25519};
 use diem_infallible::{duration_since_epoch, RwLock};
@@ -91,10 +93,10 @@ pub enum HandshakeAuthMode {
         anti_replay_timestamps: RwLock<AntiReplayTimestamps>,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     },
-    /// In `ServerOnly` mode, the dialer authenticates the server. However, the
-    /// server does not care who connects to them and will allow inbound connections
-    /// from any peer.
-    ServerOnly,
+    /// In `MaybeMutual` mode, the dialer authenticates the server and the server will allow all
+    /// inbound connections from any peer but will mark connections as `Trusted` if the incoming
+    /// connection is apart of its trusted peers set.
+    MaybeMutual(Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>),
 }
 
 impl HandshakeAuthMode {
@@ -105,20 +107,23 @@ impl HandshakeAuthMode {
         }
     }
 
+    pub fn maybe_mutual(
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    ) -> Self {
+        HandshakeAuthMode::MaybeMutual(trusted_peers)
+    }
+
+    pub fn server_only() -> Self {
+        HandshakeAuthMode::maybe_mutual(Arc::new(RwLock::new(HashMap::default())))
+    }
+
     fn anti_replay_timestamps(&self) -> Option<&RwLock<AntiReplayTimestamps>> {
         match &self {
             HandshakeAuthMode::Mutual {
                 anti_replay_timestamps,
                 ..
             } => Some(&anti_replay_timestamps),
-            HandshakeAuthMode::ServerOnly => None,
-        }
-    }
-
-    fn trusted_peers(&self) -> Option<&RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>> {
-        match &self {
-            HandshakeAuthMode::Mutual { trusted_peers, .. } => Some(&trusted_peers),
-            HandshakeAuthMode::ServerOnly => None,
+            HandshakeAuthMode::MaybeMutual(_) => None,
         }
     }
 }
@@ -348,35 +353,52 @@ impl NoiseUpgrader {
             .map_err(|err| NoiseHandshakeError::ServerParseClient(remote_peer_short, err))?;
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
-        let trust_level = if let Some(trusted_peers) = self.auth_mode.trusted_peers() {
-            match trusted_peers.read().get(&remote_peer_id) {
-                Some(remote_pubkey_set) => {
-                    if !remote_pubkey_set.contains(&remote_public_key) {
-                        return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
+        let trust_level = match &self.auth_mode {
+            HandshakeAuthMode::Mutual { trusted_peers, .. } => {
+                match trusted_peers.read().get(&remote_peer_id) {
+                    Some(remote_pubkey_set) => {
+                        if !remote_pubkey_set.contains(&remote_public_key) {
+                            return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
+                                remote_peer_short,
+                                hex::encode(remote_public_key.as_slice()),
+                            ));
+                        }
+                    }
+                    None => {
+                        return Err(NoiseHandshakeError::UnauthenticatedClient(
                             remote_peer_short,
-                            hex::encode(remote_public_key.as_slice()),
-                        ));
+                            remote_peer_id,
+                        ))
+                    }
+                };
+                TrustLevel::Trusted
+            }
+            HandshakeAuthMode::MaybeMutual(trusted_peers) => {
+                match trusted_peers.read().get(&remote_peer_id) {
+                    Some(remote_pubkey_set) => {
+                        if !remote_pubkey_set.contains(&remote_public_key) {
+                            return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
+                                remote_peer_short,
+                                hex::encode(remote_public_key.as_slice()),
+                            ));
+                        }
+                        TrustLevel::Trusted
+                    }
+                    None => {
+                        // if not, verify that their peerid is constructed correctly from their public key
+                        let derived_remote_peer_id =
+                            PeerId::from_identity_public_key(remote_public_key);
+                        if derived_remote_peer_id != remote_peer_id {
+                            return Err(NoiseHandshakeError::ClientPeerIdMismatch(
+                                remote_peer_short,
+                                remote_peer_id,
+                                derived_remote_peer_id,
+                            ));
+                        }
+                        TrustLevel::Untrusted
                     }
                 }
-                None => {
-                    return Err(NoiseHandshakeError::UnauthenticatedClient(
-                        remote_peer_short,
-                        remote_peer_id,
-                    ))
-                }
-            };
-            TrustLevel::Trusted
-        } else {
-            // if not, verify that their peerid is constructed correctly from their public key
-            let derived_remote_peer_id = PeerId::from_identity_public_key(remote_public_key);
-            if derived_remote_peer_id != remote_peer_id {
-                return Err(NoiseHandshakeError::ClientPeerIdMismatch(
-                    remote_peer_short,
-                    remote_peer_id,
-                    derived_remote_peer_id,
-                ));
             }
-            TrustLevel::Untrusted
         };
 
         // if on a mutually authenticated network,
@@ -433,7 +455,11 @@ impl NoiseUpgrader {
             self.network_context,
             remote_peer_short,
         );
-        Ok((NoiseStream::new(socket, session), remote_peer_id, trust_level))
+        Ok((
+            NoiseStream::new(socket, session),
+            remote_peer_id,
+            trust_level,
+        ))
     }
 }
 
@@ -488,8 +514,8 @@ mod test {
             let client_peer_id = PeerId::from_identity_public_key(client_public_key);
             let server_peer_id = PeerId::from_identity_public_key(server_public_key);
             (
-                HandshakeAuthMode::ServerOnly,
-                HandshakeAuthMode::ServerOnly,
+                HandshakeAuthMode::server_only(),
+                HandshakeAuthMode::server_only(),
                 client_peer_id,
                 server_peer_id,
             )

@@ -91,7 +91,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
         let noise_config = Arc::new(NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(peer_id),
             private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config
@@ -112,7 +112,7 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
         let noise_config = Arc::new(NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(peer_id),
             private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         ));
         let remote_public_key = addr.find_noise_proto();
         let (_remote_static_key, socket) = noise_config

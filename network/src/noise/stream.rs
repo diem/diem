@@ -580,12 +580,12 @@ mod test {
         let client = NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(client_peer_id),
             client_private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         );
         let server = NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(server_peer_id),
             server_private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         );
 
         ((client, client_public), (server, server_public))
