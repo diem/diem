@@ -151,7 +151,7 @@ fn main() {
                 },
                 vec!["diem-types"],
             ),
-            Language::Java => ("org.diem.types".to_string(), vec!["org", "diem", "types"]),
+            Language::Java => ("com.diem.types".to_string(), vec!["com", "diem", "types"]),
             Language::Go => ("diemtypes".to_string(), vec!["diemtypes"]),
             _ => ("diem_types".to_string(), vec!["diem_types"]),
         };

@@ -78,7 +78,7 @@ fn write_script_call_files(
     package_name: &str,
     abis: &[ScriptABI],
 ) -> Result<()> {
-    let external_definitions = crate::common::get_external_definitions("org.diem.types");
+    let external_definitions = crate::common::get_external_definitions("com.diem.types");
     let script_registry: BTreeMap<_, _> = vec![(
         "ScriptCall".to_string(),
         common::make_abi_enum_container(abis),
@@ -150,10 +150,10 @@ where
 import java.math.BigInteger;
 import java.lang.IllegalArgumentException;
 import java.lang.IndexOutOfBoundsException;
-import org.diem.types.AccountAddress;
-import org.diem.types.Script;
-import org.diem.types.TransactionArgument;
-import org.diem.types.TypeTag;
+import com.diem.types.AccountAddress;
+import com.diem.types.Script;
+import com.diem.types.TransactionArgument;
+import com.diem.types.TypeTag;
 import com.novi.serde.Int128;
 import com.novi.serde.Unsigned;
 import com.novi.serde.Bytes;
@@ -167,7 +167,7 @@ import com.novi.serde.Bytes;
             self.out,
             r#"
 /**
- * Build a Diem {{@link org.diem.types.Script}} from a structured value {{@link ScriptCall}}.
+ * Build a Diem {{@link com.diem.types.Script}} from a structured value {{@link ScriptCall}}.
  *
  * @param call {{@link ScriptCall}} value to encode.
  * @return Encoded script.
@@ -184,9 +184,9 @@ public static Script encode_script(ScriptCall call) {{
             self.out,
             r#"
 /**
- * Try to recognize a Diem {{@link org.diem.types.Script}} and convert it into a structured value {{@code ScriptCall}}.
+ * Try to recognize a Diem {{@link com.diem.types.Script}} and convert it into a structured value {{@code ScriptCall}}.
  *
- * @param script {{@link org.diem.types.Script}} values to decode.
+ * @param script {{@link com.diem.types.Script}} values to decode.
  * @return Decoded {{@link ScriptCall}} value.
  */
 public static ScriptCall decode_script(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
@@ -234,7 +234,7 @@ public static ScriptCall decode_script(Script script) throws IllegalArgumentExce
             Self::quote_doc(
                 abi.doc(),
                 [quoted_type_params_doc, quoted_params_doc].concat(),
-                "Encoded {@link org.diem.types.Script} value.",
+                "Encoded {@link com.diem.types.Script} value.",
             ),
             abi.name(),
             [quoted_type_params, quoted_params].concat().join(", ")

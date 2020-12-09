@@ -242,10 +242,10 @@ fn test_that_java_code_compiles_and_demo_runs() {
     let paths = std::fs::read_dir("examples/java/custom_diem_code")
         .unwrap()
         .map(|e| e.unwrap().path());
-    let config = serdegen::CodeGeneratorConfig::new("org.diem.types".to_string())
+    let config = serdegen::CodeGeneratorConfig::new("com.diem.types".to_string())
         .with_encodings(vec![serdegen::Encoding::Lcs])
         .with_custom_code(buildgen::read_custom_code_from_paths(
-            &["org", "diem", "types"],
+            &["com", "diem", "types"],
             paths,
         ));
     let lcs_installer = serdegen::java::Installer::new(dir.path().to_path_buf());
@@ -255,7 +255,7 @@ fn test_that_java_code_compiles_and_demo_runs() {
 
     let abi_installer = buildgen::java::Installer::new(dir.path().to_path_buf());
     abi_installer
-        .install_transaction_builders("org.diem.stdlib", &abis)
+        .install_transaction_builders("com.diem.stdlib", &abis)
         .unwrap();
 
     std::fs::copy(
@@ -268,8 +268,8 @@ fn test_that_java_code_compiles_and_demo_runs() {
         std::iter::empty()
             .chain(std::fs::read_dir(dir.path().join("com/novi/serde")).unwrap())
             .chain(std::fs::read_dir(dir.path().join("com/novi/lcs")).unwrap())
-            .chain(std::fs::read_dir(dir.path().join("org/diem/types")).unwrap())
-            .chain(std::fs::read_dir(dir.path().join("org/diem/stdlib")).unwrap())
+            .chain(std::fs::read_dir(dir.path().join("com/diem/types")).unwrap())
+            .chain(std::fs::read_dir(dir.path().join("com/diem/stdlib")).unwrap())
             .map(|e| e.unwrap().path())
             .chain(std::iter::once(dir.path().join("StdlibDemo.java")))
     };

@@ -86,11 +86,11 @@ clang++ --std=c++17 -I "$DEST" "$DEST/diem_stdlib.cpp" "$DEST/stdlib_demo.cpp" -
 
 ### Java
 
-To install Java source packages `com.novi.serde`, `com.novi.lcs`, `org.diem.types`, and `org.diem.stdlib` into a target directory `$DEST`, run:
+To install Java source packages `com.novi.serde`, `com.novi.lcs`, `com.diem.types`, and `com.diem.stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language java \
-    --module-name org.diem.stdlib \
+    --module-name com.diem.stdlib \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
     --with-custom-diem-code language/transaction-builder/generator/examples/java/custom_diem_code/*.java -- \
