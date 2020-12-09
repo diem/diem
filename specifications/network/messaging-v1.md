@@ -120,9 +120,9 @@ The serialized `NetworkMsg`s over-the-wire then look like a sequence of length-p
 
 ### Maximum Frame Size
 
-Each `serialized-message-bytes` MUST be less than or equal to 8 MiB in size (8388608 bytes). Note that this calculated length does NOT include the `u32-length-prefix`. LibraNet servers should reject inbound messages larger than the 8 MiB limit and LibraNet clients MUST NOT send outbound messages larger than the 8 MiB limit.
+Each `serialized-message-bytes` MUST be less than or equal to 8 MiB in size (8388608 bytes). Note that this calculated length does NOT include the `u32-length-prefix`. DiemNet servers should reject inbound messages larger than the 8 MiB limit and DiemNet clients MUST NOT send outbound messages larger than the 8 MiB limit.
 
-As an example, basic pseudocode for reading a single LibraNet message might look like:
+As an example, basic pseudocode for reading a single DiemNet message might look like:
 
 ```rust
 const MAX_DIEMNET_FRAME_LEN: u32 = 8388608; // 8 MiB

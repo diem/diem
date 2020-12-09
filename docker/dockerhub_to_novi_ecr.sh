@@ -10,7 +10,7 @@
 
 function usage {
   echo "Usage:"
-  echo "Copies a libra dockerhub image to aws ecr"
+  echo "Copies a diem dockerhub image to aws ecr"
   echo "dockerhub_to_ecr.sh -t <dockerhub_tag> [ -r <REPO> ]"
   echo "-t the tag that exists in hub.docker.com."
   echo "-o override tag that should be pushed to target repo."

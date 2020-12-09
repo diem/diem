@@ -21,7 +21,7 @@ To get the development installation with all the necessary dependencies for
 linting, testing, and building the documentation, run the following:
 ```bash
 git clone https://github.com/diem/diem.git
-cd libra
+cd diem
 ./scripts/dev_setup.sh
 cargo build
 cargo xtest

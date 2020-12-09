@@ -11,7 +11,7 @@
 [PROVER]: https://github.com/diem/diem/blob/master/language/move-prover/doc/user/prover-guide.md
 [BOOGIE]: https://github.com/boogie-org/boogie
 [Z3]: https://github.com/Z3Prover/z3
-[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/master/dips/dip-2.md
 
 The Diem framework comes with an exhaustive formal specification of modules and transaction scripts.
 The specifications are formally verified against the Move implementation, with the verification enabled in
@@ -98,6 +98,6 @@ notably, Event generation has not been specified and verified.
 
 
 [//]: # ("File containing references which can be used from documentation")
-[ACCESS_CONTROL]: https://github.com/libra/lip/blob/master/lips/lip-2.md
-[ROLE]: https://github.com/libra/lip/blob/master/lips/lip-2.md#roles
-[PERMISSION]: https://github.com/libra/lip/blob/master/lips/lip-2.md#permissions
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/master/dips/dip-2.md
+[ROLE]: https://github.com/diem/dip/blob/master/dips/dip-2.md#roles
+[PERMISSION]: https://github.com/diem/dip/blob/master/dips/dip-2.md#permissions

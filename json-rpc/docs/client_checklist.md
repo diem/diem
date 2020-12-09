@@ -102,7 +102,7 @@ See [doc][5] for above concepts.
 
 # Examples
 
-- [ ] [p2p transfer examples](https://github.com/diem/lip/blob/master/lips/lip-4.md#transaction-examples)
+- [ ] [p2p transfer examples](https://github.com/diem/dip/blob/master/dips/dip-4.md#transaction-examples)
 - [ ] refund p2p transfer example
 - [ ] create childVASP example
 - [ ] Intent identifier encoding, decoding example
@@ -113,9 +113,9 @@ See [doc][5] for above concepts.
 - [ ] CLI connects to testnet for trying out features.
 
 [1]: https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md "Diem JSON-RPC SPEC"
-[2]: https://github.com/diem/lip/blob/master/lips/lip-5.md "LIP-5"
+[2]: https://github.com/diem/dip/blob/master/dips/dip-5.md "LIP-5"
 [3]: https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md "P2P Transafer"
 [4]: https://github.com/diem/diem/tree/master/language/stdlib/transaction_scripts/doc "Move Stdlib scripts"
 [5]: https://github.com/diem/diem/blob/master/client/diem-dev/README.md "Diem Client Dev Doc"
 [6]: https://github.com/diem/diem/blob/master/json-rpc/docs/service_testnet_faucet.md "Faucet service"
-[7]: https://github.com/diem/lip/blob/master/lips/lip-4.md "Transaction Metadata Specification"
+[7]: https://github.com/diem/dip/blob/master/dips/dip-4.md "Transaction Metadata Specification"

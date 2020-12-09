@@ -10,7 +10,7 @@ We do not specify any of one of these algorithms from first principles, but
 leverage and refer to existing specifications, while laying out exhastively
 where our implementation choices differ from the existant standards. Our
 implementation choices as described are expected to undergo future improvement
-through [Diem Improvement Processes](https://github.com/libra/lip) (LIPs).
+through [Diem Improvement Processes](https://github.com/diem/dip) (LIPs).
 
 ## Algorithms
 

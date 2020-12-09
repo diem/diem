@@ -29,7 +29,7 @@ cd "$SCRIPT_PATH/.." || exit
 
 function usage {
   echo "Usage:"
-  echo "Installs or updates necessary dev tools for libra/libra."
+  echo "Installs or updates necessary dev tools for diem/diem."
   echo "-b batch mode, no user interactions and miminal output"
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
