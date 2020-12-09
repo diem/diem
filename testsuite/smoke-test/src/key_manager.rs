@@ -54,6 +54,9 @@ fn test_key_manager_consensus_rotation() {
         ChainId::test(),
     );
 
+    // Add some time padding to ensure the libra timestamp increases on-chain
+    sleep(Duration::from_secs(10));
+
     // Spawn the key manager and execute a rotation
     let _key_manager_thread = thread::spawn(move || key_manager.execute());
 
