@@ -20,9 +20,14 @@ use bytes::Bytes;
 use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
-use futures::{future, io::AsyncWriteExt, stream::StreamExt, SinkExt};
+use futures::{
+    future,
+    io::{AsyncRead, AsyncWrite, AsyncWriteExt},
+    stream::StreamExt,
+    SinkExt,
+};
 use memsocket::MemorySocket;
-use netcore::transport::ConnectionOrigin;
+use netcore::{compat::IoCompat, transport::ConnectionOrigin};
 use std::str::FromStr;
 use tokio::runtime::{Handle, Runtime};
 
@@ -108,6 +113,18 @@ fn build_test_connected_peers(
     )
 }
 
+fn build_network_sink_stream<'a>(
+    connection: &'a mut MemorySocket,
+) -> (
+    NetworkMessageSink<impl AsyncWrite + 'a>,
+    NetworkMessageStream<impl AsyncRead + 'a>,
+) {
+    let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
+    let sink = NetworkMessageSink::new(IoCompat::new(write_half), MAX_FRAME_SIZE);
+    let stream = NetworkMessageStream::new(IoCompat::new(read_half), MAX_FRAME_SIZE);
+    (sink, stream)
+}
+
 async fn assert_peer_disconnected_event(
     peer_id: PeerId,
     reason: DisconnectReason,
@@ -127,8 +144,9 @@ async fn assert_peer_disconnected_event(
 fn peer_send_message() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, mut peer_handle, connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, mut peer_handle, mut connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = Message {
         protocol_id: PROTOCOL,
@@ -140,16 +158,18 @@ fn peer_send_message() {
         raw_msg: Vec::from("hello world"),
     });
 
-    let client = async move {
-        // The client should then send the network message.
-        let mut connection = NetworkMessageStream::new(connection, MAX_FRAME_SIZE);
+    let client = async {
+        // Client should receive the direct send messages.
         for _ in 0..30 {
-            let msg = connection.next().await.unwrap().unwrap();
+            let msg = client_stream.next().await.unwrap().unwrap();
             assert_eq!(msg, recv_msg);
         }
+        // Client then closes the connection.
+        client_sink.close().await.unwrap();
     };
 
-    let server = async move {
+    let server = async {
+        // Server sends some direct send messages.
         for _ in 0..30 {
             peer_handle
                 .send_direct_send(send_msg.clone())
