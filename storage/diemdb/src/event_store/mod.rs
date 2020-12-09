@@ -28,8 +28,8 @@ use diem_types::{
     proof::{position::Position, EventAccumulatorProof, EventProof},
     transaction::Version,
 };
-use schemadb::{schema::ValueCodec, ReadOptions, DB};
-use std::{convert::TryFrom, sync::Arc};
+use schemadb::{schema::ValueCodec, ReadOptions, SchemaIterator, DB};
+use std::{convert::TryFrom, iter::Peekable, sync::Arc};
 
 #[derive(Debug)]
 pub(crate) struct EventStore {
@@ -58,6 +58,23 @@ impl EventStore {
         }
 
         Ok(events)
+    }
+
+    pub fn get_events_by_version_iter(
+        &self,
+        start_version: Version,
+        num_versions: usize,
+    ) -> Result<EventsByVersionIter> {
+        let mut iter = self.db.iter::<EventSchema>(Default::default())?;
+        iter.seek(&start_version)?;
+
+        Ok(EventsByVersionIter {
+            inner: iter.peekable(),
+            expected_next_version: start_version,
+            end_version: start_version
+                .checked_add(num_versions as u64)
+                .ok_or_else(|| format_err!("Too many versions requested."))?,
+        })
     }
 
     /// Get the event raw data given transaction version and the index of the event queried.
@@ -239,6 +256,45 @@ struct EmptyReader;
 impl HashReader for EmptyReader {
     fn get(&self, _position: Position) -> Result<HashValue> {
         unreachable!()
+    }
+}
+
+pub struct EventsByVersionIter<'a> {
+    inner: Peekable<SchemaIterator<'a, EventSchema>>,
+    expected_next_version: Version,
+    end_version: Version,
+}
+
+impl<'a> EventsByVersionIter<'a> {
+    fn next_impl(&mut self) -> Result<Option<Vec<ContractEvent>>> {
+        if self.expected_next_version >= self.end_version {
+            return Ok(None);
+        }
+
+        let mut ret = Vec::new();
+        while let Some(res) = self.inner.peek() {
+            let ((version, _index), _event) = res
+                .as_ref()
+                .map_err(|e| format_err!("Hit error iterating events: {}", e))?;
+            if *version != self.expected_next_version {
+                break;
+            }
+            let ((_version, _index), event) =
+                self.inner.next().transpose()?.expect("Known to exist.");
+            ret.push(event);
+        }
+        self.expected_next_version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("expected version overflowed."))?;
+        Ok(Some(ret))
+    }
+}
+
+impl<'a> Iterator for EventsByVersionIter<'a> {
+    type Item = Result<Vec<ContractEvent>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl().transpose()
     }
 }
 

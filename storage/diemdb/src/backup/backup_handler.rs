@@ -58,7 +58,7 @@ impl BackupHandler {
             .get_transaction_info_iter(start_version, num_transactions)?;
         let zipped = zip_eq(txn_iter, txn_info_iter).enumerate().map(
             move |(idx, (txn_res, txn_info_res))| {
-                BACKUP_TXN_VERSION.set((start_version + idx as u64) as i64);
+                BACKUP_TXN_VERSION.set((start_version.wrapping_add(idx as u64)) as i64);
                 Ok((txn_res?, txn_info_res?))
             },
         );

@@ -196,6 +196,15 @@ fn test_index_get_impl(event_batches: Vec<Vec<ContractEvent>>) {
     store.db.write_schemas(cs.batch);
     let ledger_version_plus_one = event_batches.len() as u64;
 
+    assert_eq!(
+        store
+            .get_events_by_version_iter(0, event_batches.len())
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap(),
+        event_batches,
+    );
+
     // Calculate expected event sequence per access_path.
     let mut events_by_event_key = HashMap::new();
     event_batches
