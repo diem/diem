@@ -797,6 +797,17 @@ impl DbReader for DiemDB {
             self.ledger_store.get_root_hash(version)
         })
     }
+
+    fn get_next_sequence_number(
+        &self,
+        ledger_version: Version,
+        event_key: &EventKey,
+    ) -> Result<u64> {
+        gauged_api("get_next_sequence_number", || {
+            self.event_store
+                .get_next_sequence_number(ledger_version, event_key)
+        })
+    }
 }
 
 impl DbWriter for DiemDB {

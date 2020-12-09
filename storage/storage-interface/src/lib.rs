@@ -303,6 +303,16 @@ pub trait DbReader: Send + Sync {
     fn get_accumulator_root_hash(&self, _version: Version) -> Result<HashValue> {
         unimplemented!()
     }
+
+    /// Gets the sequence number for the next emit of a specified event stream.
+    /// Resturns 0 if no such event exists in the stream yet.
+    fn get_next_sequence_number(
+        &self,
+        _ledger_version: Version,
+        _event_key: &EventKey,
+    ) -> Result<u64> {
+        unimplemented!()
+    }
 }
 
 impl MoveStorage for &dyn DbReader {

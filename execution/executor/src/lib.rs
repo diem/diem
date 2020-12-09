@@ -11,6 +11,7 @@ mod logging;
 mod metrics;
 #[cfg(test)]
 mod mock_vm;
+mod sequence_number_assigner;
 mod speculation_cache;
 mod types;
 
@@ -24,6 +25,7 @@ use crate::{
         DIEM_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, DIEM_EXECUTOR_TRANSACTIONS_SAVED,
         DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
     },
+    sequence_number_assigner::SequenceNumberAssigner,
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
 };
@@ -252,6 +254,7 @@ where
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
     fn process_vm_outputs(
+        &self,
         mut account_to_state: HashMap<AccountAddress, AccountState>,
         account_to_proof: HashMap<HashValue, SparseMerkleProof>,
         transactions: &[Transaction],
@@ -271,6 +274,10 @@ where
 
         let proof_reader = ProofReader::new(account_to_proof);
         let new_epoch_event_key = on_chain_config::new_epoch_event_key();
+        let mut seq_assigner = SequenceNumberAssigner::new(
+            self.db.reader.clone(),
+            parent_trees.txn_accumulator().num_leaves() as Version,
+        );
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             if next_epoch_state.is_some() {
                 txn_data.push(TransactionData::new(
@@ -291,6 +298,20 @@ where
                 vm_output.write_set().clone(),
                 &current_state_tree,
             )?;
+
+            // Check VM outputted event sequence numbers match expectation.
+            // TODO: VM stop outputting event sequence numbers
+            vm_output
+                .events()
+                .iter()
+                .map(|e| {
+                    ensure!(
+                    e.sequence_number() == seq_assigner.assign(e.key())?,
+                    "VM assigned event sequence number does not match that expected by storage.",
+                );
+                    Ok(())
+                })
+                .collect::<Result<Vec<_>>>()?;
 
             let event_tree = {
                 let event_hashes: Vec<_> =
@@ -459,7 +480,7 @@ where
 
         let (account_to_state, account_to_proof) = state_view.into();
 
-        let output = Self::process_vm_outputs(
+        let output = self.process_vm_outputs(
             account_to_state,
             account_to_proof,
             &transactions,
@@ -754,14 +775,15 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             }
 
             let (account_to_state, account_to_proof) = state_view.into();
-            let output = Self::process_vm_outputs(
-                account_to_state,
-                account_to_proof,
-                &transactions,
-                vm_outputs,
-                &parent_block_executed_trees,
-            )
-            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
+            let output = self
+                .process_vm_outputs(
+                    account_to_state,
+                    account_to_proof,
+                    &transactions,
+                    vm_outputs,
+                    &parent_block_executed_trees,
+                )
+                .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
             let parent_accu = parent_block_executed_trees.txn_accumulator();
 
