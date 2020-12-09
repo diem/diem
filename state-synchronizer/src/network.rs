@@ -54,7 +54,7 @@ pub fn network_endpoint_config() -> (
     (
         vec![],
         vec![ProtocolId::StateSynchronizerDirectSend],
-        QueueStyle::LIFO,
+        QueueStyle::FIFO,
         // TODO:  Name this as a constant.
         1,
         Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
