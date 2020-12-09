@@ -408,10 +408,10 @@ impl From<HashValue> for BytesView {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MoveAbortExplanationView {
-    category: String,
-    category_description: String,
-    reason: String,
-    reason_description: String,
+    pub category: String,
+    pub category_description: String,
+    pub reason: String,
+    pub reason_description: String,
 }
 
 impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
