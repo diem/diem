@@ -204,7 +204,7 @@ commands:
     steps:
       - save_cache:
           name: Save breaking change rev
-          key: testnet-{{ checksum "testnet_rev" }}
+          key: testnet-v1-{{ checksum "testnet_rev" }}
           # paths are relative to /home/circleci/project/
           paths:
             - breaking_change_rev
@@ -214,7 +214,7 @@ commands:
     steps:
       - restore_cache:
           name: Restore breaking change rev
-          key: testnet-{{ checksum "testnet_rev" }}
+          key: testnet-v1-{{ checksum "testnet_rev" }}
   send_message:
     description: Send message to the specified webhook, if no webhook is set simply return.
     parameters:
