@@ -12,15 +12,21 @@ use crate::{
 };
 use diem_config::config::{SafetyRulesConfig, SafetyRulesService};
 use diem_infallible::RwLock;
+use diem_logger::error;
 use diem_secure_storage::{KVStorage, Storage};
 use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 
 pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {
     let backend = &config.backend;
     let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
+    error!(
+        "About to check the availability of storage! Config: {:?}",
+        config
+    );
     internal_storage
         .available()
         .expect("Storage is not available");
+    error!("Storage is available!");
 
     if let Some(test_config) = &config.test {
         let author = test_config.author;

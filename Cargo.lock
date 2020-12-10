@@ -2200,6 +2200,7 @@ dependencies = [
  "base64 0.13.0",
  "chrono",
  "diem-crypto",
+ "diem-logger",
  "diem-proptest-helpers",
  "diem-types",
  "diem-workspace-hack",

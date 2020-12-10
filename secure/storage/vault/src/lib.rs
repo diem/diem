@@ -440,6 +440,7 @@ impl Client {
     pub fn unsealed(&self) -> Result<bool, Error> {
         let request = self.agent.get(&format!("{}/v1/sys/seal-status", self.host));
         let resp = self.upgrade_request_without_token(request).call();
+        diem_logger::error!("About to process unsealed response!");
 
         process_unsealed_response(resp)
     }
@@ -680,10 +681,16 @@ pub fn process_transit_sign_response(resp: Response) -> Result<Ed25519Signature,
 
 /// Processes the response returned by a seal-status() vault request.
 pub fn process_unsealed_response(resp: Response) -> Result<bool, Error> {
+    diem_logger::error!("Processing unsealed response: {:?}", &resp);
+
     if resp.ok() {
+        diem_logger::error!("Response was okay!");
         let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
+        diem_logger::error!("Response was okay! {:?}", &resp);
+
         Ok(!resp.sealed)
     } else {
+        diem_logger::error!("Response was not okay! {:?}", &resp);
         Err(resp.into())
     }
 }

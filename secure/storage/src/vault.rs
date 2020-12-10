@@ -73,6 +73,7 @@ impl VaultStorage {
                 }
             }
         }
+        diem_logger::error!("Got the client successfully!");
         &self.client
     }
 
@@ -236,6 +237,7 @@ impl VaultStorage {
 
 impl KVStorage for VaultStorage {
     fn available(&self) -> Result<(), Error> {
+        diem_logger::error!("In the available check!",);
         if !self.client().unsealed()? {
             Err(Error::InternalError("Vault is not unsealed".into()))
         } else {
