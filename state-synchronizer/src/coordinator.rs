@@ -999,6 +999,49 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
     }
 
+    /// Calculates the next version and epoch to request (assuming the given transaction list
+    /// and ledger info will be applied successfully).  Note: if no ledger info is specified,
+    /// we assume the next chunk will be for our current epoch.
+    fn calculate_version_and_epoch_to_request(
+        &mut self,
+        txn_list_with_proof: TransactionListWithProof,
+        ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(u64, u64)> {
+        let new_version = self
+            .local_state
+            .synced_version()
+            .checked_add(txn_list_with_proof.len() as u64)
+            .ok_or_else(|| format_err!("New version has overflown!"))?;
+
+        let mut new_epoch = self.local_state.trusted_epoch();
+        if let Some(ledger_info) = ledger_info {
+            if ledger_info.ledger_info().version() == new_version
+                && ledger_info.ledger_info().ends_epoch()
+            {
+                // This chunk is going to finish the current epoch.
+                new_epoch = self
+                    .local_state
+                    .trusted_epoch()
+                    .checked_add(1)
+                    .ok_or_else(|| format_err!("New epoch has overflown!"))?;
+            }
+        }
+
+        Ok((new_version, new_epoch))
+    }
+
+    /// Sends a chunk request and if an error occurs during sending the error is
+    /// logged rather than being thrown to the caller.
+    fn send_chunk_request_and_log_error(&mut self, version: u64, epoch: u64) {
+        if let Err(e) = self.send_chunk_request(version, epoch) {
+            error!(LogSchema::event_log(
+                LogEntry::ProcessChunkResponse,
+                LogEvent::SendChunkRequestFail
+            )
+            .error(&e));
+        }
+    }
+
     /// Processing chunk responses that carry a LedgerInfo that should be verified using the
     /// current local trusted validator set.
     fn process_response_with_verifiable_li(
@@ -1023,26 +1066,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 );
             }
         }
-        // Optimistically fetch the next chunk assuming the current chunk is going to be applied
-        // successfully.
-        let new_version = self
-            .local_state
-            .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
-            .ok_or_else(|| format_err!("New version has overflown!"))?;
-        let new_epoch = if response_li.ledger_info().version() == new_version
-            && response_li.ledger_info().ends_epoch()
-        {
-            // This chunk is going to finish the current epoch, optimistically request a chunk
-            // from the next epoch.
-            self.local_state
-                .trusted_epoch()
-                .checked_add(1)
-                .ok_or_else(|| format_err!("New epoch has overflown!"))?
-        } else {
-            // Remain in the current epoch
-            self.local_state.trusted_epoch()
-        };
+        // Optimistically fetch the next chunk (assume the current chunk will be applied successfully).
+        let (new_version, new_epoch) = self.calculate_version_and_epoch_to_request(
+            txn_list_with_proof.clone(),
+            Some(response_li.clone()),
+        )?;
+        self.send_chunk_request_and_log_error(new_version, new_epoch);
+
         self.local_state.verify_ledger_info(&response_li)?;
         if let Some(li) = pending_li {
             if li != response_li {
@@ -1054,20 +1084,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         // need to sync with local storage to see whether response LI was actually committed
         // and update pending_ledger_infos accordingly
-        self.sync_state_with_local_storage()?;
-        let new_version = self.local_state.synced_version();
-
-        // don't throw error for failed chunk request send, as this failure is not related to
-        // validity of the chunk response itself
-        if let Err(e) = self.send_chunk_request(new_version, new_epoch) {
-            error!(LogSchema::event_log(
-                LogEntry::ProcessChunkResponse,
-                LogEvent::SendChunkRequestFail
-            )
-            .error(&e));
-        }
-
-        Ok(())
+        self.sync_state_with_local_storage()
     }
 
     /// Processing chunk responses that carry a LedgerInfo corresponding to the waypoint.
@@ -1081,36 +1098,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             !self.is_initialized(),
             "Response with a waypoint LI but we're already initialized"
         );
-        // Optimistically fetch the next chunk.
-        let new_version = self
-            .local_state
-            .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
-            .ok_or_else(|| format_err!("New version has overflown!"))?;
-        // The epoch in the optimistic request (= new_epoch) should be the next epoch if the current chunk
-        // is the last one in its epoch.
-        let next_epoch = self
-            .local_state
-            .trusted_epoch()
-            .checked_add(1)
-            .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
-        let new_epoch = end_of_epoch_li
-            .as_ref()
-            .map_or(self.local_state.trusted_epoch(), |li| {
-                if li.ledger_info().version() == new_version && li.ledger_info().ends_epoch() {
-                    next_epoch
-                } else {
-                    self.local_state.trusted_epoch()
-                }
-            });
+        // Optimistically fetch the next chunk (assume the current chunk will be applied successfully).
+        let (new_version, new_epoch) = self.calculate_version_and_epoch_to_request(
+            txn_list_with_proof.clone(),
+            end_of_epoch_li.clone(),
+        )?;
         if new_version < self.waypoint.version() {
-            if let Err(e) = self.send_chunk_request(new_version, new_epoch) {
-                error!(LogSchema::event_log(
-                    LogEntry::ProcessChunkResponse,
-                    LogEvent::SendChunkRequestFail
-                )
-                .error(&e));
-            }
+            self.send_chunk_request_and_log_error(new_version, new_epoch);
         }
 
         // verify the end-of-epoch LI for the following before passing it to execution:
