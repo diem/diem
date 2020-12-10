@@ -13,7 +13,7 @@ jobs:
     runs-on: self-hosted
     # NOTE the total time should cover build (~10 min) and test (~20 min).
     # The additional time can cover the retries and wait.
-    timeout-minutes: 50
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v1
       - name: Get PR number
