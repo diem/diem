@@ -475,6 +475,19 @@ fn test_non_existence() {
 }
 
 #[test]
+fn test_missing_root() {
+    let db = MockTreeStore::default();
+    let tree = JellyfishMerkleTree::new(&db);
+    let err = tree
+        .get_with_proof(HashValue::random(), 0)
+        .err()
+        .unwrap()
+        .downcast::<MissingRootError>()
+        .unwrap();
+    assert_eq!(err.version, 0);
+}
+
+#[test]
 fn test_put_blob_sets() {
     let mut keys = vec![];
     let mut values = vec![];

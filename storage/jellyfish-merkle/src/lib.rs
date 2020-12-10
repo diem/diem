@@ -92,7 +92,14 @@ use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use std::collections::{BTreeMap, BTreeSet};
+use thiserror::Error;
 use tree_cache::TreeCache;
+
+#[derive(Error, Debug)]
+#[error("Missing state root node at version {version}, probably pruned.")]
+pub struct MissingRootError {
+    pub version: Version,
+}
 
 /// The hardcoded maximum height of a [`JellyfishMerkleTree`] in nibbles.
 pub const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;
@@ -519,7 +526,13 @@ where
         // We limit the number of loops here deliberately to avoid potential cyclic graph bugs
         // in the tree structure.
         for nibble_depth in 0..=ROOT_NIBBLE_HEIGHT {
-            let next_node = self.reader.get_node(&next_node_key)?;
+            let next_node = self.reader.get_node(&next_node_key).map_err(|err| {
+                if nibble_depth == 0 {
+                    MissingRootError { version }.into()
+                } else {
+                    err
+                }
+            })?;
             match next_node {
                 Node::Internal(internal_node) => {
                     let queried_child_index = nibble_iter
