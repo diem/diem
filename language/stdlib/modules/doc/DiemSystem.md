@@ -481,7 +481,7 @@ Adds a new validator to the validator set.
 </code></pre>
 
 
-LIP-6 property: validator has validator role. The code does not check this explicitly,
+DIP-6 property: validator has validator role. The code does not check this explicitly,
 but it is implied by the <code><b>assert</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a></code>, since there
 is an invariant (in ValidatorConfig) that a an address with a published ValidatorConfig has
 a ValidatorRole
@@ -744,7 +744,7 @@ It updates the correct entry in the correct way
 </code></pre>
 
 
-LIP-6 property
+DIP-6 property
 
 
 <pre><code><b>schema</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a> {

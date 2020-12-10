@@ -142,7 +142,7 @@ message EventData {
   string created_address = 18 [json_name="created_address"];
   /**
    * createaccount event field.
-   * Role id of the created account, see [LIP-2](https://dip.diem.com/dip-2/#move-implementation)
+   * Role id of the created account, see [DIP-2](https://dip.diem.com/dip-2/#move-implementation)
    * for more details
    */
   uint64 role_id = 19 [json_name="role_id"];
@@ -304,12 +304,12 @@ message Script {
 
   /**
    * Metadata of the transaction, LCS serialized hex-encoded string.
-   * See [LIP-4](https://dip.diem.com/dip-4/) for more details.
+   * See [DIP-4](https://dip.diem.com/dip-4/) for more details.
    */
   string metadata = 8;
   /**
    * Hex-encoded metadata signature, use this to validate metadata.
-   * See [LIP-4](https://dip.diem.com/dip-4/) for more details.
+   * See [DIP-4](https://dip.diem.com/dip-4/) for more details.
    */
   string metadata_signature = 9 [json_name="metadata_signature"];
 }

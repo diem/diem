@@ -9,7 +9,7 @@ Roles are associated with accounts and govern what operations are permitted by t
 is typically asserted on function entry using a statement like <code><a href="Roles.md#0x1_Roles_assert_diem_root">Self::assert_diem_root</a>(account)</code>. This
 module provides multiple assertion functions like this one, as well as the functions to setup roles.
 
-For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
+For a conceptual discussion of roles, see the [DIP-2 document][ACCESS_CONTROL].
 
 
 -  [Resource `RoleId`](#0x1_Roles_RoleId)

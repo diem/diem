@@ -195,7 +195,7 @@ module DiemSystem {
     }
     spec schema AddValidatorEnsures {
         validator_addr: address;
-        /// LIP-6 property: validator has validator role. The code does not check this explicitly,
+        /// DIP-6 property: validator has validator role. The code does not check this explicitly,
         /// but it is implied by the `assert ValidatorConfig::is_valid`, since there
         /// is an invariant (in ValidatorConfig) that a an address with a published ValidatorConfig has
         /// a ValidatorRole
@@ -330,7 +330,7 @@ module DiemSystem {
         ensures forall i in 0..len(vs): vs[i].config == old(vs[i].config) ||
                     (old(vs)[i].addr == validator_addr &&
                     vs[i].config == ValidatorConfig::get_config(validator_addr));
-        /// LIP-6 property
+        /// DIP-6 property
         ensures Roles::spec_has_validator_role_addr(validator_addr);
     }
 

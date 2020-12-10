@@ -6,7 +6,7 @@ address 0x1 {
 /// is typically asserted on function entry using a statement like `Self::assert_diem_root(account)`. This
 /// module provides multiple assertion functions like this one, as well as the functions to setup roles.
 ///
-/// For a conceptual discussion of roles, see the [LIP-2 document][ACCESS_CONTROL].
+/// For a conceptual discussion of roles, see the [DIP-2 document][ACCESS_CONTROL].
 module Roles {
     use 0x1::Signer;
     use 0x1::CoreAddresses;

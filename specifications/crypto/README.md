@@ -10,7 +10,7 @@ We do not specify any of one of these algorithms from first principles, but
 leverage and refer to existing specifications, while laying out exhastively
 where our implementation choices differ from the existant standards. Our
 implementation choices as described are expected to undergo future improvement
-through [Diem Improvement Processes](https://github.com/diem/dip) (LIPs).
+through [Diem Improvement Processes](https://github.com/diem/dip) (DIPs).
 
 ## Algorithms
 
@@ -51,7 +51,7 @@ standards in ways that we make precise below:
   group equation that a valid signature must pass is `[s]B = R + [k]A`, rather
   than `[8][s]B = [8]R + [8][k]A`, where `s`, `B`, `R`, `k`, `A` are defined as
   in RFC 8032 §5.1.7. We discuss this choice in [the next section](#On
-  cofactored vs. cofactor-less verification), and may revisit it through a LIP
+  cofactored vs. cofactor-less verification), and may revisit it through a DIP
   in the future. Ed25519 implementations overwhelmingly employ cofactor-less
   verification.
 
@@ -84,7 +84,7 @@ to implement cofactored verification—, it would be possible to stall consensus
 by spamming the transaction mempool with such non-conformant signatures<sup>[5](#f5)</sup>.
 
 As a consequence, we require cofactorless verification, but expect a further
-LIP to revisit this decision as soon as the ecosystem of Ed255519 libraries
+DIP to revisit this decision as soon as the ecosystem of Ed255519 libraries
 makes the other choice practical.
 
 ### Hashing
@@ -218,7 +218,7 @@ The implementation, exposed as a Move standard library module
 [(Authenticator)](https://github.com/diem/diem/blob/master/language/stdlib/modules/Authenticator.move),
 is currently simply a multiple-signature container —rather than a distinct
 signing scheme (e.g. MuSig). Nonetheless, we plan to improve it in further
-LIPs, while expanding the scope of threshold signing.
+DIPs, while expanding the scope of threshold signing.
 
 We refer the reader to the Move standard library specification for the details
 of smart-contract semantics.

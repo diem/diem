@@ -152,7 +152,7 @@ Event emitted when a new account is created
 |-----------------|--------|--------------------------------|
 | type            | string | Constant string "createaccount"|
 | created_address | string | Address of the created account |
-| role_id         | u64    | Role id of the created account, see [LIP-2](https://dip.diem.com/dip-2/#move-implementation) for more details |
+| role_id         | u64    | Role id of the created account, see [DIP-2](https://dip.diem.com/dip-2/#move-implementation) for more details |
 
 #### unknown
 

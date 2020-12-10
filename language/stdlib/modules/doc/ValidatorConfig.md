@@ -817,7 +817,7 @@ Every address that has a ValidatorConfig also has a validator role.
 </code></pre>
 
 
-LIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
+DIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
 in DiemSystem so we don't have to check whether every validator address has a validator role.
 
 
@@ -826,7 +826,7 @@ in DiemSystem so we don't have to check whether every validator address has a va
 </code></pre>
 
 
-LIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with
+DIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with
 a config option that is "some") has a validator role. This is a trivial consequence
 of the previous invariant, but it is not inductive and can't be proved without the
 previous one as a helper.

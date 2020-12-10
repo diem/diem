@@ -152,7 +152,7 @@ This is the only type we decoded script arguments and type_arguments as named fi
 | metadata                  | string         | Metadata of the transaction, LCS serialized hex-encoded string.     |
 | metadata_signature        | string         | Hex-encoded metadata signature, use this to validate metadata       |
 
-Note: for metadata and metadata_signature, see [LIP-4](https://dip.diem.com/dip-4/) for more details.
+Note: for metadata and metadata_signature, see [DIP-4](https://dip.diem.com/dip-4/) for more details.
 
 ### Type VMStatus
 

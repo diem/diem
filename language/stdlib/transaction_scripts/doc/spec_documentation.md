@@ -92,7 +92,7 @@ At this point, the Diem framework is specified to the following extent:
 - Most Module functions called directly or indirectly via a transaction script are specified. Note that
 some Module code which is not called this way may not yet be fully specified. Also some functions might
 not be individually specified, but still verified in the context they are used from other functions.
-- A crosscut regards *access control* as defined by [LIP-2][ACCESS_CONTROL] has been systematically specified.
+- A crosscut regards *access control* as defined by [DIP-2][ACCESS_CONTROL] has been systematically specified.
 - Some aspects of the framework have been abstracted out in the current release and are not verified; most
 notably, Event generation has not been specified and verified.
 
