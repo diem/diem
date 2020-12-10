@@ -154,10 +154,20 @@ fn test_end_to_end_impl(d: TestData) {
     )
     .unwrap();
     assert_eq!(
-        d.db.get_transactions(d.txn_start_ver, num_txns_to_backup, d.target_ver, false)
-            .unwrap(),
+        d.db.get_transactions(
+            d.txn_start_ver,
+            num_txns_to_backup,
+            d.target_ver,
+            true /* fetch_events */
+        )
+        .unwrap(),
         tgt_db
-            .get_transactions(d.txn_start_ver, num_txns_to_backup, d.target_ver, false)
+            .get_transactions(
+                d.txn_start_ver,
+                num_txns_to_backup,
+                d.target_ver,
+                true /* fetch_events */
+            )
             .unwrap()
     );
     if let Some(state_snapshot_ver) = d.state_snapshot_ver {

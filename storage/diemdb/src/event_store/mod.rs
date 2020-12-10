@@ -224,6 +224,24 @@ impl EventStore {
 
         Ok(root_hash)
     }
+
+    pub(crate) fn put_events_multiple_versions(
+        &self,
+        first_version: u64,
+        event_vecs: &[Vec<ContractEvent>],
+        cs: &mut ChangeSet,
+    ) -> Result<Vec<HashValue>> {
+        event_vecs
+            .iter()
+            .enumerate()
+            .map(|(idx, events)| {
+                let version = first_version
+                    .checked_add(idx as Version)
+                    .ok_or_else(|| format_err!("version overflow"))?;
+                self.put_events(version, events, cs)
+            })
+            .collect::<Result<Vec<_>>>()
+    }
 }
 
 type Accumulator<'a> = MerkleAccumulator<EventHashReader<'a>, EventAccumulatorHasher>;
@@ -283,7 +301,8 @@ impl<'a> EventsByVersionIter<'a> {
                 self.inner.next().transpose()?.expect("Known to exist.");
             ret.push(event);
         }
-        self.expected_next_version
+        self.expected_next_version = self
+            .expected_next_version
             .checked_add(1)
             .ok_or_else(|| format_err!("expected version overflowed."))?;
         Ok(Some(ret))

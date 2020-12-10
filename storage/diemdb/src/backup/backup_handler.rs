@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    event_store::EventStore,
     ledger_store::LedgerStore,
     metrics::{
         BACKUP_EPOCH_ENDING_EPOCH, BACKUP_STATE_SNAPSHOT_LEAF_IDX, BACKUP_STATE_SNAPSHOT_VERSION,
@@ -15,6 +16,7 @@ use diem_crypto::hash::HashValue;
 use diem_jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use diem_types::{
     account_state_blob::AccountStateBlob,
+    contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     proof::{SparseMerkleRangeProof, TransactionAccumulatorRangeProof, TransactionInfoWithProof},
     transaction::{Transaction, TransactionInfo, Version},
@@ -29,6 +31,7 @@ pub struct BackupHandler {
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
+    event_store: Arc<EventStore>,
 }
 
 impl BackupHandler {
@@ -36,11 +39,13 @@ impl BackupHandler {
         ledger_store: Arc<LedgerStore>,
         transaction_store: Arc<TransactionStore>,
         state_store: Arc<StateStore>,
+        event_store: Arc<EventStore>,
     ) -> Self {
         Self {
             ledger_store,
             transaction_store,
             state_store,
+            event_store,
         }
     }
 
@@ -49,19 +54,24 @@ impl BackupHandler {
         &'a self,
         start_version: Version,
         num_transactions: usize,
-    ) -> Result<impl Iterator<Item = Result<(Transaction, TransactionInfo)>> + 'a> {
+    ) -> Result<impl Iterator<Item = Result<(Transaction, TransactionInfo, Vec<ContractEvent>)>> + 'a>
+    {
         let txn_iter = self
             .transaction_store
             .get_transaction_iter(start_version, num_transactions)?;
         let txn_info_iter = self
             .ledger_store
             .get_transaction_info_iter(start_version, num_transactions)?;
-        let zipped = zip_eq(txn_iter, txn_info_iter).enumerate().map(
-            move |(idx, (txn_res, txn_info_res))| {
+        let events_iter = self
+            .event_store
+            .get_events_by_version_iter(start_version, num_transactions)?;
+
+        let zipped = zip_eq(zip_eq(txn_iter, txn_info_iter), events_iter)
+            .enumerate()
+            .map(move |(idx, ((txn_res, txn_info_res), events_res))| {
                 BACKUP_TXN_VERSION.set((start_version.wrapping_add(idx as u64)) as i64);
-                Ok((txn_res?, txn_info_res?))
-            },
-        );
+                Ok((txn_res?, txn_info_res?, events_res?))
+            });
         Ok(zipped)
     }
 

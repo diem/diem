@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    change_set::ChangeSet, ledger_store::LedgerStore,
+    change_set::ChangeSet, event_store::EventStore, ledger_store::LedgerStore,
     schema::transaction_accumulator::TransactionAccumulatorSchema, state_store::StateStore,
     transaction_store::TransactionStore, DiemDB,
 };
@@ -10,6 +10,7 @@ use anyhow::{ensure, Result};
 use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_jellyfish_merkle::restore::JellyfishMerkleRestore;
 use diem_types::{
+    contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     proof::{definition::LeafCount, position::FrozenSubTreeIterator},
     transaction::{Transaction, TransactionInfo, Version, PRE_GENESIS_VERSION},
@@ -26,6 +27,7 @@ pub struct RestoreHandler {
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
+    event_store: Arc<EventStore>,
 }
 
 impl RestoreHandler {
@@ -35,6 +37,7 @@ impl RestoreHandler {
         ledger_store: Arc<LedgerStore>,
         transaction_store: Arc<TransactionStore>,
         state_store: Arc<StateStore>,
+        event_store: Arc<EventStore>,
     ) -> Self {
         Self {
             db,
@@ -42,6 +45,7 @@ impl RestoreHandler {
             ledger_store,
             transaction_store,
             state_store,
+            event_store,
         }
     }
 
@@ -119,6 +123,7 @@ impl RestoreHandler {
         first_version: Version,
         txns: &[Transaction],
         txn_infos: &[TransactionInfo],
+        events: &[Vec<ContractEvent>],
     ) -> Result<()> {
         let mut cs = ChangeSet::new();
         for (idx, txn) in txns.iter().enumerate() {
@@ -127,6 +132,8 @@ impl RestoreHandler {
         }
         self.ledger_store
             .put_transaction_infos(first_version, txn_infos, &mut cs)?;
+        self.event_store
+            .put_events_multiple_versions(first_version, events, &mut cs)?;
 
         self.db.write_schemas(cs.batch)
     }

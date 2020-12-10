@@ -116,17 +116,30 @@ fn end_to_end() {
             first_ver_to_backup,
             num_txns_to_restore as u64,
             target_version,
-            false,
+            true, /* fetch_events */
         )
-        .unwrap()
-        .transactions;
+        .unwrap();
 
     assert_eq!(
-        recovered_transactions,
+        recovered_transactions.transactions,
         txns.into_iter()
             .skip(first_ver_to_backup as usize)
             .take(num_txns_to_restore)
             .cloned()
+            .collect::<Vec<_>>()
+    );
+
+    assert_eq!(
+        recovered_transactions.events.unwrap(),
+        blocks
+            .iter()
+            .map(|(txns, _li)| {
+                txns.iter()
+                    .map(|txn_to_commit| txn_to_commit.events().to_vec())
+            })
+            .flatten()
+            .skip(first_ver_to_backup as usize)
+            .take(num_txns_to_restore)
             .collect::<Vec<_>>()
     );
 

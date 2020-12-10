@@ -108,7 +108,7 @@ pub struct DiemDB {
     ledger_store: Arc<LedgerStore>,
     transaction_store: Arc<TransactionStore>,
     state_store: Arc<StateStore>,
-    event_store: EventStore,
+    event_store: Arc<EventStore>,
     system_store: SystemStore,
     pruner: Option<Pruner>,
 }
@@ -137,7 +137,7 @@ impl DiemDB {
 
         DiemDB {
             db: Arc::clone(&db),
-            event_store: EventStore::new(Arc::clone(&db)),
+            event_store: Arc::new(EventStore::new(Arc::clone(&db))),
             ledger_store: Arc::new(LedgerStore::new(Arc::clone(&db))),
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
@@ -320,6 +320,7 @@ impl DiemDB {
             Arc::clone(&self.ledger_store),
             Arc::clone(&self.transaction_store),
             Arc::clone(&self.state_store),
+            Arc::clone(&self.event_store),
         )
     }
 
@@ -911,6 +912,7 @@ impl GetRestoreHandler for Arc<DiemDB> {
             Arc::clone(&self.ledger_store),
             Arc::clone(&self.transaction_store),
             Arc::clone(&self.state_store),
+            Arc::clone(&self.event_store),
         )
     }
 }

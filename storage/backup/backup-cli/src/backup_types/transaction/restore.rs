@@ -19,6 +19,7 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Result};
 use diem_logger::prelude::*;
 use diem_types::{
+    contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     proof::{TransactionAccumulatorRangeProof, TransactionListProof},
     transaction::{Transaction, TransactionInfo, TransactionListWithProof, Version},
@@ -68,6 +69,7 @@ struct LoadedChunk {
     pub manifest: TransactionChunk,
     pub txns: Vec<Transaction>,
     pub txn_infos: Vec<TransactionInfo>,
+    pub event_vecs: Vec<Vec<ContractEvent>>,
     pub range_proof: TransactionAccumulatorRangeProof,
     pub ledger_info: LedgerInfoWithSignatures,
 }
@@ -81,11 +83,13 @@ impl LoadedChunk {
         let mut file = BufReader::new(storage.open_for_read(&manifest.transactions).await?);
         let mut txns = Vec::new();
         let mut txn_infos = Vec::new();
+        let mut event_vecs = Vec::new();
 
         while let Some(record_bytes) = file.read_record_bytes().await? {
-            let (txn, txn_info) = lcs::from_bytes(&record_bytes)?;
+            let (txn, txn_info, events) = lcs::from_bytes(&record_bytes)?;
             txns.push(txn);
             txn_infos.push(txn_info);
+            event_vecs.push(events);
         }
 
         ensure!(
@@ -108,7 +112,7 @@ impl LoadedChunk {
         // make a `TransactionListWithProof` to reuse its verification code.
         let txn_list_with_proof = TransactionListWithProof::new(
             txns,
-            None, /* events */
+            Some(event_vecs),
             Some(manifest.first_version),
             TransactionListProof::new(range_proof, txn_infos),
         );
@@ -116,11 +120,13 @@ impl LoadedChunk {
         // and disassemble it to get things back.
         let txns = txn_list_with_proof.transactions;
         let (range_proof, txn_infos) = txn_list_with_proof.proof.unpack();
+        let event_vecs = txn_list_with_proof.events.expect("unknown to be Some.");
 
         Ok(Self {
             manifest,
             txns,
             txn_infos,
+            event_vecs,
             range_proof,
             ledger_info,
         })
@@ -204,9 +210,11 @@ impl TransactionRestoreController {
                     chunk.manifest.first_version,
                     &chunk.txns[..num_txns_to_save],
                     &chunk.txn_infos[..num_txns_to_save],
+                    &chunk.event_vecs[..num_txns_to_save],
                 )?;
                 chunk.txns.drain(0..num_txns_to_save);
                 chunk.txn_infos.drain(0..num_txns_to_save);
+                chunk.event_vecs.drain(0..num_txns_to_save);
                 TRANSACTION_SAVE_VERSION.set(last_to_save as i64);
             }
             // Those to replay:
