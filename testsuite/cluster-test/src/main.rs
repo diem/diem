@@ -561,7 +561,7 @@ impl ClusterTestRunner {
     }
 
     fn get_changelog(&self, prev_commit: Option<&String>, upstream_commit: &str) -> String {
-        let commits = self.github.get_commits("libra/libra", &upstream_commit);
+        let commits = self.github.get_commits("diem/diem", &upstream_commit);
         match commits {
             Err(e) => {
                 info!("Failed to get github commits: {:?}", e);
