@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::context::XContext;
+use anyhow::anyhow;
 use guppy::graph::summaries::{diff::SummaryDiff, Summary};
 use std::{fs, path::PathBuf};
 use structopt::StructOpt;
@@ -30,7 +31,8 @@ pub fn run(args: Args, _xctx: XContext) -> crate::Result<()> {
     match args.output_format.as_deref() {
         Some("json") => println!("{}", serde_json::to_string(&summary_diff)?),
         Some("toml") => println!("{}", toml::to_string(&summary_diff)?),
-        _ => println!("{}", summary_diff.report()),
+        Some("text") | None => println!("{}", summary_diff.report()),
+        _ => return Err(anyhow!("--output-format only accepts json, html or text")),
     };
 
     Ok(())
