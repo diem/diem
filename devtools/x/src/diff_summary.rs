@@ -14,6 +14,9 @@ pub struct Args {
     #[structopt(name = "COMPARE_SUMMARY")]
     /// Path to the comparison summary
     compare_summary: PathBuf,
+    #[structopt(name = "OUTPUT_FORMAT")]
+    /// optionally, output can be formated as json or toml
+    output_format: Option<String>,
 }
 
 pub fn run(args: Args, _xctx: XContext) -> crate::Result<()> {
@@ -23,6 +26,12 @@ pub fn run(args: Args, _xctx: XContext) -> crate::Result<()> {
     let compare_summary = Summary::parse(&compare_summary_text)?;
 
     let summary_diff = SummaryDiff::new(&base_summary, &compare_summary);
-    println!("{}", summary_diff.report());
+
+    match args.output_format.as_deref() {
+        Some("json") => println!("{}", serde_json::to_string(&summary_diff)?),
+        Some("toml") => println!("{}", toml::to_string(&summary_diff)?),
+        _ => println!("{}", summary_diff.report()),
+    };
+
     Ok(())
 }
