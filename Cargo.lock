@@ -2268,11 +2268,17 @@ dependencies = [
 name = "diem-workspace-hack"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "bytes",
  "cc",
+ "chrono",
+ "itertools 0.9.0",
+ "itoa",
  "log",
  "memchr",
+ "num-integer",
  "num-traits",
+ "once_cell",
  "petgraph",
  "serde",
  "sha-1 0.9.2",
