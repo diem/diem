@@ -173,7 +173,7 @@ impl AccountState {
         self.0.get(key)
     }
 
-    fn get_resource_impl<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
+    pub fn get_resource_impl<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
         self.0
             .get(key)
             .map(|bytes| lcs::from_bytes(bytes))
