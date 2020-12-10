@@ -14,7 +14,6 @@ use diem_config::{
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::x25519;
-use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use diem_types::{chain_id::ChainId, PeerId};
@@ -26,7 +25,7 @@ use futures::{
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
 use serde::{export::Formatter, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::BTreeMap,
     convert::TryFrom,
     fmt::Debug,
     io,
@@ -408,7 +407,7 @@ where
         base_transport: TTransport,
         network_context: Arc<NetworkContext>,
         identity_key: x25519::PrivateKey,
-        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
+        auth_mode: HandshakeAuthMode,
         handshake_version: u8,
         chain_id: ChainId,
         application_protocols: SupportedProtocols,
@@ -418,12 +417,6 @@ where
         let mut supported_protocols = BTreeMap::new();
         supported_protocols.insert(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
-        // create upgrade context
-        // TODO(mimoo): should we build this based on the networkid, and not on trusted peers
-        let auth_mode = match trusted_peers.as_ref() {
-            Some(trusted_peers) => HandshakeAuthMode::mutual(trusted_peers.clone()),
-            None => HandshakeAuthMode::server_only(),
-        };
         let identity_pubkey = identity_key.public_key();
         let network_id = network_context.network_id().clone();
 

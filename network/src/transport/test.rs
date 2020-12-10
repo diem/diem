@@ -68,23 +68,40 @@ where
     let listener_key = x25519::PrivateKey::generate(&mut rng);
     let dialer_key = x25519::PrivateKey::generate(&mut rng);
 
-    let (listener_peer_id, dialer_peer_id, trusted_peers) = match auth {
-        Auth::Mutual => {
-            let listener_peer_id = PeerId::random();
-            let dialer_peer_id = PeerId::random();
+    let (listener_peer_id, dialer_peer_id, listener_auth_mode, dialer_auth_mode, trusted_peers) =
+        match auth {
+            Auth::Mutual => {
+                let listener_peer_id = PeerId::random();
+                let dialer_peer_id = PeerId::random();
 
-            let trusted_peers =
-                build_trusted_peers(dialer_peer_id, &dialer_key, listener_peer_id, &listener_key);
+                let trusted_peers = build_trusted_peers(
+                    dialer_peer_id,
+                    &dialer_key,
+                    listener_peer_id,
+                    &listener_key,
+                );
 
-            (listener_peer_id, dialer_peer_id, Some(trusted_peers))
-        }
-        Auth::ServerOnly => {
-            let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
-            let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
+                (
+                    listener_peer_id,
+                    dialer_peer_id,
+                    HandshakeAuthMode::mutual(trusted_peers.clone()),
+                    HandshakeAuthMode::mutual(trusted_peers.clone()),
+                    Some(trusted_peers),
+                )
+            }
+            Auth::ServerOnly => {
+                let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
+                let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
 
-            (listener_peer_id, dialer_peer_id, None)
-        }
-    };
+                (
+                    listener_peer_id,
+                    dialer_peer_id,
+                    HandshakeAuthMode::server_only(),
+                    HandshakeAuthMode::server_only(),
+                    None,
+                )
+            }
+        };
 
     let supported_protocols = SupportedProtocols::from(
         [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend].iter(),
@@ -94,7 +111,7 @@ where
         base_transport.clone(),
         NetworkContext::mock_with_peer_id(listener_peer_id),
         listener_key,
-        trusted_peers.clone(),
+        listener_auth_mode,
         HANDSHAKE_VERSION,
         chain_id,
         supported_protocols.clone(),
@@ -105,7 +122,7 @@ where
         base_transport,
         NetworkContext::mock_with_peer_id(dialer_peer_id),
         dialer_key,
-        trusted_peers.clone(),
+        dialer_auth_mode,
         HANDSHAKE_VERSION,
         chain_id,
         supported_protocols.clone(),
