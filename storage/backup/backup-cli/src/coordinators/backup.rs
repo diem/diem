@@ -9,8 +9,11 @@ use crate::{
     },
     metadata,
     metadata::cache::MetadataCacheOpt,
+    metrics::backup::{
+        EPOCH_ENDING_EPOCH, HEARTBEAT_TS, STATE_SNAPSHOT_VERSION, TRANSACTION_VERSION,
+    },
     storage::BackupStorage,
-    utils::{backup_service_client::BackupServiceClient, GlobalBackupOpt},
+    utils::{backup_service_client::BackupServiceClient, unix_timestamp_sec, GlobalBackupOpt},
 };
 use anyhow::{anyhow, ensure, Result};
 use diem_logger::prelude::*;
@@ -149,6 +152,7 @@ impl BackupCoordinator {
     async fn try_refresh_db_state(&self, db_state_broadcast: &watch::Sender<Option<DbState>>) {
         match self.client.get_db_state().await {
             Ok(s) => {
+                HEARTBEAT_TS.set(unix_timestamp_sec());
                 if s.is_none() {
                     warn!("DB not bootstrapped.");
                 } else {
@@ -172,6 +176,9 @@ impl BackupCoordinator {
         downstream_db_state_broadcaster: &watch::Sender<Option<DbState>>,
     ) -> Result<Option<u64>> {
         loop {
+            if let Some(epoch) = last_epoch_ending_epoch_in_backup {
+                EPOCH_ENDING_EPOCH.set(epoch as i64);
+            }
             let (first, last) = get_batch_range(last_epoch_ending_epoch_in_backup, 1);
 
             if db_state.epoch <= last {
@@ -205,6 +212,9 @@ impl BackupCoordinator {
         last_snapshot_version_in_backup: Option<Version>,
         db_state: DbState,
     ) -> Result<Option<Version>> {
+        if let Some(version) = last_snapshot_version_in_backup {
+            STATE_SNAPSHOT_VERSION.set(version as i64);
+        }
         let next_snapshot_version = get_next_snapshot(
             last_snapshot_version_in_backup,
             db_state,
@@ -236,6 +246,9 @@ impl BackupCoordinator {
         db_state: DbState,
     ) -> Result<Option<u64>> {
         loop {
+            if let Some(version) = last_transaction_version_in_backup {
+                TRANSACTION_VERSION.set(version as i64);
+            }
             let (first, last) = get_batch_range(
                 last_transaction_version_in_backup,
                 self.transaction_batch_size,

@@ -17,6 +17,7 @@ use backup_cli::{
     },
 };
 use diem_logger::{prelude::*, Level, Logger};
+use diem_secure_push_metrics::MetricsPusher;
 use std::sync::Arc;
 use structopt::StructOpt;
 
@@ -129,6 +130,8 @@ async fn main() -> Result<()> {
 
 async fn main_impl() -> Result<()> {
     Logger::new().level(Level::Info).init();
+    let _mp = MetricsPusher::start();
+
     let cmd = Command::from_args();
     match cmd {
         Command::OneShot(one_shot_cmd) => match one_shot_cmd {
