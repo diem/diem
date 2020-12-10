@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::{
-    types as jsonrpc, Client, Error, JsonRpcResponse, Request, Response, Retry, State,
-    WaitForTransactionError,
+    types as jsonrpc, BroadcastHttpClient, Client, Error, JsonRpcResponse, Request, Response,
+    Retry, State, WaitForTransactionError,
 };
 use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use reqwest::Url;
 use serde_json::{json, to_value, Value};
 use std::{
     convert::TryInto,
+    str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -70,6 +72,37 @@ fn setup_with_server(inouts: Vec<(Value, Value)>) -> Client<Retry> {
     tokio::task::spawn(async move { future.await });
     let server_url = format!("http://localhost:{}", port);
     Client::from_url(&server_url, Retry::default()).unwrap()
+}
+
+fn setup_with_multiple_servers(inouts: Vec<(Value, Value)>) -> Client<Retry> {
+    // First server
+    let id = Arc::new(AtomicUsize::new(0));
+    let inouts_clone = inouts.clone();
+    let stub = warp::any().and(warp::body::json()).map(move |req: Value| {
+        let id = id.fetch_add(1, Ordering::SeqCst);
+        let (request, response) = inouts_clone[id].clone();
+        assert_eq!(request, req);
+        Ok(warp::reply::json(&response))
+    });
+    let port = diem_config::utils::get_available_port();
+    let future = warp::serve(stub).bind(([127, 0, 0, 1], port));
+    tokio::task::spawn(async move { future.await });
+    let server1_url = format!("http://localhost:{}", port);
+
+    // Second server
+    let id = Arc::new(AtomicUsize::new(0));
+    let stub = warp::any().and(warp::body::json()).map(move |req: Value| {
+        let id = id.fetch_add(1, Ordering::SeqCst);
+        let (request, response) = inouts[id].clone();
+        assert_ne!(request, req);
+        Ok(warp::reply::json(&response))
+    });
+    let port = diem_config::utils::get_available_port();
+    let future = warp::serve(stub).bind(([127, 0, 0, 1], port));
+    tokio::task::spawn(async move { future.await });
+    let server2_url = format!("http://localhost:{}", port);
+
+    Client::from_url_list(vec![&server1_url, &server2_url], 2, Retry::default()).unwrap()
 }
 
 #[tokio::test]
@@ -651,7 +684,7 @@ async fn test_chain_id_mismatch_error() {
 async fn test_batch_send_requests() {
     let metadata_result = metadata_sample();
     let currencies_result = currencies_sample();
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -661,25 +694,29 @@ async fn test_batch_send_requests() {
             new_response_with_version_and_id(currencies_result.clone(), 1, 1),
             new_response_with_version_and_id(metadata_result.clone(), 1, 0),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let mut res = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await
+            .expect("no error");
+        let metadata: Response<jsonrpc::Metadata> = res.remove(0).try_into().expect("no error");
+        assert_eq!(state_for_version(1), metadata.state);
+        assert_eq!(metadata_result, serde_json::to_value(&*metadata).unwrap());
 
-    let mut res = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await
-        .expect("no error");
-    let metadata: Response<jsonrpc::Metadata> = res.remove(0).try_into().expect("no error");
-    assert_eq!(state_for_version(1), metadata.state);
-    assert_eq!(metadata_result, serde_json::to_value(&*metadata).unwrap());
-
-    let currencies: Response<Vec<jsonrpc::CurrencyInfo>> =
-        res.remove(0).try_into().expect("no error");
-    assert_eq!(state_for_version(1), currencies.state);
-    assert_eq!(currencies_result, to_value(&*currencies).unwrap());
+        let currencies: Response<Vec<jsonrpc::CurrencyInfo>> =
+            res.remove(0).try_into().expect("no error");
+        assert_eq!(state_for_version(1), currencies.state);
+        assert_eq!(currencies_result, to_value(&*currencies).unwrap());
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_response_id_not_matched_error() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -688,19 +725,23 @@ async fn test_batch_send_requests_and_response_id_not_matched_error() {
             new_response_with_version_and_id(currencies_sample(), 1, 1),
             new_response_with_version_and_id(metadata_sample(), 1, 2),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_response_id_type_not_matched_error() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -709,19 +750,23 @@ async fn test_batch_send_requests_and_response_id_type_not_matched_error() {
             new_response_with_version_and_id(currencies_sample(), 1, 0),
             new_response_with_version_and_json_id(metadata_sample(), 1, json!("1")),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_response_id_duplicated_error() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -730,19 +775,23 @@ async fn test_batch_send_requests_and_response_id_duplicated_error() {
             new_response_with_version_and_id(currencies_sample(), 1, 0),
             new_response_with_version_and_id(metadata_sample(), 1, 0),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_response_id_not_found_error() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -751,19 +800,23 @@ async fn test_batch_send_requests_and_response_id_not_found_error() {
             new_response_with_version_and_id(currencies_sample(), 1, 0),
             new_response_with_version_and_json_id(metadata_sample(), 1, json!(null)),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_responses_more_then_requested() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -773,37 +826,49 @@ async fn test_batch_send_requests_and_responses_more_then_requested() {
             new_response_with_version_and_id(currencies_sample(), 1, 1),
             new_response_with_version_and_id(currencies_sample(), 1, 1),
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert!(format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse"));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert!(
+            format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse")
+        );
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_and_responses_less_then_requested() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
         ]),
         json!([new_response_with_version_and_id(currencies_sample(), 1, 0),]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
 
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-
-    assert!(format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse"));
-    assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert!(
+            format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse")
+        );
+        assert_err!(err, Error::UnexpectedError { .. }, true);
+    }
 }
 
 #[tokio::test]
 async fn test_batch_send_requests_fail_if_any_response_has_error() {
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_currencies", "params": []}
@@ -812,12 +877,16 @@ async fn test_batch_send_requests_fail_if_any_response_has_error() {
             new_response_with_version_and_id(metadata_sample(), 1, 0),
             invalid_request_response_with_id(1)
         ]),
-    )]);
-
-    let err = client
-        .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
-        .await;
-    assert_err!(err, Error::JsonRpcError { .. }, true);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let err = client
+            .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
+            .await;
+        assert_err!(err, Error::JsonRpcError { .. }, true);
+    }
 }
 
 #[tokio::test]
@@ -826,7 +895,7 @@ async fn test_batch_send_requests_return_not_found_error_if_no_result() {
     let get_account_result = json!(null);
 
     let metadata_result = metadata_sample();
-    let client = setup_with_server(vec![(
+    let inouts = vec![(
         json!([
             {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
             {"id": 1, "jsonrpc": "2.0", "method": "get_account", "params": [address]}
@@ -835,26 +904,30 @@ async fn test_batch_send_requests_return_not_found_error_if_no_result() {
             new_response_with_version_and_id(metadata_result.clone(), 1, 0),
             new_response_with_version_and_id(get_account_result, 1, 1)
         ]),
-    )]);
+    )];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        let mut res = client
+            .batch_send(vec![
+                Request::get_metadata(),
+                Request::get_account(&address),
+            ])
+            .await
+            .expect("no error");
+        let metadata: Response<jsonrpc::Metadata> = res.remove(0).try_into().expect("no error");
+        assert_eq!(state_for_version(1), metadata.state);
+        assert_eq!(metadata_result, serde_json::to_value(&*metadata).unwrap());
 
-    let mut res = client
-        .batch_send(vec![
-            Request::get_metadata(),
-            Request::get_account(&address),
-        ])
-        .await
-        .expect("no error");
-    let metadata: Response<jsonrpc::Metadata> = res.remove(0).try_into().expect("no error");
-    assert_eq!(state_for_version(1), metadata.state);
-    assert_eq!(metadata_result, serde_json::to_value(&*metadata).unwrap());
-
-    let not_found_err: Result<Response<jsonrpc::Account>, Error> = res.remove(0).try_into();
-    assert_err!(not_found_err, Error::ResultNotFound { .. }, false);
+        let not_found_err: Result<Response<jsonrpc::Account>, Error> = res.remove(0).try_into();
+        assert_err!(not_found_err, Error::ResultNotFound { .. }, false);
+    }
 }
 
 #[tokio::test]
 async fn batch_test_retry_stale_response_on_get_methods() {
-    let client = setup_with_server(vec![
+    let inouts = vec![
         (
             json!([
                 {"id": 0, "jsonrpc": "2.0", "method": "get_metadata", "params": []},
@@ -873,20 +946,111 @@ async fn batch_test_retry_stale_response_on_get_methods() {
             ]),
             json!([new_response_with_version_and_id(metadata_sample(), 3, 0)]),
         ),
-    ]);
+    ];
+    for client in vec![
+        setup_with_server(inouts.clone()),
+        setup_with_multiple_servers(inouts.clone()),
+    ] {
+        client
+            .batch_send(vec![Request::get_metadata()])
+            .await
+            .expect("some");
+        let now = std::time::Instant::now();
+        client
+            .batch_send(vec![Request::get_metadata()])
+            .await
+            .expect("some");
+        assert!(now.elapsed() > Duration::from_millis(10));
 
-    client
-        .batch_send(vec![Request::get_metadata()])
-        .await
-        .expect("some");
-    let now = std::time::Instant::now();
-    client
-        .batch_send(vec![Request::get_metadata()])
-        .await
-        .expect("some");
-    assert!(now.elapsed() > Duration::from_millis(10));
+        assert_eq!(client.last_known_state().unwrap(), state_for_version(3))
+    }
+}
 
-    assert_eq!(client.last_known_state().unwrap(), state_for_version(3))
+#[test]
+fn test_select_highest_ledger_version_response() {
+    let urls: Vec<Url> = vec![
+        Url::from_str("http://url1").unwrap(),
+        Url::from_str("http://url2").unwrap(),
+        Url::from_str("http://url3").unwrap(),
+        Url::from_str("http://url4").unwrap(),
+    ];
+    let lb_http_client = BroadcastHttpClient::new(urls, 3).unwrap();
+    let resps = vec![
+        new_jsonrpc_response_with_version_and_json_id(
+            json!({"version": 123, "timestamp": 234234, "chain_id": 4}),
+            123,
+            json!(1),
+        ),
+        new_jsonrpc_response_with_version_and_json_id(
+            json!({"version": 124, "timestamp": 234235, "chain_id": 4}),
+            124,
+            json!(1),
+        ),
+        new_jsonrpc_response_with_version_and_json_id(
+            json!({"version": 125, "timestamp": 234236, "chain_id": 4}),
+            125,
+            json!(1),
+        ),
+    ];
+    let response = lb_http_client
+        .select_highest_ledger_version_response(1, resps)
+        .unwrap();
+    assert_eq!(response.diem_ledger_version, 125);
+    assert_eq!(response.diem_ledger_timestampusec, version_timestamp(125));
+}
+
+#[test]
+fn select_highest_ledger_version_response_batch() {
+    let urls: Vec<Url> = vec![
+        Url::from_str("http://url1").unwrap(),
+        Url::from_str("http://url2").unwrap(),
+        Url::from_str("http://url3").unwrap(),
+    ];
+    let json_requests = vec![
+        Request::get_metadata().to_json(0),
+        Request::get_metadata().to_json(1),
+    ];
+    let lb_http_client = BroadcastHttpClient::new(urls, 2).unwrap();
+    let resps = vec![
+        vec![
+            new_jsonrpc_response_with_version_and_json_id(
+                json!({"version": 124, "timestamp": 234234, "chain_id": 4}),
+                124,
+                json!(0),
+            ),
+            new_jsonrpc_response_with_version_and_json_id(
+                json!({"version": 124, "timestamp": 234234, "chain_id": 4}),
+                124,
+                json!(1),
+            ),
+        ],
+        vec![
+            new_jsonrpc_response_with_version_and_json_id(
+                json!({"version": 125, "timestamp": 234235, "chain_id": 4}),
+                125,
+                json!(0),
+            ),
+            new_jsonrpc_response_with_version_and_json_id(
+                json!({"version": 125, "timestamp": 234235, "chain_id": 4}),
+                125,
+                json!(1),
+            ),
+        ],
+    ];
+    let response = lb_http_client
+        .select_highest_ledger_version_response_batch(json_requests, resps)
+        .unwrap();
+    assert_eq!(response.len(), 2);
+    assert_eq!(response[0].diem_ledger_version, 125);
+    assert_eq!(
+        response[0].diem_ledger_timestampusec,
+        version_timestamp(125)
+    );
+    assert_eq!(response[1].diem_ledger_version, 125);
+    assert_eq!(
+        response[1].diem_ledger_timestampusec,
+        version_timestamp(125)
+    );
 }
 
 fn currencies_sample() -> Value {
@@ -1045,6 +1209,22 @@ fn new_response_with_version_and_json_id(result: Value, version: u64, id: Value)
         error: None,
     })
     .unwrap()
+}
+
+fn new_jsonrpc_response_with_version_and_json_id(
+    result: Value,
+    version: u64,
+    id: Value,
+) -> JsonRpcResponse {
+    JsonRpcResponse {
+        diem_chain_id: 4,
+        diem_ledger_version: version,
+        diem_ledger_timestampusec: version_timestamp(version),
+        jsonrpc: "2.0".to_string(),
+        id: Some(id),
+        result: Some(result),
+        error: None,
+    }
 }
 
 fn state_for_version(version: u64) -> State {

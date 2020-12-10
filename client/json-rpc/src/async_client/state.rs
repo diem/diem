@@ -19,3 +19,37 @@ impl State {
         }
     }
 }
+
+pub struct StateManager {
+    last_known_state: std::sync::RwLock<Option<State>>,
+}
+
+impl Default for StateManager {
+    fn default() -> Self {
+        Self {
+            last_known_state: std::sync::RwLock::new(None),
+        }
+    }
+}
+
+impl StateManager {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn last_known_state(&self) -> Option<State> {
+        let data = self.last_known_state.read().unwrap();
+        data.clone()
+    }
+
+    pub fn update_state(&self, resp_state: State) -> bool {
+        let mut state_writer = self.last_known_state.write().unwrap();
+        if let Some(state) = &*state_writer {
+            if &resp_state < state {
+                return false;
+            }
+        }
+        *state_writer = Some(resp_state);
+        true
+    }
+}

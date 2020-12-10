@@ -1648,13 +1648,16 @@ name = "diem-json-rpc-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "diem-config",
  "diem-crypto",
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",
+ "futures 0.3.8",
  "hex",
  "libra-canonical-serialization",
+ "rand 0.7.3",
  "reqwest",
  "serde",
  "serde_json",

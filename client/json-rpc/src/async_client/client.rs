@@ -2,155 +2,42 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::{
-    defaults, types as jsonrpc, Error, JsonRpcResponse, RetryStrategy, State,
-    WaitForTransactionError,
+    defaults, types as jsonrpc, BroadcastHttpClient, Error, HttpClient, JsonRpcResponse, Request,
+    Response, RetryStrategy, SimpleHttpClient, State, WaitForTransactionError,
 };
 use diem_crypto::hash::CryptoHash;
 use diem_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Transaction},
 };
+
 use serde::de::DeserializeOwned;
-use serde_json::json;
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-    time::Duration,
-};
 
-#[derive(Debug)]
-pub struct Request {
-    pub method: &'static str,
-    pub params: serde_json::Value,
-}
+use std::{convert::TryInto, sync::Arc, time::Duration};
 
-impl Request {
-    pub fn new(method: &'static str, params: serde_json::Value) -> Self {
-        Request { method, params }
-    }
-
-    pub fn submit(txn: &SignedTransaction) -> Result<Self, lcs::Error> {
-        let txn_payload = hex::encode(lcs::to_bytes(txn)?);
-        Ok(Self::new("submit", json!([txn_payload])))
-    }
-
-    pub fn get_account_state_with_proof(
-        address: &AccountAddress,
-        from_version: Option<u64>,
-        to_version: Option<u64>,
-    ) -> Self {
-        Self::new(
-            "get_account_state_with_proof",
-            json!([address, from_version, to_version]),
-        )
-    }
-
-    pub fn get_state_proof(from_version: u64) -> Self {
-        Self::new("get_state_proof", json!([from_version]))
-    }
-
-    pub fn get_currencies() -> Self {
-        Self::new("get_currencies", json!([]))
-    }
-
-    pub fn get_events(key: &str, start_seq: u64, limit: u64) -> Self {
-        Self::new("get_events", json!([key, start_seq, limit]))
-    }
-
-    pub fn get_transactions(start_seq: u64, limit: u64, include_events: bool) -> Self {
-        Self::new(
-            "get_transactions",
-            json!([start_seq, limit, include_events]),
-        )
-    }
-
-    pub fn get_account_transactions(
-        address: &AccountAddress,
-        start_seq: u64,
-        limit: u64,
-        include_events: bool,
-    ) -> Self {
-        Self::new(
-            "get_account_transactions",
-            json!([address, start_seq, limit, include_events]),
-        )
-    }
-
-    pub fn get_account_transaction(
-        address: &AccountAddress,
-        seq: u64,
-        include_events: bool,
-    ) -> Self {
-        Self::new(
-            "get_account_transaction",
-            json!([address, seq, include_events]),
-        )
-    }
-
-    pub fn get_account(address: &AccountAddress) -> Self {
-        Self::new("get_account", json!([address]))
-    }
-    pub fn get_metadata_by_version(version: u64) -> Self {
-        Self::new("get_metadata", json!([version]))
-    }
-
-    pub fn get_metadata() -> Self {
-        Self::new("get_metadata", json!([]))
-    }
-
-    pub fn to_json(&self, id: usize) -> serde_json::Value {
-        json!({"jsonrpc": "2.0", "id": id, "method": self.method, "params": self.params})
-    }
-}
-
-#[derive(Debug)]
-pub struct Response<R> {
-    pub result: R,
-    pub state: State,
-}
-
-impl<R> std::ops::Deref for Response<R> {
-    type Target = R;
-
-    fn deref(&self) -> &Self::Target {
-        &self.result
-    }
-}
-
-impl<R: for<'de> serde::Deserialize<'de>> TryFrom<JsonRpcResponse> for Response<R> {
-    type Error = Error;
-
-    fn try_from(resp: JsonRpcResponse) -> Result<Self, Error> {
-        let state = State::from_response(&resp);
-        match resp.result {
-            Some(ret) => Ok(Self {
-                result: serde_json::from_value::<R>(ret)
-                    .map_err(Error::DeserializeResponseJsonError)?,
-                state,
-            }),
-            None => Err(Error::ResultNotFound(resp)),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Client<R> {
-    pub http_client: reqwest::Client,
-    pub server_url: reqwest::Url,
-    pub last_known_state: std::sync::RwLock<Option<State>>,
+    pub http_client: Arc<dyn HttpClient>,
     pub retry: R,
 }
 
 impl<R: RetryStrategy> Client<R> {
     pub fn from_url<T: reqwest::IntoUrl>(server_url: T, retry: R) -> Result<Self, reqwest::Error> {
         Ok(Self {
-            http_client: reqwest::ClientBuilder::new()
-                .use_native_tls()
-                .timeout(defaults::HTTP_REQUEST_TIMEOUT)
-                .build()
-                .expect("Unable to build Client."),
-            server_url: server_url.into_url()?,
-            last_known_state: std::sync::RwLock::new(None),
+            http_client: Arc::new(SimpleHttpClient::new(server_url)?),
+            retry,
+        })
+    }
+
+    pub fn from_url_list<T: reqwest::IntoUrl>(
+        server_urls: Vec<T>,
+        num_parallel_requests: usize,
+        retry: R,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            http_client: Arc::new(BroadcastHttpClient::new(
+                server_urls,
+                num_parallel_requests,
+            )?),
             retry,
         })
     }
@@ -201,7 +88,7 @@ impl<R: RetryStrategy> Client<R> {
                     state: txn_resp.state,
                 });
             }
-            if let Some(state) = self.last_known_state() {
+            if let Some(state) = self.http_client.last_known_state() {
                 if expiration_time_secs <= state.timestamp_usecs / 1_000_000 {
                     return Err(WaitForTransactionError::TransactionExpired(
                         state.timestamp_usecs,
@@ -214,19 +101,7 @@ impl<R: RetryStrategy> Client<R> {
     }
 
     pub fn last_known_state(&self) -> Option<State> {
-        let data = self.last_known_state.read().unwrap();
-        data.clone()
-    }
-
-    pub fn update_state(&self, resp_state: State) -> bool {
-        let mut state_writer = self.last_known_state.write().unwrap();
-        if let Some(state) = &*state_writer {
-            if &resp_state < state {
-                return false;
-            }
-        }
-        *state_writer = Some(resp_state);
-        true
+        self.http_client.last_known_state()
     }
 
     pub async fn get_metadata(&self) -> Result<Response<jsonrpc::Metadata>, Error> {
@@ -323,7 +198,7 @@ impl<R: RetryStrategy> Client<R> {
 
     pub async fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>, Error> {
         let req = Request::submit(txn).map_err(Error::unexpected_lcs_error)?;
-        let resp = self.send_without_retry(&req).await?;
+        let resp = self.http_client.single_request(&req).await?;
         Ok(Response {
             result: (),
             state: State::from_response(&resp),
@@ -352,19 +227,12 @@ impl<R: RetryStrategy> Client<R> {
     pub async fn send_with_retry(&self, request: &Request) -> Result<JsonRpcResponse, Error> {
         let mut retries: u32 = 0;
         loop {
-            let ret = self.send_without_retry(request).await;
+            let ret = self.http_client.single_request(request).await;
             match ret {
                 Ok(r) => return Ok(r),
                 Err(err) => retries = self.handle_retry_error(retries, err).await?,
             }
         }
-    }
-
-    pub async fn send_without_retry(&self, request: &Request) -> Result<JsonRpcResponse, Error> {
-        let id = 1;
-        let rpc_resp: JsonRpcResponse = self.send_json_request(request.to_json(id)).await?;
-        self.validate(&rpc_resp, id, id)?;
-        Ok(rpc_resp)
     }
 
     /// Batch requests into one JSON-RPC batch request.
@@ -414,108 +282,12 @@ impl<R: RetryStrategy> Client<R> {
     ) -> Result<Vec<JsonRpcResponse>, Error> {
         let mut retries: u32 = 0;
         loop {
-            let ret = self.batch_send_without_retry(requests).await;
+            let ret = self.http_client.batch_request(requests).await;
             match ret {
                 Ok(r) => return Ok(r),
                 Err(err) => retries = self.handle_retry_error(retries, err).await?,
             }
         }
-    }
-
-    pub async fn batch_send_without_retry(
-        &self,
-        requests: &[Request],
-    ) -> Result<Vec<JsonRpcResponse>, Error> {
-        let json_requests: Vec<serde_json::Value> = requests
-            .iter()
-            .enumerate()
-            .map(|(i, r)| r.to_json(i))
-            .collect();
-
-        let rpc_resps: Vec<JsonRpcResponse> = self.send_json_request(json![&json_requests]).await?;
-        if rpc_resps.len() != requests.len() {
-            return Err(Error::unexpected_invalid_batch_response(rpc_resps));
-        }
-
-        let mut resp_maps: HashMap<usize, JsonRpcResponse> = HashMap::new();
-        for resp in rpc_resps {
-            let id = self.validate(&resp, 0, requests.len() - 1)?;
-            if resp_maps.contains_key(&id) {
-                return Err(Error::unexpected_duplicated_response_id(resp));
-            }
-
-            resp_maps.insert(id, resp);
-        }
-
-        json_requests
-            .iter()
-            .enumerate()
-            .map(|(i, req)| {
-                resp_maps
-                    .remove(&i)
-                    .ok_or_else(|| Error::unexpected_no_response(req.clone()))
-            })
-            .collect()
-    }
-
-    async fn send_json_request<T: for<'de> serde::Deserialize<'de>>(
-        &self,
-        req: serde_json::Value,
-    ) -> Result<T, Error> {
-        let resp = self
-            .http_client
-            .post(self.server_url.clone())
-            .json(&req)
-            .send()
-            .await
-            .map_err(Error::NetworkError)?;
-        if !resp.status().is_success() {
-            return Err(Error::InvalidHTTPStatus(
-                format!("{:#?}", resp),
-                resp.status(),
-            ));
-        }
-        resp.json().await.map_err(Error::InvalidHTTPResponse)
-    }
-
-    fn validate(
-        &self,
-        resp: &JsonRpcResponse,
-        min_id: usize,
-        max_id: usize,
-    ) -> Result<usize, Error> {
-        if resp.jsonrpc != "2.0" {
-            return Err(Error::InvalidRpcResponse(resp.clone()));
-        }
-
-        let id = if let Some(ref id) = resp.id {
-            if let Ok(index) = serde_json::from_value::<usize>(id.clone()) {
-                if index > max_id || index < min_id {
-                    return Err(Error::unexpected_invalid_response_id(resp.clone()));
-                }
-                index
-            } else {
-                return Err(Error::unexpected_invalid_response_id_type(resp.clone()));
-            }
-        } else {
-            return Err(Error::unexpected_response_id_not_found(resp.clone()));
-        };
-
-        if let Some(state) = self.last_known_state() {
-            if resp.diem_chain_id != state.chain_id {
-                return Err(Error::ChainIdMismatch(resp.clone()));
-            }
-        }
-
-        let resp_state = State::from_response(resp);
-        if !self.update_state(resp_state) {
-            return Err(Error::StaleResponseError(resp.clone()));
-        }
-
-        if let Some(ref err) = resp.error {
-            return Err(Error::JsonRpcError(err.clone()));
-        }
-        Ok(id)
     }
 
     async fn handle_retry_error(&self, mut retries: u32, err: Error) -> Result<u32, Error> {

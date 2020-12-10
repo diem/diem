@@ -23,6 +23,8 @@ pub enum Error {
     StaleResponseError(JsonRpcResponse),
     // Server response chain id does not match previous response chain id
     ChainIdMismatch(JsonRpcResponse),
+    // There was a timeout waiting for the response
+    ResponseTimeout(String),
     // Unexpected error, should never happen, likely is a bug if it happens.
     UnexpectedError(UnexpectedError),
 }
@@ -48,6 +50,9 @@ impl Error {
     }
     pub fn unexpected_no_response(req: serde_json::Value) -> Self {
         Error::UnexpectedError(UnexpectedError::NoResponse(req))
+    }
+    pub fn unexpected_uncategorized(err: String) -> Self {
+        Error::UnexpectedError(UnexpectedError::Uncategorized(err))
     }
 }
 
@@ -79,6 +84,7 @@ pub enum UnexpectedError {
     InvalidBatchResponse(Vec<JsonRpcResponse>),
     DuplicatedResponseId(JsonRpcResponse),
     NoResponse(serde_json::Value),
+    Uncategorized(String),
 }
 
 impl std::fmt::Display for UnexpectedError {
