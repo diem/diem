@@ -3130,9 +3130,9 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0658e39db7498a195f3f68c3ecf0ed2bce7f35c580c2ee9dd2c2dc4bbe1e7c4"
+checksum = "7b22da110f13fac4b3d688d09be2c16066d366197953248901a898e1dd30078c"
 dependencies = [
  "cargo_metadata",
  "fixedbitset",
@@ -3153,9 +3153,9 @@ dependencies = [
 
 [[package]]
 name = "guppy-summaries"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4db8242f1f19bfdbb0226cc425bca27cc5f1e029cde7d3145924fe71184dff9f"
+checksum = "7e44283a7f83c77582b47e14e03d93a556fe06eefc3a0b32a65426f453d10c4d"
 dependencies = [
  "diffus",
  "semver 0.11.0",
@@ -5930,9 +5930,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.117"
+version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
+checksum = "06c64263859d87aa2eb554587e2d23183398d617427327cf2b3d0ed8c69e4800"
 dependencies = [
  "serde_derive",
 ]
@@ -6007,9 +6007,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.117"
+version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbd1ae72adb44aab48f325a02444a5fc079349a8d804c1fc922aed3f7454c74e"
+checksum = "c84d3526699cd55261af4b941e4e725444df67aa4f9e6a3564f18030d12672df"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
