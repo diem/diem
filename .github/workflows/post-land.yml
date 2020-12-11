@@ -31,7 +31,7 @@ jobs:
           set +e
           retry=0
           status=1
-          while [[ $status != 0 && $retry < $RETRIES ]]; do
+          while [[ $status != 0 && $retry -lt $RETRIES ]]; do
             status=0
             for image in libra/validator libra/validator_tcb libra/init libra/cluster_test; do
               aws ecr describe-images --region $AWS_REGION --repository-name $image --image-ids=imageTag=$IMAGE_TAG
