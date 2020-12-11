@@ -27,7 +27,7 @@ pub struct Metadata {
 
     /// The program backtrace taken when the event occurred. Backtraces are
     /// only supported for errors.
-    backtrace: Option<Backtrace>,
+    backtrace: Option<String>,
 }
 
 impl Metadata {
@@ -41,12 +41,13 @@ impl Metadata {
     ) -> Self {
         let backtrace = match level {
             Level::Error => {
-                let backtrace = Backtrace::new();
+                let mut backtrace = Backtrace::new();
                 let mut frames = backtrace.frames().to_vec();
                 if frames.len() > 3 {
                     frames.drain(0..3); // Remove the first 3 unnecessary frames to simplify backtrace
                 }
-                Some(frames.into())
+                backtrace = frames.into();
+                Some(format!("{:?}", backtrace))
             }
             _ => None,
         };
@@ -90,8 +91,8 @@ impl Metadata {
         self.location
     }
 
-    pub fn backtrace(&self) -> Option<Backtrace> {
-        self.backtrace.clone()
+    pub fn backtrace(&self) -> Option<&str> {
+        self.backtrace.as_deref()
     }
 }
 
