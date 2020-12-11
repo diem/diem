@@ -41,6 +41,7 @@ fn main() {
         .read_env()
         .init();
 
+    crash_handler::setup_panic_handler();
     let _mp = MetricsPusher::start();
     counters::initialize_all_metric_counters();
 

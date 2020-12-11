@@ -1690,6 +1690,7 @@ name = "diem-key-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "crash-handler",
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",
