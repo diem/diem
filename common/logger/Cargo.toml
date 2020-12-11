@@ -12,6 +12,7 @@ edition = "2018"
 # Do NOT add any inter-project dependencies.
 # This is to avoid ever having a circular dependency with the diem-logger crate.
 [dependencies]
+backtrace = { version = "0.3", features = ["serde"] }
 chrono = "0.4.19"
 erased-serde = "0.3.12"
 hostname = "0.3.1"

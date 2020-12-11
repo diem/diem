@@ -231,6 +231,7 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+ "serde",
 ]
 
 [[package]]
@@ -1732,6 +1733,7 @@ dependencies = [
 name = "diem-logger"
 version = "0.1.0"
 dependencies = [
+ "backtrace",
  "chrono",
  "diem-infallible",
  "diem-log-derive",

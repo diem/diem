@@ -68,7 +68,7 @@ impl LogEntry {
             }
         }
 
-        let metadata = *event.metadata();
+        let metadata = event.metadata().clone();
         let thread_name = thread_name.map(ToOwned::to_owned);
         let message = event.message().map(fmt::format);
 
@@ -544,6 +544,7 @@ mod tests {
         );
         assert_eq!(entry.metadata.module_path(), module_path!());
         assert_eq!(entry.metadata.file(), file!());
+        assert!(entry.metadata.backtrace().is_none());
         assert_eq!(entry.message.as_deref(), Some("This is a log"));
 
         // Log time should be the time the structured log entry was created
@@ -569,6 +570,11 @@ mod tests {
             entry.data.get("category").and_then(JsonValue::as_str),
             Some("name"),
         );
+
+        // Test error logs contain backtraces
+        error!("This is an error log");
+        let entry = receiver.recv().unwrap();
+        assert!(entry.metadata.backtrace().is_some());
 
         // Test all log levels work properly
         // Tracing should be skipped because the Logger was setup to skip Tracing events
