@@ -28,7 +28,7 @@ use std::{
     time::{Duration, Instant},
 };
 use structopt::StructOpt;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::{Builder, Handle};
 use std::ops::Add;
 
 const EXPERIMENT_BUFFER_SECS: u64 = 900;
@@ -82,7 +82,13 @@ impl Experiment for LoadTest {
         let vfn = context.cluster.random_fullnode_instance();
         info!("Node {:?} is selected", vfn.peer_name());
         let vfn_endpoint = format!("http://{}:{}/v1", vfn.ip(), vfn.ac_port());
-        let mut stubbed_node = get_stubbed_nodes(vfn_endpoint, self.num_stubbed).await;
+        let network_runtime = Builder::new()
+            .thread_name("stubbed-node-network")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("Failed to start runtime. Won't be able to start networking.");
+        let mut stubbed_node = get_stubbed_nodes(vfn_endpoint, network_runtime.handle().clone(), self.num_stubbed).await;
         let mut emit_job = None;
         let mut mempool_handlers: Vec<_> = vec![];
         let mut state_sync_handlers: Vec<_> = vec![];
@@ -162,35 +168,33 @@ impl Experiment for LoadTest {
             );
         }
 
-        let mut mempool_stats: Option<MempoolStats> = None;
+        let mut mempool_stats = MempoolStats::default();
         for task in mempool_task {
             if let Some(t) = task {
                 let stats = t.await?.expect("failed mempool load test task");
-                let cur = &stats + &mempool_stats.unwrap_or_default();
-                mempool_stats = Some(cur);
+                mempool_stats = mempool_stats + stats;
             }
         }
-        if let Some(s) = mempool_stats {
-            info!("Total mempool stats: {}", s);
+        if self.mempool {
+            info!("Total mempool stats: {}", mempool_stats);
             info!(
                 "Average rate: {}",
-                s.rate(Duration::from_secs(self.duration))
+                mempool_stats.rate(Duration::from_secs(self.duration))
             );
         }
 
-        let mut state_sync_stats: Option<StateSyncStats> = None;
+        let mut state_sync_stats = StateSyncStats::default();
         for task in state_sync_task {
             if let Some(t) = task {
                 let stats = t.await?.expect("failed state sync load test task");
-                let cur = &stats + &state_sync_stats.unwrap_or_default();
-                state_sync_stats = Some(cur);
+                state_sync_stats = state_sync_stats + stats;
             }
         }
-        if let Some(s) = state_sync_stats {
-            info!("Total state sync stats: {}", s);
+        if self.state_sync {
+            info!("Total state sync stats: {}", state_sync_stats);
             info!(
                 "Average rate: {}",
-                s.rate(Duration::from_secs(self.duration))
+                state_sync_stats.rate(Duration::from_secs(self.duration))
             );
         }
 
@@ -198,7 +202,7 @@ impl Experiment for LoadTest {
         // We cannot drop a runtime in an async context where blocking is not allowed - otherwise,
         // this thread will panic.
         tokio::task::spawn_blocking(move || {
-            for _n in stubbed_node {}
+            drop(network_runtime);
         }).await?;
 
         Ok(())
@@ -218,10 +222,10 @@ impl fmt::Display for LoadTest {
     }
 }
 
-async fn get_stubbed_nodes(endpoint: String, num_of_nodes: usize) -> Vec<StubbedNode> {
+async fn get_stubbed_nodes(endpoint: String, runtime_handle: Handle, num_of_nodes: usize) -> Vec<StubbedNode> {
     let mut nodes = vec![];
     for i in 0..num_of_nodes {
-        nodes.push(StubbedNode::launch(endpoint.clone(), i).await);
+        nodes.push(StubbedNode::launch(endpoint.clone(), runtime_handle.clone(), i).await);
     }
     nodes
 }
@@ -231,13 +235,12 @@ async fn get_stubbed_nodes(endpoint: String, num_of_nodes: usize) -> Vec<Stubbed
 // It is 'stubbed' in the sense that it has no real node components running and only network stubs
 // that interact with the remote VFN via DiemNet mempool and state sync protocol
 struct StubbedNode {
-    pub network_runtime: Runtime,
     pub mempool_handle: Option<(MempoolNetworkSender, MempoolNetworkEvents)>,
     pub state_sync_handle: Option<(StateSynchronizerSender, StateSynchronizerEvents)>,
 }
 
 impl StubbedNode {
-    async fn launch(node_endpoint: String, index: usize) -> Self {
+    async fn launch(node_endpoint: String, runtime_handle: Handle, index: usize) -> Self {
         // generate seed peers config from querying node endpoint
         let seed_peers = seed_peer_generator::utils::gen_seed_peer_config(node_endpoint);
 
@@ -270,15 +273,8 @@ impl StubbedNode {
                 pfn_config.mempool.max_broadcasts_per_peer,
             ),
         ));
-        let network_runtime = Builder::new()
-            .thread_name("stubbed-node-network")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("Failed to start runtime. Won't be able to start networking.");
 
-        network_builder.build(network_runtime.handle().clone());
-
+        network_builder.build(runtime_handle);
         network_builder.start();
 
         // feed the network builder the seed peer config
@@ -310,7 +306,6 @@ impl StubbedNode {
         }
         
         Self {
-            network_runtime,
             mempool_handle,
             state_sync_handle,
         }
@@ -358,7 +353,7 @@ async fn mempool_load_test(
 #[derive(Debug, Default)]
 struct MempoolStats {
     bytes: u64,
-    tx_num: u64, // TODO
+    tx_num: u64,
     msg_num: u64,
 }
 
@@ -379,10 +374,10 @@ impl MempoolStats {
     }
 }
 
-impl Add for &MempoolStats {
+impl Add for MempoolStats {
     type Output = MempoolStats;
 
-    fn add(self, other: &MempoolStats) -> MempoolStats {
+    fn add(self, other: MempoolStats) -> MempoolStats {
         MempoolStats {
             bytes: self.bytes + other.bytes,
             tx_num: self.tx_num + other.tx_num,
@@ -480,10 +475,10 @@ pub struct StateSyncStatsRate {
     pub msg_num: u64,
 }
 
-impl Add for &StateSyncStats {
+impl Add for StateSyncStats {
     type Output = StateSyncStats;
 
-    fn add(self, other: &StateSyncStats) -> StateSyncStats {
+    fn add(self, other: StateSyncStats) -> StateSyncStats {
         StateSyncStats {
             served_txns: self.served_txns + other.served_txns,
             bytes: self.bytes + other.bytes,
