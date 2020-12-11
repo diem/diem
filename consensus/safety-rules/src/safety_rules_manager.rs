@@ -18,9 +18,9 @@ use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {
     let backend = &config.backend;
     let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
-    internal_storage
-        .available()
-        .expect("Storage is not available");
+    if let Err(error) = internal_storage.available() {
+        panic!("Storage is not available: {:?}", error);
+    }
 
     if let Some(test_config) = &config.test {
         let author = test_config.author;
