@@ -103,3 +103,11 @@ All Diem JSON-RPC server responses include the following headers:
 * `X-Diem-Ledger-TimestampUsec`: server-side latest ledger timestamp microseconds
 
 These headers are similar with [Diem extensions](#diem-extensions), except the value type is all string.
+
+## Experimental APIs
+
+The following APIs are experimental APIs. They are unstable and likely to be changed.
+
+* get_state_proof
+* get_account_state_with_proof
+* get_transactions_with_proofs

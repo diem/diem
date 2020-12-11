@@ -331,6 +331,9 @@ message CurrencyInfo {
   string exchange_rate_update_events_key = 9 [json_name="exchange_rate_update_events_key"];
 }
 
+/**
+ * This is for experimental API get_state_proof response. It is unstable and likely to be changed.
+ */
 message StateProof {
   // hex-encoded lcs bytes
   string ledger_info_with_signatures = 1 [json_name="ledger_info_with_signatures"];
@@ -340,6 +343,9 @@ message StateProof {
   string ledger_consistency_proof = 3 [json_name="ledger_consistency_proof"];
 }
 
+/**
+ * This is for experimental API get_account_state_with_proof response. It is unstable and likely to be changed.
+ */
 message AccountStateWithProof {
   uint64 version = 1;
   // hex-encoded lcs bytes
@@ -349,6 +355,9 @@ message AccountStateWithProof {
 }
 
 
+/**
+ * This is for experimental API get_account_state_with_proof response. It is unstable and likely to be changed.
+ */
 message AccountStateProof {
   // hex-encoded lcs bytes
   string ledger_info_to_transaction_info_proof = 1 [json_name="ledger_info_to_transaction_info_proof"];
