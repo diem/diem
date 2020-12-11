@@ -57,7 +57,7 @@ pub struct Args {
     bench: Vec<String>,
     #[structopt(long)]
     ///  Build all benches
-    benchs: bool,
+    benches: bool,
     #[structopt(long)]
     /// Build all targets
     all_targets: bool,
@@ -159,8 +159,8 @@ pub fn convert_args(args: &Args) -> Vec<OsString> {
             direct_args.push(OsString::from(bench));
         }
     }
-    if args.benchs {
-        direct_args.push(OsString::from("--benchs"));
+    if args.benches {
+        direct_args.push(OsString::from("--benches"));
     };
 
     if args.all_targets {
