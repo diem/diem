@@ -206,14 +206,16 @@ impl<R: RetryStrategy> Client<R> {
     }
 
     pub async fn send<T: DeserializeOwned>(&self, request: Request) -> Result<Response<T>, Error> {
-        self.send_with_retry(&request).await?.try_into()
+        self.send_with_retry(&request, &self.retry)
+            .await?
+            .try_into()
     }
 
     pub async fn send_opt<T: DeserializeOwned>(
         &self,
         request: Request,
     ) -> Result<Response<Option<T>>, Error> {
-        let resp = self.send_with_retry(&request).await?;
+        let resp = self.send_with_retry(&request, &self.retry).await?;
         let state = State::from_response(&resp);
         let result = match resp.result {
             Some(ret) => {
@@ -224,13 +226,17 @@ impl<R: RetryStrategy> Client<R> {
         Ok(Response { result, state })
     }
 
-    pub async fn send_with_retry(&self, request: &Request) -> Result<JsonRpcResponse, Error> {
+    pub async fn send_with_retry<RS: RetryStrategy>(
+        &self,
+        request: &Request,
+        retry: &RS,
+    ) -> Result<JsonRpcResponse, Error> {
         let mut retries: u32 = 0;
         loop {
             let ret = self.http_client.single_request(request).await;
             match ret {
                 Ok(r) => return Ok(r),
-                Err(err) => retries = self.handle_retry_error(retries, err).await?,
+                Err(err) => retries = self.handle_retry_error(retries, err, retry).await?,
             }
         }
     }
@@ -273,35 +279,41 @@ impl<R: RetryStrategy> Client<R> {
     /// to avoid re-submit errors, it is better to use batch_send_without_retry and handle errors
     /// by yourself.
     pub async fn batch_send(&self, requests: Vec<Request>) -> Result<Vec<JsonRpcResponse>, Error> {
-        self.batch_send_with_retry(&requests).await
+        self.batch_send_with_retry(&requests, &self.retry).await
     }
 
-    pub async fn batch_send_with_retry(
+    pub async fn batch_send_with_retry<RS: RetryStrategy>(
         &self,
         requests: &[Request],
+        retry: &RS,
     ) -> Result<Vec<JsonRpcResponse>, Error> {
         let mut retries: u32 = 0;
         loop {
             let ret = self.http_client.batch_request(requests).await;
             match ret {
                 Ok(r) => return Ok(r),
-                Err(err) => retries = self.handle_retry_error(retries, err).await?,
+                Err(err) => retries = self.handle_retry_error(retries, err, retry).await?,
             }
         }
     }
 
-    async fn handle_retry_error(&self, mut retries: u32, err: Error) -> Result<u32, Error> {
-        if !self.retry.is_retriable(&err) {
+    async fn handle_retry_error<RS: RetryStrategy>(
+        &self,
+        mut retries: u32,
+        err: Error,
+        retry: &RS,
+    ) -> Result<u32, Error> {
+        if !retry.is_retriable(&err) {
             return Err(err);
         }
-        if retries < self.retry.max_retries(&err) {
+        if retries < retry.max_retries(&err) {
             match retries.checked_add(1) {
-                Some(i) if i < self.retry.max_retries(&err) => {
+                Some(i) if i < retry.max_retries(&err) => {
                     retries = i;
                 }
                 _ => return Err(err),
             };
-            tokio::time::delay_for(self.retry.delay(&err, retries)).await;
+            tokio::time::delay_for(retry.delay(&err, retries)).await;
             Ok(retries)
         } else {
             Err(err)
