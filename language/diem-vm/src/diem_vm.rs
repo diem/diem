@@ -22,6 +22,7 @@ use diem_types::{
 };
 use fail::fail_point;
 use move_core_types::{
+    account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::IdentStr,
 };
@@ -519,8 +520,9 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
 pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
     cost_strategy: &mut CostStrategy,
     session: &Session<R>,
+    sender: &AccountAddress,
 ) -> Result<(), VMStatus> {
-    let total_cost = session.num_mutated_accounts()
+    let total_cost = session.num_mutated_accounts(sender)
         * cost_strategy
             .cost_table()
             .gas_constants

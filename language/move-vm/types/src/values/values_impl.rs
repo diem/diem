@@ -2291,6 +2291,18 @@ impl GlobalValueImpl {
             },
         })
     }
+
+    fn is_mutated(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Deleted => true,
+            Self::Fresh { fields: _ } => true,
+            Self::Cached { fields: _, status } => match &*status.borrow() {
+                GlobalDataStatus::Dirty => true,
+                GlobalDataStatus::Clean => false,
+            },
+        }
+    }
 }
 
 impl GlobalValue {
@@ -2327,6 +2339,10 @@ impl GlobalValue {
             GlobalValueEffect::Deleted => GlobalValueEffect::Deleted,
             GlobalValueEffect::Changed(v) => GlobalValueEffect::Changed(Value(v)),
         })
+    }
+
+    pub fn is_mutated(&self) -> bool {
+        self.0.is_mutated()
     }
 }
 

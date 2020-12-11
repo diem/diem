@@ -198,7 +198,7 @@ impl DiemVM {
                 )
                 .map_err(|e| e.into_vm_status())?;
 
-            charge_global_write_gas_usage(cost_strategy, &session)?;
+            charge_global_write_gas_usage(cost_strategy, &session, &txn_data.sender())?;
 
             cost_strategy.disable_metering();
             self.success_transaction_cleanup(
@@ -261,7 +261,7 @@ impl DiemVM {
             )
             .map_err(|e| e.into_vm_status())?;
 
-        charge_global_write_gas_usage(cost_strategy, &session)?;
+        charge_global_write_gas_usage(cost_strategy, &session, &txn_data.sender())?;
 
         self.success_transaction_cleanup(
             session,

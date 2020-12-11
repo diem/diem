@@ -77,7 +77,6 @@ impl<'a> CostStrategy<'a> {
         if !self.charge {
             return Ok(());
         }
-        debug_assert!(amount.get() > 0);
         if self
             .gas_left
             .app(&amount, |curr_gas, gas_amt| curr_gas >= gas_amt)

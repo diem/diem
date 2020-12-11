@@ -157,8 +157,15 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         })
     }
 
-    pub(crate) fn num_mutated_accounts(&self) -> u64 {
-        self.account_map.keys().len() as u64
+    pub(crate) fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {
+        // The sender's account will always be mutated.
+        let mut total_mutated_accounts: u64 = 1;
+        for (addr, entry) in self.account_map.iter() {
+            if addr != sender && entry.data_map.values().any(|(_, v)| v.is_mutated()) {
+                total_mutated_accounts += 1;
+            }
+        }
+        total_mutated_accounts
     }
 
     fn get_mut_or_insert_with<'a, K, V, F>(map: &'a mut BTreeMap<K, V>, k: &K, gen: F) -> &'a mut V
