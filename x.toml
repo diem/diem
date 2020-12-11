@@ -177,6 +177,8 @@ members = [
     "diem-genesis-tool",
     "diem-key-manager",
     "diem-node",
+    "diem-operational-tool",
+    "execution-correctness",
     "safety-rules",
 ]
 
