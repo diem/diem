@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{CargoArgs, CargoCommand, SelectedPackageArgs},
+    cargo::{selected_package::SelectedPackageArgs, CargoArgs, CargoCommand},
     context::XContext,
     Result,
 };
