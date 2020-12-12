@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use guppy::graph::DependencyDirection;
 use std::collections::BTreeSet;
 use structopt::StructOpt;
+use x_core::WorkspaceStatus;
 
 /// Arguments for the Cargo package selector.
 #[derive(Debug, StructOpt)]
@@ -19,6 +20,9 @@ pub struct SelectedPackageArgs {
     #[structopt(long)]
     /// Run on all packages in the workspace
     pub(crate) workspace: bool,
+    #[structopt(long)]
+    /// Run on production code (non-test-only code, reachable from default members)
+    pub(crate) production: bool,
 }
 
 impl SelectedPackageArgs {
@@ -34,6 +38,9 @@ impl SelectedPackageArgs {
             }
             if self.workspace {
                 exclusive.push("--workspace");
+            }
+            if self.production {
+                exclusive.push("--production");
             }
 
             if exclusive.len() > 1 {
@@ -56,6 +63,8 @@ impl SelectedPackageArgs {
                     .packages(DependencyDirection::Forward)
                     .map(|package| package.name()),
             ))
+        } else if self.production {
+            SelectedPackages::production(xctx)
         } else {
             SelectedPackages::default_cwd(xctx)
         }
@@ -89,6 +98,24 @@ impl<'a> SelectedPackages<'a> {
             includes: SelectedInclude::Workspace,
             excludes: BTreeSet::new(),
         }
+    }
+
+    /// Returns a new `CargoPackages` that selects production crates (non-test-only code).
+    pub fn production(xctx: &'a XContext) -> Result<Self> {
+        let default_members = xctx.core().default_members()?;
+        let workspace = xctx.core().package_graph()?.workspace();
+
+        let selected = workspace.iter().filter_map(|package| {
+            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
+                Some(package.name())
+            } else {
+                None
+            }
+        });
+        Ok(Self {
+            includes: SelectedInclude::Includes(selected.collect()),
+            excludes: BTreeSet::new(),
+        })
     }
 
     /// Returns a new `CargoPackages` that selects the default set of packages for the current
