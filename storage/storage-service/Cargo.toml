@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.5", features = ["full"] }
 futures = "0.3.8"
 
 lcs = { version = "0.1.0", package = "libra-canonical-serialization" }

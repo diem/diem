@@ -62,7 +62,7 @@ state-synchronizer = { path = "../../state-synchronizer", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.8"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.5", features = ["full"] }
 async-trait = "0.1.42"
 
 kube = { version = "0.42.0" }

@@ -20,7 +20,7 @@ regex = "1.4.2"
 rust_decimal = "1.8.1"
 rusty-fork = "0.3.0"
 statistical = "1.0.0"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.5", features = ["full"] }
 
 backup-cli = { path = "../../storage/backup/backup-cli", version = "0.1.0" }
 cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
