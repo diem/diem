@@ -1,9 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    cargo::{
-        build_args::BuildArgs, selected_package::SelectedPackageArgs, CargoArgs, CargoCommand,
-    },
+    cargo::{build_args::BuildArgs, selected_package::SelectedPackageArgs, CargoCommand},
     context::XContext,
     Result,
 };
@@ -55,5 +53,5 @@ pub fn run(args: Box<Args>, xctx: XContext) -> Result<()> {
     };
 
     let packages = args.package_args.to_selected_packages(&xctx)?;
-    cmd.run_on_packages(&packages, &CargoArgs::default())
+    cmd.run_on_packages(&packages)
 }

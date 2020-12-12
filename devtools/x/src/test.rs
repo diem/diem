@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{selected_package::SelectedPackageArgs, CargoArgs, CargoCommand},
+    cargo::{selected_package::SelectedPackageArgs, CargoCommand},
     context::XContext,
     utils::project_root,
     Result,
@@ -110,7 +110,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         env: &env_vars,
     };
 
-    let cmd_result = cmd.run_on_packages(&packages, &CargoArgs::default());
+    let cmd_result = cmd.run_on_packages(&packages);
 
     if !args.no_fail_fast && cmd_result.is_err() {
         return cmd_result;

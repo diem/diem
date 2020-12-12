@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{selected_package::SelectedPackageArgs, CargoArgs, CargoCommand},
+    cargo::{build_args::BuildArgs, selected_package::SelectedPackageArgs, CargoCommand},
     context::XContext,
     Result,
 };
@@ -12,20 +12,18 @@ use structopt::StructOpt;
 pub struct Args {
     #[structopt(flatten)]
     pub(crate) package_args: SelectedPackageArgs,
-    #[structopt(long)]
-    /// Run check on all targets of a package (lib, bin, test, example)
-    pub(crate) all_targets: bool,
+    #[structopt(flatten)]
+    pub(crate) build_args: BuildArgs,
 }
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
-    let cmd = CargoCommand::Check(xctx.config().cargo_config());
-    run_with(cmd, args, &xctx)
-}
+    let mut direct_args = vec![];
+    args.build_args.add_args(&mut direct_args);
 
-pub fn run_with(cmd: CargoCommand<'_>, args: Args, xctx: &XContext) -> Result<()> {
-    let base_args = CargoArgs {
-        all_targets: args.all_targets,
+    let cmd = CargoCommand::Check {
+        cargo_config: xctx.config().cargo_config(),
+        direct_args: &direct_args,
     };
-    let packages = args.package_args.to_selected_packages(xctx)?;
-    cmd.run_on_packages(&packages, &base_args)
+    let packages = args.package_args.to_selected_packages(&xctx)?;
+    cmd.run_on_packages(&packages)
 }

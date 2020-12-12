@@ -116,11 +116,6 @@ impl Cargo {
         self
     }
 
-    pub fn all_targets(&mut self) -> &mut Self {
-        self.inner.arg("--all-targets");
-        self
-    }
-
     pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {
         self.inner.current_dir(dir);
         self
@@ -279,11 +274,6 @@ impl Cargo {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct CargoArgs {
-    pub all_targets: bool,
-}
-
 /// Represents an invocations of cargo that will call multiple other invocations of
 /// cargo based on groupings implied by the contents of <workspace-root>/x.toml.
 pub enum CargoCommand<'a> {
@@ -293,9 +283,20 @@ pub enum CargoCommand<'a> {
         args: &'a [OsString],
         env: &'a [(&'a str, Option<&'a str>)],
     },
-    Check(&'a CargoConfig),
-    Clippy(&'a CargoConfig, &'a [OsString]),
-    Fix(&'a CargoConfig, &'a [OsString]),
+    Check {
+        cargo_config: &'a CargoConfig,
+        direct_args: &'a [OsString],
+    },
+    Clippy {
+        cargo_config: &'a CargoConfig,
+        direct_args: &'a [OsString],
+        args: &'a [OsString],
+    },
+    Fix {
+        cargo_config: &'a CargoConfig,
+        direct_args: &'a [OsString],
+        args: &'a [OsString],
+    },
     Test {
         cargo_config: &'a CargoConfig,
         direct_args: &'a [OsString],
@@ -314,15 +315,15 @@ impl<'a> CargoCommand<'a> {
     pub fn cargo_config(&self) -> &CargoConfig {
         match self {
             CargoCommand::Bench { cargo_config, .. } => cargo_config,
-            CargoCommand::Check(config) => config,
-            CargoCommand::Clippy(config, _) => config,
-            CargoCommand::Fix(config, _) => config,
+            CargoCommand::Check { cargo_config, .. } => cargo_config,
+            CargoCommand::Clippy { cargo_config, .. } => cargo_config,
+            CargoCommand::Fix { cargo_config, .. } => cargo_config,
             CargoCommand::Test { cargo_config, .. } => cargo_config,
             CargoCommand::Build { cargo_config, .. } => cargo_config,
         }
     }
 
-    pub fn run_on_packages(&self, packages: &SelectedPackages<'_>, args: &CargoArgs) -> Result<()> {
+    pub fn run_on_packages(&self, packages: &SelectedPackages<'_>) -> Result<()> {
         // Early return if we have no packages to run.
         if !packages.should_invoke() {
             info!("no packages to {}: exiting early", self.as_str());
@@ -330,7 +331,6 @@ impl<'a> CargoCommand<'a> {
         }
 
         let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
-        Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
             .args(self.direct_args())
@@ -343,9 +343,9 @@ impl<'a> CargoCommand<'a> {
     pub fn as_str(&self) -> &'static str {
         match self {
             CargoCommand::Bench { .. } => "bench",
-            CargoCommand::Check(_) => "check",
-            CargoCommand::Clippy(_, _) => "clippy",
-            CargoCommand::Fix(_, _) => "fix",
+            CargoCommand::Check { .. } => "check",
+            CargoCommand::Clippy { .. } => "clippy",
+            CargoCommand::Fix { .. } => "fix",
             CargoCommand::Test { .. } => "test",
             CargoCommand::Build { .. } => "build",
         }
@@ -354,9 +354,9 @@ impl<'a> CargoCommand<'a> {
     fn pass_through_args(&self) -> &[OsString] {
         match self {
             CargoCommand::Bench { args, .. } => args,
-            CargoCommand::Check(_) => &[],
-            CargoCommand::Clippy(_, args) => args,
-            CargoCommand::Fix(_, args) => args,
+            CargoCommand::Check { .. } => &[],
+            CargoCommand::Clippy { args, .. } => args,
+            CargoCommand::Fix { args, .. } => args,
             CargoCommand::Test { args, .. } => args,
             CargoCommand::Build { args, .. } => args,
         }
@@ -365,9 +365,9 @@ impl<'a> CargoCommand<'a> {
     fn direct_args(&self) -> &[OsString] {
         match self {
             CargoCommand::Bench { direct_args, .. } => direct_args,
-            CargoCommand::Check(_) => &[],
-            CargoCommand::Clippy(_, _) => &[],
-            CargoCommand::Fix(_, _) => &[],
+            CargoCommand::Check { direct_args, .. } => direct_args,
+            CargoCommand::Clippy { direct_args, .. } => direct_args,
+            CargoCommand::Fix { direct_args, .. } => direct_args,
             CargoCommand::Test { direct_args, .. } => direct_args,
             CargoCommand::Build { direct_args, .. } => direct_args,
         }
@@ -376,17 +376,11 @@ impl<'a> CargoCommand<'a> {
     pub fn get_extra_env(&self) -> &[(&str, Option<&str>)] {
         match self {
             CargoCommand::Bench { env, .. } => env,
-            CargoCommand::Check(_) => &[],
-            CargoCommand::Clippy(_, _) => &[],
-            CargoCommand::Fix(_, _) => &[],
+            CargoCommand::Check { .. } => &[],
+            CargoCommand::Clippy { .. } => &[],
+            CargoCommand::Fix { .. } => &[],
             CargoCommand::Test { env, .. } => env,
             CargoCommand::Build { env, .. } => env,
-        }
-    }
-
-    fn apply_args(cargo: &mut Cargo, args: &CargoArgs) {
-        if args.all_targets {
-            cargo.all_targets();
         }
     }
 }
