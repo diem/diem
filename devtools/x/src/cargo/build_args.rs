@@ -84,7 +84,7 @@ pub struct BuildArgs {
     pub(crate) verbose: usize,
     #[structopt(long, possible_values = &Coloring::variants(), default_value="Auto")]
     /// Coloring: auto, always, never
-    pub(crate) coloring: Coloring,
+    pub(crate) color: Coloring,
     #[structopt(long)]
     /// Require Cargo.lock and cache are up to date
     pub(crate) frozen: bool,
@@ -191,9 +191,9 @@ impl BuildArgs {
         if self.verbose > 0 {
             direct_args.push(OsString::from(format!("-{}", "v".repeat(self.verbose))));
         };
-        if self.coloring.to_string() != Coloring::Auto.to_string() {
-            direct_args.push(OsString::from("--coloring"));
-            direct_args.push(OsString::from(self.coloring.to_string()));
+        if self.color.to_string() != Coloring::Auto.to_string() {
+            direct_args.push(OsString::from("--color"));
+            direct_args.push(OsString::from(self.color.to_string()));
         };
         if self.frozen {
             direct_args.push(OsString::from("--frozen"));
