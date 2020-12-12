@@ -18,6 +18,7 @@ use std::{
     time::Instant,
 };
 
+pub mod build_args;
 pub mod selected_package;
 
 const RUST_TOOLCHAIN_VERSION: &str = include_str!("../../../rust-toolchain");
