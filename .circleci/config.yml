@@ -369,19 +369,9 @@ jobs:
       - build_setup
       - restore_cargo_package_cache
       - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16
+          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --production
       - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p cli
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p cluster-test
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p language-benchmarks
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p diem-fuzzer
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p diem-swarm
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 -p test-generation
+          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --workspace --all-targets
       - run:
           command: |
             rustup target add powerpc-unknown-linux-gnu
