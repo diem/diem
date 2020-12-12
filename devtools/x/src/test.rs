@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cargo::{selected_package::SelectedPackageArgs, CargoCommand},
+    cargo::{build_args::BuildArgs, selected_package::SelectedPackageArgs, CargoCommand},
     context::XContext,
     utils::project_root,
     Result,
@@ -24,18 +24,14 @@ pub struct Args {
     #[structopt(long, short)]
     /// Skip running expensive diem testsuite integration tests
     unit: bool,
-    #[structopt(long)]
-    /// Test only this package's library unit tests, skipping doctests
-    lib: bool,
+    #[structopt(flatten)]
+    pub(crate) build_args: BuildArgs,
     #[structopt(long)]
     /// Do not fast fail the run if tests (or test executables) fail
     no_fail_fast: bool,
     #[structopt(long)]
     /// Do not run tests, only compile the test executables
     no_run: bool,
-    #[structopt(long, short)]
-    /// Number of parallel jobs, defaults to # of CPUs
-    jobs: Option<u16>,
     #[structopt(long, parse(from_os_str))]
     /// Directory to output HTML coverage report (using grcov)
     html_cov_dir: Option<PathBuf>,
@@ -88,19 +84,12 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     };
 
     let mut direct_args = Vec::new();
+    args.build_args.add_args(&mut direct_args);
     if args.no_run {
         direct_args.push(OsString::from("--no-run"));
     };
     if args.no_fail_fast {
         direct_args.push(OsString::from("--no-fail-fast"));
-    };
-    if args.lib {
-        direct_args.push(OsString::from("--lib"));
-    };
-
-    if let Some(jobs) = args.jobs {
-        direct_args.push(OsString::from("--jobs"));
-        direct_args.push(OsString::from(jobs.to_string()));
     };
 
     let cmd = CargoCommand::Test {

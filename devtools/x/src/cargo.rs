@@ -274,6 +274,8 @@ impl Cargo {
     }
 }
 
+// TODO: this should really be a struct instead of an enum with repeated fields.
+
 /// Represents an invocations of cargo that will call multiple other invocations of
 /// cargo based on groupings implied by the contents of <workspace-root>/x.toml.
 pub enum CargoCommand<'a> {
