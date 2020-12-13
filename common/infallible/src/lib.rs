@@ -5,6 +5,6 @@ mod mutex;
 mod rwlock;
 mod time;
 
-pub use mutex::Mutex;
-pub use rwlock::RwLock;
+pub use mutex::{Mutex, MutexGuard};
+pub use rwlock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use time::duration_since_epoch;

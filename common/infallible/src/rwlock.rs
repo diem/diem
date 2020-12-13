@@ -1,17 +1,19 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::{RwLock as RwLockImpl, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::RwLock as StdRwLock;
+
+pub use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 /// A simple wrapper around the lock() function of a std::sync::RwLock
 /// The only difference is that you don't need to call unwrap() on it.
 #[derive(Debug, Default)]
-pub struct RwLock<T>(RwLockImpl<T>);
+pub struct RwLock<T>(StdRwLock<T>);
 
 impl<T> RwLock<T> {
     /// creates a read-write lock
     pub fn new(t: T) -> Self {
-        Self(RwLockImpl::new(t))
+        Self(StdRwLock::new(t))
     }
 
     /// lock the rwlock in read mode

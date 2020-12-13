@@ -1,7 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::sync::{Mutex as StdMutex, MutexGuard};
+use std::sync::Mutex as StdMutex;
+
+pub use std::sync::MutexGuard;
 
 /// A simple wrapper around the lock() function of a std::sync::Mutex
 /// The only difference is that you don't need to call unwrap() on it.
