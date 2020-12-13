@@ -29,7 +29,7 @@ The main purpose is to demonstrate common use cases for Diem Coins custodial wal
 
 The image below details the different user flows for the Public Demo Wallet.
 
-![](/img/docs/userflows-demo-wallet.svg)
+![Figure 1.0 Different user flows for the Public Demo Wallet](/img/docs/userflows-demo-wallet.svg)
 
 
 
@@ -103,7 +103,7 @@ User actions available on the home page include:
 * Withdraw Diem Coins from the wallet; activated by clicking “Transfer” and then “Withdraw.”
 * Convert between Diem Coins currencies
 
-![](/img/docs/wallet-home.svg)
+![Figure 2.0 Demo Wallet home page](/img/docs/wallet-home.svg)
 
 
 
@@ -124,7 +124,7 @@ The supported payment methods are:
 
 In addition, the page shows the simulated username of the fictional active user. It is not possible to change the user’s username.
 
-![](/img/docs/modify-settings.svg)
+![Figure 2.1 Public Demo Wallet settings page](/img/docs/modify-settings.svg)
 
 >
 >Note: The payment methods are for demonstration purposes only. The supplied information is not validated, and no real transactions are made using the configured credit cards and bank accounts. Users of the Public Demo Wallet will not be permitted to enter real credit card or bank account information.
@@ -133,7 +133,7 @@ In addition, the page shows the simulated username of the fictional active user.
 
 
 To change the wallet UI language, enter the Settings page and choose the desired language from the languages dropdown menu
-![](/img/docs/language-settings.svg)
+![Figure 2.3 choose language](/img/docs/language-settings.svg)
 
 ## Execute transactions
 
@@ -141,7 +141,7 @@ To change the wallet UI language, enter the Settings page and choose the desired
 
 Choosing a specific Diem Coins currency on the home page shows all the wallet transactions for that currency in descending order. Transactions may be internal (i.e., off-chain), within the wallet’s network (e.g., Diem Coins transfer between customers of the same wallet service), or external (i.e., on-chain) on the Diem Blockchain (e.g., Diem transfer to some external Diem address).
 
-![](/img/docs/execute-transactions.png)
+![Figure 3.0 View list of transactions](/img/docs/execute-transactions.png)
 
 Each transaction consists of:
 
@@ -155,7 +155,7 @@ Each transaction consists of:
 
 Clicking a transaction in the transactions list will open a window with transaction details.
 
-![](/img/docs/check-transaction.svg)
+![Figure 3.1 View transaction details](/img/docs/check-transaction.svg)
 
 
 

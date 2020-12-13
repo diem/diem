@@ -4,7 +4,7 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
 module.exports = {
   title: 'Diem Documentation',
   tagline: 'The Diem Association’s mission is to enable a simple global payment system and financial infrastructure that empowers billions of people.',
-  url: 'https://developers.diem.com/docs/',
+  url: 'https://developers.diem.com',
   baseUrl: '/',
   favicon: 'img/shared/favicon.ico',
   organizationName: 'Diem',
@@ -14,6 +14,10 @@ module.exports = {
       apiKey: 'f0c9dd5d95535c4b0d99aa1fbcb0e949',
       indexName: 'diem_developer_website',
     },
+    image: '/img/shared/logo.png',
+    navbar: {
+      title: 'Diem Documentation',
+    },
     prism: {
       darkTheme: darkCodeTheme,
       theme: lightCodeTheme,
@@ -21,9 +25,6 @@ module.exports = {
     },
     sidebarCollapsible: false,
     siteID: 'developers',
-    navbar: {
-      title: 'Diem Documentation',
-    },
   },
   plugins: [
     require.resolve('./plugins/webpack'),
@@ -38,14 +39,14 @@ module.exports = {
         docs: {
           sidebarPath: require.resolve('./sidebars'),
           // Please change this to your repo.
-          editUrl: 'https://github.com/libra/developer-docs/edit/staging/',
+          editUrl: 'https://github.com/diem/diem/edit/master/developers.diem.com/',
         },
 
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           editUrl:
-            'https://github.com/libra/website/edit/master/website/blog/',
+            'https://github.com/diem/diem/edit/master/developers.diem.com/blog/',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

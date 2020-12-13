@@ -64,10 +64,10 @@ The main purpose of this implementation is to demonstrate common use cases when 
 Direct payments under US$1,000 do not require any special AML procedures and are processed immediately.
 
 1. Open the merchant store.
-2. Choose a product under US$1,000 and click “Buy now.” ![img](/img/docs/merchant-buy.svg)
-3. The checkout dialog window will open.
+2. Choose a product under US$1,000 and click “Buy now.” ![Figure 1.0 List of products to purchase](/img/docs/merchant-buy.svg)
+3. The checkout dialog window will open. 
 4. Select the desired Diem Coin currency.
-5. The calculated price in the selected Diem Coin currency will be displayed. ![img](/img/docs/merchant-checkout.svg)
+5. The calculated price in the selected Diem Coin currency will be displayed. ![Figure 1.1 Checkout page](/img/docs/merchant-checkout.svg)
 6. Scan the QR code or copy the deep-link into a Diem wallet of your choice.
 7. Complete the payment in the wallet.
 8. The checkout dialog will confirm payment success.

@@ -44,7 +44,7 @@ The **ChildVASP account** is the child of your ParentVASP account. You can have 
 Learn more about account concepts [here](core/accounts.md).
 
 ### Create Your VASP Account
-![img](https://lh3.googleusercontent.com/zugl1j3iyLgTL6U9hVQ8b1VAF5X3_zNiEezOzsgYj2sJ4-C_kPoiM9SM8BJtydfweZV1W1AuA6KlZx6R6qFqQPvyN4WCc1DBFqxOct9CXnsiL4lHQyQJBj8ZslJazNgMRKOkMZNo)
+![Figure 1.0 Create VASP account](https://lh3.googleusercontent.com/zugl1j3iyLgTL6U9hVQ8b1VAF5X3_zNiEezOzsgYj2sJ4-C_kPoiM9SM8BJtydfweZV1W1AuA6KlZx6R6qFqQPvyN4WCc1DBFqxOct9CXnsiL4lHQyQJBj8ZslJazNgMRKOkMZNo)
 
 1. **[Generate Keys](core/accounts.md#addresses-authentication-keys-and-cryptographic-keys)**: Generate an ed25519 keypair and associated authentication key for your on-chain Regulated VASP account.
 2. **Share Account Info**: Share the following with the Diem Networks Treasury offline.
@@ -83,7 +83,7 @@ Once you have your own Regulated VASP account, you can start interacting with DP
 
 When you submit a transaction to the DPN, you are cryptographically signing a transaction script and then waiting (by listening to the event stream) for consensus from validators. The diagram below shows the flow of a transaction once it’s been submitted. Learn more about this flow [here](core/life-of-a-transaction.md).
 
-![img](https://lh3.googleusercontent.com/Vp5Ko8_mIV5AIV6fPUZX361fCqqs1XJ44_q9Jhf6OaftznmyRplZAmczmnqjc8511ULBFKMQzzn_ZIliDK22oCQYN4gjO91JhByyHuZrQMpPUtXq1oCrSTXFDd0KwDYM3PFi6pSJ)
+![Lifecycle of a transaction](https://lh3.googleusercontent.com/Vp5Ko8_mIV5AIV6fPUZX361fCqqs1XJ44_q9Jhf6OaftznmyRplZAmczmnqjc8511ULBFKMQzzn_ZIliDK22oCQYN4gjO91JhByyHuZrQMpPUtXq1oCrSTXFDd0KwDYM3PFi6pSJ)
 
 #### How to Interact with the DPN
 The first step to submitting transactions to the DPN is determining how to connect and interact with it. The guidance for this differs slightly based on if you are a validator node operator or not.

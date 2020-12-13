@@ -4,6 +4,8 @@ title: Move Introduction
 sidebar_label: Introduction
 ---
 
+import MoveArchitecture from 'img/docs/move-architecture.svg';
+
 Welcome to Move, a next generation language for secure, sandboxed, and formally verified programming. Its first use case is for the Diem blockchain, where Move provides the foundation for its implementation. Move allows developers to write programs that flexibly manage and transfer assets, while providing the security and protections against attacks on those assets. However, Move has been developed with use cases in mind outside a blockchain context as well.
 
 Move takes its cue from [Rust](https://www.rust-lang.org/) by using resource types with move (hence the name) semantics as an explicit representation of digital assets, such as currency.
@@ -35,7 +37,7 @@ Currently, Move is not targeting developers who wish to create custom modules an
 
 Move has all of the syntax and semantics you would expect from a first-class programming language. However, there is an entire architecture dedicated to creating, using, and executing code based on Move. The diagram below shows the architecture of Move as it pertains to the Diem Payment Network, from using the source language to script execution. Click on a specific topic of the diagram to be taken to more information about that specific area.
 
-![Figure 1.2 Move Architecture](/img/docs/move-architecture.svg)
+<MoveArchitecture alt="Figure 1.2 Move Architecture" />
 <small className="figure">Figure 1.2 Move Architecture</small>
 
 ## Where Do I Start?

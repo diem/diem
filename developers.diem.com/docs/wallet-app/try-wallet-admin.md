@@ -28,7 +28,7 @@ The main page of the admin UI shows the total number of registered users and the
 *   Administrators management
 *   Liquidity management
 
-![](/img/docs/admin-dash.png)
+![Figure 1.0 Reference Wallet admin dashboard](/img/docs/admin-dash.png)
 
 
 ## User and admin management pages
