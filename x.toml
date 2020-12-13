@@ -147,6 +147,7 @@ members = [
     "smoke-test",
     "socket-bench-server",
     "test-generation",
+    "time-service",
     "x",
     "x-core",
     "x-lint",

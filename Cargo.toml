@@ -26,6 +26,7 @@ members = [
     "common/short-hex-str",
     "common/subscription-service",
     "common/temppath",
+    "common/time-service",
     "common/trace",
     "common/workspace-hack",
     "config",

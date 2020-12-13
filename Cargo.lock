@@ -6875,6 +6875,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "time-service"
+version = "0.1.0"
+dependencies = [
+ "diem-infallible",
+ "diem-workspace-hack",
+ "enum_dispatch",
+ "futures 0.3.8",
+ "pin-project 1.0.2",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+]
+
+[[package]]
 name = "tiny-keccak"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6962,6 +6976,17 @@ dependencies = [
  "futures 0.1.30",
  "rand 0.4.6",
  "tokio-timer",
+]
+
+[[package]]
+name = "tokio-test"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed0049c119b6d505c4447f5c64873636c7af6c75ab0d45fd9f618d82acb8016d"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "tokio",
 ]
 
 [[package]]

@@ -1,0 +1,28 @@
+[package]
+name = "time-service"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Time service"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+enum_dispatch = "0.3.4"
+futures = "0.3.8"
+pin-project = "1.0.2"
+thiserror = "1.0.22"
+tokio = { version = "0.2.22", features = ["macros", "rt-threaded", "time"] }
+
+diem-infallible = { path = "../infallible", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+
+[dev-dependencies]
+tokio-test = "0.2.1"
+
+[features]
+default = []
+fuzzing = []
+testing = []
