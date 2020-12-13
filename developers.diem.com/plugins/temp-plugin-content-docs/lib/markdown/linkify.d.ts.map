@@ -1,0 +1,1 @@
+{"version":3,"file":"linkify.d.ts","sourceRoot":"","sources":["../../src/markdown/linkify.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAKH,OAAO,EAAC,iBAAiB,EAAC,MAAM,UAAU,CAAC;AAE3C,MAAM,CAAC,OAAO,WACZ,UAAU,EAAE,MAAM,EAClB,QAAQ,EAAE,MAAM,EAChB,OAAO,EAAE,MAAM,EACf,OAAO,EAAE,MAAM,EACf,iBAAiB,EAAE,iBAAiB,EACpC,YAAY,CAAC,EAAE,MAAM,UAqDtB"}

@@ -1,1 +1,0 @@
-https://testnet.libra.org/waypoint.txt

@@ -78,7 +78,7 @@ allowed-paths = "^([a-zA-Z0-9._\\-/@:]|-)+$"
 whitespace-exceptions = [
     ".github/actions/*/dist/*",
     # TODO: reevaluate skipping whitespace checks in .md files for the website
-    "developers.libra.org/**/*.md",
+    "developers.diem.com/**/*.md",
     "**/*.exp",
     "**/*.errmap",
 ]
@@ -198,7 +198,7 @@ mark-changed = "all"
 
 [[determinator.path-rule]]
 # Ignore website and other ancillary files, and scripts not listed above.
-globs = ["developers.libra.org/**/*", "documentation/**/*", "docker/**/*", "specifications/**/*", "scripts/**/*"]
+globs = ["developers.diem.com/**/*", "documentation/**/*", "docker/**/*", "specifications/**/*", "scripts/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

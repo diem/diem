@@ -1,16 +1,16 @@
-name: Libra Developers Website CI
+name: Diem Developers Website CI
 
 on:
   push:
     branches: [ auto ]
     # would have had
-    # paths: [ 'developers.libra.org/**' ]
-    # but want to build rustdocs on main Libra code changes outside of the website too
+    # paths: [ 'developers.diem.com/**' ]
+    # but want to build rustdocs on main Diem code changes outside of the website too
   pull_request:
     branches: [ master ]
     # would have had
-    # paths: [ 'developers.libra.org/**' ]
-    # but want to build rustdocs on main Libra code changes outside of the website too
+    # paths: [ 'developers.diem.com/**' ]
+    # but want to build rustdocs on main Diem code changes outside of the website too
 
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checks-out the Libra website repository under $GITHUB_WORKSPACE, so job can access it
+    # Checks-out the Diem website repository under $GITHUB_WORKSPACE, so job can access it
     - uses: actions/checkout@v2
     # Installs node and yarn
     - name: Use Node.js 12
@@ -38,5 +38,8 @@ jobs:
     # Test that building the site is successful
     - name: Build Site
       run: |
-        cd developers.libra.org
-        ./scripts/build_docs.sh -b -r -p
+        cd developers.diem.com
+        # Only build the straight Docusaurus site now. Do not build rust `-r`
+        # or python docs `-p` on CI checks until we resolve the best way to
+        # build them for deployment
+        ./scripts/build_docs.sh -b
