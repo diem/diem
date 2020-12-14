@@ -6,10 +6,12 @@ use crate::{
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::{
         direct_send::Message,
+        rpc::InboundRpcRequest,
         wire::{
             handshake::v1::MessagingProtocolVersion,
             messaging::v1::{
                 DirectSendMsg, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
+                RpcRequest, RpcResponse,
             },
         },
     },
@@ -21,9 +23,10 @@ use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
 use futures::{
+    channel::oneshot,
     future,
     io::{AsyncRead, AsyncWrite, AsyncWriteExt},
-    stream::StreamExt,
+    stream::{StreamExt, TryStreamExt},
     SinkExt,
 };
 use memsocket::MemorySocket;
@@ -272,6 +275,228 @@ fn peers_send_message_concurrent() {
     };
 
     rt.block_on(future::join3(peer_a.start(), peer_b.start(), test));
+}
+
+#[test]
+fn peer_recv_rpc() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
+
+    let send_msg = NetworkMessage::RpcRequest(RpcRequest {
+        request_id: 123,
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_request: Vec::from("hello world"),
+    });
+    let recv_msg = PeerNotification::RecvRpc(InboundRpcRequest {
+        protocol_id: PROTOCOL,
+        data: Bytes::from("hello world"),
+        res_tx: oneshot::channel().0,
+    });
+    let resp_msg = NetworkMessage::RpcResponse(RpcResponse {
+        request_id: 123,
+        priority: 0,
+        raw_response: Vec::from("goodbye world"),
+    });
+
+    let client = async move {
+        for _ in 0..30 {
+            // Client should send the rpc request.
+            client_sink.send(&send_msg).await.unwrap();
+            // Client should then receive the expected rpc response.
+            let received = client_stream.next().await.unwrap().unwrap();
+            assert_eq!(received, resp_msg);
+        }
+        // Client then closes connection.
+        client_sink.close().await.unwrap();
+    };
+    let server = async move {
+        for _ in 0..30 {
+            // Wait to receive RpcRequest from Peer.
+            let received = peer_notifs_rx.next().await.unwrap();
+            assert_eq!(recv_msg, received);
+
+            // Send response to rpc.
+            match received {
+                PeerNotification::RecvRpc(req) => {
+                    let response = Ok(Bytes::from("goodbye world"));
+                    req.res_tx.send(response).unwrap()
+                }
+                _ => panic!("Unexpected PeerNotification: {:?}", received),
+            }
+        }
+    };
+    rt.block_on(future::join3(peer.start(), server, client));
+}
+
+#[test]
+fn peer_recv_rpc_concurrent() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
+
+    let send_msg = NetworkMessage::RpcRequest(RpcRequest {
+        request_id: 123,
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_request: Vec::from("hello world"),
+    });
+    let recv_msg = PeerNotification::RecvRpc(InboundRpcRequest {
+        protocol_id: PROTOCOL,
+        data: Bytes::from("hello world"),
+        res_tx: oneshot::channel().0,
+    });
+    let resp_msg = NetworkMessage::RpcResponse(RpcResponse {
+        request_id: 123,
+        priority: 0,
+        raw_response: Vec::from("goodbye world"),
+    });
+
+    let client = async move {
+        // The client should send many rpc requests.
+        for _ in 0..30 {
+            client_sink.send(&send_msg).await.unwrap();
+        }
+
+        // The client should then receive the expected rpc responses.
+        for _ in 0..30 {
+            let received = client_stream.next().await.unwrap().unwrap();
+            assert_eq!(received, resp_msg);
+        }
+
+        // Client then closes connection.
+        client_sink.close().await.unwrap();
+    };
+    let server = async move {
+        let mut res_txs = vec![];
+
+        // Wait to receive RpcRequests from Peer.
+        for _ in 0..30 {
+            let received = peer_notifs_rx.next().await.unwrap();
+            assert_eq!(recv_msg, received);
+            match received {
+                PeerNotification::RecvRpc(req) => res_txs.push(req.res_tx),
+                _ => panic!("Unexpected PeerNotification: {:?}", received),
+            };
+        }
+
+        // Send all rpc responses to client.
+        for res_tx in res_txs.into_iter() {
+            let response = Bytes::from("goodbye world");
+            res_tx.send(Ok(response)).unwrap();
+        }
+    };
+    rt.block_on(future::join3(peer.start(), server, client));
+}
+
+// TODO(philiphayes): reenable this once mock time-service lands.
+#[test]
+#[ignore]
+fn peer_recv_rpc_timeout() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
+
+    let send_msg = NetworkMessage::RpcRequest(RpcRequest {
+        request_id: 123,
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_request: Vec::from("hello world"),
+    });
+    let recv_msg = PeerNotification::RecvRpc(InboundRpcRequest {
+        protocol_id: PROTOCOL,
+        data: Bytes::from("hello world"),
+        res_tx: oneshot::channel().0,
+    });
+
+    let test = async move {
+        // Client sends the rpc request.
+        client_sink.send(&send_msg).await.unwrap();
+
+        // Server receives the rpc request from client.
+        let received = peer_notifs_rx.next().await.unwrap();
+        assert_eq!(received, recv_msg);
+
+        // Pull out the request completion handle.
+        let mut res_tx = match received {
+            PeerNotification::RecvRpc(req) => req.res_tx,
+            _ => panic!("Unexpected PeerNotification: {:?}", received),
+        };
+
+        // The rpc response channel should still be open since we haven't timed out yet.
+        assert!(!res_tx.is_canceled());
+
+        // time.advance(Duration::from_millis(INBOUND_RPC_TIMEOUT_MS).await;
+
+        // The rpc response channel should be canceled from the timeout.
+        assert!(res_tx.is_canceled());
+        res_tx.cancellation().await;
+
+        // Client then half-closes write side.
+        client_sink.close().await.unwrap();
+
+        // Client shouldn't have received any messages.
+        let messages = client_stream.try_collect::<Vec<_>>().await.unwrap();
+        assert_eq!(messages, vec![]);
+    };
+    rt.block_on(future::join(peer.start(), test));
+}
+
+#[test]
+fn peer_recv_rpc_cancel() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
+
+    let send_msg = NetworkMessage::RpcRequest(RpcRequest {
+        request_id: 123,
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_request: Vec::from("hello world"),
+    });
+    let recv_msg = PeerNotification::RecvRpc(InboundRpcRequest {
+        protocol_id: PROTOCOL,
+        data: Bytes::from("hello world"),
+        res_tx: oneshot::channel().0,
+    });
+
+    let test = async move {
+        // Client sends the rpc request.
+        client_sink.send(&send_msg).await.unwrap();
+
+        // Server receives the rpc request from client.
+        let received = peer_notifs_rx.next().await.unwrap();
+        assert_eq!(received, recv_msg);
+
+        // Pull out the request completion handle.
+        let res_tx = match received {
+            PeerNotification::RecvRpc(req) => req.res_tx,
+            _ => panic!("Unexpected PeerNotification: {:?}", received),
+        };
+
+        // The rpc response channel should still be open since we haven't timed out yet.
+        assert!(!res_tx.is_canceled());
+
+        // Server drops the response completion handle to cancel the request.
+        drop(res_tx);
+
+        // Client then half-closes write side.
+        client_sink.close().await.unwrap();
+
+        // Client shouldn't have received any messages.
+        let messages = client_stream.try_collect::<Vec<_>>().await.unwrap();
+        assert_eq!(messages, vec![]);
+    };
+    rt.block_on(future::join(peer.start(), test));
 }
 
 // PeerManager can request a Peer to shutdown.
