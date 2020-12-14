@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_canonical_serialization as bcs;
 use diem_stdlib::{encode_peer_to_peer_with_metadata_script, ScriptCall};
 use diem_types::{AccountAddress, Identifier, TypeTag, StructTag};
 use serde_bytes::ByteBuf as Bytes;
