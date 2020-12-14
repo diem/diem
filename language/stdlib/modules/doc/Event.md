@@ -21,8 +21,8 @@ events emitted to a handle and emit events to the event store.
 -  [Module Specification](#@Module_Specification_1)
 
 
-<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
+<pre><code><b>use</b> <a href="BCS.md#0x1_BCS">0x1::BCS</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
 <b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
 </code></pre>
@@ -163,8 +163,8 @@ hash it with the sender's address, the result is guaranteed to be globally uniqu
 
 
 <pre><code><b>fun</b> <a href="Event.md#0x1_Event_fresh_guid">fresh_guid</a>(counter: &<b>mut</b> <a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a>): vector&lt;u8&gt; {
-    <b>let</b> sender_bytes = <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&counter.addr);
-    <b>let</b> count_bytes = <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&counter.counter);
+    <b>let</b> sender_bytes = <a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&counter.addr);
+    <b>let</b> count_bytes = <a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&counter.counter);
     counter.counter = counter.counter + 1;
 
     // <a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a> goes first just in case we want <b>to</b> extend address in the future.

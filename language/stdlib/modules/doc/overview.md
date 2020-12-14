@@ -77,7 +77,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * <code><a href="Event.md#0x1_Event">Event</a></code>
 * <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>
 * <code><a href="Hash.md#0x1_Hash">Hash</a></code>
-* <code><a href="LCS.md#0x1_LCS">LCS</a></code>
+* <code><a href="BCS.md#0x1_BCS">BCS</a></code>
 * <code>Offer</code>
 * <code><a href="Option.md#0x1_Option">Option</a></code>
 * <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>
@@ -93,6 +93,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::AccountFreezing`](AccountFreezing.md#0x1_AccountFreezing)
 -  [`0x1::AccountLimits`](AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
+-  [`0x1::BCS`](BCS.md#0x1_BCS)
 -  [`0x1::ChainId`](ChainId.md#0x1_ChainId)
 -  [`0x1::CoreAddresses`](CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](DesignatedDealer.md#0x1_DesignatedDealer)
@@ -111,7 +112,6 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::FixedPoint32`](FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Genesis`](Genesis.md#0x1_Genesis)
 -  [`0x1::Hash`](Hash.md#0x1_Hash)
--  [`0x1::LCS`](LCS.md#0x1_LCS)
 -  [`0x1::Option`](Option.md#0x1_Option)
 -  [`0x1::RecoveryAddress`](RecoveryAddress.md#0x1_RecoveryAddress)
 -  [`0x1::RegisteredCurrencies`](RegisteredCurrencies.md#0x1_RegisteredCurrencies)

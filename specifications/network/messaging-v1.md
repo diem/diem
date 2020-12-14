@@ -8,7 +8,7 @@ The messaging protocol is versioned using the [`MessagingProtocolVersion`](hands
 
 ## Messages
 
-DiemNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [lcs]. All DiemNet endpoints must be able to handle receiving all of these messages.
+DiemNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [bcs]. All DiemNet endpoints must be able to handle receiving all of these messages.
 
 ```rust
 /// Most primitive message type set on the network. Note this can only support up to 127 message
@@ -135,11 +135,11 @@ if length_prefix > MAX_DIEMNET_FRAME_LEN {
     reject;
 }
 
-// read the actual lcs-serialized message
+// read the actual bcs-serialized message
 let message_bytes = noise_socket.read(length_prefix);
 
 // deserialize the message
-let message = lcs::from_bytes(message_bytes);
+let message = bcs::from_bytes(message_bytes);
 ```
 
 (TODO(philiphayes): add streaming RPC protocol when supported)

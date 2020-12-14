@@ -18,7 +18,7 @@ structopt = "0.3.21"
 thiserror = "1.0.22"
 toml = { version = "0.5.7", default-features = false }
 
-lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
+bcs = "0.1.1"
 diem-config = { path = "..", version = "0.1.0"}
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-global-constants = { path = "../../config/global-constants", version = "0.1.0"}

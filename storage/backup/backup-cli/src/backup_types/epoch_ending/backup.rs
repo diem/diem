@@ -138,7 +138,7 @@ impl EpochEndingBackupController {
     }
 
     fn get_waypoint(record: &[u8], epoch: u64) -> Result<Waypoint> {
-        let li: LedgerInfoWithSignatures = lcs::from_bytes(record)?;
+        let li: LedgerInfoWithSignatures = bcs::from_bytes(record)?;
         ensure!(
             li.ledger_info().epoch() == epoch,
             "Epoch not expected. expected: {}, actual: {}.",

@@ -94,7 +94,7 @@ async fn expect_ping(
 
     assert_eq!(protocol_id, ProtocolId::HealthCheckerRpc,);
 
-    match lcs::from_bytes(&req_data).unwrap() {
+    match bcs::from_bytes(&req_data).unwrap() {
         HealthCheckerMsg::Ping(ping) => (ping, res_tx),
         msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
     }
@@ -104,7 +104,7 @@ async fn expect_ping_send_ok(
     network_reqs_rx: &mut diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
 ) {
     let (ping, res_tx) = expect_ping(network_reqs_rx).await;
-    let res_data = lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap();
+    let res_data = bcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap();
     res_tx.send(Ok(res_data.into())).unwrap();
 }
 
@@ -130,7 +130,7 @@ async fn send_inbound_ping(
     network_notifs_tx: &mut diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
     let protocol_id = ProtocolId::HealthCheckerRpc;
-    let data = lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
+    let data = bcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
         .unwrap()
         .into();
     let (res_tx, res_rx) = oneshot::channel();
@@ -154,7 +154,7 @@ async fn send_inbound_ping(
 
 async fn expect_pong(res_rx: oneshot::Receiver<Result<Bytes, RpcError>>) {
     let res_data = res_rx.await.unwrap().unwrap();
-    match lcs::from_bytes(&res_data).unwrap() {
+    match bcs::from_bytes(&res_data).unwrap() {
         HealthCheckerMsg::Pong(_) => {}
         msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
     };

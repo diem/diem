@@ -42,7 +42,7 @@ impl<T: DeserializeOwned + PrivateKey + Serialize> ConfigKey<T> {
 
 impl<T: DeserializeOwned + PrivateKey + Serialize> Clone for ConfigKey<T> {
     fn clone(&self) -> Self {
-        lcs::from_bytes(&lcs::to_bytes(self).unwrap()).unwrap()
+        bcs::from_bytes(&bcs::to_bytes(self).unwrap()).unwrap()
     }
 }
 
@@ -57,6 +57,6 @@ impl<T: PrivateKey + Serialize + diem_crypto::Uniform> Default for ConfigKey<T> 
 
 impl<T: PrivateKey + Serialize> PartialEq for ConfigKey<T> {
     fn eq(&self, other: &Self) -> bool {
-        lcs::to_bytes(&self).unwrap() == lcs::to_bytes(&other).unwrap()
+        bcs::to_bytes(&self).unwrap() == bcs::to_bytes(&other).unwrap()
     }
 }

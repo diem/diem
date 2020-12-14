@@ -5,7 +5,7 @@ address 0x1 {
 module Authenticator {
     use 0x1::Errors;
     use 0x1::Hash;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Vector;
 
     /// A multi-ed25519 public key
@@ -84,7 +84,7 @@ module Authenticator {
             );
             i = i + 1;
         };
-        Vector::append(&mut authentication_key_preimage, LCS::to_bytes(&k.threshold));
+        Vector::append(&mut authentication_key_preimage, BCS::to_bytes(&k.threshold));
         Vector::push_back(&mut authentication_key_preimage, MULTI_ED25519_SCHEME_ID);
         Hash::sha3_256(authentication_key_preimage)
     }

@@ -140,7 +140,7 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
 ) -> future::Ready<Option<Event<TMessage>>> {
     let maybe_event = match notif {
         PeerManagerNotification::RecvRpc(peer_id, rpc_req) => {
-            match lcs::from_bytes(&rpc_req.data) {
+            match bcs::from_bytes(&rpc_req.data) {
                 Ok(req_msg) => Some(Event::RpcRequest(peer_id, req_msg, rpc_req.res_tx)),
                 Err(err) => {
                     let data = &rpc_req.data;
@@ -155,7 +155,7 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
                 }
             }
         }
-        PeerManagerNotification::RecvMessage(peer_id, msg) => match lcs::from_bytes(&msg.mdata) {
+        PeerManagerNotification::RecvMessage(peer_id, msg) => match bcs::from_bytes(&msg.mdata) {
             Ok(msg) => Some(Event::Message(peer_id, msg)),
             Err(err) => {
                 let data = &msg.mdata;
@@ -261,7 +261,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         protocol: ProtocolId,
         message: TMessage,
     ) -> Result<(), NetworkError> {
-        let mdata = lcs::to_bytes(&message)?.into();
+        let mdata = bcs::to_bytes(&message)?.into();
         self.peer_mgr_reqs_tx.send_to(recipient, protocol, mdata)?;
         Ok(())
     }
@@ -275,7 +275,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         message: TMessage,
     ) -> Result<(), NetworkError> {
         // Serialize message.
-        let mdata = lcs::to_bytes(&message)?.into();
+        let mdata = bcs::to_bytes(&message)?.into();
         self.peer_mgr_reqs_tx
             .send_to_many(recipients, protocol, mdata)?;
         Ok(())
@@ -292,12 +292,12 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         timeout: Duration,
     ) -> Result<TMessage, RpcError> {
         // serialize request
-        let req_data = lcs::to_bytes(&req_msg)?.into();
+        let req_data = bcs::to_bytes(&req_msg)?.into();
         let res_data = self
             .peer_mgr_reqs_tx
             .send_rpc(recipient, protocol, req_data, timeout)
             .await?;
-        let res_msg: TMessage = lcs::from_bytes(&res_data)?;
+        let res_msg: TMessage = bcs::from_bytes(&res_data)?;
         Ok(res_msg)
     }
 }

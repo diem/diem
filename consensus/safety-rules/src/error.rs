@@ -43,8 +43,8 @@ pub enum Error {
     VoteProposalSignatureNotFound,
 }
 
-impl From<lcs::Error> for Error {
-    fn from(error: lcs::Error) -> Self {
+impl From<bcs::Error> for Error {
+    fn from(error: bcs::Error) -> Self {
         Self::SerializationError(format!("{}", error))
     }
 }

@@ -1344,42 +1344,42 @@ procedure {:inline 1} $Signature_ed25519_verify(
 }
 
 // ==================================================================================
-// Native LCS::serialize
+// Native BCS::serialize
 
 // native define serialize<MoveValue>(v: &MoveValue): vector<u8>;
 
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
-function {:inline} $LCS_serialize(ta: $TypeValue, v: $Value): $Value {
-    $LCS_serialize_core(v)
+function {:inline} $BCS_serialize(ta: $TypeValue, v: $Value): $Value {
+    $BCS_serialize_core(v)
 }
 
-function $LCS_serialize_core(v: $Value): $Value;
-function $LCS_serialize_core_inv(v: $Value): $Value;
+function $BCS_serialize_core(v: $Value): $Value;
+function $BCS_serialize_core_inv(v: $Value): $Value;
 // Needed only because IsEqual(v1, v2) is weaker than v1 == v2 in case there is a vector nested inside v1 or v2.
-axiom (forall v1, v2: $Value :: $IsEqual(v1, v2) ==> $LCS_serialize_core(v1) == $LCS_serialize_core(v2));
+axiom (forall v1, v2: $Value :: $IsEqual(v1, v2) ==> $BCS_serialize_core(v1) == $BCS_serialize_core(v2));
 // Injectivity
-axiom (forall v: $Value :: $LCS_serialize_core_inv($LCS_serialize_core(v)) == v);
+axiom (forall v: $Value :: $BCS_serialize_core_inv($BCS_serialize_core(v)) == v);
 
 // This says that serialize returns a non-empty vec<u8>
 {{#if (eq backend.serialize_bound 0)}}
-axiom (forall v: $Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 ));
+axiom (forall v: $Value :: ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 ));
 {{else}}
-axiom (forall v: $Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 &&
+axiom (forall v: $Value :: ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && $vlen(r) > 0 &&
                             $vlen(r) <= {{backend.serialize_bound}} ));
 {{/if}}
 
 // Serialized addresses should have the same length
 const $serialized_address_len: int;
-axiom (forall v: $Value :: (var r := $LCS_serialize_core(v); is#$Address(v) ==> $vlen(r) == $serialized_address_len));
+axiom (forall v: $Value :: (var r := $BCS_serialize_core(v); is#$Address(v) ==> $vlen(r) == $serialized_address_len));
 
-procedure $LCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: $Value);
-ensures res == $LCS_serialize(ta, v);
+procedure $BCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: $Value);
+ensures res == $BCS_serialize(ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 
-function {:inline} $LCS_$to_bytes(ta: $TypeValue, v: $Value): $Value {
-    $LCS_serialize_core(v)
+function {:inline} $BCS_$to_bytes(ta: $TypeValue, v: $Value): $Value {
+    $BCS_serialize_core(v)
 }
 
 // ==================================================================================

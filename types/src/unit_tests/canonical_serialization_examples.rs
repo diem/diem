@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! These tests verify the behavior of LCS against some known test vectors with various types.
+//! These tests verify the behavior of BCS against some known test vectors with various types.
 
 use crate::{
     access_path::AccessPath,
@@ -13,7 +13,7 @@ use crate::{
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use lcs::to_bytes;
+use bcs::to_bytes;
 
 #[test]
 fn test_access_path_canonical_serialization_example() {

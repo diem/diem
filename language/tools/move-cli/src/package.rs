@@ -35,7 +35,7 @@ const STDLIB_MODULE_FILES: [&str; 8] = [
     "Event.move",
     "FixedPoint32.move",
     "Hash.move",
-    "LCS.move",
+    "BCS.move",
     "Option.move",
     "Vector.move",
     "Signer.move",

@@ -134,7 +134,7 @@ impl StdlibScript {
             .get_file(path.clone())
             .unwrap_or_else(|| panic!("File {:?} does not exist", path))
             .contents();
-        lcs::from_bytes(content)
+        bcs::from_bytes(content)
             .unwrap_or_else(|err| panic!("Failed to deserialize ABI file {:?}: {}", path, err))
     }
 

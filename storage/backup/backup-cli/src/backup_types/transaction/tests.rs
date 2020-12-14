@@ -47,7 +47,7 @@ fn end_to_end() {
         .collect::<Vec<_>>();
     let max_chunk_size = txns
         .iter()
-        .map(|t| lcs::to_bytes(t).unwrap().len())
+        .map(|t| bcs::to_bytes(t).unwrap().len())
         .max()
         .unwrap() // biggest txn
         + 115 // size of a serialized TransactionInfo

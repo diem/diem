@@ -30,7 +30,7 @@ result of executing any transaction script is given by the following table:
 | ----                     | ---                                                                                                      |
 | `Executed`               | The transaction was executed successfully.                                                               |
 | `OutOfGas`               | The transaction ran out of gas during execution.                                                         |
-| `MiscellaneousError`     | The transaction was malformed, e.g., an argument was not in LCS format. Possible, but unlikely to occur. |
+| `MiscellaneousError`     | The transaction was malformed, e.g., an argument was not in BCS format. Possible, but unlikely to occur. |
 | `ExecutionFailure{ ...}` | The transaction encountered an uncaught error. Possible, but unlikely to occur.                          |
 
 **This set of statuses is considered stable**, and they should not be expected to

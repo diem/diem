@@ -36,7 +36,7 @@ pub enum PeerManagerError {
     MpscSendError(mpsc::SendError),
 
     #[error("Serialization error {0}")]
-    LcsError(lcs::Error),
+    BcsError(bcs::Error),
 
     #[error("Error reading off wire: {0}")]
     WireReadError(#[from] wire::ReadError),
@@ -57,9 +57,9 @@ impl From<oneshot::Canceled> for PeerManagerError {
     }
 }
 
-impl From<lcs::Error> for PeerManagerError {
-    fn from(e: lcs::Error) -> Self {
-        PeerManagerError::LcsError(e)
+impl From<bcs::Error> for PeerManagerError {
+    fn from(e: bcs::Error) -> Self {
+        PeerManagerError::BcsError(e)
     }
 }
 

@@ -589,7 +589,7 @@ impl From<Transaction> for TransactionDataView {
                 };
 
                 let script_bytes: BytesView = match t.payload() {
-                    TransactionPayload::Script(s) => lcs::to_bytes(s).unwrap_or_default(),
+                    TransactionPayload::Script(s) => bcs::to_bytes(s).unwrap_or_default(),
                     _ => vec![],
                 }
                 .into();
@@ -774,11 +774,11 @@ impl
         ),
     ) -> Result<StateProofView, Self::Error> {
         Ok(StateProofView {
-            ledger_info_with_signatures: BytesView::from(&lcs::to_bytes(
+            ledger_info_with_signatures: BytesView::from(&bcs::to_bytes(
                 &ledger_info_with_signatures,
             )?),
-            epoch_change_proof: BytesView::from(&lcs::to_bytes(&epoch_change_proof)?),
-            ledger_consistency_proof: BytesView::from(&lcs::to_bytes(&ledger_consistency_proof)?),
+            epoch_change_proof: BytesView::from(&bcs::to_bytes(&epoch_change_proof)?),
+            ledger_consistency_proof: BytesView::from(&bcs::to_bytes(&ledger_consistency_proof)?),
         })
     }
 }
@@ -797,7 +797,7 @@ impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
         account_state_with_proof: AccountStateWithProof,
     ) -> Result<AccountStateWithProofView, Error> {
         let blob = if let Some(account_blob) = account_state_with_proof.blob {
-            Some(BytesView::from(&lcs::to_bytes(&account_blob)?))
+            Some(BytesView::from(&bcs::to_bytes(&account_blob)?))
         } else {
             None
         };
@@ -821,17 +821,17 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
 
     fn try_from(account_state_proof: AccountStateProof) -> Result<AccountStateProofView, Error> {
         Ok(AccountStateProofView {
-            ledger_info_to_transaction_info_proof: BytesView::from(&lcs::to_bytes(
+            ledger_info_to_transaction_info_proof: BytesView::from(&bcs::to_bytes(
                 account_state_proof
                     .transaction_info_with_proof()
                     .ledger_info_to_transaction_info_proof(),
             )?),
-            transaction_info: BytesView::from(&lcs::to_bytes(
+            transaction_info: BytesView::from(&bcs::to_bytes(
                 account_state_proof
                     .transaction_info_with_proof()
                     .transaction_info(),
             )?),
-            transaction_info_to_account_proof: BytesView::from(&lcs::to_bytes(
+            transaction_info_to_account_proof: BytesView::from(&bcs::to_bytes(
                 account_state_proof.transaction_info_to_account_proof(),
             )?),
         })

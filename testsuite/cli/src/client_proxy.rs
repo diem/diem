@@ -1489,7 +1489,7 @@ impl ClientProxy {
             ));
         }
         let bytes = hex::decode(body)?;
-        let txns: Vec<SignedTransaction> = lcs::from_bytes(&bytes).unwrap();
+        let txns: Vec<SignedTransaction> = bcs::from_bytes(&bytes).unwrap();
         for txn in &txns {
             self.wait_for_signed_transaction(txn).map_err(|e| {
                 info!("minting transaction error: {}", e);

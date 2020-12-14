@@ -48,16 +48,16 @@ pub struct SignedTransactionTarget;
 
 impl FuzzTargetImpl for SignedTransactionTarget {
     fn description(&self) -> &'static str {
-        "SignedTransaction (LCS deserializer)"
+        "SignedTransaction (BCS deserializer)"
     }
 
     fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         let value = gen.generate(any_with::<SignedTransaction>(()));
-        Some(lcs::to_bytes(&value).expect("serialization should work"))
+        Some(bcs::to_bytes(&value).expect("serialization should work"))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let _: Result<SignedTransaction, _> = lcs::from_bytes(&data);
+        let _: Result<SignedTransaction, _> = bcs::from_bytes(&data);
     }
 }
 
@@ -78,11 +78,11 @@ static SIGNED_TXN: Lazy<SignedTransaction> = Lazy::new(|| {
 });
 
 static SERIALIZED_SIGNED_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| lcs::to_bytes(&SIGNED_TXN.clone()).expect("serialization should work"));
+    Lazy::new(|| bcs::to_bytes(&SIGNED_TXN.clone()).expect("serialization should work"));
 
 impl FuzzTargetImpl for MutatedSignedTransaction {
     fn description(&self) -> &'static str {
-        "SignedTransaction (LCS serialized -> mutation -> deserializer)"
+        "SignedTransaction (BCS serialized -> mutation -> deserializer)"
     }
 
     /// We always return the same serialized signed transaction for corpus generation,
@@ -99,7 +99,7 @@ impl FuzzTargetImpl for MutatedSignedTransaction {
             return;
         }
 
-        if let Ok(signed_txn) = lcs::from_bytes::<SignedTransaction>(&data) {
+        if let Ok(signed_txn) = bcs::from_bytes::<SignedTransaction>(&data) {
             assert_ne!(*SIGNED_TXN, signed_txn);
         }
     }
@@ -115,7 +115,7 @@ impl FuzzTargetImpl for TwoSignedTransactions {
 
     fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         let txn = gen.generate(any_with::<SignedTransaction>(()));
-        let mut serialized_txn = lcs::to_bytes(&txn).expect("serialization should work");
+        let mut serialized_txn = bcs::to_bytes(&txn).expect("serialization should work");
         // return [serialized_txn | serialized_txn]
         serialized_txn.extend_from_slice(&serialized_txn.clone());
         Some(serialized_txn)
@@ -136,8 +136,8 @@ impl FuzzTargetImpl for TwoSignedTransactions {
         }
 
         // ensure the deserialization is different
-        if let Ok(txn1) = lcs::from_bytes::<SignedTransaction>(txn1) {
-            if let Ok(txn2) = lcs::from_bytes::<SignedTransaction>(txn2) {
+        if let Ok(txn1) = bcs::from_bytes::<SignedTransaction>(txn1) {
+            if let Ok(txn2) = bcs::from_bytes::<SignedTransaction>(txn2) {
                 assert_ne!(txn1, txn2);
             }
         }

@@ -69,7 +69,7 @@ impl VMExecutor for MockVM {
                     new_epoch_event_key(),
                     0,
                     TypeTag::Bool,
-                    lcs::to_bytes(&0).unwrap(),
+                    bcs::to_bytes(&0).unwrap(),
                 )],
                 0,
                 KEEP_STATUS.clone(),
@@ -154,7 +154,7 @@ impl VMExecutor for MockVM {
                             new_epoch_event_key(),
                             0,
                             TypeTag::Bool,
-                            lcs::to_bytes(&0).unwrap(),
+                            bcs::to_bytes(&0).unwrap(),
                         )],
                         0,
                         KEEP_STATUS.clone(),
@@ -225,11 +225,11 @@ fn gen_genesis_writeset() -> WriteSet {
     let validator_set_ap = ValidatorSet::CONFIG_ID.access_path();
     write_set.push((
         validator_set_ap,
-        WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+        WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
     ));
     write_set.push((
         AccessPath::new(config_address(), ConfigurationResource::resource_path()),
-        WriteOp::Value(lcs::to_bytes(&ConfigurationResource::default()).unwrap()),
+        WriteOp::Value(bcs::to_bytes(&ConfigurationResource::default()).unwrap()),
     ));
     write_set
         .freeze()

@@ -5,7 +5,7 @@ module DiemAccount {
     use 0x1::Transaction;
     use 0x1::Hash;
     use 0x1::XDX;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Diem;
     use 0x1::DiemTransactionTimeout;
     use 0x1::Vector;
@@ -380,7 +380,7 @@ module DiemAccount {
     }
     spec fun pay_from_sender_with_metadata {
         // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !exists<T>(payee) && len(BCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
         aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
         aborts_if !exists<T>(payee) && !exists<Diem::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
@@ -400,15 +400,15 @@ module DiemAccount {
         ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
         ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
         ensures old(!exists<T>(payee)) ==> exists<T>(payee);
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, BCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, BCS::serialize(0), BCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, BCS::serialize(1), BCS::serialize(payee));
         // derived from withdraw_from_sender
         ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
@@ -430,7 +430,7 @@ module DiemAccount {
     }
     spec fun pay_from_sender {
         // derived from create_account
-        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !exists<T>(payee) && len(BCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
         aborts_if !exists<T>(payee) && exists<Balance<Token>>(payee); // modified
         aborts_if !exists<T>(payee) && !exists<Diem::Info<Token>>(0xA550C18); // modified
         // derived from withdraw_from_sender
@@ -450,15 +450,15 @@ module DiemAccount {
         ensures old(!exists<T>(payee)) ==> exists<Balance<Token>>(payee);
         ensures old(!exists<T>(payee)) ==> global<Balance<Token>>(payee).coin.value == amount;
         ensures old(!exists<T>(payee)) ==> exists<T>(payee);
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, BCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
         ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, BCS::serialize(0), BCS::serialize(payee));
         ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
-        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, BCS::serialize(1), BCS::serialize(payee));
         // derived from withdraw_from_sender
         ensures payee != sender() ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         // derived from deposit_with_metadata
@@ -550,7 +550,7 @@ module DiemAccount {
     public fun create_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>) {
         let generator = EventHandleGenerator {counter: 0};
         let authentication_key = auth_key_prefix;
-        Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
+        Vector::append(&mut authentication_key, BCS::to_bytes(&fresh_address));
         assert(Vector::length(&authentication_key) == 32, 12);
 
         save_account(
@@ -570,22 +570,22 @@ module DiemAccount {
         );
     }
     spec fun create_account {
-        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
+        aborts_if len(BCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
         aborts_if exists<Balance<Token>>(fresh_address);
         aborts_if exists<T>(fresh_address);
         aborts_if !exists<Diem::Info<Token>>(0xA550C18);
         ensures exists<Balance<Token>>(fresh_address);
         ensures global<Balance<Token>>(fresh_address).coin.value == 0;
         ensures exists<T>(fresh_address);
-        ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, BCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
         ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
         ensures global<T>(fresh_address).sequence_number == 0;
         ensures global<T>(fresh_address).event_generator.counter == 2;
         ensures global<T>(fresh_address).received_events.counter == 0;
-        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, BCS::serialize(0), BCS::serialize(fresh_address));
         ensures global<T>(fresh_address).sent_events.counter == 0;
-        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, BCS::serialize(1), BCS::serialize(fresh_address));
     }
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
@@ -606,7 +606,7 @@ module DiemAccount {
     }
     spec fun create_new_account {
         // derived from create_account
-        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
+        aborts_if len(BCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
         aborts_if exists<Balance<Token>>(fresh_address);
         aborts_if exists<T>(fresh_address);
         aborts_if !exists<Diem::Info<Token>>(0xA550C18);
@@ -623,15 +623,15 @@ module DiemAccount {
         ensures exists<Balance<Token>>(fresh_address);
         ensures global<Balance<Token>>(fresh_address).coin.value == initial_balance; // modified
         ensures exists<T>(fresh_address);
-        ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, BCS::serialize(fresh_address));
         ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
         ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
         ensures global<T>(fresh_address).sequence_number == 0;
         ensures global<T>(fresh_address).event_generator.counter == 2;
         ensures initial_balance > 0 ==> global<T>(fresh_address).received_events.counter == 1; // modified
-        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, BCS::serialize(0), BCS::serialize(fresh_address));
         ensures global<T>(fresh_address).sent_events.counter == 0;
-        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
+        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, BCS::serialize(1), BCS::serialize(fresh_address));
         // derived from withdraw_from_sender
         ensures initial_balance > 0 ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - initial_balance;
         // derived from deposit_with_metadata
@@ -806,8 +806,8 @@ module DiemAccount {
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
     fun fresh_guid(counter: &mut EventHandleGenerator, sender: address): vector<u8> {
-        let sender_bytes = LCS::to_bytes(&sender);
-        let count_bytes = LCS::to_bytes(&counter.counter);
+        let sender_bytes = BCS::to_bytes(&sender);
+        let count_bytes = BCS::to_bytes(&counter.counter);
         counter.counter = counter.counter + 1;
 
         // EventHandleGenerator goes first just in case we want to extend address in the future.
@@ -817,7 +817,7 @@ module DiemAccount {
     }
     spec fun fresh_guid {
         aborts_if counter.counter + 1 > max_u64();
-        ensures Vector::eq_append(result, LCS::serialize(old(counter.counter)), LCS::serialize(sender));
+        ensures Vector::eq_append(result, BCS::serialize(old(counter.counter)), BCS::serialize(sender));
     }
 
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
@@ -826,7 +826,7 @@ module DiemAccount {
     }
     spec fun new_event_handle_impl {
         aborts_if counter.counter + 1 > max_u64();
-        ensures Vector::eq_append(result.guid, LCS::serialize(old(counter.counter)), LCS::serialize(sender));
+        ensures Vector::eq_append(result.guid, BCS::serialize(old(counter.counter)), BCS::serialize(sender));
         ensures result.counter == 0;
     }
 
@@ -838,7 +838,7 @@ module DiemAccount {
     spec fun new_event_handle {
         aborts_if !exists<T>(sender());
         aborts_if global<T>(sender()).event_generator.counter + 1 > max_u64();
-        ensures Vector::eq_append(result.guid, LCS::serialize(old(global<T>(sender()).event_generator.counter)), LCS::serialize(sender()));
+        ensures Vector::eq_append(result.guid, BCS::serialize(old(global<T>(sender()).event_generator.counter)), BCS::serialize(sender()));
         ensures result.counter == 0;
     }
 

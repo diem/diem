@@ -25,7 +25,7 @@ pub enum Error {
     #[error("Unable to decrypt address for account {0}: {1}")]
     DecryptionError(AccountAddress, String),
     #[error("Failed (de)serializing validator_network_address_keys")]
-    LCSError(#[from] lcs::Error),
+    BCSError(#[from] bcs::Error),
     #[error("NetworkAddress parse error {0}")]
     ParseError(#[from] diem_network_address::ParseError),
     #[error("Failed reading validator_network_address_keys from storage")]
@@ -91,7 +91,7 @@ impl Encryptor {
         for (idx, addr) in network_addresses.iter().cloned().enumerate() {
             enc_addrs.push(addr.encrypt(&key.0, keys.current, &account, seq_num, idx as u32)?);
         }
-        lcs::to_bytes(&enc_addrs).map_err(|e| e.into())
+        bcs::to_bytes(&enc_addrs).map_err(|e| e.into())
     }
 
     pub fn decrypt(
@@ -100,7 +100,7 @@ impl Encryptor {
         account: AccountAddress,
     ) -> Result<Vec<NetworkAddress>, Error> {
         let keys = self.read()?;
-        let enc_addrs: Vec<EncNetworkAddress> = lcs::from_bytes(&encrypted_network_addresses)
+        let enc_addrs: Vec<EncNetworkAddress> = bcs::from_bytes(&encrypted_network_addresses)
             .map_err(|e| Error::AddressDeserialization(account, e.to_string()))?;
         let mut addrs = Vec::new();
         for (idx, enc_addr) in enc_addrs.iter().enumerate() {

@@ -83,8 +83,8 @@ User submitted transaction.
 | gas_currency              | string                 | Gas price currency code                                               |
 | expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
 | script_hash               | string                 | Hex-encoded sha3 256 hash of the script binary code bytes used in this transaction |
-| script_bytes              | string                 | Hex-encoded string of LCS bytes of the script, decode it to get back transaction script arguments |
-| script                    | [Script](#type-script) | The transaction script and arguments of this transaction, you can decode `script_bytes` by LCS to get same data. |
+| script_bytes              | string                 | Hex-encoded string of BCS bytes of the script, decode it to get back transaction script arguments |
+| script                    | [Script](#type-script) | The transaction script and arguments of this transaction, you can decode `script_bytes` by BCS to get same data. |
 
 Note: script_hash is not hash of the script_bytes, it's hash of the script binary code bytes. More specifically, you can get same hash string by the following steps:
 
@@ -92,9 +92,9 @@ Note: script_hash is not hash of the script_bytes, it's hash of the script binar
     2. Sha3 256 hash of the code binary bytes in the script call struct.
     3. Hex-encode the hash result bytes.
 
-* You can decode transaction script call ([struct](https://developers.diem.com/docs/rustdocs/diem_types/transaction/struct.Script.html)) from script_bytes by LCS deserializer.
+* You can decode transaction script call ([struct](https://developers.diem.com/docs/rustdocs/diem_types/transaction/struct.Script.html)) from script_bytes by BCS deserializer.
 * If script_bytes is empty, it means transaction is not a [TransactionPayload#Script](https://developers.diem.com/docs/rustdocs/diem_types/transaction/enum.TransactionPayload.html#variant.Script).
-You may decode Transaction#bytes by LCS deserializer for more details.
+You may decode Transaction#bytes by BCS deserializer for more details.
 
 
 #### unknown
@@ -149,7 +149,7 @@ This is the only type we decoded script arguments and type_arguments as named fi
 | receiver                  | string         | Hex-encoded account address of the receiver                         |
 | amount                    | unsigned int64 | Amount transfered.                                                  |
 | currency                  | string         | Currency code.                                                      |
-| metadata                  | string         | Metadata of the transaction, LCS serialized hex-encoded string.     |
+| metadata                  | string         | Metadata of the transaction, BCS serialized hex-encoded string.     |
 | metadata_signature        | string         | Hex-encoded metadata signature, use this to validate metadata       |
 
 Note: for metadata and metadata_signature, see [DIP-4](https://dip.diem.com/dip-4/) for more details.

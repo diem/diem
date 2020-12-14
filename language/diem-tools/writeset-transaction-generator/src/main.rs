@@ -32,7 +32,7 @@ enum Command {
 }
 
 fn save_transaction(txn: Transaction, path: PathBuf) -> Result<()> {
-    let bytes = lcs::to_bytes(&txn).map_err(|_| format_err!("Transaction Serialize Error"))?;
+    let bytes = bcs::to_bytes(&txn).map_err(|_| format_err!("Transaction Serialize Error"))?;
     std::fs::write(path.as_path(), bytes.as_slice())
         .map_err(|_| format_err!("Unable to write to path"))
 }

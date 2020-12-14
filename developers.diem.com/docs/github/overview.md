@@ -57,9 +57,9 @@ title: GitHub Projects
   <SimpleTextCard
     icon="img/github.svg"
     iconDark="img/github-dark.svg"
-    overlay="Diem Canonical Serializer"
-    title="DCS"
-    to="https://github.com/libra/lcs"
+    overlay="Binary Canonical Serializer"
+    title="BCS"
+    to="https://github.com/libra/bcs"
   />
   <SimpleTextCard
     icon="img/github.svg"

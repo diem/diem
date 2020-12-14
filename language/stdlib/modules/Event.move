@@ -6,7 +6,7 @@ address 0x1 {
 /// events emitted to a handle and emit events to the event store.
 module Event {
     use 0x1::Errors;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Signer;
     use 0x1::Vector;
 
@@ -44,8 +44,8 @@ module Event {
     /// such counter is going to give distinct value for each of the new event stream under each sender. And since we
     /// hash it with the sender's address, the result is guaranteed to be globally unique.
     fun fresh_guid(counter: &mut EventHandleGenerator): vector<u8> {
-        let sender_bytes = LCS::to_bytes(&counter.addr);
-        let count_bytes = LCS::to_bytes(&counter.counter);
+        let sender_bytes = BCS::to_bytes(&counter.addr);
+        let count_bytes = BCS::to_bytes(&counter.counter);
         counter.counter = counter.counter + 1;
 
         // EventHandleGenerator goes first just in case we want to extend address in the future.

@@ -2,7 +2,7 @@
 
 `NetworkAddress` is a compact, efficient, self-describing and future-proof network address represented as a stack of
 protocols, inspired by libp2p's [multiaddr](https://multiformats.io/multiaddr/) format. The primary differences include
-using [LCS] to describe the binary format and reducing the set of supported protocols.
+using [BCS] to describe the binary format and reducing the set of supported protocols.
 
 (TODO(philiphayes): we should rename this to make it less generic sounding...)
 (TODO(philiphayes): include `EncNetworkAddress` spec)
@@ -59,7 +59,7 @@ pub struct DnsName(String);
 
 ## Human-readable Format
 
-All `NetworkAddress` sent and received over-the-wire or stored on-chain are in their compact [`u8`] [`lcs`]-serialized
+All `NetworkAddress` sent and received over-the-wire or stored on-chain are in their compact [`u8`] [`bcs`]-serialized
 format. However, implementations may also wish to implement the optional human-readable format to aid reading
 `NetworkAddress`es from configuration or printing `NetworkAddress` in logs.
 

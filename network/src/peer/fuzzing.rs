@@ -21,7 +21,7 @@ use memsocket::MemorySocket;
 use netcore::transport::ConnectionOrigin;
 use proptest::{arbitrary::any, collection::vec};
 
-/// Generate a sequence of `NetworkMessage`, lcs serialize them, and write them
+/// Generate a sequence of `NetworkMessage`, bcs serialize them, and write them
 /// out to a buffer using our length-prefixed message codec.
 pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let network_msgs = gen.generate(vec(any::<NetworkMessage>(), 1..20));

@@ -60,7 +60,7 @@ impl<'env> Abigen<'env> {
         std::mem::take(&mut self.output)
             .into_iter()
             .map(|(path, abi)| {
-                let content = lcs::to_bytes(&abi).expect("ABI serialization should not fail");
+                let content = bcs::to_bytes(&abi).expect("ABI serialization should not fail");
                 (path, content)
             })
             .collect()

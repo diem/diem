@@ -19,7 +19,7 @@ mod move_abi;
 /// Network messages.
 mod network;
 
-pub use linter::lint_lcs_format;
+pub use linter::lint_bcs_format;
 
 arg_enum! {
 #[derive(Debug, StructOpt, Clone, Copy)]

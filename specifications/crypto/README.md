@@ -157,7 +157,7 @@ We will look at how the domain separator defined in this section is used
 ## Serialization
 
 Serialization of a payload is done using
-[LCS](https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/). This
+[BCS](https://docs.rs/bcs/). This
 serialization library guarantees deterministic serialization for any Diem data
 structure.
 
@@ -187,7 +187,7 @@ domain separator and hash are as defined above.
 That is, if `v` is the Diem value we aim to sign, the bytes sent to the
 signing or verification algorithm are:
 
-`SHA3-256( domain_separator(type_of(v)) ) ∥ lcs_bytes(v)`
+`SHA3-256( domain_separator(type_of(v)) ) ∥ bcs_bytes(v)`
 
 where ∥ is byte sequence concatenation. The purpose of using the hashed domain
 separator, rather than the separator itself is to avoid any suffix attacks on
@@ -205,7 +205,7 @@ implemented on public keys and signatures. The construction of the binary
 representation is performed implicitly.
 
 When defining a new data structure in the Diem code base, the developer should
-implement `Serialize`, and derive `CryptoHasher` and `LCSCryptoHash` by
+implement `Serialize`, and derive `CryptoHasher` and `BCSCryptoHash` by
 annotation. The `CryptoHash` trait will be derived automatically.
 
 ## Multi-signatures

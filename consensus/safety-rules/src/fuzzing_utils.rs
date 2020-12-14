@@ -270,8 +270,8 @@ pub mod fuzzing {
         // Create a safety rules serializer test instance for fuzzing
         let mut serializer_service = test_utils::test_serializer();
 
-        // LCS encode the safety_rules_input and fuzz the handle_message() method
-        if let Ok(safety_rules_input) = lcs::to_bytes(&safety_rules_input) {
+        // BCS encode the safety_rules_input and fuzz the handle_message() method
+        if let Ok(safety_rules_input) = bcs::to_bytes(&safety_rules_input) {
             serializer_service.handle_message(safety_rules_input)
         } else {
             Err(Error::SerializationError(

@@ -1,4 +1,4 @@
-// This file is created to verify the native function in the standard LCS module.
+// This file is created to verify the native function in the standard BCS module.
 
 module VerifySignature {
     use 0x1::Signature;

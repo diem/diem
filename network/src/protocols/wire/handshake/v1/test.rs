@@ -5,9 +5,9 @@ use super::*;
 
 // Ensure serialization of MessagingProtocolVersion enum takes 1 byte.
 #[test]
-fn net_protocol() -> lcs::Result<()> {
+fn net_protocol() -> bcs::Result<()> {
     let protocol = MessagingProtocolVersion::V1;
-    assert_eq!(lcs::to_bytes(&protocol)?, vec![0x00]);
+    assert_eq!(bcs::to_bytes(&protocol)?, vec![0x00]);
     Ok(())
 }
 

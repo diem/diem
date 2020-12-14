@@ -186,7 +186,7 @@ impl VMValidator for DiemVMValidator {
 fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> GovernanceRole {
     let role_access_path = create_access_path(sender, RoleId::struct_tag());
     if let Ok(Some(blob)) = remote_cache.get(&role_access_path) {
-        return lcs::from_bytes::<account_config::RoleId>(&blob)
+        return bcs::from_bytes::<account_config::RoleId>(&blob)
             .map(|role_id| GovernanceRole::from_role_id(role_id.role_id()))
             .unwrap_or(GovernanceRole::NonGovernanceRole);
     }

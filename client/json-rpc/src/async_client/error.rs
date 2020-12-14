@@ -30,8 +30,8 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn unexpected_lcs_error(e: lcs::Error) -> Self {
-        Error::UnexpectedError(UnexpectedError::LCSError(e))
+    pub fn unexpected_bcs_error(e: bcs::Error) -> Self {
+        Error::UnexpectedError(UnexpectedError::BCSError(e))
     }
     pub fn unexpected_invalid_response_id(resp: JsonRpcResponse) -> Self {
         Error::UnexpectedError(UnexpectedError::InvalidResponseId(resp))
@@ -77,7 +77,7 @@ impl std::error::Error for Error {
 
 #[derive(Debug)]
 pub enum UnexpectedError {
-    LCSError(lcs::Error),
+    BCSError(bcs::Error),
     InvalidResponseId(JsonRpcResponse),
     InvalidResponseIdType(JsonRpcResponse),
     ResponseIdNotFound(JsonRpcResponse),
@@ -96,7 +96,7 @@ impl std::fmt::Display for UnexpectedError {
 impl std::error::Error for UnexpectedError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            UnexpectedError::LCSError(e) => Some(e),
+            UnexpectedError::BCSError(e) => Some(e),
             _ => None,
         }
     }

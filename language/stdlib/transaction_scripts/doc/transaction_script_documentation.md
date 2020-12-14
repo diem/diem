@@ -128,7 +128,7 @@ result of executing any transaction script is given by the following table:
 | ----                     | ---                                                                                                      |
 | <code>Executed</code>               | The transaction was executed successfully.                                                               |
 | <code>OutOfGas</code>               | The transaction ran out of gas during execution.                                                         |
-| <code>MiscellaneousError</code>     | The transaction was malformed, e.g., an argument was not in LCS format. Possible, but unlikely to occur. |
+| <code>MiscellaneousError</code>     | The transaction was malformed, e.g., an argument was not in BCS format. Possible, but unlikely to occur. |
 | <code>ExecutionFailure{ ...}</code> | The transaction encountered an uncaught error. Possible, but unlikely to occur.                          |
 
 **This set of statuses is considered stable**, and they should not be expected to
@@ -2680,7 +2680,7 @@ The <code>metadata</code> and <code>metadata_signature</code> parameters are onl
 <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microdiem_limit">DualAttestation::get_cur_microdiem_limit</a></code> XDX and <code>payer</code> and <code>payee</code> are distinct VASPs.
 However, a transaction sender can opt in to dual attestation even when it is not required
 (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty <code>metadata_signature</code>.
-Standardized <code>metadata</code> LCS format can be found in <code>diem_types::transaction::metadata::Metadata</code>.
+Standardized <code>metadata</code> BCS format can be found in <code>diem_types::transaction::metadata::Metadata</code>.
 
 
 <a name="@Events_129"></a>
@@ -5047,6 +5047,7 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`0x1::AccountFreezing`](../../modules/doc/AccountFreezing.md#0x1_AccountFreezing)
 -  [`0x1::AccountLimits`](../../modules/doc/AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](../../modules/doc/Authenticator.md#0x1_Authenticator)
+-  [`0x1::BCS`](../../modules/doc/BCS.md#0x1_BCS)
 -  [`0x1::ChainId`](../../modules/doc/ChainId.md#0x1_ChainId)
 -  [`0x1::CoreAddresses`](../../modules/doc/CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer)
@@ -5062,7 +5063,6 @@ with this <code>hash</code> can be successfully sent to the network.
 -  [`0x1::Event`](../../modules/doc/Event.md#0x1_Event)
 -  [`0x1::FixedPoint32`](../../modules/doc/FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Hash`](../../modules/doc/Hash.md#0x1_Hash)
--  [`0x1::LCS`](../../modules/doc/LCS.md#0x1_LCS)
 -  [`0x1::Option`](../../modules/doc/Option.md#0x1_Option)
 -  [`0x1::RecoveryAddress`](../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress)
 -  [`0x1::RegisteredCurrencies`](../../modules/doc/RegisteredCurrencies.md#0x1_RegisteredCurrencies)

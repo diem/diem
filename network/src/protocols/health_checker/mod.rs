@@ -284,7 +284,7 @@ where
         ping: Ping,
         res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
     ) {
-        let message = match lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))) {
+        let message = match bcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))) {
             Ok(msg) => msg,
             Err(e) => {
                 warn!(

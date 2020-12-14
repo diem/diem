@@ -1,6 +1,6 @@
 
 module M {
-    use 0x1::LCS;
+    use 0x1::BCS;
 
     struct Box<T> { x: T }
     struct Box3<T> { x: Box<Box<T>> }
@@ -40,15 +40,15 @@ module M {
     }
 
     public fun encode_128(): vector<u8> {
-        LCS::to_bytes(&box127(true))
+        BCS::to_bytes(&box127(true))
     }
 
     public fun encode_256(): vector<u8> {
-        LCS::to_bytes(&box255(true))
+        BCS::to_bytes(&box255(true))
     }
 
     public fun encode_257(): vector<u8> {
-        LCS::to_bytes(&Box { x: box255(true) })
+        BCS::to_bytes(&Box { x: box255(true) })
     }
 }
 // check: "Keep(EXECUTED)"
@@ -84,4 +84,4 @@ script {
         M::encode_257();
     }
 }
-// check: "ABORTED { code: 453, location: 00000000000000000000000000000001::LCS }"
+// check: "ABORTED { code: 453, location: 00000000000000000000000000000001::BCS }"

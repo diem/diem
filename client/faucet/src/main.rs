@@ -227,8 +227,8 @@ mod tests {
             .await;
         let body = resp.body();
         let txns: Vec<diem_types::transaction::SignedTransaction> =
-            lcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
-                .expect("valid lcs vec");
+            bcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
+                .expect("valid bcs vec");
         assert_eq!(txns.len(), 2);
         let reader = accounts.read();
         let addr = AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
@@ -258,8 +258,8 @@ mod tests {
             .await;
         let body = resp.body();
         let txns: Vec<diem_types::transaction::SignedTransaction> =
-            lcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
-                .expect("valid lcs vec");
+            bcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
+                .expect("valid bcs vec");
         assert_eq!(txns.len(), 2);
         let reader = accounts.read();
         let addr = AccountAddress::try_from("54aa533116e934f8a50c28bece06d3ac".to_owned()).unwrap();
@@ -328,7 +328,7 @@ mod tests {
             Some("submit") => {
                 let raw: &str = req["params"][0].as_str().unwrap();
                 let txn: diem_types::transaction::SignedTransaction =
-                    lcs::from_bytes(&hex::decode(raw).unwrap()).unwrap();
+                    bcs::from_bytes(&hex::decode(raw).unwrap()).unwrap();
                 assert_eq!(txn.chain_id(), chain_id);
                 if let Script(script) = txn.payload() {
                     match ScriptCall::decode(script) {

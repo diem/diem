@@ -30,7 +30,7 @@ The proofs:
 | ledger_info_to_transaction_infos_proof  | string | An hex encoded string of raw bytes of a `Vec<AccumulatorRangeProof<TransactionAccumulatorHasher>>` that contains the proofs of the returned transactions |
 | transaction_infos          | string | An hex encoded string of raw bytes of a `Vec<TransactionInfo>` that corresponds to returned transcations    |
 
-Notice that all raw bytes encoded strings are containing LCS encoded data.
+Notice that all raw bytes encoded strings are containing BCS encoded data.
 
 Also, please notice that you need the ledger_info at the time of the request in order to have the correct accumulator_hash to verify the ledger_info_to_transaction_infos_proof produced at that time, so you should do a batched call to `get_state_proof` whenever you call `get_transactions_with_proofs`.
 

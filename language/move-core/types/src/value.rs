@@ -95,11 +95,11 @@ impl MoveKindInfo {
 
 impl MoveValue {
     pub fn simple_deserialize(blob: &[u8], ty: &MoveTypeLayout) -> AResult<Self> {
-        Ok(lcs::from_bytes_seed(ty, blob)?)
+        Ok(bcs::from_bytes_seed(ty, blob)?)
     }
 
     pub fn simple_serialize(&self) -> Option<Vec<u8>> {
-        lcs::to_bytes(self).ok()
+        bcs::to_bytes(self).ok()
     }
 
     pub fn vector_u8(v: Vec<u8>) -> Self {
@@ -113,7 +113,7 @@ impl MoveStruct {
     }
 
     pub fn simple_deserialize(blob: &[u8], ty: &MoveStructLayout) -> AResult<Self> {
-        Ok(lcs::from_bytes_seed(ty, blob)?)
+        Ok(bcs::from_bytes_seed(ty, blob)?)
     }
 
     pub fn fields(&self) -> &[MoveValue] {

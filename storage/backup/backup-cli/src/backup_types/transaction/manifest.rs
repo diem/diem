@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
 pub struct TransactionChunk {
     pub first_version: Version,
     pub last_version: Version,
-    /// Repeated `len(record) + record`, where `record` is LCS serialized tuple
+    /// Repeated `len(record) + record`, where `record` is BCS serialized tuple
     /// `(Transaction, TransactionInfo)`
     pub transactions: FileHandle,
-    /// LCS serialized `(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)`.
+    /// BCS serialized `(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)`.
     /// The `TransactionAccumulatorRangeProof` links the transactions to the
     /// `LedgerInfoWithSignatures`, and the `LedgerInfoWithSignatures` can be verified by the
     /// signatures it carries, against the validator set in the epoch. (Hence proper

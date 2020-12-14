@@ -337,11 +337,11 @@ async fn mempool_load_test(
     let task_start = Instant::now();
     while Instant::now().duration_since(task_start) < duration {
         let msg = diem_mempool::network::MempoolSyncMsg::BroadcastTransactionsRequest {
-            request_id: lcs::to_bytes("request_id")?,
+            request_id: bcs::to_bytes("request_id")?,
             transactions: vec![], // TODO submit actual txns
         };
         // TODO log stats for bandwidth sent to remote peer to MempoolResult
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
+        bytes += bcs::to_bytes(&msg)?.len() as u64;
         msg_num += 1;
         sender.send_to(vfn, msg)?;
 
@@ -444,7 +444,7 @@ async fn state_sync_load_test(
         let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
-        bytes += lcs::to_bytes(&msg)?.len() as u64;
+        bytes += bcs::to_bytes(&msg)?.len() as u64;
         msg_num += 1;
         sender.send_to(vfn, msg)?;
 

@@ -3,7 +3,7 @@ error: post-condition does not hold
 
     ┌── tests/sources/functional/address_serialization_constant_size.move:19:9 ───
     │
- 19 │         ensures len(LCS::serialize(mv1)) == len(LCS::serialize(mv2));
+ 19 │         ensures len(BCS::serialize(mv1)) == len(BCS::serialize(mv2));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/address_serialization_constant_size.move:15:5: serialized_move_values_diff_len_incorrect

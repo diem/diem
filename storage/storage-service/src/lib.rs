@@ -33,16 +33,16 @@ pub struct StorageService {
 
 impl StorageService {
     fn handle_message(&self, input_message: Vec<u8>) -> Result<Vec<u8>, Error> {
-        let input = lcs::from_bytes(&input_message)?;
+        let input = bcs::from_bytes(&input_message)?;
         let output = match input {
             storage_interface::StorageRequest::GetAccountStateWithProofByVersionRequest(req) => {
-                lcs::to_bytes(&self.get_account_state_with_proof_by_version(&req))
+                bcs::to_bytes(&self.get_account_state_with_proof_by_version(&req))
             }
             storage_interface::StorageRequest::GetStartupInfoRequest => {
-                lcs::to_bytes(&self.get_startup_info())
+                bcs::to_bytes(&self.get_startup_info())
             }
             storage_interface::StorageRequest::SaveTransactionsRequest(req) => {
-                lcs::to_bytes(&self.save_transactions(&req))
+                bcs::to_bytes(&self.save_transactions(&req))
             }
         };
         Ok(output?)

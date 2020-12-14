@@ -123,7 +123,7 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     const IDENTIFIER: &'static str;
     const CONFIG_ID: ConfigID = ConfigID(Self::ADDRESS, Self::IDENTIFIER);
 
-    // Single-round LCS deserialization from bytes to `Self`
+    // Single-round BCS deserialization from bytes to `Self`
     // This is the expected deserialization pattern for most Rust representations,
     // but sometimes `deserialize_into_config` may need an extra customized round of deserialization
     // (e.g. enums like `VMPublishingOption`)
@@ -131,12 +131,12 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     // Note: we cannot directly call the default `deserialize_into_config` implementation
     // in its override - this will just refer to the override implementation itself
     fn deserialize_default_impl(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes::<Self>(&bytes)
+        bcs::from_bytes::<Self>(&bytes)
             .map_err(|e| format_err!("[on-chain config] Failed to deserialize into config: {}", e))
     }
 
     // Function for deserializing bytes to `Self`
-    // It will by default try one round of LCS deserialization directly to `Self`
+    // It will by default try one round of BCS deserialization directly to `Self`
     // The implementation for the concrete type should override this function if this
     // logic needs to be customized
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {

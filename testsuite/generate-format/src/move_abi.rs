@@ -12,7 +12,7 @@ pub fn output_file() -> Option<&'static str> {
 
 pub fn get_registry() -> Result<Registry> {
     let mut tracer =
-        Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
+        Tracer::new(TracerConfig::default().is_human_readable(bcs::is_human_readable()));
     let samples = Samples::new();
     // 1. Record samples for types with custom deserializers.
 

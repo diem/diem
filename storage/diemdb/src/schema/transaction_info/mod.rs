@@ -42,11 +42,11 @@ impl KeyCodec<TransactionInfoSchema> for Version {
 
 impl ValueCodec<TransactionInfoSchema> for TransactionInfo {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        lcs::to_bytes(self).map_err(Into::into)
+        bcs::to_bytes(self).map_err(Into::into)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        lcs::from_bytes(data).map_err(Into::into)
+        bcs::from_bytes(data).map_err(Into::into)
     }
 }
 

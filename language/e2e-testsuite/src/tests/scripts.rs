@@ -154,17 +154,17 @@ fn script_non_existing_function_dep() {
     // create a bogus script
     let mut script = empty_script();
 
-    // LCS module
+    // BCS module
     script
         .address_identifiers
         .push(account_config::CORE_CODE_ADDRESS);
-    script.identifiers.push(Identifier::new("LCS").unwrap());
+    script.identifiers.push(Identifier::new("BCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
-    // make a non existent function on LCS
+    // make a non existent function on BCS
     script.identifiers.push(Identifier::new("foo").unwrap());
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
@@ -230,17 +230,17 @@ fn script_bad_sig_function_dep() {
     // create a bogus script
     let mut script = empty_script();
 
-    // LCS module
+    // BCS module
     script
         .address_identifiers
         .push(account_config::CORE_CODE_ADDRESS);
-    script.identifiers.push(Identifier::new("LCS").unwrap());
+    script.identifiers.push(Identifier::new("BCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
-    // LCS::to_bytes with bad sig
+    // BCS::to_bytes with bad sig
     script
         .identifiers
         .push(Identifier::new("to_bytes").unwrap());

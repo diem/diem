@@ -129,7 +129,7 @@ pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
         (N::SHA3_256, GasCost::new(64, 1)),
         (N::ED25519_VERIFY, GasCost::new(61, 1)),
         (N::ED25519_THRESHOLD_VERIFY, GasCost::new(3351, 1)),
-        (N::LCS_TO_BYTES, GasCost::new(181, 1)),
+        (N::BCS_TO_BYTES, GasCost::new(181, 1)),
         (N::LENGTH, GasCost::new(98, 1)),
         (N::EMPTY, GasCost::new(84, 1)),
         (N::BORROW, GasCost::new(1334, 1)),

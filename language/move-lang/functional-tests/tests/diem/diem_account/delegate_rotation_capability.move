@@ -90,7 +90,7 @@ fun main() {
 //! sender: bob
 script {
 use {{alice}}::SharedKeyRotation;
-use 0x1::LCS;
+use 0x1::BCS;
 use 0x1::DiemAccount;
 use 0x1::Vector;
 // Bob now rotates the key back to its old value
@@ -100,7 +100,7 @@ fun main(account: &signer) {
     // details to be found in DiemAccount::make_account
     let newkey = Vector::empty();
     Vector::append(&mut newkey, {{alice::auth_key}});
-    Vector::append(&mut newkey, LCS::to_bytes(&{{alice}}));
+    Vector::append(&mut newkey, BCS::to_bytes(&{{alice}}));
     SharedKeyRotation::rotate(account, {{alice}}, newkey);
 }
 }

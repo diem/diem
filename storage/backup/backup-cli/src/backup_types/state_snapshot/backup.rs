@@ -155,7 +155,7 @@ impl StateSnapshotBackupController {
     }
 
     fn parse_key(record: &Bytes) -> Result<HashValue> {
-        let (key, _): (HashValue, AccountStateBlob) = lcs::from_bytes(record)?;
+        let (key, _): (HashValue, AccountStateBlob) = bcs::from_bytes(record)?;
         Ok(key)
     }
 
@@ -205,7 +205,7 @@ impl StateSnapshotBackupController {
     ) -> Result<FileHandle> {
         let proof_bytes = self.client.get_state_root_proof(self.version).await?;
         let (txn_info, _): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
-            lcs::from_bytes(&proof_bytes)?;
+            bcs::from_bytes(&proof_bytes)?;
 
         let (proof_handle, mut proof_file) = self
             .storage

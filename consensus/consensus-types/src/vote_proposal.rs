@@ -3,7 +3,7 @@
 
 use crate::block::Block;
 use diem_crypto::{ed25519::Ed25519Signature, hash::TransactionAccumulatorHasher};
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use diem_types::{epoch_state::EpochState, proof::AccumulatorExtensionProof};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -13,7 +13,7 @@ use std::{
 
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
-#[derive(Clone, Debug, CryptoHasher, Deserialize, LCSCryptoHash, Serialize)]
+#[derive(Clone, Debug, CryptoHasher, Deserialize, BCSCryptoHash, Serialize)]
 pub struct VoteProposal {
     /// Contains the data necessary to construct the parent's execution output state
     /// and the childs in a verifiable way

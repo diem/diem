@@ -32,12 +32,12 @@ Module managing dual attestation.
     -  [Access Control](#@Access_Control_4)
 
 
-<pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
+<pre><code><b>use</b> <a href="BCS.md#0x1_BCS">0x1::BCS</a>;
+<b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
 <b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
 <b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Event.md#0x1_Event">0x1::Event</a>;
-<b>use</b> <a href="LCS.md#0x1_LCS">0x1::LCS</a>;
 <b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
 <b>use</b> <a href="Signature.md#0x1_Signature">0x1::Signature</a>;
 <b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
@@ -973,8 +973,8 @@ Message is <code>metadata</code> | <code>payer</code> | <code>amount</code> | <c
     payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64
 ): vector&lt;u8&gt; {
     <b>let</b> message = metadata;
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&payer));
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&deposit_value));
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&payer));
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&deposit_value));
     <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DOMAIN_SEPARATOR</a>);
     message
 }
@@ -988,7 +988,7 @@ Message is <code>metadata</code> | <code>payer</code> | <code>amount</code> | <c
 <summary>Specification</summary>
 
 
-Abstract from construction of message for the prover. Concatenation of results from <code><a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a></code>
+Abstract from construction of message for the prover. Concatenation of results from <code><a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a></code>
 are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
 message is not important for the verification problem, as long as the prover considers both
 messages which fail verification and which do not.

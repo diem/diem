@@ -153,7 +153,7 @@ impl EncNetworkAddress {
         addr_idx: u32,
     ) -> Result<Self, ParseError> {
         // unpack the NetworkAddress into its base Vec<u8>
-        let mut addr_vec: Vec<u8> = lcs::to_bytes(&addr)?;
+        let mut addr_vec: Vec<u8> = bcs::to_bytes(&addr)?;
 
         let derived_key = Self::derive_key(shared_val_netaddr_key, account);
         let aead = Aes256Gcm::new(GenericArray::from_slice(&derived_key));
@@ -237,7 +237,7 @@ impl EncNetworkAddress {
         // remove the auth tag suffix, leaving just the decrypted network address
         enc_addr.truncate(auth_tag_offset);
 
-        lcs::from_bytes(&enc_addr).map_err(|e| e.into())
+        bcs::from_bytes(&enc_addr).map_err(|e| e.into())
     }
 
     /// Given the shared `shared_val_netaddr_key`, derive the per-validator

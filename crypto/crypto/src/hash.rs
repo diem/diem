@@ -31,7 +31,7 @@
 //! from another type.
 //!
 //! Finally, to prevent format ambiguity within a same type `MyNewStruct` and facilitate protocol
-//! specifications, we use [Diem Canonical Serialization (LCS)](../../diem_canonical_serialization/index.html)
+//! specifications, we use [Binary Canonical Serialization (BCS)](https://docs.rs/bcs/)
 //! as the recommended solution to write Rust values into a hasher.
 //!
 //! # Quick Start
@@ -40,9 +40,9 @@
 //! use the derive macros of `serde` and `diem_crypto_derive` as follows:
 //! ```
 //! use diem_crypto::hash::CryptoHash;
-//! use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+//! use diem_crypto_derive::{CryptoHasher, BCSCryptoHash};
 //! use serde::{Deserialize, Serialize};
-//! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
+//! #[derive(Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
 //! struct MyNewStruct { /*...*/ }
 //!
 //! let value = MyNewStruct { /*...*/ };
@@ -50,7 +50,7 @@
 //! ```
 //!
 //! Under the hood, this will generate a new implementation `MyNewStructHasher` for the trait
-//! `CryptoHasher` and implement the trait `CryptoHash` for `MyNewStruct` using LCS.
+//! `CryptoHasher` and implement the trait `CryptoHash` for `MyNewStruct` using BCS.
 //!
 //! # Implementing New Hashers
 //!
@@ -437,7 +437,7 @@ impl<'a> std::iter::ExactSizeIterator for HashValueBitIterator<'a> {}
 /// A type that can be cryptographically hashed to produce a `HashValue`.
 ///
 /// In most cases, this trait should not be implemented manually but rather derived using
-/// the macros `serde::Serialize`, `CryptoHasher`, and `LCSCryptoHash`.
+/// the macros `serde::Serialize`, `CryptoHasher`, and `BCSCryptoHash`.
 pub trait CryptoHash {
     /// The associated `Hasher` type which comes with a unique salt for this type.
     type Hasher: CryptoHasher;
@@ -469,7 +469,7 @@ impl DefaultHasher {
     #[doc(hidden)]
     /// This function does not return a HashValue in the sense of our usual
     /// hashes, but a construction of initial bytes that are fed into any hash
-    /// provided we're passed  a (lcs) serialization name as argument.
+    /// provided we're passed  a (bcs) serialization name as argument.
     pub fn prefixed_hash(buffer: &[u8]) -> [u8; HashValue::LENGTH] {
         // The salt is initial material we prefix to actual value bytes for
         // domain separation. Its length is variable.
@@ -651,7 +651,7 @@ pub trait TestOnlyHash {
 
 impl<T: ser::Serialize + ?Sized> TestOnlyHash for T {
     fn test_only_hash(&self) -> HashValue {
-        let bytes = lcs::to_bytes(self).expect("serialize failed during hash.");
+        let bytes = bcs::to_bytes(self).expect("serialize failed during hash.");
         let mut hasher = TestOnlyHasher::default();
         hasher.update(&bytes);
         hasher.finish()

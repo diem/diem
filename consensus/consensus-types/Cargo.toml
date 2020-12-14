@@ -13,7 +13,7 @@ proptest = { version = "0.10.1", optional = true }
 serde = { version = "1.0.117", default-features = false }
 
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
-lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
+bcs = "0.1.1"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

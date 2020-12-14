@@ -8,8 +8,8 @@ use crate::{
             get_json_rpc_diem_interface, get_op_tool, load_backend_storage, load_diem_root_storage,
             load_node_config,
         },
-        wait_for_transaction_on_all_nodes, write_key_to_file_hex_format,
-        write_key_to_file_lcs_format,
+        wait_for_transaction_on_all_nodes, write_key_to_file_bcs_format,
+        write_key_to_file_hex_format,
     },
 };
 use diem_config::config::SecureBackend;
@@ -135,8 +135,8 @@ fn test_create_operator_hex_file() {
 }
 
 #[test]
-fn test_create_operator_lcs_file() {
-    create_operator_with_file_writer(write_key_to_file_lcs_format);
+fn test_create_operator_bcs_file() {
+    create_operator_with_file_writer(write_key_to_file_bcs_format);
 }
 
 #[test]
@@ -145,8 +145,8 @@ fn test_create_validator_hex_file() {
 }
 
 #[test]
-fn test_create_validator_lcs_file() {
-    create_validator_with_file_writer(write_key_to_file_lcs_format);
+fn test_create_validator_bcs_file() {
+    create_validator_with_file_writer(write_key_to_file_bcs_format);
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn test_set_operator_and_add_new_validator() {
     let operator_key_path = write_key_to_file(
         &operator_key.public_key(),
         &env,
-        write_key_to_file_lcs_format,
+        write_key_to_file_bcs_format,
     );
     let op_human_name = "new_operator";
     let (txn_ctx, _) = op_tool
@@ -372,7 +372,7 @@ fn test_extract_private_key() {
 
     // Verify the operator private key has been written correctly
     let file_contents = fs::read(key_file_path).unwrap();
-    let key_from_file = lcs::from_bytes(&file_contents).unwrap();
+    let key_from_file = bcs::from_bytes(&file_contents).unwrap();
     let key_from_storage = storage.export_private_key(OPERATOR_KEY).unwrap();
     assert_eq!(key_from_storage, key_from_file);
 }
@@ -390,7 +390,7 @@ fn test_extract_public_key() {
 
     // Verify the operator key has been written correctly
     let file_contents = fs::read(key_file_path).unwrap();
-    let key_from_file = lcs::from_bytes(&file_contents).unwrap();
+    let key_from_file = bcs::from_bytes(&file_contents).unwrap();
     let key_from_storage = storage.get_public_key(OPERATOR_KEY).unwrap().public_key;
     assert_eq!(key_from_storage, key_from_file);
 }

@@ -15,13 +15,13 @@ name = "abigen"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "codespan-reporting",
  "datatest-stable",
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
  "heck",
- "libra-canonical-serialization",
  "log",
  "move-core-types",
  "move-prover",
@@ -241,6 +241,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "backup-service",
+ "bcs",
  "byteorder",
  "bytes",
  "diem-config",
@@ -261,7 +262,6 @@ dependencies = [
  "futures 0.3.8",
  "hex",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "num_cpus",
  "once_cell",
  "pin-project 1.0.2",
@@ -283,6 +283,7 @@ name = "backup-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytes",
  "diem-config",
  "diem-crypto",
@@ -294,7 +295,6 @@ dependencies = [
  "diemdb",
  "futures 0.3.8",
  "hyper",
- "libra-canonical-serialization",
  "once_cell",
  "reqwest",
  "serde",
@@ -320,6 +320,16 @@ name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
+
+[[package]]
+name = "bcs"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de93f2dbfb1c5259e38da712ab293659ef9139b496d5253478bc8a709c295610"
+dependencies = [
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "bincode"
@@ -515,11 +525,11 @@ name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "codespan",
  "codespan-reporting",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "move-ir-types",
  "serde",
@@ -710,6 +720,7 @@ name = "cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "chrono",
  "compiled-stdlib",
  "compiler",
@@ -727,7 +738,6 @@ dependencies = [
  "diem-workspace-hack",
  "generate-key",
  "hex",
- "libra-canonical-serialization",
  "num-traits",
  "once_cell",
  "proptest",
@@ -757,6 +767,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bcs",
  "chrono",
  "consensus-types",
  "debug-interface",
@@ -786,7 +797,6 @@ dependencies = [
  "itertools 0.9.0",
  "k8s-openapi",
  "kube",
- "libra-canonical-serialization",
  "network",
  "network-builder",
  "num_cpus",
@@ -858,12 +868,12 @@ name = "compiled-stdlib"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytecode-verifier",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
  "include_dir",
- "libra-canonical-serialization",
  "once_cell",
  "sha2",
  "stdlib",
@@ -875,13 +885,13 @@ name = "compiler"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytecode-source-map",
  "bytecode-verifier",
  "compiled-stdlib",
  "diem-types",
  "diem-workspace-hack",
  "ir-to-bytecode",
- "libra-canonical-serialization",
  "move-ir-types",
  "serde_json",
  "structopt 0.3.21",
@@ -894,6 +904,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bcs",
  "byteorder",
  "bytes",
  "channel",
@@ -917,7 +928,6 @@ dependencies = [
  "fail",
  "futures 0.3.8",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "mirai-annotations",
  "network",
  "num-derive",
@@ -945,13 +955,13 @@ name = "consensus-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-crypto-derive",
  "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
  "executor-types",
- "libra-canonical-serialization",
  "mirai-annotations",
  "proptest",
  "serde",
@@ -1248,6 +1258,7 @@ name = "db-bootstrapper"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-temppath",
@@ -1256,7 +1267,6 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "executor",
- "libra-canonical-serialization",
  "storage-interface",
  "structopt 0.3.21",
 ]
@@ -1304,9 +1314,9 @@ dependencies = [
 name = "diem-bitvec"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "diem-proptest-helpers",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "proptest",
  "proptest-derive",
  "serde",
@@ -1317,6 +1327,7 @@ dependencies = [
 name = "diem-config"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "diem-crypto",
  "diem-crypto-derive",
  "diem-global-constants",
@@ -1328,7 +1339,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "get_if_addrs",
- "libra-canonical-serialization",
  "log",
  "mirai-annotations",
  "rand 0.7.3",
@@ -1343,6 +1353,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "bcs",
  "bitvec",
  "byteorder",
  "bytes",
@@ -1357,7 +1368,6 @@ dependencies = [
  "ed25519-dalek 1.0.1 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat5)",
  "hex",
  "hkdf",
- "libra-canonical-serialization",
  "mirai-annotations",
  "once_cell",
  "proptest",
@@ -1395,12 +1405,12 @@ dependencies = [
 name = "diem-dev"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "bindgen",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
  "libc",
- "libra-canonical-serialization",
  "move-core-types",
  "rand 0.7.3",
  "static_assertions",
@@ -1428,12 +1438,12 @@ name = "diem-events-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-json-rpc-client",
  "diem-types",
  "diem-workspace-hack",
  "futures 0.3.8",
  "hex",
- "libra-canonical-serialization",
  "reqwest",
  "structopt 0.3.21",
  "tokio",
@@ -1444,6 +1454,7 @@ name = "diem-faucet"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-infallible",
@@ -1453,7 +1464,6 @@ dependencies = [
  "diem-workspace-hack",
  "generate-key",
  "hex",
- "libra-canonical-serialization",
  "move-core-types",
  "reqwest",
  "serde",
@@ -1482,6 +1492,7 @@ version = "0.1.0"
 dependencies = [
  "accumulator",
  "anyhow",
+ "bcs",
  "byteorder",
  "consensus",
  "consensus-types",
@@ -1500,7 +1511,6 @@ dependencies = [
  "executor-types",
  "hex",
  "language-e2e-tests",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-types",
  "network",
@@ -1525,6 +1535,7 @@ name = "diem-genesis-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "consensus-types",
  "diem-config",
  "diem-crypto",
@@ -1541,7 +1552,6 @@ dependencies = [
  "diemdb",
  "executor",
  "generate-key",
- "libra-canonical-serialization",
  "rand 0.7.3",
  "serde",
  "storage-interface",
@@ -1580,6 +1590,7 @@ name = "diem-jellyfish-merkle"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "byteorder",
  "diem-crypto",
  "diem-crypto-derive",
@@ -1587,7 +1598,6 @@ dependencies = [
  "diem-nibble",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "mirai-annotations",
  "num-derive",
  "num-traits",
@@ -1603,6 +1613,7 @@ name = "diem-json-rpc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "diem-config",
  "diem-crypto",
@@ -1626,7 +1637,6 @@ dependencies = [
  "generate-key",
  "hex",
  "hyper",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-types",
  "network",
@@ -1651,6 +1661,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-json-rpc-types",
@@ -1658,7 +1669,6 @@ dependencies = [
  "diem-workspace-hack",
  "futures 0.3.8",
  "hex",
- "libra-canonical-serialization",
  "rand 0.7.3",
  "reqwest",
  "serde",
@@ -1672,12 +1682,12 @@ name = "diem-json-rpc-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "move-core-types",
  "move-explain",
  "prost",
@@ -1753,6 +1763,7 @@ name = "diem-management"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-global-constants",
@@ -1764,7 +1775,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "serde",
  "serde_yaml",
  "structopt 0.3.21",
@@ -1778,6 +1788,7 @@ name = "diem-mempool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bounded-executor",
  "channel",
  "diem-config",
@@ -1793,7 +1804,6 @@ dependencies = [
  "fail",
  "futures 0.3.8",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "mirai-annotations",
  "netcore",
  "network",
@@ -1842,9 +1852,9 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "proptest",
  "proptest-derive",
@@ -1859,13 +1869,13 @@ name = "diem-network-address-encryption"
 version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
+ "bcs",
  "diem-global-constants",
  "diem-infallible",
  "diem-logger",
  "diem-network-address",
  "diem-secure-storage",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "rand 0.7.3",
  "serde",
@@ -1923,6 +1933,7 @@ name = "diem-operational-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-global-constants",
@@ -1936,7 +1947,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "serde",
  "serde_json",
  "structopt 0.3.21",
@@ -1969,6 +1979,7 @@ name = "diem-secure-json-rpc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-json-rpc",
@@ -1979,7 +1990,6 @@ dependencies = [
  "diemdb",
  "futures 0.3.8",
  "hex",
- "libra-canonical-serialization",
  "proptest",
  "serde",
  "serde_json",
@@ -2018,6 +2028,7 @@ name = "diem-secure-storage"
 version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
+ "bcs",
  "chrono",
  "diem-crypto",
  "diem-crypto-derive",
@@ -2029,7 +2040,6 @@ dependencies = [
  "diem-vault-client",
  "diem-workspace-hack",
  "enum_dispatch",
- "libra-canonical-serialization",
  "rand 0.7.3",
  "serde",
  "serde_json",
@@ -2129,6 +2139,7 @@ name = "diem-transaction-replay"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "diem-state-view",
  "diem-types",
@@ -2137,7 +2148,6 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "difference",
- "libra-canonical-serialization",
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
@@ -2155,6 +2165,7 @@ name = "diem-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytes",
  "chrono",
  "diem-crypto",
@@ -2165,7 +2176,6 @@ dependencies = [
  "diem-workspace-hack",
  "hex",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "mirai-annotations",
  "move-core-types",
  "once_cell",
@@ -2185,13 +2195,13 @@ name = "diem-validator-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-json-rpc-client",
  "diem-state-view",
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
- "libra-canonical-serialization",
  "reqwest",
  "scratchpad",
  "storage-interface",
@@ -2221,6 +2231,7 @@ name = "diem-vm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-logger",
  "diem-metrics",
@@ -2229,7 +2240,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "fail",
- "libra-canonical-serialization",
  "mirai-annotations",
  "move-core-types",
  "move-vm-runtime",
@@ -2291,6 +2301,7 @@ name = "diem-writeset-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "diem-state-view",
  "diem-types",
@@ -2299,7 +2310,6 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "handlebars",
- "libra-canonical-serialization",
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
@@ -2321,6 +2331,7 @@ dependencies = [
  "accumulator",
  "anyhow",
  "arc-swap",
+ "bcs",
  "byteorder",
  "diem-config",
  "diem-crypto",
@@ -2333,7 +2344,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "num-derive",
  "num-traits",
  "num-variants",
@@ -2598,11 +2608,11 @@ name = "errmapgen"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "codespan-reporting",
  "datatest-stable",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "log",
  "move-core-types",
  "move-prover",
@@ -2615,6 +2625,7 @@ name = "execution-correctness"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "consensus-types",
  "diem-config",
  "diem-crypto",
@@ -2631,7 +2642,6 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "libra-canonical-serialization",
  "rand 0.7.3",
  "serde",
  "storage-client",
@@ -2644,6 +2654,7 @@ name = "executor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "compiler",
  "consensus-types",
@@ -2665,7 +2676,6 @@ dependencies = [
  "executor-types",
  "fail",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "move-core-types",
  "once_cell",
  "proptest",
@@ -2731,11 +2741,11 @@ name = "executor-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-secure-net",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "scratchpad",
  "serde",
  "storage-interface",
@@ -2999,6 +3009,7 @@ checksum = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 name = "generate-format"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "consensus",
  "consensus-types",
  "diem-config",
@@ -3007,7 +3018,6 @@ dependencies = [
  "diem-network-address",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "network",
  "rand 0.7.3",
@@ -3021,10 +3031,10 @@ dependencies = [
 name = "generate-key"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "diem-crypto",
  "diem-temppath",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "rand 0.7.3",
 ]
 
@@ -3051,10 +3061,10 @@ dependencies = [
 name = "genesis-viewer"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "compiled-stdlib",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "resource-viewer",
  "structopt 0.3.21",
  "vm",
@@ -3708,6 +3718,7 @@ name = "language-e2e-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "compiler",
  "diem-config",
@@ -3719,7 +3730,6 @@ dependencies = [
  "diem-workspace-hack",
  "goldenfile",
  "hex",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -3735,6 +3745,7 @@ dependencies = [
 name = "language-e2e-testsuite"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "bytecode-verifier",
  "compiled-stdlib",
  "compiler",
@@ -3745,7 +3756,6 @@ dependencies = [
  "diem-workspace-hack",
  "diem-writeset-generator",
  "language-e2e-tests",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -3792,16 +3802,6 @@ checksum = "f2b111a074963af1d37a139918ac6d49ad1d0d5e47f72fd55388619691a7d753"
 dependencies = [
  "cc",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "libra-canonical-serialization"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d8dddda30939e963210412740c920779b3b57d0b8ab58d94d562cc433d621f1"
-dependencies = [
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -4016,6 +4016,7 @@ name = "move-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "datatest-stable",
  "diem-state-view",
@@ -4026,7 +4027,6 @@ dependencies = [
  "disassembler",
  "errmapgen",
  "include_dir",
- "libra-canonical-serialization",
  "move-core-types",
  "move-coverage",
  "move-lang",
@@ -4045,11 +4045,11 @@ name = "move-core-types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-crypto-derive",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "mirai-annotations",
  "once_cell",
  "proptest",
@@ -4070,13 +4070,13 @@ name = "move-coverage"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytecode-source-map",
  "bytecode-verifier",
  "codespan",
  "colored",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "move-ir-types",
  "once_cell",
@@ -4090,10 +4090,10 @@ dependencies = [
 name = "move-explain"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "compiled-stdlib",
  "diem-workspace-hack",
  "errmapgen",
- "libra-canonical-serialization",
  "move-core-types",
  "structopt 0.3.21",
 ]
@@ -4117,6 +4117,7 @@ name = "move-lang"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "bcs",
  "borrow-graph",
  "bytecode-source-map",
  "bytecode-verifier",
@@ -4128,7 +4129,6 @@ dependencies = [
  "difference",
  "hex",
  "ir-to-bytecode",
- "libra-canonical-serialization",
  "move-core-types",
  "move-ir-types",
  "move-lang-test-utils",
@@ -4291,9 +4291,9 @@ dependencies = [
 name = "move-vm-types"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "diem-crypto",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "mirai-annotations",
  "move-core-types",
  "once_cell",
@@ -4384,6 +4384,7 @@ name = "network"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytes",
  "channel",
  "criterion",
@@ -4401,7 +4402,6 @@ dependencies = [
  "futures 0.3.8",
  "futures-util",
  "hex",
- "libra-canonical-serialization",
  "memsocket",
  "netcore",
  "network-builder",
@@ -4427,6 +4427,7 @@ dependencies = [
 name = "network-builder"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "channel",
  "diem-config",
  "diem-crypto",
@@ -4439,7 +4440,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "futures 0.3.8",
- "libra-canonical-serialization",
  "netcore",
  "network",
  "network-simple-onchain-discovery",
@@ -4455,6 +4455,7 @@ name = "network-simple-onchain-discovery"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "channel",
  "diem-config",
  "diem-crypto",
@@ -4465,7 +4466,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "futures 0.3.8",
- "libra-canonical-serialization",
  "move-core-types",
  "network",
  "once_cell",
@@ -5542,12 +5542,12 @@ name = "resource-viewer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "compiled-stdlib",
  "diem-state-view",
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -5786,6 +5786,7 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 name = "safety-rules"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "consensus-types",
  "crash-handler",
  "criterion",
@@ -5802,7 +5803,6 @@ dependencies = [
  "diem-types",
  "diem-vault-client",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "once_cell",
  "proptest",
  "rand 0.7.3",
@@ -5899,6 +5899,7 @@ name = "seed-peer-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-logger",
@@ -5908,7 +5909,6 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "rand 0.7.3",
  "serde_yaml",
  "structopt 0.3.21",
@@ -5961,14 +5961,14 @@ dependencies = [
 
 [[package]]
 name = "serde-generate"
-version = "0.16.1"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "304bf0df4a8ef83155b0ee0e30bd1cffc9a7887c04a0d3f747c166b87c69801f"
+checksum = "075353ee504a2b099d4fd0b5d452b6bde115e8bbe61a6ec11d3ef834924e64f9"
 dependencies = [
+ "bcs",
  "bincode",
  "heck",
  "include_dir",
- "libra-canonical-serialization",
  "maplit",
  "serde",
  "serde-reflection",
@@ -6241,6 +6241,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "backup-cli",
+ "bcs",
  "cli",
  "debug-interface",
  "diem-config",
@@ -6268,7 +6269,6 @@ dependencies = [
  "diem-workspace-hack",
  "generate-key",
  "hex",
- "libra-canonical-serialization",
  "num 0.3.1",
  "num-traits",
  "once_cell",
@@ -6358,6 +6358,7 @@ name = "state-synchronizer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytes",
  "channel",
  "compiled-stdlib",
@@ -6381,7 +6382,6 @@ dependencies = [
  "fail",
  "futures 0.3.8",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "memsocket",
  "netcore",
  "network",
@@ -6425,13 +6425,13 @@ name = "stdlib"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytecode-verifier",
  "clap",
  "datatest-stable",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "log",
  "move-lang",
  "move-prover",
@@ -6496,13 +6496,13 @@ name = "storage-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-infallible",
  "diem-logger",
  "diem-secure-net",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "serde",
  "storage-interface",
 ]
@@ -6512,13 +6512,13 @@ name = "storage-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-crypto",
  "diem-secure-net",
  "diem-state-view",
  "diem-types",
  "diem-workspace-hack",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "move-core-types",
  "scratchpad",
  "serde",
@@ -6530,6 +6530,7 @@ name = "storage-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-config",
  "diem-crypto",
  "diem-logger",
@@ -6541,7 +6542,6 @@ dependencies = [
  "diemdb",
  "futures 0.3.8",
  "itertools 0.9.0",
- "libra-canonical-serialization",
  "proptest",
  "rand 0.7.3",
  "storage-client",
@@ -6627,11 +6627,11 @@ checksum = "171758edb47aa306a78dfa4ab9aeb5167405bd4e3dc2b64e88f6a84bbe98bd63"
 name = "swiss-knife"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "libra-canonical-serialization",
  "move-core-types",
  "rand 0.7.3",
  "serde",
@@ -7068,11 +7068,11 @@ dependencies = [
 name = "transaction-builder-generated"
 version = "0.1.0"
 dependencies = [
+ "bcs",
  "compiled-stdlib",
  "diem-proptest-helpers",
  "diem-types",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "once_cell",
  "proptest",
@@ -7085,10 +7085,10 @@ name = "transaction-builder-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "diem-types",
  "diem-workspace-hack",
  "heck",
- "libra-canonical-serialization",
  "move-core-types",
  "regex",
  "serde-generate",
@@ -7321,6 +7321,7 @@ name = "vm-genesis"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "bytecode-verifier",
  "compiled-stdlib",
  "diem-config",
@@ -7331,7 +7332,6 @@ dependencies = [
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
- "libra-canonical-serialization",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",

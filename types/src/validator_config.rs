@@ -35,9 +35,9 @@ impl MoveResource for ValidatorOperatorConfigResource {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorConfig {
     pub consensus_public_key: Ed25519PublicKey,
-    /// This is an lcs serialized Vec<EncNetworkAddress>
+    /// This is an bcs serialized Vec<EncNetworkAddress>
     pub validator_network_addresses: Vec<u8>,
-    /// This is an lcs serialized Vec<NetworkAddress>
+    /// This is an bcs serialized Vec<NetworkAddress>
     pub fullnode_network_addresses: Vec<u8>,
 }
 
@@ -54,11 +54,11 @@ impl ValidatorConfig {
         }
     }
 
-    pub fn fullnode_network_addresses(&self) -> Result<Vec<NetworkAddress>, lcs::Error> {
-        lcs::from_bytes(&self.fullnode_network_addresses)
+    pub fn fullnode_network_addresses(&self) -> Result<Vec<NetworkAddress>, bcs::Error> {
+        bcs::from_bytes(&self.fullnode_network_addresses)
     }
 
-    pub fn validator_network_addresses(&self) -> Result<Vec<EncNetworkAddress>, lcs::Error> {
-        lcs::from_bytes(&self.validator_network_addresses)
+    pub fn validator_network_addresses(&self) -> Result<Vec<EncNetworkAddress>, bcs::Error> {
+        bcs::from_bytes(&self.validator_network_addresses)
     }
 }

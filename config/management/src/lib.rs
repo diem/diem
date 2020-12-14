@@ -42,10 +42,10 @@ use diem_crypto::ed25519::Ed25519PublicKey;
 use std::{convert::TryInto, fs, path::PathBuf};
 
 /// Reads a given ed25519 public key from file. Attempts to read the key using
-/// lcs encoding first. If this fails, attempts reading the key using hex.
+/// bcs encoding first. If this fails, attempts reading the key using hex.
 pub fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
-    let lcs_bytes = fs::read(path).map_err(|e| e.to_string())?;
-    if let Ok(key) = lcs::from_bytes(&lcs_bytes) {
+    let bcs_bytes = fs::read(path).map_err(|e| e.to_string())?;
+    if let Ok(key) = bcs::from_bytes(&bcs_bytes) {
         Ok(key)
     } else {
         let hex_bytes = fs::read_to_string(path).map_err(|e| e.to_string())?;

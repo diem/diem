@@ -7,11 +7,11 @@ use diem_crypto::{
     test_utils::KeyPair,
     traits::*,
 };
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{CryptoHasher, BCSCryptoHash};
 use rand::{prelude::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 
-#[derive(CryptoHasher, LCSCryptoHash, Serialize, Deserialize)]
+#[derive(CryptoHasher, BCSCryptoHash, Serialize, Deserialize)]
 struct TestTypedSemantics(String);
 
 fn main() {

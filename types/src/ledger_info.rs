@@ -10,7 +10,7 @@ use crate::{
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use diem_crypto::{ed25519::Ed25519Signature, hash::HashValue};
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ use std::{
 /// LedgerInfo with the `version` being the latest version that will be committed if B gets 2f+1
 /// votes. It sets `consensus_data_hash` to represent B so that if those 2f+1 votes are gathered a
 /// QC is formed on B.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct LedgerInfo {
     commit_info: BlockInfo,
@@ -313,9 +313,9 @@ mod tests {
             LedgerInfoWithV0::new(ledger_info, author_to_signature_map);
 
         let ledger_info_with_signatures_bytes =
-            lcs::to_bytes(&ledger_info_with_signatures).expect("block serialization failed");
+            bcs::to_bytes(&ledger_info_with_signatures).expect("block serialization failed");
         let ledger_info_with_signatures_reversed_bytes =
-            lcs::to_bytes(&ledger_info_with_signatures_reversed)
+            bcs::to_bytes(&ledger_info_with_signatures_reversed)
                 .expect("block serialization failed");
 
         assert_eq!(

@@ -1161,7 +1161,7 @@ fn metadata_sample() -> Value {
 
 fn signed_txn_sample() -> SignedTransaction {
     let bytes = hex::decode(signed_txn_hex_sample()).unwrap();
-    lcs::from_bytes(&bytes).unwrap()
+    bcs::from_bytes(&bytes).unwrap()
 }
 
 fn signed_txn_hex_sample() -> String {

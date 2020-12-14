@@ -48,7 +48,7 @@ fn get_validator_set(endpoint: String, peer_id: PeerId) -> anyhow::Result<Option
 /// Convert ValidatorInfo to a seed peer
 fn to_seed_peer(
     validator_info: &ValidatorInfo,
-) -> Result<(PeerId, Vec<NetworkAddress>), lcs::Error> {
+) -> Result<(PeerId, Vec<NetworkAddress>), bcs::Error> {
     let peer_id = *validator_info.account_address();
     let addrs = validator_info.config().fullnode_network_addresses()?;
     Ok((peer_id, addrs))

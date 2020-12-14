@@ -15,8 +15,8 @@ pub enum NetworkErrorKind {
     #[error("IO error")]
     IoError,
 
-    #[error("Lcs error")]
-    LcsError,
+    #[error("Bcs error")]
+    BcsError,
 
     #[error("PeerManager error")]
     PeerManagerError,
@@ -45,10 +45,10 @@ impl From<io::Error> for NetworkError {
     }
 }
 
-impl From<lcs::Error> for NetworkError {
-    fn from(err: lcs::Error) -> NetworkError {
+impl From<bcs::Error> for NetworkError {
+    fn from(err: bcs::Error) -> NetworkError {
         anyhow::Error::new(err)
-            .context(NetworkErrorKind::LcsError)
+            .context(NetworkErrorKind::BcsError)
             .into()
     }
 }

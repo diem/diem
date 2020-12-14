@@ -490,7 +490,7 @@ impl Signature for MultiEd25519Signature {
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let mut bytes = <T as CryptoHash>::Hasher::seed().to_vec();
-        lcs::serialize_into(&mut bytes, &message)
+        bcs::serialize_into(&mut bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)?;
         Self::verify_arbitrary_msg(self, &bytes, public_key)
     }

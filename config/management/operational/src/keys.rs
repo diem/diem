@@ -61,7 +61,7 @@ impl ExtractPrivateKey {
 }
 
 fn save_key<T: Serialize>(key: &T, key_name: &'static str, path: &PathBuf) -> Result<(), Error> {
-    let encoded = lcs::to_bytes(key).map_err(|e| Error::LCS(key_name.to_string(), e))?;
+    let encoded = bcs::to_bytes(key).map_err(|e| Error::BCS(key_name.to_string(), e))?;
     let mut file = File::create(path).map_err(|e| Error::IO(key_name.to_string(), e))?;
     file.write_all(&encoded)
         .map_err(|e| Error::IO(key_name.to_string(), e))?;

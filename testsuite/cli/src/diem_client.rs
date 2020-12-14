@@ -100,7 +100,7 @@ impl DiemClient {
             .map(|r| r.result)
             .map_err(anyhow::Error::new)?;
         if !ret.blob.is_empty() {
-            Ok((Some(lcs::from_bytes(&hex::decode(ret.blob)?)?), ret.version))
+            Ok((Some(bcs::from_bytes(&hex::decode(ret.blob)?)?), ret.version))
         } else {
             Ok((None, ret.version))
         }
@@ -169,9 +169,9 @@ impl DiemClient {
         let state = self.trusted_state();
 
         let li: LedgerInfoWithSignatures =
-            lcs::from_bytes(&hex::decode(state_proof.ledger_info_with_signatures)?)?;
+            bcs::from_bytes(&hex::decode(state_proof.ledger_info_with_signatures)?)?;
         let epoch_change_proof: EpochChangeProof =
-            lcs::from_bytes(&hex::decode(state_proof.epoch_change_proof)?)?;
+            bcs::from_bytes(&hex::decode(state_proof.epoch_change_proof)?)?;
 
         // check ledger info version
         ensure!(

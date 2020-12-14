@@ -31,14 +31,14 @@ impl SerializerService {
     }
 
     pub fn handle_message(&mut self, input_message: Vec<u8>) -> Result<Vec<u8>, Error> {
-        let input = lcs::from_bytes(&input_message)?;
+        let input = bcs::from_bytes(&input_message)?;
 
         let output = match input {
             ExecutionCorrectnessInput::CommittedBlockId => {
-                lcs::to_bytes(&self.internal.committed_block_id())
+                bcs::to_bytes(&self.internal.committed_block_id())
             }
-            ExecutionCorrectnessInput::Reset => lcs::to_bytes(&self.internal.reset()),
-            ExecutionCorrectnessInput::ExecuteBlock(block_with_parent_id) => lcs::to_bytes(
+            ExecutionCorrectnessInput::Reset => bcs::to_bytes(&self.internal.reset()),
+            ExecutionCorrectnessInput::ExecuteBlock(block_with_parent_id) => bcs::to_bytes(
                 &self
                     .internal
                     .execute_block(
@@ -58,7 +58,7 @@ impl SerializerService {
                         result
                     }),
             ),
-            ExecutionCorrectnessInput::CommitBlocks(blocks_with_li) => lcs::to_bytes(
+            ExecutionCorrectnessInput::CommitBlocks(blocks_with_li) => bcs::to_bytes(
                 &self
                     .internal
                     .commit_blocks(blocks_with_li.0, blocks_with_li.1),
@@ -90,12 +90,12 @@ impl SerializerClient {
 impl ExecutionCorrectness for SerializerClient {
     fn committed_block_id(&mut self) -> Result<HashValue, Error> {
         let response = self.request(ExecutionCorrectnessInput::CommittedBlockId)?;
-        lcs::from_bytes(&response)?
+        bcs::from_bytes(&response)?
     }
 
     fn reset(&mut self) -> Result<(), Error> {
         let response = self.request(ExecutionCorrectnessInput::Reset)?;
-        lcs::from_bytes(&response)?
+        bcs::from_bytes(&response)?
     }
 
     fn execute_block(
@@ -107,7 +107,7 @@ impl ExecutionCorrectness for SerializerClient {
             block,
             parent_block_id,
         ))))?;
-        lcs::from_bytes(&response)?
+        bcs::from_bytes(&response)?
     }
 
     fn commit_blocks(
@@ -119,7 +119,7 @@ impl ExecutionCorrectness for SerializerClient {
             block_ids,
             ledger_info_with_sigs,
         ))))?;
-        lcs::from_bytes(&response)?
+        bcs::from_bytes(&response)?
     }
 }
 
@@ -133,7 +133,7 @@ struct LocalService {
 
 impl TSerializerClient for LocalService {
     fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
-        let input_message = lcs::to_bytes(&input)?;
+        let input_message = bcs::to_bytes(&input)?;
         self.serializer_service.lock().handle_message(input_message)
     }
 }

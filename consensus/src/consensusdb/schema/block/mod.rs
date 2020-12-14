@@ -35,11 +35,11 @@ impl KeyCodec<BlockSchema> for HashValue {
 
 impl ValueCodec<BlockSchema> for Block {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        Ok(lcs::to_bytes(&self)?)
+        Ok(bcs::to_bytes(&self)?)
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Ok(lcs::from_bytes(data)?)
+        Ok(bcs::from_bytes(data)?)
     }
 }
 

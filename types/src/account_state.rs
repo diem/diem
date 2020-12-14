@@ -176,7 +176,7 @@ impl AccountState {
     pub fn get_resource_impl<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
         self.0
             .get(key)
-            .map(|bytes| lcs::from_bytes(bytes))
+            .map(|bytes| bcs::from_bytes(bytes))
             .transpose()
             .map_err(Into::into)
     }
@@ -247,11 +247,11 @@ impl TryFrom<(&AccountResource, &BalanceResource)> for AccountState {
         let mut btree_map: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         btree_map.insert(
             AccountResource::resource_path(),
-            lcs::to_bytes(account_resource)?,
+            bcs::to_bytes(account_resource)?,
         );
         btree_map.insert(
             BalanceResource::resource_path(),
-            lcs::to_bytes(balance_resource)?,
+            bcs::to_bytes(balance_resource)?,
         );
 
         Ok(Self(btree_map))

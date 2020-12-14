@@ -61,7 +61,7 @@ module ApprovalGroup {
 module ColdWallet {
     use 0x1::XUS::XUS;
     use 0x1::Hash;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Diem;
     use 0x1::Vector;
     use 0x1::Signer;
@@ -123,14 +123,14 @@ module ColdWallet {
         // TODO: Move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
         let constant = x"636F6C6477616C6C65742E7472616E73616374696F6E";
-        let payer_bytes = LCS::to_bytes(&payer);
+        let payer_bytes = BCS::to_bytes(&payer);
 
         let transaction_bytes = copy payer_bytes;
         Vector::append(&mut transaction_bytes, constant);
 
-        let payee_bytes = LCS::to_bytes(&payee);
-        let amount_bytes = LCS::to_bytes(&amount);
-        let seq_bytes = LCS::to_bytes(&wallet.sequence_num);
+        let payee_bytes = BCS::to_bytes(&payee);
+        let amount_bytes = BCS::to_bytes(&amount);
+        let seq_bytes = BCS::to_bytes(&wallet.sequence_num);
 
         Vector::append(&mut transaction_bytes, payee_bytes);
         Vector::append(&mut transaction_bytes, amount_bytes);

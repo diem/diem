@@ -261,9 +261,9 @@ fn create_and_initialize_main_accounts(
     .unwrap();
 
     let genesis_gas_schedule = &INITIAL_GAS_SCHEDULE;
-    let instr_gas_costs = lcs::to_bytes(&genesis_gas_schedule.instruction_table)
+    let instr_gas_costs = bcs::to_bytes(&genesis_gas_schedule.instruction_table)
         .expect("Failure serializing genesis instr gas costs");
-    let native_gas_costs = lcs::to_bytes(&genesis_gas_schedule.native_table)
+    let native_gas_costs = bcs::to_bytes(&genesis_gas_schedule.native_table)
         .expect("Failure serializing genesis native gas costs");
 
     exec_function(
@@ -610,8 +610,8 @@ impl Validator {
         let script = transaction_builder::encode_register_validator_config_script(
             self.owner_address,
             self.key.public_key().to_bytes().to_vec(),
-            lcs::to_bytes(&[0u8; 0]).unwrap(),
-            lcs::to_bytes(&[0u8; 0]).unwrap(),
+            bcs::to_bytes(&[0u8; 0]).unwrap(),
+            bcs::to_bytes(&[0u8; 0]).unwrap(),
         );
         (self.key.public_key(), self.name.clone(), script)
     }

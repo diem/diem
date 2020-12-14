@@ -1,6 +1,6 @@
 # Diem Swiss Knife
 
-`swiss-knife` can be used to generate and serialize (LCS) raw and signed Diem transactions for a supported set of move scripts (See the `MoveScriptParams` enum for a list of supported MoveScripts). This binary is intended for use both by humans (interactive use) and to be called by automation (programs in any language which support json).
+`swiss-knife` can be used to generate and serialize (BCS) raw and signed Diem transactions for a supported set of move scripts (See the `MoveScriptParams` enum for a list of supported MoveScripts). This binary is intended for use both by humans (interactive use) and to be called by automation (programs in any language which support json).
 
 `swiss-knife` expects json input from stdin (wherever applicable) and writes json output to stdout. The output json object will always have two fields: `error_message` and `data`. If the operation succeeds, then `data` is set, otherwise `error_message` is set. Only one of them will be set and the other one will be an empty string.
 

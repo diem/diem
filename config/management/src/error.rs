@@ -18,7 +18,7 @@ pub enum Error {
     #[error("Error accessing '{0}': {1}")]
     IO(String, #[source] std::io::Error),
     #[error("Error (de)serializing '{0}': {1}")]
-    LCS(String, #[source] lcs::Error),
+    BCS(String, #[source] bcs::Error),
     #[error("Failed to read '{0}' from JSON-RPC: {1}")]
     JsonRpcReadError(&'static str, String),
     #[error("Failed to write '{0}' from JSON-RPC: {1}")]
