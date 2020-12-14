@@ -105,8 +105,6 @@ where
         executor.spawn(peer.start());
 
         // Setup and start RPC actor.
-        let (rpc_notifs_tx, _rpc_notifs_rx) =
-            channel::new(channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
         let (rpc_reqs_tx, rpc_reqs_rx) =
             channel::new(channel_size, &counters::PENDING_RPC_REQUESTS);
         let rpc = Rpc::new(
@@ -114,10 +112,7 @@ where
             peer_handle.clone(),
             rpc_reqs_rx,
             peer_rpc_notifs_rx,
-            rpc_notifs_tx,
-            Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
             constants::MAX_CONCURRENT_OUTBOUND_RPCS,
-            constants::MAX_CONCURRENT_INBOUND_RPCS,
         );
         executor.spawn(rpc.start());
 
