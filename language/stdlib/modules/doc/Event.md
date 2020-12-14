@@ -21,8 +21,8 @@ events emitted to a handle and emit events to the event store.
 -  [Module Specification](#@Module_Specification_1)
 
 
-<pre><code><b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="BCS.md#0x1_BCS">0x1::BCS</a>;
+<pre><code><b>use</b> <a href="BCS.md#0x1_BCS">0x1::BCS</a>;
+<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
 <b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
 </code></pre>
