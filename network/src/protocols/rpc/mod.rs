@@ -71,10 +71,6 @@ use std::{collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;
 
-#[cfg(any(feature = "fuzzing", test))]
-#[path = "fuzzing.rs"]
-/// fuzzing module for the rpc protocol
-pub mod fuzzing;
 #[cfg(test)]
 mod test;
 
