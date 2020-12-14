@@ -49,6 +49,7 @@ use crate::{
     },
     logging::NetworkSchema,
     peer::{PeerHandle, PeerNotification},
+    peer_manager::PeerManagerError,
     protocols::wire::messaging::v1::{
         NetworkMessage, Priority, RequestId, RpcRequest, RpcResponse,
     },
@@ -61,13 +62,13 @@ use diem_types::PeerId;
 use error::RpcError;
 use futures::{
     channel::oneshot,
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    future::{self, BoxFuture, FusedFuture, Future, FutureExt, TryFutureExt},
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
     task::Context,
 };
 use serde::Serialize;
-use std::{collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
+use std::{cmp::PartialEq, collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;
 
@@ -171,6 +172,177 @@ impl RequestIdGenerator {
             }
         };
         request_id
+    }
+}
+
+impl PartialEq for InboundRpcRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.protocol_id == other.protocol_id && self.data == other.data
+    }
+}
+
+/// `InboundRpcs` handles new inbound rpc requests off the wire, notifies the
+/// `PeerManager` of the new request, and stores the pending response on a queue.
+/// If the response eventually completes, `InboundRpc` records some metrics and
+/// enqueues the response message onto the outbound write queue.
+///
+/// There is one `InboundRpcs` handler per connection.
+pub struct InboundRpcs {
+    /// The network instance this Peer actor is running under.
+    network_context: Arc<NetworkContext>,
+    /// The PeerId of this connection's remote peer. Used for logging.
+    remote_peer_id: PeerId,
+    /// The core async queue of pending inbound rpc tasks. The tasks are driven
+    /// to completion by the `InboundRpcs::next_completed_response()` method.
+    inbound_rpc_tasks: FuturesUnordered<BoxFuture<'static, Result<RpcResponse, RpcError>>>,
+    /// A blanket timeout on all inbound rpc requests. If the application handler
+    /// doesn't respond to the request before this timeout, the request will be
+    /// dropped.
+    inbound_rpc_timeout: Duration,
+    /// Only allow this many concurrent rpcs at one time from this remote peer.
+    /// New inbound requests exceeding this limit will be dropped.
+    max_concurrent_inbound_rpcs: u32,
+}
+
+impl InboundRpcs {
+    pub fn new(
+        network_context: Arc<NetworkContext>,
+        remote_peer_id: PeerId,
+        inbound_rpc_timeout: Duration,
+        max_concurrent_inbound_rpcs: u32,
+    ) -> Self {
+        Self {
+            network_context,
+            remote_peer_id,
+            inbound_rpc_tasks: FuturesUnordered::new(),
+            inbound_rpc_timeout,
+            max_concurrent_inbound_rpcs,
+        }
+    }
+
+    /// Handle a new inbound `RpcRequest` message off the wire.
+    pub async fn handle_inbound_request(
+        &mut self,
+        peer_notifs_tx: &mut channel::Sender<PeerNotification>,
+        request: RpcRequest,
+    ) -> Result<(), RpcError> {
+        let network_context = &self.network_context;
+
+        // Drop new inbound requests if our completion queue is at capacity.
+        if self.inbound_rpc_tasks.len() as u32 == self.max_concurrent_inbound_rpcs {
+            // Increase counter of declined responses and log warning.
+            counters::rpc_messages(network_context, RESPONSE_LABEL, DECLINED_LABEL).inc();
+            return Err(RpcError::TooManyPending(self.max_concurrent_inbound_rpcs));
+        }
+
+        let protocol_id = request.protocol_id;
+        let request_id = request.request_id;
+        let priority = request.priority;
+        let req_len = request.raw_request.len() as u64;
+
+        trace!(
+            NetworkSchema::new(network_context).remote_peer(&self.remote_peer_id),
+            "{} Received inbound rpc request from peer {} with request_id {} and protocol_id {}",
+            network_context,
+            self.remote_peer_id.short_str(),
+            request_id,
+            protocol_id,
+        );
+
+        // Collect counters for received request.
+        counters::rpc_messages(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc();
+        counters::rpc_bytes(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc_by(req_len);
+        let timer =
+            counters::inbound_rpc_handler_latency(network_context, protocol_id).start_timer();
+
+        // Foward request to PeerManager for handling.
+        let (res_tx, res_rx) = oneshot::channel();
+        let notif = PeerNotification::RecvRpc(InboundRpcRequest {
+            protocol_id,
+            data: Bytes::from(request.raw_request),
+            res_tx,
+        });
+        if let Err(err) = peer_notifs_tx.send(notif).await {
+            counters::rpc_messages(network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
+            return Err(err.into());
+        }
+
+        // Create a new task that waits for a response from the upper layer with a timeout.
+        let inbound_rpc_task = tokio::time::timeout(self.inbound_rpc_timeout, res_rx)
+            .map(move |result| {
+                // Flatten the errors
+                let maybe_response = match result {
+                    Ok(Ok(Ok(response_bytes))) => Ok(RpcResponse {
+                        request_id,
+                        priority,
+                        raw_response: Vec::from(response_bytes.as_ref()),
+                    }),
+                    Ok(Ok(Err(err))) => Err(err),
+                    Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
+                    Err(_elapsed) => Err(RpcError::TimedOut),
+                };
+                // Only record latency of successful requests
+                match maybe_response {
+                    Ok(_) => timer.stop_and_record(),
+                    Err(_) => timer.stop_and_discard(),
+                };
+                maybe_response
+            })
+            .boxed();
+
+        // Add that task to the inbound completion queue. These tasks are driven
+        // forward by `Peer` awaiting `self.next_completed_response()`.
+        self.inbound_rpc_tasks.push(inbound_rpc_task);
+
+        Ok(())
+    }
+
+    /// Method for `Peer` actor to drive the pending inbound rpc tasks forward.
+    /// The returned `Future` is a `FusedFuture` so it works correctly in a
+    /// `futures::select!`.
+    pub fn next_completed_response<'a>(
+        &'a mut self,
+    ) -> impl Future<Output = Result<RpcResponse, RpcError>> + FusedFuture + 'a {
+        self.inbound_rpc_tasks.select_next_some()
+    }
+
+    /// Handle a completed response from the application handler. If successful,
+    /// we update the appropriate counters and enqueue the response message onto
+    /// the outbound write queue.
+    pub async fn send_outbound_response(
+        &mut self,
+        write_reqs_tx: &mut channel::Sender<(
+            NetworkMessage,
+            oneshot::Sender<Result<(), PeerManagerError>>,
+        )>,
+        maybe_response: Result<RpcResponse, RpcError>,
+    ) -> Result<(), RpcError> {
+        let network_context = &self.network_context;
+        let response = match maybe_response {
+            Ok(response) => response,
+            Err(err) => {
+                counters::rpc_messages(network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
+                return Err(err);
+            }
+        };
+        let res_len = response.raw_response.len() as u64;
+
+        // Send outbound response to remote peer.
+        trace!(
+            NetworkSchema::new(network_context).remote_peer(&self.remote_peer_id),
+            "{} Sending rpc response to peer {} for request_id {}",
+            network_context,
+            self.remote_peer_id.short_str(),
+            response.request_id,
+        );
+        let message = NetworkMessage::RpcResponse(response);
+        let (ack_tx, _) = oneshot::channel();
+        write_reqs_tx.send((message, ack_tx)).await?;
+
+        // Collect counters for sent response.
+        counters::rpc_messages(network_context, RESPONSE_LABEL, SENT_LABEL).inc();
+        counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).inc_by(res_len);
+        Ok(())
     }
 }
 

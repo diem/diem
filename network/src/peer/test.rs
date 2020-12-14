@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants::MAX_FRAME_SIZE,
+    constants::{INBOUND_RPC_TIMEOUT_MS, MAX_CONCURRENT_INBOUND_RPCS, MAX_FRAME_SIZE},
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::{
         direct_send::Message,
@@ -28,7 +28,7 @@ use futures::{
 };
 use memsocket::MemorySocket;
 use netcore::{compat::IoCompat, transport::ConnectionOrigin};
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 use tokio::runtime::{Handle, Runtime};
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
@@ -68,6 +68,8 @@ fn build_test_peer(
         peer_req_rx,
         peer_notifs_tx,
         peer_rpc_notifs_tx,
+        Duration::from_millis(INBOUND_RPC_TIMEOUT_MS),
+        MAX_CONCURRENT_INBOUND_RPCS,
         MAX_FRAME_SIZE,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);

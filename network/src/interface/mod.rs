@@ -18,7 +18,7 @@ use crate::{
     peer_manager::TransportNotification,
     protocols::{
         direct_send::Message,
-        rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
+        rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc},
     },
     transport::Connection,
     ProtocolId,
@@ -98,12 +98,14 @@ where
             peer_reqs_rx,
             peer_notifs_tx,
             peer_rpc_notifs_tx,
+            Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
+            constants::MAX_CONCURRENT_INBOUND_RPCS,
             max_frame_size,
         );
         executor.spawn(peer.start());
 
         // Setup and start RPC actor.
-        let (rpc_notifs_tx, rpc_notifs_rx) =
+        let (rpc_notifs_tx, _rpc_notifs_rx) =
             channel::new(channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
         let (rpc_reqs_tx, rpc_reqs_rx) =
             channel::new(channel_size, &counters::PENDING_RPC_REQUESTS);
@@ -131,13 +133,6 @@ where
             NonZeroUsize::new(channel_size).expect("diem_channel cannot be of size 0"),
             Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
         );
-
-        // Handle notifications from RPC actor.
-        let inbound_rpc_notifs_tx = notifs_tx.clone();
-        executor.spawn(rpc_notifs_rx.for_each(move |notif| {
-            Self::handle_rpc_notification(peer_id, notif, inbound_rpc_notifs_tx.clone());
-            futures::future::ready(())
-        }));
 
         // Handle notifications from Peer actor.
         let inbound_notifs_tx = notifs_tx;
@@ -213,27 +208,6 @@ where
         }
     }
 
-    fn handle_rpc_notification(
-        peer_id: PeerId,
-        notif: RpcNotification,
-        mut notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
-    ) {
-        trace!("RpcNotification::{:?}", notif);
-        match notif {
-            RpcNotification::RecvRpc(req) => {
-                if let Err(e) = notifs_tx.push(req.protocol_id, NetworkNotification::RecvRpc(req)) {
-                    warn!(
-                        remote_peer = peer_id,
-                        error = e.to_string(),
-                        "Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}",
-                        peer_id.short_str(),
-                        e
-                    );
-                }
-            }
-        }
-    }
-
     async fn handle_peer_notification(
         notif: PeerNotification,
         mut inbound_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
@@ -261,6 +235,16 @@ where
                     warn!(
                         error = e.to_string(),
                         "Failed to push RecvDirectSend to PeerManager. Error: {:?}", e
+                    );
+                }
+            }
+            PeerNotification::RecvRpc(request) => {
+                let protocol_id = request.protocol_id;
+                let notif = NetworkNotification::RecvRpc(request);
+                if let Err(e) = inbound_notifs_tx.push(protocol_id, notif) {
+                    warn!(
+                        error = e.to_string(),
+                        "Failed to push RecvRpc to PeerManager. Error: {:?}", e
                     );
                 }
             }
