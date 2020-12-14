@@ -4,7 +4,7 @@
 address 0x2 {
 module Set {
     use 0x1::Compare;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Vector;
 
     struct T<Elem> { v: vector<Elem> }
@@ -22,7 +22,7 @@ module Set {
     }
 
     fun find<Elem>(t: &T<Elem>, e: &Elem): (u64, bool) {
-        let e_lcs = LCS::to_bytes(e);
+        let e_bcs = BCS::to_bytes(e);
         let v = &t.v;
         // use binary search to locate `e` (if it exists)
         let left = 0;
@@ -33,7 +33,7 @@ module Set {
         let right = len - 1;
         while (left <= right) {
             let mid = (left + right) / 2;
-            let cmp = Compare::cmp_lcs_bytes(&LCS::to_bytes(Vector::borrow(v, mid)), &e_lcs);
+            let cmp = Compare::cmp_bcs_bytes(&BCS::to_bytes(Vector::borrow(v, mid)), &e_bcs);
             if (cmp == 0u8) {
                 return (mid, true)
             } else if (cmp == 1u8) {

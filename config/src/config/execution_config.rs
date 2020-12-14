@@ -69,7 +69,7 @@ impl ExecutionConfig {
             let mut buffer = vec![];
             file.read_to_end(&mut buffer)
                 .map_err(|e| Error::IO("genesis".into(), e))?;
-            let data = lcs::from_bytes(&buffer).map_err(|e| Error::LCS("genesis", e))?;
+            let data = bcs::from_bytes(&buffer).map_err(|e| Error::BCS("genesis", e))?;
             self.genesis = Some(data);
         }
 
@@ -83,7 +83,7 @@ impl ExecutionConfig {
             }
             let path = root_dir.full_path(&self.genesis_file_location);
             let mut file = File::create(&path).map_err(|e| Error::IO("genesis".into(), e))?;
-            let data = lcs::to_bytes(&genesis).map_err(|e| Error::LCS("genesis", e))?;
+            let data = bcs::to_bytes(&genesis).map_err(|e| Error::BCS("genesis", e))?;
             file.write_all(&data)
                 .map_err(|e| Error::IO("genesis".into(), e))?;
         }

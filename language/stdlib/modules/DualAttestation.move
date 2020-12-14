@@ -5,7 +5,7 @@ module DualAttestation {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
     use 0x1::XDX::XDX;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::Diem;
     use 0x1::DiemTimestamp;
     use 0x1::Roles;
@@ -331,13 +331,13 @@ module DualAttestation {
         payer: address, metadata: vector<u8>, deposit_value: u64
     ): vector<u8> {
         let message = metadata;
-        Vector::append(&mut message, LCS::to_bytes(&payer));
-        Vector::append(&mut message, LCS::to_bytes(&deposit_value));
+        Vector::append(&mut message, BCS::to_bytes(&payer));
+        Vector::append(&mut message, BCS::to_bytes(&deposit_value));
         Vector::append(&mut message, DOMAIN_SEPARATOR);
         message
     }
     spec fun dual_attestation_message {
-        /// Abstract from construction of message for the prover. Concatenation of results from `LCS::to_bytes`
+        /// Abstract from construction of message for the prover. Concatenation of results from `BCS::to_bytes`
         /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
         /// message is not important for the verification problem, as long as the prover considers both
         /// messages which fail verification and which do not.

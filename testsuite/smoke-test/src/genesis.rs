@@ -107,7 +107,7 @@ fn test_genesis_transaction_flow() {
     let genesis_path = TempPath::new();
     genesis_path.create_as_file().unwrap();
     let mut file = File::create(genesis_path.path()).unwrap();
-    file.write_all(&lcs::to_bytes(&genesis_transaction).unwrap())
+    file.write_all(&bcs::to_bytes(&genesis_transaction).unwrap())
         .unwrap();
 
     println!("6. prepare the waypoint with the transaction");

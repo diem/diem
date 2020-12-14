@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::vm_status::sub_status::NFE_LCS_SERIALIZATION_FAILURE;
+use move_core_types::vm_status::sub_status::NFE_BCS_SERIALIZATION_FAILURE;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -23,15 +23,15 @@ pub fn native_to_bytes(
     let ref_to_val = pop_arg!(args, Reference);
 
     let arg_type = ty_args.pop().unwrap();
-    // delegate to the LCS serialization for `Value`
+    // delegate to the BCS serialization for `Value`
     let serialized_value_opt = match context.type_to_type_layout(&arg_type)? {
         None => None,
         Some(layout) => ref_to_val.read_ref()?.simple_serialize(&layout),
     };
     let serialized_value = match serialized_value_opt {
         None => {
-            let cost = native_gas(context.cost_table(), NativeCostIndex::LCS_TO_BYTES, 1);
-            return Ok(NativeResult::err(cost, NFE_LCS_SERIALIZATION_FAILURE));
+            let cost = native_gas(context.cost_table(), NativeCostIndex::BCS_TO_BYTES, 1);
+            return Ok(NativeResult::err(cost, NFE_BCS_SERIALIZATION_FAILURE));
         }
         Some(serialized_value) => serialized_value,
     };
@@ -39,7 +39,7 @@ pub fn native_to_bytes(
     // cost is proportional to the size of the serialized value
     let cost = native_gas(
         context.cost_table(),
-        NativeCostIndex::LCS_TO_BYTES,
+        NativeCostIndex::BCS_TO_BYTES,
         serialized_value.len(),
     );
 

@@ -169,7 +169,7 @@ fn get_state_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
             DiemTimestampResource::resource_path(),
         ))?
         .ok_or_else(|| format_err!("DiemTimestampResource missing."))?;
-    let rsrc = lcs::from_bytes::<DiemTimestampResource>(&rsrc_bytes)?;
+    let rsrc = bcs::from_bytes::<DiemTimestampResource>(&rsrc_bytes)?;
     Ok(rsrc.diem_timestamp.microseconds)
 }
 
@@ -180,7 +180,7 @@ fn get_state_epoch(state_view: &VerifiedStateView) -> Result<u64> {
             ConfigurationResource::resource_path(),
         ))?
         .ok_or_else(|| format_err!("ConfigurationResource missing."))?;
-    let rsrc = lcs::from_bytes::<ConfigurationResource>(&rsrc_bytes)?;
+    let rsrc = bcs::from_bytes::<ConfigurationResource>(&rsrc_bytes)?;
     Ok(rsrc.epoch())
 }
 

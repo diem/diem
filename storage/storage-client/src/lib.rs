@@ -43,7 +43,7 @@ impl StorageClient {
     }
 
     fn request<T: DeserializeOwned>(&self, input: StorageRequest) -> std::result::Result<T, Error> {
-        let input_message = lcs::to_bytes(&input)?;
+        let input_message = bcs::to_bytes(&input)?;
         let result = loop {
             match self.process_one_message(&input_message) {
                 Err(err) => warn!(
@@ -54,7 +54,7 @@ impl StorageClient {
                 Ok(value) => break value,
             }
         };
-        lcs::from_bytes(&result)?
+        bcs::from_bytes(&result)?
     }
 
     pub fn get_account_state_with_proof_by_version(

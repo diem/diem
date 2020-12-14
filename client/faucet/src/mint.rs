@@ -20,7 +20,7 @@ impl std::fmt::Display for Response {
         match self {
             Response::DDAccountNextSeqNum(v1) => write!(f, "{}", v1),
             Response::SubmittedTxns(v2) => {
-                write!(f, "{}", hex::encode(lcs::to_bytes(&v2).unwrap()))
+                write!(f, "{}", hex::encode(bcs::to_bytes(&v2).unwrap()))
             }
         }
     }

@@ -12,7 +12,7 @@ This document is organized as follows:
 4. [Abstracted modules](#Abstracted-modules) - The components this specification depends on.
 5. [Consensus modules](#Consensus-modules) - The components built upon common data structures that are described as a part of this specification.
 
-All network communication occurs over DiemNet and any serialization, deserialization and hashing is determined by [LCS](https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/).
+All network communication occurs over DiemNet and any serialization, deserialization and hashing is determined by [BCS](https://docs.rs/bcs/).
 
 ## Architecture
 
@@ -44,7 +44,7 @@ struct Block {
 
 Fields:
 
-* `id` is the unique identifier of this block. It is calculated with the LCS serialized hash of `block_data`. This field is not serialized but calculated whenever deserialized.
+* `id` is the unique identifier of this block. It is calculated with the BCS serialized hash of `block_data`. This field is not serialized but calculated whenever deserialized.
 * `block_data` is the container of the block with zero or more transactions
 * `signature` is populated if this block was proposed by a validator. If this block is a genesis or NIL block, it is `None`.
 
@@ -55,7 +55,7 @@ Verification
 
 ### BlockData
 
-Block data is all the information necessary to vote on a block of transactions. `Block` wraps this structure as a convenient way storage of its LCS serialized hash and a signature (if this is proposed by a validator).
+Block data is all the information necessary to vote on a block of transactions. `Block` wraps this structure as a convenient way storage of its BCS serialized hash and a signature (if this is proposed by a validator).
 
 ```rust
 struct BlockData {
@@ -130,7 +130,7 @@ Verification
 
 ### VoteData
 
-This structure maintains information about a block and its parent block as a helper for `QuorumCert`. Its LCS-generated hash is used for the `consensus_data_hash` field in `LedgerInfo`.
+This structure maintains information about a block and its parent block as a helper for `QuorumCert`. Its BCS-generated hash is used for the `consensus_data_hash` field in `LedgerInfo`.
 
 ```rust
 pub struct VoteData {
@@ -167,7 +167,7 @@ struct Vote {
 
 Fields:
 
-* `vote_data` is the proposed and previous block and also contains the round information being voted on. The LCS-serialized hash of `vote_data` must be the same as `ledger_info.consensus_data_hash`
+* `vote_data` is the proposed and previous block and also contains the round information being voted on. The BCS-serialized hash of `vote_data` must be the same as `ledger_info.consensus_data_hash`
 * `author` is the identify of the voter with respect to its account address
 * `ledger_info` contains the ledger state of the block that will be committed if >2f unique `signatures` are gathered
 * `signature` is the signature from the `author` on `ledger_info` that attests to the vote of the `vote_data.proposed` block, its parent and the `ledger_info`
@@ -193,7 +193,7 @@ struct QuorumCert {
 
 Fields:
 
-* `vote_data` is a helper structure that includes block information about a proposed block and its parent block. The LCS hash of `vote_data` must be equal to the `signed_ledger_info`.ledger_info.consensus_data_hash as a part of verification
+* `vote_data` is a helper structure that includes block information about a proposed block and its parent block. The BCS hash of `vote_data` must be equal to the `signed_ledger_info`.ledger_info.consensus_data_hash as a part of verification
 * `signed_ledger_info` contains the [ledger state](../common/data_structures.md#LedgerInfoWithSignatures) of the committed block. Since a signature agrees on the hash of `vote_data`, it certifies the proposed block and its parent from `vote_data` as well as the highest committed state on this blockchain branch.
 
 Derived Fields
@@ -249,7 +249,7 @@ pub struct TimeoutCertificate {
 Fields
 
 * `timeout` is the `Timeout` being signed.
-* `signatures` contains >2f signatures signed on the LCS-serialized `timeout`.
+* `signatures` contains >2f signatures signed on the BCS-serialized `timeout`.
 
 Verification
 
@@ -764,7 +764,7 @@ let commit_info = if commit_rule() {
 }
 ```
 
-Generate a LedgerInfo with lcs seiralize hash of vote_data and sign the lcs seriealize hash to generate a vote signature which captures both vote and commit.
+Generate a LedgerInfo with bcs seiralize hash of vote_data and sign the bcs seriealize hash to generate a vote signature which captures both vote and commit.
 
 ```rust
 let ledger_info = LedgerInfo {
@@ -830,7 +830,7 @@ fn generate_proposal(round: Round) -> Block;
 * otherwise
     - pull transactions from mempool to form a `payload`, excluding pending transactions already used (by calling `block_store.path_from_root(hqc.certified_block().id())`)
     - use the current UNIX time in microseconds as a `timestamp`
-* construct a BlockData as following, and sign the lcs serialized hash with consensus key to construct a Block
+* construct a BlockData as following, and sign the bcs serialized hash with consensus key to construct a Block
 
   ```rust
   BlockData {
@@ -1288,7 +1288,7 @@ A `round` number is received when the timer setup in the constructor of `RoundSt
       }
       ```
 
-    * obtain a `digest` of the `timeout` by calling `SHA-3-256(lcs.serialize(timeout))`
+    * obtain a `digest` of the `timeout` by calling `SHA-3-256(bcs.serialize(timeout))`
     * obtain a `signature` over the digest by calling `ed25519_sign(private_key, digest)`
     * set the `round_state.vote.timeout_signature` to the `signature`.
     * cache the vote in `round_state.vote_sent`

@@ -89,7 +89,7 @@ impl ValidatorConfig {
             owner_account,
             consensus_key.to_bytes().to_vec(),
             validator_addresses,
-            lcs::to_bytes(&vec![fullnode_address]).unwrap(),
+            bcs::to_bytes(&vec![fullnode_address]).unwrap(),
         );
 
         // Create and sign the validator-config transaction

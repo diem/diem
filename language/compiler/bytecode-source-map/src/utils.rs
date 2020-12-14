@@ -28,7 +28,7 @@ where
         .ok()
         .and_then(|mut file| file.read_to_end(&mut bytes).ok())
         .ok_or_else(|| format_err!("Error while reading in source map information"))?;
-    lcs::from_bytes::<SourceMap<Location>>(&bytes)
+    bcs::from_bytes::<SourceMap<Location>>(&bytes)
         .map_err(|_| format_err!("Error deserializing into source map"))
 }
 

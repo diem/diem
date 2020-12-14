@@ -22,8 +22,8 @@ impl Request {
         Request { method, params }
     }
 
-    pub fn submit(txn: &SignedTransaction) -> Result<Self, lcs::Error> {
-        let txn_payload = hex::encode(lcs::to_bytes(txn)?);
+    pub fn submit(txn: &SignedTransaction) -> Result<Self, bcs::Error> {
+        let txn_payload = hex::encode(bcs::to_bytes(txn)?);
         Ok(Self::new("submit", json!([txn_payload])))
     }
 

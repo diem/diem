@@ -26,7 +26,7 @@ def main() -> None:
     assert call.amount == amount;
     assert call.payee == payee;
 
-    for b in script.lcs_serialize():
+    for b in script.bcs_serialize():
         print("%d " % b, end='')
     print()
 

@@ -150,7 +150,7 @@ fn main() {
 
         if args.output_source_maps {
             let source_map_bytes =
-                lcs::to_bytes(&source_map).expect("Unable to serialize source maps for script");
+                bcs::to_bytes(&source_map).expect("Unable to serialize source maps for script");
             write_output(
                 &source_path.with_extension(source_map_extension),
                 &source_map_bytes,
@@ -173,7 +173,7 @@ fn main() {
 
         if args.output_source_maps {
             let source_map_bytes =
-                lcs::to_bytes(&source_map).expect("Unable to serialize source maps for module");
+                bcs::to_bytes(&source_map).expect("Unable to serialize source maps for module");
             write_output(
                 &source_path.with_extension(source_map_extension),
                 &source_map_bytes,

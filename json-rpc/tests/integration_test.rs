@@ -99,7 +99,7 @@ fn create_test_cases() -> Vec<Test> {
                 let sp_resp = env.send("get_state_proof", json!([resp.diem_ledger_version]));
                 let state_proof = sp_resp.result.unwrap();
                 let info_hex = state_proof["ledger_info_with_signatures"].as_str().unwrap();
-                let info:LedgerInfoWithSignatures = lcs::from_bytes(&hex::decode(&info_hex).unwrap()).unwrap();
+                let info:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&info_hex).unwrap()).unwrap();
                 let expected_hash = info.deref().ledger_info().transaction_accumulator_hash().to_hex();
                 assert_eq!(expected_hash, metadata["accumulator_root_hash"].as_str().unwrap());
             },
@@ -269,7 +269,7 @@ fn create_test_cases() -> Vec<Test> {
 
                 let txn = env.transfer_coins((0, 0), (1, 0), 200000);
                 env.wait_for_txn(&txn);
-                let txn_hex = hex::encode(lcs::to_bytes(&txn).expect("lcs txn failed"));
+                let txn_hex = hex::encode(bcs::to_bytes(&txn).expect("bcs txn failed"));
 
                 let sender = &env.vasps[0].children[0];
                 let receiver = &env.vasps[1].children[0];
@@ -293,7 +293,7 @@ fn create_test_cases() -> Vec<Test> {
                     _ => unreachable!(),
                 };
                 let script_hash = diem_crypto::HashValue::sha3_256_of(script.code()).to_hex();
-                let script_bytes = hex::encode(lcs::to_bytes(script).unwrap());
+                let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
 
                 assert_eq!(
                     result,
@@ -888,7 +888,7 @@ fn create_test_cases() -> Vec<Test> {
                     // we need to get the validator set from the batched get_state_proof call.
                     let ledger_info_view = &f.iter().find(|g| g["id"] == 1).unwrap()["result"];
                     let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
-                    let epoch_proofs:EpochChangeProof = lcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+                    let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
                     let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
                     assert!(!some_li.is_empty());
                     // Let's use the first one since the validator set does not change in the tests.
@@ -896,10 +896,10 @@ fn create_test_cases() -> Vec<Test> {
 
                     // The actual proofs
                     let raw_hex_li = proofs["ledger_info_to_transaction_infos_proof"].as_str().unwrap();
-                    let li_to_tip:TransactionAccumulatorRangeProof = lcs::from_bytes(&hex::decode(&raw_hex_li).unwrap()).unwrap();
+                    let li_to_tip:TransactionAccumulatorRangeProof = bcs::from_bytes(&hex::decode(&raw_hex_li).unwrap()).unwrap();
                     // The txs for which we got the proofs
                     let raw_hex_txs = proofs["transaction_infos"].as_str().unwrap();
-                    let txs_infos:Vec<TransactionInfo> = lcs::from_bytes(&hex::decode(&raw_hex_txs).unwrap()).unwrap();
+                    let txs_infos:Vec<TransactionInfo> = bcs::from_bytes(&hex::decode(&raw_hex_txs).unwrap()).unwrap();
                     let hashes: Vec<_> = txs_infos
                     .iter()
                     .map(CryptoHash::hash)
@@ -913,7 +913,7 @@ fn create_test_cases() -> Vec<Test> {
                     let raw_blobs = data["serialized_transactions"].as_array().unwrap();
                     assert!(!raw_blobs.is_empty());
                     let actual_txs:Vec<Transaction>= raw_blobs.iter().map(|tx| {
-                        lcs::from_bytes(&hex::decode(&tx.as_str().unwrap()).unwrap()).unwrap()
+                        bcs::from_bytes(&hex::decode(&tx.as_str().unwrap()).unwrap()).unwrap()
                     }).collect();
                     assert!(!actual_txs.is_empty());
                     assert_eq!(txs_infos.len(), actual_txs.len());
@@ -933,7 +933,7 @@ fn create_test_cases() -> Vec<Test> {
 
                     // We need to get the details required to verify the proof from the batched get_state_proof call
                     let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
-                    let li:LedgerInfoWithSignatures = lcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
+                    let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
                     let expected_hash = li.ledger_info().transaction_accumulator_hash();
 
                     // and we verify the signature of the provided ledger info that provided the accumulator hash

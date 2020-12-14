@@ -78,7 +78,7 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     // Compose RequestBlock message and RespondBlock message with `msg_len` bytes payload
     let req = DummyMsg(vec![]);
     let res = DummyMsg(vec![0u8; *msg_len]);
-    let res: Bytes = lcs::to_bytes(&res)
+    let res: Bytes = bcs::to_bytes(&res)
         .expect("failed to serialize message")
         .into();
 

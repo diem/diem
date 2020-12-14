@@ -20,8 +20,8 @@ use proptest::{collection::btree_map, prelude::*};
 
 /// Serializes a HandshakeMsg by simulating sending it over a socket
 fn serialize_handshake_message(handshake_msg: &HandshakeMsg) -> Vec<u8> {
-    // serialize with LCS
-    let handshake_msg = lcs::to_bytes(handshake_msg).unwrap();
+    // serialize with BCS
+    let handshake_msg = bcs::to_bytes(handshake_msg).unwrap();
     // prepend a 2-byte prefix indicating the message length
     let mut serialized = (handshake_msg.len() as u16).to_be_bytes().to_vec();
     serialized.extend_from_slice(&handshake_msg);
@@ -47,7 +47,7 @@ pub fn fuzz_network_handshake_protocol_exchange(self_handshake: &HandshakeMsg, d
 }
 
 /// Same function as fuzz_network_handshake_protocol_exchange except that the network exchange is skipped,
-/// letting us skip LCS deserialization (and potentially other logic) and fuzz the negotiation of protocols directly.
+/// letting us skip BCS deserialization (and potentially other logic) and fuzz the negotiation of protocols directly.
 pub fn fuzz_network_handshake_protocol_negotiation(
     self_handshake: &HandshakeMsg,
     remote_handshake: &HandshakeMsg,

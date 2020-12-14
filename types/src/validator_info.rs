@@ -74,8 +74,8 @@ impl ValidatorInfo {
         );
         let config = ValidatorConfig::new(
             consensus_public_key,
-            lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
-            lcs::to_bytes(&vec![addr]).unwrap(),
+            bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+            bcs::to_bytes(&vec![addr]).unwrap(),
         );
 
         Self {

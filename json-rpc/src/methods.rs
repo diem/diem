@@ -224,7 +224,7 @@ impl JsonRpcRequest {
 
     fn _parse_signed_transaction(&self, val: Value) -> Result<SignedTransaction> {
         let raw: String = serde_json::from_value(val)?;
-        Ok(lcs::from_bytes(&hex::decode(raw)?)?)
+        Ok(bcs::from_bytes(&hex::decode(raw)?)?)
     }
 }
 
@@ -392,7 +392,7 @@ async fn get_transactions(
         result.push(TransactionView {
             version: start_version + v as u64,
             hash: tx.hash().into(),
-            bytes: lcs::to_bytes(&tx)?.into(),
+            bytes: bcs::to_bytes(&tx)?.into(),
             transaction: tx.into(),
             events,
             vm_status: info.status().into(),
@@ -424,7 +424,7 @@ async fn get_transactions_with_proofs(
 
     let mut blobs = vec![];
     for t in txs.transactions.iter() {
-        let bv = lcs::to_bytes(t)?;
+        let bv = bcs::to_bytes(t)?;
         blobs.push(BytesView::from(bv));
     }
 
@@ -433,8 +433,8 @@ async fn get_transactions_with_proofs(
     Ok(Some(TransactionsWithProofsView {
         serialized_transactions: blobs,
         proofs: TransactionsProofsView {
-            ledger_info_to_transaction_infos_proof: BytesView::from(&lcs::to_bytes(&proofs)?),
-            transaction_infos: BytesView::from(&lcs::to_bytes(&tx_info)?),
+            ledger_info_to_transaction_infos_proof: BytesView::from(&bcs::to_bytes(&proofs)?),
+            transaction_infos: BytesView::from(&bcs::to_bytes(&tx_info)?),
         },
     }))
 }
@@ -471,7 +471,7 @@ async fn get_account_transaction(
         Ok(Some(TransactionView {
             version: tx_version,
             hash: tx.transaction.hash().into(),
-            bytes: lcs::to_bytes(&tx.transaction)?.into(),
+            bytes: bcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().status().into(),
@@ -581,7 +581,7 @@ async fn get_account_transactions(
         all_txs.push(TransactionView {
             version: tx.version,
             hash: tx.transaction.hash().into(),
-            bytes: lcs::to_bytes(&tx.transaction)?.into(),
+            bytes: bcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().status().into(),
@@ -698,7 +698,7 @@ fn invalid_param(index: usize, name: &str) -> JsonRpcError {
         "include_events" => "boolean",
         "account address" => "hex-encoded string",
         "event key" => "hex-encoded string",
-        "data" => "hex-encoded string of LCS serialized Diem SignedTransaction type",
+        "data" => "hex-encoded string of BCS serialized Diem SignedTransaction type",
         "version" => "unsigned int64",
         "ledger version for proof" => "unsigned int64",
         _ => "unknown",

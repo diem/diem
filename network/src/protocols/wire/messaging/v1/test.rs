@@ -3,31 +3,31 @@
 
 use super::*;
 use crate::testutils::fake_socket::{ReadOnlyTestSocket, ReadWriteTestSocket};
+use bcs::test_helpers::assert_canonical_encode_decode;
 use futures::{executor::block_on, future, sink::SinkExt, stream::StreamExt};
-use lcs::test_helpers::assert_canonical_encode_decode;
 use memsocket::MemorySocket;
 use proptest::{collection::vec, prelude::*};
 
 // Ensure serialization of ProtocolId enum takes 1 byte.
 #[test]
-fn protocol_id_serialization() -> lcs::Result<()> {
+fn protocol_id_serialization() -> bcs::Result<()> {
     let protocol = ProtocolId::ConsensusRpc;
-    assert_eq!(lcs::to_bytes(&protocol)?, vec![0x00]);
+    assert_eq!(bcs::to_bytes(&protocol)?, vec![0x00]);
     Ok(())
 }
 
 #[test]
-fn error_code() -> lcs::Result<()> {
+fn error_code() -> bcs::Result<()> {
     let error_code = ErrorCode::ParsingError(ParsingErrorType {
         message: 9,
         protocol: 5,
     });
-    assert_eq!(lcs::to_bytes(&error_code)?, vec![0, 9, 5]);
+    assert_eq!(bcs::to_bytes(&error_code)?, vec![0, 9, 5]);
     Ok(())
 }
 
 #[test]
-fn rpc_request() -> lcs::Result<()> {
+fn rpc_request() -> bcs::Result<()> {
     let rpc_request = RpcRequest {
         request_id: 25,
         protocol_id: ProtocolId::ConsensusRpc,
@@ -35,7 +35,7 @@ fn rpc_request() -> lcs::Result<()> {
         raw_request: [0, 1, 2, 3].to_vec(),
     };
     assert_eq!(
-        lcs::to_bytes(&rpc_request)?,
+        bcs::to_bytes(&rpc_request)?,
         // [0] -> protocol_id
         // [25, 0, 0, 0] -> request_id
         // [0] -> priority
@@ -173,7 +173,7 @@ fn arb_network_message(max_frame_size: usize) -> impl Strategy<Value = NetworkMe
         arb_direct_send_msg(max_frame_size).prop_map(NetworkMessage::DirectSendMsg),
     ]
     .prop_filter("larger than max frame size", move |msg| {
-        lcs::serialized_size(&msg).unwrap() <= max_frame_size
+        bcs::serialized_size(&msg).unwrap() <= max_frame_size
     })
 }
 

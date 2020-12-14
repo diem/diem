@@ -72,8 +72,8 @@ impl SynchronizerEnvHelper {
             let voting_power = if idx == 0 { 1000 } else { 1 };
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
-                lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
-                lcs::to_bytes(&vec![addr.clone()]).unwrap(),
+                bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+                bcs::to_bytes(&vec![addr.clone()]).unwrap(),
             );
             let validator_info = ValidatorInfo::new(peer_id, voting_power, validator_config);
             validator_infos.push(validator_info);

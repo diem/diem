@@ -63,7 +63,7 @@ impl AccessPath {
     }
 
     pub fn resource_access_vec(tag: StructTag) -> Vec<u8> {
-        lcs::to_bytes(&Path::Resource(tag)).expect("Unexpected serialization error")
+        bcs::to_bytes(&Path::Resource(tag)).expect("Unexpected serialization error")
     }
 
     /// Convert Accesses into a byte offset which would be used by the storage layer to resolve
@@ -77,7 +77,7 @@ impl AccessPath {
     }
 
     fn code_access_path_vec(key: ModuleId) -> Vec<u8> {
-        lcs::to_bytes(&Path::Code(key)).expect("Unexpected serialization error")
+        bcs::to_bytes(&Path::Code(key)).expect("Unexpected serialization error")
     }
 
     pub fn code_access_path(key: ModuleId) -> AccessPath {

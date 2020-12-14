@@ -108,5 +108,5 @@ fn load_genesis_txn(path: &PathBuf) -> Result<Transaction> {
     let mut buffer = vec![];
     file.read_to_end(&mut buffer)?;
 
-    Ok(lcs::from_bytes(&buffer)?)
+    Ok(bcs::from_bytes(&buffer)?)
 }

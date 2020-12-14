@@ -183,7 +183,7 @@ impl FakeExecutor {
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .unwrap_or_else(|| panic!("Can't fetch account resource for {}", account.address()));
-        lcs::from_bytes(data_blob.as_slice()).ok()
+        bcs::from_bytes(data_blob.as_slice()).ok()
     }
 
     /// Reads the balance resource value for an account from this executor's data store with the
@@ -197,7 +197,7 @@ impl FakeExecutor {
         StateView::get(&self.data_store, &ap)
             .unwrap_or_else(|_| panic!("account {:?} must exist in data store", account.address()))
             .map(|data_blob| {
-                lcs::from_bytes(data_blob.as_slice()).expect("Failure decoding balance resource")
+                bcs::from_bytes(data_blob.as_slice()).expect("Failure decoding balance resource")
             })
     }
 
@@ -312,7 +312,7 @@ impl FakeExecutor {
         // check if we emit the expected event, there might be more events for transaction fees
         let event = output.events()[0].clone();
         assert_eq!(event.key(), &new_block_event_key());
-        assert!(lcs::from_bytes::<NewBlockEvent>(event.event_data()).is_ok());
+        assert!(bcs::from_bytes::<NewBlockEvent>(event.event_data()).is_ok());
         self.apply_write_set(output.write_set());
     }
 

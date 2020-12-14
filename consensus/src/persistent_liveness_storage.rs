@@ -303,7 +303,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
     }
 
     fn save_vote(&self, vote: &Vote) -> Result<()> {
-        Ok(self.db.save_vote(lcs::to_bytes(vote)?)?)
+        Ok(self.db.save_vote(bcs::to_bytes(vote)?)?)
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
@@ -324,11 +324,11 @@ impl PersistentLivenessStorage for StorageWriteProxy {
             .expect("unable to recover consensus data");
 
         let last_vote = raw_data.0.map(|vote_data| {
-            lcs::from_bytes(&vote_data[..]).expect("unable to deserialize last vote msg")
+            bcs::from_bytes(&vote_data[..]).expect("unable to deserialize last vote msg")
         });
 
         let highest_timeout_certificate = raw_data.1.map(|ts| {
-            lcs::from_bytes(&ts[..]).expect("unable to deserialize highest timeout certificate")
+            bcs::from_bytes(&ts[..]).expect("unable to deserialize highest timeout certificate")
         });
         let blocks = raw_data.2;
         let quorum_certs: Vec<_> = raw_data.3;
@@ -403,7 +403,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         Ok(self
             .db
-            .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)?)
+            .save_highest_timeout_certificate(bcs::to_bytes(&highest_timeout_cert)?)?)
     }
 
     fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof> {

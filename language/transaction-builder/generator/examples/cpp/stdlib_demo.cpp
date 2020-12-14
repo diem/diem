@@ -21,7 +21,7 @@ int main() {
     auto script =
         encode_peer_to_peer_with_metadata_script(token, payee, amount, {}, {});
 
-    auto output = script.lcsSerialize();
+    auto output = script.bcsSerialize();
     for (uint8_t o : output) {
         printf("%d ", o);
     };

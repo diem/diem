@@ -41,10 +41,10 @@ Manifest structure: (N.B when actually stored, manifests are serialized in JSON.
 struct TransactionChunk {
     first_version: Version,
     last_version: Version,
-    /// Repeated `len(record) + record`, where `record` is LCS serialized tuple
+    /// Repeated `len(record) + record`, where `record` is BCS serialized tuple
     /// `(Transaction, TransactionInfo)`
     transactions: FileHandle,
-    /// LCS serialized `(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)`.
+    /// BCS serialized `(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)`.
     /// The `TransactionAccumulatorRangeProof` links the transactions to the
     /// `LedgerInfoWithSignatures`, and the `LedgerInfoWithSignatures` can be verified by the
     /// signatures it carries, against the validator set in the epoch. (Hence proper
@@ -110,10 +110,10 @@ pub struct StateSnapshotChunk {
     pub first_key: HashValue,
     /// key of the last account in this chunk.
     pub last_key: HashValue,
-    /// Repeated `len(record) + record` where `record` is LCS serialized tuple
+    /// Repeated `len(record) + record` where `record` is BCS serialized tuple
     /// `(key, account_state_blob)`
     pub blobs: FileHandle,
-    /// LCS serialized `SparseMerkleRangeProof` that proves this chunk adds up to the root hash
+    /// BCS serialized `SparseMerkleRangeProof` that proves this chunk adds up to the root hash
     /// indicated in the backup (`StateSnapshotBackup::root_hash`).
     pub proof: FileHandle,
 }
@@ -127,7 +127,7 @@ pub struct StateSnapshotBackup {
     pub root_hash: HashValue,
     /// All account blobs in chunks.
     pub chunks: Vec<StateSnapshotChunk>,
-    /// LCS serialized
+    /// BCS serialized
     /// `Tuple(TransactionInfoWithProof, LedgerInfoWithSignatures)`.
     ///   - The `TransactionInfoWithProof` is at `Version` above, and carries the same `root_hash`
     /// above; It proves that at specified version the root hash is as specified in a chain
@@ -335,7 +335,7 @@ s3://diem-backup/backup1/
 
 ## Backup service inside of a Diem Validator/Full node
 
-Since the DB we are backing up from is likely to be already open (and actively operated on) by a Diem Validator / Full Node, access to the DB by the backup system is done in the same process, as the Backup Service. The service is open to localhost only, as a preliminary security measure, and is supposed to be accessed only by the `BackupController` described below. The protocol between them is deemed private to the Diem implementation and in reality its in LCS over HTTP.
+Since the DB we are backing up from is likely to be already open (and actively operated on) by a Diem Validator / Full Node, access to the DB by the backup system is done in the same process, as the Backup Service. The service is open to localhost only, as a preliminary security measure, and is supposed to be accessed only by the `BackupController` described below. The protocol between them is deemed private to the Diem implementation and in reality its in BCS over HTTP.
 
 ## Backup Controllers
 

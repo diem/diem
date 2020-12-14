@@ -227,7 +227,7 @@ We can now inspect this newly published resource using `move view` since
 the change has been committed:
 
 ```shell
-$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.lcs
+$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 resource 0x2::Test::Resource {
         i: 10
 }
@@ -241,12 +241,12 @@ can be done using the `move clean` command which will remove the
 `storage` directory:
 
 ```shell
-$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.lcs
+$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 resource 0x2::Test::Resource {
         i: 10
 }
 $ move clean
-$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.lcs
+$ move view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 Error: `move view <file>` must point to a valid file under storage
 ```
 
@@ -291,7 +291,7 @@ check
 publish
 view storage/0x00000000000000000000000000000002/modules/Test.mv
 run src/scripts/test_script.move --signers 0xf -v --mode bare
-view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.lcs
+view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 ```
 
 We can then use the `move test` command and point it at the `readme` directory to run each of these
@@ -437,7 +437,7 @@ are the following:
   [`Event`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Event.move),
   [`FixedPoint32`](https://github.com/diem/diem/blob/master/language/stdlib/modules/FixedPoint32.move),
   [`Hash`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Hash.move),
-  [`LCS`](https://github.com/diem/diem/blob/master/language/stdlib/modules/LCS.move),
+  [`BCS`](https://github.com/diem/diem/blob/master/language/stdlib/modules/BCS.move),
   [`Option`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Option.move),
   [`Vector`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Vector.move), and
   [`Signer`](https://github.com/diem/diem/blob/master/language/stdlib/modules/Signer.move).

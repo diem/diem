@@ -300,7 +300,7 @@ pub enum NativeCostIndex {
     SHA3_256 = 1,
     ED25519_VERIFY = 2,
     ED25519_THRESHOLD_VERIFY = 3,
-    LCS_TO_BYTES = 4,
+    BCS_TO_BYTES = 4,
     LENGTH = 5,
     EMPTY = 6,
     BORROW = 7,

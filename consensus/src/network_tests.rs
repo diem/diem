@@ -216,7 +216,7 @@ impl NetworkPlayground {
         // copy message data
         let msg_copy = match &msg_notif {
             PeerManagerNotification::RecvMessage(src, msg) => {
-                let msg: ConsensusMsg = lcs::from_bytes(&msg.mdata).unwrap();
+                let msg: ConsensusMsg = bcs::from_bytes(&msg.mdata).unwrap();
                 (*src, msg)
             }
             msg_notif => panic!(
@@ -263,7 +263,7 @@ impl NetworkPlayground {
 
             let dst_twin_ids = self.get_twin_ids(dst);
             for (idx, dst_twin_id) in dst_twin_ids.iter().enumerate() {
-                let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
+                let consensus_msg = bcs::from_bytes(&msg.mdata).unwrap();
 
                 // Deliver and copy message if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, dst_twin_id, consensus_msg) {
@@ -379,7 +379,7 @@ impl NetworkPlayground {
             for dst_twin_id in dst_twin_ids.iter() {
                 let msg_notif =
                     PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
-                let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
+                let consensus_msg = bcs::from_bytes(&msg.mdata).unwrap();
 
                 // Deliver and copy message it if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, &dst_twin_id, consensus_msg) {
@@ -685,7 +685,7 @@ mod tests {
                 let response =
                     BlockRetrievalResponse::new(BlockRetrievalStatus::IdNotFound, vec![]);
                 let response = ConsensusMsg::BlockRetrievalResponse(Box::new(response));
-                let bytes = lcs::to_bytes(&response).unwrap();
+                let bytes = bcs::to_bytes(&response).unwrap();
                 request.response_sender.send(Ok(bytes.into())).unwrap();
             }
         };
@@ -741,7 +741,7 @@ mod tests {
             peer_id,
             InboundRpcRequest {
                 protocol_id,
-                data: Bytes::from(lcs::to_bytes(&liveness_check_msg).unwrap()),
+                data: Bytes::from(bcs::to_bytes(&liveness_check_msg).unwrap()),
                 res_tx,
             },
         );

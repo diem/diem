@@ -53,7 +53,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * `Event`
 * `FixedPoint32`
 * `Hash`
-* `LCS`
+* `BCS`
 * `Offer`
 * `Option`
 * `SlidingNonce`

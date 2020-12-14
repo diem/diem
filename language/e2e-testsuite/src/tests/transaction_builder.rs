@@ -408,7 +408,7 @@ fn dual_attestation_payment() {
         // Transaction >= 1_000_000 threshold goes through signature verification with valid signature, passes
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
         // in transaction from sender's account
-        let ref_id = lcs::to_bytes(&7777u64).unwrap();
+        let ref_id = bcs::to_bytes(&7777u64).unwrap();
         let output = executor.execute_and_apply(
             payment_sender
                 .transaction()
@@ -430,7 +430,7 @@ fn dual_attestation_payment() {
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
         // in transaction from sender's account. Make sure credential resolution is working for
         // children.
-        let ref_id = lcs::to_bytes(&7777u64).unwrap();
+        let ref_id = bcs::to_bytes(&7777u64).unwrap();
         let output = executor.execute_and_apply(
             payment_sender
                 .transaction()
@@ -473,7 +473,7 @@ fn dual_attestation_payment() {
 
     {
         // transaction >= 1_000_000 threshold goes through signature verification with invalid signature, aborts
-        let ref_id = lcs::to_bytes(&9999u64).unwrap();
+        let ref_id = bcs::to_bytes(&9999u64).unwrap();
         let output = executor.execute_transaction(
             payment_sender
                 .transaction()
@@ -606,7 +606,7 @@ fn dual_attestation_payment() {
                     payment_amount,
                     account_config::xus_tag(),
                     // pick an arbitrary ref_id
-                    lcs::to_bytes(&9999u64).unwrap(),
+                    bcs::to_bytes(&9999u64).unwrap(),
                     &receiver_vasp_compliance_private_key,
                 ))
                 .sequence_number(4)
@@ -625,7 +625,7 @@ fn dual_attestation_payment() {
                     payment_amount,
                     account_config::xus_tag(),
                     // pick an arbitrary ref_id
-                    lcs::to_bytes(&9999u64).unwrap(),
+                    bcs::to_bytes(&9999u64).unwrap(),
                     &receiver_vasp_compliance_private_key,
                 ))
                 .sequence_number(3)
@@ -646,8 +646,8 @@ fn create_dual_attestation_payment(
     let mut domain_separator = b"@@$$DIEM_ATTEST$$@@".to_vec();
     let message = {
         let mut msg = ref_id.clone();
-        msg.append(&mut lcs::to_bytes(&sender_address).unwrap());
-        msg.append(&mut lcs::to_bytes(&amount).unwrap());
+        msg.append(&mut bcs::to_bytes(&sender_address).unwrap());
+        msg.append(&mut bcs::to_bytes(&amount).unwrap());
         msg.append(&mut domain_separator);
         msg
     };
@@ -820,7 +820,7 @@ fn dd_dual_attestation_payments() {
                 XUS_THRESHOLD,
                 account_config::xus_tag(),
                 // pick an arbitrary ref_id
-                lcs::to_bytes(&9999u64).unwrap(),
+                bcs::to_bytes(&9999u64).unwrap(),
                 &dd2_compliance_private_key,
             ))
             .sequence_number(2)
@@ -849,7 +849,7 @@ fn dd_dual_attestation_payments() {
                 XUS_THRESHOLD,
                 account_config::xus_tag(),
                 // pick an arbitrary ref_id
-                lcs::to_bytes(&9999u64).unwrap(),
+                bcs::to_bytes(&9999u64).unwrap(),
                 &parent_vasp_compliance_private_key,
             ))
             .sequence_number(4)
@@ -880,7 +880,7 @@ fn dd_dual_attestation_payments() {
                 XUS_THRESHOLD,
                 account_config::xus_tag(),
                 // pick an arbitrary ref_id
-                lcs::to_bytes(&9999u64).unwrap(),
+                bcs::to_bytes(&9999u64).unwrap(),
                 &dd1_compliance_private_key,
             ))
             .sequence_number(2)

@@ -25,7 +25,7 @@ struct Key {
     shared_backend: SharedBackend,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
-    #[structopt(long, help = "ed25519 public key in lcs or hex format")]
+    #[structopt(long, help = "ed25519 public key in bcs or hex format")]
     path_to_key: Option<PathBuf>,
 }
 

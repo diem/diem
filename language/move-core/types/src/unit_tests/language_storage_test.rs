@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::language_storage::ModuleId;
-use lcs::test_helpers::assert_canonical_encode_decode;
+use bcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
 
 proptest! {

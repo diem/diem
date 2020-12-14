@@ -201,7 +201,7 @@ message Transaction {
   uint64 version = 1;
   TransactionData transaction = 2;
   string hash = 3;
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string bytes = 4;
   repeated Event events = 5;
   VMStatus vm_status = 6 [json_name="vm_status"];
@@ -335,11 +335,11 @@ message CurrencyInfo {
  * This is for experimental API get_state_proof response. It is unstable and likely to be changed.
  */
 message StateProof {
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string ledger_info_with_signatures = 1 [json_name="ledger_info_with_signatures"];
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string epoch_change_proof = 2 [json_name="epoch_change_proof"];
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string ledger_consistency_proof = 3 [json_name="ledger_consistency_proof"];
 }
 
@@ -348,9 +348,9 @@ message StateProof {
  */
 message AccountStateWithProof {
   uint64 version = 1;
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string blob = 2;
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   AccountStateProof proof = 3;
 }
 
@@ -359,10 +359,10 @@ message AccountStateWithProof {
  * This is for experimental API get_account_state_with_proof response. It is unstable and likely to be changed.
  */
 message AccountStateProof {
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string ledger_info_to_transaction_info_proof = 1 [json_name="ledger_info_to_transaction_info_proof"];
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string transaction_info = 2 [json_name="transaction_info"];
-  // hex-encoded lcs bytes
+  // hex-encoded bcs bytes
   string transaction_info_to_account_proof = 3 [json_name="transaction_info_to_account_proof"];
 }

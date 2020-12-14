@@ -3,15 +3,15 @@
 
 use serde_reflection::{ContainerFormat, Error, Format, FormatHolder, Result};
 
-/// Verify that a Serde format is compatible with LCS and follows best practices.
-pub fn lint_lcs_format(format: &ContainerFormat) -> Result<()> {
+/// Verify that a Serde format is compatible with BCS and follows best practices.
+pub fn lint_bcs_format(format: &ContainerFormat) -> Result<()> {
     if is_empty_container(format) {
         return Err(Error::Custom("Please avoid 0-sized containers".into()));
     }
     format.visit(&mut |f| {
         use Format::*;
         match f {
-            F32 | F64 | Char => Err(Error::Custom(format!("LCS does not support type {:?}", f))),
+            F32 | F64 | Char => Err(Error::Custom(format!("BCS does not support type {:?}", f))),
             Seq(inner) => match inner.as_ref() {
                 U8 => Err(Error::Custom(
                     "Please use `#[serde(with = \"serde_bytes\")` on `Vec<u8>` objects.".into(),

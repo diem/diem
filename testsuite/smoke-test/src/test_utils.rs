@@ -238,9 +238,9 @@ pub fn write_key_to_file_hex_format(key: &Ed25519PublicKey, key_file_path: PathB
     file.write_all(&key_and_newline.as_bytes()).unwrap();
 }
 
-/// Writes a given public key to a file specified by the given path using lcs encoding.
-pub fn write_key_to_file_lcs_format(key: &Ed25519PublicKey, key_file_path: PathBuf) {
-    let lcs_encoded_key = lcs::to_bytes(&key).unwrap();
+/// Writes a given public key to a file specified by the given path using bcs encoding.
+pub fn write_key_to_file_bcs_format(key: &Ed25519PublicKey, key_file_path: PathBuf) {
+    let bcs_encoded_key = bcs::to_bytes(&key).unwrap();
     let mut file = File::create(key_file_path).unwrap();
-    file.write_all(&lcs_encoded_key).unwrap();
+    file.write_all(&bcs_encoded_key).unwrap();
 }

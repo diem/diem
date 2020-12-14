@@ -137,9 +137,9 @@ The snippet below shows the on-chain `ValidatorConfig` of each VN:
 ```rust
 pub struct ValidatorConfig {
     pub consensus_public_key: Ed25519PublicKey,
-    /// This is an lcs serialized Vec<EncNetworkAddress>
+    /// This is an bcs serialized Vec<EncNetworkAddress>
     pub validator_network_addresses: Vec<u8>,
-    /// This is an lcs serialized Vec<NetworkAddress>
+    /// This is an bcs serialized Vec<NetworkAddress>
     pub fullnode_network_addresses: Vec<u8>,
 }
 ```

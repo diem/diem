@@ -37,7 +37,7 @@ public class StdlibDemo {
         assert(call.amount.equals(amount));
         assert(call.payee.equals(payee));
 
-        byte[] output = script.lcsSerialize();
+        byte[] output = script.bcsSerialize();
         for (byte o : output) {
             System.out.print(((int) o & 0xFF) + " ");
         };

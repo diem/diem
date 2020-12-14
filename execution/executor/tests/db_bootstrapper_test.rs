@@ -284,11 +284,11 @@ fn test_pre_genesis() {
         WriteSetMut::new(vec![
             (
                 ValidatorSet::CONFIG_ID.access_path(),
-                WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+                WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
                 AccessPath::new(account1, BalanceResource::access_path_for(xus_tag())),
-                WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1000)).unwrap()),
+                WriteOp::Value(bcs::to_bytes(&BalanceResource::new(1000)).unwrap()),
             ),
         ])
         .freeze()
@@ -348,15 +348,15 @@ fn test_new_genesis() {
         WriteSetMut::new(vec![
             (
                 ValidatorSet::CONFIG_ID.access_path(),
-                WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+                WriteOp::Value(bcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
                 AccessPath::new(config_address(), ConfigurationResource::resource_path()),
-                WriteOp::Value(lcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
+                WriteOp::Value(bcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
             ),
             (
                 AccessPath::new(account1, BalanceResource::access_path_for(xus_tag())),
-                WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1_000_000)).unwrap()),
+                WriteOp::Value(bcs::to_bytes(&BalanceResource::new(1_000_000)).unwrap()),
             ),
         ])
         .freeze()

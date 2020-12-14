@@ -23,7 +23,7 @@ This crate provide a binary tool `generate-transaction-builders` to generate and
 
 The tool will also generate and install type definitions for Diem types such as `TypeTag`, `AccountAddress`, and `Script`.
 
-In practice, hashing and signing Diem transactions additionally requires a runtime library for Diem Canonical Serialization ("LCS").
+In practice, hashing and signing Diem transactions additionally requires a runtime library for Binary Canonical Serialization ("BCS").
 Such a library will be installed together with the Diem types.
 
 
@@ -50,7 +50,7 @@ You may browse command line options with `target/debug/generate-transaction-buil
 
 ### Python
 
-To install Python3 modules `serde`, `lcs`, `diem_types`, and `diem_stdlib` into a target directory `$DEST`, run:
+To install Python3 modules `serde`, `bcs`, `diem_types`, and `diem_stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language python3 \
@@ -68,7 +68,7 @@ PYTHONPATH="$PYTHONPATH:$DEST" python3 "$DEST/stdlib_demo.py"
 
 ### C++
 
-To install C++ files `serde.hpp`, `lcs.hpp`, `diem_types.hpp`, `diem_stdlib.hpp`, `diem_stdlib.cpp` into a target directory `$DEST`, run:
+To install C++ files `serde.hpp`, `bcs.hpp`, `diem_types.hpp`, `diem_stdlib.hpp`, `diem_stdlib.cpp` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language cpp \
@@ -86,7 +86,7 @@ clang++ --std=c++17 -I "$DEST" "$DEST/diem_stdlib.cpp" "$DEST/stdlib_demo.cpp" -
 
 ### Java
 
-To install Java source packages `com.novi.serde`, `com.novi.lcs`, `com.diem.types`, and `com.diem.stdlib` into a target directory `$DEST`, run:
+To install Java source packages `com.novi.serde`, `com.novi.bcs`, `com.diem.types`, and `com.diem.stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language java \
@@ -143,7 +143,7 @@ Supporting transaction builders in an additional programming language boils down
 
 1. Code generation for Diem types (Rust library and tool),
 
-2. LCS runtime (library in target language),
+2. BCS runtime (library in target language),
 
 3. Code generation for transaction builders (Rust tool).
 

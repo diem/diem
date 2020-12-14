@@ -149,7 +149,7 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
     let mut account_state = AccountState::default();
     account_state.insert(
         AccountResource::resource_path(),
-        lcs::to_bytes(&account_resource).unwrap(),
+        bcs::to_bytes(&account_resource).unwrap(),
     );
 
     AccountStateBlob::try_from(&account_state).unwrap()

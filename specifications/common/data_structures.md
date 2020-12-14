@@ -11,7 +11,7 @@ This specification describes several common data structures used across various 
 
 ## Data structures
 
-Similar to all other LPN specifications, we use Rust to describe all data structures below such that serialization is implemented by serializing each field in sequential order according to the LCS specification.
+Similar to all other LPN specifications, we use Rust to describe all data structures below such that serialization is implemented by serializing each field in sequential order according to the BCS specification.
 
 ### AccountAddress
 
@@ -119,7 +119,7 @@ struct LedgerInfoWithV0 {
 Fields:
 
 * `ledger_info` contains the ledger state at a given transaction version
-* `signatures` is a sorted map by account addresses that map to ed25519 signatures over the LCS hash value of `ledger_info`. The signatures must have >2f voting power from validator accounts in order to be considered committed by the consensus specification.
+* `signatures` is a sorted map by account addresses that map to ed25519 signatures over the BCS hash value of `ledger_info`. The signatures must have >2f voting power from validator accounts in order to be considered committed by the consensus specification.
 
 ### ContractEvent
 

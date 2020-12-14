@@ -22,8 +22,8 @@ impl FuzzTargetImpl for ValueTarget {
 
         // Values as currently serialized are not self-describing, so store a serialized form of the
         // layout + kind info along with the value as well.
-        let layout_blob = lcs::to_bytes(&layout).unwrap();
-        let kinfo_blob = lcs::to_bytes(&kinfo).unwrap();
+        let layout_blob = bcs::to_bytes(&layout).unwrap();
+        let kinfo_blob = bcs::to_bytes(&kinfo).unwrap();
         let value_blob = value.simple_serialize(&layout).expect("must serialize");
 
         let mut blob = vec![];
@@ -88,8 +88,8 @@ fn deserialize(data: &[u8]) -> Result<()> {
     let kinfo_data = &data[layout_len..n];
     let value_data = &data[n..];
 
-    let layout: MoveTypeLayout = lcs::from_bytes(layout_data)?;
-    let kinfo: MoveKindInfo = lcs::from_bytes(kinfo_data)?;
+    let layout: MoveTypeLayout = bcs::from_bytes(layout_data)?;
+    let kinfo: MoveKindInfo = bcs::from_bytes(kinfo_data)?;
 
     // The fuzzer may alter the raw bytes, resulting in invalid layouts that will not
     // pass the bytecode verifier. We need to filter these out as they can show up as

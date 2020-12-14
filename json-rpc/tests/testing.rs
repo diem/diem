@@ -195,7 +195,7 @@ impl Env {
     }
 
     pub fn submit(&self, txn: &SignedTransaction) -> JsonRpcResponse {
-        let txn_hex = hex::encode(lcs::to_bytes(txn).expect("lcs txn failed"));
+        let txn_hex = hex::encode(bcs::to_bytes(txn).expect("bcs txn failed"));
         self.send("submit", json!([txn_hex]))
     }
 

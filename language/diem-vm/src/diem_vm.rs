@@ -574,7 +574,7 @@ pub(crate) fn get_currency_info(
 ) -> Result<CurrencyInfoResource, VMStatus> {
     let currency_info_path = CurrencyInfoResource::resource_path_for(currency_code.to_owned());
     if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
-        let x = lcs::from_bytes::<CurrencyInfoResource>(&blob)
+        let x = bcs::from_bytes::<CurrencyInfoResource>(&blob)
             .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
         Ok(x)
     } else {

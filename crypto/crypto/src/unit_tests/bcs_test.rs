@@ -15,31 +15,31 @@ use crate::{
 };
 
 #[test]
-fn ed25519_lcs_material() {
+fn ed25519_bcs_material() {
     use std::borrow::Cow;
 
     let private_key =
         Ed25519PrivateKey::try_from([1u8; ED25519_PRIVATE_KEY_LENGTH].as_ref()).unwrap();
     let public_key = Ed25519PublicKey::from(&private_key);
 
-    let serialized_public_key = lcs::to_bytes(&Cow::Borrowed(&public_key)).unwrap();
-    // Expected size should be 1 byte due to LCS length prefix + 32 bytes for the raw key bytes
+    let serialized_public_key = bcs::to_bytes(&Cow::Borrowed(&public_key)).unwrap();
+    // Expected size should be 1 byte due to BCS length prefix + 32 bytes for the raw key bytes
     assert_eq!(serialized_public_key.len(), 1 + ED25519_PUBLIC_KEY_LENGTH);
 
     // Ensure public key serialization - deserialization is stable and deterministic
     let deserialized_public_key: Ed25519PublicKey =
-        lcs::from_bytes(&serialized_public_key).unwrap();
+        bcs::from_bytes(&serialized_public_key).unwrap();
     assert_eq!(deserialized_public_key, public_key);
 
     let message = TestDiemCrypto("Hello, World".to_string());
     let signature: Ed25519Signature = private_key.sign(&message);
 
-    let serialized_signature = lcs::to_bytes(&Cow::Borrowed(&signature)).unwrap();
-    // Expected size should be 1 byte due to LCS length prefix + 64 bytes for the raw signature bytes
+    let serialized_signature = bcs::to_bytes(&Cow::Borrowed(&signature)).unwrap();
+    // Expected size should be 1 byte due to BCS length prefix + 64 bytes for the raw signature bytes
     assert_eq!(serialized_signature.len(), 1 + ED25519_SIGNATURE_LENGTH);
 
     // Ensure signature serialization - deserialization is stable and deterministic
-    let deserialized_signature: Ed25519Signature = lcs::from_bytes(&serialized_signature).unwrap();
+    let deserialized_signature: Ed25519Signature = bcs::from_bytes(&serialized_signature).unwrap();
     assert_eq!(deserialized_signature, signature);
 
     // Verify signature
@@ -48,7 +48,7 @@ fn ed25519_lcs_material() {
 }
 
 #[test]
-fn multi_ed25519_lcs_material() {
+fn multi_ed25519_bcs_material() {
     use std::borrow::Cow;
 
     // Helper function to generate N ed25519 private keys.
@@ -66,10 +66,10 @@ fn multi_ed25519_lcs_material() {
     let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
 
     let serialized_multi_public_key =
-        lcs::to_bytes(&Cow::Borrowed(&multi_public_key_7of10)).unwrap();
+        bcs::to_bytes(&Cow::Borrowed(&multi_public_key_7of10)).unwrap();
 
     // Expected size due to specialization is
-    // 2 bytes for LCS length prefix (due to ULEB128)
+    // 2 bytes for BCS length prefix (due to ULEB128)
     // + 10 * single_pub_key_size bytes (each key is the compressed Edwards Y coordinate)
     // + 1 byte for the threshold
     assert_eq!(
@@ -78,7 +78,7 @@ fn multi_ed25519_lcs_material() {
     );
 
     let deserialized_multi_public_key: MultiEd25519PublicKey =
-        lcs::from_bytes(&serialized_multi_public_key).unwrap();
+        bcs::from_bytes(&serialized_multi_public_key).unwrap();
     assert_eq!(deserialized_multi_public_key, multi_public_key_7of10);
 
     let message = TestDiemCrypto("Hello, World".to_string());
@@ -86,9 +86,9 @@ fn multi_ed25519_lcs_material() {
     // Verifying a 7-of-10 signature against a public key with the same threshold should pass.
     let multi_signature_7of10: MultiEd25519Signature = multi_private_key_7of10.sign(&message);
 
-    let serialized_multi_signature = lcs::to_bytes(&Cow::Borrowed(&multi_signature_7of10)).unwrap();
+    let serialized_multi_signature = bcs::to_bytes(&Cow::Borrowed(&multi_signature_7of10)).unwrap();
     // Expected size due to specialization is
-    // 2 bytes for LCS length prefix (due to ULEB128)
+    // 2 bytes for BCS length prefix (due to ULEB128)
     // + 7 * single_signature_size bytes (each sig is of the form (R,s),
     // a 32B compressed Edwards Y coordinate concatenated with a 32B scalar)
     // + 4 bytes for the bitmap (the bitmap can hold up to 32 bits)

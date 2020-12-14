@@ -406,7 +406,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param data(params[0]): should be hex-encoded string of LCS serialized Diem SignedTransaction type",
+                    "message": "Invalid param data(params[0]): should be hex-encoded string of BCS serialized Diem SignedTransaction type",
                     "data": null
                 },
                 "id": 1,
@@ -1465,11 +1465,11 @@ fn test_get_account_state_with_proof() {
 
     // blob
     let account_blob: AccountStateBlob =
-        lcs::from_bytes(&received_proof.blob.unwrap().into_bytes().unwrap()).unwrap();
+        bcs::from_bytes(&received_proof.blob.unwrap().into_bytes().unwrap()).unwrap();
     assert_eq!(account_blob, *expected_blob);
 
     // proof
-    let sm_proof: SparseMerkleProof = lcs::from_bytes(
+    let sm_proof: SparseMerkleProof = bcs::from_bytes(
         &received_proof
             .proof
             .transaction_info_to_account_proof
@@ -1479,8 +1479,8 @@ fn test_get_account_state_with_proof() {
     .unwrap();
     assert_eq!(sm_proof, *expected_sm_proof);
     let txn_info: TransactionInfo =
-        lcs::from_bytes(&received_proof.proof.transaction_info.into_bytes().unwrap()).unwrap();
-    let li_proof: TransactionAccumulatorProof = lcs::from_bytes(
+        bcs::from_bytes(&received_proof.proof.transaction_info.into_bytes().unwrap()).unwrap();
+    let li_proof: TransactionAccumulatorProof = bcs::from_bytes(
         &received_proof
             .proof
             .ledger_info_to_transaction_info_proof
@@ -1502,7 +1502,7 @@ fn test_get_state_proof() {
     let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
     let proof = StateProofView::from_response(result).unwrap();
     let li: LedgerInfoWithSignatures =
-        lcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes().unwrap()).unwrap();
+        bcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes().unwrap()).unwrap();
     assert_eq!(li.ledger_info().version(), version);
 }
 

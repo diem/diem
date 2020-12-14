@@ -284,7 +284,7 @@ impl PeerManager {
         if let Err(e) = network_sender.send_to(
             peer.peer_id(),
             MempoolSyncMsg::BroadcastTransactionsRequest {
-                request_id: lcs::to_bytes(&batch_id).expect("failed LCS serialization of batch ID"),
+                request_id: bcs::to_bytes(&batch_id).expect("failed BCS serialization of batch ID"),
                 transactions,
             },
         ) {
@@ -462,7 +462,7 @@ impl PeerManager {
     ) {
         let peer_id = &peer.peer_id().to_string();
         let network_id = &peer.raw_network_id().to_string();
-        let batch_id = if let Ok(id) = lcs::from_bytes::<BatchId>(&request_id_bytes) {
+        let batch_id = if let Ok(id) = bcs::from_bytes::<BatchId>(&request_id_bytes) {
             id
         } else {
             counters::INVALID_ACK_RECEIVED_COUNT

@@ -88,7 +88,7 @@ impl SMRNode {
         let mut configs = HashMap::new();
         configs.insert(
             ValidatorSet::CONFIG_ID,
-            lcs::to_bytes(storage.get_validator_set()).unwrap(),
+            bcs::to_bytes(storage.get_validator_set()).unwrap(),
         );
         let payload = OnChainConfigPayload::new(1, Arc::new(configs));
         reconfig_sender.push((), payload).unwrap();

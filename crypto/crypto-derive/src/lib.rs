@@ -349,7 +349,7 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
     };
 
     let out = quote!(
-        /// Cryptographic hasher for an LCS-serializable #item
+        /// Cryptographic hasher for an BCS-serializable #item
         #[derive(Clone)]
         pub struct #hasher_name(diem_crypto::hash::DefaultHasher);
 
@@ -409,13 +409,13 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
     out.into()
 }
 
-#[proc_macro_derive(LCSCryptoHash)]
-pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(BCSCryptoHash)]
+pub fn bcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = &ast.ident;
     let hasher_name = Ident::new(&format!("{}Hasher", &name.to_string()), Span::call_site());
     let error_msg = syn::LitStr::new(
-        &format!("LCS serialization of {} should not fail", name.to_string()),
+        &format!("BCS serialization of {} should not fail", name.to_string()),
         Span::call_site(),
     );
     let generics = add_trait_bounds(ast.generics);
@@ -428,7 +428,7 @@ pub fn lcs_crypto_hash_dispatch(input: TokenStream) -> TokenStream {
                 use diem_crypto::hash::CryptoHasher;
 
                 let mut state = Self::Hasher::default();
-                lcs::serialize_into(&mut state, &self).expect(#error_msg);
+                bcs::serialize_into(&mut state, &self).expect(#error_msg);
                 state.finish()
             }
         }

@@ -15,7 +15,7 @@ module DiemAccount {
     use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
     use 0x1::XDX::XDX;
-    use 0x1::LCS;
+    use 0x1::BCS;
     use 0x1::DiemConfig;
     use 0x1::DiemTimestamp;
     use 0x1::DiemTransactionPublishingOption;
@@ -999,7 +999,7 @@ module DiemAccount {
     fun create_authentication_key(account: &signer, auth_key_prefix: vector<u8>): vector<u8> {
         let authentication_key = auth_key_prefix;
         Vector::append(
-            &mut authentication_key, LCS::to_bytes(Signer::borrow_address(account))
+            &mut authentication_key, BCS::to_bytes(Signer::borrow_address(account))
         );
         assert(
             Vector::length(&authentication_key) == 32,

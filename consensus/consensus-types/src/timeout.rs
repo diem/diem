@@ -3,14 +3,14 @@
 
 use crate::common::Round;
 use diem_crypto::ed25519::Ed25519Signature;
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use diem_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a timeout message
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, LCSCryptoHash)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, BCSCryptoHash)]
 pub struct Timeout {
     /// Epoch number corresponds to the set of validators that are active for this round.
     epoch: u64,

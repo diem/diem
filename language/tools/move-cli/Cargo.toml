@@ -32,7 +32,7 @@ resource-viewer = { path = "../resource-viewer", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 vm-genesis = { path = "../vm-genesis", version = "0.1.0" }
-lcs = { version = "0.1.0", package = "libra-canonical-serialization" }
+bcs = "0.1.1"
 
 [dev-dependencies]
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }

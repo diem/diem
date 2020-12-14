@@ -175,7 +175,7 @@ pub static NUM_BLOCKS_IN_TREE: Lazy<IntGauge> = Lazy::new(|| {
 // pub static UNWRAPPED_PROPOSAL_SIZE_BYTES: Lazy<Histogram> = Lazy::new(|| {
 //     register_histogram!(
 //         "diem_consensus_unwrapped_proposal_size_bytes",
-//         "Histogram of proposal size after LCS but before wrapping with GRPC and diem net."
+//         "Histogram of proposal size after BCS but before wrapping with GRPC and diem net."
 //     )
 //     .unwrap()
 // });

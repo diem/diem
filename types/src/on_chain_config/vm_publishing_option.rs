@@ -59,7 +59,7 @@ impl OnChainConfig for VMPublishingOption {
 
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
         let raw_publishing_option =
-            lcs::from_bytes::<VMPublishingOptionInner>(&bytes).map_err(|e| {
+            bcs::from_bytes::<VMPublishingOptionInner>(&bytes).map_err(|e| {
                 format_err!(
                     "Failed first round of deserialization for VMPublishingOptionInner: {}",
                     e

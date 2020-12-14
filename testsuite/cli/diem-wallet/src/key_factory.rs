@@ -119,10 +119,10 @@ impl ExtendedPrivKey {
     ///
     /// NOTE: In Diem, we do not sign the raw bytes of a transaction, but
     /// those raw bytes prefixed by a domain separation hash.
-    /// Informally signed_bytes = sha3(domain_separator) || lcs_serialization_bytes
+    /// Informally signed_bytes = sha3(domain_separator) || bcs_serialization_bytes
     ///
     /// The domain separator hash is derived automatically from a `#[derive(CryptoHasher,
-    /// LCSCryptoHash)]` annotation, or can be declared manually in a process
+    /// BCSCryptoHash)]` annotation, or can be declared manually in a process
     /// described in `diem_crypto::hash`.
     ///
     pub fn sign<T: CryptoHash + Serialize>(&self, msg: &T) -> Ed25519Signature {

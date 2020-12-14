@@ -53,7 +53,7 @@ As [depicted](#The-Diem-network), there are 4 network protocol specifications:
 
 In addition, these specifications build on top of a common set of specifications:
 
-* **[Diem canonical serialization (LCS)](https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/)**. This details how data is canonically serialized and deserialized. Hashing and signing of data structures are applied after LCS serialization.
+* **[Binary canonical serialization (BCS)](https://docs.rs/bcs/)**. This details how data is canonically serialized and deserialized. Hashing and signing of data structures are applied after BCS serialization.
 * **[Common data structures](common/data_structures.md)**. These are the data structures that are used across more than one specification.
 * **[DiemNet](network/)**. This describes a handshake and wire protocol for all networking protocols. This relies on the [Noise protocol framework](https://noiseprotocol.org/) for integrity and confidentiality.
 * **[On-chain discovery](network/onchain-discovery.md)**. This defines how clients can safely find the endpoints of the LPN validators.
@@ -72,7 +72,7 @@ The process for upgrading the LPN specifications is as follows:
 
 3. **LPN upgrade**. There are two types of specification upgrades: backwards-incompatible (e.g. hard forks) or backwards-compatible (e.g. soft forks). Unlike conventional software systems, backwards-incompatible upgrades are likely to be much more common than backwards-compatible upgrades in LPN. Because the purpose of LPN is to agree on the bit-precise result of executing a computation and most specifications contribute to that result, almost every upgrade will break compatibility with previous versions. Thus, we will assume that proposed upgrades are backwards-incompatible by default and require rigorous justification to handle an upgrade as backwards-compatible. In addition, changes to the following specifications are backwards-incompatible by definition:
 
-    * Diem canonical serialization
+    * Binary canonical serialization
     * Authenticated data structures
     * Move virtual machine
     * Diem adapter

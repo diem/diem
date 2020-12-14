@@ -300,7 +300,7 @@ When the state tree is updated after the execution of a transaction and a new tr
 
 #### Accounts
 
-At the logical level, an account is a collection of Move resources and modules. At the physical level, an account is an ordered map of access paths to byte array values. TODO: link to definition of access path. When an account is stored in the ledger state, the ordered map is serialized using Diem Canonical Serialization (LCS) to create a binary blob `AccountStateBlob` that gets inserted into a sparse Merkle tree.
+At the logical level, an account is a collection of Move resources and modules. At the physical level, an account is an ordered map of access paths to byte array values. TODO: link to definition of access path. When an account is stored in the ledger state, the ordered map is serialized using Binary Canonical Serialization (BCS) to create a binary blob `AccountStateBlob` that gets inserted into a sparse Merkle tree.
 
 ```rust
 type Path = Vec<u8>;
@@ -319,7 +319,7 @@ struct AccountStateBlob {
 impl From<AccountState> for AccountStateBlob {
     fn from(account_state: AccountState) -> Self {
         Self {
-            blob: lcs::to_bytes(&account_state),
+            blob: bcs::to_bytes(&account_state),
         }
     }
 }

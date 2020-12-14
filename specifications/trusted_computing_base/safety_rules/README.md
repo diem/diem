@@ -46,7 +46,7 @@ LSR design and deployment embody the following principles:
 
 ## Interface
 
-The SafetyRules interface largely builds upon existing data types mostly contained within the [Consensus specification](../consensus/spec.md). Each of the data types have a well defined LCS representation allowing LSR to be hosted as a component running in the same process as consensus or independently in its own domain, such as a process or within a secure enclave.
+The SafetyRules interface largely builds upon existing data types mostly contained within the [Consensus specification](../consensus/spec.md). Each of the data types have a well defined BCS representation allowing LSR to be hosted as a component running in the same process as consensus or independently in its own domain, such as a process or within a secure enclave.
 
 Consensus communicates to LSR through the following interface, which also defines the minimal set of functions required to operate an external LSR:
 

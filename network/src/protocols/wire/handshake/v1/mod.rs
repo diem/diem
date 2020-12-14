@@ -74,14 +74,14 @@ impl fmt::Display for ProtocolId {
 pub struct SupportedProtocols(bitvec::BitVec);
 
 impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
-    type Error = lcs::Error;
+    type Error = bcs::Error;
 
-    fn try_into(self) -> lcs::Result<Vec<ProtocolId>> {
+    fn try_into(self) -> bcs::Result<Vec<ProtocolId>> {
         let mut protocols = Vec::with_capacity(self.0.count_ones() as usize);
         if let Some(last_bit) = self.0.last_set_bit() {
             for i in 0..=last_bit {
                 if self.0.is_set(i) {
-                    let protocol: ProtocolId = lcs::from_bytes(&[i])?;
+                    let protocol: ProtocolId = bcs::from_bytes(&[i])?;
                     protocols.push(protocol);
                 }
             }

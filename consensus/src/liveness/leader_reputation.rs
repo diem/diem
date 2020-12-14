@@ -50,7 +50,7 @@ impl DiemDBBackend {
         )?;
         let mut result = vec![];
         for (v, e) in events {
-            let e = lcs::from_bytes::<NewBlockEvent>(e.event_data())?;
+            let e = bcs::from_bytes::<NewBlockEvent>(e.event_data())?;
             if e.round() <= target_round && result.len() < self.window_size {
                 result.push((v, e));
             }

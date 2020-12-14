@@ -29,7 +29,7 @@ impl DiemEventsFetcher {
                 .0
                 .get_account_state_with_proof(&account, None, None)
                 .await?;
-            lcs::from_bytes(&hex::decode(&resp.result.blob)?)?
+            bcs::from_bytes(&hex::decode(&resp.result.blob)?)?
         };
         Ok(Some(AccountState::try_from(&account_state)?))
     }

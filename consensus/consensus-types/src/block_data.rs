@@ -7,7 +7,7 @@ use crate::{
     vote_data::VoteData,
 };
 use diem_crypto::hash::HashValue;
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use diem_types::{
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -34,7 +34,7 @@ pub enum BlockType {
     Genesis,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher, LCSCryptoHash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher, BCSCryptoHash)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct BlockData {

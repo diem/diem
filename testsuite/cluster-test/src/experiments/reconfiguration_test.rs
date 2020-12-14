@@ -80,7 +80,7 @@ async fn expect_epoch(
         _ => bail!("unexpected response"),
     };
     let li: LedgerInfoWithSignatures =
-        lcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
+        bcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
     let epoch = li.ledger_info().next_block_epoch();
     ensure!(
         epoch == expected_epoch,

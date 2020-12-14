@@ -35,7 +35,7 @@ impl JsonRpcBatch {
     }
 
     pub fn add_submit_request(&mut self, transaction: SignedTransaction) -> Result<()> {
-        let txn_payload = hex::encode(lcs::to_bytes(&transaction)?);
+        let txn_payload = hex::encode(bcs::to_bytes(&transaction)?);
         self.add_request("submit".to_string(), vec![Value::String(txn_payload)]);
         Ok(())
     }

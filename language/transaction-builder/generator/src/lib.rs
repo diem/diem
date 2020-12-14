@@ -31,7 +31,7 @@ pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<S
         let mut buffer = Vec::new();
         let mut f = std::fs::File::open(path)?;
         f.read_to_end(&mut buffer)?;
-        abis.push(lcs::from_bytes(&buffer)?);
+        abis.push(bcs::from_bytes(&buffer)?);
     }
     // Sorting scripts by alphabetical order.
     #[allow(clippy::unnecessary_sort_by)]

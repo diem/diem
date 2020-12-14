@@ -71,7 +71,7 @@ impl RemoteClient {
 
 impl TSerializerClient for RemoteClient {
     fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
-        let input_message = lcs::to_bytes(&input)?;
+        let input_message = bcs::to_bytes(&input)?;
         loop {
             match self.process_one_message(&input_message) {
                 Err(err) => warn!("Failed to communicate with LEC service: {}", err),

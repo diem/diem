@@ -124,7 +124,7 @@ pub struct DirectSendMsg {
 #[derive(Debug, Error)]
 pub enum ReadError {
     #[error("network message stream: failed to deserialize network message frame: {0}, frame length: {1}, frame prefix: {2:?}")]
-    DeserializeError(#[source] lcs::Error, usize, Bytes),
+    DeserializeError(#[source] bcs::Error, usize, Bytes),
 
     #[error("network message stream: IO error while reading message: {0}")]
     IoError(#[from] io::Error),
@@ -134,7 +134,7 @@ pub enum ReadError {
 #[derive(Debug, Error)]
 pub enum WriteError {
     #[error("network message sink: failed to serialize network message: {0}")]
-    SerializeError(#[source] lcs::Error),
+    SerializeError(#[source] bcs::Error),
 
     #[error("network message sink: IO error while sending message: {0}")]
     IoError(#[from] io::Error),
@@ -175,7 +175,7 @@ impl<TReadSocket: AsyncRead> Stream for NetworkMessageStream<TReadSocket> {
             Poll::Ready(Some(Ok(frame))) => {
                 let frame = frame.freeze();
 
-                match lcs::from_bytes(&frame) {
+                match bcs::from_bytes(&frame) {
                     Ok(message) => Poll::Ready(Some(Ok(message))),
                     // Failed to deserialize the NetworkMessage
                     Err(err) => {
@@ -234,7 +234,7 @@ impl<TWriteSocket: AsyncWrite> Sink<&NetworkMessage> for NetworkMessageSink<TWri
     }
 
     fn start_send(self: Pin<&mut Self>, message: &NetworkMessage) -> Result<(), Self::Error> {
-        let frame = lcs::to_bytes(message).map_err(WriteError::SerializeError)?;
+        let frame = bcs::to_bytes(message).map_err(WriteError::SerializeError)?;
         let frame = Bytes::from(frame);
 
         self.project()

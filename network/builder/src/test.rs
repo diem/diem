@@ -79,7 +79,7 @@ fn test_rpc() {
             Event::RpcRequest(peer_id, msg, rs) => {
                 assert_eq!(peer_id, dialer_peer_id);
                 assert_eq!(msg, msg_clone);
-                rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();
+                rs.send(Ok(bcs::to_bytes(&msg).unwrap().into())).unwrap();
             }
             event => panic!("Unexpected event: {:?}", event),
         }
@@ -97,7 +97,7 @@ fn test_rpc() {
             Event::RpcRequest(peer_id, msg, rs) => {
                 assert_eq!(peer_id, listener_peer_id);
                 assert_eq!(msg, msg_clone);
-                rs.send(Ok(lcs::to_bytes(&msg).unwrap().into())).unwrap();
+                rs.send(Ok(bcs::to_bytes(&msg).unwrap().into())).unwrap();
             }
             event => panic!("Unexpected event: {:?}", event),
         }

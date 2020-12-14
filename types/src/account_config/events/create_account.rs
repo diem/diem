@@ -22,7 +22,7 @@ impl CreateAccountEvent {
     }
 
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes(bytes).map_err(Into::into)
+        bcs::from_bytes(bytes).map_err(Into::into)
     }
 
     pub fn event_key() -> EventKey {

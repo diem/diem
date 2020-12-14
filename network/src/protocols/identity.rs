@@ -18,7 +18,7 @@ where
     T: AsyncRead + AsyncWrite + Unpin,
 {
     // Send serialized handshake message to remote peer.
-    let msg = lcs::to_bytes(own_handshake).map_err(|e| {
+    let msg = bcs::to_bytes(own_handshake).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to serialize identity msg: {}", e),
@@ -30,7 +30,7 @@ where
     // Read handshake message from the Remote
     let mut response = BytesMut::new();
     read_u16frame(socket, &mut response).await?;
-    let identity = lcs::from_bytes(&response).map_err(|e| {
+    let identity = bcs::from_bytes(&response).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),
@@ -102,8 +102,8 @@ mod tests {
                 .expect("Handshake fails");
 
             assert_eq!(
-                lcs::to_bytes(&handshake).unwrap(),
-                lcs::to_bytes(&client_handshake_clone).unwrap()
+                bcs::to_bytes(&handshake).unwrap(),
+                bcs::to_bytes(&client_handshake_clone).unwrap()
             );
         };
 
@@ -113,8 +113,8 @@ mod tests {
                 .expect("Handshake fails");
 
             assert_eq!(
-                lcs::to_bytes(&handshake).unwrap(),
-                lcs::to_bytes(&server_handshake_clone).unwrap()
+                bcs::to_bytes(&handshake).unwrap(),
+                bcs::to_bytes(&server_handshake_clone).unwrap()
             );
         };
 

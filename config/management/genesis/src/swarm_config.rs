@@ -34,7 +34,7 @@ impl SwarmConfig {
         }
 
         let diem_root_key_path = output_dir.join("mint.key");
-        let serialized_keys = lcs::to_bytes(&diem_root_key)?;
+        let serialized_keys = bcs::to_bytes(&diem_root_key)?;
         let mut key_file = File::create(&diem_root_key_path)?;
         key_file.write_all(&serialized_keys)?;
 

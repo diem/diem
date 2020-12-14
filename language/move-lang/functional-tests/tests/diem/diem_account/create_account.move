@@ -2,11 +2,11 @@
 script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
-use 0x1::LCS;
+use 0x1::BCS;
 fun main(account: &signer) {
     let addr: address = 0x111101;
     assert(!DiemAccount::exists_at(addr), 83);
-    DiemAccount::create_parent_vasp_account<XUS>(account, addr, LCS::to_bytes(&addr), x"aa", false);
+    DiemAccount::create_parent_vasp_account<XUS>(account, addr, BCS::to_bytes(&addr), x"aa", false);
 }
 }
 

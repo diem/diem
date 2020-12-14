@@ -56,7 +56,7 @@ impl BackupServiceClient {
     pub async fn get_db_state(&self) -> Result<Option<DbState>> {
         let mut buf = Vec::new();
         self.get("db_state").await?.read_to_end(&mut buf).await?;
-        Ok(lcs::from_bytes(&buf)?)
+        Ok(bcs::from_bytes(&buf)?)
     }
 
     pub async fn get_account_range_proof(

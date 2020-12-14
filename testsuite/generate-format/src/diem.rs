@@ -7,7 +7,7 @@ use diem_crypto::{
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::{SigningKey, Uniform},
 };
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use diem_types::{contract_event, event, transaction, write_set};
 use move_core_types::language_storage;
 use rand::{rngs::StdRng, SeedableRng};
@@ -19,8 +19,8 @@ pub fn output_file() -> Option<&'static str> {
     Some("tests/staged/diem.yaml")
 }
 
-/// This aims at signing canonically serializable LCS data
-#[derive(CryptoHasher, LCSCryptoHash, Serialize, Deserialize)]
+/// This aims at signing canonically serializable BCS data
+#[derive(CryptoHasher, BCSCryptoHash, Serialize, Deserialize)]
 struct TestDiemCrypto(String);
 
 /// Record sample values for crypto types used by transactions.
@@ -46,7 +46,7 @@ fn trace_crypto_values(tracer: &mut Tracer, samples: &mut Samples) -> Result<()>
 
 pub fn get_registry() -> Result<Registry> {
     let mut tracer =
-        Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
+        Tracer::new(TracerConfig::default().is_human_readable(bcs::is_human_readable()));
     let mut samples = Samples::new();
     // 1. Record samples for types with custom deserializers.
     trace_crypto_values(&mut tracer, &mut samples)?;

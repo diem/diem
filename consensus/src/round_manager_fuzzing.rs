@@ -49,7 +49,7 @@ pub fn generate_corpus_proposal() -> Vec<u8> {
             })
             .await;
         // serialize and return proposal
-        lcs::to_bytes(&proposal.unwrap()).unwrap()
+        bcs::to_bytes(&proposal.unwrap()).unwrap()
     })
 }
 
@@ -173,7 +173,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut round_manager = create_node_for_fuzzing();
 
-    let proposal: ProposalMsg = match lcs::from_bytes(data) {
+    let proposal: ProposalMsg = match bcs::from_bytes(data) {
         Ok(xx) => xx,
         Err(_) => {
             if cfg!(test) {

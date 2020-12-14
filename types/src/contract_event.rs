@@ -15,7 +15,7 @@ use crate::{
 };
 use anyhow::{ensure, Error, Result};
 use diem_crypto::hash::CryptoHash;
-use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, ops::Deref};
 
 /// Support versioning of the data structure.
-#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
+#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
 pub enum ContractEvent {
     V0(ContractEventV0),
 }

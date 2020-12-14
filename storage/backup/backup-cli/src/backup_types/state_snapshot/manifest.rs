@@ -18,10 +18,10 @@ pub struct StateSnapshotChunk {
     pub first_key: HashValue,
     /// key of the last account in this chunk.
     pub last_key: HashValue,
-    /// Repeated `len(record) + record` where `record` is LCS serialized tuple
+    /// Repeated `len(record) + record` where `record` is BCS serialized tuple
     /// `(key, account_state_blob)`
     pub blobs: FileHandle,
-    /// LCS serialized `SparseMerkleRangeProof` that proves this chunk adds up to the root hash
+    /// BCS serialized `SparseMerkleRangeProof` that proves this chunk adds up to the root hash
     /// indicated in the backup (`StateSnapshotBackup::root_hash`).
     pub proof: FileHandle,
 }
@@ -35,7 +35,7 @@ pub struct StateSnapshotBackup {
     pub root_hash: HashValue,
     /// All account blobs in chunks.
     pub chunks: Vec<StateSnapshotChunk>,
-    /// LCS serialized
+    /// BCS serialized
     /// `Tuple(TransactionInfoWithProof, LedgerInfoWithSignatures)`.
     ///   - The `TransactionInfoWithProof` is at `Version` above, and carries the same `root_hash`
     /// above; It proves that at specified version the root hash is as specified in a chain

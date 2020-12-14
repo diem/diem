@@ -29,7 +29,7 @@ fn trace_crypto_values(tracer: &mut Tracer, samples: &mut Samples) -> Result<()>
 /// Create a registry of network data formats.
 pub fn get_registry() -> Result<Registry> {
     let mut tracer =
-        Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
+        Tracer::new(TracerConfig::default().is_human_readable(bcs::is_human_readable()));
     let mut samples = Samples::new();
     // 1. Record samples for types with custom deserializers.
     trace_crypto_values(&mut tracer, &mut samples)?;

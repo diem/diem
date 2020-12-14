@@ -78,10 +78,10 @@ Details of doing this exchange in production will be published soon, but we will
 Every parent VASP created by the faucet has a dummy `base_url` and  `compliance_public_key`. However, you can use [these](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/rotate_base_url.move) [scripts](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/rotate_compliance_public_key.move) to send a transaction from the parent VASP that sets the URL/key to meaningful values. Once this is done, you can construct the message to be signed and craft a dual attestation transaction with the following ingredients:
 
 * `payer_vasp_address`: the address of the payer (can be either a parent or child VASP)
-* `payee_vasp_address`: the address of the payee (can be either a parent or child VASP). Encoding: LCS `[u8; 16]`
-* `amount`: number of coins to send. Encoding: LCS `u64`
-* `reference_id`: an identifier for the payment in the off-chain protocol. This is not inspected on-chain, so dummy value suffices for testing.  Encoding: LCS `[u8;12]`
+* `payee_vasp_address`: the address of the payee (can be either a parent or child VASP). Encoding: BCS `[u8; 16]`
+* `amount`: number of coins to send. Encoding: BCS `u64`
+* `reference_id`: an identifier for the payment in the off-chain protocol. This is not inspected on-chain, so dummy value suffices for testing.  Encoding: BCS `[u8;12]`
 
-The payee VASP should sign the [LCS](https://developers.diem.com/docs/rustdocs/diem_canonical_serialization/index.html)-encoded (see types above) message `reference_id | payer_vasp_address | amount | @@$$DIEM_ATTEST$$@@`. to produce a `payee_signature`. The `@@$$DIEM_ATTEST$$@@` part is a domain separator intended to  prevent misusing a  different signature from the same key (e.g., interpreting a KYC signature as a travel rule signature).
+The payee VASP should sign the [BCS](https://docs.rs/bcs/)-encoded (see types above) message `reference_id | payer_vasp_address | amount | @@$$DIEM_ATTEST$$@@`. to produce a `payee_signature`. The `@@$$DIEM_ATTEST$$@@` part is a domain separator intended to  prevent misusing a  different signature from the same key (e.g., interpreting a KYC signature as a travel rule signature).
 
 Finally, send a transaction from payer_vasp_address using the payment [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/peer_to_peer_with_metadata.move) mentioned above with `payee = payee_vasp_address, amount = amount, metadata = reference_id, metadata_signature = payee_signature`.

@@ -30,11 +30,11 @@ pub(super) static THROUGHPUT_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub(super) fn reply_with_lcs_bytes<R: Serialize>(
+pub(super) fn reply_with_bcs_bytes<R: Serialize>(
     endpoint: &str,
     record: &R,
 ) -> Result<Box<dyn Reply>> {
-    let bytes = lcs::to_bytes(record)?;
+    let bytes = bcs::to_bytes(record)?;
     THROUGHPUT_COUNTER
         .with_label_values(&[endpoint])
         .inc_by(bytes.len() as u64);
@@ -82,12 +82,12 @@ where
     Ok(Box::new(Response::new(body)))
 }
 
-pub(super) async fn send_size_prefixed_lcs_bytes<I, R>(iter_res: Result<I>, mut sender: BytesSender)
+pub(super) async fn send_size_prefixed_bcs_bytes<I, R>(iter_res: Result<I>, mut sender: BytesSender)
 where
     I: Iterator<Item = Result<R>>,
     R: Serialize,
 {
-    send_size_prefixed_lcs_bytes_impl(iter_res, &mut sender)
+    send_size_prefixed_bcs_bytes_impl(iter_res, &mut sender)
         .await
         .unwrap_or_else(|e| {
             warn!("Failed writing to output http body: {:?}", e);
@@ -95,7 +95,7 @@ where
         });
 }
 
-async fn send_size_prefixed_lcs_bytes_impl<I, R>(
+async fn send_size_prefixed_bcs_bytes_impl<I, R>(
     iter_res: Result<I>,
     sender: &mut BytesSender,
 ) -> Result<()>
@@ -105,7 +105,7 @@ where
 {
     for record_res in iter_res? {
         let record = record_res?;
-        let record_bytes = lcs::to_bytes(&record)?;
+        let record_bytes = bcs::to_bytes(&record)?;
         let size_bytes = (record_bytes.len() as u32).to_be_bytes();
         sender.send_data(Bytes::from(size_bytes.to_vec())).await?;
         sender.send_data(Bytes::from(record_bytes)).await?;

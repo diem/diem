@@ -9,7 +9,7 @@
 //! # Examples
 //!
 //! ```
-//! use diem_crypto_derive::{CryptoHasher, LCSCryptoHash};
+//! use diem_crypto_derive::{CryptoHasher, BCSCryptoHash};
 //! use diem_crypto::{
 //!     ed25519::*,
 //!     traits::{Signature, SigningKey, Uniform},
@@ -17,7 +17,7 @@
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use serde::{Serialize, Deserialize};
 //!
-//! #[derive(Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
+//! #[derive(Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
 //! pub struct TestCryptoDocTest(String);
 //! let message = TestCryptoDocTest("Test message".to_string());
 //!
@@ -237,7 +237,7 @@ impl SigningKey for Ed25519PrivateKey {
 
     fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> Ed25519Signature {
         let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
-        lcs::serialize_into(&mut bytes, &message)
+        bcs::serialize_into(&mut bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)
             .expect("Serialization of signable material should not fail.");
         Ed25519PrivateKey::sign_arbitrary_message(&self, bytes.as_ref())
@@ -421,7 +421,7 @@ impl Signature for Ed25519Signature {
         // Public keys should be validated to be safe against small subgroup attacks, etc.
         precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
-        lcs::serialize_into(&mut bytes, &message)
+        bcs::serialize_into(&mut bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)?;
         Self::verify_arbitrary_msg(self, &bytes, public_key)
     }
@@ -457,7 +457,7 @@ impl Signature for Ed25519Signature {
             Ed25519Signature::check_malleability(&sig.to_bytes())?
         }
         let mut message_bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
-        lcs::serialize_into(&mut message_bytes, &message)
+        bcs::serialize_into(&mut message_bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)?;
 
         let batch_argument = keys_and_signatures

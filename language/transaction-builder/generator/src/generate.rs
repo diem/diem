@@ -30,7 +30,7 @@ enum Language {
     about = "Generate code for Move script builders"
 )]
 struct Options {
-    /// Path to the directory containing ABI files in LCS encoding.
+    /// Path to the directory containing ABI files in BCS encoding.
     abi_directory: PathBuf,
 
     /// Language for code generation.
@@ -41,7 +41,7 @@ struct Options {
     #[structopt(long)]
     target_source_dir: Option<PathBuf>,
 
-    /// Also install the diem types described by the given YAML file, along with the LCS runtime.
+    /// Also install the diem types described by the given YAML file, along with the BCS runtime.
     #[structopt(long)]
     with_diem_types: Option<PathBuf>,
 
@@ -53,7 +53,7 @@ struct Options {
     #[structopt(long)]
     module_name: Option<String>,
 
-    /// Optional package name (Python) or module path (Go) of the Serde and LCS runtime dependencies.
+    /// Optional package name (Python) or module path (Go) of the Serde and BCS runtime dependencies.
     #[structopt(long)]
     serde_package_name: Option<String>,
 
@@ -136,7 +136,7 @@ fn main() {
             Language::Rust | Language::Go => (),
             _ => {
                 installer.install_serde_runtime().unwrap();
-                installer.install_lcs_runtime().unwrap();
+                installer.install_bcs_runtime().unwrap();
             }
         }
         let content =
@@ -160,7 +160,7 @@ fn main() {
             options.with_custom_diem_code.into_iter(),
         );
         let config = serdegen::CodeGeneratorConfig::new(diem_package_name)
-            .with_encodings(vec![serdegen::Encoding::Lcs])
+            .with_encodings(vec![serdegen::Encoding::Bcs])
             .with_custom_code(custom_diem_code);
         installer.install_module(&config, &registry).unwrap();
     }

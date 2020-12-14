@@ -86,7 +86,7 @@ impl LoadedChunk {
         let mut event_vecs = Vec::new();
 
         while let Some(record_bytes) = file.read_record_bytes().await? {
-            let (txn, txn_info, events) = lcs::from_bytes(&record_bytes)?;
+            let (txn, txn_info, events) = bcs::from_bytes(&record_bytes)?;
             txns.push(txn);
             txn_infos.push(txn_info);
             event_vecs.push(events);
@@ -101,7 +101,7 @@ impl LoadedChunk {
         );
 
         let (range_proof, ledger_info) = storage
-            .load_lcs_file::<(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)>(
+            .load_bcs_file::<(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)>(
                 &manifest.proof,
             )
             .await?;

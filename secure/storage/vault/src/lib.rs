@@ -695,7 +695,7 @@ pub fn process_unsealed_response(resp: Response) -> Result<bool, Error> {
 ///       "name":"local_owner_key__consensus",
 ///       "keys":{
 ///          "1":{
-///             "key":"C3R5O8uAfrgv7sJmCMSLEp1R2HmkZtwdfGT/xVvZVvgCGo6TkWga/ojplJFMM+i2805X3CV7IRyNLCSJcr4AqQ==",
+///             "key":"C3R5O8uAfrgv7sJmCMSLEp1R2HmkZtwdfGT/xVvZVvgCGo6TkWga/ojplJFMM+i2805X3CV7IRyNBCSJcr4AqQ==",
 ///             "hmac_key":null,
 ///             "time":"2020-05-29T06:27:38.1233515Z",
 ///             "ec_x":null,

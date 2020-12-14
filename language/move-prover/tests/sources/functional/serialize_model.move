@@ -1,19 +1,19 @@
-module TestLCS {
+module TestBCS {
 
-    use 0x1::LCS;
+    use 0x1::BCS;
 
     spec module {
         pragma verify = true;
     }
 
 
-    fun lcs_test1<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
+    fun bcs_test1<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
     {
-        let s1 = LCS::to_bytes(v1);
-        let s2 = LCS::to_bytes(v2);
+        let s1 = BCS::to_bytes(v1);
+        let s2 = BCS::to_bytes(v2);
         (s1, s2)
     }
-    spec fun lcs_test1 {
+    spec fun bcs_test1 {
         aborts_if false;
         ensures result_1 == result_2 ==> v1 == v2;
         ensures v1 == v2 ==> result_1 == result_2;
@@ -23,13 +23,13 @@ module TestLCS {
 
     // serialize tests
 
-    fun lcs_test1_incorrect<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
+    fun bcs_test1_incorrect<Thing>(v1: &Thing, v2: &Thing): (vector<u8>, vector<u8>)
     {
-        let s1 = LCS::to_bytes(v1);
-        let s2 = LCS::to_bytes(v2);
+        let s1 = BCS::to_bytes(v1);
+        let s2 = BCS::to_bytes(v2);
         (s1, s2)
     }
-    spec fun lcs_test1_incorrect {
+    spec fun bcs_test1_incorrect {
         aborts_if false;
         ensures result_1 == result_2;
         ensures len(result_1) > 0;

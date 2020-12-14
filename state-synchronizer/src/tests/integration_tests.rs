@@ -793,12 +793,12 @@ fn test_lagging_upstream_long_poll() {
     let (_, msg) = env.deliver_msg(full_node_vfn_network);
     // expected: known_version 0, epoch 1, no target LI version
     let req: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(req, 0, None);
 
     let (_, msg) = env.deliver_msg(validator);
     let resp: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 400, 1, 250);
     env.wait_for_version(1, 250, None);
 
@@ -810,7 +810,7 @@ fn test_lagging_upstream_long_poll() {
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
     let (_, msg) = env.deliver_msg(full_node_failover_network);
     let msg: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 250, Some(400));
 
     // update failover VFN from lagging state to updated state
@@ -831,23 +831,23 @@ fn test_lagging_upstream_long_poll() {
     // failover fn sends chunk request to validator
     let (_, msg) = env.deliver_msg(failover_fn_vfn_network);
     let msg: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 500, None);
     let (_, msg) = env.deliver_msg(validator);
     let resp: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
 
     // failover sends long-poll subscription to fullnode
     let (_, msg) = env.deliver_msg(failover_fn);
     let resp: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 251, 250);
 
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
     let (_, msg) = env.deliver_msg(full_node_failover_network);
     let msg: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     // here we check that the next requested version is not the older target LI 400 - that should be
     // pruned out from PendingLedgerInfos since it becomes outdated after the known_version advances to 500
     check_chunk_request(msg, 500, None);
@@ -855,7 +855,7 @@ fn test_lagging_upstream_long_poll() {
     // check that fullnode successfully finishes sync to 600
     let (_, msg) = env.deliver_msg(failover_fn);
     let resp: StateSynchronizerMsg =
-        lcs::from_bytes(&msg.mdata).expect("failed lcs deserialization");
+        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
     env.wait_for_version(1, 600, Some(600));
 }

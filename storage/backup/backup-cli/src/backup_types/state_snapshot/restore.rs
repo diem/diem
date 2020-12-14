@@ -96,7 +96,7 @@ impl StateSnapshotRestoreController {
         let manifest: StateSnapshotBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
         let (txn_info_with_proof, li): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
-            self.storage.load_lcs_file(&manifest.proof).await?;
+            self.storage.load_bcs_file(&manifest.proof).await?;
         txn_info_with_proof.verify(li.ledger_info(), manifest.version)?;
         ensure!(
             txn_info_with_proof.transaction_info().state_root_hash() == manifest.root_hash,
@@ -131,7 +131,7 @@ impl StateSnapshotRestoreController {
         tgt_leaf_idx.set(manifest.chunks.last().map_or(0, |c| c.last_idx as i64));
         for chunk in manifest.chunks {
             let blobs = self.read_account_state_chunk(chunk.blobs).await?;
-            let proof = self.storage.load_lcs_file(&chunk.proof).await?;
+            let proof = self.storage.load_bcs_file(&chunk.proof).await?;
 
             receiver.add_chunk(blobs, proof)?;
             leaf_idx.set(chunk.last_idx as i64);
@@ -150,7 +150,7 @@ impl StateSnapshotRestoreController {
         let mut chunk = vec![];
 
         while let Some(record_bytes) = file.read_record_bytes().await? {
-            chunk.push(lcs::from_bytes(&record_bytes)?);
+            chunk.push(bcs::from_bytes(&record_bytes)?);
         }
 
         Ok(chunk)
