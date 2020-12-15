@@ -8,13 +8,14 @@ use guppy::graph::PackageGraph;
 use once_cell::sync::OnceCell;
 use std::path::{Path, PathBuf};
 
+pub mod core_config;
 mod debug_ignore;
 mod errors;
 mod git;
 mod graph;
 mod workspace_subset;
 
-use crate::git::GitCli;
+use crate::{core_config::XCoreConfig, git::GitCli};
 pub use debug_ignore::*;
 pub use errors::*;
 use graph::PackageGraphPlus;
@@ -24,6 +25,7 @@ pub use workspace_subset::*;
 #[derive(Debug)]
 pub struct XCoreContext {
     project_root: &'static Path,
+    config: XCoreConfig,
     current_dir: PathBuf,
     current_rel_dir: PathBuf,
     git_cli: GitCli,
@@ -32,7 +34,11 @@ pub struct XCoreContext {
 
 impl XCoreContext {
     /// Creates a new XCoreContext.
-    pub fn new(project_root: &'static Path, current_dir: PathBuf) -> Result<Self> {
+    pub fn new(
+        project_root: &'static Path,
+        current_dir: PathBuf,
+        config: XCoreConfig,
+    ) -> Result<Self> {
         let current_rel_dir = match current_dir.strip_prefix(project_root) {
             Ok(rel_dir) => rel_dir.to_path_buf(),
             Err(_) => {
@@ -46,6 +52,7 @@ impl XCoreContext {
         // function.
         Ok(Self {
             project_root,
+            config,
             current_dir,
             current_rel_dir,
             git_cli: GitCli::new(project_root)?,
@@ -56,6 +63,11 @@ impl XCoreContext {
     /// Returns the project root for this workspace.
     pub fn project_root(&self) -> &'static Path {
         self.project_root
+    }
+
+    /// Returns the core config.
+    pub fn config(&self) -> &XCoreConfig {
+        &self.config
     }
 
     /// Returns the current working directory for this process.
@@ -83,8 +95,8 @@ impl XCoreContext {
         Ok(self.package_graph_plus()?.head())
     }
 
-    /// Returns information about the default members for this workspace.
-    pub fn default_members<'a>(&'a self) -> Result<&'a WorkspaceSubset<'a>> {
+    /// Returns information about the subsets for this workspace.
+    pub fn subsets<'a>(&'a self) -> Result<&'a WorkspaceSubsets<'a>> {
         Ok(self.package_graph_plus()?.suffix())
     }
 

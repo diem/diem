@@ -1,22 +1,121 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Result, SystemError};
+use crate::{core_config::SubsetConfig, Result, SystemError};
 use guppy::{
     graph::{
         cargo::{CargoOptions, CargoResolverVersion, CargoSet},
-        feature::{default_filter, FeatureFilter, FeatureSet},
-        PackageGraph, PackageMetadata,
+        feature::{default_filter, FeatureFilter, FeatureQuery, FeatureSet},
+        PackageGraph, PackageMetadata, PackageQuery,
     },
     PackageId,
 };
 use serde::Deserialize;
-use std::{fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+};
 use toml::de;
+
+/// Contains information about all the subsets specified in this workspace.
+#[derive(Clone, Debug)]
+pub struct WorkspaceSubsets<'g> {
+    // TODO: default members should become a subset in x.toml
+    default_members: WorkspaceSubset<'g>,
+    subsets: BTreeMap<String, WorkspaceSubset<'g>>,
+}
+
+impl<'g> WorkspaceSubsets<'g> {
+    /// Constructs a new store for workspace subsets.
+    ///
+    /// This is done with respect to a "standard build", which assumes:
+    /// * any platform
+    /// * v2 resolver
+    /// * no dev dependencies
+    pub fn new(
+        graph: &'g PackageGraph,
+        project_root: &Path,
+        config: &BTreeMap<String, SubsetConfig>,
+    ) -> Result<Self> {
+        let cargo_opts = CargoOptions::new()
+            .with_version(CargoResolverVersion::V2)
+            .with_dev_deps(false);
+
+        let default_members = Self::read_default_members(project_root)?;
+
+        // Look up default members by path.
+        let default_query = graph
+            .query_workspace_paths(&default_members)
+            .map_err(|err| SystemError::guppy("querying default members", err))?;
+        let default_members = WorkspaceSubset::new(&default_query, default_filter(), &cargo_opts);
+
+        // For each of the subset configs, look up the packages by name.
+        let subsets = config
+            .iter()
+            .map(|(name, config)| {
+                let query = graph
+                    .query_workspace_names(&config.members)
+                    .map_err(|err| {
+                        SystemError::guppy(format!("querying members for subset '{}'", name), err)
+                    })?;
+                let subset = WorkspaceSubset::new(&query, default_filter(), &cargo_opts);
+                Ok((name.clone(), subset))
+            })
+            .collect::<Result<_, _>>()?;
+
+        Ok(Self {
+            default_members,
+            subsets,
+        })
+    }
+
+    /// Returns information about default members.
+    pub fn default_members(&self) -> &WorkspaceSubset<'g> {
+        &self.default_members
+    }
+
+    /// Returns information about the subset by name.
+    pub fn get(&self, name: impl AsRef<str>) -> Option<&WorkspaceSubset<'g>> {
+        self.subsets.get(name.as_ref())
+    }
+
+    /// Iterate over all named subsets.
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a str, &'a WorkspaceSubset<'g>)> + 'a {
+        self.subsets
+            .iter()
+            .map(|(name, subset)| (name.as_str(), subset))
+    }
+
+    // ---
+    // Helper methods
+    // ---
+
+    fn read_default_members(project_root: &Path) -> Result<Vec<PathBuf>> {
+        #[derive(Deserialize)]
+        struct RootToml {
+            workspace: Workspace,
+        }
+
+        #[derive(Deserialize)]
+        struct Workspace {
+            #[serde(rename = "default-members")]
+            default_members: Vec<PathBuf>,
+        }
+
+        let root_toml = project_root.join("Cargo.toml");
+        let contents =
+            fs::read(&root_toml).map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
+        let contents: RootToml = de::from_slice(&contents)
+            .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
+        Ok(contents.workspace.default_members)
+    }
+}
 
 /// Information collected about a subset of members of a workspace.
 ///
 /// Some subsets of this workspace have special properties that are enforced through linters.
+#[derive(Clone, Debug)]
 pub struct WorkspaceSubset<'g> {
     build_set: CargoSet<'g>,
     unified_set: FeatureSet<'g>,
@@ -26,58 +125,26 @@ impl<'g> WorkspaceSubset<'g> {
     /// Creates a new subset by simulating a Cargo build on the specified workspace paths, with
     /// the given feature filter.
     pub fn new<'a>(
-        package_graph: &'g PackageGraph,
-        paths: impl IntoIterator<Item = &'a Path>,
+        package_query: &PackageQuery<'g>,
         feature_filter: impl FeatureFilter<'g>,
         cargo_opts: &CargoOptions<'_>,
-    ) -> Result<Self, guppy::Error> {
+    ) -> Self {
         // Use the Cargo resolver to figure out which packages will be included.
-        let build_set = package_graph
-            .query_workspace_paths(paths)?
+        let build_set = package_query
             .to_feature_query(feature_filter)
-            .resolve_cargo(cargo_opts)?;
+            .resolve_cargo(cargo_opts)
+            .expect("resolve cargo should always succeed");
         let unified_set = build_set.host_features().union(build_set.target_features());
 
-        Ok(Self {
+        Self {
             build_set,
             unified_set,
-        })
+        }
     }
 
-    /// Creates a new subset of default members by reading the root `Cargo.toml` file.
-    ///
-    /// This does not include dev-dependencies.
-    pub fn default_members(package_graph: &'g PackageGraph, project_root: &Path) -> Result<Self> {
-        #[derive(Deserialize)]
-        struct RootToml<'a> {
-            #[serde(borrow)]
-            workspace: Workspace<'a>,
-        }
-
-        #[derive(Deserialize)]
-        struct Workspace<'a> {
-            #[serde(borrow)]
-            #[serde(rename = "default-members")]
-            default_members: Vec<&'a Path>,
-        }
-
-        let root_toml = project_root.join("Cargo.toml");
-        let contents =
-            fs::read(&root_toml).map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
-        let contents: RootToml = de::from_slice(&contents)
-            .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
-        let default_members = contents.workspace.default_members;
-
-        let cargo_opts = CargoOptions::new()
-            .with_version(CargoResolverVersion::V2)
-            .with_dev_deps(false);
-        Self::new(
-            package_graph,
-            default_members,
-            default_filter(),
-            &cargo_opts,
-        )
-        .map_err(|err| SystemError::guppy("parsing default members", err))
+    /// Returns the original query that this subset was constructed from.
+    pub fn query(&self) -> &FeatureQuery<'g> {
+        self.build_set.original_query()
     }
 
     /// Returns the status of the given package ID in the subset.

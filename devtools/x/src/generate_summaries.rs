@@ -5,7 +5,7 @@ use crate::context::XContext;
 use anyhow::Context;
 use guppy::graph::{
     cargo::CargoOptions,
-    feature::{all_filter, default_filter, FeatureQuery},
+    feature::{all_filter, FeatureQuery},
 };
 use std::{
     fs,
@@ -27,9 +27,8 @@ impl Args {
 pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let config = xctx.config();
     let summaries_config = config.summaries_config();
-    let workspace_config = config.workspace_config();
     let pkg_graph = xctx.core().package_graph()?;
-    let default_members = xctx.core().default_members()?;
+    let subsets = xctx.core().subsets()?;
 
     let default_opts = summaries_config.default.to_cargo_options(pkg_graph)?;
     let full_opts = summaries_config.full.to_cargo_options(pkg_graph)?;
@@ -49,18 +48,14 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     // * default members (default features)
     // (note that we aren't using the build set from default_members() as it may have different
     // options)
-    let feature_query = default_members.build_set().original_query().clone();
+    let feature_query = subsets.default_members().query().clone();
     write_summary("default", feature_query, &default_opts, &out_dir)?;
 
     summary_count += 1;
 
     // * subsets (default features)
-    for (name, subset_config) in &workspace_config.subsets {
-        // TODO: cache these next to PackageGraph?
-        let feature_query = pkg_graph
-            .query_workspace_names(&subset_config.members)
-            .with_context(|| format!("error while querying workspace paths for {}", name))?
-            .to_feature_query(default_filter());
+    for (name, subset) in subsets.iter() {
+        let feature_query = subset.query().clone();
         write_summary(name, feature_query, &default_opts, &out_dir)?;
 
         summary_count += 1;

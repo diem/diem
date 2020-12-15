@@ -158,19 +158,19 @@ members = [
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.
 
-[workspace.subsets.lsr]
+[subsets.lsr]
 # The Diem safety rules TCB.
 members = [
     "safety-rules",
 ]
 
-[workspace.subsets.lec]
+[subsets.lec]
 # The Diem execution correctness TCB.
 members = [
     "execution-correctness",
 ]
 
-[workspace.subsets.release]
+[subsets.release]
 # The Diem release binaries
 members = [
     "backup-cli",

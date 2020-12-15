@@ -129,7 +129,7 @@ pub(super) enum SelectedInclude<'a> {
 impl<'a> SelectedInclude<'a> {
     /// Returns a `SelectedInclude` that selects production crates (non-test-only code).
     pub fn production(xctx: &'a XContext) -> Result<Self> {
-        let default_members = xctx.core().default_members()?;
+        let default_members = xctx.core().subsets()?.default_members();
         let workspace = xctx.core().package_graph()?.workspace();
 
         let selected = workspace.iter().filter_map(|package| {

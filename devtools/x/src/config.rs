@@ -7,11 +7,24 @@ use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
+use x_core::core_config::XCoreConfig;
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct XConfig {
+    /// Core configuration.
+    #[serde(flatten)]
+    pub core: XCoreConfig,
+    /// X configuration.
+    #[serde(flatten)]
+    pub config: Config,
+}
+
+// TODO: probably split up lints and their configs into their own crate and section
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
@@ -114,8 +127,6 @@ pub struct WorkspaceConfig {
     pub test_only: TestOnlyConfig,
     /// Exceptions to whitespace linters
     pub whitespace_exceptions: Vec<String>,
-    /// Subsets of this workspace
-    pub subsets: BTreeMap<String, SubsetConfig>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -152,13 +163,6 @@ pub struct TestOnlyConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-pub struct SubsetConfig {
-    /// The members in this subset
-    pub members: Vec<String>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
 pub struct Clippy {
     allowed: Vec<String>,
     warn: Vec<String>,
@@ -176,7 +180,7 @@ pub struct CargoConfig {
     pub sccache: Option<Sccache>,
 }
 
-impl Config {
+impl XConfig {
     pub fn from_file(f: impl AsRef<Path>) -> Result<Self> {
         let f = f.as_ref();
         let contents =
@@ -192,7 +196,9 @@ impl Config {
     pub fn from_project_root() -> Result<Self> {
         Self::from_file(project_root().join("x.toml"))
     }
+}
 
+impl Config {
     pub fn cargo_config(&self) -> &CargoConfig {
         &self.cargo
     }

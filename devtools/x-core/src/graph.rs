@@ -1,18 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Result, SystemError, WorkspaceSubset, XCoreContext};
+use crate::{Result, SystemError, WorkspaceSubsets, XCoreContext};
 use guppy::MetadataCommand;
 
 rental! {
     mod rent_package_graph {
-        use crate::WorkspaceSubset;
+        use crate::WorkspaceSubsets;
         use guppy::graph::PackageGraph;
 
         #[rental(covariant)]
         pub(crate) struct PackageGraphPlus {
             g: Box<PackageGraph>,
-            default_members: WorkspaceSubset<'g>,
+            subsets: WorkspaceSubsets<'g>,
         }
     }
 }
@@ -31,7 +31,7 @@ impl PackageGraphPlus {
                 cmd.build_graph()
                     .map_err(|err| SystemError::guppy("building package graph", err))?,
             ),
-            move |graph| WorkspaceSubset::default_members(graph, project_root),
+            move |graph| WorkspaceSubsets::new(graph, project_root, &ctx.config().subsets),
         )
     }
 }
