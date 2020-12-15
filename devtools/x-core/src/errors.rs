@@ -31,7 +31,10 @@ pub enum SystemError {
         context: Cow<'static, str>,
         err: FromHexError,
     },
-    Guppy(guppy::Error),
+    Guppy {
+        context: Cow<'static, str>,
+        err: guppy::Error,
+    },
     Io {
         context: Cow<'static, str>,
         err: io::Error,
@@ -45,6 +48,13 @@ pub enum SystemError {
 impl SystemError {
     pub fn io(context: impl Into<Cow<'static, str>>, err: io::Error) -> Self {
         SystemError::Io {
+            context: context.into(),
+            err,
+        }
+    }
+
+    pub fn guppy(context: impl Into<Cow<'static, str>>, err: guppy::Error) -> Self {
+        SystemError::Guppy {
             context: context.into(),
             err,
         }
@@ -101,8 +111,8 @@ impl fmt::Display for SystemError {
             SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
             SystemError::FromHex { context, .. }
             | SystemError::Io { context, .. }
-            | SystemError::Serde { context, .. } => write!(f, "while {}", context),
-            SystemError::Guppy(err) => write!(f, "guppy error: {}", err),
+            | SystemError::Serde { context, .. }
+            | SystemError::Guppy { context, .. } => write!(f, "while {}", context),
         }
     }
 }
@@ -115,14 +125,8 @@ impl error::Error for SystemError {
             | SystemError::GitRoot(_) => None,
             SystemError::FromHex { err, .. } => Some(err),
             SystemError::Io { err, .. } => Some(err),
-            SystemError::Guppy(err) => Some(err),
+            SystemError::Guppy { err, .. } => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),
         }
-    }
-}
-
-impl From<guppy::Error> for SystemError {
-    fn from(err: guppy::Error) -> Self {
-        SystemError::Guppy(err)
     }
 }

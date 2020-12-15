@@ -71,12 +71,13 @@ impl<'g> WorkspaceSubset<'g> {
         let cargo_opts = CargoOptions::new()
             .with_version(CargoResolverVersion::V2)
             .with_dev_deps(false);
-        Ok(Self::new(
+        Self::new(
             package_graph,
             default_members,
             default_filter(),
             &cargo_opts,
-        )?)
+        )
+        .map_err(|err| SystemError::guppy("parsing default members", err))
     }
 
     /// Returns the status of the given package ID in the subset.

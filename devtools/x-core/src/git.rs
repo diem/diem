@@ -123,7 +123,10 @@ impl GitCli {
         let scratch = self.get_or_init_scratch(commit_ref)?;
 
         // Compute the package graph for the scratch worktree.
-        Ok(MetadataCommand::new().current_dir(scratch).build_graph()?)
+        MetadataCommand::new()
+            .current_dir(scratch)
+            .build_graph()
+            .map_err(|err| SystemError::guppy("building package graph", err))
     }
 
     // ---

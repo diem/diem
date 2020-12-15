@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Result, WorkspaceSubset, XCoreContext};
+use crate::{Result, SystemError, WorkspaceSubset, XCoreContext};
 use guppy::MetadataCommand;
 
 rental! {
@@ -26,8 +26,12 @@ impl PackageGraphPlus {
         let project_root = ctx.project_root();
         cmd.current_dir(project_root);
 
-        Self::try_new_or_drop(Box::new(cmd.build_graph()?), move |graph| {
-            WorkspaceSubset::default_members(graph, project_root)
-        })
+        Self::try_new_or_drop(
+            Box::new(
+                cmd.build_graph()
+                    .map_err(|err| SystemError::guppy("building package graph", err))?,
+            ),
+            move |graph| WorkspaceSubset::default_members(graph, project_root),
+        )
     }
 }
