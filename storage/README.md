@@ -22,7 +22,7 @@ The storage module is designed to serve two primary purposes:
 The Diem Blockchain can be viewed as a Merkle tree consisting of the following
 components:
 
-![data](https://developers.diem.com/docs/assets/data.png)
+![data](data.png)
 
 ### Ledger History
 
