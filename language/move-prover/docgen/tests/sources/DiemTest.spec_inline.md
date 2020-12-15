@@ -496,7 +496,7 @@ currency would be the XDX.
 </dt>
 <dd>
  The code symbol for this <code>CoinType</code>. ASCII encoded.
- e.g. for "XDX" this is x"4C4252". No character limit.
+ e.g. for "XDX" this is x"584458". No character limit.
 </dd>
 <dt>
 <code>can_mint: bool</code>

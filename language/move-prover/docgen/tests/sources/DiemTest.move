@@ -137,7 +137,7 @@ module DiemTest {
         /// 10^2 for `XUS` cents)
         fractional_part: u64,
         /// The code symbol for this `CoinType`. ASCII encoded.
-        /// e.g. for "XDX" this is x"4C4252". No character limit.
+        /// e.g. for "XDX" this is x"584458". No character limit.
         currency_code: vector<u8>,
         /// We may want to disable the ability to mint further coins of a
         /// currency while that currency is still around. This allows us to
