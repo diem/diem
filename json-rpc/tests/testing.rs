@@ -226,7 +226,7 @@ impl Env {
                     return result;
                 }
             }
-            ::std::thread::sleep(::std::time::Duration::from_millis(100));
+            ::std::thread::sleep(::std::time::Duration::from_millis(500));
         }
         panic!("transaction not executed?");
     }
