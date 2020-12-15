@@ -30,9 +30,6 @@ impl SelectedPackageArgs {
         // Mutually exclusive options -- only one of these can be provided.
         {
             let mut exclusive = vec![];
-            if self.changed_since.is_some() {
-                exclusive.push("--changed-since");
-            }
             if !self.package.is_empty() {
                 exclusive.push("--package");
             }
@@ -49,25 +46,28 @@ impl SelectedPackageArgs {
             }
         }
 
-        if self.workspace {
-            Ok(SelectedPackages::workspace())
+        let mut includes = if self.workspace {
+            SelectedInclude::Workspace
         } else if !self.package.is_empty() {
-            Ok(SelectedPackages::includes(
-                self.package.iter().map(|s| s.as_str()),
-            ))
-        } else if let Some(base) = &self.changed_since {
+            SelectedInclude::includes(self.package.iter().map(|s| s.as_str()))
+        } else if self.production {
+            SelectedInclude::production(xctx)?
+        } else {
+            SelectedInclude::default_cwd(xctx)?
+        };
+
+        // Intersect with --changed-since if specified.
+        if let Some(base) = &self.changed_since {
             let affected_set = changed_since_impl(&xctx, &base)?;
 
-            Ok(SelectedPackages::includes(
+            includes = includes.intersection(
                 affected_set
                     .packages(DependencyDirection::Forward)
                     .map(|package| package.name()),
-            ))
-        } else if self.production {
-            SelectedPackages::production(xctx)
-        } else {
-            SelectedPackages::default_cwd(xctx)
+            );
         }
+
+        Ok(SelectedPackages::new(includes))
     }
 }
 
@@ -92,70 +92,14 @@ pub struct SelectedPackages<'a> {
 }
 
 impl<'a> SelectedPackages<'a> {
-    /// Returns a new `CargoPackages` that selects all packages in this workspace.
-    pub fn workspace() -> Self {
+    pub(super) fn new(includes: SelectedInclude<'a>) -> Self {
         Self {
-            includes: SelectedInclude::Workspace,
-            excludes: BTreeSet::new(),
-        }
-    }
-
-    /// Returns a new `CargoPackages` that selects production crates (non-test-only code).
-    pub fn production(xctx: &'a XContext) -> Result<Self> {
-        let default_members = xctx.core().default_members()?;
-        let workspace = xctx.core().package_graph()?.workspace();
-
-        let selected = workspace.iter().filter_map(|package| {
-            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
-                Some(package.name())
-            } else {
-                None
-            }
-        });
-        Ok(Self {
-            includes: SelectedInclude::Includes(selected.collect()),
-            excludes: BTreeSet::new(),
-        })
-    }
-
-    /// Returns a new `CargoPackages` that selects the default set of packages for the current
-    /// working directory. This may either be the entire workspace or a set of packages inside the
-    /// workspace.
-    pub fn default_cwd(xctx: &'a XContext) -> Result<Self> {
-        let includes = if xctx.core().current_dir_is_root() {
-            SelectedInclude::Workspace
-        } else {
-            // Select all packages that begin with the current rel dir.
-            let rel = xctx.core().current_rel_dir();
-            let workspace = xctx.core().package_graph()?.workspace();
-            let selected = workspace.iter_by_path().filter_map(|(path, package)| {
-                // If we're in devtools, run tests for all packages inside devtools.
-                // If we're in devtools/x/src, run tests for devtools/x.
-                if path.starts_with(rel) || rel.starts_with(path) {
-                    Some(package.name())
-                } else {
-                    None
-                }
-            });
-            SelectedInclude::Includes(selected.collect())
-        };
-        Ok(Self {
             includes,
             excludes: BTreeSet::new(),
-        })
-    }
-
-    /// Returns a new `CargoPackages` that selects the specified packages.
-    pub fn includes(package_names: impl IntoIterator<Item = &'a str>) -> Self {
-        Self {
-            includes: SelectedInclude::Includes(package_names.into_iter().collect()),
-            excludes: BTreeSet::new(),
         }
     }
 
-    /// Adds excludes for this `CargoPackages`.
-    ///
-    /// The excludes are currently ignored if the local package is built.
+    /// Adds excludes for this `SelectedPackages`.
     pub fn add_excludes(&mut self, exclude_names: impl IntoIterator<Item = &'a str>) -> &mut Self {
         self.excludes.extend(exclude_names);
         self
@@ -179,7 +123,63 @@ impl<'a> SelectedPackages<'a> {
 #[derive(Clone, Debug)]
 pub(super) enum SelectedInclude<'a> {
     Workspace,
-    Includes(Vec<&'a str>),
+    Includes(BTreeSet<&'a str>),
+}
+
+impl<'a> SelectedInclude<'a> {
+    /// Returns a `SelectedInclude` that selects production crates (non-test-only code).
+    pub fn production(xctx: &'a XContext) -> Result<Self> {
+        let default_members = xctx.core().default_members()?;
+        let workspace = xctx.core().package_graph()?.workspace();
+
+        let selected = workspace.iter().filter_map(|package| {
+            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
+                Some(package.name())
+            } else {
+                None
+            }
+        });
+        Ok(SelectedInclude::Includes(selected.collect()))
+    }
+
+    /// Returns a `SelectedInclude` that selects the default set of packages for the current
+    /// working directory. This may either be the entire workspace or a set of packages inside the
+    /// workspace.
+    pub fn default_cwd(xctx: &'a XContext) -> Result<Self> {
+        if xctx.core().current_dir_is_root() {
+            Ok(SelectedInclude::Workspace)
+        } else {
+            // Select all packages that begin with the current rel dir.
+            let rel = xctx.core().current_rel_dir();
+            let workspace = xctx.core().package_graph()?.workspace();
+            let selected = workspace.iter_by_path().filter_map(|(path, package)| {
+                // If we're in devtools, run tests for all packages inside devtools.
+                // If we're in devtools/x/src, run tests for devtools/x.
+                if path.starts_with(rel) || rel.starts_with(path) {
+                    Some(package.name())
+                } else {
+                    None
+                }
+            });
+            Ok(SelectedInclude::Includes(selected.collect()))
+        }
+    }
+
+    /// Returns a `SelectedInclude` that selects the specified packages.
+    pub fn includes(package_names: impl IntoIterator<Item = &'a str>) -> Self {
+        SelectedInclude::Includes(package_names.into_iter().collect())
+    }
+
+    /// Intersects this `SelectedInclude` with the given names.
+    pub fn intersection(&self, names: impl IntoIterator<Item = &'a str>) -> Self {
+        let names = names.into_iter().collect();
+        match self {
+            SelectedInclude::Workspace => SelectedInclude::Includes(names),
+            SelectedInclude::Includes(includes) => {
+                SelectedInclude::Includes(includes.intersection(&names).copied().collect())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -188,17 +188,21 @@ mod test {
 
     #[test]
     fn test_should_invoke() {
-        let packages = SelectedPackages::workspace();
+        let packages = SelectedPackages::new(SelectedInclude::Workspace);
         assert!(packages.should_invoke(), "workspace => invoke");
 
-        let mut packages = SelectedPackages::includes(vec!["foo", "bar"]);
+        let mut packages = SelectedPackages::new(SelectedInclude::Includes(
+            vec!["foo", "bar"].into_iter().collect(),
+        ));
         packages.add_excludes(vec!["foo"]);
         assert!(packages.should_invoke(), "non-empty packages => invoke");
 
-        let packages = SelectedPackages::includes(vec![]);
+        let packages = SelectedPackages::new(SelectedInclude::Includes(BTreeSet::new()));
         assert!(!packages.should_invoke(), "no packages => do not invoke");
 
-        let mut packages = SelectedPackages::includes(vec!["foo", "bar"]);
+        let mut packages = SelectedPackages::new(SelectedInclude::Includes(
+            vec!["foo", "bar"].into_iter().collect(),
+        ));
         packages.add_excludes(vec!["foo", "bar"]);
         assert!(
             !packages.should_invoke(),
