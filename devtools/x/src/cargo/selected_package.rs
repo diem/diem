@@ -14,15 +14,15 @@ pub struct SelectedPackageArgs {
     #[structopt(long, short, number_of_values = 1)]
     /// Run on the provided packages
     pub(crate) package: Vec<String>,
+    #[structopt(long, short, number_of_values = 1)]
+    /// Run on the specified members (package subsets)
+    pub(crate) members: Vec<String>,
     #[structopt(long, short)]
     /// Run on packages changed since the merge base of this commit
     changed_since: Option<String>,
     #[structopt(long)]
     /// Run on all packages in the workspace
     pub(crate) workspace: bool,
-    #[structopt(long)]
-    /// Run on production code (non-test-only code, reachable from default members)
-    pub(crate) production: bool,
 }
 
 impl SelectedPackageArgs {
@@ -30,14 +30,15 @@ impl SelectedPackageArgs {
         // Mutually exclusive options -- only one of these can be provided.
         {
             let mut exclusive = vec![];
+
             if !self.package.is_empty() {
                 exclusive.push("--package");
+            } else if !self.members.is_empty() {
+                exclusive.push("--members");
             }
+
             if self.workspace {
                 exclusive.push("--workspace");
-            }
-            if self.production {
-                exclusive.push("--production");
             }
 
             if exclusive.len() > 1 {
@@ -48,10 +49,12 @@ impl SelectedPackageArgs {
 
         let mut includes = if self.workspace {
             SelectedInclude::Workspace
-        } else if !self.package.is_empty() {
-            SelectedInclude::includes(self.package.iter().map(|s| s.as_str()))
-        } else if self.production {
-            SelectedInclude::production(xctx)?
+        } else if !self.package.is_empty() || !self.members.is_empty() {
+            SelectedInclude::includes(
+                xctx,
+                self.package.iter().map(|s| s.as_str()),
+                self.members.iter().map(|s| s.as_str()),
+            )?
         } else {
             SelectedInclude::default_cwd(xctx)?
         };
@@ -127,19 +130,46 @@ pub(super) enum SelectedInclude<'a> {
 }
 
 impl<'a> SelectedInclude<'a> {
-    /// Returns a `SelectedInclude` that selects production crates (non-test-only code).
-    pub fn production(xctx: &'a XContext) -> Result<Self> {
-        let default_members = xctx.core().subsets()?.default_members();
-        let workspace = xctx.core().package_graph()?.workspace();
+    /// Returns a `SelectedInclude` that selects the specified package and subset names.
+    pub fn includes(
+        xctx: &'a XContext,
+        package_names: impl IntoIterator<Item = &'a str>,
+        subsets: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Result<Self> {
+        let mut names: BTreeSet<_> = package_names.into_iter().collect();
 
-        let selected = workspace.iter().filter_map(|package| {
-            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
-                Some(package.name())
+        // Don't need to initialize the package graph if no subsets are specified.
+        for name in subsets {
+            let workspace = xctx.core().package_graph()?.workspace();
+            let subsets = xctx.core().subsets()?;
+
+            let name = name.as_ref();
+            // TODO: turn this into a subset in x.toml
+            let subset = if name == "production" {
+                subsets.default_members()
             } else {
-                None
-            }
-        });
-        Ok(SelectedInclude::Includes(selected.collect()))
+                subsets.get(name).ok_or_else(|| {
+                    let known_subsets: Vec<_> = subsets.iter().map(|(name, _)| name).collect();
+                    let help = known_subsets.join(", ");
+                    anyhow!(
+                        "unknown subset '{}' (known subsets are: {}, production)",
+                        name,
+                        help
+                    )
+                })?
+            };
+            let selected = workspace.iter().filter_map(|package| {
+                if subset.status_of(package.id()) != WorkspaceStatus::Absent {
+                    Some(package.name())
+                } else {
+                    None
+                }
+            });
+
+            names.extend(selected);
+        }
+
+        Ok(SelectedInclude::Includes(names))
     }
 
     /// Returns a `SelectedInclude` that selects the default set of packages for the current
@@ -163,11 +193,6 @@ impl<'a> SelectedInclude<'a> {
             });
             Ok(SelectedInclude::Includes(selected.collect()))
         }
-    }
-
-    /// Returns a `SelectedInclude` that selects the specified packages.
-    pub fn includes(package_names: impl IntoIterator<Item = &'a str>) -> Self {
-        SelectedInclude::Includes(package_names.into_iter().collect())
     }
 
     /// Intersects this `SelectedInclude` with the given names.

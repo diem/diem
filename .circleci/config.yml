@@ -421,7 +421,7 @@ jobs:
       - build_setup
       - restore_cargo_package_cache
       - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 8 --production
+          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --members production
       - run:
           command: RUST_BACKTRACE=1 cargo xcheck -j 8 --workspace --all-targets
       - run:
