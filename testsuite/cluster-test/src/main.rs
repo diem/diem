@@ -96,6 +96,8 @@ struct Args {
         default_value = "60"
     )]
     duration: u64,
+    #[structopt(long, help = "Percentage of invalid txs", default_value = "0")]
+    invalid_tx: u64,
 
     #[structopt(
         long,
@@ -313,7 +315,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
         wait_committed: !args.burst,
     };
     let duration = Duration::from_secs(args.duration);
-    let mut emitter = TxEmitter::new(cluster, args.premainnet);
+    let mut emitter = TxEmitter::new(cluster, args.premainnet, args.invalid_tx);
     let stats = emitter
         .emit_txn_for_with_stats(
             duration,
@@ -375,7 +377,7 @@ impl BasicSwarmUtil {
     }
 
     pub async fn diag(&self, premainnet: bool) -> Result<()> {
-        let emitter = TxEmitter::new(&self.cluster, premainnet);
+        let emitter = TxEmitter::new(&self.cluster, premainnet, 0);
         let mut faucet_account: Option<AccountData> = None;
         let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
@@ -507,7 +509,7 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let tx_emitter = TxEmitter::new(&cluster, args.premainnet);
+        let tx_emitter = TxEmitter::new(&cluster, args.premainnet, args.invalid_tx);
         let github = GitHub::new();
         let report = SuiteReport::new();
         let global_emit_job_request = EmitJobRequest {

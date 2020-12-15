@@ -54,11 +54,24 @@ const MAX_CHILD_VASP_NUM: usize = 256;
 const MAX_VASP_ACCOUNT_NUM: usize = 16;
 const DD_KEY: &str = "dd.key";
 
+#[derive(Debug)]
+pub enum InvalidTxType {
+    /// invalid tx with wrong chain id
+    ChainId,
+    /// invalid tx with sender not on chain
+    Sender,
+    /// invalid tx with receiver not on chain
+    Receiver,
+    /// Last element of enum, please add new case above
+    MaxValue,
+}
+
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     chain_id: ChainId,
     premainnet: bool,
+    invalid_tx: u64,
 }
 
 pub struct EmitJob {
@@ -169,12 +182,13 @@ impl EmitJobRequest {
 }
 
 impl TxEmitter {
-    pub fn new(cluster: &Cluster, premainnet: bool) -> Self {
+    pub fn new(cluster: &Cluster, premainnet: bool, invalid_tx: u64) -> Self {
         Self {
             accounts: vec![],
             mint_key_pair: cluster.mint_key_pair().clone(),
             chain_id: cluster.chain_id,
             premainnet,
+            invalid_tx,
         }
     }
 
@@ -273,6 +287,7 @@ impl TxEmitter {
                     params,
                     stats,
                     chain_id: self.chain_id,
+                    invalid_tx: self.invalid_tx,
                 };
                 let join_handle = tokio_handle.spawn(worker.run(req.gas_price).boxed());
                 workers.push(Worker { join_handle });
@@ -598,6 +613,44 @@ struct SubmissionWorker {
     params: EmitThreadParams,
     stats: Arc<StatsAccumulator>,
     chain_id: ChainId,
+    invalid_tx: u64,
+}
+
+fn get_invalid_type() -> InvalidTxType {
+    let mut rng = rand::thread_rng();
+    match rng.gen_range(0, InvalidTxType::MaxValue as usize) {
+        1 => InvalidTxType::Receiver,
+        2 => InvalidTxType::Sender,
+        _ => InvalidTxType::ChainId,
+    }
+}
+
+fn invalid_tx(
+    sender: &mut AccountData,
+    receiver: &AccountAddress,
+    chain_id: ChainId,
+    gas_price: u64,
+) -> SignedTransaction {
+    let seed: [u8; 32] = OsRng.gen();
+    let mut rng = StdRng::from_seed(seed);
+    let mut invalid_account = gen_random_account(&mut rng);
+    let invalid_address = gen_random_account(&mut rng).address;
+    match get_invalid_type() {
+        InvalidTxType::Receiver => {
+            gen_transfer_txn_request(sender, &invalid_address, SEND_AMOUNT, chain_id, gas_price)
+        }
+        InvalidTxType::Sender => gen_transfer_txn_request(
+            &mut invalid_account,
+            receiver,
+            SEND_AMOUNT,
+            chain_id,
+            gas_price,
+        ),
+        InvalidTxType::ChainId => {
+            gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, ChainId::new(255), gas_price)
+        }
+        _ => panic!("wrong invalid type"),
+    }
 }
 
 impl SubmissionWorker {
@@ -678,15 +731,33 @@ impl SubmissionWorker {
             .iter_mut()
             .choose_multiple(&mut rng, batch_size);
         let mut requests = Vec::with_capacity(accounts.len());
+        let mut invalid_size = if self.invalid_tx != 0 {
+            // if enable mix invalid tx, at least 1 invalid tx per batch
+            max(1, accounts.len() * self.invalid_tx as usize / 100)
+        } else {
+            0
+        };
         for sender in accounts {
             let receiver = self
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            let request =
-                gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, self.chain_id, gas_price);
-            requests.push(request);
+            if invalid_size > 0 {
+                let request = invalid_tx(sender, receiver, self.chain_id, gas_price);
+                requests.push(request);
+                invalid_size -= 1;
+            } else {
+                let request = gen_transfer_txn_request(
+                    sender,
+                    receiver,
+                    SEND_AMOUNT,
+                    self.chain_id,
+                    gas_price,
+                );
+                requests.push(request);
+            }
         }
+
         requests
     }
 }
