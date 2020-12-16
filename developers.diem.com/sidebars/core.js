@@ -1,4 +1,4 @@
-const {category, categoryBoilerplate, getReference} = require('./components');
+const { category, categoryBoilerplate, getReference } = require('./components');
 
 const Sidebar = [
   ...categoryBoilerplate('core/overview', 'core-contributors'),
@@ -18,22 +18,22 @@ const Sidebar = [
   category('Reference', [
     {
       type: 'link',
-      href: 'https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md',
+      href: 'https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md',
       label: 'JSON-RPC API',
     },
     {
       type: 'link',
-      href: 'https://github.com/libra/client-sdk-python',
+      href: 'https://github.com/diem/client-sdk-python',
       label: 'Python SDK',
     },
     {
       type: 'link',
-      href: 'https://github.com/libra/client-sdk-java',
+      href: 'https://github.com/diem/client-sdk-java',
       label: 'Java SDK',
     },
     {
       type: 'link',
-      href: 'https://github.com/libra/client-sdk-go',
+      href: 'https://github.com/diem/client-sdk-go',
       label: 'Go SDK',
     },
     'core/diem-cli',

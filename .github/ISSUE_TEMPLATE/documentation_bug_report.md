@@ -1,5 +1,5 @@
 ---
-name: "\U0001F41B Documentation/developers.libra.org Bug report"
+name: "\U0001F41B Documentation/developers.diem.org Bug report"
 about: Create a bug report to help improve the Diem Developers' Website
 title: "[Bug]"
 labels: bug
@@ -13,7 +13,7 @@ If you're looking to report an issue with the Diem Core project go to https://gi
 
 <!-- A clear and concise description of what the bug is.
 
-If you've uncovered a security issue, please email security@libra.org -->
+If you've uncovered a security issue, please email security@diem.org -->
 
 ## Steps to reproduce
 

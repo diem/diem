@@ -28,7 +28,7 @@ All code examples are shared in the [my-first-client](https://github.com/diem/my
 
 ### Clone the repo:
 
-_git clone [https://github.com/libra/my-first-client.git](https://github.com/diem/my-first-client.git)_
+_git clone [https://github.com/diem/my-first-client.git](https://github.com/diem/my-first-client.git)_
 
 Each SDK has the following system requirements:
 
@@ -377,7 +377,7 @@ In the example below, we will setup a wallet with 100 Coin1 and then call the mi
 <Tabs groupId="syntax" defaultValue="python" values={syntax}>
 <TabItem value="python">
 
-```python title="https://github.com/libra/my-first-client/blob/master/python/src/get_events_example.py"
+```python title="https://github.com/diem/my-first-client/blob/master/python/src/get_events_example.py"
 import time
 from random import randrange
 from threading import Thread
@@ -445,7 +445,7 @@ if __name__ == "__main__":
 </TabItem>
 <TabItem value="java">
 
-```java title="https://github.com/libra/my-first-client/blob/master/java/src/main/java/example/GetEventsExample.java"
+```java title="https://github.com/diem/my-first-client/blob/master/java/src/main/java/example/GetEventsExample.java"
 
 package example;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;

@@ -1,6 +1,6 @@
 # Substribe to CI changes
-/.circleci/ @libra/libra-oss-admin-team
-/.github/ @libra/libra-oss-admin-team
+/.circleci/ @diem/libra-oss-admin-team
+/.github/ @diem/libra-oss-admin-team
 
 # Subscribe to crypto crate changing PRs
 /crypto @kchalkias @huitseeker @valerini
@@ -15,4 +15,4 @@
 /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
 
 # Code freeze
-# * @libra/release-gatekeepers
+# * @diem/release-gatekeepers

@@ -2,7 +2,7 @@
 *.swp
 **/.terraform/
 target/
-!target/libra-node-builder/libra-node
+!target/diem-node-builder/diem-node
 **/*Dockerfile
 .circleci/config.yml
 docker/update_or_build.sh

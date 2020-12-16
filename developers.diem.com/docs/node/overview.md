@@ -17,8 +17,8 @@ Learn how to start, configure, and monitor a Diem Node
     to="/docs/node/nodes#validator-nodes-validators"
   />
   <SimpleTextCard
-    icon="img/libra-nodes.svg"
-    iconDark="img/libra-nodes-dark.svg"
+    icon="img/diem-nodes.svg"
+    iconDark="img/diem-nodes-dark.svg"
     overlay="Introduction to Full Nodes and how they work."
     title="Full Nodes"
     to="/docs/node/nodes#full-nodes"

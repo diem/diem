@@ -45,8 +45,8 @@ unzip diem.zip
 ## Publishing
 
 The site is hosted on GitHub pages, via the `gh-pages` branch of the `website'
-[GitHub repo](https://github.com/libra/website).
+[GitHub repo](https://github.com/diem/website).
 
 The website is automatically built and published from CircleCI - see the
-[config file](https://github.com/libra/website/blob/master/.circleci/config.yml)
+[config file](https://github.com/diem/website/blob/master/.circleci/config.yml)
 for details.

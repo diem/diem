@@ -40,7 +40,7 @@ jobs:
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           ref: ${{ steps.fetch-base-ref.outputs.ref }}
-          path: libra-base
+          path: diem-base
       - name: checkout
         uses: actions/checkout@v2
         if: ${{ github.event_name == 'push' }}
@@ -51,7 +51,7 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         with:
           ref: ${{ github.event.before }}
-          path: libra-base
+          path: diem-base
 
       - name: generate new summaries
         run: |
@@ -61,13 +61,13 @@ jobs:
       - name: generate base summaries
         run: |
           set +e
-          cd libra-base
+          cd diem-base
           cargo x generate-summaries
 
       - name: diff LSR summary
         id: verify-lsr
         run: |
-          output="$(cargo x diff-summary libra-base/target/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
+          output="$(cargo x diff-summary diem-base/target/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -76,7 +76,7 @@ jobs:
       - name: diff LEC summary
         id: verify-lec
         run: |
-          output="$(cargo x diff-summary libra-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
+          output="$(cargo x diff-summary diem-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -85,7 +85,7 @@ jobs:
       - name: diff release summary
         id: verify-release
         run: |
-          output="$(cargo x diff-summary libra-base/target/summaries/summary-release.toml target/summaries/summary-release.toml)"
+          output="$(cargo x diff-summary diem-base/target/summaries/summary-release.toml target/summaries/summary-release.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -100,7 +100,7 @@ jobs:
   requires-dep-audit-review:
     runs-on: ubuntu-latest
     name: Require review for TCB dep summary changes.
-    if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
+    if: ${{ github.event_name == 'push' || github.actor != 'bors-diem' }}
     needs: calc-summaries
     steps:
       - name: require dep-audit review if TCB deps changed

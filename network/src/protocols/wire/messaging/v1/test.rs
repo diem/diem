@@ -47,7 +47,7 @@ fn rpc_request() -> bcs::Result<()> {
 }
 
 #[test]
-fn libranet_wire_test_vectors() {
+fn diemnet_wire_test_vectors() {
     let message = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: ProtocolId::MempoolDirectSend,
         priority: 0,

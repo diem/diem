@@ -81,6 +81,6 @@ Explore the technical and economic concepts behind the Diem Payment Network, exp
     icon="img/github.svg"
     iconDark="img/github-dark.svg"
     title="GitHub"
-    to="https://github.com/libra/libra"
+    to="https://github.com/diem/diem"
   />
 </CardsWrapper>
