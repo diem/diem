@@ -1,5 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::integer_arithmetic)]
 
 use crate::pick_slice_idxs;
 use proptest::sample::Index;
@@ -103,7 +104,7 @@ impl<T> RepeatVec<T> {
         // Skip over zero-length elements to maintain the invariant on items.
         if size > 0 {
             self.items.push((self.len, item));
-            self.len = self.len.saturating_add(size);
+            self.len += size;
         }
     }
 
@@ -157,7 +158,7 @@ impl<T> RepeatVec<T> {
             Err(start_idx) => {
                 // This is the physical index after the logical item. Start reasoning from the
                 // previous index to match the Ok branch above.
-                start_idx.saturating_sub(1)
+                start_idx - 1
             }
         };
 
@@ -170,20 +171,20 @@ impl<T> RepeatVec<T> {
             let mut new_items = vec![];
 
             while let Some((current_logical_idx_old, current_elem)) = items.next() {
-                let current_logical_idx_new = current_logical_idx_old.saturating_sub(decrease);
+                let current_logical_idx_new = current_logical_idx_old - decrease;
 
                 let next_logical_idx_old = items.peek().map_or(self.len, |&(idx, _)| idx);
 
                 // Remove all indexes until the next logical index or sorted_indexes runs out.
                 while let Some(remove_idx) = logical_indexes.get(decrease) {
                     if *remove_idx < next_logical_idx_old {
-                        decrease = decrease.saturating_add(1);
+                        decrease += 1;
                     } else {
                         break;
                     }
                 }
 
-                let next_logical_idx_new = next_logical_idx_old.saturating_sub(decrease);
+                let next_logical_idx_new = next_logical_idx_old - decrease;
                 assert!(
                     next_logical_idx_new >= current_logical_idx_new,
                     "too many items removed from next"
@@ -198,7 +199,7 @@ impl<T> RepeatVec<T> {
         };
 
         self.items.extend(new_items);
-        self.len = self.len.saturating_sub(decrease);
+        self.len -= decrease;
     }
 
     /// Returns the item at location `at`. The return value is a reference to the stored item, plus
@@ -212,8 +213,8 @@ impl<T> RepeatVec<T> {
             Err(start_idx) => {
                 // start_idx can never be 0 because usize starts from 0 and items[0].0 is always 0.
                 // So start_idx is always at least 1.
-                let start_val = &self.items[start_idx.saturating_sub(1)];
-                let offset = at.saturating_sub(start_val.0);
+                let start_val = &self.items[start_idx - 1];
+                let offset = at - start_val.0;
                 Some((&start_val.1, offset))
             }
         }

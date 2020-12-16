@@ -1,5 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::integer_arithmetic)]
 
 use proptest::sample::Index;
 use std::iter::FromIterator;
@@ -118,7 +119,7 @@ where
             if idx >= to_idx {
                 break;
             }
-            self.current_pos = self.current_pos.saturating_add(1);
+            self.current_pos += 1;
         }
     }
 }

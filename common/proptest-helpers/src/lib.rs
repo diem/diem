@@ -1,6 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+#![allow(clippy::integer_arithmetic)]
 #![forbid(unsafe_code)]
 
 #[cfg(test)]
@@ -70,13 +70,13 @@ where
     // for a longer explanation. This is a variant that works with zero-indexing.
     let mut selected = BTreeSet::new();
     let to_select = indexes_len.min(max);
-    for (iter_idx, choice) in ((max.saturating_sub(to_select))..max).enumerate() {
+    for (iter_idx, choice) in ((max - to_select)..max).enumerate() {
         // "RandInt(1, J)" in the original algorithm means a number between 1
         // and choice, both inclusive. `PropIndex::index` picks a number between 0 and
         // whatever's passed in, with the latter exclusive. Pass in "+1" to ensure the same
         // range of values is picked from. (This also ensures that if choice is 0 then `index`
         // doesn't panic.
-        let idx = indexes[iter_idx].as_ref().index(choice.saturating_add(1));
+        let idx = indexes[iter_idx].as_ref().index(choice + 1);
         if !selected.insert(idx) {
             selected.insert(choice);
         }

@@ -1,6 +1,5 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-#![allow(clippy::integer_arithmetic)]
 
 use mirai_annotations::debug_checked_precondition;
 use serde::{Serialize, Serializer};
@@ -21,7 +20,7 @@ pub struct InputTooShortError;
 
 impl ShortHexStr {
     pub const SOURCE_LENGTH: usize = 4;
-    pub const LENGTH: usize = 2 * ShortHexStr::SOURCE_LENGTH;
+    pub const LENGTH: usize = ShortHexStr::SOURCE_LENGTH.saturating_mul(2);
 
     /// Format a new `ShortHexStr` from a byte slice.
     ///
@@ -80,6 +79,7 @@ const HEX_CHARS_LOWER: &[u8; 16] = b"0123456789abcdef";
 
 /// Format a byte as hex. Returns a tuple containing the first character and then
 /// the second character as ASCII bytes.
+#[allow(clippy::integer_arithmetic)]
 #[inline(always)]
 fn byte2hex(byte: u8) -> (u8, u8) {
     let hi = HEX_CHARS_LOWER[((byte >> 4) & 0x0f) as usize];
@@ -88,9 +88,10 @@ fn byte2hex(byte: u8) -> (u8, u8) {
 }
 
 /// Hex encode a byte slice into the destination byte slice.
+#[allow(clippy::integer_arithmetic)]
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) {
-    debug_checked_precondition!(dst.len() == 2 * src.len());
+    debug_checked_precondition!(dst.len() == src.len().saturating_mul(2));
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
         let (hi, lo) = byte2hex(*byte);
