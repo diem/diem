@@ -112,7 +112,7 @@ If you enter only the major command, it will show the help information for that 
 #### `<transfer | t> | <transferb | tb>` &mdash; Transfer coins from one account to another. Suffix 'b' is for blocking.
 
       Usage:
-          transfer|transferb|t|tb <sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 10000)]
+          transfer|transferb|t|tb <sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_diems (default=0)] [max_gas_amount_in_micro_diems (default 10000)]
       Arguments:
           sender_account_address|sender_account_ref_id - The account from which this transfer transaction
                 is sent. The sender account pays for the gas.
@@ -121,8 +121,8 @@ If you enter only the major command, it will show the help information for that 
                 gas required for both account creation and coin transfer.
           number_of_coins - The number of coins transferred to receiver account.
           currency_code - Which currency to transfer. For example, `Coin1`.
-          gas_unit_price_in_micro_libras - The unit price to pay for gas.
-          max_gas_amount_in_micro_libras - Max units of gas user is willing to pay for this transaction.
+          gas_unit_price_in_micro_diems - The unit price to pay for gas.
+          max_gas_amount_in_micro_diems - Max units of gas user is willing to pay for this transaction.
 
 ---
 
@@ -235,12 +235,12 @@ Subcommands include:
       Usage:
           gen_waypoint|g
 
-`change_libra_version | v` &mdash; Change the libra_version stored on chain.
+`change_diem_version | v` &mdash; Change the diem_version stored on chain.
 
       Usage:
-          change_libra_version|v <new_libra_version>
+          change_diem_version|v <new_diem_version>
       Arguments:
-          new_libra_version - New libra version, must be strictly incrementing.
+          new_diem_version - New major version for the VM, must be strictly incrementing.
 
 `enable_custom_script | s` &mdash; Allow executing arbitrary script in the network. This disables script hash verification.
 
