@@ -293,7 +293,7 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
         if start_time.is_none() {
             start_time = Some(ts);
         }
-        let trace_time = ts - start_time.unwrap();
+        let trace_time = ts.saturating_sub(start_time.unwrap());
         let stage = entry
             .json
             .get("stage")
@@ -452,7 +452,7 @@ pub fn is_selected(node: (&'static str, u64)) -> bool {
         match &SAMPLING_CONFIG {
             Some(Sampling(sampling)) => {
                 if let Some(sampling_rate) = sampling.get(node.0) {
-                    node.1 % sampling_rate.denominator < sampling_rate.nominator
+                    node.1.wrapping_rem(sampling_rate.denominator) < sampling_rate.nominator
                 } else {
                     // assume no sampling if sampling category is not found and return true
                     true

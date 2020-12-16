@@ -1,5 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::integer_arithmetic)]
 
 use mirai_annotations::debug_checked_precondition;
 use serde::{Serialize, Serializer};
