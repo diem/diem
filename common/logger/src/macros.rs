@@ -5,18 +5,18 @@
 macro_rules! log {
     // Entry, Log Level + stuff
     ($level:expr, $($args:tt)+) => {{
-        let metadata = $crate::Metadata::new(
+        const METADATA: $crate::Metadata = $crate::Metadata::new(
             $level,
-            module_path!().split("::").next().unwrap(),
+            env!("CARGO_CRATE_NAME"),
             module_path!(),
             file!(),
             line!(),
             concat!(file!(), ':', line!()),
         );
 
-        if metadata.enabled() {
+        if METADATA.enabled() {
             $crate::Event::dispatch(
-                &metadata,
+                &METADATA,
                 $crate::fmt_args!($($args)+),
                 $crate::schema!($($args)+),
             );

@@ -10,6 +10,7 @@ use crate::{
     struct_log::TcpWriter,
     Event, Filter, Level, LevelFilter, Metadata,
 };
+use backtrace::Backtrace;
 use chrono::{SecondsFormat, Utc};
 use diem_infallible::RwLock;
 use once_cell::sync::Lazy;
@@ -35,6 +36,10 @@ pub struct LogEntry {
     metadata: Metadata,
     #[serde(skip_serializing_if = "Option::is_none")]
     thread_name: Option<String>,
+    /// The program backtrace taken when the event occurred. Backtraces are
+    /// only supported for errors.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    backtrace: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     hostname: Option<&'static str>,
     timestamp: String,
@@ -68,7 +73,7 @@ impl LogEntry {
             }
         }
 
-        let metadata = event.metadata().clone();
+        let metadata = *event.metadata();
         let thread_name = thread_name.map(ToOwned::to_owned);
         let message = event.message().map(fmt::format);
 
@@ -80,6 +85,19 @@ impl LogEntry {
 
         let hostname = HOSTNAME.as_deref();
 
+        let backtrace = match metadata.level() {
+            Level::Error => {
+                let mut backtrace = Backtrace::new();
+                let mut frames = backtrace.frames().to_vec();
+                if frames.len() > 3 {
+                    frames.drain(0..3); // Remove the first 3 unnecessary frames to simplify backtrace
+                }
+                backtrace = frames.into();
+                Some(format!("{:?}", backtrace))
+            }
+            _ => None,
+        };
+
         let mut data = BTreeMap::new();
         for schema in event.keys_and_values() {
             schema.visit(&mut JsonVisitor(&mut data));
@@ -88,6 +106,7 @@ impl LogEntry {
         Self {
             metadata,
             thread_name,
+            backtrace,
             hostname,
             timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
             data,
@@ -544,8 +563,8 @@ mod tests {
         );
         assert_eq!(entry.metadata.module_path(), module_path!());
         assert_eq!(entry.metadata.file(), file!());
-        assert!(entry.metadata.backtrace().is_none());
         assert_eq!(entry.message.as_deref(), Some("This is a log"));
+        assert!(entry.backtrace.is_none());
 
         // Log time should be the time the structured log entry was created
         let timestamp = DateTime::parse_from_rfc3339(&entry.timestamp).unwrap();
@@ -574,7 +593,7 @@ mod tests {
         // Test error logs contain backtraces
         error!("This is an error log");
         let entry = receiver.recv().unwrap();
-        assert!(entry.metadata.backtrace().is_some());
+        assert!(entry.backtrace.is_some());
 
         // Test all log levels work properly
         // Tracing should be skipped because the Logger was setup to skip Tracing events
