@@ -1,2 +1,18 @@
 Thank you to the people who contributed to and improved this website:
-Archana Jayaswal, Eric Nakagawa, Ben Maurer, Kevin Hurley, George Cabrera, Avery Ching, Sam Blackshear, Brian Johnson, Tim Zakian, Joel Marcey
+- Archana Jayaswal
+- Avery Ching
+- Ben Maurer
+- Brandon Williams
+- Brian Johnson
+- David Wolinsky
+- Eric Nakagawa
+- George Cabrera
+- jareknowotka
+- Joel Marcey
+- Kevin Hurley
+- nimishamw
+- oriooctopus
+- Rain
+- Sam Blackshear
+- Tim Zakian
+- Ville Sundell
