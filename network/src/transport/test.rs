@@ -42,6 +42,7 @@ fn build_trusted_peers(
 
 enum Auth {
     Mutual,
+    MaybeMutual,
     ServerOnly,
 }
 
@@ -52,7 +53,7 @@ fn setup<TTransport>(
     Runtime,
     (PeerId, DiemNetTransport<TTransport>),
     (PeerId, DiemNetTransport<TTransport>),
-    Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
+    Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     SupportedProtocols,
 )
 where
@@ -86,19 +87,38 @@ where
                     dialer_peer_id,
                     HandshakeAuthMode::mutual(trusted_peers.clone()),
                     HandshakeAuthMode::mutual(trusted_peers.clone()),
-                    Some(trusted_peers),
+                    trusted_peers,
+                )
+            }
+            Auth::MaybeMutual => {
+                let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
+                let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
+                let trusted_peers = build_trusted_peers(
+                    dialer_peer_id,
+                    &dialer_key,
+                    listener_peer_id,
+                    &listener_key,
+                );
+
+                (
+                    listener_peer_id,
+                    dialer_peer_id,
+                    HandshakeAuthMode::maybe_mutual(trusted_peers.clone()),
+                    HandshakeAuthMode::maybe_mutual(trusted_peers.clone()),
+                    trusted_peers,
                 )
             }
             Auth::ServerOnly => {
                 let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
                 let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
+                let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
                 (
                     listener_peer_id,
                     dialer_peer_id,
                     HandshakeAuthMode::server_only(),
                     HandshakeAuthMode::server_only(),
-                    None,
+                    trusted_peers,
                 )
             }
         };
@@ -271,12 +291,7 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     ) = setup(base_transport, Auth::Mutual);
 
     // remove dialer from trusted_peers set
-    trusted_peers
-        .as_ref()
-        .unwrap()
-        .write()
-        .remove(&dialer_peer_id)
-        .unwrap();
+    trusted_peers.write().remove(&dialer_peer_id).unwrap();
 
     let (mut inbounds, listener_addr) = rt.enter(|| {
         listener_transport
@@ -310,6 +325,141 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     rt.block_on(future::join(listener_task, dialer_task));
 }
 
+fn test_transport_maybe_mutual<TTransport>(
+    base_transport: TTransport,
+    listen_addr: &str,
+    expect_formatted_addr: fn(&NetworkAddress),
+) where
+    TTransport: Transport<Error = io::Error> + Clone,
+    TTransport::Output: TSocket,
+    TTransport::Outbound: Send + 'static,
+    TTransport::Inbound: Send + 'static,
+    TTransport::Listener: Send + 'static,
+{
+    let (
+        mut rt,
+        (listener_peer_id, listener_transport),
+        (dialer_peer_id, dialer_transport),
+        trusted_peers,
+        supported_protocols,
+    ) = setup(base_transport, Auth::MaybeMutual);
+
+    let (mut inbounds, listener_addr) = rt.enter(|| {
+        listener_transport
+            .listen_on(listen_addr.parse().unwrap())
+            .unwrap()
+    });
+    expect_formatted_addr(&listener_addr);
+    let supported_protocols_clone = supported_protocols.clone();
+
+    // we accept the dialer's inbound connection, check the connection metadata,
+    // and verify that the upgraded socket actually works (sends and receives
+    // bytes).
+    let listener_task = async move {
+        // accept one inbound connection from dialer
+        let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
+        let mut conn = inbound.await.unwrap();
+
+        // check connection metadata
+        assert_eq!(conn.metadata.remote_peer_id, dialer_peer_id);
+        expect_formatted_addr(&conn.metadata.addr);
+        assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
+        assert_eq!(
+            conn.metadata.messaging_protocol,
+            MessagingProtocolVersion::V1
+        );
+        assert_eq!(
+            conn.metadata.application_protocols,
+            supported_protocols_clone,
+        );
+        assert_eq!(conn.metadata.trust_level, TrustLevel::Trusted);
+
+        // test the socket works
+        let msg = write_read_msg(&mut conn.socket, b"foobar").await;
+        assert_eq!(&msg, b"barbaz".as_ref());
+        conn.socket.close().await.unwrap();
+
+        // Clear the trusted peers and see that we can still connect to the remote but with it
+        // being untrusted
+        trusted_peers.write().clear();
+
+        // accept one inbound connection from dialer
+        let (inbound, _dialer_addr) = inbounds.next().await.unwrap().unwrap();
+        let mut conn = inbound.await.unwrap();
+
+        // check connection metadata
+        assert_eq!(conn.metadata.remote_peer_id, dialer_peer_id);
+        expect_formatted_addr(&conn.metadata.addr);
+        assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
+        assert_eq!(
+            conn.metadata.messaging_protocol,
+            MessagingProtocolVersion::V1
+        );
+        assert_eq!(
+            conn.metadata.application_protocols,
+            supported_protocols_clone,
+        );
+        assert_eq!(conn.metadata.trust_level, TrustLevel::Untrusted);
+
+        // test the socket works
+        let msg = write_read_msg(&mut conn.socket, b"foobar").await;
+        assert_eq!(&msg, b"barbaz".as_ref());
+        conn.socket.close().await.unwrap();
+    };
+
+    // dial the listener, check the connection metadata, and verify that the
+    // upgraded socket actually works (sends and receives bytes).
+    let dialer_task = async move {
+        // dial listener
+        let mut conn = dialer_transport
+            .dial(listener_peer_id, listener_addr.clone())
+            .unwrap()
+            .await
+            .unwrap();
+
+        // check connection metadata
+        assert_eq!(conn.metadata.remote_peer_id, listener_peer_id);
+        assert_eq!(conn.metadata.addr, listener_addr);
+        assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
+        assert_eq!(
+            conn.metadata.messaging_protocol,
+            MessagingProtocolVersion::V1
+        );
+        assert_eq!(conn.metadata.application_protocols, supported_protocols);
+
+        // test the socket works
+        let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
+        assert_eq!(&msg, b"foobar".as_ref());
+        conn.socket.close().await.unwrap();
+
+        // Dial again as an "untrusted" dialer
+
+        // dial listener
+        let mut conn = dialer_transport
+            .dial(listener_peer_id, listener_addr.clone())
+            .unwrap()
+            .await
+            .unwrap();
+
+        // check connection metadata
+        assert_eq!(conn.metadata.remote_peer_id, listener_peer_id);
+        assert_eq!(conn.metadata.addr, listener_addr);
+        assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
+        assert_eq!(
+            conn.metadata.messaging_protocol,
+            MessagingProtocolVersion::V1
+        );
+        assert_eq!(conn.metadata.application_protocols, supported_protocols);
+
+        // test the socket works
+        let msg = write_read_msg(&mut conn.socket, b"barbaz").await;
+        assert_eq!(&msg, b"foobar".as_ref());
+        conn.socket.close().await.unwrap();
+    };
+
+    rt.block_on(future::join(listener_task, dialer_task));
+}
+
 ////////////////////////////////////////
 // DiemNetTransport<MemoryTransport> //
 ////////////////////////////////////////
@@ -337,6 +487,15 @@ fn test_memory_transport_server_only_auth() {
 #[test]
 fn test_memory_transport_rejects_unauthed_dialer() {
     test_transport_rejects_unauthed_dialer(
+        memory::MemoryTransport,
+        "/memory/0",
+        expect_memory_noise_addr,
+    );
+}
+
+#[test]
+fn test_memory_transport_maybe_mutual() {
+    test_transport_maybe_mutual(
         memory::MemoryTransport,
         "/memory/0",
         expect_memory_noise_addr,
