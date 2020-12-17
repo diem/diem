@@ -160,19 +160,19 @@ members = [
 
 [subsets.lsr]
 # The Diem safety rules TCB.
-members = [
+root-members = [
     "safety-rules",
 ]
 
 [subsets.lec]
 # The Diem execution correctness TCB.
-members = [
+root-members = [
     "execution-correctness",
 ]
 
 [subsets.release]
 # The Diem release binaries
-members = [
+root-members = [
     "backup-cli",
     "db-bootstrapper",
     "diem-genesis-tool",

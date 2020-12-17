@@ -15,6 +15,6 @@ pub struct XCoreConfig {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubsetConfig {
-    /// The members in this subset
-    pub members: Vec<String>,
+    /// The root members in this subset
+    pub root_members: Vec<String>,
 }

@@ -55,7 +55,7 @@ impl<'g> WorkspaceSubsets<'g> {
             .iter()
             .map(|(name, config)| {
                 let query = graph
-                    .query_workspace_names(&config.members)
+                    .query_workspace_names(&config.root_members)
                     .map_err(|err| {
                         SystemError::guppy(format!("querying members for subset '{}'", name), err)
                     })?;
