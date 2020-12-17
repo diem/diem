@@ -75,9 +75,14 @@ module DiemSystem {
     const EVALIDATOR_INDEX: u64 = 5;
     /// Rate limited when trying to update config
     const ECONFIG_UPDATE_RATE_LIMITED: u64 = 6;
+    /// Validator set already at maximum allowed size
+    const EMAX_VALIDATORS: u64 = 7;
 
     /// Number of microseconds in 5 minutes
     const FIVE_MINUTES: u64 = 300000000;
+
+    /// The maximum number of allowed validators in the validator set
+    const MAX_VALIDATORS: u64 = 256;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -161,6 +166,12 @@ module DiemSystem {
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig::is_valid(validator_addr), Errors::invalid_argument(EINVALID_PROSPECTIVE_VALIDATOR));
 
+        // Bound the validator set size
+        assert(
+            validator_set_size() < MAX_VALIDATORS,
+            Errors::limit_exceeded(EMAX_VALIDATORS)
+        );
+
         let diem_system_config = get_diem_system_config();
 
         // Ensure that this address is not already a validator
@@ -168,6 +179,7 @@ module DiemSystem {
             !is_validator_(validator_addr, &diem_system_config.validators),
             Errors::invalid_argument(EALREADY_A_VALIDATOR)
         );
+
         // it is guaranteed that the config is non-empty
         let config = ValidatorConfig::get_config(validator_addr);
         Vector::push_back(&mut diem_system_config.validators, ValidatorInfo {
@@ -187,6 +199,7 @@ module DiemSystem {
     spec schema AddValidatorAbortsIf {
         dr_account: signer;
         validator_addr: address;
+        aborts_if validator_set_size() >= MAX_VALIDATORS with Errors::LIMIT_EXCEEDED;
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include DiemConfig::ReconfigureAbortsIf;

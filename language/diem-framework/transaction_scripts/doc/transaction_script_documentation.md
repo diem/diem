@@ -860,7 +860,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <b>aborts_if</b> child_initial_balance &gt; max_u64() <b>with</b> <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 <b>include</b> (child_initial_balance &gt; 0) ==&gt;
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: parent_addr};
-<b>include</b> (child_initial_balance &gt; 0) ==&gt;
+<b>include</b> (child_initial_balance) &gt; 0 ==&gt;
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PayFromAbortsIfRestricted">DiemAccount::PayFromAbortsIfRestricted</a>&lt;CoinType&gt;{
         cap: parent_cap,
         payee: child_address,
@@ -2378,7 +2378,8 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAcc
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf">RecoveryAddress::RotateAuthenticationKeyAbortsIf</a>;
 <b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyEnsures">RecoveryAddress::RotateAuthenticationKeyEnsures</a>;
 <b>aborts_with</b> [check]
@@ -2512,6 +2513,8 @@ off-chain communication, and the blockchain time at which the url was updated em
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEmits">DualAttestation::RotateBaseUrlEmits</a>;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEmits">DualAttestation::RotateCompliancePublicKeyEmits</a>;
 </code></pre>
 
 
@@ -2845,7 +2848,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
-| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
+| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
 | <code>sliding_nonce</code>     | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                         |
 | <code>validator_name</code>    | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator. Must match the human name in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> for the validator. |
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be added to the validator set.                                                                    |
@@ -2855,18 +2858,19 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 
 ##### Common Abort Conditions
 
-| Error Category             | Error Reason                                  | Description                                                                                                                               |
-| ----------------           | --------------                                | -------------                                                                                                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.                                                |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                | The <code>sliding_nonce</code> is too far in the future.                                                                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>       | The <code>sliding_nonce</code> has been previously recorded.                                                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                  | The sending account is not the Diem Root account.                                                                                        |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                          | The sending account is not the Diem Root account.                                                                                        |
-| 0                          | 0                                             | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
+| Error Category             | Error Reason                                 | Description                                                                                                                               |
+| ----------------           | --------------                               | -------------                                                                                                                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>               | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>               | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.                                                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>               | The <code>sliding_nonce</code> is too far in the future.                                                                                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>      | The <code>sliding_nonce</code> has been previously recorded.                                                                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_EDIEM_ROOT">CoreAddresses::EDIEM_ROOT</a></code>                  | The sending account is not the Diem Root account.                                                                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EDIEM_ROOT">Roles::EDIEM_ROOT</a></code>                          | The sending account is not the Diem Root account.                                                                                         |
+| 0                          | 0                                            | The provided <code>validator_name</code> does not match the already-recorded human name for the validator.                                           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_EINVALID_PROSPECTIVE_VALIDATOR">DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR</a></code> | The validator to be added does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it, or its <code>config</code> field is empty. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_EALREADY_A_VALIDATOR">DiemSystem::EALREADY_A_VALIDATOR</a></code>           | The <code>validator_address</code> account is already a registered validator.                                                                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/DiemSystem.md#0x1_DiemSystem_EMAX_VALIDATORS">DiemSystem::EMAX_VALIDATORS</a></code>                | The validator set is already at its maximum size. The validator could not be added.                                                       |
 
 
 <a name="@Related_Scripts_137"></a>
@@ -2934,6 +2938,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 </code></pre>
 
@@ -3939,6 +3944,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnWithResourceCapEmits">Diem::BurnWithResourceCapEmits</a>&lt;Token&gt;{<a href="transaction_script_documentation.md#preburn">preburn</a>: <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(preburn_address)};
 </code></pre>
 
 
@@ -4091,6 +4097,7 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 
 
 <pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + <b>old</b>(preburn_value_at_addr);
+<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_CancelBurnWithCapEmits">Diem::CancelBurnWithCapEmits</a>&lt;Token&gt;;
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,

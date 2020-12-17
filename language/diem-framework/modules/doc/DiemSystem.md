@@ -238,6 +238,16 @@ Tried to add a validator with an invalid state to the validator set
 
 
 
+<a name="0x1_DiemSystem_EMAX_VALIDATORS"></a>
+
+Validator set already at maximum allowed size
+
+
+<pre><code><b>const</b> <a href="DiemSystem.md#0x1_DiemSystem_EMAX_VALIDATORS">EMAX_VALIDATORS</a>: u64 = 7;
+</code></pre>
+
+
+
 <a name="0x1_DiemSystem_ENOT_AN_ACTIVE_VALIDATOR"></a>
 
 An operation was attempted on an address not in the vaidator set
@@ -264,6 +274,16 @@ Number of microseconds in 5 minutes
 
 
 <pre><code><b>const</b> <a href="DiemSystem.md#0x1_DiemSystem_FIVE_MINUTES">FIVE_MINUTES</a>: u64 = 300000000;
+</code></pre>
+
+
+
+<a name="0x1_DiemSystem_MAX_VALIDATORS"></a>
+
+The maximum number of allowed validators in the validator set
+
+
+<pre><code><b>const</b> <a href="DiemSystem.md#0x1_DiemSystem_MAX_VALIDATORS">MAX_VALIDATORS</a>: u64 = 256;
 </code></pre>
 
 
@@ -418,6 +438,12 @@ Adds a new validator to the validator set.
     // A prospective validator must have a validator config <b>resource</b>
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_addr), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemSystem.md#0x1_DiemSystem_EINVALID_PROSPECTIVE_VALIDATOR">EINVALID_PROSPECTIVE_VALIDATOR</a>));
 
+    // Bound the validator set size
+    <b>assert</b>(
+        <a href="DiemSystem.md#0x1_DiemSystem_validator_set_size">validator_set_size</a>() &lt; <a href="DiemSystem.md#0x1_DiemSystem_MAX_VALIDATORS">MAX_VALIDATORS</a>,
+        <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="DiemSystem.md#0x1_DiemSystem_EMAX_VALIDATORS">EMAX_VALIDATORS</a>)
+    );
+
     <b>let</b> diem_system_config = <a href="DiemSystem.md#0x1_DiemSystem_get_diem_system_config">get_diem_system_config</a>();
 
     // Ensure that this address is not already a validator
@@ -425,6 +451,7 @@ Adds a new validator to the validator set.
         !<a href="DiemSystem.md#0x1_DiemSystem_is_validator_">is_validator_</a>(validator_addr, &diem_system_config.validators),
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="DiemSystem.md#0x1_DiemSystem_EALREADY_A_VALIDATOR">EALREADY_A_VALIDATOR</a>)
     );
+
     // it is guaranteed that the config is non-empty
     <b>let</b> config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_addr);
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> diem_system_config.validators, <a href="DiemSystem.md#0x1_DiemSystem_ValidatorInfo">ValidatorInfo</a> {
@@ -461,6 +488,7 @@ Adds a new validator to the validator set.
 <pre><code><b>schema</b> <a href="DiemSystem.md#0x1_DiemSystem_AddValidatorAbortsIf">AddValidatorAbortsIf</a> {
     dr_account: signer;
     validator_addr: address;
+    <b>aborts_if</b> <a href="DiemSystem.md#0x1_DiemSystem_validator_set_size">validator_set_size</a>() &gt;= <a href="DiemSystem.md#0x1_DiemSystem_MAX_VALIDATORS">MAX_VALIDATORS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
     <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
     <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">DiemConfig::ReconfigureAbortsIf</a>;
@@ -658,6 +686,7 @@ and emits a reconfigurationevent.
 <pre><code><b>pragma</b> opaque;
 <b>pragma</b> verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DiemConfig">DiemConfig::DiemConfig</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfGetOperator">ValidatorConfig::AbortsIfGetOperator</a>{addr: validator_addr};
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">UpdateConfigAndReconfigureAbortsIf</a>;
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a>;
 <a name="0x1_DiemSystem_is_validator_info_updated$20"></a>
@@ -1024,7 +1053,8 @@ It has a loop, so there are spec blocks in the code to assert loop invariants.
 
 
 
-<pre><code><b>pragma</b> opaque;
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_DiemSystem_size$21"></a>
 <b>let</b> size = len(validators);
@@ -1284,7 +1314,6 @@ Genesis.
 
 ### Helper Functions
 
-
 Fetches the currently published validator set from the published DiemConfig<DiemSystem>
 resource.
 
@@ -1293,7 +1322,7 @@ resource.
 
 
 <pre><code><b>define</b> <a href="DiemSystem.md#0x1_DiemSystem_spec_get_validators">spec_get_validators</a>(): vector&lt;<a href="DiemSystem.md#0x1_DiemSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
-    <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;().validators
+   <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;().validators
 }
 </code></pre>
 
