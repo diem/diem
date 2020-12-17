@@ -144,7 +144,7 @@ The creation of a new Child VASP account would exceed the number of children per
 Maximum number of child accounts that can be created by a single ParentVASP
 
 
-<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a>: u64 = 256;
+<pre><code><b>const</b> <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a>: u64 = 65536;
 </code></pre>
 
 
