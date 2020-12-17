@@ -88,10 +88,15 @@ fn byte2hex(byte: u8) -> (u8, u8) {
 }
 
 /// Hex encode a byte slice into the destination byte slice.
-#[allow(clippy::integer_arithmetic)]
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) {
-    debug_checked_precondition!(dst.len() == src.len().saturating_mul(2));
+    debug_checked_precondition!(
+        dst.len()
+            == src
+                .len()
+                .checked_mul(2)
+                .expect("integer overflow when encoding to hex string")
+    );
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
         let (hi, lo) = byte2hex(*byte);
