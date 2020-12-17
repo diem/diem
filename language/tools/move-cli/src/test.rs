@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_STORAGE_DIR};
+use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_SOURCE_DIR, DEFAULT_STORAGE_DIR};
 use anyhow::anyhow;
 use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
 use move_lang::{
@@ -31,11 +31,15 @@ const EXP_EXT: &str = "exp";
 /// produced by a test. However, you'll have to manually run `move clean`
 /// before re-running the test.
 const NO_MOVE_CLEAN: &str = "NO_MOVE_CLEAN";
+
 /// If either of these env vars is set, the test harness overwrites the
 /// old .exp files with the output instead of checking them against the
 /// output.
 const UPDATE_BASELINE: &str = "UPDATE_BASELINE";
 const UB: &str = "UB";
+
+/// The filename that contains the arguments to the Move binary.
+pub const TEST_ARGS_FILENAME: &str = "args.txt";
 
 /// Name of the environment variable we need to set in order to get tracing
 /// enabled in the move VM.
@@ -261,7 +265,7 @@ pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Re
 
     // find `args.txt` and iterate over them
     for entry in move_lang::find_filenames(&[args_path.to_owned()], |fpath| {
-        fpath.file_name().expect("unexpected file entry path") == "args.txt"
+        fpath.file_name().expect("unexpected file entry path") == TEST_ARGS_FILENAME
     })? {
         match run_one(Path::new(&entry), cli_binary, track_cov) {
             Ok(cov_opt) => {
@@ -287,6 +291,41 @@ pub fn run_all(args_path: &str, cli_binary: &str, track_cov: bool) -> anyhow::Re
         let mut summary_writer: Box<dyn Write> = Box::new(io::stdout());
         for (_, module_summary) in cov_info.into_module_summaries() {
             module_summary.summarize_human(&mut summary_writer, true)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Create a directory scaffold for writing a Move CLI test.
+pub fn create_test_scaffold(path: &str) -> anyhow::Result<()> {
+    let path = Path::new(path);
+
+    if path.exists() {
+        anyhow::bail!("{:#?} already exists. Remove {:#?} and re-run this command if creating it as a test directory was intentional.", path, path);
+    }
+
+    let format_src_dir = |dir| format!("{}/{}", DEFAULT_SOURCE_DIR, dir);
+    let dirs = ["modules", "scripts"];
+    let files = [(
+        TEST_ARGS_FILENAME,
+        Some("# This is a batch file. To write an expected value test that runs `move <command1> <args1>;move <command2> <args2>`, write\n\
+            # `<command1> <args1>`\n\
+            # `<command2> <args2>`\n\
+            # '#' is a comment.",
+            ),
+    )];
+
+    fs::create_dir_all(&path)?;
+
+    for dir in &dirs {
+        fs::create_dir_all(&path.canonicalize()?.join(format_src_dir(dir)))?;
+    }
+
+    for (file, possible_contents) in &files {
+        let mut file_handle = fs::File::create(path.canonicalize()?.join(file))?;
+        if let Some(contents) = possible_contents {
+            write!(file_handle, "{}", contents)?;
         }
     }
 

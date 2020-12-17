@@ -325,6 +325,19 @@ Command `run scripts/debug_script.move --signers 0xf --mode bare`:
 ...
 ```
 
+The scaffolding for a new test that follows the above structure for tests can be created
+by passing the `--create` flag to `move test` along with the name of the test that you wish to create:
+
+```
+$ move test new_test_name --create
+$ tree new_test_name
+new_test_name
+├── args.txt
+└── src
+    ├── modules
+    └── scripts
+```
+
 ### Testing with code coverage tracking
 
 Code coverage has been an important metric in software testing. In Move CLI, we

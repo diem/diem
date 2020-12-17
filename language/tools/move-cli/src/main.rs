@@ -142,6 +142,9 @@ enum Command {
         /// By default, coverage will not be tracked nor shown.
         #[structopt(long = "track-cov")]
         track_cov: bool,
+        /// Create a new test directory scaffold with the specified <path>
+        #[structopt(long = "create")]
+        create: bool,
     },
     /// View Move resources, events files, and modules stored on disk
     #[structopt(name = "view")]
@@ -839,7 +842,16 @@ fn main() -> Result<()> {
                 move_args.verbose,
             )
         }
-        Command::Test { path, track_cov } => test::run_all(
+        Command::Test {
+            path,
+            track_cov: _,
+            create: true,
+        } => test::create_test_scaffold(path),
+        Command::Test {
+            path,
+            track_cov,
+            create: false,
+        } => test::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
             *track_cov,
