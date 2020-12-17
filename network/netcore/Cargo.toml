@@ -24,6 +24,7 @@ memsocket = { path = "../memsocket", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
+diem-network-address = { path = "../network-address", version = "0.1.0", features = ["fuzzing"] }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 
 [features]
