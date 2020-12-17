@@ -18,6 +18,7 @@ pub struct RocksdbConfig {
     pub max_total_wal_size: u64,
 }
 
+#[allow(clippy::integer_arithmetic)]
 impl Default for RocksdbConfig {
     fn default() -> Self {
         Self {

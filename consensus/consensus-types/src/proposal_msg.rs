@@ -54,7 +54,7 @@ impl ProposalMsg {
             self.sync_info.highest_quorum_cert().certified_block().id(),
             self.proposal.parent_id(),
         );
-        let previous_round = self.proposal.round() - 1;
+        let previous_round = self.proposal.round().saturating_sub(1);
         let highest_certified_round = std::cmp::max(
             self.proposal.quorum_cert().certified_block().round(),
             self.sync_info
