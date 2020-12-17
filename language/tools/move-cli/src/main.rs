@@ -49,8 +49,8 @@ struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
     storage_dir: String,
-    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
-    #[structopt(long, default_value = DEFAULT_BUILD_DIR, global = true)]
+    /// Directory storing build artifacts produced by compilation
+    #[structopt(long, short = "d", default_value = DEFAULT_BUILD_DIR, global = true)]
     build_dir: String,
     /// Dependency inclusion mode
     #[structopt(
@@ -78,10 +78,11 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// If set, modules will not override existing ones in storage
+        /// If set, fail when attempting to typecheck a module that already exists in global storage
         #[structopt(long = "no-republish")]
         no_republish: bool,
     },
+    /// Compile the specified modules and publish the resulting bytecodes in global storage
     #[structopt(name = "publish")]
     Publish {
         /// The source files containing modules to publish
@@ -90,7 +91,8 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// If set, modules will not override existing ones in storage
+        /// If set, fail during compilation when attempting to publish a module that already
+        /// exists in global storage
         #[structopt(long = "no-republish")]
         no_republish: bool,
         /// By default, code that might cause breaking changes for bytecode
@@ -98,10 +100,6 @@ enum Command {
         /// Set this flag to ignore breaking changes checks and publish anyway
         #[structopt(long = "ignore-breaking-changes")]
         ignore_breaking_changes: bool,
-        /// If set, the effects of executing `script_file` (i.e., published, updated, and
-        /// deleted resources) will NOT be committed to disk.
-        #[structopt(long = "dry-run", short = "n")]
-        dry_run: bool,
     },
     /// Compile/run a Move script that reads/writes resources stored on disk in `storage`.
     /// This command compiles each each module stored in `src` and loads it into the VM
@@ -789,7 +787,6 @@ fn main() -> Result<()> {
             source_files,
             no_republish,
             ignore_breaking_changes,
-            dry_run,
         } => {
             move_args.prepare_mode(true)?;
             let state = publish(
@@ -798,7 +795,7 @@ fn main() -> Result<()> {
                 !*no_republish,
                 *ignore_breaking_changes,
             )?;
-            maybe_commit_effects(&move_args, !*dry_run, None, &state)
+            maybe_commit_effects(&move_args, /* commit = */ true, None, &state)
         }
         Command::Run {
             script_file,
