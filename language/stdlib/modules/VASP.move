@@ -33,7 +33,7 @@ module VASP {
 
 
     /// Maximum number of child accounts that can be created by a single ParentVASP
-    const MAX_CHILD_ACCOUNTS: u64 = 256;
+    const MAX_CHILD_ACCOUNTS: u64 = 65536; // 2^16
 
     ///////////////////////////////////////////////////////////////////////////
     // To-be parent-vasp called functions
