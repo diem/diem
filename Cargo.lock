@@ -4023,6 +4023,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "bytecode-verifier",
  "compiled-stdlib",
  "datatest-stable",
  "diem-state-view",
@@ -4044,6 +4045,7 @@ dependencies = [
  "structopt 0.3.21",
  "vm",
  "vm-genesis",
+ "walkdir",
 ]
 
 [[package]]

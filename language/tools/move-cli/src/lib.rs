@@ -24,7 +24,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -187,6 +187,8 @@ impl OnDiskStateView {
         })
     }
 
+    /// Returns a deserialized representation of the resource value stored at `resource_path`.
+    /// Returns Err if the path does not hold a resource value or the resource cannot be deserialized
     pub fn view_resource(&self, resource_path: &Path) -> Result<Option<AnnotatedMoveStruct>> {
         if resource_path.is_dir() {
             bail!("Bad resource path {:?}. Needed file, found directory")
@@ -324,6 +326,44 @@ impl OnDiskStateView {
             self.save_module(id, &bytes)?
         }
         Ok(!self.modules.is_empty())
+    }
+
+    fn iter_paths<F>(&self, f: F) -> impl Iterator<Item = PathBuf>
+    where
+        F: FnOnce(&Path) -> bool + Copy,
+    {
+        walkdir::WalkDir::new(&self.storage_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path().to_path_buf())
+            .filter(move |path| f(path))
+    }
+
+    pub fn resource_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_resource_path(p))
+    }
+
+    pub fn module_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_module_path(p))
+    }
+
+    pub fn event_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_event_path(p))
+    }
+
+    /// Return a map of module ID -> module for all modules in the self.storage_dir.
+    /// Returns an Err if a module does not deserialize
+    pub fn get_all_modules(&self) -> Result<BTreeMap<ModuleId, CompiledModule>> {
+        let mut modules = BTreeMap::new();
+        for path in self.module_paths() {
+            let module = CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
+                .map_err(|e| anyhow!("Failed to deserialized module: {:?}", e))?;
+            let id = module.self_id();
+            if modules.insert(id.clone(), module).is_some() {
+                bail!("Duplicate module {:?}", id)
+            }
+        }
+        Ok(modules)
     }
 }
 

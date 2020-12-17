@@ -153,6 +153,9 @@ enum Command {
     /// Delete all resources, events, and modules stored on disk under `storage`.
     /// Does *not* delete anything in `src`.
     Clean {},
+    /// Run well-formedness checks on the `storage` and `build` directories.
+    #[structopt(name = "doctor")]
+    Doctor {},
 }
 
 impl Move {
@@ -772,6 +775,47 @@ fn view(args: &Move, file: &str) -> Result<()> {
     Ok(())
 }
 
+/// Run sanity checks on storage and build dirs. This is primarily intended for testing the CLI;
+/// doctor should never fail unless `publish --ignore-breaking changes` is used or files under
+/// `storage` or `build` are modified manually. This runs the following checks:
+/// (1) all modules pass the bytecode verifier
+/// (2) all modules pass the linker
+/// (3) all resources can be deserialized
+/// (4) all events can be deserialized (TODO)
+/// (5) build/mv_interfaces is consistent with the global storage (TODO)
+fn doctor(args: &Move) -> Result<()> {
+    let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
+    let stdlib_modules = vec![];
+    let state = OnDiskStateView::create(storage_dir, &stdlib_modules)?;
+    let modules = state.get_all_modules()?;
+    // verify and link each module
+    for module in modules.values() {
+        if bytecode_verifier::verify_module(module).is_err() {
+            bail!("Failed to verify module {:?}", module.self_id())
+        }
+        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
+            bail!(
+                "Failed to link module {:?} against its dependencies",
+                module.self_id()
+            )
+        }
+    }
+    // deserialize each resource
+    for resource_path in state.resource_paths() {
+        let resource = state.view_resource(&resource_path);
+        if resource.is_err() {
+            let parent_addr = resource_path.parent().unwrap().parent().unwrap();
+            bail!(
+                "Failed to deserialize resource {:?} stored under address {:?}",
+                resource_path.file_name().unwrap(),
+                parent_addr.file_name().unwrap()
+            )
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let move_args = Move::from_args();
 
@@ -836,5 +880,6 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
+        Command::Doctor {} => doctor(&move_args),
     }
 }
