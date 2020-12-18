@@ -19,6 +19,7 @@ use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address::NetworkAddress;
+use diem_rate_limiter::rate_limit::{TokenBucketConfig, TokenBucketRateLimiter};
 use diem_types::{chain_id::ChainId, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
@@ -187,6 +188,7 @@ pub struct PeerManagerBuilder {
     state: State,
     max_frame_size: usize,
     enable_proxy_protocol: bool,
+    inbound_token_bucket_config: TokenBucketConfig,
 }
 
 impl PeerManagerBuilder {
@@ -203,6 +205,8 @@ impl PeerManagerBuilder {
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
+        inbound_ip_byte_bucket_rate: usize,
+        inbound_ip_byte_bucket_size: usize,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -213,6 +217,13 @@ impl PeerManagerBuilder {
         // Setup channel to send connection requests to peer manager.
         let (connection_reqs_tx, connection_reqs_rx) =
             diem_channel::new(QueueStyle::FIFO, channel_size, None);
+
+        let inbound_token_bucket_config = TokenBucketConfig::new(
+            25,
+            inbound_ip_byte_bucket_size,
+            inbound_ip_byte_bucket_rate,
+            false,
+        );
 
         Self {
             network_context,
@@ -242,6 +253,7 @@ impl PeerManagerBuilder {
             state: State::CREATED,
             max_frame_size,
             enable_proxy_protocol,
+            inbound_token_bucket_config,
         }
     }
 
@@ -347,7 +359,8 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-
+        let inbound_rate_limiters =
+            TokenBucketRateLimiter::new_from_config(self.inbound_token_bucket_config);
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -364,6 +377,7 @@ impl PeerManagerBuilder {
             pm_context.channel_size,
             self.max_frame_size,
             pm_context.inbound_connection_limit,
+            inbound_rate_limiters,
         );
 
         // PeerManager constructor appends a public key to the listen_address.

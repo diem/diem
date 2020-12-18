@@ -75,6 +75,7 @@ fn build_test_peer(
         Duration::from_millis(INBOUND_RPC_TIMEOUT_MS),
         MAX_CONCURRENT_INBOUND_RPCS,
         MAX_FRAME_SIZE,
+        None,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 
@@ -127,7 +128,7 @@ fn build_network_sink_stream<'a>(
 ) {
     let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
     let sink = NetworkMessageSink::new(IoCompat::new(write_half), MAX_FRAME_SIZE);
-    let stream = NetworkMessageStream::new(IoCompat::new(read_half), MAX_FRAME_SIZE);
+    let stream = NetworkMessageStream::new(IoCompat::new(read_half), MAX_FRAME_SIZE, None);
     (sink, stream)
 }
 

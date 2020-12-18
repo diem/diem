@@ -29,6 +29,7 @@ use channel::{self, diem_channel};
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_network_address::NetworkAddress;
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
@@ -38,11 +39,12 @@ use futures::{
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
 use netcore::transport::{ConnectionOrigin, Transport};
-use serde::Serialize;
+use serde::{export::Formatter, Serialize};
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
     marker::PhantomData,
+    net::{IpAddr, Ipv4Addr},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -55,7 +57,6 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
-use serde::export::Formatter;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
@@ -284,6 +285,8 @@ where
     max_frame_size: usize,
     /// Inbound connection limit separate of outbound connections
     inbound_connection_limit: usize,
+    /// Keyed storage of all inbound rate limiters
+    inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -310,6 +313,7 @@ where
         max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         inbound_connection_limit: usize,
+        inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
@@ -329,6 +333,7 @@ where
                 transport_notifs_tx_clone,
             )
         });
+
         Self {
             network_context,
             executor,
@@ -349,6 +354,7 @@ where
             channel_size,
             max_frame_size,
             inbound_connection_limit,
+            inbound_rate_limiters,
         }
     }
 
@@ -517,6 +523,11 @@ where
                     }
                 }
 
+                let ip_addr = lost_conn_metadata
+                    .addr
+                    .find_ip_addr()
+                    .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+
                 // Notify upstream if there's still no active connection. This might be redundant,
                 // but does not affect correctness.
                 if !self.active_peers.contains_key(&peer_id) {
@@ -527,6 +538,9 @@ where
                     );
                     self.send_conn_notification(peer_id, notif);
                 }
+
+                // Garbage collect unused rate limit buckets
+                self.inbound_rate_limiters.try_garbage_collect_key(&ip_addr);
             }
         }
     }
@@ -755,6 +769,13 @@ where
             }
         }
 
+        let ip_addr = connection
+            .metadata
+            .addr
+            .find_ip_addr()
+            .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
+        let inbound_rate_limiter = self.inbound_rate_limiters.bucket(ip_addr);
+
         // Initialize a new network stack for this connection.
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
             Arc::clone(&self.network_context),
@@ -765,6 +786,7 @@ where
             self.max_concurrent_network_notifs,
             self.channel_size,
             self.max_frame_size,
+            Some(inbound_rate_limiter),
         );
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.

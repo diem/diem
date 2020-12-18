@@ -21,6 +21,7 @@ use bytes::Bytes;
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
 use diem_network_address::NetworkAddress;
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_types::PeerId;
 use futures::{channel::oneshot, io::AsyncWriteExt, stream::StreamExt};
 use memsocket::MemorySocket;
@@ -104,6 +105,7 @@ fn build_test_peer_manager(
         constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         constants::MAX_FRAME_SIZE,
         MAX_INBOUND_CONNECTIONS,
+        TokenBucketRateLimiter::open(),
     );
 
     (
@@ -118,7 +120,8 @@ fn build_test_peer_manager(
 async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
     let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
     let mut msg_tx = NetworkMessageSink::new(IoCompat::new(write_half), constants::MAX_FRAME_SIZE);
-    let mut msg_rx = NetworkMessageStream::new(IoCompat::new(read_half), constants::MAX_FRAME_SIZE);
+    let mut msg_rx =
+        NetworkMessageStream::new(IoCompat::new(read_half), constants::MAX_FRAME_SIZE, None);
 
     // Send a garbage frame to trigger an expected Error response message
     msg_tx

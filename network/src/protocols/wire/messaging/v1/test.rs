@@ -66,7 +66,7 @@ fn libranet_wire_test_vectors() {
     // test reading and deserializing gives us the expected message
 
     let socket_rx = ReadOnlyTestSocket::new(&message_bytes);
-    let message_rx = NetworkMessageStream::new(socket_rx, 128);
+    let message_rx = NetworkMessageStream::new(socket_rx, 128, None);
 
     let recv_messages = block_on(message_rx.collect::<Vec<_>>());
     let recv_messages = recv_messages
@@ -108,7 +108,7 @@ fn recv_fails_when_larger_than_frame_limit() {
     // sender won't error b/c their max frame size is larger
     let mut message_tx = NetworkMessageSink::new(memsocket_tx, 128);
     // receiver will reject the message b/c the frame size is > 64 bytes max
-    let mut message_rx = NetworkMessageStream::new(memsocket_rx, 64);
+    let mut message_rx = NetworkMessageStream::new(memsocket_rx, 64, None);
 
     let message = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: ProtocolId::ConsensusRpc,
@@ -203,7 +203,7 @@ proptest! {
         }
 
         let mut message_tx = NetworkMessageSink::new(socket_tx, 128);
-        let message_rx = NetworkMessageStream::new(socket_rx, 128);
+        let message_rx = NetworkMessageStream::new(socket_rx, 128, None);
 
         let f_send_all = async {
             for message in &messages {

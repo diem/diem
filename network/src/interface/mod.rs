@@ -26,6 +26,7 @@ use crate::{
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
+use diem_rate_limiter::rate_limit::SharedBucket;
 use diem_types::PeerId;
 use futures::{
     io::{AsyncRead, AsyncWrite},
@@ -73,6 +74,7 @@ where
         max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
+        inbound_rate_limiter: Option<SharedBucket>,
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,
@@ -101,6 +103,7 @@ where
             Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
             constants::MAX_CONCURRENT_INBOUND_RPCS,
             max_frame_size,
+            inbound_rate_limiter,
         );
         executor.spawn(peer.start());
 

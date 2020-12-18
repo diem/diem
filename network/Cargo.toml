@@ -39,6 +39,7 @@ diem-logger = { path = "../common/logger", version = "0.1.0" }
 diem-metrics = { path = "../common/metrics", version = "0.1.0" }
 diem-network-address = { path = "../network/network-address", version = "0.1.0" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-rate-limiter = { path = "../common/rate-limiter", version = "0.1.0"}
 diem-types = { path = "../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }

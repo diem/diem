@@ -11,6 +11,7 @@
 
 use crate::protocols::wire::handshake::v1::ProtocolId;
 use bytes::Bytes;
+use diem_rate_limiter::{async_lib::AsyncRateLimiter, rate_limit::SharedBucket};
 use futures::{
     io::{AsyncRead, AsyncWrite},
     sink::Sink,
@@ -153,21 +154,22 @@ pub fn network_message_frame_codec(max_frame_size: usize) -> LengthDelimitedCode
 /// A `Stream` of inbound `NetworkMessage`s read and deserialized from an
 /// underlying socket.
 #[pin_project]
-pub struct NetworkMessageStream<TReadSocket: AsyncRead> {
+pub struct NetworkMessageStream<TReadSocket: AsyncRead + Unpin> {
     #[pin]
-    framed_read: FramedRead<IoCompat<TReadSocket>, LengthDelimitedCodec>,
+    framed_read: FramedRead<IoCompat<AsyncRateLimiter<TReadSocket>>, LengthDelimitedCodec>,
 }
 
-impl<TReadSocket: AsyncRead> NetworkMessageStream<TReadSocket> {
-    pub fn new(socket: TReadSocket, max_frame_size: usize) -> Self {
+impl<TReadSocket: AsyncRead + Unpin> NetworkMessageStream<TReadSocket> {
+    pub fn new(socket: TReadSocket, max_frame_size: usize, bucket: Option<SharedBucket>) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
-        let compat_socket = IoCompat::new(socket);
+        let rate_limiter = AsyncRateLimiter::new(socket, bucket);
+        let compat_socket = IoCompat::new(rate_limiter);
         let framed_read = FramedRead::new(compat_socket, frame_codec);
         Self { framed_read }
     }
 }
 
-impl<TReadSocket: AsyncRead> Stream for NetworkMessageStream<TReadSocket> {
+impl<TReadSocket: AsyncRead + Unpin> Stream for NetworkMessageStream<TReadSocket> {
     type Item = Result<NetworkMessage, ReadError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {

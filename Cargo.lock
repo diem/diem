@@ -4505,6 +4505,7 @@ dependencies = [
  "diem-metrics",
  "diem-network-address",
  "diem-proptest-helpers",
+ "diem-rate-limiter",
  "diem-types",
  "diem-workspace-hack",
  "futures 0.3.8",
