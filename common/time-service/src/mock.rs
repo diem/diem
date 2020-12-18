@@ -6,18 +6,16 @@ use diem_infallible::Mutex;
 use futures::future::Future;
 use std::{
     cmp::max,
-    collections::hash_map::{DefaultHasher, HashMap},
+    collections::btree_map::BTreeMap,
     fmt::Debug,
-    hash::BuildHasherDefault,
     pin::Pin,
     sync::{Arc, MutexGuard},
     task::{Context, Poll, Waker},
     time::Duration,
 };
 
-// TODO(philiphayes): use more robust solution that'll let us control the seed.
-type DeterministicHasher = BuildHasherDefault<DefaultHasher>;
-
+/// Each waiter in the pending queue has a unique index to distinguish waiters
+/// with the same deadline.
 type SleepIndex = usize;
 
 /// A [`TimeService`] that simulates time and allows for fine-grained control over
@@ -31,40 +29,30 @@ pub struct MockTimeService {
 struct Inner {
     /// The current simulated time.
     now: Duration,
-    /// The next free index in the `pending` queue that we can allocate to a new waiter.
+    /// The next unique index that we can allocate to a new waiter.
     next_sleep_index: SleepIndex,
-    /// A queue of pending `SleepEntry`s, each with a deadline for when we should
-    /// wake them.
+    /// A queue of pending `MockSleep`s. The entries are stored in a `BTreeMap`
+    /// ordered by the wait deadline (and entry index, meaning ties are broken by
+    /// insertion order). Rather than store the `MockSleep`s themselves, we store
+    /// a `Waker` to alert the `MockSleep` future when it's complete.
     ///
-    /// This `HashMap` also uses a hasher with constant seed (in the future the
-    /// seed should be configurable) to help improve test determinism.
-    pending: HashMap<SleepIndex, SleepEntry, DeterministicHasher>,
-}
-
-/// A timer entry owned by the `MockTimeService` in the `pending` queue.
-///
-/// These are indexed by `SleepIndex`, which you get when you `register_sleep` a
-/// new waiter.
-#[derive(Debug)]
-struct SleepEntry {
-    /// The time when this sleep task expires and should be woken up.
-    deadline: Duration,
-    /// When the corresponding `MockSleep` future polls and isn't expired
-    /// yet, it will register its `Waker` here for the `MockTimeService`
-    maybe_waker: Option<Waker>,
+    /// Note that we store an `Option<Waker>` since there is a gap between when
+    /// a `MockSleep` is created + registered and when it's first polled (and
+    /// has a `Waker` that it can register).
+    pending: BTreeMap<(Duration, SleepIndex), Option<Waker>>,
 }
 
 /// A [`Future`] that resolves when the simulated time in the [`MockTimeService`]
-/// advances past the deadline. When these are pending, they have a `SleepEntry`
-/// in the `MockTimeService`'s `pending` queue.
+/// advances past its deadline. When these are pending, they have an entry in the
+/// `MockTimeService`'s `pending` queue.
 #[derive(Debug)]
 pub struct MockSleep {
     /// A handle to the `MockTimeService` so we can get the underlying `SleepEntry`.
     time_service: MockTimeService,
-    /// The index of this `MockSleep`'s `SleepEntry` in the `MockTimeService`'s
-    /// `pending` queue. If the `pending` queue doesn't contain our entry, then
-    /// this sleep must be completed.
-    entry_index: SleepIndex,
+    /// Wait until the simulated time has at least passed this `deadline`.
+    deadline: Duration,
+    /// This waiter's unique index.
+    index: SleepIndex,
 }
 
 /////////////////////
@@ -77,7 +65,7 @@ impl MockTimeService {
             inner: Arc::new(Mutex::new(Inner {
                 now: ZERO_DURATION,
                 next_sleep_index: 0,
-                pending: HashMap::default(),
+                pending: BTreeMap::new(),
             })),
         }
     }
@@ -140,17 +128,10 @@ impl Inner {
     fn advance_to_next(&mut self) -> Option<Duration> {
         // Find the next entry with the smallest deadline. Exit early without
         // advancing if there are no pending waiters.
-        let earliest_index = self
-            .pending
-            .iter()
-            .min_by_key(|(_index, entry)| entry.deadline)
-            .map(|(index, _entry)| *index)?;
-
-        // Wake up that entry.
-        let wake_time = self.trigger_sleep(earliest_index).unwrap();
+        let deadline = self.trigger_min_sleep()?;
 
         // If the deadline was in the past, don't actually advance the time.
-        self.now = max(self.now, wake_time);
+        self.now = max(self.now, deadline);
 
         Some(self.now)
     }
@@ -159,25 +140,20 @@ impl Inner {
         // Advance the simulated time.
         self.now += duration;
 
-        // Get the indices and deadlines of all expired waiters.
-        let mut expired_entries = self
+        // Get the number of now-expired waiters.
+        let num_expired = self
             .pending
-            .iter()
-            .map(|(index, entry)| (*index, entry.deadline))
-            .filter(|(_index, deadline)| deadline <= &self.now)
-            .collect::<Vec<_>>();
+            .keys()
+            .filter(|&(deadline, _index)| deadline <= &self.now)
+            .count();
 
-        // Wake up the waiters in order.
-        // TODO(philiphayes): break ties (same deadline) randomly but with a controlled seed.
-        expired_entries.sort_by_key(|(_index, deadline)| *deadline);
-
-        // Wake up all the expired waiters.
-        let mut num_woken = 0;
-        for (index, _deadline) in expired_entries.into_iter() {
-            self.trigger_sleep(index).unwrap();
-            num_woken += 1;
+        // Wake up and unregister all the expired waiters.
+        for _ in 0..num_expired {
+            self.trigger_min_sleep()
+                .expect("must be at least num_expired waiters");
         }
-        num_woken
+
+        num_expired
     }
 
     fn next_sleep_index(&mut self) -> SleepIndex {
@@ -189,43 +165,60 @@ impl Inner {
         index
     }
 
-    fn get_mut_sleep(&mut self, index: SleepIndex) -> Option<&mut SleepEntry> {
-        self.pending.get_mut(&index)
+    fn get_mut_sleep(
+        &mut self,
+        deadline: Duration,
+        index: SleepIndex,
+    ) -> Option<&mut Option<Waker>> {
+        self.pending.get_mut(&(deadline, index))
     }
 
-    fn is_registered(&self, index: SleepIndex) -> bool {
-        self.pending.contains_key(&index)
+    fn is_sleep_registered(&self, deadline: Duration, index: SleepIndex) -> bool {
+        self.pending.contains_key(&(deadline, index))
     }
 
     // Register a new waiter that will sleep for `duration`. Return an index that
     // can be used to query, trigger, or unregister this waiter later on.
-    fn register_sleep(&mut self, duration: Duration, maybe_waker: Option<Waker>) -> SleepIndex {
-        let entry = SleepEntry {
-            deadline: self.now + duration,
-            maybe_waker,
-        };
+    fn register_sleep(
+        &mut self,
+        duration: Duration,
+        maybe_waker: Option<Waker>,
+    ) -> (Duration, SleepIndex) {
+        let deadline = self.now + duration;
         let index = self.next_sleep_index();
-        let prev_entry = self.pending.insert(index, entry);
+        let prev_entry = self.pending.insert((deadline, index), maybe_waker);
         assert!(
             prev_entry.is_none(),
-            "there can never be a SleepEntry at an unused SleepIndex"
+            "there can never be an entry at an unused SleepIndex"
         );
-        index
+        (deadline, index)
     }
 
-    fn unregister_sleep(&mut self, index: SleepIndex) -> Option<SleepEntry> {
-        self.pending.remove(&index)
+    // Unregister a specific waiter with the given `deadline` and `index` and
+    // return its waker (if there is one).
+    fn unregister_sleep(&mut self, deadline: Duration, index: SleepIndex) -> Option<Option<Waker>> {
+        self.pending.remove(&(deadline, index))
     }
 
-    // Wake up a waiter at the given `index` and return the wake time. Return
-    // `None` if there is no waiter (presumably it was canceled).
-    fn trigger_sleep(&mut self, index: SleepIndex) -> Option<Duration> {
-        self.unregister_sleep(index).map(|entry| {
-            if let Some(waker) = entry.maybe_waker {
-                waker.wake();
-            }
-            entry.deadline
-        })
+    // Unregister and return the next waiter with the earliest deadline.
+    fn unregister_min_sleep(&mut self) -> Option<((Duration, SleepIndex), Option<Waker>)> {
+        // TODO(philiphayes): use `BTreeMap::pop_first()` when that stabilizes.
+        let (deadline, index) = self.pending.keys().next()?;
+        let deadline = *deadline;
+        let index = *index;
+        self.pending.remove_entry(&(deadline, index))
+    }
+
+    // Wake up the next waiter with the earliest deadline and return the wake
+    // time. Return `None` if there are no waiters.
+    fn trigger_min_sleep(&mut self) -> Option<Duration> {
+        self.unregister_min_sleep()
+            .map(|((deadline, _index), maybe_waker)| {
+                if let Some(waker) = maybe_waker {
+                    waker.wake();
+                }
+                deadline
+            })
     }
 }
 
@@ -235,11 +228,12 @@ impl Inner {
 
 impl MockSleep {
     fn new(time_service: MockTimeService, duration: Duration) -> Self {
-        let entry_index = time_service.lock().register_sleep(duration, None);
+        let (deadline, index) = time_service.lock().register_sleep(duration, None);
 
         Self {
             time_service,
-            entry_index,
+            deadline,
+            index,
         }
     }
 }
@@ -247,7 +241,7 @@ impl MockSleep {
 impl SleepTrait for MockSleep {
     fn is_elapsed(&self) -> bool {
         let inner = self.time_service.lock();
-        !inner.is_registered(self.entry_index)
+        !inner.is_sleep_registered(self.deadline, self.index)
     }
 
     fn reset(&mut self, duration: Duration) {
@@ -255,12 +249,12 @@ impl SleepTrait for MockSleep {
 
         // Unregister us from the time service (if we're not triggered yet)
         // and pull out our waker (if it's there).
-        let maybe_waker = inner
-            .unregister_sleep(self.entry_index)
-            .and_then(|entry| entry.maybe_waker);
+        let maybe_waker = inner.unregister_sleep(self.deadline, self.index).flatten();
 
         // Register us with the time service with our new deadline.
-        self.entry_index = inner.register_sleep(duration, maybe_waker);
+        let (deadline, index) = inner.register_sleep(duration, maybe_waker);
+        self.deadline = deadline;
+        self.index = index;
     }
 }
 
@@ -270,11 +264,11 @@ impl Future for MockSleep {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut inner = self.time_service.lock();
 
-        let maybe_entry = inner.get_mut_sleep(self.entry_index);
+        let maybe_entry = inner.get_mut_sleep(self.deadline, self.index);
         match maybe_entry {
-            Some(entry) => {
+            Some(maybe_waker) => {
                 // We're still waiting. Update our `Waker` so we can get notified.
-                entry.maybe_waker = Some(cx.waker().clone());
+                maybe_waker.replace(cx.waker().clone());
                 Poll::Pending
             }
             // If we're not in the queue then we are done!
@@ -286,7 +280,9 @@ impl Future for MockSleep {
 impl Drop for MockSleep {
     fn drop(&mut self) {
         // Be sure to unregister us from the pending queue if we get dropped/canceled.
-        self.time_service.lock().unregister_sleep(self.entry_index);
+        self.time_service
+            .lock()
+            .unregister_sleep(self.deadline, self.index);
     }
 }
 
