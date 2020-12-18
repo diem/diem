@@ -50,7 +50,7 @@ use tokio::{task::JoinHandle, time};
 
 const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempool
                                        // Please make 'MAX_CHILD_VASP_NUM' consistency with 'MAX_CHILD_ACCOUNTS' constant under VASP.move
-const MAX_CHILD_VASP_NUM: usize = 256;
+const MAX_CHILD_VASP_NUM: usize = 65536;
 const MAX_VASP_ACCOUNT_NUM: usize = 16;
 const DD_KEY: &str = "dd.key";
 
