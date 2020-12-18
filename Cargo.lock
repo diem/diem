@@ -1574,6 +1574,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
  "diem-workspace-hack",
+ "proxy",
  "serde",
  "serde_json",
  "thiserror",
