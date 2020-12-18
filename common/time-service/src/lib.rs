@@ -17,15 +17,15 @@ use std::{
 pub mod interval;
 #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
 pub mod mock;
+pub mod real;
 pub mod timeout;
-pub mod tokio;
 
 #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
 pub use crate::mock::{MockSleep, MockTimeService};
 pub use crate::{
     interval::Interval,
+    real::{RealSleep, RealTimeService},
     timeout::Timeout,
-    tokio::{TokioSleep, TokioTimeService},
 };
 
 // TODO(philiphayes): use Duration constants when those stabilize.
@@ -54,15 +54,15 @@ const ZERO_DURATION: Duration = Duration::from_nanos(0);
 #[enum_dispatch(TimeServiceTrait)]
 #[derive(Clone, Debug)]
 pub enum TimeService {
-    TokioTimeService(TokioTimeService),
+    RealTimeService(RealTimeService),
 
     #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
     MockTimeService(MockTimeService),
 }
 
 impl TimeService {
-    pub fn tokio() -> Self {
-        TokioTimeService::new().into()
+    pub fn real() -> Self {
+        RealTimeService::new().into()
     }
 
     #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
@@ -137,10 +137,10 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
 #[enum_dispatch(SleepTrait)]
 #[derive(Debug)]
 pub enum Sleep {
-    TokioSleep,
+    RealSleep(RealSleep),
 
     #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
-    MockSleep,
+    MockSleep(MockSleep),
 }
 
 impl Future for Sleep {
@@ -148,7 +148,7 @@ impl Future for Sleep {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.get_mut() {
-            Sleep::TokioSleep(inner) => Pin::new(inner).poll(cx),
+            Sleep::RealSleep(inner) => Pin::new(inner).poll(cx),
             #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
             Sleep::MockSleep(inner) => Pin::new(inner).poll(cx),
         }

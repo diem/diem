@@ -6,20 +6,20 @@ use std::time::Duration;
 
 /// The real production tokio [`TimeService`].
 ///
-/// Note: `TokioTimeService` is just a zero-sized type whose methods only delegate
+/// Note: `RealTimeService` is just a zero-sized type whose methods only delegate
 /// to the respective [`tokio::time`] functions.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct TokioTimeService;
+pub struct RealTimeService;
 
-pub type TokioSleep = tokio::time::Delay;
+pub type RealSleep = tokio::time::Delay;
 
-impl TokioTimeService {
+impl RealTimeService {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl TimeServiceTrait for TokioTimeService {
+impl TimeServiceTrait for RealTimeService {
     fn now(&self) -> Duration {
         diem_infallible::duration_since_epoch()
     }
@@ -30,13 +30,13 @@ impl TimeServiceTrait for TokioTimeService {
     }
 }
 
-impl SleepTrait for TokioSleep {
+impl SleepTrait for RealSleep {
     fn is_elapsed(&self) -> bool {
-        TokioSleep::is_elapsed(self)
+        RealSleep::is_elapsed(self)
     }
 
     fn reset(&mut self, duration: Duration) {
         let deadline = self.deadline() + duration;
-        TokioSleep::reset(self, deadline);
+        RealSleep::reset(self, deadline);
     }
 }
