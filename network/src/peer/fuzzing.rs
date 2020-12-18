@@ -112,6 +112,7 @@ pub fn fuzz(data: &[u8]) {
         max_concurrent_notifs,
         channel_size,
         MAX_FRAME_SIZE,
+        None,
     );
 
     rt.block_on(async move {

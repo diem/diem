@@ -19,6 +19,7 @@ use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address::NetworkAddress;
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_types::{chain_id::ChainId, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
@@ -188,6 +189,8 @@ pub struct PeerManagerBuilder {
     state: State,
     max_frame_size: usize,
     enable_proxy_protocol: bool,
+    inbound_ip_byte_bucket_rate: usize,
+    inbound_ip_byte_bucket_size: usize,
 }
 
 impl PeerManagerBuilder {
@@ -204,6 +207,8 @@ impl PeerManagerBuilder {
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
+        inbound_ip_byte_bucket_rate: usize,
+        inbound_ip_byte_bucket_size: usize,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -246,6 +251,8 @@ impl PeerManagerBuilder {
             state: State::CREATED,
             max_frame_size,
             enable_proxy_protocol,
+            inbound_ip_byte_bucket_rate,
+            inbound_ip_byte_bucket_size,
         }
     }
 
@@ -351,7 +358,10 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-
+        let inbound_rate_limiters = TokenBucketRateLimiter::new(
+            NonZeroUsize::new(self.inbound_ip_byte_bucket_size).unwrap(),
+            NonZeroUsize::new(self.inbound_ip_byte_bucket_rate).unwrap(),
+        );
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -368,6 +378,7 @@ impl PeerManagerBuilder {
             pm_context.channel_size,
             self.max_frame_size,
             pm_context.inbound_connection_limit,
+            inbound_rate_limiters,
         );
 
         // PeerManager constructor appends a public key to the listen_address.

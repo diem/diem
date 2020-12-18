@@ -91,6 +91,8 @@ impl NetworkBuilder {
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
         inbound_connection_limit: usize,
+        inbound_ip_byte_bucket_rate: usize,
+        inbound_ip_byte_bucket_size: usize,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -106,6 +108,8 @@ impl NetworkBuilder {
             max_frame_size,
             enable_proxy_protocol,
             inbound_connection_limit,
+            inbound_ip_byte_bucket_rate,
+            inbound_ip_byte_bucket_size,
         );
 
         NetworkBuilder {
@@ -141,6 +145,8 @@ impl NetworkBuilder {
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
+            MAX_FRAME_SIZE,
+            MAX_FRAME_SIZE,
         );
 
         builder.add_connectivity_manager(
@@ -188,6 +194,8 @@ impl NetworkBuilder {
             config.max_concurrent_network_reqs,
             config.max_concurrent_network_notifs,
             config.max_inbound_connections,
+            config.inbound_ip_byte_bucket_rate,
+            config.inbound_ip_byte_bucket_size,
         );
 
         network_builder.add_connection_monitoring(

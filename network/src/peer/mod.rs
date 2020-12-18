@@ -25,7 +25,9 @@ use crate::{
 };
 use bytes::Bytes;
 use diem_config::network_id::NetworkContext;
+use diem_infallible::Mutex;
 use diem_logger::prelude::*;
+use diem_rate_limiter::rate_limit::Bucket;
 use diem_types::PeerId;
 use futures::{
     self,
@@ -114,6 +116,8 @@ pub struct Peer<TSocket> {
     /// The maximum size of an inbound or outbound request frame
     /// Currently, requests are only a single frame
     max_frame_size: usize,
+    /// Optional outbound rate limiter
+    inbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -130,6 +134,7 @@ where
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
         max_frame_size: usize,
+        inbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -152,6 +157,7 @@ where
             ),
             state: State::Connected,
             max_frame_size,
+            inbound_rate_limiter,
         }
     }
 
@@ -173,8 +179,12 @@ where
         let (read_socket, write_socket) =
             tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
 
-        let mut reader =
-            NetworkMessageStream::new(IoCompat::new(read_socket), self.max_frame_size).fuse();
+        let mut reader = NetworkMessageStream::new(
+            IoCompat::new(read_socket),
+            self.max_frame_size,
+            self.inbound_rate_limiter.clone(),
+        )
+        .fuse();
         let writer = NetworkMessageSink::new(IoCompat::new(write_socket), self.max_frame_size);
 
         // Start writer "process" as a separate task. We receive two handles to communicate with

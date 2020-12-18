@@ -282,6 +282,15 @@ impl NetworkAddress {
         parse_diemnet_protos(self.as_slice()).is_some()
     }
 
+    /// Retrieves the IP address from the network address
+    pub fn find_ip_addr(&self) -> Option<IpAddr> {
+        self.0.iter().find_map(|proto| match proto {
+            Protocol::Ip4(addr) => Some(IpAddr::V4(*addr)),
+            Protocol::Ip6(addr) => Some(IpAddr::V6(*addr)),
+            _ => None,
+        })
+    }
+
     /// A temporary, hacky function to parse out the first `/ln-noise-ik/<pubkey>` from
     /// a `NetworkAddress`. We can remove this soon, when we move to the interim
     /// "monolithic" transport model.
