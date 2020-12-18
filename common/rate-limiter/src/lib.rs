@@ -3,4 +3,5 @@
 
 #![forbid(unsafe_code)]
 
+pub mod async_lib;
 pub mod rate_limit;
