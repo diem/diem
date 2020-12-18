@@ -14,7 +14,7 @@ rand_core = "0.5.1"
 
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-global-constants = { path = "../../config/global-constants", version = "0.1.0"}

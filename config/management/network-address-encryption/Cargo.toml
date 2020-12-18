@@ -14,7 +14,7 @@ base64 = "0.13.0"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
 thiserror = "1.0.22"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-global-constants = { path = "../../../config/global-constants", version = "0.1.0"}
 diem-infallible = { path = "../../../common/infallible", version = "0.1.0" }
 diem-logger = { path = "../../../common/logger", version = "0.1.0" }

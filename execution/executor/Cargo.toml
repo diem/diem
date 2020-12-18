@@ -19,7 +19,7 @@ serde = { version = "1.0.117", features = ["derive"] }
 
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0"}
 executor-types = { path = "../executor-types", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-metrics = { path = "../../common/metrics", version = "0.1.0" }

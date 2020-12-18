@@ -26,7 +26,7 @@ backup-cli = { path = "../../storage/backup/backup-cli", version = "0.1.0" }
 cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }

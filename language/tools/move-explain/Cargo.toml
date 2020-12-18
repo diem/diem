@@ -15,7 +15,7 @@ compiled-stdlib = { path = "../../stdlib/compiled", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 errmapgen = { path = "../../move-prover/errmapgen", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 
 [features]
 default = []

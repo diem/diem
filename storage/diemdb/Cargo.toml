@@ -23,7 +23,7 @@ serde = "1.0.117"
 thiserror = "1.0.22"
 
 accumulator = { path = "../accumulator", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }

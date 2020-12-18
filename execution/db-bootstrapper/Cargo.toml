@@ -14,7 +14,7 @@ anyhow = "1.0.34"
 structopt = "0.3.21"
 
 executor = { path = "../executor", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diemdb = { path = "../../storage/diemdb", version = "0.1.0" }
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

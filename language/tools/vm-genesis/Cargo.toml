@@ -15,7 +15,7 @@ once_cell = "1.4.1"
 rand = "0.7.3"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../../config", version = "0.1.0" }
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }

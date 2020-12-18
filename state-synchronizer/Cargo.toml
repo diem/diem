@@ -39,7 +39,7 @@ network = { path = "../network", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0", optional = true }
 
 [dev-dependencies]

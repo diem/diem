@@ -12,7 +12,7 @@ spec-lang = { path = "../spec-lang", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 
 # external dependencies
 log = "0.4.11"

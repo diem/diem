@@ -22,7 +22,7 @@ tokio = { version = "0.2.22", features = ["full"] }
 
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../config", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diem-logger = { path = "../common/logger", version = "0.1.0" }

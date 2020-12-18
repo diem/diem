@@ -28,7 +28,7 @@ diem-config = { path = "../../config", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-wallet = { path = "diem-wallet", version = "0.1.0" }
 diem-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

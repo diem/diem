@@ -18,7 +18,7 @@ anyhow = "1.0.34"
 codespan = { version = "0.8.0", features = ["serialization"] }
 colored = "2.0.0"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-types = { path = "../../../types", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }

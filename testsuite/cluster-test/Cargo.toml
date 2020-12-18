@@ -37,7 +37,7 @@ num_cpus = "1.13.0"
 
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }

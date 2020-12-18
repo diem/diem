@@ -23,7 +23,7 @@ structopt = "0.3.21"
 rand = "0.7.3"
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 

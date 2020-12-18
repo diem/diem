@@ -14,7 +14,7 @@ anyhow = "1.0.34"
 tokio = { version = "0.2.22", features = ["full"] }
 futures = "0.3.8"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diemdb = { path = "../diemdb", version = "0.1.0" }

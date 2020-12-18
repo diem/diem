@@ -17,7 +17,7 @@ serde = { version = "1.0.117", features = ["derive"] }
 serde_bytes = "0.11.5"
 
 [dev-dependencies]
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-proptest-helpers = { path = "../proptest-helpers", version = "0.1.0"}
 proptest = { version = "0.10.1", default-features = true }
 proptest-derive = { version = "0.2.0" }

@@ -21,7 +21,7 @@ serde_json = "1.0.60"
 tokio = { version = "0.2.22", features = ["full"] }
 
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-json-rpc-types  = { path = "../../json-rpc/types" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

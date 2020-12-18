@@ -17,7 +17,7 @@ move-prover = { path = "../move-prover" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 vm = { path = "../vm", version = "0.1.0" }
 transaction-builder-generator = { path = "../transaction-builder/generator", version = "0.1.0" }
 

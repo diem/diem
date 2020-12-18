@@ -14,7 +14,7 @@ anyhow = "1.0.34"
 serde = { version = "1.0.117", default-features = false }
 thiserror = "1.0.22"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }

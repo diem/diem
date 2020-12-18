@@ -18,7 +18,7 @@ serde = { version = "1.0.117", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.5"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-logger = { path = "../../../common/logger", version = "0.1.0" }
 diem-metrics = { path = "../../../common/metrics", version = "0.1.0" }

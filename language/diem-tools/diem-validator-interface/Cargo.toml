@@ -22,4 +22,4 @@ diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.
 storage-interface = { path = "../../../storage/storage-interface", version = "0.1.0" }
 scratchpad = { path = "../../../storage/scratchpad", version = "0.1.0" }
 diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"

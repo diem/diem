@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.34"
 serde = "1.0.117"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

@@ -26,7 +26,7 @@ serde_bytes = "0.11.5"
 thiserror = "1.0.22"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 diem-infallible = { path = "../common/infallible", version = "0.1.0" }

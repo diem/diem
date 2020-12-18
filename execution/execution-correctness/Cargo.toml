@@ -13,7 +13,7 @@ rand = { version = "0.7.3", default-features = false }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false }
 executor = { path = "../executor", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-global-constants = { path = "../../config/global-constants", version = "0.1.0"}

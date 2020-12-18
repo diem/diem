@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-types = { path = "../../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }

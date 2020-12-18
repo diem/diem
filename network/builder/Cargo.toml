@@ -20,7 +20,7 @@ tokio-retry = "0.2.0"
 
 
 channel = { path = "../../common/channel", version = "0.1.0" }
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

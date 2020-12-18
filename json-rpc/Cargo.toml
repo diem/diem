@@ -24,7 +24,7 @@ warp = "0.2.5"
 reqwest = { version = "0.10.9", features = ["blocking", "json"], default_features = false, optional = true }
 proptest = { version = "0.10.1", optional = true }
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-config = { path = "../config", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diemdb = { path = "../storage/diemdb", version = "0.1.0", optional = true }

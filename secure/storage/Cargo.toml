@@ -18,7 +18,7 @@ serde = { version = "1.0.117", features = ["rc"], default-features = false }
 serde_json = "1.0.60"
 thiserror = "1.0.22"
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-github-client = { path = "github", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

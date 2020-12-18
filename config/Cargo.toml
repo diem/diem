@@ -19,7 +19,7 @@ serde_yaml = "0.8.14"
 thiserror = "1.0.22"
 
 
-bcs = "0.1.1"
+bcs = "0.1.2"
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 diem-global-constants = { path = "../config/global-constants", version = "0.1.0"}
