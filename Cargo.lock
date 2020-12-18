@@ -2161,6 +2161,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-time-service"
+version = "0.1.0"
+dependencies = [
+ "diem-infallible",
+ "diem-workspace-hack",
+ "enum_dispatch",
+ "futures 0.3.8",
+ "pin-project 1.0.2",
+ "thiserror",
+ "tokio 0.2.22",
+ "tokio-test",
+]
+
+[[package]]
 name = "diem-trace"
 version = "0.1.0"
 dependencies = [

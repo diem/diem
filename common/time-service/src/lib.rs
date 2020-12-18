@@ -6,29 +6,30 @@
 //! Abstract time service
 
 use enum_dispatch::enum_dispatch;
-use futures::future::Future;
+use std::{fmt::Debug, time::Duration};
+#[cfg(any(test, feature = "async"))]
 use std::{
-    fmt::Debug,
+    future::Future,
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
 };
 
+#[cfg(any(test, feature = "async"))]
 pub mod interval;
 #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
 pub mod mock;
 pub mod real;
+#[cfg(any(test, feature = "async"))]
 pub mod timeout;
 
 #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
 pub use crate::mock::{MockSleep, MockTimeService};
-pub use crate::{
-    interval::Interval,
-    real::{RealSleep, RealTimeService},
-    timeout::Timeout,
-};
+pub use crate::real::RealTimeService;
+#[cfg(any(test, feature = "async"))]
+pub use crate::{interval::Interval, real::RealSleep, timeout::Timeout};
 
 // TODO(philiphayes): use Duration constants when those stabilize.
+#[cfg(any(test, feature = "async"))]
 const ZERO_DURATION: Duration = Duration::from_nanos(0);
 
 /// `TimeService` abstracts all time-related operations in one place that can be
@@ -94,6 +95,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     ///
     /// Canceling a sleep instance is done by dropping the returned future. No
     /// additional cleanup work is required.
+    #[cfg(any(test, feature = "async"))]
     fn sleep(&self, duration: Duration) -> Sleep;
 
     /// Blocks the current thread until `duration` time has passed.
@@ -109,6 +111,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     /// # Panics
     ///
     /// This function panics if `period` is zero.
+    #[cfg(any(test, feature = "async"))]
     fn interval(&self, period: Duration) -> Interval {
         let delay = self.sleep(ZERO_DURATION);
         Interval::new(delay, period)
@@ -127,6 +130,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     ///
     /// The original future may be obtained by calling [`Timeout::into_inner`]. This
     /// consumes the [`Timeout`].
+    #[cfg(any(test, feature = "async"))]
     fn timeout<F: Future>(&self, duration: Duration, future: F) -> Timeout<F> {
         let delay = self.sleep(duration);
         Timeout::new(future, delay)
@@ -139,6 +143,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
 /// `Sleep` is modeled after [`tokio::time::Delay`].
 #[enum_dispatch(SleepTrait)]
 #[derive(Debug)]
+#[cfg(any(test, feature = "async"))]
 pub enum Sleep {
     RealSleep(RealSleep),
 
@@ -146,6 +151,7 @@ pub enum Sleep {
     MockSleep(MockSleep),
 }
 
+#[cfg(any(test, feature = "async"))]
 impl Future for Sleep {
     type Output = ();
 
@@ -159,6 +165,7 @@ impl Future for Sleep {
 }
 
 #[enum_dispatch]
+#[cfg(any(test, feature = "async"))]
 pub trait SleepTrait: Future<Output = ()> + Send + Sync + Unpin + Debug {
     /// Returns `true` if this `Sleep`'s requested wait duration has elapsed.
     fn is_elapsed(&self) -> bool;

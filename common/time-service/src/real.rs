@@ -1,7 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Sleep, SleepTrait, TimeServiceTrait};
+use crate::TimeServiceTrait;
+#[cfg(any(test, feature = "async"))]
+use crate::{Sleep, SleepTrait};
 use std::{thread, time::Duration};
 
 /// The real production tokio [`TimeService`].
@@ -11,6 +13,7 @@ use std::{thread, time::Duration};
 #[derive(Copy, Clone, Debug, Default)]
 pub struct RealTimeService;
 
+#[cfg(any(test, feature = "async"))]
 pub type RealSleep = tokio::time::Delay;
 
 impl RealTimeService {
@@ -24,6 +27,7 @@ impl TimeServiceTrait for RealTimeService {
         diem_infallible::duration_since_epoch()
     }
 
+    #[cfg(any(test, feature = "async"))]
     fn sleep(&self, duration: Duration) -> Sleep {
         tokio::time::delay_for(duration).into()
     }
@@ -33,6 +37,7 @@ impl TimeServiceTrait for RealTimeService {
     }
 }
 
+#[cfg(any(test, feature = "async"))]
 impl SleepTrait for RealSleep {
     fn is_elapsed(&self) -> bool {
         RealSleep::is_elapsed(self)
