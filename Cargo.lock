@@ -1379,7 +1379,7 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.7.3",
- "rand_core 0.5.1",
+ "rand_core 0.6.0",
  "ripemd160",
  "serde",
  "serde-name",
@@ -4417,7 +4417,7 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.7.3",
- "rand_core 0.5.1",
+ "rand_core 0.6.0",
  "serde",
  "serde_bytes",
  "serial_test",
@@ -5280,6 +5280,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_core"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8b34ba8cfb21243bd8df91854c830ff0d785fff2e82ebd4434c2644cb9ada18"
+
+[[package]]
 name = "rand_hc"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5812,7 +5818,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "rand 0.7.3",
- "rand_core 0.5.1",
+ "rand_core 0.6.0",
  "serde",
  "tempfile",
  "thiserror",
