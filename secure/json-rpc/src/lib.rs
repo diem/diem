@@ -15,9 +15,10 @@ use diem_types::{
     account_state_blob::AccountStateBlob, transaction::SignedTransaction,
 };
 use hex::FromHexError;
+use proxy::Proxy;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{convert::TryFrom, env, io};
+use std::{convert::TryFrom, io};
 use thiserror::Error;
 use ureq::Response;
 
@@ -130,27 +131,18 @@ impl JsonRpcClient {
             .timeout_connect(REQUEST_TIMEOUT)
             .build();
 
+        let proxy = Proxy::new();
+        let host = request.get_host().expect("unable to get the host");
         let scheme = request
             .get_scheme()
             .expect("Unable to get the scheme from the host");
-        match scheme.as_str() {
-            "http" => {
-                if let Ok(proxy) = env::var("http_proxy") {
-                    request.set_proxy(
-                        ureq::Proxy::new(proxy)
-                            .expect("Unable to parse http_proxy environment variable"),
-                    );
-                };
-            }
-            "https" => {
-                if let Ok(proxy) = env::var("https_proxy") {
-                    request.set_proxy(
-                        ureq::Proxy::new(proxy)
-                            .expect("Unable to parse https_proxy environment variable"),
-                    );
-                };
-            }
-            _ => {}
+        let proxy_url = match scheme.as_str() {
+            "http" => proxy.http(&host),
+            "https" => proxy.https(&host),
+            _ => None,
+        };
+        if let Some(proxy_url) = proxy_url {
+            request.set_proxy(ureq::Proxy::new(proxy_url).expect("Unable to parse proxy_url"));
         }
 
         request.send_json(
