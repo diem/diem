@@ -8,6 +8,7 @@ use diem_crypto::{
     Signature, SigningKey, Uniform, ValidCryptoMaterialStringExt,
 };
 use diem_types::{
+    account_address::AccountAddress,
     chain_id::ChainId,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, SignedTransaction, Transaction,
@@ -16,7 +17,7 @@ use diem_types::{
 };
 use rand::{prelude::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{convert::TryFrom, str::FromStr};
 use structopt::StructOpt;
 use swiss_knife::helpers;
 
@@ -158,6 +159,13 @@ enum MoveScriptParams {
         // Hex encoded 32 byte Ed25519PublicKey, eg: "edd0f6de342a1e6a7236d6244f23d83eedfcecd059a386c85055701498e77033"
         new_key_hex_encoded: String,
     },
+    CreateChildVaspAccount {
+        coin_type: String,
+        child_address: String,
+        auth_key_prefix_hex_encoded: String,
+        add_all_currencies: bool,
+        child_initial_balance: u64,
+    },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -205,6 +213,26 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
             let new_key = hex::decode(new_key_hex_encoded)
                 .expect("Failed to hex decode new_key_hex_encoded field");
             transaction_builder::encode_rotate_dual_attestation_info_script(new_url, new_key)
+        }
+        MoveScriptParams::CreateChildVaspAccount {
+            coin_type,
+            child_address,
+            auth_key_prefix_hex_encoded,
+            add_all_currencies,
+            child_initial_balance,
+        } => {
+            let coin_type = helpers::coin_tag_parser(&coin_type);
+            let child_address = AccountAddress::try_from(child_address)
+                .expect("Invalid child_address. This should be a valid AccountAddress in hex");
+            let auth_key_prefix = hex::decode(auth_key_prefix_hex_encoded)
+                .expect("Failed to hex decode auth_key_prefix field");
+            transaction_builder::encode_create_child_vasp_account_script(
+                coin_type,
+                child_address,
+                auth_key_prefix,
+                add_all_currencies,
+                child_initial_balance,
+            )
         }
     };
     let payload = TransactionPayload::Script(script);

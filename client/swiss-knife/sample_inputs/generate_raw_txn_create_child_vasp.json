@@ -1,0 +1,20 @@
+{
+  "txn_params": {
+    "sender_address": "0xe1b3d22871989e9fd9dc6814b2f4fc41",
+    "sequence_number": 42,
+    "max_gas_amount": 1000000,
+    "gas_unit_price": 0,
+    "gas_currency_code": "XDX",
+    "chain_id": "TESTING",
+    "expiration_timestamp_secs": 1593189628
+  },
+  "script_params": {
+    "create_child_vasp_account": {
+      "coin_type": "XUS",
+      "child_address": "e1b3d22871989e9fd9dc6814b2f4fc41",
+      "auth_key_prefix_hex_encoded": "5a06116a9801533249b06eeef54db2f1",
+      "add_all_currencies": true,
+      "child_initial_balance": 0
+    }
+  }
+}
