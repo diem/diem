@@ -1997,6 +1997,7 @@ dependencies = [
  "futures 0.3.8",
  "hex",
  "proptest",
+ "proxy",
  "serde",
  "serde_json",
  "storage-interface",
@@ -5144,6 +5145,14 @@ checksum = "1834f67c0697c001304b75be76f67add9c89742eda3a085ad8ee0bb38c3417aa"
 dependencies = [
  "bytes",
  "prost",
+]
+
+[[package]]
+name = "proxy"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+ "ipnet",
 ]
 
 [[package]]

@@ -22,6 +22,7 @@ members = [
     "common/nibble",
     "common/num-variants",
     "common/proptest-helpers",
+    "common/proxy",
     "common/retrier",
     "common/short-hex-str",
     "common/subscription-service",

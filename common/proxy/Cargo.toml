@@ -1,0 +1,15 @@
+[package]
+name = "proxy"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem proxy"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+ipnet = "2.3"
+
+diem-workspace-hack = { path = "../workspace-hack" }
