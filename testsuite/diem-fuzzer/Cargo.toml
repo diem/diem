@@ -10,7 +10,7 @@ edition = "2018"
 
 # common dependencies
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 byteorder = { version = "1.3.4", default-features = false }
 hex = "0.4.2"
 once_cell = "1.4.1"

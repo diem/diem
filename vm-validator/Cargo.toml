@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 fail = "0.4.0"
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 diem-state-view = { path = "../storage/state-view", version = "0.1.0" }

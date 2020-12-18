@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 once_cell = "1.4.1"
 diem-config = { path = "../../config", version = "0.1.0" }
 diem-metrics = { path = "../../common/metrics", version = "0.1.0" }

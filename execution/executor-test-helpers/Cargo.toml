@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 rand = "0.7.3"
 tempfile = "3.1.0"
 

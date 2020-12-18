@@ -12,7 +12,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 structopt = "0.3.21"
 tempfile = "3.1.0"
 handlebars = "3.5.1"

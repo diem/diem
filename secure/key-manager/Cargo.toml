@@ -29,7 +29,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 transaction-builder-generated = { path = "../../client/transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 futures = "0.3.8"
 rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["full"] }

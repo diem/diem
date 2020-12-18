@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 hex = "0.4.2"
 reqwest = { version = "0.10.9", features = ["blocking"], default-features = false }
 serde = "1.0.117"

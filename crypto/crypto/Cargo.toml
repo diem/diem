@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 bytes = "0.5.6"
 vanilla-curve25519-dalek = { version = "3", package = 'curve25519-dalek', default-features = false, features = ["std"], optional = true }
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat3", version = "3", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }

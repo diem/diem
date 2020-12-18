@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 hex = "0.4.2"
 diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }

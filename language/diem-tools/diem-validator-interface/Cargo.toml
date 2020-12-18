@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 reqwest = { version = "0.10.9", features = ["blocking", "json"] }
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 diem-config = { path = "../../../config", version = "0.1.0" }
 diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }

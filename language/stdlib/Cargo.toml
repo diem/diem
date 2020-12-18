@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 move-lang = { path = "../move-lang" }
 move-prover = { path = "../move-prover" }

@@ -18,4 +18,4 @@ quote = "1.0.7"
 proc-macro2 = "1.0.24"
 
 [dev-dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.35"
