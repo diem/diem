@@ -163,7 +163,7 @@ Created/retrieved local account #0 address 5261f913eab22cfc448a815a0e672143
 * 0 is the index of Alice’s account.
 * The hex string is the address of Alice’s account.
 
-The index is just a way to refer to Alice’s account. Users can use the account index, a local CLI index, in other CLI commands to refer to the accounts they have created. The index is meaningless to the blockchain. Alice’s account will be created on the blockchain only when when fake Diem Coins are added to Alice’s account or transferred to Alice’s account via a transfer from another user. Note that you may also use the hex address in CLI commands. The account index is just a convenience wrapper around the account address.
+The index is just a way to refer to Alice’s account. Users can use the account index, a local CLI index, in other CLI commands to refer to the accounts they have created. The index is meaningless to the blockchain. Alice’s account will be created on the blockchain only when fake Diem Coins are added to Alice’s account or transferred to Alice’s account via a transfer from another user. Note that you may also use the hex address in CLI commands. The account index is just a convenience wrapper around the account address.
 
 
 #### Step 3: Create Bob’s account
