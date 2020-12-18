@@ -14,7 +14,7 @@ bytes = "0.5.6"
 futures = "0.3.8"
 pin-project = "1.0.2"
 serde = { version = "1.0.117", default-features = false }
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.6", features = ["full"] }
 url = { version = "2.1.1" }
 
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

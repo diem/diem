@@ -16,7 +16,7 @@ reqwest = { version = "0.10.9", features = ["blocking"], default-features = fals
 serde = "1.0.117"
 serde_derive = "1.0.117"
 structopt = "0.3.21"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.6", features = ["full"] }
 warp = "0.2.5"
 
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }

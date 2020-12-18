@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.8"
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-tokio = { version = "0.2.22", features = ["sync"] }
+tokio = { version = "0.3.6", features = ["sync"] }
 
 [dev-dependencies]
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "0.3.6", features = ["full"] }
