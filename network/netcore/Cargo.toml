@@ -21,6 +21,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 diem-network-address = { path = "../network-address", version = "0.1.0" }
 diem-types = { path = "../../types" }
 memsocket = { path = "../memsocket", version = "0.1.0", optional = true }
+proxy = { path = "../../common/proxy" }
 
 [dev-dependencies]
 diem-logger = { path = "../../common/logger", version = "0.1.0" }

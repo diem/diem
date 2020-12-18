@@ -4384,6 +4384,7 @@ dependencies = [
  "futures 0.3.8",
  "memsocket",
  "pin-project 1.0.2",
+ "proxy",
  "serde",
  "tokio",
  "url",

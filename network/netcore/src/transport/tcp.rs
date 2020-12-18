@@ -11,6 +11,7 @@ use futures::{
     ready,
     stream::Stream,
 };
+use proxy::Proxy;
 use std::{
     convert::TryFrom,
     fmt::Debug,
@@ -109,20 +110,31 @@ impl Transport for TcpTransport {
             .or_else(|| parse_dns_tcp(protos).map(|_| ()))
             .ok_or_else(|| invalid_addr_error(&addr))?;
 
-        let proxy_addr = std::env::var("https_proxy")
-            .ok()
-            .and_then(|https_proxy| Url::parse(&https_proxy).ok())
-            .and_then(|url| {
-                if url.has_host() && url.scheme() == "http" {
-                    Some(format!(
-                        "{}:{}",
-                        url.host().unwrap(),
-                        url.port_or_known_default().unwrap()
-                    ))
-                } else {
-                    None
-                }
-            });
+        let proxy = Proxy::new();
+
+        let proxy_addr = {
+            use diem_network_address::Protocol::*;
+
+            let addr = match protos.first() {
+                Some(Ip4(ip)) => proxy.https(&ip.to_string()),
+                Some(Ip6(ip)) => proxy.https(&ip.to_string()),
+                Some(Dns(name)) | Some(Dns4(name)) | Some(Dns6(name)) => proxy.https(name.as_ref()),
+                _ => None,
+            };
+
+            addr.and_then(|https_proxy| Url::parse(&https_proxy).ok())
+                .and_then(|url| {
+                    if url.has_host() && url.scheme() == "http" {
+                        Some(format!(
+                            "{}:{}",
+                            url.host().unwrap(),
+                            url.port_or_known_default().unwrap()
+                        ))
+                    } else {
+                        None
+                    }
+                })
+        };
 
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
             Box::pin(match proxy_addr {
