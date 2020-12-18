@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Sleep, SleepTrait, TimeServiceTrait};
-use std::time::Duration;
+use std::{thread, time::Duration};
 
 /// The real production tokio [`TimeService`].
 ///
@@ -24,9 +24,12 @@ impl TimeServiceTrait for RealTimeService {
         diem_infallible::duration_since_epoch()
     }
 
-    /// See [`tokio::time::delay_for`]
     fn sleep(&self, duration: Duration) -> Sleep {
         tokio::time::delay_for(duration).into()
+    }
+
+    fn sleep_blocking(&self, duration: Duration) {
+        thread::sleep(duration);
     }
 }
 

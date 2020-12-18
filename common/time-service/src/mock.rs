@@ -118,6 +118,11 @@ impl TimeServiceTrait for MockTimeService {
     fn sleep(&self, duration: Duration) -> Sleep {
         MockSleep::new(self.clone(), duration).into()
     }
+
+    fn sleep_blocking(&self, duration: Duration) {
+        let delay = self.sleep(duration);
+        futures::executor::block_on(delay);
+    }
 }
 
 ///////////

@@ -96,6 +96,9 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     /// additional cleanup work is required.
     fn sleep(&self, duration: Duration) -> Sleep;
 
+    /// Blocks the current thread until `duration` time has passed.
+    fn sleep_blocking(&self, duration: Duration);
+
     /// Creates new [`Interval`] that yields with interval of `period`. The first
     /// tick completes immediately. An interval will tick indefinitely.
     ///
