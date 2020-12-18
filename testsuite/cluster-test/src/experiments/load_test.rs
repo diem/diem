@@ -429,7 +429,7 @@ async fn state_sync_load_test(
     let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
         1,
         1,
-        250,
+        1000,
         state_synchronizer::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,

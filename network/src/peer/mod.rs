@@ -13,6 +13,7 @@ use crate::{
     peer_manager::PeerManagerError,
     protocols::{
         direct_send::Message,
+        rpc::{InboundRpcRequest, InboundRpcs},
         wire::messaging::v1::{
             DirectSendMsg, ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
             Priority, ReadError, WriteError,
@@ -35,7 +36,7 @@ use futures::{
 };
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 #[cfg(test)]
@@ -81,6 +82,7 @@ pub enum PeerNotification {
     // Temporary message type until we can remove NetworkProvider and use the
     // diem_channel::Sender<ProtocolId, NetworkNotification> directly.
     RecvDirectSend(Message),
+    RecvRpc(InboundRpcRequest),
     NewMessage(NetworkMessage),
     PeerDisconnected(ConnectionMetadata, DisconnectReason),
 }
@@ -103,8 +105,10 @@ pub struct Peer<TSocket> {
     requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
     peer_notifs_tx: channel::Sender<PeerNotification>,
-    /// Channel to notify about new inbound RPCs.
+    /// Channel to notify about new inbound RPC responses.
     rpc_notifs_tx: channel::Sender<PeerNotification>,
+    /// Inbound rpc request queue for handling requests from remote peer.
+    inbound_rpcs: InboundRpcs,
     /// Flag to indicate if the actor is being shut down.
     state: State,
     /// The maximum size of an inbound or outbound request frame
@@ -123,20 +127,29 @@ where
         requests_rx: channel::Receiver<PeerRequest>,
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
+        inbound_rpc_timeout: Duration,
+        max_concurrent_inbound_rpcs: u32,
         max_frame_size: usize,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
             socket,
         } = connection;
+        let remote_peer_id = connection_metadata.remote_peer_id;
         Self {
-            network_context,
+            network_context: network_context.clone(),
             executor,
             connection_metadata,
             connection: Some(socket),
             requests_rx,
             peer_notifs_tx,
             rpc_notifs_tx,
+            inbound_rpcs: InboundRpcs::new(
+                network_context,
+                remote_peer_id,
+                inbound_rpc_timeout,
+                max_concurrent_inbound_rpcs,
+            ),
             state: State::Connected,
             max_frame_size,
         }
@@ -213,6 +226,18 @@ where
                                     );
                                     self.close_connection(DisconnectReason::ConnectionLost);
                                 }
+                            }
+                        },
+                        // Drive the queue of pending inbound rpcs. When one is
+                        // fulfilled by an upstream protocol, send the response
+                        // to the remote peer.
+                        maybe_response = self.inbound_rpcs.next_completed_response() => {
+                            if let Err(err) = self.inbound_rpcs.send_outbound_response(&mut write_reqs_tx, maybe_response).await {
+                                warn!(
+                                    NetworkSchema::new(&self.network_context).connection_metadata(&self.connection_metadata),
+                                    error = %err,
+                                    "{} Error in handling inbound rpc request, error: {}", self.network_context, err,
+                                );
                             }
                         },
                     }
@@ -420,7 +445,23 @@ where
                     error_msg,
                 );
             }
-            NetworkMessage::RpcRequest(_) | NetworkMessage::RpcResponse(_) => {
+            NetworkMessage::RpcRequest(request) => {
+                if let Err(err) = self
+                    .inbound_rpcs
+                    .handle_inbound_request(&mut self.peer_notifs_tx, request)
+                    .await
+                {
+                    warn!(
+                        NetworkSchema::new(&self.network_context)
+                            .connection_metadata(&self.connection_metadata),
+                        error = %err,
+                        "{} Error handling inbound rpc request: {}",
+                        self.network_context,
+                        err
+                    );
+                }
+            }
+            NetworkMessage::RpcResponse(_) => {
                 let notif = PeerNotification::NewMessage(message);
                 self.rpc_notifs_tx.send(notif).await.map_err(|err| {
                     warn!(

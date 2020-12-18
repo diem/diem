@@ -344,6 +344,9 @@ jobs:
           name: cargo clippy
           command: cargo xclippy --workspace --all-targets
       - run:
+          name: cargo clippy tcb
+          command: cargo xclippy -p safety-rules  -p execution-correctness -p diem-key-manager
+      - run:
           name: cargo fmt
           command: cargo xfmt --check
       - run:

@@ -32,6 +32,11 @@ module RecoveryAddress {
     const EACCOUNT_NOT_RECOVERABLE: u64 = 4;
     /// A `RecoveryAddress` resource was in an unexpected state
     const ERECOVERY_ADDRESS: u64 = 5;
+    /// The maximum allowed number of keys have been registered with this recovery address.
+    const EMAX_KEYS_REGISTERED: u64 = 6;
+
+    /// The maximum number of keys that can be registered with a single recovery address.
+    const MAX_REGISTERED_KEYS: u64 = 256;
 
     /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
     /// `RecoveryAddress` resource under  `recovery_account`.
@@ -159,10 +164,13 @@ module RecoveryAddress {
             Errors::invalid_argument(EINVALID_KEY_ROTATION_DELEGATION)
         );
 
-        Vector::push_back(
-            &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps,
-            to_recover
+        let recovery_caps = &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps;
+        assert(
+            Vector::length(recovery_caps) < MAX_REGISTERED_KEYS,
+            Errors::limit_exceeded(EMAX_KEYS_REGISTERED)
         );
+
+        Vector::push_back(recovery_caps, to_recover);
     }
     spec fun add_rotation_capability {
         include AddRotationCapabilityAbortsIf;
@@ -172,6 +180,7 @@ module RecoveryAddress {
         to_recover: KeyRotationCapability;
         recovery_address: address;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
+        aborts_if len(global<RecoveryAddress>(recovery_address).rotation_caps) >= MAX_REGISTERED_KEYS with Errors::LIMIT_EXCEEDED;
         let to_recover_address = DiemAccount::key_rotation_capability_address(to_recover);
         aborts_if !VASP::spec_is_same_vasp(recovery_address, to_recover_address) with Errors::INVALID_ARGUMENT;
     }

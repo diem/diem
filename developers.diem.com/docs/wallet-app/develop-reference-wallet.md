@@ -238,25 +238,25 @@ Docs can be generated locally using SwaggerUI. Instructions for how to get that 
 
 User APIs handle user creation, and information management and updates.
 
-![](/img/docs/service-api-user.svg)
+![Figure 1.0 User API methods](/img/docs/service-api-user.svg)
 
 ### Account
 
 Account APIs deal with an account’s address and transactions management.
 
-![](/img/docs/service-api-account.svg)
+![Figure 1.1 Account API methods](/img/docs/service-api-account.svg)
 
 ### CICO
 
 CICO handles all cash-in and cash-out flows, including getting rates and executing a given quote.
 
-![](/img/docs/service-api-cico.svg)
+![Figure 1.2 CICO API methods](/img/docs/service-api-cico.svg)
 
 ### Admin
 
 Admin APIs fetch admin user account information and have debt settlement logic.
 
-![](/img/docs/service-api-admin.svg)
+![Figure 1.3 Admin API methods](/img/docs/service-api-admin.svg)
 
 
 

@@ -61,28 +61,6 @@ impl FuzzTargetImpl for NetworkNoiseStream {
 }
 
 //
-// RPC protocol
-//
-
-use network::protocols::rpc;
-
-#[derive(Clone, Debug, Default)]
-pub struct RpcInboundRequest;
-impl FuzzTargetImpl for RpcInboundRequest {
-    fn description(&self) -> &'static str {
-        "P2P Network Inbound RPC Request"
-    }
-
-    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(rpc::fuzzing::generate_corpus(gen))
-    }
-
-    fn fuzz(&self, data: &[u8]) {
-        rpc::fuzzing::fuzzer(data);
-    }
-}
-
-//
 // Handshake protocol
 //
 

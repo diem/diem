@@ -68,12 +68,12 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     let initiator = NoiseUpgrader::new(
         NetworkContext::mock_with_peer_id(initiator_peer_id),
         initiator_private_key,
-        HandshakeAuthMode::ServerOnly,
+        HandshakeAuthMode::server_only(),
     );
     let responder = NoiseUpgrader::new(
         NetworkContext::mock_with_peer_id(responder_peer_id),
         responder_private_key,
-        HandshakeAuthMode::ServerOnly,
+        HandshakeAuthMode::server_only(),
     );
 
     // create exposing socket
@@ -91,7 +91,7 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
 
     // take result
     let initiator_session = initiator_session.unwrap();
-    let (responder_session, peer_id) = responder_session.unwrap();
+    let (responder_session, peer_id, _) = responder_session.unwrap();
 
     // some sanity checks
     assert_eq!(initiator_session.get_remote_static(), responder_public_key);
@@ -133,7 +133,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let initiator = NoiseUpgrader::new(
         NetworkContext::mock_with_peer_id(initiator_peer_id),
         initiator_private_key,
-        HandshakeAuthMode::ServerOnly,
+        HandshakeAuthMode::server_only(),
     );
 
     // setup NoiseStream
@@ -151,7 +151,7 @@ pub fn fuzz_responder(data: &[u8]) {
     let responder = NoiseUpgrader::new(
         NetworkContext::mock_with_peer_id(responder_peer_id),
         responder_private_key,
-        HandshakeAuthMode::ServerOnly,
+        HandshakeAuthMode::server_only(),
     );
 
     // setup NoiseStream

@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-ureq = { version = "1.5.2", features = ["json", "native-tls"], default-features = false }
+ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-metrics-core = { path = "../../common/metrics-core", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

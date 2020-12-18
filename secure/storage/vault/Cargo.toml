@@ -18,7 +18,7 @@ native-tls = "0.2.6"
 serde = { version = "1.0.117", features = ["derive"], default-features = false }
 serde_json = "1.0.60"
 thiserror = "1.0.22"
-ureq = { version = "1.5.2", features = ["json", "native-tls"], default-features = false }
+ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }

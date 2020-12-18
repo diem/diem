@@ -51,17 +51,17 @@ To generate an authentication key and account address:
 
 ## Currencies and balances
 
-The Diem Payment Network supports an account transacting in different currencies.  [`Diem<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/Diem.md#resource-diem) is the Diem Blockchain equivalent of [ERC20](https://eips.ethereum.org/EIPS/eip-20) from a standards perspective. At the Move level, these are different generic instantiations of the same Diem resource type (e.g., `Diem<Coin1>`, `Diem<USD>`).
+The Diem Payment Network supports an account transacting in different currencies.  [`Diem<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/Diem.md#resource-diem) is the Diem Blockchain equivalent of [ERC20](https://eips.ethereum.org/EIPS/eip-20) from a standards perspective. At the Move level, these are different generic instantiations of the same Diem resource type (e.g., `Diem<Coin1>`, `Diem<XUS>`).
 
 >
->**Note**: `Diem<USD>` will be available at launch.
+>**Note**: `Diem<XUS>` will be available at launch.
 >
 
-Each non-administrative account stores one or more [Balance`<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-balance) resources. There is a separate Balance resource for each currency type that the account holds (e.g., Balance`<Diem<Coin1>>`, Balance`<Diem<USD>>`, …).
+Each non-administrative account stores one or more [Balance`<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-balance) resources. There is a separate Balance resource for each currency type that the account holds (e.g., Balance`<Diem<Coin1>>`, Balance`<Diem<XUS>>`, …).
 
 In order to send and receive `Diem<CoinType>`, an account must have a balance in `Diem<CoinType>`. This can be a zero balance of `Diem<CoinType>` that is added whenever `Diem<CoinType>` currency is authorized for an account. A transaction that sends `Diem<CoinType>` to an account without a balance in `Diem<CoinType>` will abort. Thus, before sending funds of type CoinType to an address, clients should first ensure that (a) the address exists, and (b) the address has a balance in CoinType (even if that balance is zero).
 
-Balances can be added either at account creation time or subsequently via the [add_currency script](transaction-types.md#adding-a-currency-to-an-account). Only the account owner can add new balances after account creation. Once a balance has been added to an account, it cannot be removed. For example, an account that accepts `Diem<USD>` will always accept `Diem<USD>`.
+Balances can be added either at account creation time or subsequently via the [add_currency script](transaction-types.md#adding-a-currency-to-an-account). Only the account owner can add new balances after account creation. Once a balance has been added to an account, it cannot be removed. For example, an account that accepts `Diem<XUS>` will always accept `Diem<XUS>`.
 
 
 ###### tags: `core`

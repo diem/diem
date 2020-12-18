@@ -8,7 +8,7 @@ use crate::{
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
 };
 use diem_config::config::{NodeConfig, RoleType};
-use diem_logger::{debug, Level, Schema};
+use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use futures::future::join_all;
@@ -60,21 +60,18 @@ struct RpcResponseLog<'a> {
 #[macro_export]
 macro_rules! log_response {
     ($trace_id: expr, $resp: expr, $is_batch: expr) => {
-        let mut level = Level::Trace;
-        if let Some(ref error) = $resp.error {
-            if is_internal_error(&error.code) {
-                level = Level::Error
+        let log = RpcResponseLog {
+            trace_id: $trace_id,
+            is_batch: $is_batch,
+            response_error: $resp.error.is_some(),
+            response: $resp,
+        };
+        match &$resp.error {
+            Some(error) if is_internal_error(&error.code) => {
+                diem_logger::error!(log)
             }
+            _ => diem_logger::trace!(log),
         }
-        diem_logger::log!(
-            level,
-            RpcResponseLog {
-                trace_id: $trace_id,
-                is_batch: $is_batch,
-                response_error: $resp.error.is_some(),
-                response: $resp,
-            }
-        );
     };
 }
 

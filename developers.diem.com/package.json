@@ -20,7 +20,7 @@
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",
     "classnames": "^2.2.6",
-    "libra-docusaurus-components": "^0.2.42",
+    "libra-docusaurus-components": "^0.2.43",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "valid-url": "^1.0.9"

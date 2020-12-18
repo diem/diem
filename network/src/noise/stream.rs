@@ -580,12 +580,12 @@ mod test {
         let client = NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(client_peer_id),
             client_private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         );
         let server = NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(server_peer_id),
             server_private,
-            HandshakeAuthMode::ServerOnly,
+            HandshakeAuthMode::server_only(),
         );
 
         ((client, client_public), (server, server_public))
@@ -608,7 +608,7 @@ mod test {
 
         //
         let client_session = client_session.unwrap();
-        let (server_session, _) = server_session.unwrap();
+        let (server_session, _, _) = server_session.unwrap();
         (client_session, server_session)
     }
 
@@ -714,7 +714,7 @@ mod test {
 
         // get session
         let mut client = client.unwrap();
-        let (mut server, _) = server.unwrap();
+        let (mut server, _, _) = server.unwrap();
 
         // test send and receive
         block_on(client.write_all(b"The Name of the Wind")).unwrap();

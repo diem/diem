@@ -3,7 +3,7 @@
 
 use crate::{
     counters,
-    noise::stream::NoiseStream,
+    noise::{stream::NoiseStream, HandshakeAuthMode},
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
@@ -283,9 +283,15 @@ impl PeerManagerBuilder {
         let protos = transport_context.supported_protocols();
         let chain_id = transport_context.chain_id;
 
-        let (key, maybe_trusted_peers) = match transport_context.authentication_mode {
-            AuthenticationMode::ServerOnly(key) => (key, None),
-            AuthenticationMode::Mutual(key) => (key, Some(transport_context.trusted_peers)),
+        let (key, auth_mode) = match transport_context.authentication_mode {
+            AuthenticationMode::ServerOnly(key) => (
+                key,
+                HandshakeAuthMode::maybe_mutual(transport_context.trusted_peers),
+            ),
+            AuthenticationMode::Mutual(key) => (
+                key,
+                HandshakeAuthMode::mutual(transport_context.trusted_peers),
+            ),
         };
 
         match self.listen_address.as_slice() {
@@ -295,7 +301,7 @@ impl PeerManagerBuilder {
                         DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
                         key,
-                        maybe_trusted_peers,
+                        auth_mode,
                         HANDSHAKE_VERSION,
                         chain_id,
                         protos,
@@ -311,7 +317,7 @@ impl PeerManagerBuilder {
                         MemoryTransport,
                         self.network_context.clone(),
                         key,
-                        maybe_trusted_peers,
+                        auth_mode,
                         HANDSHAKE_VERSION,
                         chain_id,
                         protos,

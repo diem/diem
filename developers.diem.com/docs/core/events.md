@@ -12,8 +12,8 @@ As shown in the following diagram:
 * Each stream is associated with a key value, which is a globally unique 40-byte array that is defined when the stream is created.
 * The entries in an event stream are assigned sequence numbers beginning from zero.
 
-  ![img](/img/docs/events-fig1.svg)
-
+  ![Figure 1.0 EventHandle and event streams in the Diem Framework](/img/docs/events-fig1.svg)
+  
 * A ContractEvent payload contains the event key, the sequence number, and a serialized Move value, along with a tag to identify the type of that value. Different kinds of events are distinguished by the Move value types, such as `SentPaymentEvent` or `ReceivedPaymentEvent`, which are emitted to the event streams.
 
 * Event streams are referenced from the StateStore via EventHandle Move resources. An EventHandle contains the event key and the number of events in the stream. (This count is always equal to the biggest sequence number for the events in the stream). An EventHandle resource is typically embedded inside other Move resources to record related events. For example, every DiemAccount resource contains a sent_events EventHandle for a stream of SentPaymentEvents and also a received_events EventHandle for a stream of ReceivedPaymentEvents.
@@ -60,7 +60,7 @@ There are several JSON-RPC APIs associated with events:
 
 ### Get `SentPaymentEvent` for an account
 
-This example demonstrates how to query a `SentPaymentEvent` for an account. In this example, account 0x996b67d has two event streams, with three sent payments and two received payments:![img](/img/docs/events-fig2.svg)
+This example demonstrates how to query a `SentPaymentEvent` for an account. In this example, account 0x996b67d has two event streams, with three sent payments and two received payments:![Figure 1.1 Example event streams for a Diem Account](/img/docs/events-fig2.svg)
 
 1. The first step is to find the event key for the account’s `SentPaymentEvent` stream. We can send a [get_account](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account.md) query to the JSON-RPC endpoint to get the state of that [account](https://github.com/diem/diem/blob/master/json-rpc/docs/type_account.md), including two event keys: one for the `SentPaymentEvent` stream (the sent_events_key field) and one for the `ReceivedPaymentEvent` stream (the received_events_key field). The response will look like the following:
 

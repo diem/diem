@@ -118,12 +118,32 @@ A cycle would have been created would be created
 
 
 
+<a name="0x1_RecoveryAddress_EMAX_KEYS_REGISTERED"></a>
+
+The maximum allowed number of keys have been registered with this recovery address.
+
+
+<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_EMAX_KEYS_REGISTERED">EMAX_KEYS_REGISTERED</a>: u64 = 6;
+</code></pre>
+
+
+
 <a name="0x1_RecoveryAddress_ERECOVERY_ADDRESS"></a>
 
 A <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource was in an unexpected state
 
 
 <pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a>: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_MAX_REGISTERED_KEYS"></a>
+
+The maximum number of keys that can be registered with a single recovery address.
+
+
+<pre><code><b>const</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_MAX_REGISTERED_KEYS">MAX_REGISTERED_KEYS</a>: u64 = 256;
 </code></pre>
 
 
@@ -361,10 +381,13 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">EINVALID_KEY_ROTATION_DELEGATION</a>)
     );
 
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(
-        &<b>mut</b> borrow_global_mut&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps,
-        to_recover
+    <b>let</b> recovery_caps = &<b>mut</b> borrow_global_mut&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
+    <b>assert</b>(
+        <a href="Vector.md#0x1_Vector_length">Vector::length</a>(recovery_caps) &lt; <a href="RecoveryAddress.md#0x1_RecoveryAddress_MAX_REGISTERED_KEYS">MAX_REGISTERED_KEYS</a>,
+        <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_EMAX_KEYS_REGISTERED">EMAX_KEYS_REGISTERED</a>)
     );
+
+    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(recovery_caps, to_recover);
 }
 </code></pre>
 
@@ -391,6 +414,7 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
     to_recover: KeyRotationCapability;
     recovery_address: address;
     <b>aborts_if</b> !<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> len(<b>global</b>&lt;<a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps) &gt;= <a href="RecoveryAddress.md#0x1_RecoveryAddress_MAX_REGISTERED_KEYS">MAX_REGISTERED_KEYS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
     <a name="0x1_RecoveryAddress_to_recover_address$8"></a>
     <b>let</b> to_recover_address = <a href="DiemAccount.md#0x1_DiemAccount_key_rotation_capability_address">DiemAccount::key_rotation_capability_address</a>(to_recover);
     <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(recovery_address, to_recover_address) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;

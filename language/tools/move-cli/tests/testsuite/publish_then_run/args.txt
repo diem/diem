@@ -1,0 +1,2 @@
+publish src/modules
+run src/scripts/main.move

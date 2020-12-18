@@ -55,7 +55,6 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(proof::EventProofFuzzer::default()),
         Box::new(proof::TransactionListProofFuzzer::default()),
         // Network
-        Box::new(network::RpcInboundRequest::default()),
         Box::new(network::NetworkNoiseInitiator::default()),
         Box::new(network::NetworkNoiseResponder::default()),
         Box::new(network::NetworkNoiseStream::default()),

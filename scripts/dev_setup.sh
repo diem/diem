@@ -21,6 +21,7 @@ TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
+CVC4_VERSION=aac53f51
 DOTNET_VERSION=3.1
 BOOGIE_VERSION=2.7.35
 
@@ -34,7 +35,7 @@ function usage {
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
   echo "-o install operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
-  echo "-y installs or updates Move prover tools: z3, dotnet, boogie"
+  echo "-y installs or updates Move prover tools: z3, cvc4, dotnet, boogie"
   echo "-v verbose mode"
   echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
   echo "This command must be called from the root folder of the Diem project."
@@ -56,6 +57,7 @@ function update_path_and_profile {
      add_to_profile "export DOTNET_ROOT=\$HOME/.dotnet"
      add_to_profile "export PATH=\"${HOME}/.dotnet/tools:\$PATH\""
      add_to_profile "export Z3_EXE=$HOME/bin/z3"
+     add_to_profile "export CVC4_EXE=$HOME/bin/cvc4"
      add_to_profile "export BOOGIE_EXE=$HOME/.dotnet/tools/boogie"
   fi
 }
@@ -389,6 +391,38 @@ function install_z3 {
   rm -rf "$TMPFILE"
 }
 
+function install_cvc4 {
+  echo "Installing CVC4"
+  if which /usr/local/bin/cvc4 &>/dev/null; then
+    echo "cvc4 already exists at /usr/local/bin/cvc4"
+    echo "but this install will go to $HOME/bin/cvc4."
+    echo "you may want to remove the shared instance to avoid version confusion"
+  fi
+  if which "$HOME/bin/cvc4" &>/dev/null && [[ "$("$HOME/bin/cvc4" --version)" =~ .*${CVC4_VERSION}.* ]]; then
+     echo "CVC4 ${CVC4_VERSION} already installed"
+     return
+  fi
+  if [[ "$(uname)" == "Linux" ]]; then
+    CVC4_PKG="cvc4-$CVC4_VERSION-x64-ubuntu"
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    CVC4_PKG="cvc4-$CVC4_VERSION-x64-osx"
+  else
+    echo "CVC4 support not configured for this platform (uname=$(uname))"
+    return
+  fi
+  TMPFILE=$(mktemp)
+  rm "$TMPFILE"
+  mkdir -p "$TMPFILE"/
+  (
+    cd "$TMPFILE" || exit
+    curl -LOs "https://cvc4.cs.stanford.edu/downloads/builds/minireleases/$CVC4_PKG.zip"
+    unzip -q "$CVC4_PKG.zip"
+    cp "$CVC4_PKG/cvc4" "$HOME/bin"
+    chmod +x "$HOME/bin/cvc4"
+  )
+  rm -rf "$TMPFILE"
+}
+
 function welcome_message {
 cat <<EOF
 Welcome to Diem!
@@ -432,6 +466,7 @@ EOF
 cat <<EOF
 Move prover tools (since -y was provided):
   * z3
+  * cvc4
   * dotnet
   * boogie
 EOF
@@ -592,6 +627,7 @@ fi
 
 if [[ "$INSTALL_PROVER" == "true" ]]; then
   install_z3
+  install_cvc4
   install_dotnet
   install_boogie
 fi

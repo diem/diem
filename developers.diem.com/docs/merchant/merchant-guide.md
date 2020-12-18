@@ -18,7 +18,7 @@ To start the integration process for DPN mainnet, you will need to [create your 
 
 
 
-#efore you create your Regulated VASP account, you will need to become familiar with some account concepts.
+Before you create your Regulated VASP account, you will need to become familiar with some account concepts.
 
 DPN supports the following on-chain institutional accounts:
 
@@ -45,7 +45,7 @@ The **ChildVASP account** is the child of your ParentVASP account. You can have 
 Learn more about account concepts [here](core/accounts.md).
 
 ### Create Your VASP Account
-![img](https://lh3.googleusercontent.com/zugl1j3iyLgTL6U9hVQ8b1VAF5X3_zNiEezOzsgYj2sJ4-C_kPoiM9SM8BJtydfweZV1W1AuA6KlZx6R6qFqQPvyN4WCc1DBFqxOct9CXnsiL4lHQyQJBj8ZslJazNgMRKOkMZNo)
+![Figure 1.0 Steps to create your VASP account](https://lh3.googleusercontent.com/zugl1j3iyLgTL6U9hVQ8b1VAF5X3_zNiEezOzsgYj2sJ4-C_kPoiM9SM8BJtydfweZV1W1AuA6KlZx6R6qFqQPvyN4WCc1DBFqxOct9CXnsiL4lHQyQJBj8ZslJazNgMRKOkMZNo)
 
 1. **[Generate Keys](core/accounts.md#addresses-authentication-keys-and-cryptographic-keys)**: Generate an ed25519 keypair and associated authentication key for your on-chain Regulated VASP account.
 2. **Share Account Info**: Share the following with the Diem Networks Treasury offline.
@@ -84,7 +84,7 @@ Once you have your own Regulated VASP account, you can start interacting with DP
 
 When you submit a transaction to the DPN, you are cryptographically signing a transaction script and then waiting (by listening to the event stream) for consensus from validators. The diagram below shows the flow of a transaction once it’s been submitted. Learn more about this flow [here](core/life-of-a-transaction.md).
 
-![img](https://lh3.googleusercontent.com/Vp5Ko8_mIV5AIV6fPUZX361fCqqs1XJ44_q9Jhf6OaftznmyRplZAmczmnqjc8511ULBFKMQzzn_ZIliDK22oCQYN4gjO91JhByyHuZrQMpPUtXq1oCrSTXFDd0KwDYM3PFi6pSJ)
+![Figure 1.1 Lifecycle of a transaction](https://lh3.googleusercontent.com/Vp5Ko8_mIV5AIV6fPUZX361fCqqs1XJ44_q9Jhf6OaftznmyRplZAmczmnqjc8511ULBFKMQzzn_ZIliDK22oCQYN4gjO91JhByyHuZrQMpPUtXq1oCrSTXFDd0KwDYM3PFi6pSJ)
 
 #### How to Interact with the DPN
 The first step to submitting transactions to the DPN is determining how to connect and interact with it. The guidance for this differs slightly based on if you are a validator node operator or not.
@@ -222,7 +222,7 @@ When the Diem Payment Network launches, we expect that wallets will support a ba
 To provide an interoperable checkout experience, a merchant service provider will need to share payment information with the end user. This can happen through a generated QR code, copy-pastable URI, or mobile deep link.
 
 
-![img](/img/docs/direct-payments.svg)
+![Figure 2.0 How checkout works for direct payments](/img/docs/direct-payments.svg)
 
 This “payment context” includes:
 * Fully qualified address: stable on-chain address and unique, generated subaddress

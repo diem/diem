@@ -1,0 +1,3 @@
+publish src/modules/
+publish M.move
+publish --ignore-breaking-changes M.move

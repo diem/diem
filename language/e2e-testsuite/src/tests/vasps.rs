@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use diem_types::{account_config, vm_status::KeptVMStatus};
+use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_types::{
+    account_config, transaction::authenticator::AuthenticationKey, vm_status::KeptVMStatus,
+};
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use move_core_types::vm_status::VMStatus;
 use move_vm_types::values::Value;
@@ -53,7 +56,7 @@ fn valid_creator_already_vasp() {
 }
 
 #[test]
-fn max_child_accounts_for_vasp() {
+fn max_child_accounts_for_vasp_recovery_address() {
     let max_num_child_accounts = 256;
 
     let mut executor = FakeExecutor::from_genesis_file();
@@ -78,8 +81,12 @@ fn max_child_accounts_for_vasp() {
             .sign(),
     );
 
-    for i in 0..max_num_child_accounts {
+    let mut accounts = Vec::new();
+
+    // Create the maximum number of allowed child accounts
+    for i in 0..max_num_child_accounts + 1 {
         let child = executor.create_raw_account();
+        accounts.push(child.clone());
         executor.execute_and_apply(
             account
                 .transaction()
@@ -95,24 +102,62 @@ fn max_child_accounts_for_vasp() {
         );
     }
 
-    let child = executor.create_raw_account();
-    let output = executor.execute_transaction(
-        account
+    // Now setup the recovery addresses
+    let recovery_account = accounts.remove(0);
+    let one_account_too_many = accounts.remove(0);
+    executor.execute_and_apply(
+        recovery_account
             .transaction()
-            .script(encode_create_child_vasp_account_script(
-                account_config::xus_tag(),
-                *child.address(),
-                child.auth_key_prefix(),
-                false,
-                0,
+            .script(encode_create_recovery_address_script())
+            .sequence_number(0)
+            .sign(),
+    );
+    for account in &accounts {
+        executor.execute_and_apply(
+            account
+                .transaction()
+                .script(encode_add_recovery_rotation_capability_script(
+                    *recovery_account.address(),
+                ))
+                .sequence_number(0)
+                .sign(),
+        );
+    }
+
+    // Make sure that we can't add any more
+    let output = executor.execute_transaction(
+        one_account_too_many
+            .transaction()
+            .script(encode_add_recovery_rotation_capability_script(
+                *recovery_account.address(),
             ))
-            .sequence_number(max_num_child_accounts)
+            .sequence_number(0)
             .sign(),
     );
 
     if let Ok(KeptVMStatus::MoveAbort(_, code)) = output.status().status() {
-        assert_eq!(code, 264); // ETOO_MANY_CHILDREN
+        assert_eq!(code, 1544);
     } else {
         panic!("expected MoveAbort")
+    }
+
+    // Now rotate all of the account keys
+    for account in &accounts {
+        let privkey = Ed25519PrivateKey::generate_for_testing();
+        let pubkey = privkey.public_key();
+        let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
+        executor.execute_and_apply(
+            account
+                .transaction()
+                .script(
+                    encode_rotate_authentication_key_with_recovery_address_script(
+                        *recovery_account.address(),
+                        *account.address(),
+                        new_key_hash,
+                    ),
+                )
+                .sequence_number(1)
+                .sign(),
+        );
     }
 }

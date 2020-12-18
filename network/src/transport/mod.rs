@@ -14,7 +14,6 @@ use diem_config::{
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::x25519;
-use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use diem_types::{chain_id::ChainId, PeerId};
@@ -26,7 +25,7 @@ use futures::{
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
 use serde::{export::Formatter, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::BTreeMap,
     convert::TryFrom,
     fmt::Debug,
     io,
@@ -96,6 +95,15 @@ impl ConnectionIdGenerator {
     }
 }
 
+/// Used to indicate the trust level of a Connection
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub enum TrustLevel {
+    /// Either we dialed the peer or it was in our trusted peers set
+    Trusted,
+    /// A peer that isn't in our trusted peers set
+    Untrusted,
+}
+
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, PartialEq, Serialize)]
 pub struct ConnectionMetadata {
@@ -105,6 +113,7 @@ pub struct ConnectionMetadata {
     pub origin: ConnectionOrigin,
     pub messaging_protocol: MessagingProtocolVersion,
     pub application_protocols: SupportedProtocols,
+    pub trust_level: TrustLevel,
 }
 
 impl ConnectionMetadata {
@@ -115,6 +124,7 @@ impl ConnectionMetadata {
         origin: ConnectionOrigin,
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
+        trust_level: TrustLevel,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
             remote_peer_id,
@@ -123,6 +133,7 @@ impl ConnectionMetadata {
             origin,
             messaging_protocol,
             application_protocols,
+            trust_level,
         }
     }
 
@@ -135,6 +146,7 @@ impl ConnectionMetadata {
             origin: ConnectionOrigin::Inbound,
             messaging_protocol: MessagingProtocolVersion::V1,
             application_protocols: [].iter().into(),
+            trust_level: TrustLevel::Untrusted,
         }
     }
 }
@@ -233,22 +245,23 @@ async fn upgrade_inbound<T: TSocket>(
     };
 
     // try authenticating via noise handshake
-    let (mut socket, remote_peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
-        if err.should_security_log() {
-            sample!(
-                SampleRate::Duration(Duration::from_secs(15)),
-                error!(
-                    SecurityEvent::NoiseHandshake,
-                    NetworkSchema::new(&ctxt.noise.network_context)
-                        .network_address(&addr)
-                        .connection_origin(&origin),
-                    error = %err,
-                )
-            );
-        }
-        let err = io::Error::new(io::ErrorKind::Other, err);
-        add_pp_addr(proxy_protocol_enabled, err, &addr)
-    })?;
+    let (mut socket, remote_peer_id, trust_level) =
+        ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
+            if err.should_security_log() {
+                sample!(
+                    SampleRate::Duration(Duration::from_secs(15)),
+                    error!(
+                        SecurityEvent::NoiseHandshake,
+                        NetworkSchema::new(&ctxt.noise.network_context)
+                            .network_address(&addr)
+                            .connection_origin(&origin),
+                        error = %err,
+                    )
+                );
+            }
+            let err = io::Error::new(io::ErrorKind::Other, err);
+            add_pp_addr(proxy_protocol_enabled, err, &addr)
+        })?;
     let remote_pubkey = socket.get_remote_static();
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
 
@@ -288,6 +301,7 @@ async fn upgrade_inbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
+            trust_level,
         ),
     })
 }
@@ -357,6 +371,7 @@ async fn upgrade_outbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
+            TrustLevel::Trusted,
         ),
     })
 }
@@ -392,7 +407,7 @@ where
         base_transport: TTransport,
         network_context: Arc<NetworkContext>,
         identity_key: x25519::PrivateKey,
-        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
+        auth_mode: HandshakeAuthMode,
         handshake_version: u8,
         chain_id: ChainId,
         application_protocols: SupportedProtocols,
@@ -402,12 +417,6 @@ where
         let mut supported_protocols = BTreeMap::new();
         supported_protocols.insert(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
-        // create upgrade context
-        // TODO(mimoo): should we build this based on the networkid, and not on trusted peers
-        let auth_mode = match trusted_peers.as_ref() {
-            Some(trusted_peers) => HandshakeAuthMode::mutual(trusted_peers.clone()),
-            None => HandshakeAuthMode::ServerOnly,
-        };
         let identity_pubkey = identity_key.public_key();
         let network_id = network_context.network_id().clone();
 

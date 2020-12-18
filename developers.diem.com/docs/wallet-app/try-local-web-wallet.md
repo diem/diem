@@ -55,7 +55,7 @@ The Reference Wallet simulates the account verification process by returning the
 ### User flows
 
 The image below details the different user flows for the local Reference Wallet web client.
-![](/img/docs/userflows-local-wallet.svg)
+![Figure 1.0 User flows for the Local Web Wallet](/img/docs/userflows-local-wallet.svg)
 
 
 
@@ -129,7 +129,7 @@ User actions available on the home page include:
 
 
 
-![](/img/docs/wallet-home.svg)
+![Figure 2.0 View home page](/img/docs/wallet-home.svg)
 
 
 
@@ -150,7 +150,7 @@ The supported payment methods are:
 
 In addition, the page shows the email address of the active user. It is not possible to change the user’s email address.
 
-![](/img/docs/modify-settings.svg)
+![Figure 2.1 View Local Web Wallet settings page](/img/docs/modify-settings.svg)
 
 >
 >Note: The payment methods are for demonstration purposes only. The supplied information is not validated, and no real transactions are made using the configured credit cards and bank accounts.
@@ -160,7 +160,7 @@ In addition, the page shows the email address of the active user. It is not poss
 
 To change the wallet UI language, enter the Settings page and choose the desired language from the languages dropdown menu:
 
-![](/img/docs/language-settings.svg)
+![Figure 2.2 Choose language in settings](/img/docs/language-settings.svg)
 
 
 
@@ -171,7 +171,7 @@ To change the wallet UI language, enter the Settings page and choose the desired
 Choosing a specific Diem Coin currency on the home page shows all the wallet transactions for that currency in descending order. Transactions may be internal (i.e., off-chain), within the wallet’s network (e.g., Diem deposit from a credit card), or external (i.e., on-chain) on the Diem Blockchain (e.g., Diem transfer to some external Diem address).
 
 
-![](/img/docs/execute-transactions.png)
+![Figure 3.0 View transactions list](/img/docs/execute-transactions.png)
 
 Each transaction consists of:
 
@@ -185,7 +185,7 @@ Each transaction consists of:
 
 Clicking a transaction in the transactions list will open a window with transaction details.
 
-![](/img/docs/check-transaction.svg)
+![Figure 3.1 View transaction details](/img/docs/check-transaction.svg)
 
 
 

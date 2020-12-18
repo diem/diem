@@ -55,7 +55,7 @@ The proposed VASP reference implementation is centered on serving an online reta
 In this use case, the user pays for a product using Diem Coins from his wallet directly to the Regulated VASP. Since no additional verification is required for amounts under US$1,000, the user wallet posts the transaction directly to the Diem Blockchain. The merchant settles the payment later using the payout procedure.
 
 
-.![img](/img/docs/direct-payment-usecase.svg)
+.![Figure 1.0 Use case: Direct payments under US$1000](/img/docs/direct-payment-usecase.svg)
 
 ### Payment payout
 Payout is a procedure between a merchant and its payment VASP. Payout causes the funds collected from a client by the VASP for some previous purchase, to be transferred to the merchant in the form of a fiat deposit to the merchant’s bank account. The VASP employs a liquidity provider (as an external service) to convert Diem funds to a fiat currency.
@@ -63,7 +63,7 @@ Payout is a procedure between a merchant and its payment VASP. Payout causes the
 Paid out payments are not refundable.
 
 
-![img](/img/docs/payment-payouts.svg)
+![Figure 1.1 Use case: Payment payouts](/img/docs/payment-payouts.svg)
 
 Notice that the Diem Reference Merchant does not demonstrate the final fiat transfer and focuses only on the Diem operations.
 

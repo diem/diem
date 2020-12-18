@@ -1,6 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-//
+
 // NB: We run all tests serially because some tests need to inspect counters to verify certain code
 // paths were taken, in absence of other feedback signals. Since counters are static variables (and
 // therefore shared across tests), this can sometimes lead to interference and tests being
@@ -8,7 +8,7 @@
 
 use super::{error::RpcError, *};
 use crate::{
-    counters::{CANCELED_LABEL, FAILED_LABEL, REQUEST_LABEL, RESPONSE_LABEL},
+    counters::{CANCELED_LABEL, REQUEST_LABEL},
     peer::{PeerNotification, PeerRequest},
     peer_manager::PeerManagerError,
     transport::ConnectionMetadata,
@@ -34,7 +34,6 @@ fn start_rpc_actor(
 ) -> (
     Arc<NetworkContext>,
     channel::Sender<OutboundRpcRequest>,
-    channel::Receiver<RpcNotification>,
     channel::Receiver<PeerRequest>,
     channel::Sender<PeerNotification>,
 ) {
@@ -42,7 +41,6 @@ fn start_rpc_actor(
     let (peer_reqs_tx, peer_reqs_rx) = channel::new_test(8);
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(8);
     let (rpc_requests_tx, rpc_requests_rx) = channel::new_test(8);
-    let (rpc_notifs_tx, rpc_notifs_rx) = channel::new_test(8);
     // Reset counters before starting actor.
     reset_counters();
     let connection_metadata = ConnectionMetadata::mock(PeerId::random());
@@ -51,16 +49,12 @@ fn start_rpc_actor(
         PeerHandle::new(network_context.clone(), connection_metadata, peer_reqs_tx),
         rpc_requests_rx,
         peer_notifs_rx,
-        rpc_notifs_tx,
-        Duration::from_secs(1), // 1 second inbound rpc timeout.
-        10,                     // max_concurrent_outbound_rpcs
-        10,                     // max_concurrent_inbound_rpcs
+        10, // max_concurrent_outbound_rpcs
     );
     executor.spawn(rpc.start());
     (
         network_context,
         rpc_requests_tx,
-        rpc_notifs_rx,
         peer_reqs_rx,
         peer_notifs_tx,
     )
@@ -102,21 +96,6 @@ async fn expect_successful_send(
             res_tx.send(Ok(())).unwrap();
         }
         req => panic!("Unexpected PeerRequest: {:?}, expected OpenSubstream", req),
-    }
-}
-
-async fn handle_inbound_request(
-    rpc_notifs_rx: &mut channel::Receiver<RpcNotification>,
-    expected_protocol_id: ProtocolId,
-    expected_message: Bytes,
-    response: Bytes,
-) {
-    match rpc_notifs_rx.next().await.unwrap() {
-        RpcNotification::RecvRpc(request) => {
-            assert_eq!(request.protocol_id, expected_protocol_id);
-            assert_eq!(request.data, expected_message);
-            request.res_tx.send(Ok(response)).unwrap();
-        }
     }
 }
 
@@ -167,13 +146,8 @@ fn outbound_rpc_success() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (
-        _network_context,
-        mut rpc_requests_tx,
-        _rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
+    let (_network_context, mut rpc_requests_tx, mut peer_reqs_rx, mut peer_notifs_tx) =
+        start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
     let req_data = Bytes::from_static(b"Hello");
@@ -225,13 +199,8 @@ fn outbound_rpc_concurrent() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (
-        _network_context,
-        mut rpc_requests_tx,
-        _rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
+    let (_network_context, mut rpc_requests_tx, mut peer_reqs_rx, mut peer_notifs_tx) =
+        start_rpc_actor(rt.handle().clone());
 
     let protocol_id_a = RPC_PROTOCOL_A;
     let protocol_id_b = RPC_PROTOCOL_B;
@@ -318,7 +287,7 @@ fn outbound_rpc_timeout() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (_network_context, mut rpc_requests_tx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -360,7 +329,7 @@ fn outbound_cancellation_before_send() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, _peer_notifs_tx) =
+    let (network_context, mut rpc_requests_tx, _peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -398,7 +367,7 @@ fn outbound_cancellation_before_recv() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (network_context, mut rpc_requests_tx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -442,7 +411,7 @@ fn outbound_rpc_failed_request_delivery() {
     ::diem_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (_network_context, mut rpc_requests_tx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -470,344 +439,5 @@ fn outbound_rpc_failed_request_delivery() {
     };
 
     let f = join(f_mock_peer, f_send_rpc);
-    rt.block_on(f);
-}
-
-// Test successful handling of inbound RPC.
-#[test]
-#[serial]
-fn inbound_rpc_success() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (
-        _network_context,
-        _rpc_requests_tx,
-        mut rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
-
-    let protocol_id = RPC_PROTOCOL_A;
-    let req_data = Bytes::from_static(b"Hello");
-    let expected_req_data = req_data.clone();
-    let resp_data = Bytes::from_static(b"Bonjour");
-    let expected_resp_data = resp_data.clone();
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request and response NetworkMessages.
-        let request = create_network_request(0 as RequestId, protocol_id, req_data);
-        let response = create_network_response(0 as RequestId, expected_resp_data);
-
-        // Send inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request))
-            .await
-            .unwrap();
-        // Expect response.
-        expect_successful_send(&mut peer_reqs_rx, protocol_id, response).await;
-    };
-
-    // Handle inbound rpc request.
-    let f_recv_rpc = async move {
-        handle_inbound_request(
-            &mut rpc_notifs_rx,
-            protocol_id,
-            expected_req_data,
-            resp_data,
-        )
-        .await;
-    };
-
-    let f = join(f_recv_rpc, f_mock_peer);
-    rt.block_on(f);
-}
-
-// Test handling of concurrent inbound RPCs.
-#[test]
-#[serial]
-fn inbound_rpc_concurrent() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (
-        _network_context,
-        _rpc_requests_tx,
-        mut rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
-
-    let protocol_id_a = RPC_PROTOCOL_A;
-    let protocol_id_b = RPC_PROTOCOL_B;
-
-    let req_data_a = Bytes::from_static(b"Hello");
-    let req_data_b = Bytes::from_static(b"world");
-    let expected_req_data_a = req_data_a.clone();
-    let expected_req_data_b = req_data_b.clone();
-
-    let resp_data_a = Bytes::from_static(b"namaste");
-    let resp_data_b = Bytes::from_static(b"duniya");
-    let expected_resp_data_a = resp_data_a.clone();
-    let expected_resp_data_b = resp_data_b.clone();
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request and response NetworkMessages.
-        let request_a = create_network_request(0 as RequestId, protocol_id_a, req_data_a);
-        let request_b = create_network_request(1 as RequestId, protocol_id_b, req_data_b);
-        let response_a = create_network_response(0 as RequestId, expected_resp_data_a);
-        let response_b = create_network_response(1 as RequestId, expected_resp_data_b);
-
-        // Send first inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request_a))
-            .await
-            .unwrap();
-        // Send second inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request_b))
-            .await
-            .unwrap();
-        // Expect responses.
-        expect_two_requests(
-            &mut peer_reqs_rx,
-            protocol_id_a,
-            protocol_id_b,
-            response_a,
-            response_b,
-        )
-        .await;
-    };
-
-    // Make an outbound rpc request. listener does not reply with response within timeout.
-    let f_recv_rpc = async move {
-        // Expect first inbound request.
-        handle_inbound_request(
-            &mut rpc_notifs_rx,
-            protocol_id_a,
-            expected_req_data_a,
-            resp_data_a,
-        )
-        .await;
-        // Expect secondi inbound request.
-        handle_inbound_request(
-            &mut rpc_notifs_rx,
-            protocol_id_b,
-            expected_req_data_b,
-            resp_data_b,
-        )
-        .await;
-    };
-
-    let f = join(f_recv_rpc, f_mock_peer);
-    rt.block_on(f);
-}
-
-// Test timeout when handling inbound RPC.
-#[test]
-#[serial]
-fn inbound_rpc_timeout() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (network_context, _rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
-
-    let protocol_id = RPC_PROTOCOL_A;
-    let req_data = Bytes::from_static(b"Hello");
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request NetworkMessage.
-        let request = create_network_request(0 as RequestId, protocol_id, req_data);
-        // Send inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request))
-            .await
-            .unwrap();
-        // Wait for time greater than inbound_rpc_timeout and check for failure counter.
-        tokio::time::delay_for(Duration::from_millis(1500)).await;
-        assert_eq!(
-            counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64,
-            1
-        );
-    };
-    rt.block_on(f_mock_peer);
-}
-
-// Test failure path when response cannot be delivered for inbound RPC.
-#[test]
-#[serial]
-fn inbound_rpc_failed_response_delivery() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (
-        network_context,
-        _rpc_requests_tx,
-        mut rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
-
-    let protocol_id = RPC_PROTOCOL_A;
-    let req_data = Bytes::from_static(b"Hello");
-    let expected_req_data = req_data.clone();
-    let resp_data = Bytes::from_static(b"Bonjour");
-    let expected_resp_data = resp_data.clone();
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request and response NetworkMessages.
-        let request = create_network_request(0 as RequestId, protocol_id, req_data);
-        let response = create_network_response(0 as RequestId, expected_resp_data);
-        // Send inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request))
-            .await
-            .unwrap();
-        // Expect failed response.
-        expect_failed_send(&mut peer_reqs_rx, protocol_id, response).await;
-    };
-
-    // Handle inbound rpc request.
-    let f_recv_rpc = async move {
-        handle_inbound_request(
-            &mut rpc_notifs_rx,
-            protocol_id,
-            expected_req_data,
-            resp_data,
-        )
-        .await;
-        // Failure counter should increase.
-        while counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64
-            != 1
-        {
-            tokio::time::delay_for(Duration::from_millis(10)).await;
-        }
-    };
-
-    let f = join(f_recv_rpc, f_mock_peer);
-    rt.block_on(f);
-}
-
-// Test failure path when upstream cannot be notified about inbound RPC.
-#[test]
-#[serial]
-fn inbound_rpc_failed_upstream_delivery() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (network_context, _rpc_requests_tx, rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
-
-    let protocol_id = RPC_PROTOCOL_A;
-    let req_data = Bytes::from_static(b"Hello");
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request NetworkMessage.
-        let request = create_network_request(0 as RequestId, protocol_id, req_data);
-        // Drop RPC notifications handler which should cause inbound RPCs to fail.
-        drop(rpc_notifs_rx);
-        // Send inbound request to RPC module.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request))
-            .await
-            .unwrap();
-        // Failure counter should increase.
-        while counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64
-            != 1
-        {
-            tokio::time::delay_for(Duration::from_millis(10)).await;
-        }
-    };
-    rt.block_on(f_mock_peer);
-}
-
-// Test handling of concurrent inbound and outbound RPCs.
-#[test]
-#[serial]
-fn concurrent_inbound_outbound() {
-    ::diem_logger::Logger::init_for_testing();
-
-    let mut rt = Runtime::new().unwrap();
-    let (
-        _network_context,
-        mut rpc_requests_tx,
-        mut rpc_notifs_rx,
-        mut peer_reqs_rx,
-        mut peer_notifs_tx,
-    ) = start_rpc_actor(rt.handle().clone());
-
-    let protocol_id_a = RPC_PROTOCOL_A;
-    let protocol_id_b = RPC_PROTOCOL_B;
-
-    let req_data_a = Bytes::from_static(b"Hello");
-    let req_data_b = Bytes::from_static(b"world");
-    let expected_req_data_a = req_data_a.clone();
-    let expected_req_data_b = req_data_b.clone();
-
-    let resp_data_a = Bytes::from_static(b"namaste");
-    let resp_data_b = Bytes::from_static(b"duniya");
-    let expected_resp_data_a = resp_data_a.clone();
-    let expected_resp_data_b = resp_data_b.clone();
-
-    // Mock messages received and sent by the peer actor.
-    let f_mock_peer = async move {
-        // Create expected request and response NetworkMessages.
-        let request_a = create_network_request(0 as RequestId, protocol_id_a, expected_req_data_a);
-        let request_b = create_network_request(1 as RequestId, protocol_id_b, req_data_b);
-        let response_a = create_network_response(0 as RequestId, resp_data_a);
-        let response_b = create_network_response(1 as RequestId, expected_resp_data_b);
-
-        // Wait for one outbound request to arrive.
-        expect_successful_send(&mut peer_reqs_rx, protocol_id_a, request_a).await;
-        // Send  notification about inbound RPC.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(request_b))
-            .await
-            .unwrap();
-
-        // Wait for response to inbound RPC.
-        expect_successful_send(&mut peer_reqs_rx, protocol_id_b, response_b).await;
-
-        // Notify about response to outbound RPC.
-        peer_notifs_tx
-            .send(PeerNotification::NewMessage(response_a))
-            .await
-            .unwrap();
-    };
-
-    // Make two outbound RPC requests and wait for both to succeed.
-    let f_send_rpc = async move {
-        // Send first request.
-        let (res_tx_a, res_rx_a) = oneshot::channel();
-        rpc_requests_tx
-            .send(OutboundRpcRequest {
-                protocol_id: protocol_id_a,
-                data: req_data_a.clone(),
-                res_tx: res_tx_a,
-                timeout: Duration::from_millis(100),
-            })
-            .await
-            .unwrap();
-
-        // Handle inbound request.
-        handle_inbound_request(
-            &mut rpc_notifs_rx,
-            protocol_id_b,
-            expected_req_data_b,
-            resp_data_b,
-        )
-        .await;
-
-        // Wait for response to outbound RPC request.
-        assert_eq!(expected_resp_data_a, res_rx_a.await.unwrap().unwrap());
-    };
-
-    let f = join(f_send_rpc, f_mock_peer);
     rt.block_on(f);
 }
