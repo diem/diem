@@ -417,7 +417,7 @@ fn setup_secure_storage(
 // that serves the JSON RPC requests. The server communicates with the given database reader/writer
 // to handle each JSON RPC request.
 fn setup_diem_interface_and_json_server(db_rw: DbReaderWriter) -> (JsonRpcDiemInterface, Runtime) {
-    let address = "0.0.0.0";
+    let address = "127.0.0.1";
     let port = utils::get_available_port();
     let host = format!("{}:{}", address, port);
 

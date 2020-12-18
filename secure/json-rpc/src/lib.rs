@@ -517,7 +517,7 @@ mod test {
     /// with the given database to handle each JSON RPC request. If mock_validator is set to true,
     /// the server is also given a mock vm validator to validate any submitted transactions.
     fn create_client_and_server(db: MockDiemDB, mock_validator: bool) -> (JsonRpcClient, Runtime) {
-        let address = "0.0.0.0";
+        let address = "127.0.0.1";
         let port = utils::get_available_port();
         let host = format!("{}:{}", address, port);
         let (mp_sender, mut mp_events) = channel(1024);
