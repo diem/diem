@@ -6,6 +6,7 @@ hide_right_sidebar: true
 wider_content: true
 ---
 
-Welcome to the Diem CLI tutorial, a fully functioning terminal connected to the Diem testnet. Choose a command prompt to get started:
+Welcome to the Diem CLI tutorial, a fully functioning terminal connected to the Diem testnet. <br />
+Choose a command prompt to get started:
 
 <CLI />
