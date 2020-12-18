@@ -452,9 +452,10 @@ pub fn is_selected(node: (&'static str, u64)) -> bool {
         match &SAMPLING_CONFIG {
             Some(Sampling(sampling)) => {
                 if let Some(sampling_rate) = sampling.get(node.0) {
-                    node.1.checked_rem(sampling_rate.denominator).expect(
-                        "Sampling rate denominator has a value of 0, resulting in integer overflow",
-                    ) < sampling_rate.nominator
+                    if sampling_rate.denominator == 0 {
+                        return true; // assume no sampling if samplng denominator is 0 and return true
+                    }
+                    node.1.wrapping_rem(sampling_rate.denominator) < sampling_rate.nominator
                 } else {
                     // assume no sampling if sampling category is not found and return true
                     true

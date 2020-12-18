@@ -18,11 +18,10 @@ pub struct ShortHexStr([u8; ShortHexStr::LENGTH]);
 #[error("Input bytes are too short")]
 pub struct InputTooShortError;
 
-#[allow(clippy::integer_arithmetic)]
 impl ShortHexStr {
     pub const SOURCE_LENGTH: usize = 4;
+    #[allow(clippy::integer_arithmetic)]
     pub const LENGTH: usize = 2 * ShortHexStr::SOURCE_LENGTH;
-
     /// Format a new `ShortHexStr` from a byte slice.
     ///
     /// Returns `Err(InputTooShortError)` if the input byte slice length is less
@@ -89,9 +88,9 @@ fn byte2hex(byte: u8) -> (u8, u8) {
 }
 
 /// Hex encode a byte slice into the destination byte slice.
-#[allow(clippy::integer_arithmetic)]
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) {
+    #[allow(clippy::integer_arithmetic)]
     debug_checked_precondition!(dst.len() == 2 * src.len());
 
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
