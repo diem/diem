@@ -23,6 +23,7 @@ members = [
     "common/num-variants",
     "common/proptest-helpers",
     "common/proxy",
+    "common/rate-limiter",
     "common/retrier",
     "common/short-hex-str",
     "common/subscription-service",

@@ -1996,6 +1996,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-rate-limiter"
+version = "0.1.0"
+dependencies = [
+ "diem-infallible",
+ "diem-workspace-hack",
+ "futures 0.3.8",
+ "pin-project 1.0.3",
+ "tokio 0.2.24",
+]
+
+[[package]]
 name = "diem-retrier"
 version = "0.1.0"
 dependencies = [

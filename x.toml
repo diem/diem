@@ -121,6 +121,7 @@ members = [
     "diem-fuzz",
     "diem-fuzzer",
     "diem-proptest-helpers",
+    "diem-rate-limiter",
     "diem-retrier",
     "diem-smoke-test-attribute",
     "diem-swarm",
