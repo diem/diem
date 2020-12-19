@@ -13,6 +13,7 @@ use std::{
 ///
 /// Mostly taken from [`tokio::time::Interval`] but uses our `Sleep` future.
 #[must_use = "streams do nothing unless you `.await` or poll them"]
+#[derive(Debug)]
 pub struct Interval {
     delay: Sleep,
     period: Duration,

@@ -80,6 +80,12 @@ impl TimeService {
     }
 }
 
+impl Default for TimeService {
+    fn default() -> Self {
+        Self::real()
+    }
+}
+
 #[enum_dispatch]
 pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     /// Query the time service for the current unix timestamp.

@@ -14,12 +14,25 @@ use std::{
     time::Duration,
 };
 
+/// TODO(philiphayes): Use `Duration::MAX` once it stabilizes.
+fn duration_max() -> Duration {
+    Duration::new(std::u64::MAX, 1_000_000_000 - 1)
+}
+
 /// Each waiter in the pending queue has a unique index to distinguish waiters
 /// with the same deadline.
 type SleepIndex = usize;
 
 /// A [`TimeService`] that simulates time and allows for fine-grained control over
 /// advancing time and waking up sleeping tasks.
+///
+/// ### Auto Advance
+///
+/// `MockTimeService` has the option to auto advance time when new `Sleep`s are
+/// crated. When we're auto advancing, new `Sleep`s are immediately resolved and
+/// the simulation time is advanced to the wait deadline. New `Sleep`s whose deadlines
+/// are after the auto advance deadline will be pending and must be manually
+/// woken by the `MockTimeService::advance_` methods.
 #[derive(Clone, Debug)]
 pub struct MockTimeService {
     inner: Arc<Mutex<Inner>>,
@@ -29,6 +42,8 @@ pub struct MockTimeService {
 struct Inner {
     /// The current simulated time.
     now: Duration,
+    /// If `Some`, then auto advance until the simulation time passes the deadline.
+    auto_advance_deadline: Option<Duration>,
     /// The next unique index that we can allocate to a new waiter.
     next_sleep_index: SleepIndex,
     /// A queue of pending `MockSleep`s. The entries are stored in a `BTreeMap`
@@ -60,10 +75,31 @@ pub struct MockSleep {
 /////////////////////
 
 impl MockTimeService {
+    /// Create a new `MockTimeService` with no auto advance. Time will only advance
+    /// by manually calling the `MockTimeService::advance_*` methods.
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
                 now: ZERO_DURATION,
+                auto_advance_deadline: None,
+                next_sleep_index: 0,
+                pending: BTreeMap::new(),
+            })),
+        }
+    }
+
+    /// Create a new `MockTimeService` that will auto advance forever.
+    pub fn new_auto_advance() -> Self {
+        Self::new_auto_advance_for(duration_max())
+    }
+
+    /// Create a new `MockTimeService` that will auto advance until the simulation
+    /// time passes `deadline`.
+    pub fn new_auto_advance_for(deadline: Duration) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(Inner {
+                now: ZERO_DURATION,
+                auto_advance_deadline: Some(deadline),
                 next_sleep_index: 0,
                 pending: BTreeMap::new(),
             })),
@@ -81,31 +117,39 @@ impl MockTimeService {
 
     /// Advance time to the next pending waiter, wake it up, and return the wake
     /// time, or `None` if there are no waiters.
-    pub async fn advance_to_next(&self) -> Option<Duration> {
-        let wake_time = self.lock().advance_to_next();
+    pub fn advance_next(&self) -> Option<Duration> {
+        self.lock().advance_next()
+    }
 
-        // Yield to the executor to run any freshly awoken tasks (which might
-        // also create more `Sleep` futures).
-        //
+    /// Advance time by `duration` and wake any pending waiters whose sleep has
+    /// expired. Return the number of waiters that we woke up.
+    pub fn advance(&self, duration: Duration) -> usize {
+        self.lock().advance(duration)
+    }
+
+    /// Advance time to the next pending waiter, wake it up, and return the wake
+    /// time, or `None` if there are no waiters.
+    ///
+    /// Yields to the executor to run any freshly awoken tasks (which might also
+    /// create more `Sleep` futures).
+    pub async fn advance_next_async(&self) -> Option<Duration> {
+        let wake_time = self.lock().advance_next();
         // Imporant: don't hold the lock while yielding. We don't want to block
         // creating new `Sleep`s or letting existing `Sleep`s run.
         tokio::task::yield_now().await;
-
         wake_time
     }
 
     /// Advance time by `duration` and wake any pending waiters whose sleep has
     /// expired. Return the number of waiters that we woke up.
-    pub async fn advance(&self, duration: Duration) -> usize {
+    ///
+    /// Yields to the executor to run any freshly awoken tasks (which might also
+    /// create more `Sleep` futures).
+    pub async fn advance_async(&self, duration: Duration) -> usize {
         let num_woken = self.lock().advance(duration);
-
-        // Yield to the executor to run any freshly awoken tasks (which might
-        // also create more `Sleep` futures).
-        //
         // Imporant: don't hold the lock while yielding. We don't want to block
         // creating new `Sleep`s or letting existing `Sleep`s run.
         tokio::task::yield_now().await;
-
         num_woken
     }
 }
@@ -130,7 +174,7 @@ impl TimeServiceTrait for MockTimeService {
 ///////////
 
 impl Inner {
-    fn advance_to_next(&mut self) -> Option<Duration> {
+    fn advance_next(&mut self) -> Option<Duration> {
         // Find the next entry with the smallest deadline. Exit early without
         // advancing if there are no pending waiters.
         let deadline = self.trigger_min_sleep()?;
@@ -145,12 +189,15 @@ impl Inner {
         // Advance the simulated time.
         self.now += duration;
 
-        // Get the number of now-expired waiters.
+        let num_waiters = self.pending.len();
+
+        // Get the number of now-expired waiters, also the index of the first
+        // still-pending waiter.
         let num_expired = self
             .pending
             .keys()
-            .filter(|&(deadline, _index)| deadline <= &self.now)
-            .count();
+            .position(|&(deadline, _index)| deadline > self.now)
+            .unwrap_or(num_waiters);
 
         // Wake up and unregister all the expired waiters.
         for _ in 0..num_expired {
@@ -191,6 +238,20 @@ impl Inner {
     ) -> (Duration, SleepIndex) {
         let deadline = self.now + duration;
         let index = self.next_sleep_index();
+
+        // When we're auto advancing, immediately resolve sleeps under the auto
+        // deadline and advance the simulation time.
+        if let Some(auto_advance_deadline) = self.auto_advance_deadline {
+            if deadline <= auto_advance_deadline {
+                self.now += duration;
+                return (deadline, index);
+            } else {
+                // Turn off auto advancing when we've passed the deadline.
+                self.now = max(self.now, auto_advance_deadline);
+                self.auto_advance_deadline = None;
+            }
+        }
+
         let prev_entry = self.pending.insert((deadline, index), maybe_waker);
         assert!(
             prev_entry.is_none(),
@@ -309,9 +370,9 @@ mod test {
 
         // Initial pending queue should be empty. Advancing time wakes nothing.
         assert_eq!(time.num_waiters(), 0);
-        assert_eq!(time.advance_to_next().await, None);
+        assert_eq!(time.advance_next_async().await, None);
         let start = time.now();
-        assert_eq!(time.advance(ms(10)).await, 0);
+        assert_eq!(time.advance_async(ms(10)).await, 0);
         assert_eq!(time.now() - start, ms(10));
 
         // Create a new sleep future. Check that it's registered in the queue.
@@ -321,13 +382,13 @@ mod test {
         assert_pending!(sleep.poll());
 
         // It won't wake up until we pass its deadline.
-        assert_eq!(time.advance(ms(5)).await, 0);
+        assert_eq!(time.advance_async(ms(5)).await, 0);
         assert!(!sleep.is_woken());
         assert_pending!(sleep.poll());
 
         // When we pass the deadline, the sleep future should be unregistered,
         // woken, and resolved.
-        assert_eq!(time.advance(ms(5)).await, 1);
+        assert_eq!(time.advance_async(ms(5)).await, 1);
         assert_eq!(time.num_waiters(), 0);
         assert!(sleep.is_woken());
         assert_ready!(sleep.poll());
@@ -339,7 +400,7 @@ mod test {
         assert_pending!(sleep.poll());
 
         // Passing the deadline of a reset sleep future should also work.
-        assert_eq!(time.advance(ms(5)).await, 1);
+        assert_eq!(time.advance_async(ms(5)).await, 1);
         assert_eq!(time.num_waiters(), 0);
         assert!(sleep.is_woken());
         assert_ready!(sleep.poll());
@@ -348,7 +409,7 @@ mod test {
         sleep.reset(ms(5));
         assert!(!sleep.is_woken());
 
-        assert_eq!(time.advance(ms(5)).await, 1);
+        assert_eq!(time.advance_async(ms(5)).await, 1);
         assert_eq!(time.num_waiters(), 0);
         assert!(!sleep.is_woken());
         assert_ready!(sleep.poll());
@@ -378,7 +439,7 @@ mod test {
         assert_pending!(sleep_20ms.poll());
 
         // Advance 10ms leaving just the 15ms and 20ms waiters.
-        assert_eq!(time.advance(ms(10)).await, 4);
+        assert_eq!(time.advance_async(ms(10)).await, 4);
         assert_eq!(time.num_waiters(), 2);
 
         assert_ready!(sleep_5ms.poll());
@@ -389,14 +450,14 @@ mod test {
         assert_pending!(sleep_20ms.poll());
 
         // Advance to next, triggering the 15ms waiter.
-        assert_eq!(time.advance_to_next().await, Some(ms(15)));
+        assert_eq!(time.advance_next_async().await, Some(ms(15)));
         assert_eq!(time.num_waiters(), 1);
 
         assert_ready!(sleep_15ms.poll());
         assert_pending!(sleep_20ms.poll());
 
         // Advance to next, triggering the final 20ms waiter.
-        assert_eq!(time.advance_to_next().await, Some(ms(20)));
+        assert_eq!(time.advance_next_async().await, Some(ms(20)));
         assert_eq!(time.num_waiters(), 0);
 
         assert_ready!(sleep_20ms.poll());
@@ -412,18 +473,18 @@ mod test {
         assert!(!interval.is_woken());
 
         // Interval should trigger immediately.
-        assert_eq!(time.advance_to_next().await, Some(ms(0)));
+        assert_eq!(time.advance_next_async().await, Some(ms(0)));
         assert!(interval.is_woken());
         assert_ready_eq!(interval.poll_next(), Some(()));
         assert_pending!(interval.poll_next());
 
         // Interval won't trigger until we pass the period.
-        assert_eq!(time.advance(ms(5)).await, 0);
+        assert_eq!(time.advance_async(ms(5)).await, 0);
         assert!(!interval.is_woken());
         assert_pending!(interval.poll_next());
 
         // Interval should trigger again.
-        assert_eq!(time.advance(ms(5)).await, 1);
+        assert_eq!(time.advance_async(ms(5)).await, 1);
         assert!(interval.is_woken());
         assert_ready_eq!(interval.poll_next(), Some(()));
         assert_pending!(interval.poll_next());
@@ -442,7 +503,7 @@ mod test {
         let mut timeout = task::spawn(time.timeout(ms(10), rx));
 
         assert_pending!(timeout.poll());
-        assert_eq!(time.advance(ms(5)).await, 0);
+        assert_eq!(time.advance_async(ms(5)).await, 0);
         assert_pending!(timeout.poll());
 
         tx.send(()).unwrap();
@@ -456,13 +517,80 @@ mod test {
         let mut timeout = task::spawn(time.timeout(ms(10), rx));
 
         assert_pending!(timeout.poll());
-        assert_eq!(time.advance(ms(15)).await, 1);
+        assert_eq!(time.advance_async(ms(15)).await, 1);
         assert!(timeout.is_woken());
 
         assert_ready_err!(timeout.poll());
     }
 
+    #[tokio::test]
+    async fn test_auto_advance() {
+        let time = MockTimeService::new_auto_advance_for(ms(100));
+        assert_eq!(time.now(), ms(0));
+
+        // While we're under the limit, sleeps should resolve immediately and time
+        // should advance.
+        let mut sleep = task::spawn(time.sleep(ms(20)));
+        assert_eq!(time.now(), ms(20));
+        assert_ready!(sleep.poll());
+        assert_eq!(time.now(), ms(20));
+
+        let mut sleep = task::spawn(time.sleep(ms(30)));
+        assert_eq!(time.now(), ms(50));
+        assert_ready!(sleep.poll());
+        assert_eq!(time.now(), ms(50));
+
+        // advance still works.
+        assert_eq!(time.advance_async(ms(30)).await, 0);
+        assert_eq!(time.now(), ms(80));
+
+        // The sleep should be pending if it goes over the limit.
+        let mut sleep = task::spawn(time.sleep(ms(90)));
+        assert_pending!(sleep.poll());
+        assert_eq!(time.now(), ms(100));
+
+        assert_eq!(time.advance_async(ms(30)).await, 0);
+        assert_pending!(sleep.poll());
+        assert_eq!(time.now(), ms(130));
+
+        assert_eq!(time.advance_async(ms(100)).await, 1);
+        assert_ready!(sleep.poll());
+        assert_eq!(time.now(), ms(230));
+    }
+
+    #[test]
+    fn test_auto_advance_blocking() {
+        let time = MockTimeService::new_auto_advance();
+
+        // Sleep for a long time so we'll timeout unless auto advance is working.
+        time.sleep_blocking(secs(10_000));
+        assert_eq!(time.now(), secs(10_000));
+    }
+
+    #[test]
+    fn test_auto_advance_interval() {
+        let time = MockTimeService::new_auto_advance_for(ms(10));
+
+        let mut interval = task::spawn(dbg!(time.interval(ms(4))));
+
+        assert_eq!(time.now(), ms(0));
+        assert_ready!(interval.poll_next());
+
+        assert_eq!(time.now(), ms(4));
+        assert_ready!(interval.poll_next());
+
+        assert_eq!(time.now(), ms(8));
+        assert_ready!(interval.poll_next());
+
+        assert_eq!(time.now(), ms(10));
+        assert_pending!(interval.poll_next());
+    }
+
     fn ms(duration: u64) -> Duration {
         Duration::from_millis(duration)
+    }
+
+    fn secs(duration: u64) -> Duration {
+        Duration::from_secs(duration)
     }
 }
