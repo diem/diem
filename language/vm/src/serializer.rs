@@ -841,6 +841,38 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::MOVE_TO_GENERIC as u8)?;
             serialize_struct_def_inst_index(binary, class_idx)
         }
+        Bytecode::VecEmpty(sig_idx) => {
+            binary.push(Opcodes::VEC_EMPTY as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecLen(sig_idx) => {
+            binary.push(Opcodes::VEC_LEN as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecImmBorrow(sig_idx) => {
+            binary.push(Opcodes::VEC_IMM_BORROW as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecMutBorrow(sig_idx) => {
+            binary.push(Opcodes::VEC_MUT_BORROW as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecPushBack(sig_idx) => {
+            binary.push(Opcodes::VEC_PUSH_BACK as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecPopBack(sig_idx) => {
+            binary.push(Opcodes::VEC_POP_BACK as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecDestroyEmpty(sig_idx) => {
+            binary.push(Opcodes::VEC_DESTROY_EMPTY as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
+        Bytecode::VecSwap(sig_idx) => {
+            binary.push(Opcodes::VEC_SWAP as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
     };
     res?;
     Ok(())

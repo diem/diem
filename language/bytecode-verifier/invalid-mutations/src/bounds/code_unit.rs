@@ -10,8 +10,8 @@ use vm::{
     file_format::{
         Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionDefinitionIndex, FunctionHandleIndex,
-        FunctionInstantiationIndex, LocalIndex, StructDefInstantiationIndex, StructDefinitionIndex,
-        TableIndex,
+        FunctionInstantiationIndex, LocalIndex, SignatureIndex, StructDefInstantiationIndex,
+        StructDefinitionIndex, TableIndex,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -182,6 +182,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         let struct_inst_len = self.module.struct_def_instantiations.len();
         let function_inst_len = self.module.function_instantiations.len();
         let field_inst_len = self.module.field_instantiations.len();
+        let signature_pool_len = self.module.signatures.len();
 
         mutations
             .iter()
@@ -392,6 +393,70 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         offset,
                         ImmBorrowLoc
                     ),
+                    VecEmpty(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecEmpty
+                    ),
+                    VecLen(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecLen
+                    ),
+                    VecImmBorrow(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecImmBorrow
+                    ),
+                    VecMutBorrow(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecMutBorrow
+                    ),
+                    VecPushBack(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecPushBack
+                    ),
+                    VecPopBack(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecPopBack
+                    ),
+                    VecDestroyEmpty(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecDestroyEmpty
+                    ),
+                    VecSwap(_) => new_bytecode!(
+                        signature_pool_len,
+                        current_fdef,
+                        bytecode_idx,
+                        offset,
+                        SignatureIndex,
+                        VecSwap
+                    ),
 
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
@@ -443,7 +508,15 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | MoveLoc(_)
         | StLoc(_)
         | MutBorrowLoc(_)
-        | ImmBorrowLoc(_) => true,
+        | ImmBorrowLoc(_)
+        | VecEmpty(_)
+        | VecLen(_)
+        | VecImmBorrow(_)
+        | VecMutBorrow(_)
+        | VecPushBack(_)
+        | VecPopBack(_)
+        | VecDestroyEmpty(_)
+        | VecSwap(_) => true,
 
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.

@@ -18,8 +18,8 @@ use vm::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
-        FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
-        StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
+        FunctionHandleIndex, FunctionInstantiationIndex, SignatureIndex,
+        StructDefInstantiationIndex, StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
     file_format_common::{instruction_key, Opcodes},
 };
@@ -270,6 +270,14 @@ pub fn zero_cost_schedule() -> CostTable {
             GasCost::new(0, 0),
         ),
         (Nop, GasCost::new(0, 0)),
+        (VecEmpty(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecLen(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecImmBorrow(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecMutBorrow(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecPushBack(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecPopBack(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecDestroyEmpty(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (VecSwap(SignatureIndex::new(0)), GasCost::new(0, 0)),
     ];
     let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
         .map(|_| GasCost::new(0, 0))

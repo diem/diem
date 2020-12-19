@@ -121,7 +121,7 @@ where
     }
 }
 
-/// Represents state required to materialize final data structures for function definitions.
+/// Represents state required to materialize final data structures for function handles.
 #[derive(Debug)]
 pub struct FnHandleMaterializeState<'a> {
     module_handles_len: usize,
@@ -136,12 +136,13 @@ impl<'a> FnHandleMaterializeState<'a> {
         module_handles_len: usize,
         identifiers_len: usize,
         struct_handles: &'a [StructHandle],
+        signatures: Vec<Signature>,
     ) -> Self {
         Self {
             module_handles_len,
             identifiers_len,
             struct_handles,
-            signatures: SignatureState::default(),
+            signatures: SignatureState::new(signatures),
             function_handles: HashSet::new(),
         }
     }
@@ -488,6 +489,15 @@ enum BytecodeGen {
     StLoc(PropIndex),
     MutBorrowLoc(PropIndex),
     ImmBorrowLoc(PropIndex),
+
+    VecEmpty(PropIndex),
+    VecLen(PropIndex),
+    VecImmBorrow(PropIndex),
+    VecMutBorrow(PropIndex),
+    VecPushBack(PropIndex),
+    VecPopBack(PropIndex),
+    VecDestroyEmpty(PropIndex),
+    VecSwap(PropIndex),
 }
 
 impl BytecodeGen {
@@ -517,6 +527,14 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(StLoc),
             any::<PropIndex>().prop_map(MutBorrowLoc),
             any::<PropIndex>().prop_map(ImmBorrowLoc),
+            any::<PropIndex>().prop_map(VecEmpty),
+            any::<PropIndex>().prop_map(VecLen),
+            any::<PropIndex>().prop_map(VecImmBorrow),
+            any::<PropIndex>().prop_map(VecMutBorrow),
+            any::<PropIndex>().prop_map(VecPushBack),
+            any::<PropIndex>().prop_map(VecPopBack),
+            any::<PropIndex>().prop_map(VecDestroyEmpty),
+            any::<PropIndex>().prop_map(VecSwap),
         ]
     }
 
@@ -746,9 +764,126 @@ impl BytecodeGen {
                 }
                 Bytecode::ImmBorrowLoc(idx.index(locals_signature.len()) as LocalIndex)
             }
+            BytecodeGen::VecEmpty(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecEmpty(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecLen(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecLen(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecImmBorrow(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecImmBorrow(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecMutBorrow(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecMutBorrow(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecPushBack(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecPushBack(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecPopBack(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecPopBack(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecDestroyEmpty(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecDestroyEmpty(SignatureIndex(sig_idx as TableIndex))
+            }
+            BytecodeGen::VecSwap(idx) => {
+                let sigs_len = state.signatures.signatures.len();
+                if sigs_len == 0 {
+                    return None;
+                }
+                let sig_idx = idx.index(sigs_len);
+                let sig = &state.signatures.signatures[sig_idx];
+                if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                Bytecode::VecSwap(SignatureIndex(sig_idx as TableIndex))
+            }
         };
 
         Some(bytecode)
+    }
+
+    /// Checks if the given type is well defined in the given context.
+    /// No references are permitted.
+    fn check_signature_token(token: &SignatureToken) -> bool {
+        use SignatureToken::*;
+        match token {
+            U8 | U64 | U128 | Bool | Address | Signer | Struct(_) | TypeParameter(_) => true,
+            Vector(element_token) => BytecodeGen::check_signature_token(element_token),
+            StructInstantiation(_, type_arguments) => type_arguments
+                .iter()
+                .all(|ty| BytecodeGen::check_signature_token(ty)),
+            Reference(_) | MutableReference(_) => false,
+        }
+    }
+
+    fn is_valid_vector_element_sig(sig: &Signature) -> bool {
+        if sig.len() != 1 {
+            return false;
+        }
+        BytecodeGen::check_signature_token(&sig.0[0])
     }
 
     fn simple_bytecode_strategy() -> impl Strategy<Value = Bytecode> {

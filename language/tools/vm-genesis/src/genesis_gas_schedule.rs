@@ -9,8 +9,8 @@ use once_cell::sync::Lazy;
 use vm::{
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
-        FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
-        StructDefinitionIndex,
+        FunctionHandleIndex, FunctionInstantiationIndex, SignatureIndex,
+        StructDefInstantiationIndex, StructDefinitionIndex,
     },
     file_format_common::instruction_key,
 };
@@ -120,6 +120,17 @@ pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
             GasCost::new(2, 1),
         ),
         (Nop, GasCost::new(1, 1)),
+        (VecEmpty(SignatureIndex::new(0)), GasCost::new(84, 1)),
+        (VecLen(SignatureIndex::new(0)), GasCost::new(98, 1)),
+        (VecImmBorrow(SignatureIndex::new(0)), GasCost::new(1334, 1)),
+        (VecMutBorrow(SignatureIndex::new(0)), GasCost::new(1902, 1)),
+        (VecPushBack(SignatureIndex::new(0)), GasCost::new(53, 1)),
+        (VecPopBack(SignatureIndex::new(0)), GasCost::new(227, 1)),
+        (
+            VecDestroyEmpty(SignatureIndex::new(0)),
+            GasCost::new(572, 1),
+        ),
+        (VecSwap(SignatureIndex::new(0)), GasCost::new(1436, 1)),
     ];
     // Note that the DiemVM is expecting the table sorted by instruction order.
     instrs.sort_by_key(|cost| instruction_key(&cost.0));

@@ -120,7 +120,7 @@ impl<'a> InstantiationLoopChecker<'a> {
         }
     }
 
-    /// Retrives the node corresponding to the specified type formal.
+    /// Retrieves the node corresponding to the specified type formal.
     /// If none exists in the graph yet, create one.
     fn get_or_add_node(&mut self, node: Node) -> NodeIndex {
         match self.node_map.entry(node) {

@@ -574,6 +574,8 @@ pub enum StatusCode {
     INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES = 1106,
     // The updated module introduces a cyclic friendship (i.e., A friends B and B also friends A)
     CYCLIC_MODULE_FRIENDSHIP = 1107,
+    VEC_UPDATE_EXISTS_MUTABLE_BORROW_ERROR = 1108,
+    VEC_BORROW_ELEMENT_EXISTS_MUTABLE_BORROW_ERROR = 1109,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

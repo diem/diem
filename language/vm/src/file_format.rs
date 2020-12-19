@@ -1455,6 +1455,55 @@ pub enum Bytecode {
     ///
     /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
     Shr,
+    /// Create an empty vector.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., vec[]```
+    VecEmpty(SignatureIndex),
+    /// Return the length of the vector,
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vector_reference -> ..., u64_value```
+    VecLen(SignatureIndex),
+    /// Acquire an immutable reference to the element at a given index of the vector. Abort the
+    /// execution if the index is out of bounds.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vector_reference, u64_value -> .., element_reference```
+    VecImmBorrow(SignatureIndex),
+    /// Acquire a mutable reference to the element at a given index of the vector. Abort the
+    /// execution if the index is out of bounds.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vector_reference, u64_value -> .., element_reference```
+    VecMutBorrow(SignatureIndex),
+    /// Add an element to the end of the vector.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vector_reference, element -> ...```
+    VecPushBack(SignatureIndex),
+    /// Pop an element from the end of vector. Aborts if the vector is empty.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vector_reference -> ..., element```
+    VecPopBack(SignatureIndex),
+    /// Destroy the vector. Aborts if the vector is not empty
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., vec[] -> ...`
+    VecDestroyEmpty(SignatureIndex),
+    /// Swaps the elements at two indices in the vector. Abort the execution if any of the indice
+    /// is out of bounds.
+    ///
+    /// ```..., vector_reference, u64_value(1), u64_value(2) -> ...```
+    VecSwap(SignatureIndex),
 }
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 18;
@@ -1525,6 +1574,14 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::MoveFromGeneric(a) => write!(f, "MoveFromGeneric({:?})", a),
             Bytecode::MoveTo(a) => write!(f, "MoveTo({:?})", a),
             Bytecode::MoveToGeneric(a) => write!(f, "MoveToGeneric({:?})", a),
+            Bytecode::VecEmpty(a) => write!(f, "VecEmpty({})", a),
+            Bytecode::VecLen(a) => write!(f, "VecLen({})", a),
+            Bytecode::VecImmBorrow(a) => write!(f, "VecImmBorrow({})", a),
+            Bytecode::VecMutBorrow(a) => write!(f, "VecMutBorrow({})", a),
+            Bytecode::VecPushBack(a) => write!(f, "VecPushBack({})", a),
+            Bytecode::VecPopBack(a) => write!(f, "VecPopBack({})", a),
+            Bytecode::VecDestroyEmpty(a) => write!(f, "VecDestroyEmpty({})", a),
+            Bytecode::VecSwap(a) => write!(f, "VecSwap({})", a),
         }
     }
 }
@@ -1834,8 +1891,7 @@ pub struct CompiledModuleMut {
     /// Field instantiations.
     pub field_instantiations: Vec<FieldInstantiation>,
 
-    /// Locals signature pool. The signature for all locals of the functions defined in
-    /// the module.
+    /// Locals signature pool. The signature for all locals of the functions defined in the module.
     pub signatures: SignaturePool,
 
     /// All identifiers used in this module.

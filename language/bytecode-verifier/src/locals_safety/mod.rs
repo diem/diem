@@ -1,10 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the transfer functions for verifying local safety of a
-//! procedure body.
+//! This module defines the transfer functions for verifying local safety of a procedure body.
 //! It is concerned with the assignment state of a local variable at the time of usage, which is
-//! a control flow sensitive check
+//! a control flow sensitive check.
 
 mod abstract_state;
 
@@ -149,7 +148,15 @@ fn execute_inner(
         | Bytecode::MoveFrom(_)
         | Bytecode::MoveFromGeneric(_)
         | Bytecode::MoveTo(_)
-        | Bytecode::MoveToGeneric(_) => (),
+        | Bytecode::MoveToGeneric(_)
+        | Bytecode::VecEmpty(_)
+        | Bytecode::VecLen(_)
+        | Bytecode::VecImmBorrow(_)
+        | Bytecode::VecMutBorrow(_)
+        | Bytecode::VecPushBack(_)
+        | Bytecode::VecPopBack(_)
+        | Bytecode::VecDestroyEmpty(_)
+        | Bytecode::VecSwap(_) => (),
     };
     Ok(())
 }

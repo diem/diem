@@ -3,7 +3,7 @@
 
 //! This module defines the transfer functions for verifying reference safety of a procedure body.
 //! The checks include (but are not limited to)
-//! - verifying that there are no dangaling references,
+//! - verifying that there are no dangling references,
 //! - accesses to mutable references are safe
 //! - accesses to global storage references are safe
 
@@ -14,6 +14,7 @@ use crate::{
     binary_views::{BinaryIndexedView, FunctionView},
 };
 use abstract_state::{AbstractState, AbstractValue};
+use diem_types::vm_status::StatusCode;
 use mirai_annotations::*;
 use std::collections::{BTreeSet, HashMap};
 use vm::{
@@ -323,6 +324,68 @@ fn execute_inner(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             unpack(verifier, struct_def)
+        }
+
+        Bytecode::VecEmpty(idx) => {
+            let element_type = match verifier.resolver.signature_at(*idx).0.get(0) {
+                Some(ty) => ty,
+                None => {
+                    return Err(PartialVMError::new(
+                        StatusCode::VERIFIER_INVARIANT_VIOLATION,
+                    ))
+                }
+            };
+            verifier
+                .stack
+                .push(state.value_for(&SignatureToken::Vector(Box::new(element_type.clone()))));
+        }
+
+        Bytecode::VecLen(_) => {
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_op(offset, vec_ref, false)?;
+            verifier.stack.push(state.value_for(&SignatureToken::U64));
+        }
+
+        Bytecode::VecImmBorrow(_) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_element_borrow(offset, vec_ref, false)?;
+        }
+        Bytecode::VecMutBorrow(_) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_element_borrow(offset, vec_ref, true)?;
+        }
+
+        Bytecode::VecPushBack(_) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_op(offset, vec_ref, true)?;
+        }
+
+        Bytecode::VecPopBack(idx) => {
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_op(offset, vec_ref, true)?;
+            let element_type = match verifier.resolver.signature_at(*idx).0.get(0) {
+                Some(ty) => ty,
+                None => {
+                    return Err(PartialVMError::new(
+                        StatusCode::VERIFIER_INVARIANT_VIOLATION,
+                    ))
+                }
+            };
+            verifier.stack.push(state.value_for(element_type));
+        }
+
+        Bytecode::VecDestroyEmpty(_) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+        }
+
+        Bytecode::VecSwap(_) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
+            let vec_ref = verifier.stack.pop().unwrap();
+            state.vector_op(offset, vec_ref, true)?;
         }
     };
     Ok(())

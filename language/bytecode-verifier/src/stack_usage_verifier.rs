@@ -80,8 +80,9 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::Pop
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)
-            | Bytecode::Abort
-            | Bytecode::StLoc(_) => (1, 0),
+            | Bytecode::StLoc(_)
+            | Bytecode::VecDestroyEmpty(_)
+            | Bytecode::Abort => (1, 0),
 
             // Instructions that push, but don't pop
             Bytecode::LdU8(_)
@@ -93,7 +94,8 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
             | Bytecode::MutBorrowLoc(_)
-            | Bytecode::ImmBorrowLoc(_) => (0, 1),
+            | Bytecode::ImmBorrowLoc(_)
+            | Bytecode::VecEmpty(_) => (0, 1),
 
             // Instructions that pop and push once
             Bytecode::Not
@@ -113,7 +115,9 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::MoveFromGeneric(_)
             | Bytecode::CastU8
             | Bytecode::CastU64
-            | Bytecode::CastU128 => (1, 1),
+            | Bytecode::CastU128
+            | Bytecode::VecLen(_)
+            | Bytecode::VecPopBack(_) => (1, 1),
 
             // Binary operations (pop twice and push once)
             Bytecode::Add
@@ -135,8 +139,17 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::Le
             | Bytecode::Ge => (2, 1),
 
-            // MoveTo and WriteRef pop twice but do not push
-            Bytecode::MoveTo(_) | Bytecode::MoveToGeneric(_) | Bytecode::WriteRef => (2, 0),
+            // Vector indexing operations (pop twice and push once)
+            Bytecode::VecImmBorrow(_) | Bytecode::VecMutBorrow(_) => (2, 1),
+
+            // MoveTo, WriteRef, and VecPushBack pop twice but do not push
+            Bytecode::MoveTo(_)
+            | Bytecode::MoveToGeneric(_)
+            | Bytecode::WriteRef
+            | Bytecode::VecPushBack(_) => (2, 0),
+
+            // VecSwap pops three times but does not push
+            Bytecode::VecSwap(_) => (3, 0),
 
             // Branch and Nop neither pops nor pushes
             Bytecode::Branch(_) | Bytecode::Nop => (0, 0),

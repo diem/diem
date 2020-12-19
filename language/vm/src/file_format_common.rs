@@ -196,6 +196,14 @@ pub enum Opcodes {
     IMM_BORROW_GLOBAL_GENERIC   = 0x3D,
     MOVE_FROM_GENERIC           = 0x3E,
     MOVE_TO_GENERIC             = 0x3F,
+    VEC_EMPTY                   = 0x40,
+    VEC_LEN                     = 0x41,
+    VEC_IMM_BORROW              = 0x42,
+    VEC_MUT_BORROW              = 0x43,
+    VEC_PUSH_BACK               = 0x44,
+    VEC_POP_BACK                = 0x45,
+    VEC_DESTROY_EMPTY           = 0x46,
+    VEC_SWAP                    = 0x47,
 }
 
 /// Upper limit on the binary size
@@ -560,6 +568,14 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         MoveFromGeneric(_) => Opcodes::MOVE_FROM_GENERIC,
         MoveTo(_) => Opcodes::MOVE_TO,
         MoveToGeneric(_) => Opcodes::MOVE_TO_GENERIC,
+        VecEmpty(_) => Opcodes::VEC_EMPTY,
+        VecLen(_) => Opcodes::VEC_LEN,
+        VecImmBorrow(_) => Opcodes::VEC_IMM_BORROW,
+        VecMutBorrow(_) => Opcodes::VEC_MUT_BORROW,
+        VecPushBack(_) => Opcodes::VEC_PUSH_BACK,
+        VecPopBack(_) => Opcodes::VEC_POP_BACK,
+        VecDestroyEmpty(_) => Opcodes::VEC_DESTROY_EMPTY,
+        VecSwap(_) => Opcodes::VEC_SWAP,
     };
     opcode as u8
 }

@@ -370,6 +370,21 @@ impl<'a> BoundsChecker<'a> {
                     }
                 }
 
+                // Instructions that refer to a signature
+                VecEmpty(idx) | VecLen(idx) | VecImmBorrow(idx) | VecMutBorrow(idx)
+                | VecPushBack(idx) | VecPopBack(idx) | VecDestroyEmpty(idx) | VecSwap(idx) => {
+                    self.check_code_unit_bounds_impl(
+                        &self.module.signatures,
+                        *idx,
+                        bytecode_offset,
+                    )?;
+                    if let Some(sig) = self.module.signatures.get(idx.into_index()) {
+                        for ty in &sig.0 {
+                            self.check_type_parameter(ty, type_param_count)?;
+                        }
+                    }
+                }
+
                 // List out the other options explicitly so there's a compile error if a new
                 // bytecode gets added.
                 FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64

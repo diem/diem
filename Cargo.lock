@@ -632,7 +632,6 @@ name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier",
- "compiled-stdlib",
  "diem-types",
  "diem-workspace-hack",
  "invalid-mutations",

@@ -1,8 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module defines the transfer functions for verifying type safety of a procedure body.
-//! It does not utilize control flow, but does check each block independently
+//! This module defines the transfer functions for verifying consistency of each bytecode
+//! instruction, in particular, for the bytecode instructions that come in both generic and
+//! non-generic flavors.
 
 use crate::binary_views::BinaryIndexedView;
 use diem_types::vm_status::StatusCode;
@@ -57,78 +58,89 @@ impl<'a> InstructionConsistency<'a> {
 
     fn check_instructions(&self, code: &CodeUnit) -> PartialVMResult<()> {
         for (offset, instr) in code.code.iter().enumerate() {
+            use Bytecode::*;
+
             match instr {
-                Bytecode::MutBorrowField(field_handle_index) => {
+                MutBorrowField(field_handle_index) => {
                     self.check_field_op(offset, *field_handle_index, /* generic */ false)?;
                 }
-                Bytecode::MutBorrowFieldGeneric(field_inst_index) => {
+                MutBorrowFieldGeneric(field_inst_index) => {
                     let field_inst = self.resolver.field_instantiation_at(*field_inst_index)?;
                     self.check_field_op(offset, field_inst.handle, /* generic */ true)?;
                 }
-                Bytecode::ImmBorrowField(field_handle_index) => {
+                ImmBorrowField(field_handle_index) => {
                     self.check_field_op(offset, *field_handle_index, /* generic */ false)?;
                 }
-                Bytecode::ImmBorrowFieldGeneric(field_inst_index) => {
+                ImmBorrowFieldGeneric(field_inst_index) => {
                     let field_inst = self.resolver.field_instantiation_at(*field_inst_index)?;
                     self.check_field_op(offset, field_inst.handle, /* non_ */ true)?;
                 }
-                Bytecode::Call(idx) => {
+                Call(idx) => {
                     self.check_function_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::CallGeneric(idx) => {
+                CallGeneric(idx) => {
                     let func_inst = self.resolver.function_instantiation_at(*idx);
                     self.check_function_op(offset, func_inst.handle, /* generic */ true)?;
                 }
-                Bytecode::Pack(idx) => {
+                Pack(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::PackGeneric(idx) => {
+                PackGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::Unpack(idx) => {
+                Unpack(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::UnpackGeneric(idx) => {
+                UnpackGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::MutBorrowGlobal(idx) => {
+                MutBorrowGlobal(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::MutBorrowGlobalGeneric(idx) => {
+                MutBorrowGlobalGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::ImmBorrowGlobal(idx) => {
+                ImmBorrowGlobal(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::ImmBorrowGlobalGeneric(idx) => {
+                ImmBorrowGlobalGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::Exists(idx) => {
+                Exists(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::ExistsGeneric(idx) => {
+                ExistsGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::MoveFrom(idx) => {
+                MoveFrom(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::MoveFromGeneric(idx) => {
+                MoveFromGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::MoveTo(idx) => {
+                MoveTo(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }
-                Bytecode::MoveToGeneric(idx) => {
+                MoveToGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                _ => (),
+
+                // List out the other options explicitly so there's a compile error if a new
+                // bytecode gets added.
+                FreezeRef | Pop | Ret | Branch(_) | BrTrue(_) | BrFalse(_) | LdU8(_) | LdU64(_)
+                | LdU128(_) | LdConst(_) | CastU8 | CastU64 | CastU128 | LdTrue | LdFalse
+                | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl
+                | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | CopyLoc(_) | MoveLoc(_)
+                | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecEmpty(_) | VecLen(_)
+                | VecImmBorrow(_) | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_)
+                | VecDestroyEmpty(_) | VecSwap(_) | Abort | Nop => (),
             }
         }
         Ok(())

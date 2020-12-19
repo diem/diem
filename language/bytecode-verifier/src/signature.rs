@@ -170,6 +170,19 @@ impl<'a> SignatureChecker<'a> {
                         type_parameters,
                     )
                 }
+                VecEmpty(idx) | VecLen(idx) | VecImmBorrow(idx) | VecMutBorrow(idx)
+                | VecPushBack(idx) | VecPopBack(idx) | VecDestroyEmpty(idx) | VecSwap(idx) => {
+                    let type_arguments = &self.resolver.signature_at(*idx).0;
+                    if type_arguments.len() != 1 {
+                        return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).with_message(
+                            format!(
+                                "expected 1 type token for vector operations, got {}",
+                                type_arguments.len()
+                            ),
+                        ));
+                    }
+                    self.check_signature_tokens(type_arguments)
+                }
 
                 // List out the other options explicitly so there's a compile error if a new
                 // bytecode gets added.
@@ -264,6 +277,15 @@ impl<'a> SignatureChecker<'a> {
         constraints: &[AbilitySet],
         global_abilities: &[AbilitySet],
     ) -> PartialVMResult<()> {
+        if type_arguments.len() != constraints.len() {
+            return Err(
+                PartialVMError::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                    "expected {} type argument(s), got {}",
+                    constraints.len(),
+                    type_arguments.len()
+                )),
+            );
+        }
         let abilities = type_arguments
             .iter()
             .map(|ty| self.resolver.abilities(ty, global_abilities));

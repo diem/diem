@@ -24,7 +24,10 @@ use functions::{
     FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
 };
 
-use crate::proptest_types::types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen};
+use crate::proptest_types::{
+    signature::SignatureGen,
+    types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
+};
 use std::collections::{BTreeSet, HashMap};
 
 /// Represents how large [`CompiledModule`] tables can be.
@@ -83,6 +86,8 @@ pub struct CompiledModuleStrategyGen {
     return_count: SizeRange,
     func_type_params: SizeRange,
     acquires_count: SizeRange,
+    random_sigs_count: SizeRange,
+    tokens_per_random_sig_count: SizeRange,
     code_len: SizeRange,
 }
 
@@ -97,6 +102,8 @@ impl CompiledModuleStrategyGen {
             return_count: (0..3).into(),
             func_type_params: (0..3).into(),
             acquires_count: (0..2).into(),
+            random_sigs_count: (0..5).into(),
+            tokens_per_random_sig_count: (0..5).into(),
             code_len: (0..50).into(),
         }
     }
@@ -110,6 +117,8 @@ impl CompiledModuleStrategyGen {
         self.return_count = 0.into();
         self.func_type_params = 0.into();
         self.acquires_count = 0.into();
+        self.random_sigs_count = 0.into();
+        self.tokens_per_random_sig_count = 0.into();
         self
     }
 
@@ -143,6 +152,17 @@ impl CompiledModuleStrategyGen {
                 self.struct_type_params.clone(),
             ),
             1..=self.size,
+        );
+
+        //
+        // Random signatures generator
+        //
+        // These signatures may or may not be used in the bytecode. One way to use these signatures
+        // is the Vec* bytecode (e.g. VecEmpty), which will grab a random index from the pool.
+        //
+        let random_sigs_strat = vec(
+            SignatureGen::strategy(self.tokens_per_random_sig_count),
+            self.random_sigs_count,
         );
 
         //
@@ -181,6 +201,7 @@ impl CompiledModuleStrategyGen {
             (address_pool_strat, identifiers_strat, constant_pool_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
+            random_sigs_strat,
             (function_handles_strat, function_defs_strat),
             friends_strat,
         )
@@ -189,6 +210,7 @@ impl CompiledModuleStrategyGen {
                     (address_identifier_gens, identifier_gens, constant_pool_gen),
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
+                    random_sigs_gens,
                     (function_handle_gens, function_def_gens),
                     friend_decl_gens,
                 )| {
@@ -262,14 +284,21 @@ impl CompiledModuleStrategyGen {
                     let StDefnMaterializeState { struct_handles, .. } = state;
 
                     //
-                    // Function handles. Creates signatures.
-                    let mut signatures = vec![];
+                    // Create some random signatures.
+                    let mut signatures: Vec<_> = random_sigs_gens
+                        .into_iter()
+                        .map(|sig_gen| sig_gen.materialize(&struct_handles))
+                        .collect();
+
+                    //
+                    // Function handles.
                     let mut function_handles: Vec<FunctionHandle> = vec![];
                     if module_handles_len > 1 {
                         let mut state = FnHandleMaterializeState::new(
                             module_handles_len,
                             identifiers_len,
                             &struct_handles,
+                            signatures,
                         );
                         for function_handle_gen in function_handle_gens {
                             if let Some(function_handle) =

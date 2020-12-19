@@ -18,7 +18,6 @@ diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 invalid-mutations = { path = "../invalid-mutations" }
 move-core-types = { path = "../../move-core/types" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
 vm = { path = "../../vm", features = ["fuzzing"] }
 
 [features]

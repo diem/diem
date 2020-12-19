@@ -1256,7 +1256,30 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
         let byte = cursor.read_u8().map_err(|_| {
             PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
         })?;
-        let bytecode = match Opcodes::from_u8(byte)? {
+        let opcode = Opcodes::from_u8(byte)?;
+        // version checking
+        match opcode {
+            Opcodes::VEC_EMPTY
+            | Opcodes::VEC_LEN
+            | Opcodes::VEC_IMM_BORROW
+            | Opcodes::VEC_MUT_BORROW
+            | Opcodes::VEC_PUSH_BACK
+            | Opcodes::VEC_POP_BACK
+            | Opcodes::VEC_DESTROY_EMPTY
+            | Opcodes::VEC_SWAP => {
+                if cursor.version() < VERSION_2 {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "Vector operations not available before bytecode version {}",
+                            VERSION_2
+                        )),
+                    );
+                }
+            }
+            _ => {}
+        };
+        // conversion
+        let bytecode = match opcode {
             Opcodes::POP => Bytecode::Pop,
             Opcodes::RET => Bytecode::Ret,
             Opcodes::BR_TRUE => Bytecode::BrTrue(load_bytecode_index(cursor)?),
@@ -1344,6 +1367,14 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
                 Bytecode::MoveToGeneric(load_struct_def_inst_index(cursor)?)
             }
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
+            Opcodes::VEC_EMPTY => Bytecode::VecEmpty(load_signature_index(cursor)?),
+            Opcodes::VEC_LEN => Bytecode::VecLen(load_signature_index(cursor)?),
+            Opcodes::VEC_IMM_BORROW => Bytecode::VecImmBorrow(load_signature_index(cursor)?),
+            Opcodes::VEC_MUT_BORROW => Bytecode::VecMutBorrow(load_signature_index(cursor)?),
+            Opcodes::VEC_PUSH_BACK => Bytecode::VecPushBack(load_signature_index(cursor)?),
+            Opcodes::VEC_POP_BACK => Bytecode::VecPopBack(load_signature_index(cursor)?),
+            Opcodes::VEC_DESTROY_EMPTY => Bytecode::VecDestroyEmpty(load_signature_index(cursor)?),
+            Opcodes::VEC_SWAP => Bytecode::VecSwap(load_signature_index(cursor)?),
         };
         code.push(bytecode);
     }
@@ -1506,6 +1537,14 @@ impl Opcodes {
             0x3D => Ok(Opcodes::IMM_BORROW_GLOBAL_GENERIC),
             0x3E => Ok(Opcodes::MOVE_FROM_GENERIC),
             0x3F => Ok(Opcodes::MOVE_TO_GENERIC),
+            0x40 => Ok(Opcodes::VEC_EMPTY),
+            0x41 => Ok(Opcodes::VEC_LEN),
+            0x42 => Ok(Opcodes::VEC_IMM_BORROW),
+            0x43 => Ok(Opcodes::VEC_MUT_BORROW),
+            0x44 => Ok(Opcodes::VEC_PUSH_BACK),
+            0x45 => Ok(Opcodes::VEC_POP_BACK),
+            0x46 => Ok(Opcodes::VEC_DESTROY_EMPTY),
+            0x47 => Ok(Opcodes::VEC_SWAP),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }
