@@ -8,6 +8,7 @@ address 0x1 {
 ///
 /// For a conceptual discussion of roles, see the [DIP-2 document][ACCESS_CONTROL].
 module Roles {
+    use 0x1::Caps;
     use 0x1::Signer;
     use 0x1::CoreAddresses;
     use 0x1::Errors;
