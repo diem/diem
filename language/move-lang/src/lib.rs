@@ -338,10 +338,11 @@ pub fn generate_interface_files(
             continue;
         }
 
-        let mut tmp = NamedTempFile::new()?;
+        std::fs::create_dir_all(&addr_dir)?;
+
+        let mut tmp = NamedTempFile::new_in(addr_dir)?;
         tmp.write_all(interface_contents.as_bytes())?;
 
-        std::fs::create_dir_all(addr_dir)?;
         // it's possible some files exist but not others due to multithreaded environments
         // Check for the file existing and then safely move the tmp file there if
         // it does not
