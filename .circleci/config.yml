@@ -32,7 +32,7 @@ executors:
     docker:
       - image: *image
     resource_class: xlarge
-  premainnet-cluster-test-executor:
+  xlarge-build-executor:
     docker:
       - image: *image
     resource_class: xlarge
@@ -49,6 +49,11 @@ executors:
       docker_layer_caching: true
       image: ubuntu-1604:202004-01
     resource_class: 2xlarge
+  vm-xlarge-executor:
+    machine:
+      docker_layer_caching: false
+      image: ubuntu-1604:202004-01
+    resource_class: xlarge
   vm-large-executor:
     machine:
       docker_layer_caching: false
@@ -59,7 +64,42 @@ executors:
       docker_layer_caching: false
       image: ubuntu-1604:202004-01
     resource_class: medium
+
 commands:
+  install_deps_on_vm_executor:
+    description: Install build dependencies on vm executor
+    steps:
+      - run:
+          name: Update Debian package source
+          command: |
+            sudo apt-get update
+      - run:
+          name: Install Dependencies
+          command: |
+            sudo apt-get install -y cmake curl clang llvm
+            sudo apt-get clean
+            sudo rm -r /var/lib/apt/lists/*
+      - run:
+          name: Install rustup and cargo if not found in container
+          command: |
+            if ! [ -x "$(command -v cargo)" ] || ! [ -x "$(command -v rustup)" ]; then \
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+              | sh -s -- -y --default-toolchain $(cat rust-toolchain); \
+              echo 'export PATH=$PATH:~/.cargo/bin' >> $BASH_ENV; \
+            fi
+      - run:
+          name: Install nightly version of rust toolchain for cargo with v2 feature resolver
+          command: rustup install $(cat cargo-toolchain)
+      - run:
+          name: Install specific version of rust toolchain
+          command: rustup install $(cat rust-toolchain)
+      - run:
+          name: Version Information
+          command: rustc --version; cargo --version; rustup --version
+      - run:
+          name: Install Rust linters
+          command: |
+            rustup component add clippy rustfmt --toolchain $(cat rust-toolchain)
   print_versions:
     description: Version Info
     steps:
@@ -277,6 +317,19 @@ commands:
           path: *working_directory
       - print_versions
       - env_setup
+  vm_build_setup:
+    steps:
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
+      - install_deps_on_vm_executor
+      - print_versions
   build_teardown:
     steps:
       - run:
@@ -332,7 +385,7 @@ jobs:
       - save_cargo_package_cache
   lint:
     working_directory: *working_directory
-    executor: test-executor
+    executor: xlarge-build-executor
     description: Run Rust linting tools.
     steps:
       - build_setup
@@ -366,23 +419,23 @@ jobs:
             hadolint docker/ci/centos/Dockerfile
   build-dev:
     working_directory: *working_directory
-    executor: build-executor
+    executor: xlarge-build-executor
     description: Development Build
     steps:
       - build_setup
       - restore_cargo_package_cache
       - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --production
+          command: RUST_BACKTRACE=1 cargo xcheck -j 8 --production
       - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --workspace --all-targets
+          command: RUST_BACKTRACE=1 cargo xcheck -j 8 --workspace --all-targets
       - run:
           command: |
             rustup target add powerpc-unknown-linux-gnu
-            RUST_BACKTRACE=1 cargo xcheck -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+            RUST_BACKTRACE=1 cargo xcheck -j 8 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - build_teardown
   run-e2e-test:
     working_directory: *working_directory
-    executor: build-executor
+    executor: xlarge-build-executor
     parallelism: 2
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
@@ -449,17 +502,17 @@ jobs:
           webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
     working_directory: *working_directory
-    executor: unittest-executor
+    executor: vm-xlarge-executor
     description: Run affected unit tests, excluding E2E and flaky tests that are
       explicitly ignored.
     steps:
-      - build_setup
+      - vm_build_setup
       - restore_cargo_package_cache
       - run:
           name: Run affected unit tests
           command: |
             eval $(.circleci/get_pr_info.sh -b)
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit --changed-since "origin/$TARGET_BRANCH"
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit --changed-since "origin/$TARGET_BRANCH"
   run-crypto-unit-test:
     working_directory: *working_directory
     executor: audit-executor
@@ -479,10 +532,10 @@ jobs:
               --no-default-features
   build-benchmark:
     working_directory: *working_directory
-    executor: build-executor
+    executor: vm-xlarge-executor
     description: Compile (but don't run) the benchmarks, to insulate against bit rot
     steps:
-      - build_setup
+      - vm_build_setup
       - restore_cargo_package_cache
       - run:
           name: Build benchmark targets without running
