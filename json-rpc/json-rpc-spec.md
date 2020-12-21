@@ -64,7 +64,11 @@ You can use this information to verify liveness / status of nodes in the network
 
 The JSON-RPC protocol allows requests to be batched. An arbitrary number of requests (maximum 20 by default) can be combined into a single batch and submitted to the server. These requests will be processed together under a single request context.
 
+For example:
 
+```
+curl -X POST -H "Content-Type: application/json" --data '[{"jsonrpc":"2.0","method":"get_metadata","params":[1],"id":1},{"jsonrpc":"2.0","method":"get_metadata","params":[9],"id":2}]' "https://client.testnet.diem.com/"
+```
 ### Errors
 
 If errors occur during a request, they are returned in an error object, as defined in: [https://www.jsonrpc.org/specification#error_object](https://www.jsonrpc.org/specification#error_object).
