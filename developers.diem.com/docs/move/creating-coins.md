@@ -29,7 +29,7 @@ Before we jump into the code, let's install the Move CLI and talk briefly about 
 To install the Move CLI just use `cargo install`. If you don't already have a Rust toolchain installed, you should install [Rustup](https://rustup.rs/) which will install the latest stable toolchain.
 
 ```shell
-$ cargo install --git https://github.com/libra/libra move-cli
+$ cargo install --git https://github.com/diem/diem move-cli
 ```
 
 This will install the `move` binary in your Cargo binary directory. On macOS and Linux this is usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment variable.
