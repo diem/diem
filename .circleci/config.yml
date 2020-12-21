@@ -20,35 +20,19 @@ orbs:
   aws-cli: circleci/aws-cli@0.1.13
 
 executors:
-  build-executor:
-    docker:
-      - image: *image
-    resource_class: 2xlarge
-  unittest-executor:
-    docker:
-      - image: *image
-    resource_class: 2xlarge+
-  test-executor:
+  docker-xlarge-executor:
     docker:
       - image: *image
     resource_class: xlarge
-  xlarge-build-executor:
-    docker:
-      - image: *image
-    resource_class: xlarge
-  audit-executor:
+  docker-medium-executor:
     docker:
       - image: *image
     resource_class: medium
-  small-executor:
-    docker:
-      - image: *image
-    resource_class: small
-  vm-2xlarge-executor:
+  vm-xlarge-caching-executor:
     machine:
       docker_layer_caching: true
       image: ubuntu-1604:202004-01
-    resource_class: 2xlarge
+    resource_class: xlarge
   vm-xlarge-executor:
     machine:
       docker_layer_caching: false
@@ -77,8 +61,6 @@ commands:
           name: Install Dependencies
           command: |
             sudo apt-get install -y cmake curl clang llvm
-            sudo apt-get clean
-            sudo rm -r /var/lib/apt/lists/*
       - run:
           name: Install rustup and cargo if not found in container
           command: |
@@ -106,12 +88,9 @@ commands:
       - run:
           name: Version Info
           command: rustup --version ; rustc --version
-  env_setup:
-    description: Environment Setup
+  shell_setup:
+    description: Shell Setup
     steps:
-      - run:
-          name: update tooling if needed.
-          command: scripts/dev_setup.sh -t -o -b -p -y
       - run:
           name: Setup Env
           command: |
@@ -122,7 +101,7 @@ commands:
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
-            echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
+            echo 'export CI_TIMEOUT="timeout 70m"' >> $BASH_ENV
             export RUST_NIGHTLY=$(cat cargo-toolchain)
             echo 'export RUST_NIGHTLY='"$RUST_NIGHTLY" >> $BASH_ENV
 
@@ -133,7 +112,12 @@ commands:
             echo 'export CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $BASH_ENV
             # Pin the version of RUSTC used for all invocations of cargo
             echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
-
+  move_shell_setup:
+    description: Shell Setup
+    steps:
+      - run:
+          name: Setup Env
+          command: |
             # Configure Move prover tools
             echo 'export Z3_EXE="$HOME/bin/z3"' >> $BASH_ENV
             echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> $BASH_ENV
@@ -316,7 +300,11 @@ commands:
       - checkout:
           path: *working_directory
       - print_versions
-      - env_setup
+      - run:
+          name: update tooling if needed.
+          command: scripts/dev_setup.sh -t -o -b -p -y
+      - shell_setup
+      - move_shell_setup
   vm_build_setup:
     steps:
       - run:
@@ -329,6 +317,14 @@ commands:
       - checkout:
           path: *working_directory
       - install_deps_on_vm_executor
+      - run:
+          name: install move tools, modify shell
+          command: |
+            scripts/dev_setup.sh -b -p -y
+            source "${HOME}"/.profile
+          working_directory: *working_directory
+      - shell_setup
+      - move_shell_setup
       - print_versions
   build_teardown:
     steps:
@@ -369,7 +365,7 @@ commands:
 jobs:
   prefetch-crates:
     working_directory: *working_directory
-    executor: audit-executor
+    executor: docker-medium-executor
     description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
@@ -385,7 +381,7 @@ jobs:
       - save_cargo_package_cache
   lint:
     working_directory: *working_directory
-    executor: xlarge-build-executor
+    executor: docker-xlarge-executor
     description: Run Rust linting tools.
     steps:
       - build_setup
@@ -419,7 +415,7 @@ jobs:
             hadolint docker/ci/centos/Dockerfile
   build-dev:
     working_directory: *working_directory
-    executor: xlarge-build-executor
+    executor: docker-xlarge-executor
     description: Development Build
     steps:
       - build_setup
@@ -435,7 +431,7 @@ jobs:
       - build_teardown
   run-e2e-test:
     working_directory: *working_directory
-    executor: xlarge-build-executor
+    executor: docker-xlarge-executor
     parallelism: 2
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
@@ -515,7 +511,7 @@ jobs:
             RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit --changed-since "origin/$TARGET_BRANCH"
   run-crypto-unit-test:
     working_directory: *working_directory
-    executor: audit-executor
+    executor: docker-medium-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
     steps:
       - build_setup
@@ -556,7 +552,7 @@ jobs:
             ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
   audit:
     working_directory: *working_directory
-    executor: audit-executor
+    executor: docker-medium-executor
     steps:
       - build_setup
       - restore_cargo_package_cache
@@ -577,7 +573,7 @@ jobs:
       - build_teardown
   lint-docker:
     working_directory: *working_directory
-    executor: audit-executor
+    executor: docker-medium-executor
     description: Lint changed Dockerfiles
     steps:
       - run:
@@ -602,7 +598,7 @@ jobs:
       - fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256
   check-breaking-change:
     working_directory: *working_directory
-    executor: audit-executor
+    executor: docker-medium-executor
     description: Detect breaking change in CLI
     environment:
       # NOTE The  built-in save_cache and restore_cache cmds dont accept cache
@@ -775,7 +771,7 @@ jobs:
   ######################################################################################################
   docker-pre-publish:
     working_directory: *working_directory
-    executor: vm-2xlarge-executor
+    executor: vm-xlarge-caching-executor
     description: publish docker images with a pre-* tag.
     steps:
       - run:
@@ -815,7 +811,7 @@ jobs:
   ######################################################################################################
   docker-publish:
     working_directory: *working_directory
-    executor: vm-2xlarge-executor
+    executor: vm-xlarge-caching-executor
     description: publish docker images
     steps:
       - run:
@@ -864,12 +860,20 @@ jobs:
 
   code_coverage:
     working_directory: *working_directory
+    executor: vm-xlarge-executor
     description: Run code coverage
-    executor: unittest-executor
     environment:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
-      - build_setup
+      - vm_build_setup
+      - run:
+          name: install lcov (let x install grcov)
+          command: |
+            if which lcov &>/dev/null; then
+               echo "lcov is already installed"
+            else
+              sudo apt-get install lcov --no-install-recommends -y
+            fi
       - restore_cache:
           name: restore daily latch cache file.
           key: code-coverage-daily
@@ -901,7 +905,7 @@ jobs:
       - run:
           name: Run code coverage
           command: |
-            cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 10 || true
+            cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 8 || true
           no_output_timeout: 20m
       - run:
           name: Upload result to codecov.io
