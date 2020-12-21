@@ -3,19 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "prepare": "npm run prepare-cli",
-    "prepare-cli": "cd diem-cli && npm install && npm run build && cd ../",
-    "prepare-submodules": "git submodule init && git submodule update",
     "start": "docusaurus start",
     "start-with-ada": "TEST_ADA=1 docusaurus start",
-    "build": "npm run prepare && NODE_ENV=production docusaurus build",
-    "build-staging": "npm run prepare && SEGMENT=staging docusaurus build",
+    "build": "NODE_ENV=production docusaurus build",
+    "build-staging": "SEGMENT=staging docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy-staging": "npm run build-staging && npx now"
   },
   "dependencies": {
     "@docusaurus/core": "^2.0.0-alpha.53",
     "@docusaurus/preset-classic": "^2.0.0-alpha.53",
+    "@libra-opensource/diem-cli": "^0.7.13",
     "@libra-opensource/libra-client-sdk-typescript": "1.0.2",
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",

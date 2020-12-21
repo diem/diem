@@ -12,7 +12,6 @@ module.exports = function(context, options) {
             components: path.resolve(__dirname, '../../src/components'),
             docs: path.resolve(__dirname, '../../docs'),
             img: path.resolve(__dirname, '../../static/img'),
-            'diem-cli': path.resolve(__dirname, '../../diem-cli/src'),
             react: path.resolve('./node_modules/react'),
             src: path.resolve(__dirname, '../../src'),
           }
