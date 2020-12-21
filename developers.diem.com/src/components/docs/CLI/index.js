@@ -1,16 +1,16 @@
-import React from "react";
-import PropTypes from "prop-types";
+import React from 'react';
+import PropTypes from 'prop-types';
 import Terminal, {
   CommandForms as DefaultCommands,
-} from "@libra-opensource/diem-cli";
+} from '@libra-opensource/diem-cli';
 
-import "./styles.css";
-import classnames from "classnames";
-import styles from "./styles.module.css";
+import './styles.css';
+import classnames from 'classnames';
+import styles from './styles.module.css';
 
 const getAvailableCommands = (command, commands) => {
   if (command && commands) {
-    throw "command and commands can not be simultaneously set on a CLI";
+    throw 'command and commands can not be simultaneously set on a CLI';
   } else if (!commands && !command) {
     return DefaultCommands;
   } else if (command) {
@@ -27,7 +27,7 @@ const CLI = ({ command, commands, isEmbedded, withTutorial }) => {
     <Terminal
       availableCommands={availableCommands}
       className={classnames("cli", styles.root, {
-        ["embedded-cli"]: isEmbedded,
+        ['embedded-cli']: isEmbedded,
       })}
       withTutorial={withTutorial}
     />
@@ -37,7 +37,7 @@ const CLI = ({ command, commands, isEmbedded, withTutorial }) => {
 CLI.propTypes = {
   /*
    * Additional prop to simplify usage when there
-   & is only one command
+   * is only one command
    */
   command: PropTypes.object,
   commands: PropTypes.arrayOf(PropTypes.object),

@@ -14,7 +14,6 @@
     "@docusaurus/core": "^2.0.0-alpha.53",
     "@docusaurus/preset-classic": "^2.0.0-alpha.53",
     "@libra-opensource/diem-cli": "^0.7.13",
-    "@libra-opensource/libra-client-sdk-typescript": "1.0.2",
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",
     "classnames": "^2.2.6",
