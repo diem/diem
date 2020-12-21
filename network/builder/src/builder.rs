@@ -79,6 +79,7 @@ pub struct NetworkBuilder {
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     // TODO:  Remove `pub`.  NetworkBuilder should only be created thorugh `::create()`
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         chain_id: ChainId,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
@@ -93,6 +94,8 @@ impl NetworkBuilder {
         inbound_connection_limit: usize,
         inbound_ip_byte_bucket_rate: usize,
         inbound_ip_byte_bucket_size: usize,
+        outbound_ip_byte_bucket_rate: usize,
+        outbound_ip_byte_bucket_size: usize,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -110,6 +113,8 @@ impl NetworkBuilder {
             inbound_connection_limit,
             inbound_ip_byte_bucket_rate,
             inbound_ip_byte_bucket_size,
+            outbound_ip_byte_bucket_rate,
+            outbound_ip_byte_bucket_size,
         );
 
         NetworkBuilder {
@@ -145,6 +150,8 @@ impl NetworkBuilder {
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
+            MAX_FRAME_SIZE,
+            MAX_FRAME_SIZE,
             MAX_FRAME_SIZE,
             MAX_FRAME_SIZE,
         );
@@ -196,6 +203,8 @@ impl NetworkBuilder {
             config.max_inbound_connections,
             config.inbound_ip_byte_bucket_rate,
             config.inbound_ip_byte_bucket_size,
+            config.outbound_ip_byte_bucket_rate,
+            config.outbound_ip_byte_bucket_size,
         );
 
         network_builder.add_connection_monitoring(

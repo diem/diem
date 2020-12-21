@@ -116,8 +116,10 @@ pub struct Peer<TSocket> {
     /// The maximum size of an inbound or outbound request frame
     /// Currently, requests are only a single frame
     max_frame_size: usize,
-    /// Optional outbound rate limiter
+    /// Optional inbound rate limiter
     inbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
+    /// Optional outbound rate limiter
+    outbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -135,6 +137,7 @@ where
         max_concurrent_inbound_rpcs: u32,
         max_frame_size: usize,
         inbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
+        outbound_rate_limiter: Option<Arc<Mutex<Bucket>>>,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -158,6 +161,7 @@ where
             state: State::Connected,
             max_frame_size,
             inbound_rate_limiter,
+            outbound_rate_limiter,
         }
     }
 
@@ -185,7 +189,11 @@ where
             self.inbound_rate_limiter.clone(),
         )
         .fuse();
-        let writer = NetworkMessageSink::new(IoCompat::new(write_socket), self.max_frame_size);
+        let writer = NetworkMessageSink::new(
+            IoCompat::new(write_socket),
+            self.max_frame_size,
+            self.outbound_rate_limiter.clone(),
+        );
 
         // Start writer "process" as a separate task. We receive two handles to communicate with
         // the task:

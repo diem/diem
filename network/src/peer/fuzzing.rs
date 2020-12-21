@@ -27,7 +27,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let network_msgs = gen.generate(vec(any::<NetworkMessage>(), 1..20));
 
     let (write_socket, mut read_socket) = MemorySocket::new_pair();
-    let mut writer = NetworkMessageSink::new(write_socket, MAX_FRAME_SIZE);
+    let mut writer = NetworkMessageSink::new(write_socket, MAX_FRAME_SIZE, None);
 
     // Write the `NetworkMessage`s to a fake socket
     let f_send = async move {
@@ -112,6 +112,7 @@ pub fn fuzz(data: &[u8]) {
         max_concurrent_notifs,
         channel_size,
         MAX_FRAME_SIZE,
+        None,
         None,
     );
 

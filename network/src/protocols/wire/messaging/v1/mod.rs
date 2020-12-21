@@ -208,13 +208,18 @@ impl<TReadSocket: AsyncRead + Unpin> Stream for NetworkMessageStream<TReadSocket
 #[pin_project]
 pub struct NetworkMessageSink<TWriteSocket: AsyncWrite> {
     #[pin]
-    framed_write: FramedWrite<IoCompat<TWriteSocket>, LengthDelimitedCodec>,
+    framed_write: FramedWrite<IoCompat<AsyncRateLimiter<TWriteSocket>>, LengthDelimitedCodec>,
 }
 
 impl<TWriteSocket: AsyncWrite> NetworkMessageSink<TWriteSocket> {
-    pub fn new(socket: TWriteSocket, max_frame_size: usize) -> Self {
+    pub fn new(
+        socket: TWriteSocket,
+        max_frame_size: usize,
+        bucket: Option<Arc<Mutex<Bucket>>>,
+    ) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
-        let compat_socket = IoCompat::new(socket);
+        let rate_limited_socket = AsyncRateLimiter::new(socket, bucket);
+        let compat_socket = IoCompat::new(rate_limited_socket);
         let framed_write = FramedWrite::new(compat_socket, frame_codec);
         Self { framed_write }
     }

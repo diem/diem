@@ -81,7 +81,7 @@ fn libranet_wire_test_vectors() {
     let mut write_buf = Vec::new();
     socket_tx.save_writing(&mut write_buf);
 
-    let mut message_tx = NetworkMessageSink::new(socket_tx, 128);
+    let mut message_tx = NetworkMessageSink::new(socket_tx, 128, None);
     block_on(message_tx.send(&message)).unwrap();
 
     assert_eq!(&write_buf, &message_bytes);
@@ -90,7 +90,7 @@ fn libranet_wire_test_vectors() {
 #[test]
 fn send_fails_when_larger_than_frame_limit() {
     let (memsocket_tx, _memsocket_rx) = MemorySocket::new_pair();
-    let mut message_tx = NetworkMessageSink::new(memsocket_tx, 64);
+    let mut message_tx = NetworkMessageSink::new(memsocket_tx, 64, None);
 
     // attempting to send an outbound message larger than your frame size will
     // return an Err
@@ -106,7 +106,7 @@ fn send_fails_when_larger_than_frame_limit() {
 fn recv_fails_when_larger_than_frame_limit() {
     let (memsocket_tx, memsocket_rx) = MemorySocket::new_pair();
     // sender won't error b/c their max frame size is larger
-    let mut message_tx = NetworkMessageSink::new(memsocket_tx, 128);
+    let mut message_tx = NetworkMessageSink::new(memsocket_tx, 128, None);
     // receiver will reject the message b/c the frame size is > 64 bytes max
     let mut message_rx = NetworkMessageStream::new(memsocket_rx, 64, None);
 
@@ -202,7 +202,7 @@ proptest! {
             socket_tx.set_fragmented_write();
         }
 
-        let mut message_tx = NetworkMessageSink::new(socket_tx, 128);
+        let mut message_tx = NetworkMessageSink::new(socket_tx, 128, None);
         let message_rx = NetworkMessageStream::new(socket_rx, 128, None);
 
         let f_send_all = async {

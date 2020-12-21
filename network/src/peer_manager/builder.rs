@@ -191,9 +191,12 @@ pub struct PeerManagerBuilder {
     enable_proxy_protocol: bool,
     inbound_ip_byte_bucket_rate: usize,
     inbound_ip_byte_bucket_size: usize,
+    outbound_ip_byte_bucket_rate: usize,
+    outbound_ip_byte_bucket_size: usize,
 }
 
 impl PeerManagerBuilder {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         chain_id: ChainId,
         network_context: Arc<NetworkContext>,
@@ -209,6 +212,8 @@ impl PeerManagerBuilder {
         inbound_connection_limit: usize,
         inbound_ip_byte_bucket_rate: usize,
         inbound_ip_byte_bucket_size: usize,
+        outbound_ip_byte_bucket_rate: usize,
+        outbound_ip_byte_bucket_size: usize,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -253,6 +258,8 @@ impl PeerManagerBuilder {
             enable_proxy_protocol,
             inbound_ip_byte_bucket_rate,
             inbound_ip_byte_bucket_size,
+            outbound_ip_byte_bucket_rate,
+            outbound_ip_byte_bucket_size,
         }
     }
 
@@ -362,6 +369,10 @@ impl PeerManagerBuilder {
             NonZeroUsize::new(self.inbound_ip_byte_bucket_size).unwrap(),
             NonZeroUsize::new(self.inbound_ip_byte_bucket_rate).unwrap(),
         );
+        let outbound_rate_limiters = TokenBucketRateLimiter::new(
+            NonZeroUsize::new(self.outbound_ip_byte_bucket_size).unwrap(),
+            NonZeroUsize::new(self.outbound_ip_byte_bucket_rate).unwrap(),
+        );
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -379,6 +390,7 @@ impl PeerManagerBuilder {
             self.max_frame_size,
             pm_context.inbound_connection_limit,
             inbound_rate_limiters,
+            outbound_rate_limiters,
         );
 
         // PeerManager constructor appends a public key to the listen_address.
