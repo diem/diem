@@ -169,7 +169,9 @@ impl Move {
     /// If `source_only` is true, only the source files will be populated. The modules will
     /// not be compiled nor loaded.
     ///
-    /// Currently, `source_only` is set to true for "check" and "publish" and false for "run"
+    /// Currently, `source_only` is set to
+    ///  - true for "check" and "publish" and
+    ///  - false for "run" and "doctor"
     fn prepare_mode(&self, source_only: bool) -> Result<()> {
         self.mode.prepare(&self.get_package_dir(), source_only)
     }
@@ -785,15 +787,18 @@ fn view(args: &Move, file: &str) -> Result<()> {
 /// (5) build/mv_interfaces is consistent with the global storage (TODO)
 fn doctor(args: &Move) -> Result<()> {
     let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
-    let stdlib_modules = vec![];
-    let state = OnDiskStateView::create(storage_dir, &stdlib_modules)?;
+    let state = OnDiskStateView::create(storage_dir, /* compiled_modules */ &[])?;
     let modules = state.get_all_modules()?;
+    let stdlib_modules = args.get_library_modules()?;
+    let dependencies: Vec<_> = modules.values().chain(stdlib_modules.iter()).collect();
     // verify and link each module
     for module in modules.values() {
         if bytecode_verifier::verify_module(module).is_err() {
             bail!("Failed to verify module {:?}", module.self_id())
         }
-        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
+        if bytecode_verifier::DependencyChecker::verify_module(module, dependencies.clone())
+            .is_err()
+        {
             bail!(
                 "Failed to link module {:?} against its dependencies",
                 module.self_id()
@@ -880,6 +885,9 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Doctor {} => doctor(&move_args),
+        Command::Doctor {} => {
+            move_args.prepare_mode(false)?;
+            doctor(&move_args)
+        }
     }
 }
