@@ -16,7 +16,7 @@ use execution_correctness::{ExecutionCorrectness, ExecutionCorrectnessManager};
 use executor_test_helpers::start_storage_service;
 use executor_types::ExecutedTrees;
 use futures::channel::mpsc;
-use state_synchronizer::StateSyncClient;
+use state_synchronizer::StateSynchronizerClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 
@@ -67,7 +67,7 @@ fn build_inserter(
 
     let state_computer = Arc::new(ExecutionProxy::new(
         lec_client,
-        Arc::new(StateSyncClient::new(coordinator_sender)),
+        Arc::new(StateSynchronizerClient::new(coordinator_sender)),
     ));
 
     TreeInserter::new_with_store(

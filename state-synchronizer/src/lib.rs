@@ -9,7 +9,7 @@
 
 use diem_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 use executor_types::ExecutedTrees;
-pub use state_synchronizer::{StateSyncClient, StateSynchronizer};
+pub use state_synchronizer::{StateSynchronizerClient, StateSynchronizer};
 
 pub mod chunk_request;
 pub mod chunk_response;
@@ -31,7 +31,7 @@ mod state_synchronizer;
 #[derive(Clone)]
 pub struct SynchronizerState {
     pub highest_local_li: LedgerInfoWithSignatures,
-    pub synced_trees: ExecutedTrees,
+    synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
     // or the next epoch if the highest local LI is the final LI in the current epoch.
     pub trusted_epoch: EpochState,

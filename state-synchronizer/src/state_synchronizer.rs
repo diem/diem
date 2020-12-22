@@ -120,8 +120,8 @@ impl StateSynchronizer {
         }
     }
 
-    pub fn create_client(&self) -> Arc<StateSyncClient> {
-        Arc::new(StateSyncClient::new(self.coordinator_sender.clone()))
+    pub fn create_client(&self) -> Arc<StateSynchronizerClient> {
+        Arc::new(StateSynchronizerClient::new(self.coordinator_sender.clone()))
     }
 
     /// The function returns a future that is fulfilled when the state synchronizer is
@@ -136,11 +136,11 @@ impl StateSynchronizer {
     }
 }
 
-pub struct StateSyncClient {
+pub struct StateSynchronizerClient {
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
-impl StateSyncClient {
+impl StateSynchronizerClient {
     pub fn new(coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>) -> Self {
         Self { coordinator_sender }
     }

@@ -7,7 +7,7 @@ use crate::{
         helpers::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
         mock_storage::MockStorage,
     },
-    StateSyncClient, StateSynchronizer,
+    StateSynchronizerClient, StateSynchronizer,
 };
 use anyhow::{bail, Result};
 use channel::{diem_channel, message_queues::QueueStyle};
@@ -54,7 +54,7 @@ use tokio::runtime::Runtime;
 struct SynchronizerEnv {
     runtime: Runtime,
     synchronizers: Vec<StateSynchronizer>,
-    clients: Vec<Arc<StateSyncClient>>,
+    clients: Vec<Arc<StateSynchronizerClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
     network_keys: Vec<x25519::PrivateKey>,
