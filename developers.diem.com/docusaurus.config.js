@@ -14,7 +14,7 @@ module.exports = {
       apiKey: 'f0c9dd5d95535c4b0d99aa1fbcb0e949',
       indexName: 'diem_developer_website',
     },
-    image: '/img/shared/logo.png',
+    image: "/img/shared/share-logo.jpg",
     navbar: {
       title: 'Diem Documentation',
     },
