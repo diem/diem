@@ -492,6 +492,8 @@ pub struct GlobalEnv {
     file_idx_to_id: BTreeMap<u16, FileId>,
     /// A set indicating whether a file id is a target or a dependency.
     file_id_is_dep: BTreeSet<FileId>,
+    /// A set indicating whether a module should be translated or not.
+    module_id_should_translate: RefCell<BTreeSet<ModuleId>>,
     /// A special constant location representing an unknown location.
     /// This uses a pseudo entry in `source_files` to be safely represented.
     unknown_loc: Loc,
@@ -586,6 +588,7 @@ impl GlobalEnv {
             file_id_to_idx,
             file_idx_to_id,
             file_id_is_dep: BTreeSet::new(),
+            module_id_should_translate: RefCell::new(BTreeSet::new()),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             module_data: vec![],
@@ -776,6 +779,12 @@ impl GlobalEnv {
         {
             emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
         }
+    }
+
+    pub fn add_module_to_should_translate(&self, module_id: ModuleId) {
+        self.module_id_should_translate
+            .borrow_mut()
+            .insert(module_id);
     }
 
     /// Adds a global invariant to this environment.
@@ -1293,9 +1302,19 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Returns true of this module is from a dependency, i.e. not the target of verification.
+    /// TODO(emmazzz): if the concept of 'dependency' becomes confusing after we introduce the
+    /// third kind of module(which is verified but is not target), change this to `is_target`.
     pub fn is_dependency(&self) -> bool {
         let file_id = self.data.loc.file_id;
         self.env.file_id_is_dep.contains(&file_id)
+    }
+
+    pub fn should_translate(&self) -> bool {
+        let module_id = self.get_id();
+        self.env
+            .module_id_should_translate
+            .borrow()
+            .contains(&module_id)
     }
 
     /// Returns the path to source file of this module.
@@ -2495,6 +2514,9 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Determine whether the function is target of verification.
+    /// TODO(emmazzz): return true if a function is not in the target
+    /// module but should be verified because it modifies a resource
+    /// mentioned in a target global invariant.
     pub fn should_verify(&self, default_scope: VerificationScope) -> bool {
         if self.module_env.is_dependency() {
             // Never generate verify method for functions from dependencies.

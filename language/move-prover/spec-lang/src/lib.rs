@@ -40,24 +40,23 @@ use move_lang::{
 // Entry Point
 
 pub fn run_spec_lang_compiler(
-    targets: Vec<String>,
-    deps: Vec<String>,
+    target_sources: Vec<String>,
+    other_sources: Vec<String>,
     address_opt: Option<&str>,
 ) -> anyhow::Result<GlobalEnv> {
     let address_opt = address_opt
         .map(Address::parse_str)
         .transpose()
         .map_err(|s| anyhow!(s))?;
-
-    // Construct all sources from targets and deps, as we need bytecode for all of them.
-    let mut all_sources = targets;
-    all_sources.extend(deps.clone());
+    // Construct all sources from targets and others, as we need bytecode for all of them.
+    let mut all_sources = target_sources;
+    all_sources.extend(other_sources.clone());
     let mut env = GlobalEnv::new();
     // Parse the program
     let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], address_opt, None)?;
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
-        env.add_source(fname, fsrc, deps.contains(&fname.to_string()));
+        env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));
     }
     // Add any documentation comments found by the Move compiler to the env.
     let (comment_map, addr_opt, parsed_prog) = match pprog_and_comments_res {
@@ -227,6 +226,8 @@ fn run_spec_checker(
             function_infos,
         );
     }
+    // After all specs have been processed, warn about any unused schemas.
+    translator.warn_unused_schemas();
     Ok(())
 }
 

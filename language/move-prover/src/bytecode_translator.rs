@@ -276,6 +276,10 @@ impl<'env> ModuleTranslator<'env> {
         spec_translator.translate_spec_vars();
         spec_translator.translate_spec_funs();
         self.translate_structs();
+        // Don't translate functions if the module doesn't need to be translated
+        if !self.module_env.should_translate() {
+            return;
+        }
         self.translate_functions();
     }
 

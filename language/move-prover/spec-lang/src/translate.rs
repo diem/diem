@@ -348,6 +348,23 @@ impl<'env> Translator<'env> {
                 Type::Error
             })
     }
+
+    // Generate warnings about unused schemas.
+    pub fn warn_unused_schemas(&self) {
+        for name in &self.unused_schema_set {
+            let entry = self.spec_schema_table.get(name).expect("schema defined");
+            let schema_name = name.display_simple(self.env.symbol_pool()).to_string();
+            let module_env = self.env.get_module(entry.module_id);
+            // Warn about unused schema only if the module is a target and schema name
+            // does not start with 'UNUSED'
+            if !module_env.is_dependency() && !schema_name.starts_with("UNUSED") {
+                self.env.warn(
+                    &entry.loc,
+                    &format!("unused schema {}", name.display(self.env.symbol_pool())),
+                );
+            }
+        }
+    }
 }
 
 /// # Builtins
@@ -3552,24 +3569,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             std::mem::take(&mut self.instantiation_map),
             std::mem::take(&mut self.spec_block_infos),
         );
-        // Warn about unused schemas.
-        for name in &self.parent.unused_schema_set {
-            let entry = self
-                .parent
-                .spec_schema_table
-                .get(&name)
-                .expect("schema defined");
-            let schema_name = name.display_simple(self.symbol_pool()).to_string();
-            let module_env = self.parent.env.get_module(entry.module_id);
-            // Warn about unused schema only if the module is a target and schema name
-            // does not start with 'UNUSED'
-            if !module_env.is_dependency() && !schema_name.starts_with("UNUSED") {
-                self.parent.env.warn(
-                    &entry.loc,
-                    &format!("unused schema {}", name.display(self.symbol_pool())),
-                );
-            }
-        }
     }
 }
 
