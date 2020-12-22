@@ -379,6 +379,35 @@ async fn test_get_events() {
 }
 
 #[tokio::test]
+async fn test_get_events_with_proofs() {
+    let result = events_sample();
+    let client = setup(
+        ("get_events_with_proofs", json!(["key", 0, 1])),
+        new_response(result.clone()),
+    );
+
+    let ret = client.get_events_with_proofs("key", 0, 1).await.unwrap();
+
+    assert_eq!(result, to_value(&*ret).unwrap());
+}
+
+#[tokio::test]
+async fn test_get_events_with_proofs_with_known_version() {
+    let result = events_sample();
+    let client = setup(
+        ("get_events_with_proofs", json!(["key", 0, 1, 1])),
+        new_response(result.clone()),
+    );
+
+    let ret = client
+        .get_events_with_proofs_with_known_version("key", 0, 1, 1)
+        .await
+        .unwrap();
+
+    assert_eq!(result, to_value(&*ret).unwrap());
+}
+
+#[tokio::test]
 async fn test_get_currencies() {
     let result = currencies_sample();
     let client = setup(("get_currencies", json!([])), new_response(result.clone()));

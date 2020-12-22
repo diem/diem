@@ -621,16 +621,36 @@ impl DbReader for DiemDB {
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         gauged_api("get_events", || {
-            let version = self
-                .ledger_store
-                .get_latest_ledger_info()?
-                .ledger_info()
-                .version();
-            let events = self
-                .get_events_by_event_key(event_key, start, order, limit, version)?
+            let events_with_proofs =
+                self.get_events_with_proofs(event_key, start, order, limit, None)?;
+            let events = events_with_proofs
                 .into_iter()
                 .map(|e| (e.transaction_version, e.event))
                 .collect();
+            Ok(events)
+        })
+    }
+
+    fn get_events_with_proofs(
+        &self,
+        event_key: &EventKey,
+        start: u64,
+        order: Order,
+        limit: u64,
+        known_version: Option<u64>,
+    ) -> Result<Vec<EventWithProof>> {
+        gauged_api("get_events_with_proofs", || {
+            let version;
+            if let Some(v) = known_version {
+                version = v
+            } else {
+                version = self
+                    .ledger_store
+                    .get_latest_ledger_info()?
+                    .ledger_info()
+                    .version();
+            }
+            let events = self.get_events_by_event_key(event_key, start, order, limit, version)?;
             Ok(events)
         })
     }

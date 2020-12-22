@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2020-12-22 Add `get_events_with_proof` APIs
+
+This allows to verify events since transactions and their proofs are not covering all events.
+
+
 # 2020-12-07 Add a `X-Diem-Chain-Id`, `X-Diem-Ledger-Version` and `X-Diem-Ledger-TimestampUsec` to http response header
 
 The added headers are same with JSON-RPC response json same name fields. They are added for client to know chain id and server's latest block version and timestamp without decoding body json.

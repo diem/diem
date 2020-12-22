@@ -8,7 +8,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::ContractEvent,
+    contract_event::{ContractEvent, EventWithProof},
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     event::EventKey,
@@ -193,6 +193,16 @@ pub trait DbReader: Send + Sync {
         order: Order,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
+
+    /// Returns events by given event key
+    fn get_events_with_proofs(
+        &self,
+        event_key: &EventKey,
+        start: u64,
+        order: Order,
+        limit: u64,
+        known_version: Option<u64>,
+    ) -> Result<Vec<EventWithProof>>;
 
     /// See [`DiemDB::get_block_timestamp`].
     ///

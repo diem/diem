@@ -12,7 +12,7 @@ use diem_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     chain_id::ChainId,
-    contract_event::ContractEvent,
+    contract_event::{ContractEvent, EventWithProof},
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -209,6 +209,17 @@ impl DbReader for MockDiemDB {
             .cloned()
             .collect();
         Ok(events)
+    }
+
+    fn get_events_with_proofs(
+        &self,
+        _key: &EventKey,
+        _start: u64,
+        _order: Order,
+        _limit: u64,
+        _known_version: Option<u64>,
+    ) -> Result<Vec<EventWithProof>> {
+        unimplemented!()
     }
 
     fn get_state_proof(

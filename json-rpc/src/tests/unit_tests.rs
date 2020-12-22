@@ -613,6 +613,86 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
+            "get_events_with_proofs: invalid event_key type",
+            json!({"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": [false, 1, 10], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_events_with_proofs: event_key is not hex-encoded string",
+            json!({"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": ["helloworld", 1, 10], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_events_with_proofs: invalid start param",
+            json!({"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": ["13000000000000000000000000000000000000000a550c18", false, 1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_events_with_proofs: invalid limit param",
+            json!({"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": ["13000000000000000000000000000000000000000a550c18", 1, "invalid"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_events_with_proofs: invalid version param",
+            json!({"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": ["13000000000000000000000000000000000000000a550c18", 1, 1, "invalid"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param version(params[3]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
             "get_account_transaction: invalid account",
             json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["invalid", 1, false], "id": 1}),
             json!({

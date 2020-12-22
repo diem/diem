@@ -171,6 +171,32 @@ impl<R: RetryStrategy> Client<R> {
         self.send(Request::get_events(key, start_seq, limit)).await
     }
 
+    pub async fn get_events_with_proofs(
+        &self,
+        key: &str,
+        start_seq: u64,
+        limit: u64,
+    ) -> Result<Response<Vec<jsonrpc::Event>>, Error> {
+        self.send(Request::get_events_with_proofs(key, start_seq, limit))
+            .await
+    }
+
+    pub async fn get_events_with_proofs_with_known_version(
+        &self,
+        key: &str,
+        start_seq: u64,
+        limit: u64,
+        known_version: u64,
+    ) -> Result<Response<Vec<jsonrpc::Event>>, Error> {
+        self.send(Request::get_events_with_proofs_with_known_version(
+            key,
+            start_seq,
+            limit,
+            known_version,
+        ))
+        .await
+    }
+
     pub async fn get_currencies(&self) -> Result<Response<Vec<jsonrpc::CurrencyInfo>>, Error> {
         self.send(Request::get_currencies()).await
     }

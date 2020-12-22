@@ -129,6 +129,11 @@ pub struct EventView {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct EventWithProofView {
+    pub event_with_proof: BytesView,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum EventDataView {
     #[serde(rename = "burn")]

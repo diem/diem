@@ -9,6 +9,7 @@ use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::xus_tag,
+    contract_event::EventWithProof,
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     proof::TransactionAccumulatorRangeProof,
@@ -17,6 +18,9 @@ use diem_types::{
 };
 use std::ops::Deref;
 use transaction_builder_generated::stdlib;
+
+use diem_json_rpc_types::views::EventView;
+use std::convert::TryInto;
 
 mod node;
 mod testing;
@@ -988,6 +992,171 @@ fn create_test_cases() -> Vec<Test> {
                         assert_ne!(event_type, "unknown", "{}", event);
                     }
                 }
+            },
+        },
+        Test {
+            name: "get_events_with_proofs",
+            run: |env: &mut testing::Env| {
+                let responses = env.send_request(json!([
+                    {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
+                    {"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": json!(["00000000000000000000000000000000000000000a550c18", 0, 3]), "id": 2}
+                ]));
+
+                let resps:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");
+
+                // we need te get the current ledger_info in order to verify the events
+                let ledger_info_view = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
+                let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
+                let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
+                // We want to verify the signatures of the LedgerInfo to be sure it's valid, but
+                // since we don't have a local state with the set of validators unlike an actual client,
+                // we need to get the validator set from the batched get_state_proof call.
+                let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
+                let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+                let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
+                assert!(!some_li.is_empty());
+                // Let's use the first one since the validator set does not change in the tests.
+                let validator_set = &some_li.first().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
+                // And we verify the signature
+                assert!(li.verify_signatures(&validator_set).is_ok());
+
+                // We now need to verify the events using this verified ledger_info:
+                let ledger_info = li.ledger_info();
+                let data = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"].as_array().unwrap();
+                let mut events:Vec<EventView> = vec![];
+                for d in  data.iter() {
+                    let bcs_data = d["event_with_proof"].as_str().unwrap();
+                    let event:EventWithProof = bcs::from_bytes(&hex::decode(&bcs_data).unwrap()).unwrap();
+                    let hash = event.event.hash();
+
+                    // We verify the proof of the event
+                    assert!(event.proof.verify(ledger_info, hash, event.transaction_version, event.event_index).is_ok());
+
+                    // We can now use our verified events
+                    events.push((event.transaction_version, event.event).try_into().unwrap());
+                }
+
+                assert!(events.len()==3);
+                // Testing it's the right events
+                assert_eq!(
+                    json!(events),
+                    json!([
+                        {
+                            "data":{
+                                "created_address":"0000000000000000000000000a550c18",
+                                "role_id":0,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":0,
+                            "transaction_version":0
+                        },
+                        {
+                            "data":{
+                                "created_address":"0000000000000000000000000b1e55ed",
+                                "role_id":1,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":1,
+                            "transaction_version":0
+                        },
+                        {
+                            "data":{
+                                "created_address":"b5b333aabbf92e78524e2129b722eaca",
+                                "role_id":3,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":2,
+                            "transaction_version":0
+                        }
+                    ]),
+                    "{:?}",
+                    events
+                )
+            },
+        },
+        Test {
+            name: "get_events_with_proofs with known version",
+            run: |env: &mut testing::Env| {
+                let resp = env.send("get_metadata", json!([]));
+                let sp_resp = env.send("get_state_proof", json!([resp.diem_ledger_version]));
+                let state_proof = sp_resp.result.unwrap();
+                let info_hex = state_proof["ledger_info_with_signatures"].as_str().unwrap();
+                let info:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&info_hex).unwrap()).unwrap();
+                let known_version = info.deref().ledger_info().version();
+
+                let responses = env.send("get_events_with_proofs",json!(["00000000000000000000000000000000000000000a550c18", 0, 3, known_version]));
+                // We want to verify the signatures of the LedgerInfo.
+                // since we don't have a local state with the set of validators unlike an actual client,
+                // we need to get the validator set from the batched get_state_proof call.
+                let ep_cp = state_proof["epoch_change_proof"].as_str().unwrap();
+                let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+                let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
+                assert!(!some_li.is_empty());
+                // Let's use the first one since the validator set does not change in the tests.
+                let validator_set = &some_li.first().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
+                // And we verify the signature
+                assert!(info.verify_signatures(&validator_set).is_ok());
+
+                // We now need to verify the events using this verified ledger_info:
+                let ledger_info = info.ledger_info();
+                let data_res = responses.result.unwrap();
+                let data = data_res.as_array().unwrap();
+
+                let mut events:Vec<EventView> = vec![];
+                for d in  data.iter() {
+                    let bcs_data = d["event_with_proof"].as_str().unwrap();
+                    let event:EventWithProof = bcs::from_bytes(&hex::decode(&bcs_data).unwrap()).unwrap();
+                    let hash = event.event.hash();
+
+                    // We verify the proof of the event
+                    assert!(event.proof.verify(ledger_info, hash, event.transaction_version, event.event_index).is_ok());
+
+                    // We can now use our verified events
+                    events.push((event.transaction_version, event.event).try_into().unwrap());
+                }
+
+                assert!(events.len()==3);
+                // Testing it's the right events
+                assert_eq!(
+                    json!(events),
+                    json!([
+                        {
+                            "data":{
+                                "created_address":"0000000000000000000000000a550c18",
+                                "role_id":0,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":0,
+                            "transaction_version":0
+                        },
+                        {
+                            "data":{
+                                "created_address":"0000000000000000000000000b1e55ed",
+                                "role_id":1,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":1,
+                            "transaction_version":0
+                        },
+                        {
+                            "data":{
+                                "created_address":"b5b333aabbf92e78524e2129b722eaca",
+                                "role_id":3,
+                                "type":"createaccount"
+                            },
+                            "key":"00000000000000000000000000000000000000000a550c18",
+                            "sequence_number":2,
+                            "transaction_version":0
+                        }
+                    ]),
+                    "{:?}",
+                    events
+                )
             },
         },
         Test {

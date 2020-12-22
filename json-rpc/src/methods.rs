@@ -6,7 +6,7 @@ use crate::{
     errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
-        MetadataView, StateProofView, TransactionView, TransactionsProofsView,
+        EventWithProofView, MetadataView, StateProofView, TransactionView, TransactionsProofsView,
         TransactionsWithProofsView,
     },
 };
@@ -491,17 +491,58 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
 
     service.validate_page_size_limit(limit as usize)?;
 
-    let events_with_proof = service
+    let events_raw = service
         .db
         .get_events(&event_key, start, Order::Ascending, limit)?;
 
     let req_version = request.version();
-    let events = events_with_proof
+    let events = events_raw
         .into_iter()
         .filter(|(version, _event)| version <= &req_version)
         .map(|event| event.try_into())
         .collect::<Result<Vec<EventView>>>()?;
     Ok(events)
+}
+
+/// Returns events by given access path along with their proofs
+async fn get_events_with_proofs(
+    service: JsonRpcService,
+    request: JsonRpcRequest,
+) -> Result<Vec<EventWithProofView>> {
+    let event_key = request.parse_event_key(0, "event key")?;
+
+    let start: u64 = request.parse_param(1, "start")?;
+    let limit: u64 = request.parse_param(2, "limit")?;
+
+    let version: u64 = if request.params.len() == 4 {
+        request.parse_version_param(3, "version")?
+    } else {
+        request.version()
+    };
+
+    service.validate_page_size_limit(limit as usize)?;
+
+    let events_with_proofs = service.db.get_events_with_proofs(
+        &event_key,
+        start,
+        Order::Ascending,
+        limit,
+        Some(version),
+    )?;
+
+    let req_version = request.version();
+    let mut results = vec![];
+
+    for event in events_with_proofs
+        .into_iter()
+        .filter(|e| e.transaction_version <= req_version)
+    {
+        results.push(EventWithProofView {
+            event_with_proof: bcs::to_bytes(&event)?.into(),
+        });
+    }
+
+    Ok(results)
 }
 
 /// Returns meta information about supported currencies
@@ -665,6 +706,13 @@ pub(crate) fn build_registry() -> RpcRegistry {
         0
     );
     register_rpc_method!(registry, "get_events", get_events, 3, 0);
+    register_rpc_method!(
+        registry,
+        "get_events_with_proofs",
+        get_events_with_proofs,
+        3,
+        1
+    );
     register_rpc_method!(registry, "get_currencies", get_currencies, 0, 0);
     register_rpc_method!(registry, "get_network_status", get_network_status, 0, 0);
 
