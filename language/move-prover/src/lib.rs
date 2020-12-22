@@ -35,8 +35,12 @@ use log::{debug, info, warn};
 use move_lang::find_move_filenames;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use spec_lang::env::ModuleId;
-use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
+use spec_lang::{
+    code_writer::CodeWriter,
+    emit, emitln,
+    env::{GlobalEnv, ModuleId},
+    run_spec_lang_compiler,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
