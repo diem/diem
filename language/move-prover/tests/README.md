@@ -11,6 +11,10 @@ configuring the prover are not set as described there, all tests and this direct
 those files, use `UPBL=1 cargo test`. To update or test a single file, you can also provide a fragment of the move
 source path.
 
+*Note*: there are two sets of tests here. The basic ones are those in `./sources` and in `../../stdlib`. Those are run
+by default and are merge blockers for submitting changes. An extended set of tests is found `./xsources`. Those
+are only run if the environment variable `MVP_TEST_X=1` is set.
+
 There is a convention for test cases under this directory. In general, there are two kinds of test cases, which can be
 mixed in a file. The first type of test cases are "correct" Move functions which are expected to be proven so.
 Another type of test cases are incorrect Move functions which are expected to be disproven, with the created errors

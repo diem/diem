@@ -13,11 +13,13 @@ use move_prover_test_utils::{
     baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var,
 };
 
+use datatest_stable::Requirements;
 #[allow(unused_imports)]
 use log::{debug, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
+const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
 const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
 
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
@@ -185,26 +187,13 @@ fn cvc4blacklisted(path: &Path) -> bool {
     false
 }
 
-fn test_runner_stdlib(path: &Path) -> datatest_stable::Result<()> {
-    // Gives the standard test runner a different name in test output, which is useful because
-    // the datatest infrastructure drops `..` in test file paths.
-    test_runner(path)
-}
-
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
     let (base_flags, baseline_path, modifier) = if path_str.contains("../stdlib/") {
         (STDLIB_FLAGS, None, "std_")
-    } else if path_str.contains("tests/sources/functional/")
-        || path_str.contains("tests/sources/regression/")
-    {
-        (STDLIB_FLAGS, Some(path.with_extension("exp")), "func_")
     } else {
-        return Err(anyhow!(
-            "do not know how to run tests for `{}` because it's directory is not configured",
-            path_str
-        ));
+        (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")
     };
     let mut flags = base_flags.iter().map(|s| (*s).to_string()).collect_vec();
     // Add any flags specified in the source.
@@ -223,13 +212,29 @@ fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Optio
     Ok((flags, baseline_path))
 }
 
-datatest_stable::harness!(
-    // Run tests for the content of our tests directory.
-    test_runner,
-    "tests/sources",
-    r".*\.move$",
-    // Run tests for the content of the stdlib directory.
-    test_runner_stdlib,
-    "../stdlib",
-    r".*\.move$"
-);
+// Test entry point based on datatest runner.
+fn main() {
+    let mut reqs = vec![];
+    if read_env_var(ENV_TEST_EXTENDED) == "1" {
+        reqs.push(Requirements::new(
+            test_runner,
+            "extended".to_string(),
+            "tests/xsources".to_string(),
+            r".*\.move$".to_string(),
+        ));
+    } else {
+        reqs.push(Requirements::new(
+            test_runner,
+            "functional".to_string(),
+            "tests/sources".to_string(),
+            r".*\.move$".to_string(),
+        ));
+        reqs.push(Requirements::new(
+            test_runner,
+            "stdlib".to_string(),
+            "../stdlib".to_string(),
+            r".*\.move$".to_string(),
+        ));
+    }
+    datatest_stable::runner(&reqs);
+}
