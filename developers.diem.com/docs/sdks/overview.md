@@ -1,6 +1,7 @@
 ---
 id: overview
 title: SDKs
+hide_right_sidebar: true
 ---
 
 Our official SDKs are collections of development resources like libraries, code samples, and documentation curated to help you build your own projects on the Diem platform.

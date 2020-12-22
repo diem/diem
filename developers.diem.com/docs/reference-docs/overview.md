@@ -1,6 +1,7 @@
 ---
 id: overview
 title: Reference Documentation
+hide_right_sidebar: true
 ---
 
 Reference documentation generated from project source can be found below.

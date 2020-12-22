@@ -1,6 +1,7 @@
 ---
 id: overview
 title: Technical Papers
+hide_right_sidebar: true
 ---
 
 Our technical papers take a closer look at some of Diem’s core components. Choose a paper below to view and download:
