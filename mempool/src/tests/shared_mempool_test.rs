@@ -39,6 +39,7 @@ use network::{
     protocols::network::{NewNetworkEvents, NewNetworkSender},
     DisconnectReason, ProtocolId,
 };
+use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
@@ -204,8 +205,10 @@ impl SharedMempoolNetwork {
         let mut smp = Self::default();
         let mut peers = vec![];
 
-        for _ in 0..validator_nodes_count {
-            let mut config = NodeConfig::random();
+        let mut rng = StdRng::from_seed([0u8; 32]);
+        for idx in 0..validator_nodes_count {
+            let mut config =
+                NodeConfig::random_with_template(idx as u32, &NodeConfig::default(), &mut rng);
             config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
             let peer_id = config.validator_network.as_ref().unwrap().peer_id();
             config.mempool.shared_mempool_batch_size = broadcast_batch_size;
@@ -237,7 +240,9 @@ impl SharedMempoolNetwork {
         let full_node = PeerId::random();
 
         // validator config
-        let mut config = NodeConfig::random();
+        let mut rng = StdRng::from_seed([0u8; 32]);
+        let mut config = NodeConfig::random_with_template(0, &NodeConfig::default(), &mut rng);
+
         config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         config.mempool.shared_mempool_backoff_interval_ms = 50;
         // set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this)
@@ -251,7 +256,7 @@ impl SharedMempoolNetwork {
         init_single_shared_mempool(&mut smp, validator, NetworkId::vfn_network(), config);
 
         // full node
-        let mut fn_config = NodeConfig::random();
+        let mut fn_config = NodeConfig::random_with_template(1, &NodeConfig::default(), &mut rng);
         fn_config.base.role = RoleType::FullNode;
         fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         fn_config.mempool.shared_mempool_backoff_interval_ms = 50;
