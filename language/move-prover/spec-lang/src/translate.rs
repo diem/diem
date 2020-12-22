@@ -40,8 +40,8 @@ use vm::{
 use crate::{
     ast::{
         Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, ModuleName, Operation,
-        PropertyBag, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl,
-        SpecVarDecl, Value,
+        PropertyBag, PropertyValue, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget,
+        SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
         is_pragma_valid_for_block, is_property_valid_for_condition, FieldId, FunId, FunctionData,
@@ -1858,15 +1858,23 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
             let prop_name = self.symbol_pool().make(&prop.value.name.value);
             let value = if let Some(pv) = &prop.value.value {
-                let mut et = ExpTranslator::new(self);
-                if let Some((v, _)) = et.translate_value(pv) {
-                    v
-                } else {
-                    // Error reported
-                    continue;
+                match pv {
+                    EA::PragmaValue::Literal(ev) => {
+                        let mut et = ExpTranslator::new(self);
+                        if let Some((v, _)) = et.translate_value(ev) {
+                            PropertyValue::Value(v)
+                        } else {
+                            // Error reported
+                            continue;
+                        }
+                    }
+                    EA::PragmaValue::Ident(ema) => match self.module_access_to_parts(ema) {
+                        (None, sym) => PropertyValue::Symbol(sym),
+                        _ => PropertyValue::QualifiedSymbol(self.module_access_to_qualified(ema)),
+                    },
                 }
             } else {
-                Value::Bool(true)
+                PropertyValue::Value(Value::Bool(true))
             };
             props.insert(prop_name, value);
         }
@@ -1875,7 +1883,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
     fn add_bool_property(&self, mut properties: PropertyBag, name: &str, val: bool) -> PropertyBag {
         let sym = self.symbol_pool().make(name);
-        properties.insert(sym, Value::Bool(val));
+        properties.insert(sym, PropertyValue::Value(Value::Bool(val)));
         properties
     }
 }

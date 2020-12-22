@@ -161,7 +161,15 @@ pub struct Condition {
 /// # Specifications
 
 /// A set of properties stemming from pragmas.
-pub type PropertyBag = BTreeMap<Symbol, Value>;
+pub type PropertyBag = BTreeMap<Symbol, PropertyValue>;
+
+/// The value of a property.
+#[derive(Debug, Clone)]
+pub enum PropertyValue {
+    Value(Value),
+    Symbol(Symbol),
+    QualifiedSymbol(QualifiedSymbol),
+}
 
 /// Specification and properties associated with a language item.
 #[derive(Debug, Clone, Default)]

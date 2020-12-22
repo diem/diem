@@ -35,8 +35,8 @@ use vm::{
 
 use crate::{
     ast::{
-        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo,
-        SpecFunDecl, SpecVarDecl, Value,
+        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
+        SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
     symbol::{Symbol, SymbolPool},
     translate::SpecBlockContext,
@@ -1163,7 +1163,7 @@ impl GlobalEnv {
     /// Returns true if the boolean property is true.
     pub fn is_property_true(&self, properties: &PropertyBag, name: &str) -> Option<bool> {
         let sym = &self.symbol_pool().make(name);
-        if let Some(Value::Bool(b)) = properties.get(sym) {
+        if let Some(PropertyValue::Value(Value::Bool(b))) = properties.get(sym) {
             return Some(*b);
         }
         None
@@ -1172,7 +1172,7 @@ impl GlobalEnv {
     /// Returns the value of a number property.
     pub fn get_num_property(&self, properties: &PropertyBag, name: &str) -> Option<usize> {
         let sym = &self.symbol_pool().make(name);
-        if let Some(Value::Number(n)) = properties.get(sym) {
+        if let Some(PropertyValue::Value(Value::Number(n))) = properties.get(sym) {
             return n.to_usize();
         }
         None

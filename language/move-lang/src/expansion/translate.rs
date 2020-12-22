@@ -904,8 +904,17 @@ fn pragma_property(context: &mut Context, sp!(loc, pp_): P::PragmaProperty) -> E
         name,
         value: pv_opt,
     } = pp_;
-    let value = pv_opt.and_then(|pv| value(context, pv));
+    let value = pv_opt.and_then(|pv| pragma_value(context, pv));
     sp(loc, E::PragmaProperty_ { name, value })
+}
+
+fn pragma_value(context: &mut Context, pv: P::PragmaValue) -> Option<E::PragmaValue> {
+    match pv {
+        P::PragmaValue::Literal(v) => value(context, v).map(E::PragmaValue::Literal),
+        P::PragmaValue::Ident(ma) => {
+            module_access(context, Access::Term, ma).map(E::PragmaValue::Ident)
+        }
+    }
 }
 
 //**************************************************************************************************

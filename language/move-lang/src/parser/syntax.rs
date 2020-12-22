@@ -2210,7 +2210,7 @@ fn parse_spec_pragma<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMemb
 }
 
 // Parse a specification pragma property:
-//    SpecPragmaProperty = <Identifier> ( "=" Value )?
+//    SpecPragmaProperty = <Identifier> ( "=" Value | ModuleAccess )?
 fn parse_spec_property<'input>(tokens: &mut Lexer<'input>) -> Result<PragmaProperty, Error> {
     let start_loc = tokens.start_loc();
     let name = parse_identifier(tokens)?;
@@ -2223,17 +2223,29 @@ fn parse_spec_property<'input>(tokens: &mut Lexer<'input>) -> Result<PragmaPrope
             | Tok::U64Value
             | Tok::U128Value
             | Tok::ByteStringValue
-            | Tok::AddressValue => Some(parse_value(tokens)?),
+            | Tok::AddressValue
+                if !tokens
+                    .lookahead()
+                    .map(|tok| tok == Tok::ColonColon)
+                    .unwrap_or(false) =>
+            {
+                Some(PragmaValue::Literal(parse_value(tokens)?))
+            }
             Tok::NumValue => {
                 let i = parse_num(tokens)?;
-                Some(spanned(
+                Some(PragmaValue::Literal(spanned(
                     tokens.file_name(),
                     start_loc,
                     tokens.previous_end_loc(),
                     Value_::U128(i),
-                ))
+                )))
             }
-            _ => return Err(unexpected_token_error(tokens, "a value")),
+            _ => {
+                // Parse as a module access for a possibly qualified identifier
+                Some(PragmaValue::Ident(parse_module_access(tokens, || {
+                    "an identifier as pragma value".to_string()
+                })?))
+            }
         }
     } else {
         None

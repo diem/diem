@@ -1,0 +1,7 @@
+error: property `bar` is not valid in this context
+
+   ┌── tests/sources/pragmas_err.move:7:9 ───
+   │
+ 7 │         pragma bar = true;
+   │         ^^^^^^^^^^^^^^^^^^
+   │
