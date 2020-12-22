@@ -29,7 +29,7 @@ mod state_synchronizer;
 /// version we have a proof for), `synced_trees` is used for retrieving missing chunks
 /// for the local storage.
 #[derive(Clone)]
-pub struct SynchronizerState {
+pub struct SynchronizationState {
     pub highest_local_li: LedgerInfoWithSignatures,
     synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
@@ -37,7 +37,7 @@ pub struct SynchronizerState {
     pub trusted_epoch: EpochState,
 }
 
-impl SynchronizerState {
+impl SynchronizationState {
     pub fn new(
         highest_local_li: LedgerInfoWithSignatures,
         synced_trees: ExecutedTrees,
@@ -48,7 +48,7 @@ impl SynchronizerState {
             .next_epoch_state()
             .cloned()
             .unwrap_or(current_epoch_state);
-        SynchronizerState {
+        SynchronizationState {
             highest_local_li,
             synced_trees,
             trusted_epoch,

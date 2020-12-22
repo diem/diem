@@ -9,7 +9,7 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     request_manager::{PeerScoreUpdateType, RequestManager},
-    SynchronizerState,
+    SynchronizationState,
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{
@@ -60,7 +60,7 @@ pub enum CoordinatorMessage {
         // callback for recipient to send response back to this sender
         oneshot::Sender<Result<CommitResponse>>,
     ),
-    GetState(oneshot::Sender<SynchronizerState>),
+    GetState(oneshot::Sender<SynchronizationState>),
     // Receive a notification via a given channel when coordinator is initialized.
     WaitInitialize(oneshot::Sender<Result<()>>),
 }
@@ -118,7 +118,7 @@ impl PendingLedgerInfos {
         }
     }
 
-    fn update(&mut self, sync_state: &SynchronizerState, chunk_limit: u64) {
+    fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) {
         let highest_committed_li = sync_state.highest_local_li.ledger_info().version();
         let highest_synced = sync_state.highest_version_in_local_storage();
 
@@ -166,7 +166,7 @@ pub(crate) struct SyncCoordinator<T> {
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
-    local_state: SynchronizerState,
+    local_state: SynchronizationState,
     // config
     config: StateSyncConfig,
     // role of node
@@ -202,7 +202,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         config: StateSyncConfig,
         upstream_config: UpstreamConfig,
         executor_proxy: T,
-        initial_state: SynchronizerState,
+        initial_state: SynchronizationState,
     ) -> Self {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
         let retry_timeout_val = match role {
@@ -598,7 +598,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         Ok(())
     }
 
-    fn get_state(&mut self, callback: oneshot::Sender<SynchronizerState>) {
+    fn get_state(&mut self, callback: oneshot::Sender<SynchronizationState>) {
         if let Err(e) = self.sync_state_with_local_storage() {
             error!(
                 "[state sync] failed to sync with local storage for get_state request: {:?}",

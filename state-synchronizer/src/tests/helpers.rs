@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, SynchronizerState,
+    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, SynchronizationState,
 };
 use anyhow::Result;
 use diem_config::config::HANDSHAKE_VERSION;
@@ -106,7 +106,7 @@ impl MockExecutorProxy {
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_local_storage_state(&self) -> Result<SynchronizerState> {
+    fn get_local_storage_state(&self) -> Result<SynchronizationState> {
         Ok(self.storage.read().get_local_storage_state())
     }
 

@@ -36,7 +36,7 @@ use tokio::{
 };
 
 #[cfg(test)]
-use crate::SynchronizerState;
+use crate::SynchronizationState;
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -209,7 +209,7 @@ impl StateSynchronizerClient {
     /// Returns information about StateSynchronizer internal state. This should only
     /// be used by tests.
     #[cfg(test)]
-    pub fn get_state(&self) -> impl Future<Output = Result<SynchronizerState>> {
+    pub fn get_state(&self) -> impl Future<Output = Result<SynchronizationState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         async move {
