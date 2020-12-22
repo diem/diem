@@ -4,7 +4,7 @@
 use crate::{
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
-    SynchronizationState,
+    state_synchronizer::SynchronizationState,
 };
 use anyhow::{format_err, Result};
 use diem_logger::prelude::*;

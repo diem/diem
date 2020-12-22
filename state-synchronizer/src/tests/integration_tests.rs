@@ -3,11 +3,11 @@
 
 use crate::{
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
+    state_synchronizer::{StateSynchronizer, StateSynchronizerClient},
     tests::{
         helpers::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
         mock_storage::MockStorage,
     },
-    StateSynchronizer, StateSynchronizerClient,
 };
 use anyhow::{bail, Result};
 use channel::{diem_channel, message_queues::QueueStyle};

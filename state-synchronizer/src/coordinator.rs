@@ -9,7 +9,7 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     request_manager::{PeerScoreUpdateType, RequestManager},
-    SynchronizationState,
+    state_synchronizer::SynchronizationState,
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{
