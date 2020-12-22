@@ -5,7 +5,6 @@ use crate::{
     counters,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
-    SynchronizerState,
 };
 use anyhow::{format_err, Result};
 use diem_config::{
@@ -36,13 +35,15 @@ use tokio::{
     time::timeout,
 };
 
+#[cfg(test)]
+use crate::SynchronizerState;
+
 pub struct StateSynchronizer {
     _runtime: Runtime,
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
 impl StateSynchronizer {
-    /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
         network: Vec<(
             NodeNetworkId,
@@ -121,7 +122,9 @@ impl StateSynchronizer {
     }
 
     pub fn create_client(&self) -> Arc<StateSynchronizerClient> {
-        Arc::new(StateSynchronizerClient::new(self.coordinator_sender.clone()))
+        Arc::new(StateSynchronizerClient::new(
+            self.coordinator_sender.clone(),
+        ))
     }
 
     /// The function returns a future that is fulfilled when the state synchronizer is
@@ -167,10 +170,9 @@ impl StateSynchronizerClient {
         }
     }
 
-    /// Notifies state synchronizer about new version
+    /// Notifies state synchronizer about newly committed transactions.
     pub fn commit(
         &self,
-        // *successfully* committed transactions
         committed_txns: Vec<Transaction>,
         reconfig_events: Vec<ContractEvent>,
     ) -> impl Future<Output = Result<()>> {
@@ -204,7 +206,9 @@ impl StateSynchronizerClient {
         }
     }
 
-    /// Returns information about StateSynchronizer internal state
+    /// Returns information about StateSynchronizer internal state. This should only
+    /// be used by tests.
+    #[cfg(test)]
     pub fn get_state(&self) -> impl Future<Output = Result<SynchronizerState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();

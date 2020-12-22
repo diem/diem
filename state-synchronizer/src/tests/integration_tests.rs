@@ -7,7 +7,7 @@ use crate::{
         helpers::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
         mock_storage::MockStorage,
     },
-    StateSynchronizerClient, StateSynchronizer,
+    StateSynchronizer, StateSynchronizerClient,
 };
 use anyhow::{bail, Result};
 use channel::{diem_channel, message_queues::QueueStyle};

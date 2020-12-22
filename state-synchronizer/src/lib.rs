@@ -9,7 +9,7 @@
 
 use diem_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 use executor_types::ExecutedTrees;
-pub use state_synchronizer::{StateSynchronizerClient, StateSynchronizer};
+pub use state_synchronizer::{StateSynchronizer, StateSynchronizerClient};
 
 pub mod chunk_request;
 pub mod chunk_response;
