@@ -169,20 +169,41 @@ impl Move {
     /// If `source_only` is true, only the source files will be populated. The modules will
     /// not be compiled nor loaded.
     ///
-    /// Currently, `source_only` is set to
-    ///  - true for "check" and "publish" and
-    ///  - false for "run" and "doctor"
-    fn prepare_mode(&self, source_only: bool) -> Result<()> {
-        self.mode.prepare(&self.get_package_dir(), source_only)
+    /// Currently, `source_only` is set to true for `check` only and false for `publish` and `run`
+    pub fn prepare_mode(&self, source_only: bool) -> Result<()> {
+        self.mode.prepare(&self.get_package_dir(), source_only)?;
+
+        // prepare the storage if are not only caring about the source files
+        if !source_only {
+            self.preload_storage()?;
+        }
+
+        Ok(())
     }
 
-    /// This collect the dependencies for compiling a script or module. The dependencies
-    /// include not only the loaded libraries, but also the interface files generated from
-    /// prior "publish" commands.
-    fn get_compilation_deps(&self) -> Result<Vec<String>> {
-        let mut src_dirs = self.mode.source_files(&self.get_package_dir())?;
-        src_dirs.push(interface_files_dir(&self.build_dir)?);
-        Ok(src_dirs)
+    /// Generate interface files for published files
+    pub fn generate_interface_files(&self) -> Result<()> {
+        move_lang::generate_interface_files(
+            &[self.storage_dir.clone()],
+            Some(self.build_dir.clone()),
+            false,
+        )?;
+        Ok(())
+    }
+
+    pub fn interface_files_dir(&self) -> Result<String> {
+        let mut path = PathBuf::from(self.build_dir.clone());
+        path.push(MOVE_COMPILED_INTERFACES_DIR);
+        let dir = path.into_os_string().into_string().unwrap();
+        maybe_create_dir(&dir)?;
+        Ok(dir)
+    }
+
+    /// This collects the dependencies for compiling a script or module. The dependencies are
+    /// essentially the move interface files generated from either prior `publish` commands or
+    /// preloaded libraries.
+    pub fn get_compilation_deps(&self) -> Result<Vec<String>> {
+        Ok(vec![self.interface_files_dir()?])
     }
 
     /// This collects only the compiled modules from dependent libraries. The modules
@@ -190,6 +211,25 @@ impl Move {
     /// current implementation.
     fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
         self.mode.compiled_modules(&self.get_package_dir())
+    }
+
+    /// Preload the storage with library modules (if such modules are not available in the storage)
+    fn preload_storage(&self) -> Result<()> {
+        let storage_dir = maybe_create_dir(&self.storage_dir)?;
+        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &[])?;
+
+        let lib_modules = self.get_library_modules()?;
+        let new_modules: Vec<_> = lib_modules
+            .into_iter()
+            .filter(|m| !view.has_module(&m.self_id()))
+            .collect();
+
+        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &new_modules)?;
+        if view.save_modules()? {
+            self.generate_interface_files()?;
+        }
+
+        Ok(())
     }
 }
 
@@ -199,24 +239,6 @@ fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
     if !dir.exists() {
         fs::create_dir_all(dir)?
     }
-    Ok(dir)
-}
-
-/// Generate interface files for published files
-fn generate_interface_files(args: &Move) -> Result<()> {
-    move_lang::generate_interface_files(
-        &[args.storage_dir.clone()],
-        Some(args.build_dir.clone()),
-        false,
-    )?;
-    Ok(())
-}
-
-fn interface_files_dir(build_dir: &str) -> Result<String> {
-    let mut path = PathBuf::from(build_dir);
-    path.push(MOVE_COMPILED_INTERFACES_DIR);
-    let dir = path.into_os_string().into_string().unwrap();
-    maybe_create_dir(&dir)?;
     Ok(dir)
 }
 
@@ -251,7 +273,7 @@ fn shadow_storage(
         }
     }
 
-    let interface_dir = interface_files_dir(&args.build_dir)?;
+    let interface_dir = args.interface_files_dir()?;
     let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
         let module_str = path.file_stem().unwrap().to_str().unwrap();
         let module = Identifier::new(module_str.to_string()).unwrap();
@@ -316,7 +338,7 @@ fn publish(
     files: &[String],
     republish: bool,
     ignore_breaking_changes: bool,
-) -> Result<OnDiskStateView> {
+) -> Result<()> {
     let storage_dir = maybe_create_dir(&args.storage_dir)?;
 
     if args.verbose {
@@ -358,7 +380,7 @@ fn publish(
         let view = OnDiskStateView::create(storage_dir.to_path_buf(), &[])?;
         for m in &modules {
             let id = m.self_id();
-            if let Ok(old_m) = view.get_compiled_module(&m.self_id()) {
+            if let Ok(old_m) = view.get_compiled_module(&id) {
                 let old_api = Module::new(&old_m);
                 let new_api = Module::new(m);
                 let compat = Compatibility::check(&old_api, &new_api);
@@ -379,7 +401,12 @@ fn publish(
         }
     }
 
-    OnDiskStateView::create(storage_dir.to_path_buf(), &modules)
+    let state = OnDiskStateView::create(storage_dir.to_path_buf(), &modules)?;
+    if state.save_modules()? {
+        args.generate_interface_files()?;
+    }
+
+    Ok(())
 }
 
 fn run(
@@ -428,11 +455,6 @@ fn run(
             }
         }
 
-        // TODO: run `move publish` here instead?
-        // preload the modules to the storage
-        let state =
-            OnDiskStateView::create(storage_dir.to_path_buf(), &args.get_library_modules()?)?;
-        state.save_modules()?;
         Ok((
             OnDiskStateView::create(storage_dir.to_path_buf(), &[])?,
             script_opt,
@@ -503,7 +525,7 @@ fn run(
         if args.verbose {
             explain_effects(&effects, &state)?
         }
-        maybe_commit_effects(&args, !dry_run, Some(effects), &state)
+        maybe_commit_effects(!dry_run, Some(effects), &state)
     }
 }
 
@@ -559,11 +581,12 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
 
 /// Commit the resources and modules modified by a transaction to disk
 fn maybe_commit_effects(
-    args: &Move,
     commit: bool,
     effects_opt: Option<TransactionEffects>,
     state: &OnDiskStateView,
 ) -> Result<()> {
+    // similar to explain effects, all module publishing happens via save_modules(), so effects
+    // shouldn't contain modules
     if commit {
         if let Some(effects) = effects_opt {
             for (addr, writes) in effects.resources {
@@ -589,12 +612,6 @@ fn maybe_commit_effects(
                 )?
             }
         }
-
-        let modules_saved = state.save_modules()?;
-        if modules_saved {
-            generate_interface_files(args)?;
-        }
-        state.save_modules()?;
     } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
         println!("Discarding changes; re-run without --dry-run if you would like to keep them.")
     }
@@ -789,16 +806,12 @@ fn doctor(args: &Move) -> Result<()> {
     let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
     let state = OnDiskStateView::create(storage_dir, /* compiled_modules */ &[])?;
     let modules = state.get_all_modules()?;
-    let stdlib_modules = args.get_library_modules()?;
-    let dependencies: Vec<_> = modules.values().chain(stdlib_modules.iter()).collect();
     // verify and link each module
     for module in modules.values() {
         if bytecode_verifier::verify_module(module).is_err() {
             bail!("Failed to verify module {:?}", module.self_id())
         }
-        if bytecode_verifier::DependencyChecker::verify_module(module, dependencies.clone())
-            .is_err()
-        {
+        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
                 module.self_id()
@@ -837,14 +850,13 @@ fn main() -> Result<()> {
             no_republish,
             ignore_breaking_changes,
         } => {
-            move_args.prepare_mode(true)?;
-            let state = publish(
+            move_args.prepare_mode(false)?;
+            publish(
                 &move_args,
                 source_files,
                 !*no_republish,
                 *ignore_breaking_changes,
-            )?;
-            maybe_commit_effects(&move_args, /* commit = */ true, None, &state)
+            )
         }
         Command::Run {
             script_file,
@@ -885,9 +897,6 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Doctor {} => {
-            move_args.prepare_mode(false)?;
-            doctor(&move_args)
-        }
+        Command::Doctor {} => doctor(&move_args),
     }
 }

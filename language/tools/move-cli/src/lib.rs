@@ -159,6 +159,11 @@ impl OnDiskStateView {
         }
     }
 
+    /// Check if a module at `addr`/`module_id` exists
+    pub fn has_module(&self, module_id: &ModuleId) -> bool {
+        self.get_module_path(module_id).exists()
+    }
+
     /// Deserialize and return the module stored on-disk at `addr`/`module_id`
     pub fn get_compiled_module(&self, module_id: &ModuleId) -> Result<CompiledModule> {
         CompiledModule::deserialize(
