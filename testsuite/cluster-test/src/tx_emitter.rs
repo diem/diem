@@ -408,10 +408,17 @@ impl TxEmitter {
         let balance = retrieve_account_balance(&client, faucet_account.address).await?;
         for b in balance {
             if b.currency.eq(XUS_NAME) {
-                info!(
-                    "DD account current balances are {}, requested {} coins",
-                    b.amount, coins_total
-                );
+                if b.amount < coins_total {
+                    warn!(
+                        "DD account current balance {} is low, requested {} coins",
+                        b.amount, coins_total
+                    );
+                } else {
+                    info!(
+                        "DD account current balances are {}, requested {} coins",
+                        b.amount, coins_total
+                    );
+                }
                 break;
             }
         }
