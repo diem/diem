@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.34"
 async-trait = "0.1.42"
 byteorder = { version = "1.3.4", default-features = false }
-bytes = "0.5.6"
+bytes = "0.6.0"
 fail = "0.4.0"
 futures = "0.3.8"
 itertools = { version = "0.9.0", default-features = false }

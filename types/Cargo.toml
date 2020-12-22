@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
-bytes = "0.5.6"
+bytes = "0.6.0"
 chrono = { version = "0.4.19", default-features = false, features = ["clock"] }
 hex = "0.4.2"
 itertools = { version = "0.9.0", default-features = false }
