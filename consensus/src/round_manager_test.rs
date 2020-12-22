@@ -55,7 +55,7 @@ use network::{
     protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
 use safety_rules::{PersistentSafetyStorage, SafetyRulesManager};
-use std::{num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -138,12 +138,9 @@ impl NodeSetup {
             verifier: storage.get_validator_set().into(),
         };
         let validators = epoch_state.verifier.clone();
-        let (network_reqs_tx, network_reqs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (connection_reqs_tx, _) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (consensus_tx, consensus_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (consensus_tx, consensus_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
         let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = ConsensusNetworkSender::new(

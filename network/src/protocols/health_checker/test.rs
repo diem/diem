@@ -17,7 +17,7 @@ use diem_config::{config::RoleType, network_id::NetworkId};
 use diem_network_address::NetworkAddress;
 use futures::sink::SinkExt;
 use netcore::transport::ConnectionOrigin;
-use std::{num::NonZeroUsize, str::FromStr};
+use std::str::FromStr;
 use tokio::runtime::Runtime;
 
 const PING_TIMEOUT: Duration = Duration::from_millis(500);
@@ -34,12 +34,9 @@ fn setup_permissive_health_checker(
 ) {
     let (ticker_tx, ticker_rx) = channel::new_test(0);
 
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (connection_reqs_tx, connection_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (network_notifs_tx, network_notifs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
+    let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
+    let (network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
 
     let hc_network_tx = HealthCheckerNetworkSender::new(

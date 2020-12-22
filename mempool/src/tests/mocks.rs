@@ -23,7 +23,7 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{num::NonZeroUsize, sync::Arc};
+use std::sync::Arc;
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
@@ -57,12 +57,9 @@ impl MockSharedMempool {
         config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
 
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-        let (network_reqs_tx, _network_reqs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (connection_reqs_tx, _) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (_network_notifs_tx, network_notifs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (network_reqs_tx, _network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (_network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
         let (_, conn_notifs_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
@@ -79,7 +76,7 @@ impl MockSharedMempool {
             Some(state_sync) => (None, state_sync),
         };
         let (_reconfig_event_publisher, reconfig_event_subscriber) =
-            diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+            diem_channel::new(QueueStyle::LIFO, 1, None);
         let network_handles = vec![(
             NodeNetworkId::new(NetworkId::Validator, 0),
             network_sender,

@@ -5,7 +5,6 @@ use channel::{diem_channel, message_queues::QueueStyle};
 use futures::{executor::block_on, stream::StreamExt};
 use std::{
     io::{Cursor, Write},
-    num::NonZeroUsize,
     sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     thread,
     time::Duration,
@@ -46,7 +45,7 @@ pub fn run(args: Args) {
 
     let (mut sender, mut receiver) = diem_channel::new::<[u8; KEY_SIZE_BYTES], [u8; MSG_SIZE_BYTES]>(
         QueueStyle::FIFO,
-        NonZeroUsize::new(args.max_queue_size).unwrap(),
+        args.max_queue_size,
         None,
     );
 

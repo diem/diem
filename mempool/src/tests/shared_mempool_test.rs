@@ -42,7 +42,6 @@ use network::{
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
-    num::NonZeroUsize,
     sync::Arc,
 };
 use storage_interface::mock::MockDbReader;
@@ -71,12 +70,9 @@ fn init_single_shared_mempool(
     config: NodeConfig,
 ) {
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let (network_reqs_tx, network_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (connection_reqs_tx, _) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (network_notifs_tx, network_notifs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+    let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+    let (network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
     let network_sender = MempoolNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
@@ -92,8 +88,7 @@ fn init_single_shared_mempool(
     )];
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
-    let (_reconfig_events, reconfig_events_receiver) =
-        diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
     let runtime = Builder::new()
         .thread_name("shared-mem")
@@ -134,12 +129,9 @@ fn init_smp_multiple_networks(
 
     let mut network_handles = vec![];
     for (idx, (network_id, peer_id)) in network_ids.iter().enumerate() {
-        let (network_reqs_tx, network_reqs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (connection_reqs_tx, _) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-        let (network_notifs_tx, network_notifs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+        let (network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
         let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
         let network_sender = MempoolNetworkSender::new(
             PeerManagerRequestSender::new(network_reqs_tx),
@@ -162,8 +154,7 @@ fn init_smp_multiple_networks(
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
-    let (_reconfig_events, reconfig_events_receiver) =
-        diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
     let runtime = Builder::new()
         .thread_name("shared-mem")

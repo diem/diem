@@ -28,7 +28,7 @@ use netcore::{
     compat::IoCompat,
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
-use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize};
+use std::{collections::HashMap, iter::FromIterator};
 use tokio::runtime::Handle;
 
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
@@ -85,11 +85,9 @@ fn build_test_peer_manager(
     conn_notifs_channel::Receiver,
 ) {
     let (peer_manager_request_tx, peer_manager_request_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (connection_reqs_tx, connection_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (hello_tx, hello_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+        diem_channel::new(QueueStyle::FIFO, 1, None);
+    let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
+    let (hello_tx, hello_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
     let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
 
     let peer_manager = PeerManager::new(

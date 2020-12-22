@@ -32,7 +32,7 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt,
 };
-use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -119,13 +119,13 @@ where
         // TODO: Add label for peer.
         let (requests_tx, requests_rx) = diem_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).expect("diem_channel cannot be of size 0"),
+            channel_size,
             Some(&counters::PENDING_NETWORK_REQUESTS),
         );
         // TODO: Add label for peer.
         let (notifs_tx, notifs_rx) = diem_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).expect("diem_channel cannot be of size 0"),
+            channel_size,
             Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
         );
 

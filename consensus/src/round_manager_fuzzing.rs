@@ -34,7 +34,7 @@ use network::{
 };
 use once_cell::sync::Lazy;
 use safety_rules::{test_utils, SafetyRules, TSafetyRules};
-use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -110,10 +110,8 @@ fn create_node_for_fuzzing() -> RoundManager {
     safety_rules.initialize(&proof).unwrap();
 
     // TODO: mock channels
-    let (network_reqs_tx, _network_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (connection_reqs_tx, _) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (network_reqs_tx, _network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+    let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let network_sender = ConsensusNetworkSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),

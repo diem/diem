@@ -9,7 +9,7 @@
 //! Internally, it uses the `PerKeyQueue` to store messages
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use anyhow::{ensure, Result};
-use diem_infallible::Mutex;
+use diem_infallible::{Mutex, NonZeroUsize};
 use diem_metrics::IntCounterVec;
 use futures::{
     channel::oneshot,
@@ -18,7 +18,6 @@ use futures::{
 use std::{
     fmt::{Debug, Formatter},
     hash::Hash,
-    num::NonZeroUsize,
     pin::Pin,
     sync::Arc,
     task::{Context, Poll, Waker},
@@ -194,9 +193,11 @@ impl<K: Eq + Hash + Clone, M> FusedStream for Receiver<K, M> {
 /// Create a new Diem Channel and returns the two ends of the channel.
 pub fn new<K: Eq + Hash + Clone, M>(
     queue_style: QueueStyle,
-    max_queue_size_per_key: NonZeroUsize,
+    max_queue_size_per_key: usize,
     counters: Option<&'static IntCounterVec>,
 ) -> (Sender<K, M>, Receiver<K, M>) {
+    let max_queue_size_per_key =
+        NonZeroUsize!(max_queue_size_per_key, "diem_channel cannot be of size 0");
     let shared_state = Arc::new(Mutex::new(SharedState {
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),
         waker: None,

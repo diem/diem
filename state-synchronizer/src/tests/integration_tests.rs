@@ -42,7 +42,6 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use std::{
     collections::{HashMap, HashSet},
-    num::NonZeroUsize,
     ops::DerefMut,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -198,11 +197,10 @@ impl SynchronizerEnv {
                 // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
                 // msg delivery in test
                 let (network_reqs_tx, network_reqs_rx) =
-                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-                let (connection_reqs_tx, _) =
-                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+                    diem_channel::new(QueueStyle::LIFO, 1, None);
+                let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::LIFO, 1, None);
                 let (network_notifs_tx, network_notifs_rx) =
-                    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+                    diem_channel::new(QueueStyle::LIFO, 1, None);
                 let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
                 let network_sender = StateSynchronizerSender::new(
                     PeerManagerRequestSender::new(network_reqs_tx),

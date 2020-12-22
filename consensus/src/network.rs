@@ -25,7 +25,6 @@ use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt};
 use network::protocols::{network::Event, rpc::error::RpcError};
 use std::{
     mem::{discriminant, Discriminant},
-    num::NonZeroUsize,
     time::Duration,
 };
 
@@ -210,14 +209,11 @@ impl NetworkTask {
         network_events: ConsensusNetworkEvents,
         self_receiver: channel::Receiver<Event<ConsensusMsg>>,
     ) -> (NetworkTask, NetworkReceivers) {
-        let (consensus_messages_tx, consensus_messages) = diem_channel::new(
-            QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
-            Some(&counters::CONSENSUS_CHANNEL_MSGS),
-        );
+        let (consensus_messages_tx, consensus_messages) =
+            diem_channel::new(QueueStyle::LIFO, 1, Some(&counters::CONSENSUS_CHANNEL_MSGS));
         let (block_retrieval_tx, block_retrieval) = diem_channel::new(
             QueueStyle::LIFO,
-            NonZeroUsize::new(1).unwrap(),
+            1,
             Some(&counters::BLOCK_RETRIEVAL_CHANNEL_MSGS),
         );
         let all_events = Box::new(select(network_events, self_receiver));

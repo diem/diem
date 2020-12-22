@@ -32,7 +32,6 @@ use network::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    num::NonZeroUsize,
     sync::Arc,
     time::Duration,
 };
@@ -534,12 +533,9 @@ mod tests {
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
 
         for (peer_id, peer) in peers.iter().enumerate() {
-            let (network_reqs_tx, network_reqs_rx) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (connection_reqs_tx, _) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (consensus_tx, consensus_rx) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+            let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+            let (consensus_tx, consensus_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
             let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
             let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
@@ -623,12 +619,9 @@ mod tests {
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
 
         for (peer_id, peer) in peers.iter().enumerate() {
-            let (network_reqs_tx, network_reqs_rx) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (connection_reqs_tx, _) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-            let (consensus_tx, consensus_rx) =
-                diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+            let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
+            let (consensus_tx, consensus_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
             let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
             let (_, conn_status_rx) = conn_notifs_channel::new();
             let network_sender = ConsensusNetworkSender::new(
@@ -707,9 +700,9 @@ mod tests {
     #[test]
     fn test_bad_message() {
         let (mut peer_mgr_notifs_tx, peer_mgr_notifs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, 8, None);
         let (connection_notifs_tx, connection_notifs_rx) =
-            diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            diem_channel::new(QueueStyle::FIFO, 8, None);
         let consensus_network_events =
             ConsensusNetworkEvents::new(peer_mgr_notifs_rx, connection_notifs_rx);
         let (self_sender, self_receiver) = channel::new_test(8);

@@ -33,7 +33,7 @@ use proptest::{
     prelude::*,
     strategy::Strategy,
 };
-use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 static PEER_ID: Lazy<PeerId> = Lazy::new(|| PeerId::new([0u8; PeerId::LENGTH]));
 
@@ -59,10 +59,8 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     let storage_proxy = Arc::new(RwLock::new(storage_inner));
 
     // mock network senders
-    let (network_reqs_tx, _network_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let (connection_reqs_tx, _) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (network_reqs_tx, _network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
+    let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let network_sender = StateSynchronizerSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),

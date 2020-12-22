@@ -30,7 +30,6 @@ use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
     fmt::Debug,
-    num::NonZeroUsize,
     sync::Arc,
 };
 use tokio::runtime::Handle;
@@ -208,15 +207,12 @@ impl PeerManagerBuilder {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
             QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).unwrap(),
+            channel_size,
             Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
         );
         // Setup channel to send connection requests to peer manager.
-        let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(
-            QueueStyle::FIFO,
-            NonZeroUsize::new(channel_size).unwrap(),
-            None,
-        );
+        let (connection_reqs_tx, connection_reqs_rx) =
+            diem_channel::new(QueueStyle::FIFO, channel_size, None);
 
         Self {
             network_context,
@@ -421,11 +417,8 @@ impl PeerManagerBuilder {
             .augment_direct_send_protocols(direct_send_protocols.clone())
             .augment_rpc_protocols(rpc_protocols.clone());
 
-        let (network_notifs_tx, network_notifs_rx) = diem_channel::new(
-            queue_preference,
-            NonZeroUsize::new(max_queue_size_per_peer).unwrap(),
-            counter,
-        );
+        let (network_notifs_tx, network_notifs_rx) =
+            diem_channel::new(queue_preference, max_queue_size_per_peer, counter);
 
         let pm_context = self
             .peer_manager_context

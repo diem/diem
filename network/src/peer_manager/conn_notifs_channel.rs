@@ -11,13 +11,12 @@
 use crate::peer_manager::ConnectionNotification;
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_types::PeerId;
-use std::num::NonZeroUsize;
 
 pub type Sender = diem_channel::Sender<PeerId, ConnectionNotification>;
 pub type Receiver = diem_channel::Receiver<PeerId, ConnectionNotification>;
 
 pub fn new() -> (Sender, Receiver) {
-    diem_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None)
+    diem_channel::new(QueueStyle::LIFO, 1, None)
 }
 
 #[cfg(test)]

@@ -15,7 +15,7 @@ use diem_network_address::NetworkAddress;
 use futures::SinkExt;
 use netcore::transport::ConnectionOrigin;
 use rand::rngs::StdRng;
-use std::{io, num::NonZeroUsize};
+use std::io;
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
 
@@ -57,8 +57,7 @@ fn setup_conn_mgr_with_context(
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
-    let (connection_reqs_tx, connection_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
@@ -1277,8 +1276,7 @@ fn basic_update_eligible_peers() {
         RoleType::Validator,
         PeerId::random(),
     ));
-    let (connection_reqs_tx, _connection_reqs_rx) =
-        diem_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_reqs_tx, _connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
     let (_connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (_ticker_tx, ticker_rx) = channel::new_test::<()>(0);
