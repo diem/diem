@@ -9,7 +9,7 @@
 
 use diem_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 use executor_types::ExecutedTrees;
-pub use synchronizer::{StateSyncClient, StateSynchronizer};
+pub use state_synchronizer::{StateSyncClient, StateSynchronizer};
 
 pub mod chunk_request;
 pub mod chunk_response;
@@ -19,7 +19,7 @@ mod executor_proxy;
 mod logging;
 pub mod network;
 mod request_manager;
-mod synchronizer;
+mod state_synchronizer;
 
 /// The state distinguishes between the following fields:
 /// * highest_local_li is keeping the latest certified ledger info
