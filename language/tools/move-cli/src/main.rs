@@ -10,8 +10,7 @@ use move_cli::{
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
-    identifier::Identifier,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::TypeTag,
     parser,
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
@@ -31,11 +30,9 @@ use vm::{
 
 use anyhow::{bail, Result};
 use std::{
-    collections::BTreeSet,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use structopt::StructOpt;
 
@@ -198,61 +195,6 @@ impl Move {
     }
 }
 
-fn shadow_storage(
-    interface_dir: String,
-    pprog: move_lang::parser::ast::Program,
-) -> Result<move_lang::parser::ast::Program> {
-    fn convert_module_id(
-        address: &move_lang::shared::Address,
-        name: &move_lang::parser::ast::ModuleName,
-    ) -> ModuleId {
-        use move_lang::shared::Identifier as MoveIdentifier;
-        ModuleId::new(
-            AccountAddress::new(address.to_u8()),
-            Identifier::new(name.value().to_string()).unwrap(),
-        )
-    }
-    use move_lang::parser::ast::{Definition, Program};
-    let Program {
-        source_definitions,
-        lib_definitions,
-    } = pprog;
-    let mut interface_modules_to_remove = BTreeSet::new();
-    for def in &source_definitions {
-        match def {
-            Definition::Address(_, addr, modules) => {
-                for module in modules {
-                    interface_modules_to_remove.insert(convert_module_id(addr, &module.name));
-                }
-            }
-            Definition::Module(_) | Definition::Script(_) => (),
-        }
-    }
-
-    let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
-        let module_str = path.file_stem().unwrap().to_str().unwrap();
-        let module = Identifier::new(module_str.to_string()).unwrap();
-
-        let mut comps = path.components().rev();
-        let _file = comps.next().unwrap();
-        let addr_str = comps.next().unwrap().as_os_str().to_str().unwrap();
-        let addr = AccountAddress::from_str(addr_str).unwrap();
-
-        let id = ModuleId::new(addr, module);
-        interface_modules_to_remove.contains(&id)
-    })?
-    .into_iter()
-    .collect::<BTreeSet<_>>();
-    let lib_definitions = lib_definitions
-        .into_iter()
-        .filter(|def| !interface_files_to_ignore.contains(def.file()))
-        .collect();
-    Ok(Program {
-        source_definitions,
-        lib_definitions,
-    })
-}
-
 fn move_compile_to_and_shadow(
     files: &[String],
     interface_dir: String,
@@ -263,14 +205,14 @@ fn move_compile_to_and_shadow(
     std::result::Result<MovePassResult, move_lang::errors::Errors>,
 )> {
     let (files, pprog_and_comments_res) =
-        move_lang::move_parse(files, &[interface_dir.clone()], None, None)?;
+        move_lang::move_parse(files, &[interface_dir], None, None)?;
     let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
     assert!(sender_opt.is_none());
     if republish {
-        pprog = shadow_storage(interface_dir, pprog)?;
+        pprog = move_lang::shadow_lib_module_definitions(pprog, sender_opt);
     }
     Ok((
         files,

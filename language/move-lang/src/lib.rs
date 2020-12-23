@@ -355,6 +355,52 @@ pub fn generate_interface_files(
     Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
 }
 
+pub fn shadow_lib_module_definitions(
+    pprog: parser::ast::Program,
+    sender_opt: Option<Address>,
+) -> parser::ast::Program {
+    let parser::ast::Program {
+        source_definitions,
+        lib_definitions,
+    } = pprog;
+    let mut modules_defined_in_src = BTreeSet::new();
+    for def in &source_definitions {
+        match def {
+            parser::ast::Definition::Address(_, addr, modules) => {
+                for module in modules {
+                    modules_defined_in_src.insert((*addr, module.name.clone()));
+                }
+            }
+            parser::ast::Definition::Module(module) => {
+                modules_defined_in_src
+                    .insert((sender_opt.unwrap_or_default(), module.name.clone()));
+            }
+            parser::ast::Definition::Script(_) => (),
+        }
+    }
+
+    // Shadow (i.e., filter out) library definitions with the following criteria
+    //  1. this library definition is an Address space AST and any module in the address space is
+    //    already defined in the source.
+    //  2. this library definition is a Module AST and the module is already defined in the source.
+    let lib_definitions = lib_definitions
+        .into_iter()
+        .filter(|def| match def {
+            parser::ast::Definition::Address(_, addr, modules) => !modules
+                .iter()
+                .any(|module| modules_defined_in_src.contains(&(*addr, module.name.clone()))),
+            parser::ast::Definition::Module(module) => !modules_defined_in_src
+                .contains(&(sender_opt.unwrap_or_default(), module.name.clone())),
+            parser::ast::Definition::Script(_) => false,
+        })
+        .collect();
+
+    parser::ast::Program {
+        source_definitions,
+        lib_definitions,
+    }
+}
+
 fn has_compiled_module_magic_number(path: &str) -> bool {
     use move_vm::file_format_common::BinaryConstants;
     let mut file = match File::open(path) {
