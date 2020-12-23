@@ -47,7 +47,8 @@ use structopt::StructOpt;
     rename_all = "kebab-case"
 )]
 struct Move {
-    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
+    /// Directory storing Move resources, events, and module bytecodes produced by module publishing
+    /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
     storage_dir: String,
     /// Directory storing build artifacts produced by compilation
@@ -103,8 +104,7 @@ enum Command {
         ignore_breaking_changes: bool,
     },
     /// Compile/run a Move script that reads/writes resources stored on disk in `storage`.
-    /// This command compiles each each module stored in `src` and loads it into the VM
-    /// before running the script.
+    /// This command compiles the script first before running it.
     #[structopt(name = "run")]
     Run {
         /// Path to script to compile and run.
@@ -166,20 +166,9 @@ impl Move {
 
     /// Prepare the library dependencies, need to run it before every related command,
     /// i.e., check, publish, and run.
-    ///
-    /// If `source_only` is true, only the source files will be populated. The modules will
-    /// not be compiled nor loaded.
-    ///
-    /// Currently, `source_only` is set to true for `check` only and false for `publish` and `run`
-    pub fn prepare_mode(&self, source_only: bool) -> Result<()> {
-        self.mode.prepare(&self.get_package_dir(), source_only)?;
-
-        // prepare the storage if are not only caring about the source files
-        if !source_only {
-            self.preload_storage()?;
-        }
-
-        Ok(())
+    pub fn prepare_mode(&self) -> Result<()> {
+        self.mode.prepare(&self.get_package_dir(), false)?;
+        self.preload_storage()
     }
 
     /// Generate interface files for published files
@@ -580,7 +569,7 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
     Ok(())
 }
 
-/// Commit the resources and modules modified by a transaction to disk
+/// Commit the resources and events modified by a transaction to disk
 fn maybe_commit_effects(
     commit: bool,
     effects_opt: Option<TransactionEffects>,
@@ -856,7 +845,7 @@ fn main() -> Result<()> {
             source_files,
             no_republish,
         } => {
-            move_args.prepare_mode(true)?;
+            move_args.prepare_mode()?;
             check(&move_args, !*no_republish, &source_files)
         }
         Command::Publish {
@@ -864,7 +853,7 @@ fn main() -> Result<()> {
             no_republish,
             ignore_breaking_changes,
         } => {
-            move_args.prepare_mode(false)?;
+            move_args.prepare_mode()?;
             publish(
                 &move_args,
                 source_files,
@@ -880,7 +869,7 @@ fn main() -> Result<()> {
             gas_budget,
             dry_run,
         } => {
-            move_args.prepare_mode(false)?;
+            move_args.prepare_mode()?;
             run(
                 &move_args,
                 script_file,
