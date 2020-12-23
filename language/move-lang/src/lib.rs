@@ -180,6 +180,33 @@ pub fn move_continue_up_to(pass: PassResult, until: Pass) -> Result<PassResult, 
     run(pass, until)
 }
 
+pub fn move_compile_up_to(
+    targets: &[String],
+    deps: &[String],
+    sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
+    allow_shadow: bool,
+    until: Pass,
+) -> anyhow::Result<(FilesSourceText, Result<PassResult, Errors>)> {
+    let (files, pprog_and_comments_res) =
+        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+        Err(errors) => return Ok((files, Err(errors))),
+        Ok(res) => res,
+    };
+
+    let pprog = if allow_shadow {
+        shadow_lib_module_definitions(pprog, sender_opt)
+    } else {
+        pprog
+    };
+
+    Ok((
+        files,
+        move_continue_up_to(PassResult::Parser(sender_opt, pprog), until),
+    ))
+}
+
 //**************************************************************************************************
 // Utils
 //**************************************************************************************************
@@ -355,7 +382,7 @@ pub fn generate_interface_files(
     Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
 }
 
-pub fn shadow_lib_module_definitions(
+fn shadow_lib_module_definitions(
     pprog: parser::ast::Program,
     sender_opt: Option<Address>,
 ) -> parser::ast::Program {

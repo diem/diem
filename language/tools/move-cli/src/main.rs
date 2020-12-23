@@ -195,39 +195,16 @@ impl Move {
     }
 }
 
-fn move_compile_to_and_shadow(
-    files: &[String],
-    interface_dir: String,
-    republish: bool,
-    until: MovePass,
-) -> Result<(
-    move_lang::errors::FilesSourceText,
-    std::result::Result<MovePassResult, move_lang::errors::Errors>,
-)> {
-    let (files, pprog_and_comments_res) =
-        move_lang::move_parse(files, &[interface_dir], None, None)?;
-    let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
-        Err(errors) => return Ok((files, Err(errors))),
-        Ok(res) => res,
-    };
-    assert!(sender_opt.is_none());
-    if republish {
-        pprog = move_lang::shadow_lib_module_definitions(pprog, sender_opt);
-    }
-    Ok((
-        files,
-        move_lang::move_continue_up_to(MovePassResult::Parser(None, pprog), until),
-    ))
-}
-
 /// Compile the user modules in `src` and the script in `script_file`
 fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: bool) -> Result<()> {
     if verbose {
         println!("Checking Move files...");
     }
-    let (files, result) = move_compile_to_and_shadow(
+    let (files, result) = move_lang::move_compile_up_to(
         files,
-        state.interface_files_dir()?,
+        &[state.interface_files_dir()?],
+        None,
+        None,
         republish,
         MovePass::CFGIR,
     )?;
@@ -246,9 +223,11 @@ fn publish(
         println!("Compiling Move modules...")
     }
 
-    let (files, result) = move_compile_to_and_shadow(
+    let (files, result) = move_lang::move_compile_up_to(
         files,
-        state.interface_files_dir()?,
+        &[state.interface_files_dir()?],
+        None,
+        None,
         republish,
         MovePass::Compilation,
     )?;
