@@ -38,7 +38,7 @@ rand = "0.7.3"
 regex = "1.4.2"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.60"
-simplelog = "0.8.0"
+simplelog = "0.9.0"
 once_cell = "1.4.1"
 tokio = { version = "0.2", features = ["full"] }
 toml = "0.5.7"
