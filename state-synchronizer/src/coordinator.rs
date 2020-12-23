@@ -626,7 +626,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         });
         self.sync_state_with_local_storage()?;
 
-        match request.target().clone() {
+        match request.target.clone() {
             TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),
             TargetType::HighestAvailable {
                 target_li,

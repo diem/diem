@@ -453,7 +453,7 @@ fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_ver
     match msg {
         StateSynchronizerMsg::GetChunkRequest(req) => {
             assert_eq!(req.known_version, known_version);
-            assert_eq!(req.target().version(), target_version);
+            assert_eq!(req.target.version(), target_version);
         }
         StateSynchronizerMsg::GetChunkResponse(_) => {
             panic!("received chunk response when expecting chunk request");

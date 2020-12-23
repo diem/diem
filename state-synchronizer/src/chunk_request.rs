@@ -5,7 +5,7 @@ use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 /// We're currently considering several types of chunk requests depending on the information
 /// available on the requesting side.
 pub enum TargetType {
@@ -79,7 +79,7 @@ impl fmt::Display for TargetType {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GetChunkRequest {
     /// The response should start with `known_version + 1`.
     pub known_version: Version,
@@ -88,7 +88,7 @@ pub struct GetChunkRequest {
     /// Max size of a chunk response.
     pub limit: u64,
     /// The target of the given request.
-    target: TargetType,
+    pub target: TargetType,
 }
 
 impl GetChunkRequest {
@@ -99,10 +99,6 @@ impl GetChunkRequest {
             limit,
             target,
         }
-    }
-
-    pub fn target(&self) -> &TargetType {
-        &self.target
     }
 }
 
@@ -117,10 +113,7 @@ impl fmt::Display for GetChunkRequest {
         write!(
             f,
             "[ChunkRequest: known version: {}, epoch: {}, limit: {}, target: {}]",
-            self.known_version,
-            self.current_epoch,
-            self.limit,
-            self.target(),
+            self.known_version, self.current_epoch, self.limit, self.target,
         )
     }
 }
