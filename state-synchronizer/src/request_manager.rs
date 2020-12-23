@@ -28,7 +28,7 @@ const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct PeerInfo {
     is_alive: bool,
     score: f64,
@@ -41,7 +41,7 @@ impl PeerInfo {
 }
 
 /// Basic metadata about the chunk request.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct ChunkRequestInfo {
     version: u64,
     first_request_time: SystemTime,
