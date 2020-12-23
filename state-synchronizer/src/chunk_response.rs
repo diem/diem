@@ -11,7 +11,7 @@ use std::fmt;
 /// The response can carry different LedgerInfo types depending on whether the verification
 /// is done via the local trusted validator set or a local waypoint.
 #[allow(clippy::large_enum_variant)]
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ResponseLedgerInfo {
     /// A typical response carries a LedgerInfo with signatures that should be verified using the
     /// local trusted validator set.
@@ -49,14 +49,14 @@ impl ResponseLedgerInfo {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 /// The returned chunk is bounded by the end of the known_epoch of the requester
 /// (i.e., a chunk never crosses epoch boundaries).
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 pub struct GetChunkResponse {
-    /// The proofs are built relative to the LedgerInfo in `response_ledger_info`.
+    /// The proofs are built relative to the LedgerInfo in `response_li`.
     /// The specifics of ledger info verification depend on its type.
     pub response_li: ResponseLedgerInfo,
-    /// chunk of transactions with proof corresponding to the ledger info carried by the response.
+    /// Chunk of transactions with proof corresponding to the ledger info carried by the response.
     pub txn_list_with_proof: TransactionListWithProof,
 }
 
@@ -71,6 +71,7 @@ impl GetChunkResponse {
         }
     }
 }
+
 impl fmt::Debug for GetChunkResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self)
