@@ -52,13 +52,6 @@ pub trait ExecutorProxyTrait: Send {
     /// Returns the ledger's timestamp for the given version in microseconds
     fn get_version_timestamp(&self, version: u64) -> Result<u64>;
 
-    /// Load all on-chain configs from storage
-    /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
-    /// using the tonic storage read client, which needs the tokio runtime to block on with no runtime/async issues
-    /// Once we make storage reads sync (by replacing the storage read client with direct DiemDB),
-    /// we can make this entirely internal to `ExecutorProxy`'s initialization procedure
-    fn load_on_chain_configs(&mut self) -> Result<()>;
-
     /// publishes on-chain config updates to subscribed components
     fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
 }
@@ -200,11 +193,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
 
     fn get_version_timestamp(&self, version: u64) -> Result<u64> {
         self.storage.get_block_timestamp(version)
-    }
-
-    fn load_on_chain_configs(&mut self) -> Result<()> {
-        self.on_chain_configs = Self::fetch_all_configs(&*self.storage)?;
-        Ok(())
     }
 
     fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {

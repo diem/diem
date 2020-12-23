@@ -158,10 +158,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(0)
     }
 
-    fn load_on_chain_configs(&mut self) -> Result<()> {
-        Ok(())
-    }
-
     fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
         Ok(())
     }

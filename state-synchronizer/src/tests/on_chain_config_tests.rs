@@ -54,11 +54,6 @@ fn test_on_chain_config_pub_sub() {
         "expect initial config notification",
     );
 
-    // start state sync with initial loading of on-chain configs
-    executor_proxy
-        .load_on_chain_configs()
-        .expect("failed to load on-chain configs");
-
     ////////////////////////////////////////////////////////
     // Case 1: don't publish for no reconfiguration event //
     ////////////////////////////////////////////////////////
