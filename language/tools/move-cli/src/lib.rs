@@ -24,7 +24,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -60,33 +60,20 @@ const EVENTS_DIR: &str = "events";
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
-    modules: HashMap<ModuleId, Vec<u8>>,
-    resources: HashMap<(AccountAddress, StructTag), Vec<u8>>,
     storage_dir: PathBuf,
 }
 
 impl OnDiskStateView {
-    /// Create an `OnDiskStateView` that reads/writes resource data in `storage_dir` and can
-    /// execute code in `compiled_modules`.
-    pub fn create(storage_dir: PathBuf, compiled_modules: &[CompiledModule]) -> Result<Self> {
-        if !storage_dir.exists() || !storage_dir.is_dir() {
-            bail!(
-                "Attempting to create OnDiskStateView from bad data directory {:?}",
-                storage_dir
-            )
+    /// Create an `OnDiskStateView` that reads/writes resource data and modules in `storage_dir`.
+    pub fn create<P: Into<PathBuf>>(storage_dir: P) -> Result<Self> {
+        let storage_dir = storage_dir.into();
+        if !storage_dir.exists() {
+            fs::create_dir_all(&storage_dir)?;
         }
-
-        let mut modules = HashMap::with_capacity(compiled_modules.len());
-        for module in compiled_modules {
-            let mut module_bytes = vec![];
-            module.serialize(&mut module_bytes)?;
-            modules.insert(module.self_id(), module_bytes);
-        }
-        let resources = HashMap::new();
         Ok(Self {
-            modules,
-            resources,
-            storage_dir,
+            // it is important to canonicalize the path here because `is_data_path()` relies on the
+            // fact that storage_dir is canonicalized.
+            storage_dir: storage_dir.canonicalize()?,
         })
     }
 
@@ -128,7 +115,7 @@ impl OnDiskStateView {
     }
 
     // Events are stored under address/handle creation number
-    pub fn get_event_path(&self, key: &EventKey) -> PathBuf {
+    fn get_event_path(&self, key: &EventKey) -> PathBuf {
         let mut path = self.get_addr_path(&key.get_creator_address());
         path.push(EVENTS_DIR);
         path.push(key.get_creation_number().to_string());
@@ -153,10 +140,7 @@ impl OnDiskStateView {
 
     /// Read the resource bytes stored on-disk at `addr`/`tag`
     fn get_module_bytes(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
-        match self.modules.get(module_id) {
-            None => Self::get_bytes(&self.get_module_path(module_id)),
-            m => Ok(m.cloned()),
-        }
+        Self::get_bytes(&self.get_module_path(module_id))
     }
 
     /// Check if a module at `addr`/`module_id` exists
@@ -315,22 +299,50 @@ impl OnDiskStateView {
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
-    fn save_module(&self, module_id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
-        let path = self.get_module_path(module_id);
+    fn save_module(&self, module: &CompiledModule) -> Result<()> {
+        let path = self.get_module_path(&module.self_id());
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
 
+        let mut module_bytes = vec![];
+        module.serialize(&mut module_bytes)?;
+
         Ok(fs::write(path, &module_bytes)?)
     }
 
-    /// Save all the modules in the local cache
-    /// Returns true if any modules were saved
-    pub fn save_modules(&self) -> Result<bool> {
-        for (id, bytes) in &self.modules {
-            self.save_module(id, &bytes)?
+    /// Save all the modules in the local cache, re-generate mv_interfaces if required.
+    pub fn save_modules<P: Into<PathBuf>>(
+        &self,
+        modules: &[CompiledModule],
+        build_dir_opt: Option<P>,
+    ) -> Result<()> {
+        for module in modules {
+            self.save_module(module)?;
         }
-        Ok(!self.modules.is_empty())
+
+        // sync with build_dir for updates of mv_interfaces if new modules are added
+        if !modules.is_empty() {
+            if let Some(build_dir) = build_dir_opt {
+                self.sync_interface_files(build_dir)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn sync_interface_files<P: Into<PathBuf>>(&self, build_dir: P) -> Result<()> {
+        move_lang::generate_interface_files(
+            &[self
+                .storage_dir
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()],
+            Some(build_dir.into().into_os_string().into_string().unwrap()),
+            false,
+        )?;
+        Ok(())
     }
 
     fn iter_paths<F>(&self, f: F) -> impl Iterator<Item = PathBuf>
@@ -383,12 +395,8 @@ impl RemoteCache for OnDiskStateView {
         address: &AccountAddress,
         struct_tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        match self.resources.get(&(*address, struct_tag.clone())) {
-            None => self
-                .get_resource_bytes(*address, struct_tag.clone())
-                .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR)),
-            res => Ok(res.cloned()),
-        }
+        self.get_resource_bytes(*address, struct_tag.clone())
+            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 

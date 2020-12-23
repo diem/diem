@@ -168,17 +168,17 @@ impl Move {
     /// i.e., check, publish, and run.
     pub fn prepare_mode(&self) -> Result<()> {
         self.mode.prepare(&self.get_package_dir(), false)?;
-        self.preload_storage()
-    }
 
-    /// Generate interface files for published files
-    pub fn generate_interface_files(&self) -> Result<()> {
-        move_lang::generate_interface_files(
-            &[self.storage_dir.clone()],
-            Some(self.build_dir.clone()),
-            false,
-        )?;
-        Ok(())
+        // preload the storage with library modules (if such modules do not exist in the storage)
+        let state = OnDiskStateView::create(&self.storage_dir)?;
+
+        let lib_modules = self.get_library_modules()?;
+        let new_modules: Vec<_> = lib_modules
+            .into_iter()
+            .filter(|m| !state.has_module(&m.self_id()))
+            .collect();
+
+        state.save_modules(&new_modules, Some(&self.build_dir))
     }
 
     pub fn interface_files_dir(&self) -> Result<String> {
@@ -201,25 +201,6 @@ impl Move {
     /// current implementation.
     fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
         self.mode.compiled_modules(&self.get_package_dir())
-    }
-
-    /// Preload the storage with library modules (if such modules are not available in the storage)
-    fn preload_storage(&self) -> Result<()> {
-        let storage_dir = maybe_create_dir(&self.storage_dir)?;
-        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &[])?;
-
-        let lib_modules = self.get_library_modules()?;
-        let new_modules: Vec<_> = lib_modules
-            .into_iter()
-            .filter(|m| !view.has_module(&m.self_id()))
-            .collect();
-
-        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &new_modules)?;
-        if view.save_modules()? {
-            self.generate_interface_files()?;
-        }
-
-        Ok(())
     }
 }
 
@@ -329,8 +310,6 @@ fn publish(
     republish: bool,
     ignore_breaking_changes: bool,
 ) -> Result<()> {
-    let storage_dir = maybe_create_dir(&args.storage_dir)?;
-
     if args.verbose {
         println!("Compiling Move modules...")
     }
@@ -366,11 +345,11 @@ fn publish(
         }
     }
 
+    let state = OnDiskStateView::create(&args.storage_dir)?;
     if !ignore_breaking_changes {
-        let view = OnDiskStateView::create(storage_dir.to_path_buf(), &[])?;
         for m in &modules {
             let id = m.self_id();
-            if let Ok(old_m) = view.get_compiled_module(&id) {
+            if let Ok(old_m) = state.get_compiled_module(&id) {
                 let old_api = Module::new(&old_m);
                 let new_api = Module::new(m);
                 let compat = Compatibility::check(&old_api, &new_api);
@@ -391,12 +370,7 @@ fn publish(
         }
     }
 
-    let state = OnDiskStateView::create(storage_dir.to_path_buf(), &modules)?;
-    if state.save_modules()? {
-        args.generate_interface_files()?;
-    }
-
-    Ok(())
+    state.save_modules(&modules, Some(&args.build_dir))
 }
 
 fn run(
@@ -408,12 +382,7 @@ fn run(
     gas_budget: Option<u64>,
     dry_run: bool,
 ) -> Result<()> {
-    fn compile_script(
-        args: &Move,
-        script_file: &str,
-    ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
-        let storage_dir = maybe_create_dir(&args.storage_dir)?;
-
+    fn compile_script(args: &Move, script_file: &str) -> Result<Option<CompiledScript>> {
         if args.verbose {
             println!("Compiling transaction script...")
         }
@@ -445,13 +414,10 @@ fn run(
             }
         }
 
-        Ok((
-            OnDiskStateView::create(storage_dir.to_path_buf(), &[])?,
-            script_opt,
-        ))
+        Ok(script_opt)
     }
 
-    let (state, script_opt) = compile_script(args, script_file)?;
+    let script_opt = compile_script(args, script_file)?;
     let script = match script_opt {
         Some(s) => s,
         None => bail!("Unable to find script in file {:?}", script_file),
@@ -490,6 +456,8 @@ fn run(
         .collect();
 
     let log_context = NoContextLog::new();
+
+    let state = OnDiskStateView::create(&args.storage_dir)?;
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -754,9 +722,7 @@ fn explain_error(
 
 /// Print a module or resource stored in `file`
 fn view(args: &Move, file: &str) -> Result<()> {
-    let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
-    let stdlib_modules = vec![]; // ok to use empty dir here since we're not compiling
-    let state = OnDiskStateView::create(storage_dir, &stdlib_modules)?;
+    let state = OnDiskStateView::create(&args.storage_dir)?;
 
     let path = Path::new(&file);
     if state.is_resource_path(path) {
@@ -796,8 +762,8 @@ fn doctor(args: &Move) -> Result<()> {
     fn parent_addr(p: &PathBuf) -> &OsStr {
         p.parent().unwrap().parent().unwrap().file_name().unwrap()
     }
-    let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
-    let state = OnDiskStateView::create(storage_dir, /* compiled_modules */ &[])?;
+
+    let state = OnDiskStateView::create(&args.storage_dir)?;
     let modules = state.get_all_modules()?;
     // verify and link each module
     for module in modules.values() {
