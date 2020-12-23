@@ -49,7 +49,7 @@ warn = [
 [summaries.default]
 version = "v2"
 include-dev = false
-proc-macros-on-target = false
+initials-platform = "standard"
 
 [summaries.default.target-platform]
 triple = "x86_64-unknown-linux-gnu"
@@ -67,7 +67,7 @@ workspace-path = "common/workspace-hack"
 [summaries.full]
 version = "v2"
 include-dev = true
-proc-macros-on-target = false
+initials-platform = "standard"
 # Don't set target or host platforms, or omitted packages, for the full set.
 
 [workspace]

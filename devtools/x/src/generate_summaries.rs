@@ -5,7 +5,7 @@ use crate::context::XContext;
 use anyhow::Context;
 use guppy::graph::{
     cargo::CargoOptions,
-    feature::{all_filter, FeatureQuery},
+    feature::{FeatureSet, StandardFeatures},
 };
 use std::{
     fs,
@@ -59,10 +59,10 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     // * default members (default features)
     // (note that we aren't using the build set from default_members() as it may have different
     // options)
-    let feature_query = subsets.default_members().query().clone();
+    let initials = subsets.default_members().initials().clone();
     write_summary(
         "default",
-        feature_query,
+        initials,
         &default_opts,
         &out_dir,
         args.output_format,
@@ -72,27 +72,17 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     // * subsets (default features)
     for (name, subset) in subsets.iter() {
-        let feature_query = subset.query().clone();
-        write_summary(
-            name,
-            feature_query,
-            &default_opts,
-            &out_dir,
-            args.output_format,
-        )?;
+        let initials = subset.initials().clone();
+        write_summary(name, initials, &default_opts, &out_dir, args.output_format)?;
 
         summary_count += 1;
     }
 
     // * full workspace set (all features)
-    let feature_query = pkg_graph.query_workspace().to_feature_query(all_filter());
-    write_summary(
-        "full",
-        feature_query,
-        &full_opts,
-        &out_dir,
-        args.output_format,
-    )?;
+    let initials = pkg_graph
+        .resolve_workspace()
+        .to_feature_set(StandardFeatures::All);
+    write_summary("full", initials, &full_opts, &out_dir, args.output_format)?;
 
     summary_count += 1;
 
@@ -103,12 +93,12 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
 fn write_summary(
     name: &str,
-    feature_query: FeatureQuery<'_>,
+    initials: FeatureSet<'_>,
     cargo_opts: &CargoOptions<'_>,
     out_dir: &Path,
     output_format: OutputFormat,
 ) -> crate::Result<()> {
-    let build_set = feature_query.resolve_cargo(cargo_opts)?;
+    let build_set = initials.into_cargo_set(cargo_opts)?;
     let summary = build_set.to_summary(cargo_opts)?;
 
     let (out, path) = match output_format {
