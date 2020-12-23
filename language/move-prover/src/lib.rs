@@ -19,7 +19,7 @@ use bytecode::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
-    packed_types_analysis::{self, PackedTypesProcessor},
+    packed_types_analysis::PackedTypesProcessor,
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{Bytecode, Operation},
     test_instrumenter::TestInstrumenter,
@@ -45,7 +45,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     fs::File,
-    io::{Read, Write},
+    io::Read,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -104,9 +104,6 @@ pub fn run_move_prover<W: WriteColor>(
         return Err(anyhow!("exiting with transformation errors"));
     }
 
-    if options.run_packed_types_gen {
-        return run_packed_types_gen(&options, &env, &targets, now);
-    }
     check_modifies(&env, &targets);
     if env.has_errors() {
         env.report_errors(error_writer);
@@ -224,38 +221,6 @@ fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Re
     info!("generating error map");
     generator.gen();
     generator.save_result();
-    let generating_elapsed = now.elapsed();
-    info!(
-        "{:.3}s checking, {:.3}s generating",
-        checking_elapsed.as_secs_f64(),
-        (generating_elapsed - checking_elapsed).as_secs_f64()
-    );
-    Ok(())
-}
-
-fn run_packed_types_gen(
-    options: &Options,
-    env: &GlobalEnv,
-    targets: &FunctionTargetsHolder,
-    now: Instant,
-) -> anyhow::Result<()> {
-    let checking_elapsed = now.elapsed();
-    info!("generating packed_types");
-    let packed_types = packed_types_analysis::get_packed_types(&env, &targets);
-    info!("found {:?} packed types", packed_types.len());
-    let mut access_path_type_map = BTreeMap::new();
-    for ty in packed_types {
-        access_path_type_map.insert(ty.access_vector(), ty);
-    }
-    let flattened_map = access_path_type_map
-        .into_iter()
-        .map(|(k, v)| (hex::encode(&k), v))
-        .collect::<Vec<_>>();
-    let types_json = serde_json::to_string_pretty(&flattened_map)?;
-    let mut types_file = File::create(options.output_path.clone())?;
-    types_file.write_all(&types_json.as_bytes())?;
-    types_file.write_all(b"\n")?;
-
     let generating_elapsed = now.elapsed();
     info!(
         "{:.3}s checking, {:.3}s generating",

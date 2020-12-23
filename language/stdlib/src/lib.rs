@@ -305,22 +305,6 @@ pub fn get_packed_types_path() -> PathBuf {
     path
 }
 
-pub fn build_packed_types_map() {
-    let mut options = move_prover::cli::Options::default();
-    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
-    path.push(PACKED_TYPES_DIR);
-    fs::create_dir_all(&path).unwrap();
-    path.push(PACKED_TYPES_FILENAME);
-    path.set_extension(PACKED_TYPES_EXTENSION);
-    options.output_path = path.to_str().unwrap().to_string();
-    let mut sources = stdlib_files();
-    sources.append(&mut script_files());
-    options.move_sources = sources.to_vec();
-    options.verbosity_level = LevelFilter::Warn;
-    options.run_packed_types_gen = true;
-    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
-}
-
 fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
     let mut options = move_prover::cli::Options::default();
     options.move_sources = sources.to_vec();
