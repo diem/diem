@@ -13,8 +13,8 @@ use diem_config::{
 };
 use diem_mempool::{CommitNotification, CommitResponse};
 use diem_types::{
-    contract_event::ContractEvent, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
-    transaction::Transaction, waypoint::Waypoint,
+    contract_event::ContractEvent, epoch_change::Verifier, epoch_state::EpochState,
+    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
 };
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use futures::{
@@ -44,11 +44,11 @@ use tokio::{
 /// for the local storage.
 #[derive(Clone)]
 pub struct SynchronizationState {
-    pub highest_local_li: LedgerInfoWithSignatures,
+    highest_local_li: LedgerInfoWithSignatures,
     synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
     // or the next epoch if the highest local LI is the final LI in the current epoch.
-    pub trusted_epoch: EpochState,
+    trusted_epoch: EpochState,
 }
 
 impl SynchronizationState {
@@ -69,13 +69,29 @@ impl SynchronizationState {
         }
     }
 
+    pub fn committed_epoch(&self) -> u64 {
+        self.highest_local_li.ledger_info().epoch()
+    }
+
+    pub fn committed_ledger_info(&self) -> LedgerInfoWithSignatures {
+        self.highest_local_li.clone()
+    }
+
+    pub fn committed_version(&self) -> u64 {
+        self.highest_local_li.ledger_info().version()
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.trusted_epoch.epoch
+    }
+
     /// The highest available version in the local storage (even if it's not covered by the LI).
     pub fn highest_version_in_local_storage(&self) -> u64 {
         self.synced_trees.version().unwrap_or(0)
     }
 
-    pub fn epoch(&self) -> u64 {
-        self.trusted_epoch.epoch
+    pub fn verify_epoch(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
+        self.trusted_epoch.verify(ledger_info)
     }
 }
 

@@ -20,7 +20,6 @@ use diem_logger::prelude::*;
 use diem_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use diem_types::{
     contract_event::ContractEvent,
-    epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
@@ -119,7 +118,7 @@ impl PendingLedgerInfos {
     }
 
     fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) {
-        let highest_committed_li = sync_state.highest_local_li.ledger_info().version();
+        let highest_committed_li = sync_state.committed_version();
         let highest_synced = sync_state.highest_version_in_local_storage();
 
         // prune any pending LIs that are older than the latest local synced version
@@ -336,9 +335,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Fail)
                                 .peer(&peer)
                                 .error(&err)
-                                .local_li_version(
-                                    self.local_state.highest_local_li.ledger_info().version()
-                                )
+                                .local_li_version(self.local_state.committed_version())
                                 .chunk_req(&request)
                         );
                         counters::FAIL_LABEL
@@ -387,7 +384,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// Verify that the local state's latest LI version (i.e. committed version) has reached the waypoint version.
     fn is_initialized(&self) -> bool {
-        self.waypoint.version() <= self.local_state.highest_local_li.ledger_info().version()
+        self.waypoint.version() <= self.local_state.committed_version()
     }
 
     fn set_initialization_listener(&mut self, cb_sender: oneshot::Sender<Result<()>>) {
@@ -410,7 +407,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         fail_point!("state_sync::request_sync", |_| {
             Err(anyhow::anyhow!("Injected error in request_sync"))
         });
-        let local_li_version = self.local_state.highest_local_li.ledger_info().version();
+        let local_li_version = self.local_state.committed_version();
         let target_version = request.target.ledger_info().version();
         debug!(
             LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Received)
@@ -457,7 +454,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // it's possible to manage some of the highest known versions in memory.
         self.sync_state_with_local_storage()?;
         let synced_version = self.local_state.highest_version_in_local_storage();
-        let committed_version = self.local_state.highest_local_li.ledger_info().version();
+        let committed_version = self.local_state.committed_version();
         let local_epoch = self.local_state.epoch();
         counters::set_version(counters::VersionType::Synced, synced_version);
         counters::set_version(counters::VersionType::Committed, committed_version);
@@ -481,7 +478,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .local_epoch(local_epoch));
         let block_timestamp_usecs = self
             .local_state
-            .highest_local_li
+            .committed_ledger_info()
             .ledger_info()
             .timestamp_usecs();
 
@@ -622,7 +619,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Received)
                 .peer(&peer)
                 .chunk_req(&request)
-                .local_li_version(self.local_state.highest_local_li.ledger_info().version())
+                .local_li_version(self.local_state.committed_version())
         );
         fail_point!("state_sync::process_chunk_request", |_| {
             Err(anyhow::anyhow!("Injected error in process_chunk_request"))
@@ -676,7 +673,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         // If there is nothing a node can help with, and the request supports long polling,
         // add it to the subscriptions.
-        let local_version = self.local_state.highest_local_li.ledger_info().version();
+        let local_version = self.local_state.committed_version();
         if local_version <= request.known_version && timeout > 0 {
             let expiration_time = SystemTime::now().checked_add(Duration::from_millis(timeout));
             if let Some(time) = expiration_time {
@@ -697,7 +694,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let highest_li = if target_li.ledger_info().version() < local_version
             && target_li.ledger_info().epoch() == self.local_state.epoch()
         {
-            Some(self.local_state.highest_local_li.clone())
+            Some(self.local_state.committed_ledger_info())
         } else {
             None
         };
@@ -721,9 +718,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     ) -> Result<()> {
         let mut limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         ensure!(
-            self.local_state.highest_local_li.ledger_info().version() >= waypoint_version,
+            self.local_state.committed_version() >= waypoint_version,
             "Local version {} < requested waypoint version {}.",
-            self.local_state.highest_local_li.ledger_info().version(),
+            self.local_state.committed_version(),
             waypoint_version
         );
         ensure!(
@@ -820,7 +817,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         request_epoch: u64,
         target: Option<LedgerInfoWithSignatures>,
     ) -> Result<LedgerInfoWithSignatures> {
-        let mut target_li = target.unwrap_or_else(|| self.local_state.highest_local_li.clone());
+        let mut target_li = target.unwrap_or_else(|| self.local_state.committed_ledger_info());
         let target_epoch = target_li.ledger_info().epoch();
         if target_epoch > request_epoch {
             let end_of_epoch_li = self.executor_proxy.get_epoch_proof(request_epoch)?;
@@ -1024,10 +1021,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // Remain in the current epoch
             self.local_state.epoch()
         };
-        self.local_state.trusted_epoch.verify(&response_li)?;
+        self.local_state.verify_epoch(&response_li)?;
         if let Some(li) = pending_li {
             if li != response_li {
-                self.local_state.trusted_epoch.verify(&li)?;
+                self.local_state.verify_epoch(&li)?;
             }
             self.pending_ledger_infos.add_li(li);
         }
@@ -1096,7 +1093,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let end_of_epoch_li = end_of_epoch_li
             .map(|li| {
                 // verify end-of-epoch-li against local state
-                self.local_state.trusted_epoch.verify(&li).map(|_| li)
+                self.local_state.verify_epoch(&li).map(|_| li)
             })
             .transpose()?
             .filter(|li| {
@@ -1115,8 +1112,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     ) -> Result<()> {
         let target_epoch = target.ledger_info().epoch();
         let target_version = target.ledger_info().version();
-        let local_epoch = self.local_state.highest_local_li.ledger_info().epoch();
-        let local_version = self.local_state.highest_local_li.ledger_info().version();
+        let local_epoch = self.local_state.committed_epoch();
+        let local_version = self.local_state.committed_version();
         if (target_epoch, target_version) <= (local_epoch, local_version) {
             warn!(
                 LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::OldResponseLI)
@@ -1269,7 +1266,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// latest ledger info and are not going to be used for helping the remote subscribers).
     /// The function assumes that the local state has been synced with storage.
     fn check_subscriptions(&mut self) {
-        let highest_li_version = self.local_state.highest_local_li.ledger_info().version();
+        let highest_li_version = self.local_state.committed_version();
 
         let mut ready = vec![];
         self.subscriptions.retain(|peer, request_info| {

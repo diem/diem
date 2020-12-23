@@ -339,10 +339,9 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state.synced_trees.version().unwrap_or(0) == target_version {
-                return highest_li_version.map_or(true, |li_version| {
-                    li_version == state.highest_local_li.ledger_info().version()
-                });
+            if state.highest_version_in_local_storage() == target_version {
+                return highest_li_version
+                    .map_or(true, |li_version| li_version == state.committed_version());
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));
         }
