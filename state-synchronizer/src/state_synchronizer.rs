@@ -178,10 +178,8 @@ impl StateSynchronizer {
         }
     }
 
-    pub fn create_client(&self) -> Arc<StateSynchronizerClient> {
-        Arc::new(StateSynchronizerClient::new(
-            self.coordinator_sender.clone(),
-        ))
+    pub fn create_client(&self) -> StateSynchronizerClient {
+        StateSynchronizerClient::new(self.coordinator_sender.clone())
     }
 
     /// The function returns a future that is fulfilled when the state synchronizer is

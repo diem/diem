@@ -54,7 +54,7 @@ use tokio::runtime::Runtime;
 struct SynchronizerEnv {
     runtime: Runtime,
     synchronizers: Vec<StateSynchronizer>,
-    clients: Vec<Arc<StateSynchronizerClient>>,
+    clients: Vec<StateSynchronizerClient>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
     network_keys: Vec<x25519::PrivateKey>,

@@ -67,7 +67,7 @@ fn build_inserter(
 
     let state_computer = Arc::new(ExecutionProxy::new(
         lec_client,
-        Arc::new(StateSynchronizerClient::new(coordinator_sender)),
+        StateSynchronizerClient::new(coordinator_sender),
     ));
 
     TreeInserter::new_with_store(

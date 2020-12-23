@@ -28,7 +28,7 @@ pub fn start_consensus(
     node_config: &NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
-    state_sync_client: Arc<StateSynchronizerClient>,
+    state_sync_client: StateSynchronizerClient,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: Arc<dyn DbReader>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
