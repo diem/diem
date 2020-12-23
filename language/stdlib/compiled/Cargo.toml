@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }

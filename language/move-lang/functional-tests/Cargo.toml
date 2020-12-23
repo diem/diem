@@ -12,7 +12,7 @@ license = "Apache-2.0"
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 tempfile = "3.1.0"
 
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }

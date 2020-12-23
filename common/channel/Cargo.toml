@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 futures = "0.3.8"
 diem-metrics = { path = "../metrics", version = "0.1.0" }
 diem-infallible = { path = "../infallible", version = "0.1.0" }

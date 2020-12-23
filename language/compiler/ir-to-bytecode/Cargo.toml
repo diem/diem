@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 ir-to-bytecode-syntax = { path = "syntax", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }

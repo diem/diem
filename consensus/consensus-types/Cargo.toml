@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 mirai-annotations = { version = "1.10.1", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 serde = { version = "1.0.117", default-features = false }

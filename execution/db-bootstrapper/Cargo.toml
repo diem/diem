@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 structopt = "0.3.21"
 
 executor = { path = "../executor", version = "0.1.0" }

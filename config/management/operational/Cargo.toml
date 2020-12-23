@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.36"
 hex = "0.4.2"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
 serde_json = "1.0.60"
