@@ -26,7 +26,7 @@ serde_bytes = "0.11.5"
 thiserror = "1.0.22"
 tokio = { version = "0.2.22", features = ["full"] }
 tokio-retry = "0.2.0"
-tokio-util = { version = "0.3.1", features = ["codec"] }
+tokio-util = { version = "0.5.1", features = ["codec"] }
 
 bitvec = { path = "../common/bitvec", version = "0.1.0", package = "diem-bitvec" }
 channel = { path = "../common/channel", version = "0.1.0" }
