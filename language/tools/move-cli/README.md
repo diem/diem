@@ -464,3 +464,48 @@ you can run them just like any other Move CLI test:
 ```shell
 $ move test ./tests/testsuite/diem_smoke
 ```
+
+## Detecting breaking changes
+
+The `move publish` command automatically detects when upgrading a module may lead to a breaking change.
+There are two kinds of breaking changes:
+
+* Linking compatibility (e.g., removing or changing the signature of a public function that is invoked by other modules, removing a
+struct or resource type used by other modules)
+* Layout compatibility (e.g., adding/removing a resource or struct field)
+
+The breaking changes analysis performed by `move publish` is necessarily conservative. For example, say we `move publish` the following
+module:
+
+```
+address 0x2 {
+module M {
+  resource struct S { f: u64, g: u64 }
+}
+}
+```
+
+and then wish to upgrade it to the following:
+
+```
+address 0x2 {
+module M {
+  resource struct S { f: u64 }
+}
+}
+```
+
+Running `move publish` on this new version will fail:
+
+```
+Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.
+Error: Layout API for structs of module 00000000000000000000000000000002::M has changed. Need to do a data migration of published structs
+```
+
+In this case, we know we have not published any instances of `S` in global storage, so it is safe to re-run `move publish --ignore-breaking-changes` (as recommended).
+We can double-check that this was not a breaking change by running `move doctor`.
+This handy command runs exhaustive sanity checks on global storage to detect any breaking changes that occurred in the past:
+* All modules pass the bytecode verifier
+* All modules link against their dependencies
+* All resources deserialize according to their declared types
+* All events deserialize according to their declared types

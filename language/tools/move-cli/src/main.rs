@@ -33,6 +33,7 @@ use vm::{
 use anyhow::{bail, Result};
 use std::{
     collections::BTreeSet,
+    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -800,9 +801,12 @@ fn view(args: &Move, file: &str) -> Result<()> {
 /// (1) all modules pass the bytecode verifier
 /// (2) all modules pass the linker
 /// (3) all resources can be deserialized
-/// (4) all events can be deserialized (TODO)
-/// (5) build/mv_interfaces is consistent with the global storage (TODO)
+/// (4) all events can be deserialized
+/// (5) build/mv_interfaces is consistent with the global storage (TODO?)
 fn doctor(args: &Move) -> Result<()> {
+    fn parent_addr(p: &PathBuf) -> &OsStr {
+        p.parent().unwrap().parent().unwrap().file_name().unwrap()
+    }
     let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
     let state = OnDiskStateView::create(storage_dir, /* compiled_modules */ &[])?;
     let modules = state.get_all_modules()?;
@@ -822,11 +826,21 @@ fn doctor(args: &Move) -> Result<()> {
     for resource_path in state.resource_paths() {
         let resource = state.view_resource(&resource_path);
         if resource.is_err() {
-            let parent_addr = resource_path.parent().unwrap().parent().unwrap();
             bail!(
                 "Failed to deserialize resource {:?} stored under address {:?}",
                 resource_path.file_name().unwrap(),
-                parent_addr.file_name().unwrap()
+                parent_addr(&resource_path)
+            )
+        }
+    }
+    // deserialize each event
+    for event_path in state.event_paths() {
+        let event = state.view_events(&event_path);
+        if event.is_err() {
+            bail!(
+                "Failed to deserialize event {:?} stored under address {:?}",
+                event_path.file_name().unwrap(),
+                parent_addr(&event_path)
             )
         }
     }

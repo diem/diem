@@ -20,3 +20,6 @@ run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --
 
 # transfer 500 XUS from 0xA to 0xB
 run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v
+
+# make sure state is still ok
+doctor
