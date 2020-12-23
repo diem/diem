@@ -83,16 +83,6 @@ impl<'a> LogSchema<'a> {
             chunk_req_info: None,
         }
     }
-
-    pub fn chunk_req(mut self, request: &GetChunkRequest) -> Self {
-        self.chunk_request = Some(request.clone());
-        self
-    }
-
-    pub fn chunk_resp(mut self, response: &GetChunkResponse) -> Self {
-        self.chunk_response = Some(response.clone());
-        self
-    }
 }
 
 #[derive(Clone, Copy, Serialize)]

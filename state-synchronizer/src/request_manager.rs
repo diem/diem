@@ -271,7 +271,7 @@ impl RequestManager {
     }
 
     pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
-        let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_req(&req);
+        let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_request(req.clone());
 
         // update internal state
         let peers = self.pick_peers();

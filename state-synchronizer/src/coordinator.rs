@@ -336,7 +336,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 .peer(&peer)
                                 .error(&err)
                                 .local_li_version(self.local_state.committed_version())
-                                .chunk_req(&request)
+                                .chunk_request(*request)
                         );
                         counters::FAIL_LABEL
                     } else {
@@ -618,7 +618,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Received)
                 .peer(&peer)
-                .chunk_req(&request)
+                .chunk_request(request.clone())
                 .local_li_version(self.local_state.committed_version())
         );
         fail_point!("state_sync::process_chunk_request", |_| {
@@ -779,7 +779,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .get_chunk(known_version, limit, response_li.version())?;
         let chunk_response = GetChunkResponse::new(response_li, txns);
         let log = LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::DeliverChunk)
-            .chunk_resp(&chunk_response)
+            .chunk_response(chunk_response.clone())
             .peer(&peer);
         let msg = StateSynchronizerMsg::GetChunkResponse(Box::new(chunk_response));
 
@@ -843,7 +843,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     fn apply_chunk(&mut self, peer: &PeerNetworkId, response: GetChunkResponse) -> Result<()> {
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::Received)
-                .chunk_resp(&response)
+                .chunk_response(response.clone())
                 .peer(peer)
         );
         fail_point!("state_sync::apply_chunk", |_| {
