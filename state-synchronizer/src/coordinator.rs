@@ -119,7 +119,7 @@ impl PendingLedgerInfos {
 
     fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) {
         let highest_committed_li = sync_state.committed_version();
-        let highest_synced = sync_state.highest_version_in_local_storage();
+        let highest_synced = sync_state.synced_version();
 
         // prune any pending LIs that are older than the latest local synced version
         self.pending_li_queue = self.pending_li_queue.split_off(&(highest_synced + 1));
@@ -370,10 +370,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             counters::STORAGE_READ_FAIL_COUNT.inc();
             e
         })?;
-        if new_state.epoch() > self.local_state.epoch() {
+        if new_state.trusted_epoch() > self.local_state.trusted_epoch() {
             info!(LogSchema::new(LogEntry::EpochChange)
-                .old_epoch(self.local_state.epoch())
-                .new_epoch(new_state.epoch()));
+                .old_epoch(self.local_state.trusted_epoch())
+                .new_epoch(new_state.trusted_epoch()));
         }
         self.local_state = new_state;
 
@@ -435,8 +435,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         self.sync_request = Some(request);
         self.send_chunk_request(
-            self.local_state.highest_version_in_local_storage(),
-            self.local_state.epoch(),
+            self.local_state.synced_version(),
+            self.local_state.trusted_epoch(),
         )
     }
 
@@ -453,9 +453,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
         self.sync_state_with_local_storage()?;
-        let synced_version = self.local_state.highest_version_in_local_storage();
+        let synced_version = self.local_state.synced_version();
         let committed_version = self.local_state.committed_version();
-        let local_epoch = self.local_state.epoch();
+        let local_epoch = self.local_state.trusted_epoch();
         counters::set_version(counters::VersionType::Synced, synced_version);
         counters::set_version(counters::VersionType::Committed, committed_version);
         counters::set_timestamp(
@@ -692,7 +692,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let target_li = self.choose_response_li(request.current_epoch, target_li)?;
         // Only populate highest_li field if it is different from target_li
         let highest_li = if target_li.ledger_info().version() < local_version
-            && target_li.ledger_info().epoch() == self.local_state.epoch()
+            && target_li.ledger_info().epoch() == self.local_state.trusted_epoch()
         {
             Some(self.local_state.committed_ledger_info())
         } else {
@@ -861,7 +861,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         let txn_list_with_proof = response.txn_list_with_proof.clone();
-        let known_version = self.local_state.highest_version_in_local_storage();
+        let known_version = self.local_state.synced_version();
         let chunk_start_version =
             txn_list_with_proof
                 .first_transaction_version
@@ -1009,22 +1009,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
         // Optimistically fetch the next chunk assuming the current chunk is going to be applied
         // successfully.
-        let new_version =
-            self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
+        let new_version = self.local_state.synced_version() + txn_list_with_proof.len() as u64;
         let new_epoch = if response_li.ledger_info().version() == new_version
             && response_li.ledger_info().ends_epoch()
         {
             // This chunk is going to finish the current epoch, optimistically request a chunk
             // from the next epoch.
-            self.local_state.epoch() + 1
+            self.local_state.trusted_epoch() + 1
         } else {
             // Remain in the current epoch
-            self.local_state.epoch()
+            self.local_state.trusted_epoch()
         };
-        self.local_state.verify_epoch(&response_li)?;
+        self.local_state.verify_ledger_info(&response_li)?;
         if let Some(li) = pending_li {
             if li != response_li {
-                self.local_state.verify_epoch(&li)?;
+                self.local_state.verify_ledger_info(&li)?;
             }
             self.pending_ledger_infos.add_li(li);
         }
@@ -1033,7 +1032,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // need to sync with local storage to see whether response LI was actually committed
         // and update pending_ledger_infos accordingly
         self.sync_state_with_local_storage()?;
-        let new_version = self.local_state.highest_version_in_local_storage();
+        let new_version = self.local_state.synced_version();
 
         // don't throw error for failed chunk request send, as this failure is not related to
         // validity of the chunk response itself
@@ -1060,17 +1059,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             "Response with a waypoint LI but we're already initialized"
         );
         // Optimistically fetch the next chunk.
-        let new_version =
-            self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
+        let new_version = self.local_state.synced_version() + txn_list_with_proof.len() as u64;
         // The epoch in the optimistic request (= new_epoch) should be the next epoch if the current chunk
         // is the last one in its epoch.
         let new_epoch = end_of_epoch_li
             .as_ref()
-            .map_or(self.local_state.epoch(), |li| {
+            .map_or(self.local_state.trusted_epoch(), |li| {
                 if li.ledger_info().version() == new_version && li.ledger_info().ends_epoch() {
-                    self.local_state.epoch() + 1
+                    self.local_state.trusted_epoch() + 1
                 } else {
-                    self.local_state.epoch()
+                    self.local_state.trusted_epoch()
                 }
             });
         if new_version < self.waypoint.version() {
@@ -1093,7 +1091,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let end_of_epoch_li = end_of_epoch_li
             .map(|li| {
                 // verify end-of-epoch-li against local state
-                self.local_state.verify_epoch(&li).map(|_| li)
+                self.local_state.verify_ledger_info(&li).map(|_| li)
             })
             .transpose()?
             .filter(|li| {
@@ -1172,7 +1170,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
 
-        let known_version = self.local_state.highest_version_in_local_storage();
+        let known_version = self.local_state.synced_version();
 
         // if coordinator didn't make progress by expected time or did not send a request for current
         // local synced version, issue new request
@@ -1180,7 +1178,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // log and count timeout
             counters::TIMEOUT.inc();
             warn!(LogSchema::new(LogEntry::Timeout).version(known_version));
-            if let Err(e) = self.send_chunk_request(known_version, self.local_state.epoch()) {
+            if let Err(e) = self.send_chunk_request(known_version, self.local_state.trusted_epoch())
+            {
                 error!(
                     LogSchema::event_log(LogEntry::Timeout, LogEvent::SendChunkRequestFail)
                         .version(known_version)

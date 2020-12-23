@@ -35,63 +35,69 @@ use tokio::{
     time::timeout,
 };
 
-/// The state distinguishes between the following fields:
-/// * highest_local_li is keeping the latest certified ledger info
-/// * synced_trees is keeping the latest state in the transaction accumulator and state tree.
+/// SynchronizationState contains the following fields:
+/// * `committed_ledger_info` holds the latest certified ledger info (committed to storage),
+///    i.e., the ledger info for the highest version for which storage has all ledger state.
+/// * `synced_trees` holds the latest transaction accumulator and state tree (which may
+///    or may not be committed to storage), i.e., some ledger state for the next highest
+///    ledger info version is missing.
+/// * `trusted_epoch_state` corresponds to the current epoch if the highest committed
+///    ledger info (`committed_ledger_info`) is in the middle of the epoch, otherwise, it
+///    corresponds to the next epoch if the highest committed ledger info ends the epoch.
 ///
-/// While `highest_local_li` can be used for helping the others (corresponding to the highest
-/// version we have a proof for), `synced_trees` is used for retrieving missing chunks
-/// for the local storage.
+/// Note: `committed_ledger_info` is used for helping other Diem nodes synchronize (i.e.,
+/// it corresponds to the highest version we have a proof for in storage). `synced_trees`
+/// is used locally for retrieving missing chunks for the local storage.
 #[derive(Clone)]
 pub struct SynchronizationState {
-    highest_local_li: LedgerInfoWithSignatures,
+    committed_ledger_info: LedgerInfoWithSignatures,
     synced_trees: ExecutedTrees,
-    // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
-    // or the next epoch if the highest local LI is the final LI in the current epoch.
-    trusted_epoch: EpochState,
+    trusted_epoch_state: EpochState,
 }
 
 impl SynchronizationState {
     pub fn new(
-        highest_local_li: LedgerInfoWithSignatures,
+        committed_ledger_info: LedgerInfoWithSignatures,
         synced_trees: ExecutedTrees,
         current_epoch_state: EpochState,
     ) -> Self {
-        let trusted_epoch = highest_local_li
+        let trusted_epoch_state = committed_ledger_info
             .ledger_info()
             .next_epoch_state()
             .cloned()
             .unwrap_or(current_epoch_state);
+
         SynchronizationState {
-            highest_local_li,
+            committed_ledger_info,
             synced_trees,
-            trusted_epoch,
+            trusted_epoch_state,
         }
     }
 
     pub fn committed_epoch(&self) -> u64 {
-        self.highest_local_li.ledger_info().epoch()
+        self.committed_ledger_info.ledger_info().epoch()
     }
 
     pub fn committed_ledger_info(&self) -> LedgerInfoWithSignatures {
-        self.highest_local_li.clone()
+        self.committed_ledger_info.clone()
     }
 
     pub fn committed_version(&self) -> u64 {
-        self.highest_local_li.ledger_info().version()
+        self.committed_ledger_info.ledger_info().version()
     }
 
-    pub fn epoch(&self) -> u64 {
-        self.trusted_epoch.epoch
-    }
-
-    /// The highest available version in the local storage (even if it's not covered by the LI).
-    pub fn highest_version_in_local_storage(&self) -> u64 {
+    /// Returns the highest available version in the local storage, even if it's not
+    /// committed (i.e., covered by a ledger info).
+    pub fn synced_version(&self) -> u64 {
         self.synced_trees.version().unwrap_or(0)
     }
 
-    pub fn verify_epoch(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
-        self.trusted_epoch.verify(ledger_info)
+    pub fn trusted_epoch(&self) -> u64 {
+        self.trusted_epoch_state.epoch
+    }
+
+    pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
+        self.trusted_epoch_state.verify(ledger_info)
     }
 }
 

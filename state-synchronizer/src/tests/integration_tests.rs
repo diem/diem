@@ -339,7 +339,7 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state.highest_version_in_local_storage() == target_version {
+            if state.synced_version() == target_version {
                 return highest_li_version
                     .map_or(true, |li_version| li_version == state.committed_version());
             }

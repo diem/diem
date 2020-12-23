@@ -263,8 +263,8 @@ fn test_on_chain_config_pub_sub() {
     // out the storage/execution layer. We piggy-back on this expensive DB/runtime setup here in testing
     // on-chain reconfig to test the executor proxy interface against.
     let state = executor_proxy.get_local_storage_state().unwrap();
-    assert_eq!(state.epoch(), 4);
-    assert_eq!(state.highest_version_in_local_storage(), 7);
+    assert_eq!(state.trusted_epoch(), 4);
+    assert_eq!(state.synced_version(), 7);
 
     let txns = executor_proxy.get_chunk(0, 2, 2).unwrap();
     assert_eq!(txns.transactions, vec![txn1, txn2]);
