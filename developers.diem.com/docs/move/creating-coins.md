@@ -148,6 +148,8 @@ We declare the function public to indicate that other modules and scripts are al
 
 Our function takes a `u64` value and returns the constructed `Coin`.
 
+Remember to always re-publish your module after making changes, otherwise our script won't be able to catch those changes.
+
 With this change, we should be able to update our script `test-coin.move` to call our new constructor:
 
 
