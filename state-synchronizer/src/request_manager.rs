@@ -396,7 +396,7 @@ impl RequestManager {
         }
     }
 
-    pub fn is_multicast_response(&self, version: u64, peer: &PeerNetworkId) -> bool {
+    fn is_multicast_response(&self, version: u64, peer: &PeerNetworkId) -> bool {
         self.requests.get(&version).map_or(false, |req| {
             req.last_request_peers.contains(peer) && req.last_request_peers.len() > 1
         })
@@ -414,7 +414,7 @@ impl RequestManager {
             .map(|req_info| req_info.first_request_time)
     }
 
-    pub fn get_multicast_start_time(&self, version: u64) -> Option<SystemTime> {
+    fn get_multicast_start_time(&self, version: u64) -> Option<SystemTime> {
         self.requests
             .get(&version)
             .map(|req_info| req_info.multicast_start_time)
@@ -477,7 +477,7 @@ impl RequestManager {
         is_timeout
     }
 
-    pub fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
+     fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
         let is_network_upstream = self
             .upstream_config
             .get_upstream_preference(peer.raw_network_id())
