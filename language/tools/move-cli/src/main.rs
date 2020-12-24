@@ -164,21 +164,28 @@ impl Move {
         Path::new(&self.build_dir).join(DEFAULT_PACKAGE_DIR)
     }
 
-    /// Prepare the library dependencies, need to run it before every related command,
-    /// i.e., check, publish, and run.
-    pub fn prepare_mode(&self) -> Result<()> {
-        self.mode.prepare(&self.get_package_dir(), false)?;
-
-        // preload the storage with library modules (if such modules do not exist in the storage)
+    /// Prepare an OnDiskStateView that is ready to use. Library modules will be preloaded into the
+    /// storage if `load_libraries` is true.
+    ///
+    /// NOTE: this is the only way to get a state view in Move CLI, and thus, this function needs
+    /// to be run before every command that needs a state view, i.e., `check`, `publish`, `run`,
+    /// `view`, and `doctor`.
+    pub fn prepare_state(&self, load_libraries: bool) -> Result<OnDiskStateView> {
         let state = OnDiskStateView::create(&self.storage_dir)?;
 
-        let lib_modules = self.get_library_modules()?;
-        let new_modules: Vec<_> = lib_modules
-            .into_iter()
-            .filter(|m| !state.has_module(&m.self_id()))
-            .collect();
+        if load_libraries {
+            self.mode.prepare(&self.get_package_dir(), false)?;
 
-        state.save_modules(&new_modules, Some(&self.build_dir))
+            // preload the storage with library modules (if such modules do not exist yet)
+            let lib_modules = self.get_library_modules()?;
+            let new_modules: Vec<_> = lib_modules
+                .into_iter()
+                .filter(|m| !state.has_module(&m.self_id()))
+                .collect();
+            state.save_modules(&new_modules, Some(&self.build_dir))?;
+        }
+
+        Ok(state)
     }
 
     pub fn interface_files_dir(&self) -> Result<String> {
@@ -306,6 +313,7 @@ fn check(args: &Move, republish: bool, files: &[String]) -> Result<()> {
 
 fn publish(
     args: &Move,
+    state: OnDiskStateView,
     files: &[String],
     republish: bool,
     ignore_breaking_changes: bool,
@@ -345,7 +353,6 @@ fn publish(
         }
     }
 
-    let state = OnDiskStateView::create(&args.storage_dir)?;
     if !ignore_breaking_changes {
         for m in &modules {
             let id = m.self_id();
@@ -375,6 +382,7 @@ fn publish(
 
 fn run(
     args: &Move,
+    state: OnDiskStateView,
     script_file: &str,
     signers: &[String],
     txn_args: &[TransactionArgument],
@@ -457,7 +465,6 @@ fn run(
 
     let log_context = NoContextLog::new();
 
-    let state = OnDiskStateView::create(&args.storage_dir)?;
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -721,9 +728,7 @@ fn explain_error(
 }
 
 /// Print a module or resource stored in `file`
-fn view(args: &Move, file: &str) -> Result<()> {
-    let state = OnDiskStateView::create(&args.storage_dir)?;
-
+fn view(state: OnDiskStateView, file: &str) -> Result<()> {
     let path = Path::new(&file);
     if state.is_resource_path(path) {
         match state.view_resource(path)? {
@@ -758,12 +763,11 @@ fn view(args: &Move, file: &str) -> Result<()> {
 /// (3) all resources can be deserialized
 /// (4) all events can be deserialized
 /// (5) build/mv_interfaces is consistent with the global storage (TODO?)
-fn doctor(args: &Move) -> Result<()> {
+fn doctor(state: OnDiskStateView) -> Result<()> {
     fn parent_addr(p: &PathBuf) -> &OsStr {
         p.parent().unwrap().parent().unwrap().file_name().unwrap()
     }
 
-    let state = OnDiskStateView::create(&args.storage_dir)?;
     let modules = state.get_all_modules()?;
     // verify and link each module
     for module in modules.values() {
@@ -811,7 +815,7 @@ fn main() -> Result<()> {
             source_files,
             no_republish,
         } => {
-            move_args.prepare_mode()?;
+            move_args.prepare_state(true)?;
             check(&move_args, !*no_republish, &source_files)
         }
         Command::Publish {
@@ -819,9 +823,10 @@ fn main() -> Result<()> {
             no_republish,
             ignore_breaking_changes,
         } => {
-            move_args.prepare_mode()?;
+            let state = move_args.prepare_state(true)?;
             publish(
                 &move_args,
+                state,
                 source_files,
                 !*no_republish,
                 *ignore_breaking_changes,
@@ -835,9 +840,10 @@ fn main() -> Result<()> {
             gas_budget,
             dry_run,
         } => {
-            move_args.prepare_mode()?;
+            let state = move_args.prepare_state(true)?;
             run(
                 &move_args,
+                state,
                 script_file,
                 signers,
                 args,
@@ -851,7 +857,10 @@ fn main() -> Result<()> {
             &std::env::current_exe()?.to_string_lossy(),
             *track_cov,
         ),
-        Command::View { file } => view(&move_args, file),
+        Command::View { file } => {
+            let state = move_args.prepare_state(false)?;
+            view(state, file)
+        }
         Command::Clean {} => {
             // delete storage
             let storage_dir = Path::new(&move_args.storage_dir);
@@ -866,6 +875,9 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Doctor {} => doctor(&move_args),
+        Command::Doctor {} => {
+            let state = move_args.prepare_state(false)?;
+            doctor(state)
+        }
     }
 }
