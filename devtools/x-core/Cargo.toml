@@ -14,7 +14,7 @@ indoc = "1.0.3"
 hex = "0.4.2"
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 log = "0.4.11"
-toml = "0.5.7"
+toml = "0.5.8"
 once_cell = "1.4.1"
 rental = "0.5.5"
 serde = { version = "1.0.117", features = ["derive"] }

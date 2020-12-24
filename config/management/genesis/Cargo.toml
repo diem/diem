@@ -15,7 +15,7 @@ rand = "0.7.3"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
 structopt = "0.3.21"
 thiserror = "1.0.22"
-toml = { version = "0.5.7", default-features = false }
+toml = { version = "0.5.8", default-features = false }
 
 consensus-types = { path = "../../../consensus/consensus-types", version = "0.1.0" }
 executor = { path = "../../../execution/executor", version = "0.1.0" }

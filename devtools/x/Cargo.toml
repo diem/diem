@@ -16,7 +16,7 @@ anyhow = "1.0.36"
 colored-diff = "0.2.2"
 guppy = { version = "0.6.2", features = ["summaries"] }
 indoc = "1.0.3"
-toml = "0.5.7"
+toml = "0.5.8"
 env_logger = "0.8.2"
 log = "0.4.11"
 chrono = "0.4.19"

@@ -28,7 +28,7 @@ rusoto_autoscaling = { version = "0.45.0" }
 rusoto_sts = { version = "0.45.0" }
 rusoto_s3 = { version = "0.45.0" }
 chrono = "0.4.19"
-toml = { version = "0.5.7", default-features = false }
+toml = { version = "0.5.8", default-features = false }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 diem-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
