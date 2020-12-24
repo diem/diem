@@ -12,7 +12,7 @@ use move_core_types::{
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
-use move_lang::MOVE_COMPILED_EXTENSION;
+use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
 use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
@@ -60,21 +60,37 @@ const EVENTS_DIR: &str = "events";
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
+    build_dir: PathBuf,
     storage_dir: PathBuf,
 }
 
 impl OnDiskStateView {
     /// Create an `OnDiskStateView` that reads/writes resource data and modules in `storage_dir`.
-    pub fn create<P: Into<PathBuf>>(storage_dir: P) -> Result<Self> {
+    pub fn create<P: Into<PathBuf>>(build_dir: P, storage_dir: P) -> Result<Self> {
+        let build_dir = build_dir.into();
+        if !build_dir.exists() {
+            fs::create_dir_all(&build_dir)?;
+        }
+
         let storage_dir = storage_dir.into();
         if !storage_dir.exists() {
             fs::create_dir_all(&storage_dir)?;
         }
+
         Ok(Self {
+            build_dir,
             // it is important to canonicalize the path here because `is_data_path()` relies on the
             // fact that storage_dir is canonicalized.
             storage_dir: storage_dir.canonicalize()?,
         })
+    }
+
+    pub fn interface_files_dir(&self) -> Result<String> {
+        let path = self.build_dir.join(MOVE_COMPILED_INTERFACES_DIR);
+        if !path.exists() {
+            fs::create_dir_all(&path)?;
+        }
+        Ok(path.into_os_string().into_string().unwrap())
     }
 
     fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
@@ -312,36 +328,31 @@ impl OnDiskStateView {
     }
 
     /// Save all the modules in the local cache, re-generate mv_interfaces if required.
-    pub fn save_modules<P: Into<PathBuf>>(
-        &self,
-        modules: &[CompiledModule],
-        build_dir_opt: Option<P>,
-    ) -> Result<()> {
+    pub fn save_modules(&self, modules: &[CompiledModule]) -> Result<()> {
         for module in modules {
             self.save_module(module)?;
         }
 
         // sync with build_dir for updates of mv_interfaces if new modules are added
         if !modules.is_empty() {
-            if let Some(build_dir) = build_dir_opt {
-                self.sync_interface_files(build_dir)?;
-            }
+            move_lang::generate_interface_files(
+                &[self
+                    .storage_dir
+                    .clone()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()],
+                Some(
+                    self.build_dir
+                        .clone()
+                        .into_os_string()
+                        .into_string()
+                        .unwrap(),
+                ),
+                false,
+            )?;
         }
 
-        Ok(())
-    }
-
-    fn sync_interface_files<P: Into<PathBuf>>(&self, build_dir: P) -> Result<()> {
-        move_lang::generate_interface_files(
-            &[self
-                .storage_dir
-                .clone()
-                .into_os_string()
-                .into_string()
-                .unwrap()],
-            Some(build_dir.into().into_os_string().into_string().unwrap()),
-            false,
-        )?;
         Ok(())
     }
 

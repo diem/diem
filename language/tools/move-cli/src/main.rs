@@ -18,7 +18,6 @@ use move_core_types::{
 };
 use move_lang::{
     self, compiled_unit::CompiledUnit, Pass as MovePass, PassResult as MovePassResult,
-    MOVE_COMPILED_INTERFACES_DIR,
 };
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
@@ -164,6 +163,13 @@ impl Move {
         Path::new(&self.build_dir).join(DEFAULT_PACKAGE_DIR)
     }
 
+    /// This collects only the compiled modules from dependent libraries. The modules
+    /// created via the "publish" command should already sit in the storage based on
+    /// current implementation.
+    fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
+        self.mode.compiled_modules(&self.get_package_dir())
+    }
+
     /// Prepare an OnDiskStateView that is ready to use. Library modules will be preloaded into the
     /// storage if `load_libraries` is true.
     ///
@@ -171,7 +177,7 @@ impl Move {
     /// to be run before every command that needs a state view, i.e., `check`, `publish`, `run`,
     /// `view`, and `doctor`.
     pub fn prepare_state(&self, load_libraries: bool) -> Result<OnDiskStateView> {
-        let state = OnDiskStateView::create(&self.storage_dir)?;
+        let state = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
 
         if load_libraries {
             self.mode.prepare(&self.get_package_dir(), false)?;
@@ -182,46 +188,15 @@ impl Move {
                 .into_iter()
                 .filter(|m| !state.has_module(&m.self_id()))
                 .collect();
-            state.save_modules(&new_modules, Some(&self.build_dir))?;
+            state.save_modules(&new_modules)?;
         }
 
         Ok(state)
     }
-
-    pub fn interface_files_dir(&self) -> Result<String> {
-        let mut path = PathBuf::from(self.build_dir.clone());
-        path.push(MOVE_COMPILED_INTERFACES_DIR);
-        let dir = path.into_os_string().into_string().unwrap();
-        maybe_create_dir(&dir)?;
-        Ok(dir)
-    }
-
-    /// This collects the dependencies for compiling a script or module. The dependencies are
-    /// essentially the move interface files generated from either prior `publish` commands or
-    /// preloaded libraries.
-    pub fn get_compilation_deps(&self) -> Result<Vec<String>> {
-        Ok(vec![self.interface_files_dir()?])
-    }
-
-    /// This collects only the compiled modules from dependent libraries. The modules
-    /// created via the "publish" command should already sit in the storage based on
-    /// current implementation.
-    fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
-        self.mode.compiled_modules(&self.get_package_dir())
-    }
-}
-
-/// Create a directory at ./`dir_name` if one does not already exist
-fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
-    let dir = Path::new(dir_name);
-    if !dir.exists() {
-        fs::create_dir_all(dir)?
-    }
-    Ok(dir)
 }
 
 fn shadow_storage(
-    args: &Move,
+    interface_dir: String,
     pprog: move_lang::parser::ast::Program,
 ) -> Result<move_lang::parser::ast::Program> {
     fn convert_module_id(
@@ -251,7 +226,6 @@ fn shadow_storage(
         }
     }
 
-    let interface_dir = args.interface_files_dir()?;
     let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
         let module_str = path.file_stem().unwrap().to_str().unwrap();
         let module = Identifier::new(module_str.to_string()).unwrap();
@@ -277,8 +251,8 @@ fn shadow_storage(
 }
 
 fn move_compile_to_and_shadow(
-    args: &Move,
     files: &[String],
+    interface_dir: String,
     republish: bool,
     until: MovePass,
 ) -> Result<(
@@ -286,14 +260,14 @@ fn move_compile_to_and_shadow(
     std::result::Result<MovePassResult, move_lang::errors::Errors>,
 )> {
     let (files, pprog_and_comments_res) =
-        move_lang::move_parse(files, &args.get_compilation_deps()?, None, None)?;
+        move_lang::move_parse(files, &[interface_dir.clone()], None, None)?;
     let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
     assert!(sender_opt.is_none());
     if republish {
-        pprog = shadow_storage(args, pprog)?;
+        pprog = shadow_storage(interface_dir, pprog)?;
     }
     Ok((
         files,
@@ -302,28 +276,37 @@ fn move_compile_to_and_shadow(
 }
 
 /// Compile the user modules in `src` and the script in `script_file`
-fn check(args: &Move, republish: bool, files: &[String]) -> Result<()> {
-    if args.verbose {
+fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: bool) -> Result<()> {
+    if verbose {
         println!("Checking Move files...");
     }
-    let (files, result) = move_compile_to_and_shadow(args, files, republish, MovePass::CFGIR)?;
+    let (files, result) = move_compile_to_and_shadow(
+        files,
+        state.interface_files_dir()?,
+        republish,
+        MovePass::CFGIR,
+    )?;
     move_lang::unwrap_or_report_errors!(files, result);
     Ok(())
 }
 
 fn publish(
-    args: &Move,
     state: OnDiskStateView,
     files: &[String],
     republish: bool,
     ignore_breaking_changes: bool,
+    verbose: bool,
 ) -> Result<()> {
-    if args.verbose {
+    if verbose {
         println!("Compiling Move modules...")
     }
 
-    let (files, result) =
-        move_compile_to_and_shadow(args, files, republish, MovePass::Compilation)?;
+    let (files, result) = move_compile_to_and_shadow(
+        files,
+        state.interface_files_dir()?,
+        republish,
+        MovePass::Compilation,
+    )?;
     let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
         MovePassResult::Compilation(units) => units,
         _ => unreachable!(),
@@ -333,7 +316,7 @@ fn publish(
         .iter()
         .filter(|u| matches!(u,  CompiledUnit::Module {..}))
         .count();
-    if args.verbose {
+    if verbose {
         println!("Found and compiled {} modules", num_modules)
     }
 
@@ -341,7 +324,7 @@ fn publish(
     for c in compiled_units {
         match c {
             CompiledUnit::Script { loc, .. } => {
-                if args.verbose {
+                if verbose {
                     println!(
                         "Warning: Found script in specified files for publishing. But scripts \
                          cannot be published. Script found in: {}",
@@ -377,11 +360,10 @@ fn publish(
         }
     }
 
-    state.save_modules(&modules, Some(&args.build_dir))
+    state.save_modules(&modules)
 }
 
 fn run(
-    args: &Move,
     state: OnDiskStateView,
     script_file: &str,
     signers: &[String],
@@ -389,14 +371,19 @@ fn run(
     vm_type_args: Vec<TypeTag>,
     gas_budget: Option<u64>,
     dry_run: bool,
+    verbose: bool,
 ) -> Result<()> {
-    fn compile_script(args: &Move, script_file: &str) -> Result<Option<CompiledScript>> {
-        if args.verbose {
+    fn compile_script(
+        state: &OnDiskStateView,
+        script_file: &str,
+        verbose: bool,
+    ) -> Result<Option<CompiledScript>> {
+        if verbose {
             println!("Compiling transaction script...")
         }
         let (_files, compiled_units) = move_lang::move_compile_and_report(
             &[script_file.to_string()],
-            &args.get_compilation_deps()?,
+            &[state.interface_files_dir()?],
             None,
             None,
         )?;
@@ -411,7 +398,7 @@ fn run(
                     script_opt = Some(script)
                 }
                 CompiledUnit::Module { ident, .. } => {
-                    if args.verbose {
+                    if verbose {
                         println!(
                             "Warning: Found module '{}' in file specified for the script. This \
                              module will not be published.",
@@ -425,7 +412,7 @@ fn run(
         Ok(script_opt)
     }
 
-    let script_opt = compile_script(args, script_file)?;
+    let script_opt = compile_script(&state, script_file, verbose)?;
     let script = match script_opt {
         Some(s) => s,
         None => bail!("Unable to find script in file {:?}", script_file),
@@ -487,7 +474,7 @@ fn run(
         )
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        if args.verbose {
+        if verbose {
             explain_effects(&effects, &state)?
         }
         maybe_commit_effects(!dry_run, Some(effects), &state)
@@ -815,8 +802,8 @@ fn main() -> Result<()> {
             source_files,
             no_republish,
         } => {
-            move_args.prepare_state(true)?;
-            check(&move_args, !*no_republish, &source_files)
+            let state = move_args.prepare_state(true)?;
+            check(state, !*no_republish, &source_files, move_args.verbose)
         }
         Command::Publish {
             source_files,
@@ -825,11 +812,11 @@ fn main() -> Result<()> {
         } => {
             let state = move_args.prepare_state(true)?;
             publish(
-                &move_args,
                 state,
                 source_files,
                 !*no_republish,
                 *ignore_breaking_changes,
+                move_args.verbose,
             )
         }
         Command::Run {
@@ -842,7 +829,6 @@ fn main() -> Result<()> {
         } => {
             let state = move_args.prepare_state(true)?;
             run(
-                &move_args,
                 state,
                 script_file,
                 signers,
@@ -850,6 +836,7 @@ fn main() -> Result<()> {
                 type_args.to_vec(),
                 *gas_budget,
                 *dry_run,
+                move_args.verbose,
             )
         }
         Command::Test { path, track_cov } => test::run_all(
