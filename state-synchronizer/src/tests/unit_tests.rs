@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::request_manager::{PeerScoreUpdateType, RequestManager};
+use crate::request_manager::RequestManager;
 use diem_config::config::{PeerNetworkId, UpstreamConfig};
 use netcore::transport::ConnectionOrigin;
 use std::{collections::HashMap, time::Duration};
@@ -25,7 +25,7 @@ fn test_request_manager() {
     }
 
     for _ in 0..50 {
-        request_manager.update_score(&peers[0], PeerScoreUpdateType::InvalidChunk);
+        request_manager.process_invalid_chunk(&peers[0]);
     }
 
     let mut pick_counts = HashMap::new();

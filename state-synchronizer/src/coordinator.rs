@@ -8,7 +8,7 @@ use crate::{
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
-    request_manager::{PeerScoreUpdateType, RequestManager},
+    request_manager::RequestManager,
     state_synchronizer::SynchronizationState,
 };
 use anyhow::{bail, ensure, format_err, Result};
@@ -866,8 +866,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             txn_list_with_proof
                 .first_transaction_version
                 .ok_or_else(|| {
-                    self.request_manager
-                        .update_score(&peer, PeerScoreUpdateType::EmptyChunk);
+                    self.request_manager.process_empty_chunk(&peer);
                     format_err!("[state sync] Empty chunk from {:?}", peer)
                 })?;
 
@@ -912,8 +911,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             ),
         }
         .map_err(|e| {
-            self.request_manager
-                .update_score(peer, PeerScoreUpdateType::InvalidChunk);
+            self.request_manager.process_invalid_chunk(&peer);
             format_err!("[state sync] failed to apply chunk: {}", e)
         })?;
 

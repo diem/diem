@@ -29,7 +29,7 @@ const MIN_SCORE: f64 = 1.0;
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
 #[derive(Clone, Debug)]
-pub struct PeerInfo {
+struct PeerInfo {
     is_alive: bool,
     score: f64,
 }
@@ -66,7 +66,7 @@ impl ChunkRequestInfo {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum PeerScoreUpdateType {
+enum PeerScoreUpdateType {
     Success,
     EmptyChunk,
     // A received chunk cannot be directly applied (old / wrong version). Note that it could happen
@@ -152,7 +152,7 @@ impl RequestManager {
         self.eligible_peers.is_empty()
     }
 
-    pub fn update_score(&mut self, peer: &PeerNetworkId, update_type: PeerScoreUpdateType) {
+    fn update_score(&mut self, peer: &PeerNetworkId, update_type: PeerScoreUpdateType) {
         if let Some(peer_info) = self.peers.get_mut(peer) {
             let old_score = peer_info.score;
             match update_type {
@@ -342,6 +342,14 @@ impl RequestManager {
                 .expect("missing chunk request that was just added")
                 .clone()
         }
+    }
+
+    pub fn process_empty_chunk(&mut self, peer: &PeerNetworkId) {
+        self.update_score(&peer, PeerScoreUpdateType::EmptyChunk);
+    }
+
+    pub fn process_invalid_chunk(&mut self, peer: &PeerNetworkId) {
+        self.update_score(peer, PeerScoreUpdateType::InvalidChunk);
     }
 
     pub fn process_success_response(&mut self, peer: &PeerNetworkId) {
