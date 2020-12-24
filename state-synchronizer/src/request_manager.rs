@@ -220,19 +220,6 @@ impl RequestManager {
             .collect();
     }
 
-    fn pick_peer(
-        peers: &[PeerNetworkId],
-        weighted_index: &Option<WeightedIndex<f64>>,
-    ) -> Option<PeerNetworkId> {
-        if let Some(weighted_index) = &weighted_index {
-            let mut rng = thread_rng();
-            if let Some(peer) = peers.get(weighted_index.sample(&mut rng)) {
-                return Some(peer.clone());
-            }
-        }
-        None
-    }
-
     /// Picks a set of peers to send chunk requests to
     /// Tries to pick one peer per network, in order of network preference (where the higher the preference,
     /// the lower the value)
@@ -250,7 +237,7 @@ impl RequestManager {
         let mut chosen_peers = vec![];
         let mut new_multicast_level = None;
         for (level, (peers, weighted_index)) in self.eligible_peers.iter() {
-            if let Some(peer) = Self::pick_peer(peers, weighted_index) {
+            if let Some(peer) = pick_peer(peers, weighted_index) {
                 chosen_peers.push(peer)
             }
             // at the minimum go through networks with preference level <= multicast_level
@@ -431,7 +418,7 @@ impl RequestManager {
             .requests
             .range(..version)
             .filter_map(|(version, req)| {
-                if Self::is_timeout(req.last_request_time, self.request_timeout) {
+                if is_timeout(req.last_request_time, self.request_timeout) {
                     Some(*version)
                 } else {
                     None
@@ -449,16 +436,16 @@ impl RequestManager {
     pub fn check_timeout(&mut self, version: u64) -> bool {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
-        let is_timeout = Self::is_timeout(last_request_time, self.request_timeout);
-        if !is_timeout {
-            return is_timeout;
+        let timeout = is_timeout(last_request_time, self.request_timeout);
+        if !timeout {
+            return timeout;
         }
 
         // update peer info based on timeout
         let peers_to_penalize = match self.requests.get(&version) {
             Some(prev_request) => prev_request.last_request_peers.clone(),
             None => {
-                return is_timeout;
+                return timeout;
             }
         };
         for peer in peers_to_penalize.iter() {
@@ -467,17 +454,17 @@ impl RequestManager {
 
         // increment multicast level if this request is also multicast-timed-out
         let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
-        if Self::is_timeout(multicast_start_time, self.multicast_timeout) {
+        if is_timeout(multicast_start_time, self.multicast_timeout) {
             let new_multicast_level = std::cmp::min(
                 self.multicast_level + 1,
                 self.upstream_config.upstream_count() - 1, // multicast_level (=network preference) is 0-indexed
             );
             self.update_multicast(new_multicast_level, Some(version));
         }
-        is_timeout
+        timeout
     }
 
-     fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
+    fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
         let is_network_upstream = self
             .upstream_config
             .get_upstream_preference(peer.raw_network_id())
@@ -499,16 +486,6 @@ impl RequestManager {
         self.peers.get(peer).map(|p| p.score)
     }
 
-    // Returns whether the timeout for the given params has occurred, compared to SystemTime at function call
-    // returns true if the timeout (=`timeout_start + timeout_duration`) has happened, else false
-    fn is_timeout(timeout_start: SystemTime, timeout_duration: Duration) -> bool {
-        timeout_start
-            .checked_add(timeout_duration)
-            .map_or(false, |deadline| {
-                SystemTime::now().duration_since(deadline).is_ok()
-            })
-    }
-
     fn update_multicast(&mut self, new_level: usize, request_version: Option<u64>) {
         let old_level = self.multicast_level;
         let event = match new_level {
@@ -528,4 +505,27 @@ impl RequestManager {
         self.multicast_level = new_level;
         counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
     }
+}
+
+// Returns whether the timeout for the given params has occurred, compared to SystemTime at function call
+// returns true if the timeout (=`timeout_start + timeout_duration`) has happened, else false
+fn is_timeout(timeout_start: SystemTime, timeout_duration: Duration) -> bool {
+    timeout_start
+        .checked_add(timeout_duration)
+        .map_or(false, |deadline| {
+            SystemTime::now().duration_since(deadline).is_ok()
+        })
+}
+
+fn pick_peer(
+    peers: &[PeerNetworkId],
+    weighted_index: &Option<WeightedIndex<f64>>,
+) -> Option<PeerNetworkId> {
+    if let Some(weighted_index) = &weighted_index {
+        let mut rng = thread_rng();
+        if let Some(peer) = peers.get(weighted_index.sample(&mut rng)) {
+            return Some(peer.clone());
+        }
+    }
+    None
 }
