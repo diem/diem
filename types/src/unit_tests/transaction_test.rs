@@ -6,8 +6,8 @@ use crate::{
     account_config::XUS_NAME,
     chain_id::ChainId,
     transaction::{
-        GovernanceRole, RawTransaction, Script, SignedTransaction, Transaction, TransactionInfo,
-        TransactionListWithProof, TransactionPayload, TransactionWithProof,
+        metadata, GovernanceRole, RawTransaction, Script, SignedTransaction, Transaction,
+        TransactionInfo, TransactionListWithProof, TransactionPayload, TransactionWithProof,
     },
 };
 use bcs::test_helpers::assert_canonical_encode_decode;
@@ -52,6 +52,33 @@ fn test_role_ordering() {
 
     assert!(Validator.priority() == ValidatorOperator.priority());
     assert!(Validator.priority() == DesignatedDealer.priority());
+}
+
+#[test]
+fn test_general_metadata_constructor_and_setters() {
+    let raw_to_subaddr = b"to_subaddr".to_vec();
+    let to_subaddress = Some(raw_to_subaddr.clone());
+    let raw_from_subaddr = b"from_subaddr".to_vec();
+    let from_subaddress = Some(raw_from_subaddr.clone());
+    let referenced_event = Some(1337);
+    let general_metadata =
+        metadata::GeneralMetadataV0::new(to_subaddress, from_subaddress, referenced_event);
+
+    assert!(
+        general_metadata
+            .to_subaddress()
+            .as_ref()
+            .expect("incorrect to_subaddress")
+            == &raw_to_subaddr
+    );
+    assert!(
+        general_metadata
+            .from_subaddress()
+            .as_ref()
+            .expect("incorrect from suabbdress")
+            == &raw_from_subaddr
+    );
+    assert!(general_metadata.referenced_event() == &referenced_event);
 }
 
 proptest! {

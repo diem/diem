@@ -42,6 +42,32 @@ pub struct GeneralMetadataV0 {
     referenced_event: Option<u64>,
 }
 
+impl GeneralMetadataV0 {
+    pub fn new(
+        to_subaddress: Option<Vec<u8>>,
+        from_subaddress: Option<Vec<u8>>,
+        referenced_event: Option<u64>,
+    ) -> Self {
+        GeneralMetadataV0 {
+            to_subaddress,
+            from_subaddress,
+            referenced_event,
+        }
+    }
+
+    pub fn to_subaddress(&self) -> &Option<Vec<u8>> {
+        &self.to_subaddress
+    }
+
+    pub fn from_subaddress(&self) -> &Option<Vec<u8>> {
+        &self.from_subaddress
+    }
+
+    pub fn referenced_event(&self) -> &Option<u64> {
+        &self.referenced_event
+    }
+}
+
 /// List of supported transaction metadata format versions for transactions
 /// subject to travel rule
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
