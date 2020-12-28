@@ -1087,10 +1087,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // transactions leading up to that end-of-epoch LI
         // * verify end-of-epoch-li actually ends an epoch
         let end_of_epoch_li = end_of_epoch_li
-            .map(|li| {
-                // verify end-of-epoch-li against local state
-                self.local_state.verify_ledger_info(&li).map(|_| li)
-            })
+            .map(|li| self.local_state.verify_ledger_info(&li).map(|_| li))
             .transpose()?
             .filter(|li| {
                 li.ledger_info().version() == new_version && li.ledger_info().ends_epoch()
