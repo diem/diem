@@ -5,7 +5,7 @@ use crate::{
     executor_proxy::ExecutorProxyTrait, state_synchronizer::SynchronizationState,
     tests::mock_storage::MockStorage,
 };
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use diem_config::config::HANDSHAKE_VERSION;
 use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use diem_infallible::RwLock;
@@ -131,11 +131,14 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         limit: u64,
         target_version: u64,
     ) -> Result<TransactionListWithProof> {
+        let start_version = known_version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Known version too high"))?;
         let txns = self
             .storage
             .read()
-            .get_chunk(known_version + 1, limit, target_version);
-        let first_txn_version = txns.first().map(|_| known_version + 1);
+            .get_chunk(start_version, limit, target_version);
+        let first_txn_version = txns.first().map(|_| start_version);
         let txns_with_proof = TransactionListWithProof::new(
             txns,
             None,

@@ -175,8 +175,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
         limit: u64,
         target_version: u64,
     ) -> Result<TransactionListWithProof> {
+        let start_version = known_version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Known version too high"))?;
         self.storage
-            .get_transactions(known_version + 1, limit, target_version, false)
+            .get_transactions(start_version, limit, target_version, false)
     }
 
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
