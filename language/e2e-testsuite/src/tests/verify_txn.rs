@@ -1153,6 +1153,10 @@ fn charge_gas_invalid_args() {
 
 #[test]
 pub fn publish_and_register_new_currency() {
+    // Test creating and registering a new currency and verify that it can
+    // only be used to pay transaction fees after it is initialized for that
+    // purpose.
+
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::allowlist_genesis();
     executor.set_golden_file(current_function_name!());
@@ -1289,7 +1293,7 @@ pub fn publish_and_register_new_currency() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn.clone()).status(),
-        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
+        StatusCode::BAD_TRANSACTION_FEE_CURRENCY
     );
 
     executor.exec(

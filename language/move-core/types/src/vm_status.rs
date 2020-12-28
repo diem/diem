@@ -463,6 +463,8 @@ pub enum StatusCode {
     BAD_CHAIN_ID = 23,
     // The sequence number is too large and would overflow if the transaction were executed
     SEQUENCE_NUMBER_TOO_BIG = 24,
+    // The gas currency is not registered as a TransactionFee currency
+    BAD_TRANSACTION_FEE_CURRENCY = 25,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.

@@ -203,11 +203,25 @@ The following checks are performed by all the prologue functions:
 
 * Check that the hash of the transaction's public key (from the `authenticator` in the `SignedTransaction`) matches the authentication key in the sender's account. If not, validation fails with an `INVALID_AUTH_KEY` status code.
 
-* The transaction sender must be able to pay the maximum transaction fee. The maximum fee is the product of the transaction's `max_gas_amount` and `gas_unit_price` fields. If the sender's account balance for the coin specified by the transaction's `gas_currency_code` is less than that maximum fee, validation fails with an `INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE` status code. For `WriteSet` transactions, the maximum fee is treated as zero, regardless of the gas parameters specified in the transaction.
-
-* The transaction's `sequence_number` must match the current sequence number in the sender's account. If the transaction sequence number is too low, validation fails with a `SEQUENCE_NUMBER_TOO_OLD` status code. If the number is too high, the behavior depends on whether it is the initial validation or the revalidation done as part of the execution phase. Multiple transactions with consecutive sequence numbers from the same account can be in flight at the same time, but they must be executed strictly in order. For that reason, a transaction sequence number higher than expected for the sender's account is accepted during the initial validation, but rejected with a `SEQUENCE_NUMBER_TOO_NEW` status code during the execution phase.
+* The transaction sender must be able to pay the maximum transaction fee. The maximum fee is the product of the transaction's `max_gas_amount` and `gas_unit_price` fields.
+If the maximum fee is non-zero, the coin specified by the transaction's `gas_currency_code`
+must have been registered as a valid gas currency (via the `TransactionFee` module),
+or else validation will fail with a `BAD_TRANSACTION_FEE_CURRENCY` status.
+If the sender's account balance for the gas currency is less than the maximum fee,
+validation fails with an `INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE` status code.
+For `WriteSet` transactions, the maximum fee is treated as zero,
+regardless of the gas parameters specified in the transaction.
 
 * Check if the transaction is expired. If the transaction's `expiration_timestamp_secs` field is greater than or equal to the current blockchain timestamp, fail with a `TRANSACTION_EXPIRED` status code.
+
+* Check if the transaction's `sequence_number` is already the maximum
+value, such that it would overflow if the transaction was processed.
+If so, validation fails with a `SEQUENCE_NUMBER_TOO_BIG` status code.
+
+* The transaction's `sequence_number` must match the current sequence number in the sender's account. If the transaction sequence number is too low, validation fails with a `SEQUENCE_NUMBER_TOO_OLD` status code. If the number is too high, the behavior depends on whether it is the initial validation or the revalidation done as part of the execution phase. Multiple transactions with consecutive sequence numbers from the same account can be in flight at the same time, but they must be executed strictly in order. For that reason, a transaction sequence number higher than expected for the sender's account is accepted during the initial validation, but rejected with a `SEQUENCE_NUMBER_TOO_NEW` status code during the execution phase.
+Note that this check for "too new" sequence numbers must be the last check
+in the prologue function so that a transaction cannot get through the
+initial validation when it has some other fatal error.
 
 If the prologue function fails for any other reason, which would indicate some kind of unexpected problem, validation fails with a status code of `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`.
 

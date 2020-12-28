@@ -194,7 +194,7 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 
 ## Function `add_txn_fee_currency`
 
-Sets ups the needed transaction fee state for a given <code>CoinType</code> currency by
+Sets up the needed transaction fee state for a given <code>CoinType</code> currency by
 (1) configuring <code>tc_account</code> to accept <code>CoinType</code>
 (2) publishing a wrapper of the <code>Preburn&lt;CoinType&gt;</code> resource under <code>tc_account</code>
 
