@@ -175,16 +175,19 @@ impl ExecutorProxyTrait for ExecutorProxy {
         limit: u64,
         target_version: u64,
     ) -> Result<TransactionListWithProof> {
-        let start_version = known_version
+        let starting_version = known_version
             .checked_add(1)
-            .ok_or_else(|| format_err!("Known version too high"))?;
+            .ok_or_else(|| format_err!("Starting version has overflown!"))?;
         self.storage
-            .get_transactions(start_version, limit, target_version, false)
+            .get_transactions(starting_version, limit, target_version, false)
     }
 
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+        let next_epoch = epoch
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
         self.storage
-            .get_epoch_ending_ledger_infos(epoch, epoch + 1)?
+            .get_epoch_ending_ledger_infos(epoch, next_epoch)?
             .ledger_info_with_sigs
             .pop()
             .ok_or_else(|| format_err!("Empty EpochChangeProof"))

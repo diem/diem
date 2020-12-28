@@ -7,7 +7,7 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerMsg, StateSynchronizerSender},
 };
-use anyhow::{bail, Result};
+use anyhow::{bail, format_err, Result};
 use diem_config::{
     config::{PeerNetworkId, UpstreamConfig},
     network_id::{NetworkId, NodeNetworkId},
@@ -433,19 +433,19 @@ impl RequestManager {
 
     /// Checks whether the request sent with known_version = `version` has timed out
     /// Returns true if such a request timed out or does not exist, else false
-    pub fn check_timeout(&mut self, version: u64) -> bool {
+    pub fn check_timeout(&mut self, version: u64) -> Result<bool> {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
         let timeout = is_timeout(last_request_time, self.request_timeout);
         if !timeout {
-            return timeout;
+            return Ok(timeout);
         }
 
         // update peer info based on timeout
         let peers_to_penalize = match self.requests.get(&version) {
             Some(prev_request) => prev_request.last_request_peers.clone(),
             None => {
-                return timeout;
+                return Ok(timeout);
             }
         };
         for peer in peers_to_penalize.iter() {
@@ -456,12 +456,17 @@ impl RequestManager {
         let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
         if is_timeout(multicast_start_time, self.multicast_timeout) {
             let new_multicast_level = std::cmp::min(
-                self.multicast_level + 1,
-                self.upstream_config.upstream_count() - 1, // multicast_level (=network preference) is 0-indexed
+                self.multicast_level
+                    .checked_add(1)
+                    .ok_or_else(|| format_err!("New multicast level has overflown!"))?,
+                self.upstream_config
+                    .upstream_count()
+                    .checked_sub(1)
+                    .ok_or_else(|| format_err!("Upstream count has overflown!"))?, // multicast_level (=network preference) is 0-indexed
             );
             self.update_multicast(new_multicast_level, Some(version));
         }
-        timeout
+        Ok(timeout)
     }
 
     fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {

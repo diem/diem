@@ -91,7 +91,7 @@ fn test_request_manager_request_metadata() {
     assert!(request_manager.get_first_request_time(1).is_none());
 
     request_manager.add_request(1, vec![peers[0].clone()]);
-    request_manager.check_timeout(1);
+    request_manager.check_timeout(1).unwrap();
     request_manager.add_request(1, vec![peers[1].clone()]);
     assert!(request_manager.peer_score(&peers[0]).unwrap() < 99.0);
     assert!(request_manager.peer_score(&peers[1]).unwrap() > 99.0);

@@ -175,7 +175,8 @@ impl StateSynchronizer {
             upstream_config,
             executor_proxy,
             initial_state,
-        );
+        )
+        .expect("Unable to create sync coordinator");
         runtime.spawn(coordinator.start(network));
 
         Self {

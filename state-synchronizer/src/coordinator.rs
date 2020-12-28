@@ -117,18 +117,24 @@ impl PendingLedgerInfos {
         }
     }
 
-    fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) {
+    fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) -> Result<()> {
         let highest_committed_li = sync_state.committed_version();
         let highest_synced = sync_state.synced_version();
 
         // prune any pending LIs that are older than the latest local synced version
-        self.pending_li_queue = self.pending_li_queue.split_off(&(highest_synced + 1));
+        let prune_version = highest_synced
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Prune version has overflown!"))?;
+        self.pending_li_queue = self.pending_li_queue.split_off(&prune_version);
 
         // pick target LI to use for sending ProgressiveTargetType requests.
         self.target_li = if highest_committed_li == highest_synced {
             // try to find LI with max version that will fit in a single chunk
+            let highest_version = highest_synced
+                .checked_add(chunk_limit)
+                .ok_or_else(|| format_err!("Highest version has overflown!"))?;
             self.pending_li_queue
-                .range((Included(0), Included(highest_synced + chunk_limit)))
+                .range((Included(0), Included(highest_version)))
                 .rev()
                 .next()
                 .map(|(_version, ledger_info)| ledger_info.clone())
@@ -138,6 +144,7 @@ impl PendingLedgerInfos {
                 .next()
                 .map(|(_version, ledger_info)| ledger_info.clone())
         };
+        Ok(())
     }
 
     fn target_li(&self) -> Option<LedgerInfoWithSignatures> {
@@ -202,15 +209,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         upstream_config: UpstreamConfig,
         executor_proxy: T,
         initial_state: SynchronizationState,
-    ) -> Self {
+    ) -> Result<Self> {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
         let retry_timeout_val = match role {
-            RoleType::FullNode => config.tick_interval_ms + config.long_poll_timeout_ms,
-            RoleType::Validator => 2 * config.tick_interval_ms,
+            RoleType::FullNode => config
+                .tick_interval_ms
+                .checked_add(config.long_poll_timeout_ms)
+                .ok_or_else(|| format_err!("Fullnode retry timeout has overflown."))?,
+            RoleType::Validator => config
+                .tick_interval_ms
+                .checked_mul(2)
+                .ok_or_else(|| format_err!("Validator retry timeout has overflown!"))?,
         };
         let multicast_timeout = Duration::from_millis(config.multicast_timeout_ms);
 
-        Self {
+        Ok(Self {
             client_events,
             state_sync_to_mempool_sender,
             local_state: initial_state,
@@ -229,7 +242,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             sync_request: None,
             initialization_listener: None,
             executor_proxy,
-        }
+        })
     }
 
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
@@ -378,8 +391,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.local_state = new_state;
 
         self.pending_ledger_infos
-            .update(&self.local_state, self.config.chunk_limit);
-        Ok(())
+            .update(&self.local_state, self.config.chunk_limit)
     }
 
     /// Verify that the local state's latest LI version (i.e. committed version) has reached the waypoint version.
@@ -870,7 +882,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     format_err!("[state sync] Empty chunk from {:?}", peer)
                 })?;
 
-        if chunk_start_version != known_version + 1 {
+        let expected_version = known_version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Expected version has overflown!"))?;
+        if chunk_start_version != expected_version {
             // Old / wrong chunk.
             self.request_manager.process_chunk_version_mismatch(
                 peer,
@@ -921,12 +936,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 &peer.peer_id().to_string(),
             ])
             .observe(chunk_size as f64);
+        let new_version = known_version
+            .checked_add(chunk_size)
+            .ok_or_else(|| format_err!("New version has overflown!"))?;
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::ApplyChunkSuccess),
             "Applied chunk of size {}. Previous version: {}, new version {}",
             chunk_size,
             known_version,
-            known_version + chunk_size
+            new_version
         );
 
         // The overall chunk processing duration is calculated starting from the very first attempt
@@ -1007,13 +1025,20 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
         // Optimistically fetch the next chunk assuming the current chunk is going to be applied
         // successfully.
-        let new_version = self.local_state.synced_version() + txn_list_with_proof.len() as u64;
+        let new_version = self
+            .local_state
+            .synced_version()
+            .checked_add(txn_list_with_proof.len() as u64)
+            .ok_or_else(|| format_err!("New version has overflown!"))?;
         let new_epoch = if response_li.ledger_info().version() == new_version
             && response_li.ledger_info().ends_epoch()
         {
             // This chunk is going to finish the current epoch, optimistically request a chunk
             // from the next epoch.
-            self.local_state.trusted_epoch() + 1
+            self.local_state
+                .trusted_epoch()
+                .checked_add(1)
+                .ok_or_else(|| format_err!("New epoch has overflown!"))?
         } else {
             // Remain in the current epoch
             self.local_state.trusted_epoch()
@@ -1057,14 +1082,23 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             "Response with a waypoint LI but we're already initialized"
         );
         // Optimistically fetch the next chunk.
-        let new_version = self.local_state.synced_version() + txn_list_with_proof.len() as u64;
+        let new_version = self
+            .local_state
+            .synced_version()
+            .checked_add(txn_list_with_proof.len() as u64)
+            .ok_or_else(|| format_err!("New version has overflown!"))?;
         // The epoch in the optimistic request (= new_epoch) should be the next epoch if the current chunk
         // is the last one in its epoch.
+        let next_epoch = self
+            .local_state
+            .trusted_epoch()
+            .checked_add(1)
+            .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
         let new_epoch = end_of_epoch_li
             .as_ref()
             .map_or(self.local_state.trusted_epoch(), |li| {
                 if li.ledger_info().version() == new_version && li.ledger_info().ends_epoch() {
-                    self.local_state.trusted_epoch() + 1
+                    next_epoch
                 } else {
                     self.local_state.trusted_epoch()
                 }
@@ -1169,7 +1203,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         // if coordinator didn't make progress by expected time or did not send a request for current
         // local synced version, issue new request
-        if self.request_manager.check_timeout(known_version) {
+        if self
+            .request_manager
+            .check_timeout(known_version)
+            .unwrap_or(false)
+        {
             // log and count timeout
             counters::TIMEOUT.inc();
             warn!(LogSchema::new(LogEntry::Timeout).version(known_version));
