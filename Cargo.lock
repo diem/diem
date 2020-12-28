@@ -3139,10 +3139,11 @@ dependencies = [
 
 [[package]]
 name = "ghash"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6e27f0689a6e15944bdce7e45425efb87eaa8ab0c6e87f11d0987a9133e2531"
+checksum = "97304e4cd182c3846f7575ced3890c53012ce534ad9114046b0a9e00bb30a375"
 dependencies = [
+ "opaque-debug 0.3.0",
  "polyval",
 ]
 
@@ -5003,11 +5004,12 @@ dependencies = [
 
 [[package]]
 name = "polyval"
-version = "0.4.3"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4fd92d8e0c06d08525d2e2643cc2b5c80c69ae8eb12c18272d501cd7079ccc0"
+checksum = "eebcc4aa140b9abd2bc40d9c3f7ccec842679cd79045ac3a7ac698c1a064b7cd"
 dependencies = [
  "cpuid-bool 0.2.0",
+ "opaque-debug 0.3.0",
  "universal-hash",
 ]
 
