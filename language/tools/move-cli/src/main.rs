@@ -186,7 +186,14 @@ impl Move {
                 .into_iter()
                 .filter(|m| !state.has_module(&m.self_id()))
                 .collect();
-            state.save_modules(&new_modules)?;
+
+            let mut serialized_modules = vec![];
+            for module in new_modules {
+                let mut module_bytes = vec![];
+                module.serialize(&mut module_bytes)?;
+                serialized_modules.push((module.self_id(), module_bytes));
+            }
+            state.save_modules(&serialized_modules)?;
         }
 
         Ok(state)
@@ -285,9 +292,7 @@ fn publish(
         if verbose {
             explain_publish_effects(&effects, &state)?
         }
-
-        // TODO: get modules from transaction effects
-        state.save_modules(&modules)?;
+        state.save_modules(&effects.modules)?;
     }
 
     Ok(())
@@ -396,7 +401,7 @@ fn run(
         if verbose {
             explain_execution_effects(&effects, &state)?
         }
-        maybe_commit_effects(!dry_run, Some(effects), &state)
+        maybe_commit_effects(!dry_run, effects, &state)
     }
 }
 
@@ -476,37 +481,35 @@ fn explain_execution_effects(effects: &TransactionEffects, state: &OnDiskStateVi
 /// Commit the resources and events modified by a transaction to disk
 fn maybe_commit_effects(
     commit: bool,
-    effects_opt: Option<TransactionEffects>,
+    effects: TransactionEffects,
     state: &OnDiskStateView,
 ) -> Result<()> {
     // similar to explain effects, all module publishing happens via save_modules(), so effects
     // shouldn't contain modules
     if commit {
-        if let Some(effects) = effects_opt {
-            for (addr, writes) in effects.resources {
-                for (struct_tag, write_opt) in writes {
-                    match write_opt {
-                        Some((layout, value)) => {
-                            state.save_resource(addr, struct_tag, layout, value)?
-                        }
-                        None => state.delete_resource(addr, struct_tag)?,
+        for (addr, writes) in effects.resources {
+            for (struct_tag, write_opt) in writes {
+                match write_opt {
+                    Some((layout, value)) => {
+                        state.save_resource(addr, struct_tag, layout, value)?
                     }
+                    None => state.delete_resource(addr, struct_tag)?,
                 }
             }
-
-            for (event_key, event_sequence_number, event_type, event_layout, event_data) in
-                effects.events
-            {
-                state.save_event(
-                    &event_key,
-                    event_sequence_number,
-                    event_type,
-                    &event_layout,
-                    event_data,
-                )?
-            }
         }
-    } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
+
+        for (event_key, event_sequence_number, event_type, event_layout, event_data) in
+            effects.events
+        {
+            state.save_event(
+                &event_key,
+                event_sequence_number,
+                event_type,
+                &event_layout,
+                event_data,
+            )?
+        }
+    } else if !(effects.resources.is_empty() && effects.events.is_empty()) {
         println!("Discarding changes; re-run without --dry-run if you would like to keep them.")
     }
 

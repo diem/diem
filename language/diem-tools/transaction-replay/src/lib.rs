@@ -127,7 +127,7 @@ impl DiemDebugger {
                 },
                 access_path::Path::Code(module_id) => match op {
                     WriteOp::Deletion => state_view.delete_module(&module_id)?,
-                    WriteOp::Value(bytes) => state_view.save_module_bytes(&module_id, bytes)?,
+                    WriteOp::Value(bytes) => state_view.save_module(&module_id, bytes)?,
                 },
             }
         }
@@ -148,7 +148,9 @@ impl DiemDebugger {
         if save_write_sets {
             let state_view = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
             for m in &modules {
-                state_view.save_module(m)?
+                let mut module_bytes = vec![];
+                m.serialize(&mut module_bytes)?;
+                state_view.save_module(&m.self_id(), &module_bytes)?
             }
         }
         Ok(modules)
