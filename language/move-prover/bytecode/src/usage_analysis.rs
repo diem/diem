@@ -77,7 +77,7 @@ struct MemoryUsageAnalysis<'a> {
 
 impl<'a> DataflowAnalysis for MemoryUsageAnalysis<'a> {}
 impl<'a> CompositionalAnalysis<UsageState> for MemoryUsageAnalysis<'a> {
-    fn to_summary(&self, state: UsageState) -> UsageState {
+    fn to_summary(&self, state: UsageState, _fun_target: &FunctionTarget) -> UsageState {
         state
     }
 }

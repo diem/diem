@@ -15,6 +15,7 @@ use bytecode::{
     debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
+    read_write_set_analysis::{self, ReadWriteSetProcessor},
     spec_instrumentation::SpecInstrumentationProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
@@ -84,6 +85,10 @@ pub fn run_move_prover<W: WriteColor>(
     // Same for the error map generator
     if options.run_errmapgen {
         return Ok(run_errmapgen(&env, &options, now));
+    }
+    // Same for read/write set analysis
+    if options.run_read_write_set {
+        return Ok(run_read_write_set(&env, &options, now));
     }
 
     let targets = create_and_process_bytecode(&options, &env);
@@ -218,6 +223,27 @@ fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) {
     );
 }
 
+fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
+    let mut targets = FunctionTargetsHolder::default();
+
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            targets.add_target(&func_env)
+        }
+    }
+    let mut pipeline = FunctionTargetPipeline::default();
+    pipeline.add_processor(ReadWriteSetProcessor::new());
+
+    let start = now.elapsed();
+    info!("generating read/write set");
+    pipeline.run(env, &mut targets, None);
+    read_write_set_analysis::get_read_write_set(env, &targets);
+    println!("generated for {:?}", options.move_sources);
+
+    let end = now.elapsed();
+    info!("{:.3}s analyzing", (end - start).as_secs_f64());
+}
+
 /// Adds the prelude to the generated output.
 fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
     emit!(writer, "\n// ** prelude from {}\n\n", &options.prelude_path);
@@ -274,6 +300,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
     // Add processors in order they are executed.
+
     res.add_processor(DebugInstrumenter::new());
     pipelines::pipelines(options.experimental_pipeline)
         .into_iter()

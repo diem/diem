@@ -48,8 +48,8 @@ use vm::{
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
     views::{
-        FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
-        StructHandleView,
+        FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
+        StructDefinitionView, StructHandleView,
     },
     CompiledModule,
 };
@@ -1953,6 +1953,16 @@ impl<'env> FieldEnv<'env> {
         FieldId(self.data.name)
     }
 
+    /// Returns the VM identifier for this field
+    pub fn get_identifier(&'env self) -> Identifier {
+        let m = &self.struct_env.module_env.data.module;
+        let def = m.struct_def_at(self.data.def_idx);
+        let offset = self.data.offset;
+        FieldDefinitionView::new(m, def.field(offset).expect("Bad field offset"))
+            .name()
+            .to_owned()
+    }
+
     /// Get documentation associated with this field.
     pub fn get_doc(&self) -> &str {
         if let Ok(smap) = self
@@ -2522,7 +2532,6 @@ impl<'env> FunctionEnv<'env> {
     /// `get_local_count`.
     pub fn get_local_type(&self, idx: usize) -> Type {
         let view = self.definition_view();
-
         let parameters = view.parameters();
 
         if idx < parameters.len() {

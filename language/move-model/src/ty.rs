@@ -8,7 +8,7 @@ use crate::{
     model::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
 };
-use move_core_types::language_storage::TypeTag;
+use move_core_types::language_storage::{StructTag, TypeTag};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -324,6 +324,23 @@ impl Type {
             Reference(_, bt) => bt.module_usage(usage),
             TypeDomain(bt) => bt.module_usage(usage),
             _ => {}
+        }
+    }
+
+    pub fn into_struct_tag(self, env: &GlobalEnv) -> Option<StructTag> {
+        use Type::*;
+        if self.is_open() {
+            None
+        } else {
+            Some (
+                match self {
+		    Struct(mid, sid, ts) =>
+                        env.get_struct_tag(mid, sid, &ts)
+                            .expect("Invariant violation: struct type argument contains incomplete, tuple, reference, or spec type"),
+
+                    _ => return None
+		}
+	    )
         }
     }
 

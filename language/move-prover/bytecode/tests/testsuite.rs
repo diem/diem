@@ -19,6 +19,7 @@ use bytecode::{
     options::ProverOptions,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
+    read_write_set_analysis::ReadWriteSetProcessor,
     spec_instrumentation::SpecInstrumentationProcessor,
     usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
@@ -130,6 +131,11 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(SpecInstrumentationProcessor::new());
             pipeline.add_processor(DataInvariantInstrumentationProcessor::new());
             pipeline.add_processor(GlobalInvariantInstrumentationProcessor::new());
+            Ok(Some(pipeline))
+        }
+        "read_write_set" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(ReadWriteSetProcessor {}));
             Ok(Some(pipeline))
         }
 

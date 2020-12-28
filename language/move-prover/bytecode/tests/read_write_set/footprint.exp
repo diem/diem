@@ -1,0 +1,196 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
+     var $t2: bool
+     var $t3: address
+     var $t4: u64
+     var $t5: address
+  0: $t2 := copy($t1)
+  1: if ($t2) goto 4 else goto 2
+  2: label L1
+  3: goto 8
+  4: label L0
+  5: $t3 := 0x2
+  6: $t0 := $t3
+  7: goto 8
+  8: label L2
+  9: $t4 := 4
+ 10: destroy($t4)
+ 11: $t5 := copy($t0)
+ 12: return $t5
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_constant($t0|a: address): address {
+     var $t1: address
+     var $t2: address
+  0: $t1 := 0x2
+  1: $t0 := $t1
+  2: $t2 := copy($t0)
+  3: return $t2
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_field($t0|s: &mut Footprint::S) {
+     var $t1: address
+     var $t2: &mut Footprint::S
+     var $t3: &mut address
+  0: $t1 := 0x2
+  1: $t2 := move($t0)
+  2: $t3 := borrow_field<Footprint::S>.f($t2)
+  3: write_ref($t3, $t1)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool) {
+     var $t2: bool
+     var $t3: address
+     var $t4: &mut Footprint::S
+     var $t5: &mut address
+     var $t6: &mut Footprint::S
+  0: $t2 := copy($t1)
+  1: if ($t2) goto 4 else goto 2
+  2: label L1
+  3: goto 10
+  4: label L0
+  5: $t3 := 0x2
+  6: $t4 := move($t0)
+  7: $t5 := borrow_field<Footprint::S>.f($t4)
+  8: write_ref($t5, $t3)
+  9: goto 14
+ 10: label L2
+ 11: $t6 := move($t0)
+ 12: destroy($t6)
+ 13: goto 14
+ 14: label L3
+ 15: return ()
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): address {
+     var $t2: address
+     var $t3: address
+  0: $t2 := copy($t1)
+  1: $t0 := $t2
+  2: $t3 := copy($t0)
+  3: return $t3
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+pub fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
+     var $t2: bool
+     var $t3: address
+     var $t4: u64
+     var $t5: address
+     # Accesses:
+     #
+     # Locals:
+     # Ret(0): {0x2, Loc(0), }
+     #
+  0: $t2 := copy($t1)
+  1: if ($t2) goto 4 else goto 2
+  2: label L1
+  3: goto 8
+  4: label L0
+  5: $t3 := 0x2
+  6: $t0 := $t3
+  7: goto 8
+  8: label L2
+  9: $t4 := 4
+ 10: destroy($t4)
+ 11: $t5 := copy($t0)
+ 12: return $t5
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_constant($t0|a: address): address {
+     var $t1: address
+     var $t2: address
+     # Accesses:
+     #
+     # Locals:
+     # Ret(0): 0x2
+     #
+  0: $t1 := 0x2
+  1: $t0 := $t1
+  2: $t2 := copy($t0)
+  3: return $t2
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_field($t0|s: &mut Footprint::S) {
+     var $t1: address
+     var $t2: &mut Footprint::S
+     var $t3: &mut address
+     # Accesses:
+     # Loc(0)/f: Write
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/f: 0x2
+     #
+  0: $t1 := 0x2
+  1: $t2 := move($t0)
+  2: $t3 := borrow_field<Footprint::S>.f($t2)
+  3: write_ref($t3, $t1)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool) {
+     var $t2: bool
+     var $t3: address
+     var $t4: &mut Footprint::S
+     var $t5: &mut address
+     var $t6: &mut Footprint::S
+     # Accesses:
+     # Loc(0)/f: Write
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/f: {0x2, Loc(0)/f, }
+     #
+  0: $t2 := copy($t1)
+  1: if ($t2) goto 4 else goto 2
+  2: label L1
+  3: goto 10
+  4: label L0
+  5: $t3 := 0x2
+  6: $t4 := move($t0)
+  7: $t5 := borrow_field<Footprint::S>.f($t4)
+  8: write_ref($t5, $t3)
+  9: goto 14
+ 10: label L2
+ 11: $t6 := move($t0)
+ 12: destroy($t6)
+ 13: goto 14
+ 14: label L3
+ 15: return ()
+}
+
+
+[variant baseline]
+pub fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): address {
+     var $t2: address
+     var $t3: address
+     # Accesses:
+     #
+     # Locals:
+     # Ret(0): Loc(1)
+     #
+  0: $t2 := copy($t1)
+  1: $t0 := $t2
+  2: $t3 := copy($t0)
+  3: return $t3
+}

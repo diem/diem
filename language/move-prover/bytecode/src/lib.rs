@@ -6,6 +6,8 @@
 use crate::function_target_pipeline::FunctionTargetsHolder;
 use move_model::model::GlobalEnv;
 
+pub mod access_path;
+pub mod access_path_trie;
 pub mod annotations;
 pub mod borrow_analysis;
 pub mod borrow_analysis_v2;
@@ -27,6 +29,7 @@ pub mod memory_instrumentation_v2;
 pub mod options;
 pub mod packed_types_analysis;
 pub mod reaching_def_analysis;
+pub mod read_write_set_analysis;
 pub mod spec_instrumentation;
 mod spec_translator;
 pub mod stackless_bytecode;

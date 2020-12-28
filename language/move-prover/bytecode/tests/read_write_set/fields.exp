@@ -1,0 +1,65 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
+     var $t1: &Fields::S
+     var $t2: &u64
+     var $t3: u64
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<Fields::S>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+
+[variant baseline]
+pub fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
+     var $t1: &Fields::T<#0>
+     var $t2: &u64
+     var $t3: u64
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<Fields::T<#0>>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
+     var $t1: &Fields::S
+     var $t2: &u64
+     var $t3: u64
+     # Accesses:
+     # Loc(0)/f: Read
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/f: Loc(0)/f
+     # Ret(0): Loc(0)/f
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<Fields::S>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+
+[variant baseline]
+pub fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
+     var $t1: &Fields::T<#0>
+     var $t2: &u64
+     var $t3: u64
+     # Accesses:
+     # Loc(0)/f: Read
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/f: Loc(0)/f
+     # Ret(0): Loc(0)/f
+     #
+  0: $t1 := move($t0)
+  1: $t2 := borrow_field<Fields::T<#0>>.f($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}

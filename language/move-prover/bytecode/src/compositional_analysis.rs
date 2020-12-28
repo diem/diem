@@ -3,7 +3,7 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis},
-    function_target::FunctionData,
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
@@ -63,7 +63,7 @@ where
     Self::State: AbstractDomain + 'static,
 {
     /// Specifies mapping from elements of dataflow analysis domain to elements of `Domain`.
-    fn to_summary(&self, state: Self::State) -> Domain;
+    fn to_summary(&self, state: Self::State, fun_target: &FunctionTarget) -> Domain;
 
     /// Computes a postcondition for the procedure `data` and then maps the postcondition to an
     /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
@@ -83,15 +83,19 @@ where
             let instrs = &data.code;
             let state_map = self.analyze_function(initial_state.clone(), instrs, &cfg);
             if let Some(exit_state) = state_map.get(&cfg.exit_block()) {
-                data.annotations
-                    .set(self.to_summary(exit_state.post.clone()))
+                data.annotations.set(self.to_summary(
+                    exit_state.post.clone(),
+                    &FunctionTarget::new(func_env, &data),
+                ))
             } else {
-                data.annotations.set(self.to_summary(initial_state))
+                data.annotations
+                    .set(self.to_summary(initial_state, &FunctionTarget::new(func_env, &data)))
             }
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives
-            data.annotations.set(self.to_summary(initial_state))
+            data.annotations
+                .set(self.to_summary(initial_state, &FunctionTarget::new(func_env, &data)))
         }
         data
     }

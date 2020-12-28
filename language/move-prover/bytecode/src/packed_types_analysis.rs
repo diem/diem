@@ -6,7 +6,7 @@ use crate::{
     dataflow_analysis::{
         AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
     },
-    function_target::FunctionData,
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
@@ -151,7 +151,11 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
 
 impl<'a> DataflowAnalysis for PackedTypesAnalysis<'a> {}
 impl<'a> CompositionalAnalysis<PackedTypesState> for PackedTypesAnalysis<'a> {
-    fn to_summary(&self, state: PackedTypesState) -> PackedTypesState {
+    fn to_summary(
+        &self,
+        state: PackedTypesState,
+        _fun_target: &FunctionTarget,
+    ) -> PackedTypesState {
         state
     }
 }

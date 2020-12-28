@@ -1,0 +1,123 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Summary::write_addr() {
+     var $t0: address
+  0: $t0 := 0x777
+  1: Summary::write_caller2($t0)
+  2: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
+     var $t1: u64
+     var $t2: &mut Summary::S2
+     var $t3: &mut u64
+  0: $t1 := 7
+  1: $t2 := move($t0)
+  2: $t3 := borrow_field<Summary::S2>.f($t2)
+  3: write_ref($t3, $t1)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_caller1($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Summary::S2
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Summary::S2>($t1)
+  2: Summary::write_callee($t2)
+  3: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_caller2($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Summary::S1
+     var $t3: &mut Summary::S2
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Summary::S1>($t1)
+  2: $t3 := borrow_field<Summary::S1>.s2($t2)
+  3: Summary::write_callee($t3)
+  4: return ()
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+pub fun Summary::write_addr() {
+     var $t0: address
+     # Accesses:
+     # 0x777/0x2::Summary::S1: Borrow
+     # 0x777/0x2::Summary::S1/s2: Borrow
+     # 0x777/0x2::Summary::S1/s2/f: Write
+     #
+     # Locals:
+     #
+  0: $t0 := 0x777
+  1: Summary::write_caller2($t0)
+  2: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
+     var $t1: u64
+     var $t2: &mut Summary::S2
+     var $t3: &mut u64
+     # Accesses:
+     # Loc(0)/f: Write
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/f: Loc(0)/f
+     #
+  0: $t1 := 7
+  1: $t2 := move($t0)
+  2: $t3 := borrow_field<Summary::S2>.f($t2)
+  3: write_ref($t3, $t1)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_caller1($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Summary::S2
+     # Accesses:
+     # Loc(0)/0x2::Summary::S2: Borrow
+     # Loc(0)/0x2::Summary::S2/f: Write
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     #
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Summary::S2>($t1)
+  2: Summary::write_callee($t2)
+  3: return ()
+}
+
+
+[variant baseline]
+pub fun Summary::write_caller2($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Summary::S1
+     var $t3: &mut Summary::S2
+     # Accesses:
+     # Loc(0)/0x2::Summary::S1: Borrow
+     # Loc(0)/0x2::Summary::S1/s2: Borrow
+     # Loc(0)/0x2::Summary::S1/s2/f: Write
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     # Loc(0)/0x2::Summary::S1/s2: Loc(0)/0x2::Summary::S1/s2
+     #
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Summary::S1>($t1)
+  2: $t3 := borrow_field<Summary::S1>.s2($t2)
+  3: Summary::write_callee($t3)
+  4: return ()
+}

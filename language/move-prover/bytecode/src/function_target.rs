@@ -3,7 +3,7 @@
 
 use crate::{
     annotations::Annotations,
-    borrow_analysis, livevar_analysis, reaching_def_analysis,
+    borrow_analysis, livevar_analysis, reaching_def_analysis, read_write_set_analysis,
     stackless_bytecode::{AttrId, Bytecode},
 };
 use itertools::Itertools;
@@ -235,6 +235,11 @@ impl<'env> FunctionTarget<'env> {
         self.func_env.get_local_count()
     }
 
+    /// Return an iterator over the non-parameter local variables of this function
+    pub fn get_non_parameter_locals(&self) -> Range<usize> {
+        self.get_parameter_count()..self.get_local_count()
+    }
+
     /// Returns true if the index is for a temporary, not user declared local.
     pub fn is_temporary(&self, idx: usize) -> bool {
         self.func_env.is_temporary(idx)
@@ -455,6 +460,9 @@ impl<'env> FunctionTarget<'env> {
         self.register_annotation_formatter(Box::new(borrow_analysis::format_borrow_annotation));
         self.register_annotation_formatter(Box::new(
             reaching_def_analysis::format_reaching_def_annotation,
+        ));
+        self.register_annotation_formatter(Box::new(
+            read_write_set_analysis::format_read_write_set_annotation,
         ));
     }
 }

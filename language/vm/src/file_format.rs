@@ -360,6 +360,13 @@ impl StructDefinition {
             StructFieldInformation::Declared(fields) => Ok(fields.len() as u16),
         }
     }
+
+    pub fn field(&self, offset: usize) -> Option<&FieldDefinition> {
+        match &self.field_information {
+            StructFieldInformation::Native => None,
+            StructFieldInformation::Declared(fields) => fields.get(offset),
+        }
+    }
 }
 
 /// A `FieldDefinition` is the definition of a field: its name and the field type.
