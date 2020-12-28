@@ -3,7 +3,7 @@
 
 use crate::async_client::{
     types as jsonrpc, BroadcastHttpClient, Client, Error, JsonRpcResponse, Request, Response,
-    Retry, State, WaitForTransactionError,
+    Retry, State, UnexpectedError, WaitForTransactionError,
 };
 use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Url;
@@ -763,8 +763,11 @@ async fn test_batch_send_requests_and_response_id_not_matched_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::InvalidResponseId { .. }),
+            true
+        );
     }
 }
 
@@ -788,8 +791,11 @@ async fn test_batch_send_requests_and_response_id_type_not_matched_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::InvalidResponseIdType { .. }),
+            true
+        );
     }
 }
 
@@ -813,8 +819,11 @@ async fn test_batch_send_requests_and_response_id_duplicated_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::DuplicatedResponseId { .. }),
+            true
+        );
     }
 }
 
@@ -838,8 +847,11 @@ async fn test_batch_send_requests_and_response_id_not_found_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::ResponseIdNotFound { .. }),
+            true
+        );
     }
 }
 
@@ -864,10 +876,11 @@ async fn test_batch_send_requests_and_responses_more_then_requested() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert!(
-            format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse")
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::InvalidBatchResponse { .. }),
+            true
         );
-        assert_err!(err, Error::UnexpectedError { .. }, true);
     }
 }
 
@@ -888,10 +901,11 @@ async fn test_batch_send_requests_and_responses_less_then_requested() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert!(
-            format!("{:?}", &err).contains("UnexpectedError(InvalidBatchResponse([JsonRpcResponse")
+        assert_err!(
+            err,
+            Error::UnexpectedError(UnexpectedError::InvalidBatchResponse { .. }),
+            true
         );
-        assert_err!(err, Error::UnexpectedError { .. }, true);
     }
 }
 
