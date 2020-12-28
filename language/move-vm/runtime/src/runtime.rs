@@ -47,6 +47,7 @@ impl VMRuntime {
         &self,
         module: Vec<u8>,
         sender: AccountAddress,
+        allow_republish: bool,
         data_store: &mut impl DataStore,
         _cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
@@ -73,14 +74,16 @@ impl VMRuntime {
             .finish(Location::Undefined));
         }
 
-        // Make sure that there is not already a module with this name published
-        // under the transaction sender's account.
         let module_id = compiled_module.self_id();
-        if data_store.exists_module(&module_id)? {
-            return Err(
-                PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME).finish(Location::Undefined)
-            );
-        };
+
+        if !allow_republish {
+            // Make sure that there is not already a module with this name published under the
+            // transaction sender's account.
+            if data_store.exists_module(&module_id)? {
+                return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)
+                    .finish(Location::Undefined));
+            };
+        }
 
         // perform bytecode and loading verification
         self.loader.verify_module_verify_no_missing_dependencies(

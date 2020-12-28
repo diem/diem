@@ -110,6 +110,26 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         self.runtime.publish_module(
             module,
             sender,
+            false,
+            &mut self.data_cache,
+            cost_strategy,
+            log_context,
+        )
+    }
+
+    // TODO: merge with publish_module?
+    pub fn publish_module_ext(
+        &mut self,
+        module: Vec<u8>,
+        sender: AccountAddress,
+        allow_republish: bool,
+        cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
+    ) -> VMResult<()> {
+        self.runtime.publish_module(
+            module,
+            sender,
+            allow_republish,
             &mut self.data_cache,
             cost_strategy,
             log_context,
