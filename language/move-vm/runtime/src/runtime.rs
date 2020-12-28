@@ -18,8 +18,10 @@ use move_core_types::{
 use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
 use vm::{
     access::ModuleAccess,
+    compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::SignatureToken,
+    normalized::Module,
     CompiledModule, IndexKind,
 };
 
@@ -48,6 +50,7 @@ impl VMRuntime {
         module: Vec<u8>,
         sender: AccountAddress,
         allow_republish: bool,
+        allow_breaking_changes: bool,
         data_store: &mut impl DataStore,
         _cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
@@ -83,6 +86,25 @@ impl VMRuntime {
                 return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)
                     .finish(Location::Undefined));
             };
+        } else if !allow_breaking_changes {
+            // Make sure that the to-be-published module do not introduce breaking changes if there
+            // exists an old module with the same module id in data store
+            if let Ok(old_module_bytes) = data_store.load_module(&module_id) {
+                let old_module = match CompiledModule::deserialize(&old_module_bytes) {
+                    Ok(module) => module,
+                    Err(err) => {
+                        warn!(*log_context, "[VM] module deserialization failed {:?}", err);
+                        return Err(err.finish(Location::Undefined));
+                    }
+                };
+                let old_m = Module::new(&old_module);
+                let new_m = Module::new(&compiled_module);
+                let compat = Compatibility::check(&old_m, &new_m);
+                if !compat.is_fully_compatible() {
+                    return Err(PartialVMError::new(StatusCode::INCOMPATIBLE_MODULE)
+                        .finish(Location::Undefined));
+                }
+            }
         }
 
         // perform bytecode and loading verification

@@ -251,63 +251,46 @@ fn publish(
         }
     }
 
-    if !ignore_breaking_changes {
-        // TODO: ideally, this should go to explain_publish_error
-        for m in &modules {
-            let id = m.self_id();
-            if let Ok(old_m) = state.get_compiled_module(&id) {
-                let old_api = Module::new(&old_m);
-                let new_api = Module::new(m);
-                let compat = Compatibility::check(&old_api, &new_api);
-                if !compat.is_fully_compatible() {
-                    eprintln!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
-                }
-                if !compat.struct_layout {
-                    // TODO: we could choose to make this more precise by walking the global state and looking for published
-                    // structs of this type. but probably a bad idea
-                    bail!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", id)
-                }
-                if !compat.struct_and_function_linking {
-                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
-                    // but this is not easy to check without walking the global state and looking for everything
-                    bail!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", id)
-                }
-            }
+    // use the interfaces from the VM
+    let vm = MoveVM::new();
+    let mut cost_strategy = get_cost_strategy(None)?;
+    let log_context = NoContextLog::new();
+    let mut session = vm.new_session(&state);
+
+    let mut has_error = false;
+    for module in &modules {
+        let mut module_bytes = vec![];
+        module.serialize(&mut module_bytes)?;
+
+        let id = module.self_id();
+        let sender = *id.address();
+
+        let res = session.publish_module_ext(
+            module_bytes,
+            sender,
+            republish,
+            ignore_breaking_changes,
+            &mut cost_strategy,
+            &log_context,
+        );
+        if let Err(err) = res {
+            explain_publish_error(err, &state, module)?;
+            has_error = true;
+            break;
         }
+    }
 
-        // use the interfaces from the VM
-        let vm = MoveVM::new();
-        let mut cost_strategy = get_cost_strategy(None)?;
-        let log_context = NoContextLog::new();
-        let mut session = vm.new_session(&state);
-
-        for module in &modules {
-            let mut module_bytes = vec![];
-            module.serialize(&mut module_bytes)?;
-
-            let id = module.self_id();
-            let sender = *id.address();
-
-            let res = session.publish_module_ext(
-                module_bytes,
-                sender,
-                republish,
-                &mut cost_strategy,
-                &log_context,
-            );
-            if let Err(err) = res {
-                explain_publish_error(err, &state, module)?;
-                bail!("VM failed to publish module {}", id);
-            }
-        }
-
+    if !has_error {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
         if verbose {
             explain_publish_effects(&effects, &state)?
         }
+
+        // TODO: get modules from transaction effects
+        state.save_modules(&modules)?;
     }
 
-    state.save_modules(&modules)
+    Ok(())
 }
 
 fn run(
@@ -574,13 +557,37 @@ fn explain_type_error(
 
 fn explain_publish_error(
     error: VMError,
-    _state: &OnDiskStateView,
-    _module: &CompiledModule,
+    state: &OnDiskStateView,
+    module: &CompiledModule,
 ) -> Result<()> {
     use StatusCode::*;
+
+    let module_id = module.self_id();
     match error.into_vm_status() {
         VMStatus::Error(DUPLICATE_MODULE_NAME) => {
-            // TODO
+            println!(
+                "Module {} exists already. Re-run without --no-republish to publish anyway.",
+                module_id
+            );
+        }
+        VMStatus::Error(INCOMPATIBLE_MODULE) => {
+            if let Ok(old_m) = state.get_compiled_module(&module_id) {
+                let old_api = Module::new(&old_m);
+                let new_api = Module::new(module);
+                let compat = Compatibility::check(&old_api, &new_api);
+                if !compat.is_fully_compatible() {
+                    println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
+                }
+                if !compat.struct_layout {
+                    // TODO: we could choose to make this more precise by walking the global state and looking for published
+                    // structs of this type. but probably a bad idea
+                    println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
+                } else if !compat.struct_and_function_linking {
+                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
+                    // but this is not easy to check without walking the global state and looking for everything
+                    println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)
+                }
+            }
         }
         // TODO: handle more error codes
         VMStatus::Error(status_code) => {

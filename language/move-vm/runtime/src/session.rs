@@ -111,6 +111,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             module,
             sender,
             false,
+            false,
             &mut self.data_cache,
             cost_strategy,
             log_context,
@@ -123,6 +124,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         module: Vec<u8>,
         sender: AccountAddress,
         allow_republish: bool,
+        allow_breaking_changes: bool,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
@@ -130,6 +132,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             module,
             sender,
             allow_republish,
+            allow_breaking_changes,
             &mut self.data_cache,
             cost_strategy,
             log_context,
