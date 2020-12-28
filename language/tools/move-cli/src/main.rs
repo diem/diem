@@ -17,7 +17,7 @@ use move_core_types::{
 };
 use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::{gas_schedule, values::Value};
+use move_vm_types::{gas_schedule::CostStrategy, values::Value};
 use vm::{
     access::ScriptAccess,
     compatibility::Compatibility,
@@ -252,6 +252,7 @@ fn publish(
     }
 
     if !ignore_breaking_changes {
+        // TODO: ideally, this should go to explain_publish_error
         for m in &modules {
             let id = m.self_id();
             if let Ok(old_m) = state.get_compiled_module(&id) {
@@ -272,6 +273,37 @@ fn publish(
                     bail!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", id)
                 }
             }
+        }
+
+        // use the interfaces from the VM
+        let vm = MoveVM::new();
+        let mut cost_strategy = get_cost_strategy(None)?;
+        let log_context = NoContextLog::new();
+        let mut session = vm.new_session(&state);
+
+        for module in &modules {
+            let mut module_bytes = vec![];
+            module.serialize(&mut module_bytes)?;
+
+            let id = module.self_id();
+            let sender = *id.address();
+
+            let res = session.publish_module_ext(
+                module_bytes,
+                sender,
+                republish,
+                &mut cost_strategy,
+                &log_context,
+            );
+            if let Err(err) = res {
+                explain_publish_error(err, &state, module)?;
+                bail!("VM failed to publish module {}", id);
+            }
+        }
+
+        let effects = session.finish().map_err(|e| e.into_vm_status())?;
+        if verbose {
+            explain_publish_effects(&effects, &state)?
         }
     }
 
@@ -336,19 +368,6 @@ fn run(
     let mut script_bytes = vec![];
     script.serialize(&mut script_bytes)?;
 
-    let vm = MoveVM::new();
-    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
-    let mut cost_strategy = if let Some(gas_budget) = gas_budget {
-        let max_gas_budget = u64::MAX / gas_schedule.gas_constants.gas_unit_scaling_factor;
-        if gas_budget >= max_gas_budget {
-            bail!("Gas budget set too high; maximum is {}", max_gas_budget)
-        }
-        gas_schedule::CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
-    } else {
-        // no budget specified. use CostStrategy::system, which disables gas metering
-        gas_schedule::CostStrategy::system(gas_schedule, GasUnits::new(0))
-    };
-
     let signer_addresses = signers
         .iter()
         .map(|s| AccountAddress::from_hex_literal(&s))
@@ -366,8 +385,9 @@ fn run(
         })
         .collect();
 
+    let vm = MoveVM::new();
+    let mut cost_strategy = get_cost_strategy(gas_budget)?;
     let log_context = NoContextLog::new();
-
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -380,7 +400,7 @@ fn run(
     );
 
     if let Err(err) = res {
-        explain_error(
+        explain_execution_error(
             err,
             &state,
             &script,
@@ -391,14 +411,37 @@ fn run(
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
         if verbose {
-            explain_effects(&effects, &state)?
+            explain_execution_effects(&effects, &state)?
         }
         maybe_commit_effects(!dry_run, Some(effects), &state)
     }
 }
 
-fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Result<()> {
-    // all module publishing happens via save_modules(), so effects shouldn't contain modules
+fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
+    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
+    let cost_strategy = if let Some(gas_budget) = gas_budget {
+        let max_gas_budget = u64::MAX / gas_schedule.gas_constants.gas_unit_scaling_factor;
+        if gas_budget >= max_gas_budget {
+            bail!("Gas budget set too high; maximum is {}", max_gas_budget)
+        }
+        CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
+    } else {
+        // no budget specified. use CostStrategy::system, which disables gas metering
+        CostStrategy::system(gas_schedule, GasUnits::new(0))
+    };
+    Ok(cost_strategy)
+}
+
+fn explain_publish_effects(effects: &TransactionEffects, _state: &OnDiskStateView) -> Result<()> {
+    // publish effects should contain no events and resources
+    assert!(effects.events.is_empty());
+    assert!(effects.resources.is_empty());
+    // TODO
+    Ok(())
+}
+
+fn explain_execution_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Result<()> {
+    // execution effects should contain no modules
     assert!(effects.modules.is_empty());
     if !effects.events.is_empty() {
         println!("Emitted {:?} events:", effects.events.len());
@@ -529,8 +572,30 @@ fn explain_type_error(
     println!("Execution failed with type error when binding type arguments to type parameters")
 }
 
+fn explain_publish_error(
+    error: VMError,
+    _state: &OnDiskStateView,
+    _module: &CompiledModule,
+) -> Result<()> {
+    use StatusCode::*;
+    match error.into_vm_status() {
+        VMStatus::Error(DUPLICATE_MODULE_NAME) => {
+            // TODO
+        }
+        // TODO: handle more error codes
+        VMStatus::Error(status_code) => {
+            println!("Publishing failed with unexpected error {:?}", status_code)
+        }
+        VMStatus::Executed | VMStatus::MoveAbort(..) | VMStatus::ExecutionFailure { .. } => {
+            unreachable!()
+        }
+    }
+
+    Ok(())
+}
+
 /// Explain an execution error
-fn explain_error(
+fn explain_execution_error(
     error: VMError,
     state: &OnDiskStateView,
     script: &CompiledScript,
