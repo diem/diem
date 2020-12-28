@@ -3693,9 +3693,9 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.44.0"
+version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6585da8efec1a3b5df0fb12b357e2f3921cd7436a6d10f1ea06377d4cbd85032"
+checksum = "7d0ab63beb2437861eba0fcda75b5feb9ef1c0990e63ac22cca0ef9adc4dad74"
 dependencies = [
  "Inflector",
  "base64 0.12.3",
