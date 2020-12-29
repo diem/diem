@@ -9,7 +9,7 @@ pub const X_DIEM_CHAIN_ID: &str = "X-Diem-Chain-Id";
 pub const X_DIEM_VERSION_ID: &str = "X-Diem-Ledger-Version";
 pub const X_DIEM_TIMESTAMP_USEC_ID: &str = "X-Diem-Ledger-TimestampUsec";
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct JsonRpcResponse {
     pub diem_chain_id: u8,
     pub diem_ledger_version: u64,

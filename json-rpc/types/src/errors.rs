@@ -60,12 +60,12 @@ pub enum InvalidRequestCode {
     InvalidFormat = -32604,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum ErrorData {
     StatusCode(StatusCode),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct JsonRpcError {
     pub code: i16,
     pub message: String,

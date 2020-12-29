@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_client::{
+    error::{
+        Error::UnexpectedError,
+        UnexpectedError::{
+            DuplicatedResponseId, InvalidResponseId, InvalidResponseIdType, ResponseIdNotFound,
+        },
+    },
     types as jsonrpc, BroadcastHttpClient, Client, Error, JsonRpcResponse, Request, Response,
     Retry, State, WaitForTransactionError,
 };
@@ -763,8 +769,22 @@ async fn test_batch_send_requests_and_response_id_not_matched_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(InvalidResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(2)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        match err.err().expect("must have an error") {
+            UnexpectedError(unexpected_error) => match unexpected_error {
+                InvalidResponseId(json_resp) => {
+                    assert_eq!(
+                        json_resp,
+                        new_jsonrpc_response_with_version_and_json_id(
+                            json!( {"chain_id": 4, "timestamp": 234234, "version": 1}),
+                            1,
+                            json!(2),
+                        )
+                    );
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
     }
 }
 
@@ -788,8 +808,22 @@ async fn test_batch_send_requests_and_response_id_type_not_matched_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(InvalidResponseIdType(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(String(\"1\")), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        match err.err().expect("must have an error") {
+            UnexpectedError(unexpected_error) => match unexpected_error {
+                InvalidResponseIdType(json_resp) => {
+                    assert_eq!(
+                        json_resp,
+                        new_jsonrpc_response_with_version_and_json_id(
+                            json!( {"chain_id": 4, "timestamp": 234234, "version": 1}),
+                            1,
+                            json!("1"),
+                        )
+                    );
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
     }
 }
 
@@ -813,8 +847,22 @@ async fn test_batch_send_requests_and_response_id_duplicated_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(DuplicatedResponseId(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: Some(Number(0)), result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        match err.err().expect("must have an error") {
+            UnexpectedError(unexpected_error) => match unexpected_error {
+                DuplicatedResponseId(json_resp) => {
+                    assert_eq!(
+                        json_resp,
+                        new_jsonrpc_response_with_version_and_json_id(
+                            json!( {"chain_id": 4, "timestamp": 234234, "version": 1}),
+                            1,
+                            json!(0),
+                        )
+                    );
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
     }
 }
 
@@ -838,8 +886,28 @@ async fn test_batch_send_requests_and_response_id_not_found_error() {
             .batch_send(vec![Request::get_metadata(), Request::get_currencies()])
             .await;
 
-        assert_eq!("Err(UnexpectedError(ResponseIdNotFound(JsonRpcResponse { diem_chain_id: 4, diem_ledger_version: 1, diem_ledger_timestampusec: 1602888396000000, jsonrpc: \"2.0\", id: None, result: Some(Object({\"chain_id\": Number(4), \"timestamp\": Number(234234), \"version\": Number(1)})), error: None })))", format!("{:?}", &err));
-        assert_err!(err, Error::UnexpectedError { .. }, true);
+        match err.err().expect("must have an error") {
+            UnexpectedError(unexpected_error) => match unexpected_error {
+                ResponseIdNotFound(json_resp) => {
+                    assert_eq!(
+                        json_resp,
+                        JsonRpcResponse {
+                            diem_chain_id: 4,
+                            diem_ledger_version: 1,
+                            diem_ledger_timestampusec: 1602888396000000,
+                            jsonrpc: "2.0".to_string(),
+                            id: None,
+                            result: Some(
+                                json!( {"chain_id": 4, "timestamp": 234234, "version": 1})
+                            ),
+                            error: None,
+                        }
+                    );
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
     }
 }
 
