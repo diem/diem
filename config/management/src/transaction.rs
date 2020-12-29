@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::constants;
-use diem_secure_time::{RealTimeService, TimeService};
+use diem_time_service::{RealTimeService, TimeServiceTrait};
 use diem_types::{
     account_address::AccountAddress,
     chain_id::ChainId,
@@ -23,7 +23,7 @@ pub fn build_raw_transaction(
         constants::MAX_GAS_AMOUNT,
         constants::GAS_UNIT_PRICE,
         constants::GAS_CURRENCY_CODE.to_owned(),
-        RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS,
+        RealTimeService::new().now().as_secs() + constants::TXN_EXPIRATION_SECS,
         chain_id,
     )
 }
