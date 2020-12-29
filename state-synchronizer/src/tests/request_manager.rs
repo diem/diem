@@ -10,7 +10,7 @@ const NUM_CHUNKS_TO_PROCESS: u64 = 50;
 const NUM_PICKS_TO_MAKE: u64 = 1000;
 
 #[test]
-fn test_request_manager_invalid_chunk() {
+fn test_invalid_chunk() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
 
     // Process multiple invalid chunk responses from validator 0
@@ -21,7 +21,7 @@ fn test_request_manager_invalid_chunk() {
     // Calculate pick counts for the validators
     let pick_counts = calculate_pick_counts_for_validators(&mut request_manager, NUM_PICKS_TO_MAKE);
 
-    // Verify validator 0 is chosen less than the other validators
+    // Verify validator 0 is chosen less often than the other validators
     let validator_0_count = pick_counts.get(&validators[0]).unwrap_or(&0);
     assert!(validator_0_count < pick_counts.get(&validators[1]).unwrap());
     assert!(validator_0_count < pick_counts.get(&validators[2]).unwrap());
@@ -32,14 +32,20 @@ fn test_request_manager_invalid_chunk() {
 fn test_remove_requests() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 2);
 
-    request_manager.add_request(1, vec![validators[0].clone()]);
-    request_manager.add_request(3, vec![validators[1].clone()]);
-    request_manager.add_request(5, vec![validators[0].clone()]);
-    request_manager.add_request(10, vec![validators[0].clone()]);
-    request_manager.add_request(12, vec![validators[1].clone()]);
+    let validator_0 = vec![validators[0].clone()];
+    let validator_1 = vec![validators[1].clone()];
 
+    // Add version requests to request manager
+    request_manager.add_request(1, validator_0.clone());
+    request_manager.add_request(3, validator_1.clone());
+    request_manager.add_request(5, validator_0.clone());
+    request_manager.add_request(10, validator_0);
+    request_manager.add_request(12, validator_1);
+
+    // Remove all request versions below 5
     request_manager.remove_requests(5);
 
+    // Verify versions updated correctly
     assert!(request_manager.get_last_request_time(1).is_none());
     assert!(request_manager.get_last_request_time(3).is_none());
     assert!(request_manager.get_last_request_time(5).is_some());
@@ -48,16 +54,23 @@ fn test_remove_requests() {
 }
 
 #[test]
-fn test_request_manager_request_metadata() {
+fn test_request_metadata() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 2);
 
+    let validator_0 = validators[0].clone();
+    let validator_1 = validators[1].clone();
+
+    // Verify first request time doesn't exist for missing request
     assert!(request_manager.get_first_request_time(1).is_none());
 
-    request_manager.add_request(1, vec![validators[0].clone()]);
+    // Add versions requests to request manager
+    request_manager.add_request(1, vec![validator_0.clone()]);
     request_manager.check_timeout(1).unwrap();
-    request_manager.add_request(1, vec![validators[1].clone()]);
-    assert!(request_manager.peer_score(&validators[0]).unwrap() < 99.0);
-    assert!(request_manager.peer_score(&validators[1]).unwrap() > 99.0);
+    request_manager.add_request(1, vec![validator_1.clone()]);
+
+    // Verify scores are affected by request timeouts and that request metadata is updated
+    assert!(request_manager.peer_score(&validator_0).unwrap() < 99.0);
+    assert!(request_manager.peer_score(&validator_1).unwrap() > 99.0);
     assert!(
         request_manager.get_first_request_time(1).unwrap()
             <= request_manager.get_last_request_time(1).unwrap()
