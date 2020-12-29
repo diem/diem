@@ -6,8 +6,8 @@ mod helpers;
 mod integration_tests;
 mod mock_storage;
 #[cfg(test)]
-mod on_chain_config_tests;
+mod on_chain_config;
 #[cfg(test)]
-mod unit_tests;
+mod request_manager;
 
 pub mod fuzzing;
