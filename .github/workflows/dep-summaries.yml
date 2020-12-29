@@ -64,6 +64,7 @@ jobs:
           cd libra-base
           cargo x generate-summaries
 
+      # TODO (sunshowers): add key-manager TCB
       - name: diff LSR summary
         id: verify-lsr
         run: |

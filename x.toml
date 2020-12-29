@@ -170,6 +170,12 @@ root-members = [
     "execution-correctness",
 ]
 
+[subsets.key-manager]
+# The Diem key manager TCB.
+root-members = [
+    "diem-key-manager",
+]
+
 [subsets.release]
 # The Diem release binaries
 root-members = [
