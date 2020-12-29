@@ -23,8 +23,8 @@ diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-github-client = { path = "github", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-secure-time = { path = "../time", version = "0.1.0" }
 diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
 diem-vault-client = { path = "vault", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 

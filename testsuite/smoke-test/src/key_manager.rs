@@ -12,8 +12,8 @@ use diem_key_manager::{
     KeyManager,
 };
 use diem_secure_storage::{CryptoStorage, Storage};
-use diem_secure_time::RealTimeService;
 use diem_smoke_test_attribute::smoke_test;
+use diem_time_service::RealTimeService;
 use diem_types::chain_id::ChainId;
 use std::{convert::TryInto, thread, thread::sleep, time::Duration};
 
@@ -47,7 +47,7 @@ fn test_key_manager_consensus_rotation() {
     let mut key_manager = KeyManager::new(
         JsonRpcDiemInterface::new(json_rpc_endpoint),
         key_manager_storage,
-        RealTimeService::new(),
+        RealTimeService::new().into(),
         1,
         1000, // Large sleep period to force a single rotation
         1000,

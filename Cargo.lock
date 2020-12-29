@@ -1742,7 +1742,7 @@ dependencies = [
  "diem-secure-json-rpc",
  "diem-secure-push-metrics",
  "diem-secure-storage",
- "diem-secure-time",
+ "diem-time-service",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2078,8 +2078,8 @@ dependencies = [
  "diem-github-client",
  "diem-infallible",
  "diem-logger",
- "diem-secure-time",
  "diem-temppath",
+ "diem-time-service",
  "diem-vault-client",
  "diem-workspace-hack",
  "enum_dispatch",
@@ -2167,10 +2167,10 @@ dependencies = [
  "diem-infallible",
  "diem-workspace-hack",
  "enum_dispatch",
- "futures 0.3.8",
- "pin-project 1.0.2",
+ "futures 0.3.9",
+ "pin-project 1.0.4",
  "thiserror",
- "tokio 0.2.22",
+ "tokio 0.2.24",
  "tokio-test",
 ]
 
@@ -6398,10 +6398,10 @@ dependencies = [
  "diem-operational-tool",
  "diem-secure-json-rpc",
  "diem-secure-storage",
- "diem-secure-time",
  "diem-smoke-test-attribute",
  "diem-swarm",
  "diem-temppath",
+ "diem-time-service",
  "diem-trace",
  "diem-transaction-replay",
  "diem-types",
@@ -6991,20 +6991,6 @@ dependencies = [
  "quote 1.0.8",
  "standback",
  "syn 1.0.58",
-]
-
-[[package]]
-name = "time-service"
-version = "0.1.0"
-dependencies = [
- "diem-infallible",
- "diem-workspace-hack",
- "enum_dispatch",
- "futures 0.3.9",
- "pin-project 1.0.4",
- "thiserror",
- "tokio 0.2.24",
- "tokio-test",
 ]
 
 [[package]]

@@ -3,21 +3,21 @@
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
 use diem_github_client::Client;
-use diem_secure_time::{RealTimeService, TimeService};
+use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 
 /// GitHubStorage leverages a GitHub repository to provide a file system approach to key / value
 /// storage.  This is not intended for storing private data but for organizing public data.
 pub struct GitHubStorage {
     client: Client,
-    time_service: RealTimeService,
+    time_service: TimeService,
 }
 
 impl GitHubStorage {
     pub fn new(owner: String, repository: String, branch: String, token: String) -> Self {
         Self {
             client: Client::new(owner, repository, branch, token),
-            time_service: RealTimeService::new(),
+            time_service: TimeService::real(),
         }
     }
 }
@@ -44,7 +44,8 @@ impl KVStorage for GitHubStorage {
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
-        let data = GetResponse::new(value, self.time_service.now());
+        let now = self.time_service.now().as_secs();
+        let data = GetResponse::new(value, now);
         let data = serde_json::to_string(&data)?;
         let data = base64::encode(&data);
         self.client.put(key, &data)?;

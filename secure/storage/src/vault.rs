@@ -10,7 +10,7 @@ use diem_crypto::{
     hash::CryptoHash,
 };
 use diem_infallible::RwLock;
-use diem_secure_time::{RealTimeService, TimeService};
+use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
 use diem_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
@@ -32,6 +32,7 @@ const DIEM_DEFAULT: &str = "diem_default";
 /// pairs.
 pub struct VaultStorage {
     client: Client,
+    time_service: TimeService,
     namespace: Option<String>,
     renew_ttl_secs: Option<u32>,
     next_renewal: AtomicU64,
@@ -50,6 +51,7 @@ impl VaultStorage {
     ) -> Self {
         Self {
             client: Client::new(host, token, certificate),
+            time_service: RealTimeService::new().into(),
             namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),
@@ -61,7 +63,7 @@ impl VaultStorage {
     // Made into an accessor so we can get auto-renewal
     fn client(&self) -> &Client {
         if self.renew_ttl_secs.is_some() {
-            let now = RealTimeService::new().now();
+            let now = self.time_service.now().as_secs();
             let next_renewal = self.next_renewal.load(Ordering::Relaxed);
             if now >= next_renewal {
                 let result = self.client.renew_token_self(self.renew_ttl_secs);

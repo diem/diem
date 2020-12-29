@@ -15,8 +15,8 @@ use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use diem_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
-use diem_secure_storage::{InMemoryStorageInternal, KVStorage};
-use diem_secure_time::{MockTimeService, TimeService};
+use diem_secure_storage::{InMemoryStorage, KVStorage};
+use diem_time_service::{MockTimeService, TimeServiceTrait};
 use diem_types::{
     account_address::AccountAddress,
     account_config,
@@ -37,7 +37,7 @@ use executor::Executor;
 use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc};
+use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
 use storage_interface::{DbReader, DbReaderWriter};
 use tokio::runtime::Runtime;
 use vm_validator::{
@@ -49,11 +49,7 @@ const TXN_EXPIRATION_SECS: u64 = 100;
 struct Node<T: DiemInterface> {
     executor: Executor<DiemVM>,
     diem: DiemInterfaceTestHarness<T>,
-    key_manager: KeyManager<
-        DiemInterfaceTestHarness<T>,
-        InMemoryStorageInternal<MockTimeService>,
-        MockTimeService,
-    >,
+    key_manager: KeyManager<DiemInterfaceTestHarness<T>, InMemoryStorage>,
     time: MockTimeService,
 }
 
@@ -61,11 +57,7 @@ impl<T: DiemInterface> Node<T> {
     pub fn new(
         executor: Executor<DiemVM>,
         diem: DiemInterfaceTestHarness<T>,
-        key_manager: KeyManager<
-            DiemInterfaceTestHarness<T>,
-            InMemoryStorageInternal<MockTimeService>,
-            MockTimeService,
-        >,
+        key_manager: KeyManager<DiemInterfaceTestHarness<T>, InMemoryStorage>,
         time: MockTimeService,
     ) -> Self {
         Self {
@@ -83,13 +75,12 @@ impl<T: DiemInterface> Node<T> {
 
     fn execute_and_commit(&mut self, mut block: Vec<Transaction>) {
         // 1) Update the clock for potential reconfigurations
-        self.time.increment();
-        // Clock is supposed to be in microseconds
-        let clock = self.time.now() * 1_000_000;
+        self.time.advance(Duration::from_secs(1));
 
+        let timestamp = self.time.now().as_micros() as u64;
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT);
         let block_id = HashValue::zero();
-        let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], owner_account);
+        let block_metadata = BlockMetadata::new(block_id, 0, timestamp, vec![], owner_account);
         let prologue = Transaction::BlockMetadata(block_metadata);
         block.insert(0, prologue);
 
@@ -367,7 +358,7 @@ fn setup_node<T: DiemInterface + Clone>(
     let key_manager = KeyManager::new(
         diem_test_harness.clone(),
         storage,
-        time.clone(),
+        time.clone().into(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
@@ -379,11 +370,8 @@ fn setup_node<T: DiemInterface + Clone>(
 
 // Creates and returns a secure storage implementation (based on an in memory storage engine) for
 // testing. As part of the initialization, the consensus key is created.
-fn setup_secure_storage(
-    config: &NodeConfig,
-    time: MockTimeService,
-) -> InMemoryStorageInternal<MockTimeService> {
-    let mut sec_storage = InMemoryStorageInternal::new_with_time_service(time);
+fn setup_secure_storage(config: &NodeConfig, time: MockTimeService) -> InMemoryStorage {
+    let mut sec_storage = InMemoryStorage::new_with_time_service(time.into());
     let test_config = config.clone().test.unwrap();
 
     // Initialize the owner key and account address in storage
@@ -497,7 +485,7 @@ fn verify_manual_rotation_on_chain<T: DiemInterface>(mut node: Node<T>) {
     let new_privkey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_privkey.public_key();
     // Increment time to 5min + 1sec, so that the rotation passes through rate limits
-    node.time.increment_by(301);
+    node.time.advance(Duration::from_secs(301));
     let txn1 = crate::build_rotation_transaction(
         owner_account,
         operator_account,
@@ -505,7 +493,7 @@ fn verify_manual_rotation_on_chain<T: DiemInterface>(mut node: Node<T>) {
         &new_pubkey,
         Vec::new(),
         Vec::new(),
-        node.time.now() + TXN_EXPIRATION_SECS,
+        node.time.now().as_secs() + TXN_EXPIRATION_SECS,
         diem_types::chain_id::ChainId::test(),
     );
     let txn1 = txn1
@@ -540,7 +528,10 @@ fn verify_init_and_basic_rotation<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initialization (on-chain and in storage)
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
-    assert_eq!(node.time.now(), node.key_manager.last_rotation().unwrap());
+    assert_eq!(
+        node.time.now().as_secs(),
+        node.key_manager.last_rotation().unwrap()
+    );
     // No executions yet
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
     assert_eq!(0, node.key_manager.diem_timestamp().unwrap());
@@ -557,7 +548,7 @@ fn verify_init_and_basic_rotation<T: DiemInterface>(mut node: Node<T>) {
     assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
 
     // Increment time to 5min + 1sec, so that the rotation passes through rate limits
-    node.time.increment_by(301);
+    node.time.advance(Duration::from_secs(301));
 
     // Execute key rotation on-chain
     node.execute_and_commit(node.diem.take_all_transactions());
@@ -601,12 +592,12 @@ fn verify_execute<T: DiemInterface>(mut node: Node<T>) {
     let (_, key_manager_config) = get_test_configs();
 
     // Verify correct initial state (i.e., nothing to be done by key manager)
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify rotation required after enough time
     node.time
-        .increment_by(key_manager_config.rotation_period_secs);
+        .advance(Duration::from_secs(key_manager_config.rotation_period_secs));
     node.update_diem_timestamp();
     assert_eq!(
         Action::FullKeyRotation,
@@ -626,7 +617,7 @@ fn verify_execute<T: DiemInterface>(mut node: Node<T>) {
 
     // Verify rotation transaction not executed, now expired
     node.time
-        .increment_by(key_manager_config.txn_expiration_secs);
+        .advance(Duration::from_secs(key_manager_config.txn_expiration_secs));
     node.update_diem_timestamp();
     assert_eq!(
         Action::SubmitKeyRotationTransaction,
@@ -666,7 +657,7 @@ fn test_liveness_error() {
 
 fn verify_liveness_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
@@ -700,7 +691,7 @@ fn test_missing_account_error() {
 
 fn verify_missing_account_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Reset storage to wipe all account addresses
@@ -732,7 +723,7 @@ fn test_validator_config_info_mismatch() {
 
 fn verify_validator_config_info_mismatch<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
@@ -758,7 +749,7 @@ fn verify_validator_config_info_mismatch<T: DiemInterface>(mut node: Node<T>) {
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
         XDX_NAME.to_owned(),
-        node.time.now() + TXN_EXPIRATION_SECS,
+        node.time.now().as_secs() + TXN_EXPIRATION_SECS,
         diem_types::chain_id::ChainId::test(),
     );
 
@@ -794,7 +785,7 @@ fn test_storage_blockchain_mismatch() {
 
 fn verify_storage_blockchain_mismatch<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Verify no action is required by the key manager
@@ -830,7 +821,7 @@ fn test_storage_error() {
 
 fn verify_storage_error<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Update the consensus key to an invalid value to force a storage error
@@ -861,7 +852,7 @@ fn test_missing_data_error() {
 
 fn verify_missing_data<T: DiemInterface>(mut node: Node<T>) {
     // Verify correct initial state
-    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.time.now().as_secs());
     assert_eq!(0, node.diem.last_reconfiguration().unwrap());
 
     // Update the owner account to an account that will not have any state on chain

@@ -39,13 +39,13 @@ diem-management = { path = "../../config/management", version = "0.1.0", feature
 diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
 diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
 diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
-diem-secure-time = { path = "../../secure/time", version = "0.1.0" }
 diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
 diem-smoke-test-attribute = { path = "../smoke-test/attribute", version = "0.1.0" }
 diem-swarm = { path = "../diem-swarm", version = "0.1.0"}
 diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
 diem-trace = { path = "../../common/trace", version = "0.1.0" }
 diem-events-fetcher = { path = "../../language/diem-tools/diem-events-fetcher", version = "0.1.0" }
+diem-time-service = { path = "../../common/time-service", version = "0.1.0", features = ["testing"] }
 diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }

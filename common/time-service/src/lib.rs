@@ -16,13 +16,13 @@ use std::{
 
 #[cfg(any(test, feature = "async"))]
 pub mod interval;
-#[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+#[cfg(any(test, feature = "testing"))]
 pub mod mock;
 pub mod real;
 #[cfg(any(test, feature = "async"))]
 pub mod timeout;
 
-#[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+#[cfg(any(test, feature = "testing"))]
 pub use crate::mock::{MockSleep, MockTimeService};
 pub use crate::real::RealTimeService;
 #[cfg(any(test, feature = "async"))]
@@ -57,7 +57,7 @@ const ZERO_DURATION: Duration = Duration::from_nanos(0);
 pub enum TimeService {
     RealTimeService(RealTimeService),
 
-    #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+    #[cfg(any(test, feature = "testing"))]
     MockTimeService(MockTimeService),
 }
 
@@ -66,12 +66,12 @@ impl TimeService {
         RealTimeService::new().into()
     }
 
-    #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+    #[cfg(any(test, feature = "testing"))]
     pub fn mock() -> Self {
         MockTimeService::new().into()
     }
 
-    #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+    #[cfg(any(test, feature = "testing"))]
     pub fn into_mock(self) -> MockTimeService {
         match self {
             TimeService::MockTimeService(inner) => inner,
@@ -153,7 +153,7 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
 pub enum Sleep {
     RealSleep(RealSleep),
 
-    #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+    #[cfg(any(test, feature = "testing"))]
     MockSleep(MockSleep),
 }
 
@@ -164,7 +164,7 @@ impl Future for Sleep {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.get_mut() {
             Sleep::RealSleep(inner) => Pin::new(inner).poll(cx),
-            #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+            #[cfg(any(test, feature = "testing"))]
             Sleep::MockSleep(inner) => Pin::new(inner).poll(cx),
         }
     }

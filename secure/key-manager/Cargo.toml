@@ -23,7 +23,7 @@ diem-network-address = { path = "../../network/network-address", version = "0.1.
 diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
 diem-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
 diem-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
-diem-secure-time = { path = "../../secure/time", version = "0.1.0" }
+diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 transaction-builder-generated = { path = "../../client/transaction-builder", version = "0.1.0" }
@@ -40,11 +40,12 @@ executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
 diem-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
 diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+diem-time-service = { path = "../../common/time-service", version = "0.1.0", features = ["testing"] }
 diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
 diemdb = { path = "../../storage/diemdb", version = "0.1.0" }
 storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 
 [features]
-testing = [ "diem-secure-storage/testing" ]
-fuzzing = ["diemdb/fuzzing", "diem-json-rpc/fuzzing", "diem-config/fuzzing" ]
+testing = ["diem-secure-storage/testing", "diem-time-service/testing" ]
+fuzzing = ["diemdb/fuzzing", "diem-json-rpc/fuzzing", "diem-config/fuzzing", "diem-time-service/testing"]

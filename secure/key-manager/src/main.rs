@@ -15,7 +15,7 @@ use diem_key_manager::{
 use diem_logger::info;
 use diem_secure_push_metrics::MetricsPusher;
 use diem_secure_storage::Storage;
-use diem_secure_time::RealTimeService;
+use diem_time_service::RealTimeService;
 use std::{convert::TryInto, env, process};
 
 fn main() {
@@ -67,7 +67,7 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
     let mut key_manager = KeyManager::new(
         diem_interface,
         storage,
-        time_service,
+        time_service.into(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,

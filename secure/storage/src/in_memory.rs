@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use diem_secure_time::{RealTimeService, TimeService};
+use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
@@ -12,22 +12,20 @@ use std::collections::HashMap;
 /// Internally, it retains all data, which means that it must make copies of all key material which
 /// violates the Diem code base. It violates it because the anticipation is that data stores would
 /// securely handle key material. This should not be used in production.
-pub type InMemoryStorage = InMemoryStorageInternal<RealTimeService>;
-
 #[derive(Default)]
-pub struct InMemoryStorageInternal<T> {
+pub struct InMemoryStorage {
     data: HashMap<String, Vec<u8>>,
-    time_service: T,
+    time_service: TimeService,
 }
 
-impl InMemoryStorageInternal<RealTimeService> {
+impl InMemoryStorage {
     pub fn new() -> Self {
-        Self::new_with_time_service(RealTimeService::new())
+        Self::new_with_time_service(RealTimeService::new().into())
     }
 }
 
-impl<T: TimeService> InMemoryStorageInternal<T> {
-    pub fn new_with_time_service(time_service: T) -> Self {
+impl InMemoryStorage {
+    pub fn new_with_time_service(time_service: TimeService) -> Self {
         Self {
             data: HashMap::new(),
             time_service,
@@ -35,7 +33,7 @@ impl<T: TimeService> InMemoryStorageInternal<T> {
     }
 }
 
-impl<T: TimeService> KVStorage for InMemoryStorageInternal<T> {
+impl KVStorage for InMemoryStorage {
     fn available(&self) -> Result<(), Error> {
         Ok(())
     }
@@ -50,9 +48,10 @@ impl<T: TimeService> KVStorage for InMemoryStorageInternal<T> {
     }
 
     fn set<V: Serialize>(&mut self, key: &str, value: V) -> Result<(), Error> {
+        let now = self.time_service.now().as_secs();
         self.data.insert(
             key.to_string(),
-            serde_json::to_vec(&GetResponse::new(value, self.time_service.now()))?,
+            serde_json::to_vec(&GetResponse::new(value, now))?,
         );
         Ok(())
     }
@@ -64,4 +63,4 @@ impl<T: TimeService> KVStorage for InMemoryStorageInternal<T> {
     }
 }
 
-impl<T: TimeService> CryptoKVStorage for InMemoryStorageInternal<T> {}
+impl CryptoKVStorage for InMemoryStorage {}

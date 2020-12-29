@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use diem_secure_time::{RealTimeService, TimeService};
 use diem_temppath::TempPath;
+use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
@@ -20,22 +20,18 @@ use std::{
 /// must make copies of all key material which violates the Diem code base. It violates it because
 /// the anticipation is that data stores would securely handle key material. This should not be used
 /// in production.
-pub type OnDiskStorage = OnDiskStorageInternal<RealTimeService>;
-
-pub struct OnDiskStorageInternal<T> {
+pub struct OnDiskStorage {
     file_path: PathBuf,
     temp_path: TempPath,
-    time_service: T,
+    time_service: TimeService,
 }
 
-impl OnDiskStorageInternal<RealTimeService> {
+impl OnDiskStorage {
     pub fn new(file_path: PathBuf) -> Self {
-        Self::new_with_time_service(file_path, RealTimeService::new())
+        Self::new_with_time_service(file_path, RealTimeService::new().into())
     }
-}
 
-impl<T: TimeService> OnDiskStorageInternal<T> {
-    fn new_with_time_service(file_path: PathBuf, time_service: T) -> Self {
+    fn new_with_time_service(file_path: PathBuf, time_service: TimeService) -> Self {
         if !file_path.exists() {
             File::create(&file_path).expect("Unable to create storage");
         }
@@ -73,7 +69,7 @@ impl<T: TimeService> OnDiskStorageInternal<T> {
     }
 }
 
-impl<T: TimeService> KVStorage for OnDiskStorageInternal<T> {
+impl KVStorage for OnDiskStorage {
     fn available(&self) -> Result<(), Error> {
         Ok(())
     }
@@ -86,10 +82,11 @@ impl<T: TimeService> KVStorage for OnDiskStorageInternal<T> {
     }
 
     fn set<V: Serialize>(&mut self, key: &str, value: V) -> Result<(), Error> {
+        let now = self.time_service.now().as_secs();
         let mut data = self.read()?;
         data.insert(
             key.to_string(),
-            serde_json::to_value(&GetResponse::new(value, self.time_service.now()))?,
+            serde_json::to_value(&GetResponse::new(value, now))?,
         );
         self.write(&data)
     }
@@ -100,4 +97,4 @@ impl<T: TimeService> KVStorage for OnDiskStorageInternal<T> {
     }
 }
 
-impl<T: TimeService> CryptoKVStorage for OnDiskStorageInternal<T> {}
+impl CryptoKVStorage for OnDiskStorage {}

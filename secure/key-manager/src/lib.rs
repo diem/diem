@@ -32,13 +32,14 @@ use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use diem_logger::prelude::*;
 use diem_secure_storage::{CryptoStorage, KVStorage};
-use diem_secure_time::TimeService;
+use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::{
     account_address::AccountAddress,
     account_config::XUS_NAME,
     chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
+use std::time::Duration;
 use thiserror::Error;
 
 pub mod counters;
@@ -102,10 +103,10 @@ impl From<diem_secure_storage::Error> for Error {
     }
 }
 
-pub struct KeyManager<LI, S, T> {
+pub struct KeyManager<LI, S> {
     diem: LI,
     storage: S,
-    time_service: T,
+    time_service: TimeService,
     last_checked_diem_timestamp: u64,
     rotation_period_secs: u64, // The frequency by which to rotate all keys
     sleep_period_secs: u64,    // The amount of time to sleep between key management checks
@@ -113,16 +114,15 @@ pub struct KeyManager<LI, S, T> {
     chain_id: ChainId,
 }
 
-impl<LI, S, T> KeyManager<LI, S, T>
+impl<LI, S> KeyManager<LI, S>
 where
     LI: DiemInterface,
     S: KVStorage + CryptoStorage,
-    T: TimeService,
 {
     pub fn new(
         diem: LI,
         storage: S,
-        time_service: T,
+        time_service: TimeService,
         rotation_period_secs: u64,
         sleep_period_secs: u64,
         txn_expiration_secs: u64,
@@ -178,7 +178,8 @@ where
         info!(LogSchema::new(LogEntry::Sleep)
             .event(LogEvent::Pending)
             .sleep_duration(self.sleep_period_secs));
-        self.time_service.sleep(self.sleep_period_secs);
+        self.time_service
+            .sleep_blocking(Duration::from_secs(self.sleep_period_secs));
         info!(LogSchema::new(LogEntry::Sleep).event(LogEvent::Success));
     }
 
@@ -255,7 +256,7 @@ where
 
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.diem.retrieve_sequence_number(operator_account)?;
-        let expiration = self.time_service.now() + self.txn_expiration_secs;
+        let expiration = self.time_service.now().as_secs() + self.txn_expiration_secs;
 
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
@@ -323,7 +324,9 @@ where
         match self.compare_storage_to_config() {
             Ok(()) => { /* Expected */ }
             Err(Error::ConfigStorageKeyMismatch(..)) => {
-                return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
+                return if last_rotation + self.txn_expiration_secs
+                    <= self.time_service.now().as_secs()
+                {
                     Ok(Action::SubmitKeyRotationTransaction)
                 } else {
                     Ok(Action::WaitForTransactionExecution)
@@ -332,7 +335,7 @@ where
             Err(e) => return Err(e),
         };
 
-        if last_rotation + self.rotation_period_secs <= self.time_service.now() {
+        if last_rotation + self.rotation_period_secs <= self.time_service.now().as_secs() {
             Ok(Action::FullKeyRotation)
         } else {
             Ok(Action::NoAction)
