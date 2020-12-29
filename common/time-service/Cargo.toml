@@ -13,7 +13,7 @@ edition = "2018"
 enum_dispatch = "0.3.4"
 futures = "0.3.8"
 pin-project = "1.0.2"
-thiserror = "1.0.22"
+thiserror = "1.0.23"
 tokio = { version = "0.2.22", features = ["macros", "rt-threaded", "time"] }
 
 diem-infallible = { path = "../infallible", version = "0.1.0" }

@@ -22,7 +22,7 @@ diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 once_cell = "1.4.1"
 regex = { version = "1.4.2", default-features = false, features = ["std", "perf"] }
-thiserror = "1.0.22"
+thiserror = "1.0.23"
 aho-corasick = "0.7.14"
 termcolor = "1.1.2"
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }

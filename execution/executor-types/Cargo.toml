@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.36"
 serde = { version = "1.0.117", default-features = false }
-thiserror = "1.0.22"
+thiserror = "1.0.23"
 
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
