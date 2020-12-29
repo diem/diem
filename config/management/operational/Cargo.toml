@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.36"
 hex = "0.4.2"
 serde = { version = "1.0.117", features = ["rc"], default-features = false }
-serde_json = "1.0.60"
+serde_json = "1.0.61"
 structopt = "0.3.21"
 thiserror = "1.0.22"
 toml = { version = "0.5.8", default-features = false }
