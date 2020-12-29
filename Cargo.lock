@@ -24,10 +24,10 @@ dependencies = [
  "heck",
  "log",
  "move-core-types",
+ "move-model",
  "move-prover",
  "move-prover-test-utils",
  "serde",
- "spec-lang",
 ]
 
 [[package]]
@@ -520,9 +520,9 @@ dependencies = [
  "itertools 0.9.0",
  "log",
  "move-core-types",
+ "move-model",
  "move-prover-test-utils",
  "num 0.3.1",
- "spec-lang",
  "vm",
 ]
 
@@ -2504,13 +2504,13 @@ dependencies = [
  "diem-workspace-hack",
  "itertools 0.9.0",
  "log",
+ "move-model",
  "move-prover",
  "move-prover-test-utils",
  "num 0.3.1",
  "once_cell",
  "regex",
  "serde",
- "spec-lang",
 ]
 
 [[package]]
@@ -2637,9 +2637,9 @@ dependencies = [
  "diem-workspace-hack",
  "log",
  "move-core-types",
+ "move-model",
  "move-prover",
  "serde",
- "spec-lang",
 ]
 
 [[package]]
@@ -4211,6 +4211,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-model"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode-source-map",
+ "bytecode-verifier",
+ "codespan",
+ "codespan-reporting",
+ "datatest-stable",
+ "diem-types",
+ "diem-workspace-hack",
+ "itertools 0.9.0",
+ "log",
+ "move-core-types",
+ "move-ir-types",
+ "move-lang",
+ "move-prover-test-utils",
+ "num 0.3.1",
+ "once_cell",
+ "regex",
+ "serde",
+ "vm",
+]
+
+[[package]]
 name = "move-prover"
 version = "0.1.0"
 dependencies = [
@@ -4235,6 +4260,7 @@ dependencies = [
  "log",
  "move-ir-types",
  "move-lang",
+ "move-model",
  "move-prover-test-utils",
  "num 0.3.1",
  "once_cell",
@@ -4245,7 +4271,6 @@ dependencies = [
  "serde_json",
  "shell-words",
  "simplelog",
- "spec-lang",
  "tokio 0.2.22",
  "toml",
  "vm",
@@ -6363,31 +6388,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "libc",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "spec-lang"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytecode-source-map",
- "bytecode-verifier",
- "codespan",
- "codespan-reporting",
- "datatest-stable",
- "diem-types",
- "diem-workspace-hack",
- "itertools 0.9.0",
- "log",
- "move-core-types",
- "move-ir-types",
- "move-lang",
- "move-prover-test-utils",
- "num 0.3.1",
- "once_cell",
- "regex",
- "serde",
- "vm",
 ]
 
 [[package]]

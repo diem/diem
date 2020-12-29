@@ -12,7 +12,7 @@ use crate::{
         TempIndex,
     },
 };
-use spec_lang::{
+use move_model::{
     env::{FunctionEnv, Loc},
     ty::Type,
 };

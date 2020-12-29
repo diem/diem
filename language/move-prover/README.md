@@ -24,7 +24,7 @@ For more information, refer to the documentation:
 
 -  [To be done] Move Prover Whitepaper
 -  [Move Prover User Guide](./doc/user/prover-guide.md)
--  [Move Specification Language](./doc/user/spec-lang.md)
+-  [Move Specification Language](./doc/user/move-model.md)
 -  [Installation](./doc/user/install.md)
 -  [Testing](./tests/README.md)
 -  [To be done] Move Prover Developer Guide

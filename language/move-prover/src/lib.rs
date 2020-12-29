@@ -33,14 +33,14 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use spec_lang::{
+use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
     env::{GlobalEnv, ModuleId},
     run_spec_lang_compiler,
 };
+use once_cell::sync::Lazy;
+use regex::Regex;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,

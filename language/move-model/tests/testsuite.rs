@@ -5,8 +5,8 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
+use move_model::run_spec_lang_compiler;
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, DEFAULT_SENDER};
-use spec_lang::run_spec_lang_compiler;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];

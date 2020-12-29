@@ -20,7 +20,7 @@ use bytecode::{
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
-use spec_lang::{
+use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
     env::{
@@ -46,7 +46,7 @@ use crate::{
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
 use bytecode::stackless_bytecode::TempIndex;
-use spec_lang::env::{
+use move_model::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
     SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
 };

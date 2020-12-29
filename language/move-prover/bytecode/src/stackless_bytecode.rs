@@ -3,11 +3,11 @@
 
 use crate::function_target::FunctionTarget;
 use itertools::Itertools;
-use num::BigUint;
-use spec_lang::{
+use move_model::{
     env::{FunId, ModuleId, StructId},
     ty::{Type, TypeDisplayContext},
 };
+use num::BigUint;
 use std::{collections::BTreeMap, fmt, fmt::Formatter, rc::Rc};
 use vm::file_format::CodeOffset;
 

@@ -12,7 +12,7 @@ use crate::{
 };
 use diem_types::account_config;
 use move_core_types::language_storage::{StructTag, TypeTag};
-use spec_lang::{
+use move_model::{
     env::{FunctionEnv, GlobalEnv},
     ty::Type,
 };

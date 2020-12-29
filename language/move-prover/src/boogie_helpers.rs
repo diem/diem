@@ -5,7 +5,7 @@
 
 use crate::cli::Options;
 use itertools::Itertools;
-use spec_lang::{
+use move_model::{
     env::{
         FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, QualifiedId, SpecFunId, StructEnv,
         StructId, SCRIPT_MODULE_NAME,

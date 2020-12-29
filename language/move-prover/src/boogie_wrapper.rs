@@ -19,7 +19,7 @@ use num::BigInt;
 use pretty::RcDoc;
 use regex::{Captures, Regex};
 
-use spec_lang::{
+use move_model::{
     code_writer::CodeWriter,
     env::{FunId, GlobalEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
@@ -32,8 +32,8 @@ use crate::{
 // DEBUG
 // use backtrace::Backtrace;
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
+use move_model::env::{ConditionTag, NodeId};
 use once_cell::sync::Lazy;
-use spec_lang::env::{ConditionTag, NodeId};
 use std::num::ParseIntError;
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a

@@ -1,5 +1,5 @@
 [package]
-name = "move-prover"
+name = "move-model"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 publish = false
@@ -9,44 +9,28 @@ license = "Apache-2.0"
 [dependencies]
 # diem dependencies
 move-lang = { path = "../move-lang", version = "0.0.1" }
-move-model = { path = "../move-model", version = "0.1.0" }
-docgen = { path = "docgen", version = "0.1.0" }
-abigen = { path = "abigen", version = "0.1.0" }
-errmapgen = { path = "errmapgen", version = "0.1.0" }
-bytecode = { path = "bytecode", version = "0.1.0"}
+bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1.0" }
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
+move-core-types = { path = "../move-core/types", version = "0.1.0" }
 
 # external dependencies
-async-trait = "0.1.42"
-anyhow = "1.0.36"
-clap = "2.33.3"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
-futures = "0.3.8"
-handlebars = "3.5.1"
-hex = "0.4.2"
 itertools = "0.9.0"
 log = "0.4.11"
 num = "0.3.0"
-pretty = "0.10.0"
-rand = "0.7.3"
-regex = "1.4.2"
-serde = { version = "1.0.117", features = ["derive"] }
-serde_json = "1.0.61"
-simplelog = "0.9.0"
 once_cell = "1.4.1"
-tokio = { version = "0.2", features = ["full"] }
-toml = "0.5.8"
+regex = "1.4.2"
+anyhow = "1.0.36"
+serde = { version = "1.0.117", features = ["derive"] }
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-move-prover-test-utils = { path = "test-utils", version = "0.1.0" }
-shell-words = "1.0.0"
+move-prover-test-utils = { path = "../move-prover/test-utils", version = "0.1.0" }
 
 [[test]]
 name = "testsuite"

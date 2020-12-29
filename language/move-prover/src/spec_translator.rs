@@ -5,7 +5,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use spec_lang::{
+use move_model::{
     env::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
     ty::{PrimitiveType, Type},
 };
@@ -29,7 +29,7 @@ use bytecode::{
     stackless_bytecode::SpecBlockId, usage_analysis,
 };
 use itertools::Itertools;
-use spec_lang::{
+use move_model::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
     emit, emitln,

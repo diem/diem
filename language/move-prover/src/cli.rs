@@ -11,11 +11,11 @@ use clap::{App, Arg};
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
+use move_model::env::VerificationScope;
 use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use spec_lang::env::VerificationScope;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.

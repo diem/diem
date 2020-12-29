@@ -7,7 +7,7 @@ use crate::{
     stackless_bytecode_generator::StacklessBytecodeGenerator,
 };
 use log::debug;
-use spec_lang::env::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
+use move_model::env::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
 use std::{collections::BTreeMap, fs};
 
 /// A data structure which holds data for multiple function targets, and allows to

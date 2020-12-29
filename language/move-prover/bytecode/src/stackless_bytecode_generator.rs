@@ -11,7 +11,7 @@ use crate::{
 };
 use itertools::Itertools;
 use move_core_types::value::MoveValue;
-use spec_lang::{
+use move_model::{
     env::{FunctionEnv, Loc, ModuleEnv, StructId},
     ty::{PrimitiveType, Type},
 };

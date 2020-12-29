@@ -10,7 +10,7 @@ use crate::{
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use spec_lang::env::FunctionEnv;
+use move_model::env::FunctionEnv;
 use std::collections::BTreeSet;
 use vm::file_format::CodeOffset;
 

@@ -7,7 +7,7 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, Operation, SpecBlockId, TempIndex},
 };
 use itertools::Itertools;
-use spec_lang::{
+use move_model::{
     ast::{ConditionKind, Exp, Spec},
     env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId, TypeParameter},
     symbol::{Symbol, SymbolPool},

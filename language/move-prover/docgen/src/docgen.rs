@@ -6,11 +6,7 @@ use log::{debug, info, warn};
 
 use codespan::{ByteIndex, Span};
 use itertools::Itertools;
-use num::BigUint;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use spec_lang::{
+use move_model::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},
     code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
@@ -21,6 +17,10 @@ use spec_lang::{
     symbol::Symbol,
     ty::TypeDisplayContext,
 };
+use num::BigUint;
+use once_cell::sync::Lazy;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet, VecDeque},

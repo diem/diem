@@ -8,11 +8,11 @@ use anyhow::bail;
 use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use heck::SnakeCase;
 use move_core_types::language_storage::TypeTag;
-use serde::{Deserialize, Serialize};
-use spec_lang::{
+use move_model::{
     env::{GlobalEnv, ModuleEnv},
     ty,
 };
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, io::Read, path::PathBuf};
 
 /// Options passed into the ABI generator.

@@ -14,7 +14,7 @@ use crate::{
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use spec_lang::env::FunctionEnv;
+use move_model::env::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 

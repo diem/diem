@@ -7,12 +7,12 @@ use anyhow::{bail, Result};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
 };
-use serde::{Deserialize, Serialize};
-use spec_lang::{
+use move_model::{
     ast::Value,
     env::{GlobalEnv, ModuleEnv, NamedConstantEnv},
     symbol::Symbol,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     convert::TryFrom,

@@ -7,7 +7,7 @@ use crate::{
     function_target_pipeline::FunctionTargetsHolder,
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use spec_lang::env::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
+use move_model::env::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
 
 /// Provides access to procedure summaries that have already been computed
 pub struct SummaryCache<'a> {
