@@ -25,4 +25,4 @@ move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 move-explain = { path = "../../language/tools/move-explain", version = "0.1.0" }
 
 [build-dependencies]
-prost-build = "0.6.1"
+prost-build = "0.7.0"
