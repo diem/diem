@@ -90,9 +90,7 @@ fn byte2hex(byte: u8) -> (u8, u8) {
 /// Hex encode a byte slice into the destination byte slice.
 #[inline(always)]
 fn hex_encode(src: &[u8], dst: &mut [u8]) {
-    #[allow(clippy::integer_arithmetic)]
-    debug_checked_precondition!(dst.len() == 2 * src.len());
-
+    debug_checked_precondition!(dst.len() == src.len().checked_mul(2).expect("should not happen"));
     for (byte, out) in src.iter().zip(dst.chunks_mut(2)) {
         let (hi, lo) = byte2hex(*byte);
         out[0] = hi;
