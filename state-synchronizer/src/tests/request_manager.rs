@@ -11,7 +11,7 @@ const NUM_PICKS_TO_MAKE: u64 = 1000;
 
 #[test]
 fn test_disable_peer() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 1);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(0, 1);
 
     let validator_0 = validators[0].clone();
 
@@ -35,7 +35,7 @@ fn test_disable_peer() {
 fn test_score_chunk_success() {
     let num_validators = 4;
     let (mut request_manager, validators) =
-        generate_request_manager_and_test_validators(0, num_validators);
+        generate_request_manager_and_validators(0, num_validators);
 
     // Process empty chunk responses from all validators
     for _ in 0..NUM_CHUNKS_TO_PROCESS {
@@ -49,21 +49,13 @@ fn test_score_chunk_success() {
         request_manager.process_success_response(&validators[0]);
     }
 
-    // Calculate selection counts for validators
-    let pick_counts = calculate_pick_counts_for_validators(&mut request_manager, NUM_PICKS_TO_MAKE);
-
     // Verify validator 0 is chosen more often than the other validators
-    let validator_0_count = pick_counts.get(&validators[0]).unwrap_or(&0);
-    for (validator_index, validator) in validators.iter().enumerate() {
-        if validator_index != 0 {
-            assert!(validator_0_count > pick_counts.get(&validator).unwrap());
-        }
-    }
+    verify_validator_picked_most_often(&mut request_manager, &validators, 0);
 }
 
 #[test]
 fn test_score_chunk_timeout() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 4);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(0, 4);
 
     let validator_0 = vec![validators[0].clone()];
 
@@ -74,12 +66,12 @@ fn test_score_chunk_timeout() {
     }
 
     // Verify validator 0 is chosen less often than the other validators
-    verify_bad_validator_picked_less_often(&mut request_manager, &validators, 0);
+    verify_validator_picked_least_often(&mut request_manager, &validators, 0);
 }
 
 #[test]
 fn test_score_chunk_version_mismatch() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 4);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(0, 4);
 
     let validator_0 = validators[0].clone();
 
@@ -92,12 +84,40 @@ fn test_score_chunk_version_mismatch() {
     }
 
     // Verify validator 0 is chosen less often than the other validators
-    verify_bad_validator_picked_less_often(&mut request_manager, &validators, 0);
+    verify_validator_picked_least_often(&mut request_manager, &validators, 0);
+}
+
+#[test]
+fn test_score_chunk_version_mismatch_multicast() {
+    let num_validators = 4;
+    let (mut request_manager, validators) =
+        generate_request_manager_and_validators(0, num_validators);
+
+    let validator_0 = validators[0].clone();
+    let validator_1 = validators[1].clone();
+
+    // Process empty chunk responses from all validators except validator 0
+    for _ in 0..NUM_CHUNKS_TO_PROCESS {
+        for validator_index in 1..num_validators {
+            request_manager.process_empty_chunk(&validators[validator_index as usize]);
+        }
+    }
+
+    // Process multiple multi-cast chunk version mismatches from validator 0
+    for _ in 0..NUM_CHUNKS_TO_PROCESS {
+        request_manager.add_request(100, vec![validator_0.clone(), validator_1.clone()]);
+        request_manager
+            .process_chunk_version_mismatch(&validator_0, 100, 0)
+            .unwrap_err();
+    }
+
+    // Verify validator 0 is chosen more often than the other validators
+    verify_validator_picked_most_often(&mut request_manager, &validators, 0);
 }
 
 #[test]
 fn test_score_empty_chunk() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(10, 4);
 
     // Process multiple empty chunk responses from validator 0
     for _ in 0..NUM_CHUNKS_TO_PROCESS {
@@ -105,12 +125,12 @@ fn test_score_empty_chunk() {
     }
 
     // Verify validator 0 is chosen less often than the other validators
-    verify_bad_validator_picked_less_often(&mut request_manager, &validators, 0);
+    verify_validator_picked_least_often(&mut request_manager, &validators, 0);
 }
 
 #[test]
 fn test_score_invalid_chunk() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(10, 4);
 
     // Process multiple invalid chunk responses from validator 0
     for _ in 0..NUM_CHUNKS_TO_PROCESS {
@@ -118,12 +138,12 @@ fn test_score_invalid_chunk() {
     }
 
     // Verify validator 0 is chosen less often than the other validators
-    verify_bad_validator_picked_less_often(&mut request_manager, &validators, 0);
+    verify_validator_picked_least_often(&mut request_manager, &validators, 0);
 }
 
 #[test]
 fn test_remove_requests() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 2);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(0, 2);
 
     let validator_0 = vec![validators[0].clone()];
     let validator_1 = vec![validators[1].clone()];
@@ -148,7 +168,7 @@ fn test_remove_requests() {
 
 #[test]
 fn test_request_times() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 2);
+    let (mut request_manager, validators) = generate_request_manager_and_validators(0, 2);
 
     // Verify first request time doesn't exist for missing request
     assert!(request_manager.get_first_request_time(1).is_none());
@@ -164,23 +184,47 @@ fn test_request_times() {
     );
 }
 
-/// Verify that the bad validator is chosen less often than the other validators (due to
-/// having a lower peer score internally).
-fn verify_bad_validator_picked_less_often(
+/// Verify that the specified validator is chosen most often (due to having a
+/// higher peer score internally).
+fn verify_validator_picked_most_often(
     request_manager: &mut RequestManager,
     validators: &[PeerNetworkId],
-    bad_validator_index: usize,
+    validator_index: usize,
+) {
+    verify_validator_pick_frequency(request_manager, validators, validator_index, true)
+}
+
+/// Verify that the specified validator is chosen least often (due to having a
+/// lower peer score internally).
+fn verify_validator_picked_least_often(
+    request_manager: &mut RequestManager,
+    validators: &[PeerNetworkId],
+    validator_index: usize,
+) {
+    verify_validator_pick_frequency(request_manager, validators, validator_index, false)
+}
+
+/// Verifies the picking frequency of the specified validator: if `check_highest_frequency`
+/// is true we verify the validator is chosen most often, otherwise, we verify it is
+/// chosen least often.
+fn verify_validator_pick_frequency(
+    request_manager: &mut RequestManager,
+    validators: &[PeerNetworkId],
+    validator_index: usize,
+    check_highest_frequency: bool,
 ) {
     // Calculate selection counts for validators
     let pick_counts = calculate_pick_counts_for_validators(request_manager, NUM_PICKS_TO_MAKE);
 
-    // Verify bad validator is chosen less often than the other validators
-    let bad_validator_count = pick_counts
-        .get(&validators[bad_validator_index])
-        .unwrap_or(&0);
-    for (validator_index, validator) in validators.iter().enumerate() {
-        if validator_index != bad_validator_index {
-            assert!(bad_validator_count < pick_counts.get(&validator).unwrap());
+    // Verify validator frequency
+    let validator_count = pick_counts.get(&validators[validator_index]).unwrap_or(&0);
+    for (index, validator) in validators.iter().enumerate() {
+        if validator_index != index {
+            if check_highest_frequency {
+                assert!(validator_count > pick_counts.get(&validator).unwrap());
+            } else {
+                assert!(validator_count < pick_counts.get(&validator).unwrap());
+            }
         }
     }
 }
@@ -206,7 +250,7 @@ fn calculate_pick_counts_for_validators(
 }
 
 /// Generates a new request manager with a specified number of validator peers enabled.
-fn generate_request_manager_and_test_validators(
+fn generate_request_manager_and_validators(
     request_timeout: u64,
     num_validators: u64,
 ) -> (RequestManager, Vec<PeerNetworkId>) {
