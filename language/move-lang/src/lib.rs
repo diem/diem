@@ -180,6 +180,14 @@ pub fn move_continue_up_to(pass: PassResult, until: Pass) -> Result<PassResult, 
     run(pass, until)
 }
 
+/// Similar to `move_compile`, but with an additional `allow_shadow` flag to indicate that modules
+/// defined in targets can shadow (i.e., override) the modules in dependencies. In other words,
+/// if the same module id (<address::name>) is found in both targets and dependencies, the module
+/// definition in targets takes priority.
+///
+/// This function also allows to specify a stopping point of the compilation process. Similar to
+/// `move_continue_up_to`, the stopping point is inclusive, meaning that the pass specified by
+/// `until: Pass` will be run
 pub fn move_compile_up_to(
     targets: &[String],
     deps: &[String],
@@ -382,6 +390,8 @@ pub fn generate_interface_files(
     Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
 }
 
+/// Given a parsed program, if a module id is found in both the source and lib definitions, filter
+/// out the lib definition and re-construct a new parsed program
 fn shadow_lib_module_definitions(
     pprog: parser::ast::Program,
     sender_opt: Option<Address>,
