@@ -5,11 +5,34 @@ use crate::request_manager::RequestManager;
 use diem_config::config::{PeerNetworkId, UpstreamConfig};
 use netcore::transport::ConnectionOrigin;
 use std::{collections::HashMap, time::Duration};
+
 const NUM_CHUNKS_TO_PROCESS: u64 = 50;
 const NUM_PICKS_TO_MAKE: u64 = 1000;
 
 #[test]
-fn test_chunk_success() {
+fn test_disable_peer() {
+    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 1);
+
+    let validator_0 = validators[0].clone();
+
+    // Verify single validator in peers
+    assert!(request_manager.is_known_upstream_peer(&validator_0));
+    assert!(!request_manager.no_available_peers());
+
+    // Disable validator 0
+    request_manager.disable_peer(&validator_0, ConnectionOrigin::Outbound);
+
+    // Verify validator 0 is still known, but no longer available
+    assert!(request_manager.is_known_upstream_peer(&validator_0));
+    assert!(request_manager.no_available_peers());
+
+    // Add validator 0 and verify it's now enabled
+    request_manager.enable_peer(validator_0, ConnectionOrigin::Outbound);
+    assert!(!request_manager.no_available_peers());
+}
+
+#[test]
+fn test_score_chunk_success() {
     let num_validators = 4;
     let (mut request_manager, validators) =
         generate_request_manager_and_test_validators(0, num_validators);
@@ -39,7 +62,7 @@ fn test_chunk_success() {
 }
 
 #[test]
-fn test_chunk_timeout() {
+fn test_score_chunk_timeout() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 4);
 
     let validator_0 = vec![validators[0].clone()];
@@ -47,7 +70,7 @@ fn test_chunk_timeout() {
     // Process multiple request timeouts from validator 0
     for _ in 0..NUM_CHUNKS_TO_PROCESS {
         request_manager.add_request(1, validator_0.clone());
-        request_manager.check_timeout(1);
+        assert!(request_manager.check_timeout(1).unwrap());
     }
 
     // Verify validator 0 is chosen less often than the other validators
@@ -55,7 +78,7 @@ fn test_chunk_timeout() {
 }
 
 #[test]
-fn test_chunk_version_mismatch() {
+fn test_score_chunk_version_mismatch() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 4);
 
     let validator_0 = validators[0].clone();
@@ -73,7 +96,7 @@ fn test_chunk_version_mismatch() {
 }
 
 #[test]
-fn test_empty_chunk() {
+fn test_score_empty_chunk() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
 
     // Process multiple empty chunk responses from validator 0
@@ -86,29 +109,7 @@ fn test_empty_chunk() {
 }
 
 #[test]
-fn test_disable_peer() {
-    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 1);
-
-    let validator_0 = validators[0].clone();
-
-    // Verify single validator in peers
-    assert!(request_manager.is_known_upstream_peer(&validator_0));
-    assert!(!request_manager.no_available_peers());
-
-    // Disable validator 0
-    request_manager.disable_peer(&validator_0, ConnectionOrigin::Outbound);
-
-    // Verify validator 0 is still known, but no longer available
-    assert!(request_manager.is_known_upstream_peer(&validator_0));
-    assert!(request_manager.no_available_peers());
-
-    // Add validator 0 and verify it's now enabled
-    request_manager.enable_peer(validator_0, ConnectionOrigin::Outbound);
-    assert!(!request_manager.no_available_peers());
-}
-
-#[test]
-fn test_invalid_chunk() {
+fn test_score_invalid_chunk() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
 
     // Process multiple invalid chunk responses from validator 0
