@@ -86,6 +86,28 @@ fn test_empty_chunk() {
 }
 
 #[test]
+fn test_disable_peer() {
+    let (mut request_manager, validators) = generate_request_manager_and_test_validators(0, 1);
+
+    let validator_0 = validators[0].clone();
+
+    // Verify single validator in peers
+    assert!(request_manager.is_known_upstream_peer(&validator_0));
+    assert!(!request_manager.no_available_peers());
+
+    // Disable validator 0
+    request_manager.disable_peer(&validator_0, ConnectionOrigin::Outbound);
+
+    // Verify validator 0 is still known, but no longer available
+    assert!(request_manager.is_known_upstream_peer(&validator_0));
+    assert!(request_manager.no_available_peers());
+
+    // Add validator 0 and verify it's now enabled
+    request_manager.enable_peer(validator_0, ConnectionOrigin::Outbound);
+    assert!(!request_manager.no_available_peers());
+}
+
+#[test]
 fn test_invalid_chunk() {
     let (mut request_manager, validators) = generate_request_manager_and_test_validators(10, 4);
 
