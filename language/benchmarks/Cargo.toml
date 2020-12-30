@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.36"
+anyhow = "1.0.37"
 criterion = "0.3.3"
 proptest = "0.10.1"
 

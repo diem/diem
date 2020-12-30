@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.36"
+anyhow = "1.0.37"
 heck = "0.3.2"
 regex = "1.4.2"
 structopt = "0.3.21"

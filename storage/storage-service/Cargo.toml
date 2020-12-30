@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.36"
+anyhow = "1.0.37"
 tokio = { version = "0.2.22", features = ["full"] }
 futures = "0.3.8"
 
