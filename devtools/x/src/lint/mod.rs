@@ -13,6 +13,7 @@ mod license;
 mod toml;
 mod whitespace;
 mod workspace_classify;
+mod workspace_hack;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
@@ -26,6 +27,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDeps::new(&workspace_config.banned_deps),
         &guppy::DirectDepDups,
+        &workspace_hack::GenerateWorkspaceHack,
     ];
 
     let package_linters: &[&dyn PackageLinter] = &[

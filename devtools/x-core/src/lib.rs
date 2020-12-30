@@ -19,6 +19,7 @@ use crate::{core_config::XCoreConfig, git::GitCli};
 pub use debug_ignore::*;
 pub use errors::*;
 use graph::PackageGraphPlus;
+use hakari::{HakariBuilder, TomlOptions};
 pub use workspace_subset::*;
 
 /// Core context shared across all of x.
@@ -98,6 +99,22 @@ impl XCoreContext {
     /// Returns information about the subsets for this workspace.
     pub fn subsets(&self) -> Result<&WorkspaceSubsets> {
         Ok(self.package_graph_plus()?.suffix())
+    }
+
+    /// Returns a Hakari builder for this workspace.
+    pub fn hakari_builder<'a>(&'a self) -> Result<HakariBuilder<'a, 'static>> {
+        let graph = self.package_graph()?;
+        self.config
+            .hakari
+            .to_hakari_builder(graph)
+            .map_err(|err| SystemError::guppy("while resolving Hakari config", err))
+    }
+
+    /// Returns the default Hakari TOML options for this workspace.
+    pub fn hakari_toml_options(&self) -> TomlOptions {
+        let mut options = TomlOptions::new();
+        options.set_exact_versions(true);
+        options
     }
 
     // ---

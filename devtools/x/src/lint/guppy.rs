@@ -282,6 +282,10 @@ impl ProjectLinter for DirectDepDups {
         package_graph.query_workspace().resolve_with_fn(|_, link| {
             // Collect direct dependencies of workspace packages.
             let (from, to) = link.endpoints();
+            if ctx.core().config().hakari.hakari_package.as_deref() == Some(from.name()) {
+                // Skip the workspace hack package.
+                return false;
+            }
             if from.in_workspace() && !to.in_workspace() {
                 direct_deps
                     .entry(to.name())

@@ -137,6 +137,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ansi_term"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52a9bb7ec0cf484c551830a7ce27bd20d67eac647e1befb56b0be4ee39a55d2"
+dependencies = [
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -221,6 +230,17 @@ dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.8",
  "syn 1.0.60",
+]
+
+[[package]]
+name = "atomicwrites"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a2baf2feb820299c53c7ad1cc4f5914a220a1cb76d7ce321d2522a94b54651f"
+dependencies = [
+ "nix 0.14.1",
+ "tempdir",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2355,22 +2375,52 @@ dependencies = [
 name = "diem-workspace-hack"
 version = "0.1.0"
 dependencies = [
+ "bstr",
  "byteorder",
  "bytes 1.0.1",
  "cc",
  "chrono",
+ "clap",
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "crossbeam-utils 0.8.0",
+ "either",
+ "fail",
+ "futures 0.3.12",
+ "futures-channel",
+ "futures-core",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
+ "hyper",
  "itertools 0.10.0",
  "itoa",
+ "libc",
  "log",
  "memchr",
  "num-integer",
  "num-traits",
  "once_cell",
  "petgraph",
+ "proc-macro2 0.4.30",
+ "prost",
+ "quote 0.6.13",
+ "rand 0.7.3",
+ "regex",
+ "regex-syntax",
+ "reqwest",
+ "rusty-fork",
  "serde",
- "sha-1 0.9.3",
+ "serde_json",
+ "standback",
  "subtle",
+ "syn 0.15.44",
  "syn 1.0.60",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "warp",
+ "zeroize",
 ]
 
 [[package]]
@@ -2482,6 +2532,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d3b0f382a0651ab91518390f16df755c6e2ca11f52a8e06b301fd3f7dfb576c"
 dependencies = [
  "itertools 0.8.2",
+]
+
+[[package]]
+name = "diffy"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c1ff48e3f358d3158f88b2c95071f28d136be31d89e5fa843095032a70bff56"
+dependencies = [
+ "ansi_term 0.12.1",
 ]
 
 [[package]]
@@ -3285,6 +3344,23 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-futures",
+]
+
+[[package]]
+name = "hakari"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6df4223056a2e8e6b57232c1ada51cae77744098d62fa7a955f0decfb43b4de2"
+dependencies = [
+ "atomicwrites",
+ "cfg-if 1.0.0",
+ "diffy",
+ "guppy",
+ "pathdiff",
+ "rayon",
+ "serde",
+ "toml",
+ "twox-hash",
 ]
 
 [[package]]
@@ -4538,6 +4614,19 @@ dependencies = [
  "rand 0.7.3",
  "subscription-service",
  "tokio",
+]
+
+[[package]]
+name = "nix"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c722bee1037d430d0f8e687bbdbf222f27cc6e4e68d5caf630857bb2b6dbdce"
+dependencies = [
+ "bitflags",
+ "cc",
+ "cfg-if 0.1.10",
+ "libc",
+ "void",
 ]
 
 [[package]]
@@ -6857,6 +6946,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempdir"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15f2b5fb00ccdf689e0149d1b1b3c03fead81c2b37735d812fa8bddbbf41b6d8"
+dependencies = [
+ "rand 0.4.6",
+ "remove_dir_all",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7366,6 +7465,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "twox-hash"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
+dependencies = [
+ "cfg-if 0.1.10",
+ "static_assertions",
+]
+
+[[package]]
 name = "typed-arena"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7583,6 +7692,12 @@ dependencies = [
  "transaction-builder",
  "vm-genesis",
 ]
+
+[[package]]
+name = "void"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "wait-timeout"
@@ -7828,6 +7943,7 @@ dependencies = [
  "env_logger 0.8.2",
  "globset",
  "guppy",
+ "hakari",
  "indexmap",
  "indoc",
  "log",
@@ -7848,6 +7964,7 @@ dependencies = [
  "determinator",
  "diem-workspace-hack",
  "guppy",
+ "hakari",
  "hex",
  "indoc",
  "log",
@@ -7863,6 +7980,7 @@ version = "0.1.0"
 dependencies = [
  "diem-workspace-hack",
  "guppy",
+ "hakari",
  "once_cell",
  "serde",
  "toml",

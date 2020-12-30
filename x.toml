@@ -45,6 +45,34 @@ warn = [
     "clippy::wildcard_dependencies",
 ]
 
+[hakari]
+version = "v2"
+hakari-package = "diem-workspace-hack"
+unify-target-host = "replicate-target-as-host"
+
+[[hakari.platforms]]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "unknown"
+
+[[hakari.platforms]]
+triple = "x86_64-apple-darwin"
+target-features = "unknown"
+
+# Ideally we'd have powerpc-unknown-linux-gnu here as well, but unification causes openssl-sys to be included,
+# and openssl can't be cross-compiled without extra work. This may need to be fixed in hakari through being able
+# to say "consider only these packages for these target platforms".
+
+# Don't consider the crypto packages as they do weird things with mutually exclusive features.
+[[hakari.omitted-packages]]
+name = "diem-crypto"
+version = "0.1.0"
+workspace-path = "crypto/crypto"
+
+[[hakari.omitted-packages]]
+name = "diem-crypto-derive"
+version = "0.1.0"
+workspace-path = "crypto/crypto-derive"
+
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
 version = "v2"
