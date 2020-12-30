@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.36"
 flate2 = { version = "1.0.19", features = ["rust_backend"], default-features = false }
 hex = "0.4.2"
-itertools = "0.9.0"
+itertools = "0.10.0"
 once_cell = "1.4.1"
 rand = "0.7.3"
 regex = { version = "1.4.2", default-features = false, features = ["std", "perf"] }

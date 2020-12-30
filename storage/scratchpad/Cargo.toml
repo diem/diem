@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-itertools = "0.9.0"
+itertools = "0.10.0"
 
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }

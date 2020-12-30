@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-itertools = { version = "0.9.0", default-features = false }
+itertools = { version = "0.10.0", default-features = false }
 rand = "0.7.3"
 rayon = "1.5.0"
 structopt = "0.3.21"

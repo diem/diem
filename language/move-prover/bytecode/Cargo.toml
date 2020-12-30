@@ -17,7 +17,7 @@ borrow-graph = { path = "../../borrow-graph", version = "0.0.1" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 num = "0.3.0"
-itertools = "0.9.0"
+itertools = "0.10.0"
 diem-types = { path = "../../../types", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 log = "0.4.11"
