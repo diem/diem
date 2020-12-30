@@ -20,6 +20,7 @@ Select a language to access its approved Diem resource package on GitHub:
     sdk="https://github.com/libra/client-sdk-go"
   />
   <SDKCard
+    docs="https://diem.github.io/client-sdk-python/"
     icon="/img/docs/sdk-python.png"
     sdk="https://github.com/libra/client-sdk-python"
   />
