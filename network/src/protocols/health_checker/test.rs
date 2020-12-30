@@ -10,14 +10,12 @@ use crate::{
         network::{NewNetworkEvents, NewNetworkSender},
         rpc::InboundRpcRequest,
     },
+    transport::ConnectionMetadata,
     ProtocolId,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::RoleType, network_id::NetworkId};
-use diem_network_address::NetworkAddress;
 use futures::sink::SinkExt;
-use netcore::transport::ConnectionOrigin;
-use std::str::FromStr;
 use tokio::runtime::Runtime;
 
 const PING_TIMEOUT: Duration = Duration::from_millis(500);
@@ -176,9 +174,7 @@ async fn send_new_peer_notification(
 ) {
     let (delivered_tx, delivered_rx) = oneshot::channel();
     let notif = peer_manager::ConnectionNotification::NewPeer(
-        peer_id,
-        NetworkAddress::from_str("/ip6/::1/tcp/8081").unwrap(),
-        ConnectionOrigin::Inbound,
+        ConnectionMetadata::mock(peer_id),
         NetworkContext::mock(),
     );
     connection_notifs_tx

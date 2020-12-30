@@ -37,6 +37,7 @@ use network::{
         direct_send::Message,
         network::{NewNetworkEvents, NewNetworkSender},
     },
+    transport::ConnectionMetadata,
     DisconnectReason, ProtocolId,
 };
 use network_builder::builder::NetworkBuilder;
@@ -427,18 +428,15 @@ impl SynchronizerEnv {
         direction: ConnectionOrigin,
     ) {
         let sender_id = self.get_peer_network_id(sender);
+        let mut metadata = ConnectionMetadata::mock(sender_id);
+        metadata.origin = direction;
+
         let notif = if new_peer {
-            ConnectionNotification::NewPeer(
-                sender_id,
-                NetworkAddress::mock(),
-                direction,
-                NetworkContext::mock(),
-            )
+            ConnectionNotification::NewPeer(metadata, NetworkContext::mock())
         } else {
             ConnectionNotification::LostPeer(
-                sender_id,
-                NetworkAddress::mock(),
-                direction,
+                metadata,
+                NetworkContext::mock(),
                 DisconnectReason::ConnectionLost,
             )
         };

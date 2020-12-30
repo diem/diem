@@ -88,17 +88,12 @@ pub enum ConnectionRequest {
     ),
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
-    NewPeer(
-        PeerId,
-        NetworkAddress,
-        ConnectionOrigin,
-        Arc<NetworkContext>,
-    ),
+    NewPeer(ConnectionMetadata, Arc<NetworkContext>),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
-    LostPeer(PeerId, NetworkAddress, ConnectionOrigin, DisconnectReason),
+    LostPeer(ConnectionMetadata, Arc<NetworkContext>, DisconnectReason),
 }
 
 impl std::fmt::Debug for ConnectionNotification {
@@ -110,11 +105,11 @@ impl std::fmt::Debug for ConnectionNotification {
 impl std::fmt::Display for ConnectionNotification {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConnectionNotification::NewPeer(peer, addr, origin, context) => {
-                write!(f, "[{},{},{},{}]", peer, addr, origin, context)
+            ConnectionNotification::NewPeer(metadata, context) => {
+                write!(f, "[{},{}]", metadata, context)
             }
-            ConnectionNotification::LostPeer(peer, addr, origin, reason) => {
-                write!(f, "[{},{},{},{}]", peer, addr, origin, reason)
+            ConnectionNotification::LostPeer(metadata, context, reason) => {
+                write!(f, "[{},{},{}]", metadata, context, reason)
             }
         }
     }
@@ -526,9 +521,8 @@ where
                 // but does not affect correctness.
                 if !self.active_peers.contains_key(&peer_id) {
                     let notif = ConnectionNotification::LostPeer(
-                        peer_id,
-                        lost_conn_metadata.addr.clone(),
-                        lost_conn_metadata.origin,
+                        lost_conn_metadata,
+                        self.network_context.clone(),
                         reason,
                     );
                     self.send_conn_notification(peer_id, notif);
@@ -780,12 +774,7 @@ where
             .insert(peer_id, (conn_meta.clone(), network_reqs_tx));
         // Send NewPeer notification to connection event handlers.
         if send_new_peer_notification {
-            let notif = ConnectionNotification::NewPeer(
-                peer_id,
-                conn_meta.addr.clone(),
-                conn_meta.origin,
-                self.network_context.clone(),
-            );
+            let notif = ConnectionNotification::NewPeer(conn_meta, self.network_context.clone());
             self.send_conn_notification(peer_id, notif);
         }
     }

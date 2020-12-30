@@ -5,6 +5,7 @@ use super::*;
 use crate::{
     peer::DisconnectReason,
     peer_manager::{conn_notifs_channel, ConnectionRequest},
+    transport::ConnectionMetadata,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use core::str::FromStr;
@@ -13,7 +14,6 @@ use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_logger::info;
 use diem_network_address::NetworkAddress;
 use futures::SinkExt;
-use netcore::transport::ConnectionOrigin;
 use rand::rngs::StdRng;
 use std::io;
 use tokio::runtime::Runtime;
@@ -124,12 +124,9 @@ async fn send_new_peer_await_delivery(
     notif_peer_id: PeerId,
     address: NetworkAddress,
 ) {
-    let notif = peer_manager::ConnectionNotification::NewPeer(
-        notif_peer_id,
-        address,
-        ConnectionOrigin::Inbound,
-        NetworkContext::mock(),
-    );
+    let mut metadata = ConnectionMetadata::mock(notif_peer_id);
+    metadata.addr = address;
+    let notif = peer_manager::ConnectionNotification::NewPeer(metadata, NetworkContext::mock());
     send_notification_await_delivery(connection_notifs_tx, peer_id, notif).await;
 }
 
@@ -140,12 +137,10 @@ async fn send_lost_peer_await_delivery(
     address: NetworkAddress,
     reason: DisconnectReason,
 ) {
-    let notif = peer_manager::ConnectionNotification::LostPeer(
-        notif_peer_id,
-        address,
-        ConnectionOrigin::Inbound,
-        reason,
-    );
+    let mut metadata = ConnectionMetadata::mock(notif_peer_id);
+    metadata.addr = address;
+    let notif =
+        peer_manager::ConnectionNotification::LostPeer(metadata, NetworkContext::mock(), reason);
     send_notification_await_delivery(connection_notifs_tx, peer_id, notif).await;
 }
 

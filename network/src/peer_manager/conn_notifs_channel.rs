@@ -22,17 +22,13 @@ pub fn new() -> (Sender, Receiver) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::peer::DisconnectReason;
+    use crate::{peer::DisconnectReason, transport::ConnectionMetadata};
     use diem_config::network_id::NetworkContext;
-    use diem_network_address::NetworkAddress;
     use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
-    use netcore::transport::ConnectionOrigin;
 
     fn send_new_peer(sender: &mut Sender, peer_id: PeerId) {
         let notif = ConnectionNotification::NewPeer(
-            peer_id,
-            NetworkAddress::mock(),
-            ConnectionOrigin::Inbound,
+            ConnectionMetadata::mock(peer_id),
             NetworkContext::mock(),
         );
         sender.push(peer_id, notif).unwrap()
@@ -40,9 +36,8 @@ mod test {
 
     fn send_lost_peer(sender: &mut Sender, peer_id: PeerId, reason: DisconnectReason) {
         let notif = ConnectionNotification::LostPeer(
-            peer_id,
-            NetworkAddress::mock(),
-            ConnectionOrigin::Inbound,
+            ConnectionMetadata::mock(peer_id),
+            NetworkContext::mock_with_peer_id(peer_id),
             reason,
         );
         sender.push(peer_id, notif).unwrap()
@@ -61,9 +56,8 @@ mod test {
 
             // Ensure that only the last message is received.
             let notif = ConnectionNotification::LostPeer(
-                peer_id_a,
-                NetworkAddress::mock(),
-                ConnectionOrigin::Inbound,
+                ConnectionMetadata::mock(peer_id_a),
+                NetworkContext::mock_with_peer_id(peer_id_a),
                 DisconnectReason::Requested,
             );
             assert_eq!(receiver.select_next_some().await, notif,);

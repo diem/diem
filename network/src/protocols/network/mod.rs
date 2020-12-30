@@ -175,11 +175,11 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
 
 fn control_msg_to_event<TMessage>(notif: ConnectionNotification) -> Event<TMessage> {
     match notif {
-        ConnectionNotification::NewPeer(peer_id, _addr, origin, _context) => {
-            Event::NewPeer(peer_id, origin)
+        ConnectionNotification::NewPeer(metadata, _context) => {
+            Event::NewPeer(metadata.remote_peer_id, metadata.origin)
         }
-        ConnectionNotification::LostPeer(peer_id, _addr, origin, _reason) => {
-            Event::LostPeer(peer_id, origin)
+        ConnectionNotification::LostPeer(metadata, _context, _reason) => {
+            Event::LostPeer(metadata.remote_peer_id, metadata.origin)
         }
     }
 }

@@ -15,7 +15,6 @@ use diem_config::{
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_infallible::{Mutex, RwLock};
-use diem_network_address::NetworkAddress;
 use diem_types::{
     transaction::{GovernanceRole, SignedTransaction},
     PeerId,
@@ -37,6 +36,7 @@ use network::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::network::{NewNetworkEvents, NewNetworkSender},
+    transport::ConnectionMetadata,
     DisconnectReason, ProtocolId,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -289,25 +289,21 @@ impl SharedMempoolNetwork {
     }
 
     fn send_new_peer_event(&mut self, receiver: &PeerId, new_peer: &PeerId, inbound: bool) {
-        let origin = if inbound {
+        let mut metadata = ConnectionMetadata::mock(*new_peer);
+        metadata.origin = if inbound {
             ConnectionOrigin::Inbound
         } else {
             ConnectionOrigin::Outbound
         };
-        let notif = ConnectionNotification::NewPeer(
-            *new_peer,
-            NetworkAddress::mock(),
-            origin,
-            NetworkContext::mock(),
-        );
+
+        let notif = ConnectionNotification::NewPeer(metadata, NetworkContext::mock());
         self.send_connection_event(receiver, notif)
     }
 
     fn send_lost_peer_event(&mut self, receiver: &PeerId, lost_peer: &PeerId) {
         let notif = ConnectionNotification::LostPeer(
-            *lost_peer,
-            NetworkAddress::mock(),
-            ConnectionOrigin::Inbound,
+            ConnectionMetadata::mock(*lost_peer),
+            NetworkContext::mock(),
             DisconnectReason::ConnectionLost,
         );
         self.send_connection_event(receiver, notif)

@@ -651,15 +651,17 @@ where
             "Connection notification"
         );
         match notif {
-            peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _origin, _context) => {
+            peer_manager::ConnectionNotification::NewPeer(metadata, _context) => {
+                let peer_id = metadata.remote_peer_id;
                 counters::peer_connected(&self.network_context, &peer_id, 1);
-                self.connected.insert(peer_id, addr);
+                self.connected.insert(peer_id, metadata.addr);
 
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
-            peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _origin, _reason) => {
+            peer_manager::ConnectionNotification::LostPeer(metadata, _context, _reason) => {
+                let peer_id = metadata.remote_peer_id;
                 if let Some(stored_addr) = self.connected.get(&peer_id) {
                     // Remove node from connected peers list.
 
@@ -668,24 +670,24 @@ where
                     info!(
                         NetworkSchema::new(&self.network_context)
                             .remote_peer(&peer_id)
-                            .network_address(&addr),
+                            .network_address(&metadata.addr),
                         stored_addr = stored_addr,
                         "{} Removing peer '{}' addr: {}, vs event addr: {}",
                         self.network_context,
                         peer_id.short_str(),
                         stored_addr,
-                        addr
+                        metadata.addr
                     );
                     self.connected.remove(&peer_id);
                 } else {
                     info!(
                         NetworkSchema::new(&self.network_context)
                             .remote_peer(&peer_id)
-                            .network_address(&addr),
+                            .network_address(&metadata.addr),
                         "{} Ignoring stale lost peer event for peer: {}, addr: {}",
                         self.network_context,
                         peer_id.short_str(),
-                        addr
+                        metadata.addr
                     );
                 }
             }
