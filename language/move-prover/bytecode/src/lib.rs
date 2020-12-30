@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::function_target_pipeline::FunctionTargetsHolder;
-use move_model::env::GlobalEnv;
+use move_model::model::GlobalEnv;
 
 pub mod annotations;
 pub mod borrow_analysis;

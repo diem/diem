@@ -1,14 +1,16 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_model::{
+    ast::{Condition, ConditionKind, Exp, PropertyBag, Spec, Value},
+    model::{ConditionInfo, ConditionTag, FunctionEnv, VerificationScope},
+    pragmas::ALWAYS_ABORTS_TEST_PRAGMA,
+    ty::BOOL_TYPE,
+};
+
 use crate::{
     function_target::FunctionTargetData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-};
-use move_model::{
-    ast::{Condition, ConditionKind, Exp, PropertyBag, Spec, Value},
-    env::{ConditionInfo, ConditionTag, FunctionEnv, VerificationScope, ALWAYS_ABORTS_TEST_PRAGMA},
-    ty::BOOL_TYPE,
 };
 
 /// A function target processor which instruments specifications and code for the purpose

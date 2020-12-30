@@ -11,7 +11,7 @@ use clap::{App, Arg};
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
-use move_model::env::VerificationScope;
+use move_model::model::VerificationScope;
 use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,

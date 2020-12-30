@@ -36,8 +36,8 @@ use move_lang::find_move_filenames;
 use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
-    env::{GlobalEnv, ModuleId},
-    run_spec_lang_compiler,
+    model::{GlobalEnv, ModuleId},
+    run_model_builder,
 };
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -76,7 +76,7 @@ pub fn run_move_prover<W: WriteColor>(
     );
     let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
-    let mut env: GlobalEnv = run_spec_lang_compiler(target_sources, other_sources, address)?;
+    let mut env: GlobalEnv = run_model_builder(target_sources, other_sources, address)?;
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));

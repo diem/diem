@@ -21,7 +21,7 @@ use regex::{Captures, Regex};
 
 use move_model::{
     code_writer::CodeWriter,
-    env::{FunId, GlobalEnv, Loc, ModuleId, StructId},
+    model::{FunId, GlobalEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
 
@@ -32,7 +32,7 @@ use crate::{
 // DEBUG
 // use backtrace::Backtrace;
 use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
-use move_model::env::{ConditionTag, NodeId};
+use move_model::model::{ConditionTag, NodeId};
 use once_cell::sync::Lazy;
 use std::num::ParseIntError;
 

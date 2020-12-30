@@ -9,7 +9,7 @@ use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use heck::SnakeCase;
 use move_core_types::language_storage::TypeTag;
 use move_model::{
-    env::{GlobalEnv, ModuleEnv},
+    model::{GlobalEnv, ModuleEnv},
     ty,
 };
 use serde::{Deserialize, Serialize};

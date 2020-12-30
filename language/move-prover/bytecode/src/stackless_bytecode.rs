@@ -4,7 +4,7 @@
 use crate::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
-    env::{FunId, ModuleId, StructId},
+    model::{FunId, ModuleId, StructId},
     ty::{Type, TypeDisplayContext},
 };
 use num::BigUint;

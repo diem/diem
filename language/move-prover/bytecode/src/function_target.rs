@@ -9,7 +9,7 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast::{ConditionKind, Exp, Spec},
-    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId, TypeParameter},
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId, TypeParameter},
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
 };

@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use move_model::{
-    env::{FunctionEnv, Loc},
+    model::{FunctionEnv, Loc},
     ty::Type,
 };
 use std::collections::BTreeMap;

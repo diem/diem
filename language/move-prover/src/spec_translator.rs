@@ -3,15 +3,33 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 
-use move_model::{
-    env::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
-    ty::{PrimitiveType, Type},
-};
-
+use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
+
+use bytecode::{
+    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
+    stackless_bytecode::SpecBlockId, usage_analysis,
+};
+use move_model::{
+    ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
+    code_writer::CodeWriter,
+    emit, emitln,
+    model::{
+        ConditionInfo, ConditionTag, FieldId, GlobalEnv, GlobalId, Loc, ModuleEnv, ModuleId,
+        NodeId, QualifiedId, SpecFunId, SpecVarId, StructEnv, StructId,
+    },
+    pragmas::{
+        ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABORT_ASSERT_PROP,
+        CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CHECK_ABORT_CODES_PROP,
+        CONDITION_CONCRETE_PROP, CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
+        CONDITION_ISOLATED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS_PRAGMA,
+    },
+    symbol::Symbol,
+    ty::{PrimitiveType, Type, TypeDisplayContext},
+};
 
 use crate::{
     boogie_helpers::{
@@ -24,26 +42,6 @@ use crate::{
     },
     cli::Options,
 };
-use bytecode::{
-    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-    stackless_bytecode::SpecBlockId, usage_analysis,
-};
-use itertools::Itertools;
-use move_model::{
-    ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
-    code_writer::CodeWriter,
-    emit, emitln,
-    env::{
-        ConditionInfo, ConditionTag, GlobalEnv, GlobalId, QualifiedId, SpecVarId,
-        ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABORT_ASSERT_PROP,
-        CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CHECK_ABORT_CODES_PROP,
-        CONDITION_CONCRETE_PROP, CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
-        CONDITION_ISOLATED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS_PRAGMA,
-    },
-    symbol::Symbol,
-    ty::TypeDisplayContext,
-};
-use std::collections::BTreeSet;
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";

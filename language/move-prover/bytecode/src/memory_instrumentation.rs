@@ -11,7 +11,7 @@ use crate::{
         Operation, TempIndex,
     },
 };
-use move_model::env::{FunctionEnv, Loc};
+use move_model::model::{FunctionEnv, Loc};
 use std::collections::BTreeMap;
 use vm::file_format::CodeOffset;
 

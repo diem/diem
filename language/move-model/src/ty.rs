@@ -5,7 +5,7 @@
 
 use crate::{
     ast::QualifiedSymbol,
-    env::{GlobalEnv, ModuleId, StructEnv, StructId},
+    model::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
 };
 use move_core_types::language_storage::TypeTag;

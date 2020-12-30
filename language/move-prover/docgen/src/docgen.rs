@@ -10,7 +10,7 @@ use move_model::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},
     code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
-    env::{
+    model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter,
         QualifiedId, StructEnv, TypeConstraint, TypeParameter,
     },

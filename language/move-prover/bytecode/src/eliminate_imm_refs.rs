@@ -10,7 +10,7 @@ use crate::{
         Operation::*,
     },
 };
-use move_model::{env::FunctionEnv, ty::Type};
+use move_model::{model::FunctionEnv, ty::Type};
 
 pub struct EliminateImmRefsProcessor {}
 

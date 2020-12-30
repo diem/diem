@@ -3,43 +3,42 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{
-    ast::ModuleName,
-    env::{GlobalEnv, ModuleId},
-    translate::{ModuleTranslator, Translator},
-};
 use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
-use move_lang::{
-    compiled_unit::{self, CompiledUnit},
-    errors::Errors,
-    expansion::ast::Program,
-    move_continue_up_to, move_parse,
-    shared::Address,
-    Pass as MovePass, PassResult as MovePassResult,
-};
-
-pub mod ast;
-pub mod code_writer;
-pub mod env;
-pub mod symbol;
-mod translate;
-pub mod ty;
-
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
+
+use builder::module_builder::ModuleBuilder;
 use move_ir_types::location::Spanned;
 use move_lang::{
-    expansion::ast::ModuleDefinition,
+    compiled_unit::{self, CompiledUnit},
+    errors::Errors,
+    expansion::ast::{ModuleDefinition, Program},
+    move_continue_up_to, move_parse,
     parser::ast::{ModuleIdent, ModuleIdent_},
-    shared::{unique_map::UniqueMap, Name},
+    shared::{unique_map::UniqueMap, Address, Name},
+    Pass as MovePass, PassResult as MovePassResult,
 };
+
+use crate::{
+    ast::ModuleName,
+    builder::model_builder::Builder,
+    model::{GlobalEnv, ModuleId},
+};
+
+pub mod ast;
+mod builder;
+pub mod code_writer;
+pub mod model;
+pub mod pragmas;
+pub mod symbol;
+pub mod ty;
 
 // =================================================================================================
 // Entry Point
 
-pub fn run_spec_lang_compiler(
+pub fn run_model_builder(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
     address_opt: Option<&str>,
@@ -125,7 +124,7 @@ fn run_spec_checker(
     units: Vec<CompiledUnit>,
     mut eprog: Program,
 ) -> anyhow::Result<()> {
-    let mut translator = Translator::new(env);
+    let mut builder = Builder::new(env);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
     let modules = units
@@ -208,16 +207,16 @@ fn run_spec_checker(
     for (module_count, (module_id, expanded_module, compiled_module, source_map, function_infos)) in
         modules
     {
-        let loc = translator.to_loc(&expanded_module.loc);
+        let loc = builder.to_loc(&expanded_module.loc);
         let module_name = ModuleName::from_str(
             &module_id.0.value.address.to_string(),
-            translator
+            builder
                 .env
                 .symbol_pool()
                 .make(&module_id.0.value.name.0.value),
         );
         let module_id = ModuleId::new(module_count);
-        let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
+        let mut module_translator = ModuleBuilder::new(&mut builder, module_id, module_name);
         module_translator.translate(
             loc,
             expanded_module,
@@ -227,7 +226,7 @@ fn run_spec_checker(
         );
     }
     // After all specs have been processed, warn about any unused schemas.
-    translator.warn_unused_schemas();
+    builder.warn_unused_schemas();
     Ok(())
 }
 

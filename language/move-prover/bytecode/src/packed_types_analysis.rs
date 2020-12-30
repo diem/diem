@@ -13,7 +13,7 @@ use crate::{
 use diem_types::account_config;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_model::{
-    env::{FunctionEnv, GlobalEnv},
+    model::{FunctionEnv, GlobalEnv},
     ty::Type,
 };
 use std::collections::BTreeSet;

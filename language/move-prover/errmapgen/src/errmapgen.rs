@@ -9,7 +9,7 @@ use move_core_types::{
 };
 use move_model::{
     ast::Value,
-    env::{GlobalEnv, ModuleEnv, NamedConstantEnv},
+    model::{GlobalEnv, ModuleEnv, NamedConstantEnv},
     symbol::Symbol,
 };
 use serde::{Deserialize, Serialize};

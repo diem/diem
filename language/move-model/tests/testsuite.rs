@@ -5,7 +5,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use move_model::run_spec_lang_compiler;
+use move_model::run_model_builder;
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, DEFAULT_SENDER};
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
@@ -13,7 +13,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let deps = vec![];
     let address_opt = Some(DEFAULT_SENDER);
 
-    let env = run_spec_lang_compiler(targets, deps, address_opt)?;
+    let env = run_model_builder(targets, deps, address_opt)?;
     let diags = if env.has_errors() {
         let mut writer = Buffer::no_color();
         env.report_errors(&mut writer);

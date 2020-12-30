@@ -1,11 +1,25 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Provides an environment -- global state -- for translation, including helper functions
-//! to interpret metadata about the translation target.
+//! Provides a model for a set of Move modules (and scripts, which
+//! are handled like modules). The model allows to access many different aspects of the Move
+//! code: all declared functions and types, their associated bytecode, there source location,
+//! there source text, and the specification fragments.
+//!
+//! The environment is nested into a hierarchy:
+//!
+//! - A `GlobalEnv` which gives access to all modules plus other information on global level,
+//!   and is the owner of all related data.
+//! - A `ModuleEnv` which is a reference to the data of some module in the environment.
+//! - A `StructEnv` which is a reference to the data of some struct in a module.
+//! - A `FuncEnv` which is a reference to the data of some function in a module.
 
-#[allow(unused_imports)]
-use log::{info, warn};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    ffi::OsStr,
+    rc::Rc,
+};
 
 use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span, SpanOutOfBoundsError};
 use codespan_reporting::{
@@ -13,42 +27,38 @@ use codespan_reporting::{
     term::{emit, termcolor::WriteColor, Config},
 };
 use itertools::Itertools;
+#[allow(unused_imports)]
+use log::{info, warn};
 use num::{BigUint, Num, ToPrimitive};
+use serde::{Deserialize, Serialize};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
 };
-use serde::{Deserialize, Serialize};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, Constant as VMConstant, ConstantPoolIndex, FunctionDefinitionIndex,
-        FunctionHandleIndex, Kind, SignatureIndex, SignatureToken, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex,
+        AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
         StructHandleView,
     },
+    CompiledModule,
 };
 
 use crate::{
     ast::{
-        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
-        SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+        Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec, SpecBlockInfo,
+        SpecFunDecl, SpecVarDecl, Value,
     },
+    pragmas::{INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA},
     symbol::{Symbol, SymbolPool},
-    translate::SpecBlockContext,
     ty::{PrimitiveType, Type},
 };
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
-    ffi::OsStr,
-    rc::Rc,
-};
-use vm::{file_format::Bytecode, CompiledModule};
 
 // =================================================================================================
 /// # Constants
@@ -58,158 +68,6 @@ pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
 
 /// Names used in the bytecode/AST to represent the main function of a script
 pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
-
-/// Pragma indicating whether verification should be performed for a function.
-pub const VERIFY_PRAGMA: &str = "verify";
-
-/// Pragma defining a timeout.
-pub const TIMEOUT_PRAGMA: &str = "timeout";
-
-/// Pragma defining a random seed.
-pub const SEED_PRAGMA: &str = "seed";
-
-/// Pragma indicating an estimate how long verification takes. Verification
-/// is skipped if the timeout is smaller than this.
-pub const VERIFY_DURATION_ESTIMATE_PRAGMA: &str = "verify_duration_estimate";
-
-/// Pragma indicating whether implementation of function should be ignored and
-/// instead treated to be like a native function.
-pub const INTRINSIC_PRAGMA: &str = "intrinsic";
-
-/// Pragma indicating whether implementation of function should be ignored and
-/// instead interpreted by its pre and post conditions only.
-pub const OPAQUE_PRAGMA: &str = "opaque";
-
-/// Pragma indicating whether aborts_if specification should be considered partial.
-pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
-
-/// Pragma indicating whether no explicit aborts_if specification should be treated
-/// like `aborts_if` false.
-pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
-
-/// Pragma indicating that requires are also enforced if the aborts condition is true.
-pub const REQUIRES_IF_ABORTS_PRAGMA: &str = "requires_if_aborts";
-
-/// Pragma indicating that the function will run smoke tests
-pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
-
-/// Pragma indicating that adding u64 or u128 values should not be checked
-/// for overflow.
-pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecked";
-
-/// Pragma indicating that aborts from this function shall be ignored.
-pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
-
-/// Pragma which indicates that the function's abort and ensure conditions shall be exported
-/// to the verification context even if the implementation of the function is inlined.
-pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
-
-/// Checks whether a pragma is valid in a specific spec block.
-pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
-    use SpecBlockContext::*;
-    match target {
-        Module => matches!(
-            pragma,
-            VERIFY_PRAGMA
-                | ABORTS_IF_IS_STRICT_PRAGMA
-                | ABORTS_IF_IS_PARTIAL_PRAGMA
-                | INTRINSIC_PRAGMA
-        ),
-        Function(..) => matches!(
-            pragma,
-            VERIFY_PRAGMA
-                | TIMEOUT_PRAGMA
-                | SEED_PRAGMA
-                | VERIFY_DURATION_ESTIMATE_PRAGMA
-                | INTRINSIC_PRAGMA
-                | OPAQUE_PRAGMA
-                | ABORTS_IF_IS_PARTIAL_PRAGMA
-                | ABORTS_IF_IS_STRICT_PRAGMA
-                | REQUIRES_IF_ABORTS_PRAGMA
-                | ALWAYS_ABORTS_TEST_PRAGMA
-                | ADDITION_OVERFLOW_UNCHECKED_PRAGMA
-                | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
-                | EXPORT_ENSURES_PRAGMA
-        ),
-        _ => false,
-    }
-}
-
-/// Internal property attached to conditions if they are injected via an apply or a module
-/// invariant.
-pub const CONDITION_INJECTED_PROP: &str = "$injected";
-
-/// Property which can be attached to conditions to make them exported into the VC context
-/// even if they are injected.
-pub const CONDITION_EXPORT_PROP: &str = "export";
-
-/// Property which can be attached to a module invariant to make it global.
-pub const CONDITION_GLOBAL_PROP: &str = "global";
-
-/// Property which can be attached to a global invariant to mark it as not to be used as
-/// an assumption in other verification steps. This can be used for invariants which are
-/// nonoperational constraints on system behavior, i.e. the systems "works" whether the
-/// invariant holds or not. Invariant marked as such are not assumed when
-/// memory is accessed, but only in the pre-state of a memory update.
-pub const CONDITION_ISOLATED_PROP: &str = "isolated";
-
-/// Abstract property which can be used together with an opaque specification. An abstract
-/// property is not verified against the implementation, but will be used for the
-/// function's behavior in the application context. This allows to "override" the specification
-/// with a more abstract version. In general we would need to prover the abstraction is
-/// subsumed by the implementation, but this is currently not done.
-pub const CONDITION_ABSTRACT_PROP: &str = "abstract";
-
-/// Opposite to the abstract property.
-pub const CONDITION_CONCRETE_PROP: &str = "concrete";
-
-/// Property which indicates that an aborts_if should be assumed.
-/// For callers of a function with such an aborts_if, the negation of the condition becomes
-/// an assumption.
-pub const CONDITION_ABORT_ASSUME_PROP: &str = "assume";
-
-/// Property which indicates that an aborts_if should be asserted.
-/// For callers of a function with such an aborts_if, the negation of the condition becomes
-/// an assertion.
-pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
-
-/// A property which can be attached to any condition to exclude it from verification. The
-/// condition will still be type checked.
-pub const CONDITION_DEACTIVATED_PROP: &str = "deactivated";
-
-/// A property which can be attached to an aborts_with to indicate that it should act as check
-/// whether the function produces exactly the provided number of error codes.
-pub const CONDITION_CHECK_ABORT_CODES_PROP: &str = "check";
-
-/// A function which determines whether a property is valid for a given condition kind.
-pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool {
-    if matches!(
-        prop,
-        CONDITION_INJECTED_PROP
-            | CONDITION_EXPORT_PROP
-            | CONDITION_ABSTRACT_PROP
-            | CONDITION_CONCRETE_PROP
-            | CONDITION_DEACTIVATED_PROP
-    ) {
-        // Applicable everywhere.
-        return true;
-    }
-    use ConditionKind::*;
-    match kind {
-        Invariant | InvariantUpdate => {
-            matches!(prop, CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP)
-        }
-        SucceedsIf | AbortsIf => matches!(
-            prop,
-            CONDITION_ABORT_ASSERT_PROP | CONDITION_ABORT_ASSUME_PROP
-        ),
-        AbortsWith => matches!(prop, CONDITION_CHECK_ABORT_CODES_PROP),
-        _ => {
-            // every other condition can only take general properties
-            false
-        }
-    }
-}
 
 // =================================================================================================
 /// # Locations

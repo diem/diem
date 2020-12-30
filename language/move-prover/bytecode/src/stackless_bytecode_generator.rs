@@ -12,7 +12,7 @@ use crate::{
 use itertools::Itertools;
 use move_core_types::value::MoveValue;
 use move_model::{
-    env::{FunctionEnv, Loc, ModuleEnv, StructId},
+    model::{FunctionEnv, Loc, ModuleEnv, StructId},
     ty::{PrimitiveType, Type},
 };
 use std::{collections::BTreeMap, matches};

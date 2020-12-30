@@ -3,7 +3,10 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -16,16 +19,20 @@ use bytecode::{
     stackless_bytecode::{
         AssignKind, BorrowNode,
         Bytecode::{self, *},
-        Constant, Label, Operation, SpecBlockId,
+        Constant, Label, Operation, SpecBlockId, TempIndex,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
-    env::{
+    model::{
         ConditionInfo, ConditionTag, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructEnv, StructId,
         TypeParameter,
+    },
+    pragmas::{
+        ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
+        SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
     },
     ty::{PrimitiveType, Type},
 };
@@ -45,12 +52,6 @@ use crate::{
     cli::Options,
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
-use bytecode::stackless_bytecode::TempIndex;
-use move_model::env::{
-    ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
-    SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
-};
-use std::cell::RefCell;
 
 const MODIFY_RESOURCE_FAILS_MESSAGE: &str =
     "caller does not have permission for this resource modification";

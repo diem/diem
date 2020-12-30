@@ -17,7 +17,7 @@ use bytecode::{
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
 };
-use move_model::{env::GlobalEnv, run_spec_lang_compiler};
+use move_model::{model::GlobalEnv, run_model_builder};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 
 fn get_tested_transformation_pipeline(
@@ -92,7 +92,7 @@ fn get_tested_transformation_pipeline(
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let env: GlobalEnv = run_spec_lang_compiler(sources, vec![], Some("0x2345467"))?;
+    let env: GlobalEnv = run_model_builder(sources, vec![], Some("0x2345467"))?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
         env.report_errors(&mut error_writer);

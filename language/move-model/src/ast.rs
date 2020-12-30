@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Contains AST definitions for the specification language fragments of the Move language.
+//! Note that in this crate, specs are represented in AST form, whereas code is represented
+//! as bytecodes. Therefore we do not need an AST for the Move code itself.
 
 use num::{BigInt, BigUint, Num};
 
 use crate::{
-    env::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
+    model::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
     symbol::{Symbol, SymbolPool},
     ty::Type,
 };
@@ -17,7 +19,7 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use crate::env::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
+use crate::model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 

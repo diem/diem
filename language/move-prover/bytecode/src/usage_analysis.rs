@@ -10,7 +10,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
 };
-use move_model::env::{FunctionEnv, QualifiedId, StructId};
+use move_model::model::{FunctionEnv, QualifiedId, StructId};
 use std::collections::BTreeSet;
 use vm::file_format::CodeOffset;
 
