@@ -486,11 +486,6 @@ impl RequestManager {
         self.peers.contains_key(peer)
     }
 
-    #[cfg(test)]
-    pub fn peer_score(&self, peer: &PeerNetworkId) -> Option<f64> {
-        self.peers.get(peer).map(|p| p.score)
-    }
-
     fn update_multicast(&mut self, new_level: usize, request_version: Option<u64>) {
         let old_level = self.multicast_level;
         let event = match new_level {
