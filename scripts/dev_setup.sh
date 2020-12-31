@@ -582,6 +582,8 @@ fi
 if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
 	[[ "$BATCH_MODE" == "false" ]] && echo "Updating apt-get......"
 	"${PRE_COMMAND[@]}" apt-get update
+  [[ "$BATCH_MODE" == "false" ]] && echo "Installing ca-certificates......"
+	"${PRE_COMMAND[@]}" install_pkg ca-certificates "$PACKAGE_MANAGER"
 fi
 
 [[ "$INSTALL_PROFILE" == "true" ]] && update_path_and_profile
