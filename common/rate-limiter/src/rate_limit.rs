@@ -90,6 +90,15 @@ impl TokenBucketConfig {
             open,
         }
     }
+
+    pub fn open() -> Self {
+        TokenBucketConfig {
+            new_bucket_start_percentage: 100,
+            default_bucket_size: std::usize::MAX,
+            default_fill_rate: std::usize::MAX,
+            open: true,
+        }
+    }
 }
 
 impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
@@ -111,12 +120,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 
     /// Used for testing and to not have a rate limiter
     pub fn open() -> Self {
-        Self::new_from_config(TokenBucketConfig {
-            new_bucket_start_percentage: 100,
-            default_bucket_size: std::usize::MAX,
-            default_fill_rate: std::usize::MAX,
-            open: true,
-        })
+        Self::new_from_config(TokenBucketConfig::open())
     }
 
     /// Retrieve bucket, or create a new one

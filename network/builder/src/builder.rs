@@ -12,7 +12,7 @@
 use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
-        DiscoveryMethod, NetworkConfig, RoleType, CONNECTION_BACKOFF_BASE,
+        DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType, CONNECTION_BACKOFF_BASE,
         CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
         MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
         MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
@@ -91,8 +91,7 @@ impl NetworkBuilder {
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
         inbound_connection_limit: usize,
-        inbound_ip_byte_bucket_rate: usize,
-        inbound_ip_byte_bucket_size: usize,
+        inbound_rate_limit_config: Option<RateLimitConfig>,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -108,8 +107,7 @@ impl NetworkBuilder {
             max_frame_size,
             enable_proxy_protocol,
             inbound_connection_limit,
-            inbound_ip_byte_bucket_rate,
-            inbound_ip_byte_bucket_size,
+            inbound_rate_limit_config,
         );
 
         NetworkBuilder {
@@ -145,8 +143,7 @@ impl NetworkBuilder {
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
-            MAX_FRAME_SIZE,
-            MAX_FRAME_SIZE,
+            None,
         );
 
         builder.add_connectivity_manager(
@@ -194,8 +191,7 @@ impl NetworkBuilder {
             config.max_concurrent_network_reqs,
             config.max_concurrent_network_notifs,
             config.max_inbound_connections,
-            config.inbound_ip_byte_bucket_rate,
-            config.inbound_ip_byte_bucket_size,
+            config.inbound_rate_limit_config,
         );
 
         network_builder.add_connection_monitoring(

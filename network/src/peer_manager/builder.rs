@@ -13,7 +13,10 @@ use crate::{
     ProtocolId,
 };
 use channel::{self, diem_channel, message_queues::QueueStyle};
-use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use diem_config::{
+    config::{RateLimitConfig, HANDSHAKE_VERSION},
+    network_id::NetworkContext,
+};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
@@ -205,8 +208,7 @@ impl PeerManagerBuilder {
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
-        inbound_ip_byte_bucket_rate: usize,
-        inbound_ip_byte_bucket_size: usize,
+        inbound_rate_config: Option<RateLimitConfig>,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -218,12 +220,16 @@ impl PeerManagerBuilder {
         let (connection_reqs_tx, connection_reqs_rx) =
             diem_channel::new(QueueStyle::FIFO, channel_size, None);
 
-        let inbound_token_bucket_config = TokenBucketConfig::new(
-            25,
-            inbound_ip_byte_bucket_size,
-            inbound_ip_byte_bucket_rate,
-            false,
-        );
+        let inbound_token_bucket_config = if let Some(config) = inbound_rate_config {
+            TokenBucketConfig::new(
+                config.initial_bucket_fill_percentage,
+                config.ip_byte_bucket_size,
+                config.ip_byte_bucket_rate,
+                false,
+            )
+        } else {
+            TokenBucketConfig::open()
+        };
 
         Self {
             network_context,
