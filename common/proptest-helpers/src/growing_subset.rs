@@ -119,7 +119,7 @@ where
             if idx >= to_idx {
                 break;
             }
-            self.current_pos += 1;
+            self.current_pos = self.current_pos.saturating_add(1);
         }
     }
 }
