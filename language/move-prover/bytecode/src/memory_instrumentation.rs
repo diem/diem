@@ -3,7 +3,7 @@
 
 use crate::{
     borrow_analysis::BorrowAnnotation,
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
         AttrId, BorrowNode,
@@ -28,8 +28,8 @@ impl FunctionTargetProcessor for MemoryInstrumentationProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if func_env.is_native() {
             return data;
         }

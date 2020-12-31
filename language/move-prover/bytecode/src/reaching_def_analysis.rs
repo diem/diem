@@ -8,7 +8,7 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, TempIndex},
     stackless_control_flow_graph::StacklessControlFlowGraph,
@@ -71,7 +71,11 @@ impl ReachingDefProcessor {
     }
 
     /// Perform copy propagation based on reaching definitions analysis results.
-    pub fn copy_propagation(code: Vec<Bytecode>, defs: &ReachingDefAnnotation) -> Vec<Bytecode> {
+    pub fn copy_propagation(
+        target: &FunctionTarget<'_>,
+        code: Vec<Bytecode>,
+        defs: &ReachingDefAnnotation,
+    ) -> Vec<Bytecode> {
         use Bytecode::*;
         let mut res = vec![];
         for (pc, bytecode) in code.into_iter().enumerate() {
@@ -84,7 +88,7 @@ impl ReachingDefProcessor {
                     // propagate to the destination.
                     res.push(Assign(attr, dest, propagate(src), kind));
                 }
-                _ => res.push(bytecode.remap_vars(&mut propagate)),
+                _ => res.push(bytecode.remap_vars(target, &mut propagate)),
             }
         }
         res
@@ -106,8 +110,8 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if func_env.is_native() || !self.suitable_for_copy_propagation(&data.code) {
             // Nothing to do
             data
@@ -130,7 +134,10 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 
             // Run copy propagation transformation.
             let annotations = ReachingDefAnnotation(defs);
-            data.code = Self::copy_propagation(data.code, &annotations);
+            let code = std::mem::take(&mut data.code);
+            let target = FunctionTarget::new(func_env, &data);
+            let new_code = Self::copy_propagation(&target, code, &annotations);
+            data.code = new_code;
 
             // Currently we do not need reaching defs after this phase. If so in the future, we
             // need to uncomment this statement.

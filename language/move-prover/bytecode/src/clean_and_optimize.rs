@@ -5,7 +5,7 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
@@ -27,8 +27,8 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if func_env.is_native() {
             // Nothing to do
             return data;

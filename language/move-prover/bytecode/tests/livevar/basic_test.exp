@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun TestLiveVars::test1(r_ref: &TestLiveVars::R): u64 {
      var x_ref: &u64
      var $t2: &TestLiveVars::R
@@ -15,6 +16,7 @@ fun TestLiveVars::test1(r_ref: &TestLiveVars::R): u64 {
 }
 
 
+[variant baseline]
 fun TestLiveVars::test2(b: bool): u64 {
      var r1: TestLiveVars::R
      var r2: TestLiveVars::R
@@ -54,6 +56,7 @@ fun TestLiveVars::test2(b: bool): u64 {
 }
 
 
+[variant baseline]
 fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
      var r1: TestLiveVars::R
      var r2: TestLiveVars::R
@@ -124,6 +127,7 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
 
 ============ after pipeline `livevar` ================
 
+[variant baseline]
 fun TestLiveVars::test1(r_ref: TestLiveVars::R): u64 {
      var x_ref: u64
      var $t2: TestLiveVars::R
@@ -136,6 +140,7 @@ fun TestLiveVars::test1(r_ref: TestLiveVars::R): u64 {
 }
 
 
+[variant baseline]
 fun TestLiveVars::test2(b: bool): u64 {
      var r1: TestLiveVars::R
      var r2: TestLiveVars::R
@@ -179,6 +184,7 @@ fun TestLiveVars::test2(b: bool): u64 {
 }
 
 
+[variant baseline]
 fun TestLiveVars::test3(n: u64, r_ref: TestLiveVars::R): u64 {
      var r1: TestLiveVars::R
      var r2: TestLiveVars::R

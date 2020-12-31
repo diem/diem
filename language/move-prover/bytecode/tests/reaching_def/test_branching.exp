@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun TestBranching::branching(cond: bool): u64 {
      var tmp#$1: u64
      var x: u64
@@ -29,6 +30,7 @@ fun TestBranching::branching(cond: bool): u64 {
 
 ============ after pipeline `reaching_def` ================
 
+[variant baseline]
 fun TestBranching::branching(cond: bool): u64 {
      var tmp#$1: u64
      var x: u64

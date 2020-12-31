@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
         AssignKind, AttrId, BorrowNode,
@@ -31,8 +31,8 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if func_env.is_native() {
             return data;
         }
@@ -223,7 +223,7 @@ impl<'a> EliminateMutRefs<'a> {
                 self.transform_indices(srcs),
             )
         } else {
-            bytecode.remap_vars(&mut |idx| self.transform_index(idx))
+            bytecode.remap_vars(self.func_target, &mut |idx| self.transform_index(idx))
         }
     }
 

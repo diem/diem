@@ -3,8 +3,8 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis},
-    function_target::FunctionTargetData,
-    function_target_pipeline::FunctionTargetsHolder,
+    function_target::FunctionData,
+    function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
@@ -25,8 +25,18 @@ impl<'a> SummaryCache<'a> {
 
     /// Return a summary for `fun_id`. Returns None if `fun_id` is a native function
     pub fn get<Summary: 'static>(&self, fun_id: QualifiedId<FunId>) -> Option<&Summary> {
+        // TODO(wrwg): this currently only works for FunctionVariant::Baseline. If needed
+        //   we may need to extend this. However, we expect to not perform analysis
+        //   once function variants are introduced beyond baseline, as this happens
+        //   at the end of transformation pipeline, as part of instrumentation with
+        //   the specification.
+        let fun_env = self.global_env.get_function(fun_id);
+        assert_eq!(
+            self.targets.get_target_variants(&fun_env),
+            vec![FunctionVariant::Baseline]
+        );
         self.targets
-            .get_target_data(&fun_id)
+            .get_target_data(&fun_id, FunctionVariant::Baseline)
             .map(|fun_data| {
                 if self.global_env.get_function(fun_id).is_native() {
                     None
@@ -59,8 +69,8 @@ where
         &self,
         func_env: &FunctionEnv<'_>,
         initial_state: Self::State,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if !func_env.is_native() {
             let cfg = if Self::BACKWARD {
                 unimplemented!("backward compositional analysis")

@@ -6,7 +6,7 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{AttrId, Bytecode, Label, Operation, TempIndex},
     stackless_control_flow_graph::StacklessControlFlowGraph,
@@ -50,8 +50,8 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         let offset_to_live_refs = if func_env.is_native() {
             // Native functions have no byte code.
             LiveVarAnnotation(BTreeMap::new())
@@ -151,7 +151,7 @@ impl LiveVarAnalysisProcessor {
             }
         };
         for bytecode in code {
-            new_code.push(bytecode.remap_vars(&mut transform_local));
+            new_code.push(bytecode.remap_vars(func_target, &mut transform_local));
         }
         (new_code, new_vars, remap)
     }

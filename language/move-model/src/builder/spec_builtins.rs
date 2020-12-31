@@ -261,7 +261,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("global"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Global,
+                oper: Operation::Global(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![address_t.clone()],
                 result_type: param_t.clone(),
@@ -274,7 +274,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("borrow_global"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Global,
+                oper: Operation::Global(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![address_t.clone()],
                 result_type: param_t.clone(),
@@ -284,7 +284,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("borrow_global_mut"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Global,
+                oper: Operation::Global(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![address_t.clone()],
                 result_type: param_t.clone(),
@@ -294,7 +294,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("exists"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Exists,
+                oper: Operation::Exists(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![address_t.clone()],
                 result_type: bool_t.clone(),

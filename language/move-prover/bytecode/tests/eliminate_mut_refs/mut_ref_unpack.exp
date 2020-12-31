@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 pub fun TestMutRefs::unpack(r: &mut TestMutRefs::R): u64 {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R
@@ -28,6 +29,7 @@ pub fun TestMutRefs::unpack(r: &mut TestMutRefs::R): u64 {
 }
 
 
+[variant baseline]
 pub fun TestMutRefs::unpack_incorrect(r: &mut TestMutRefs::R): u64 {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R
@@ -52,6 +54,7 @@ pub fun TestMutRefs::unpack_incorrect(r: &mut TestMutRefs::R): u64 {
 
 ============ after pipeline `eliminate_mut_refs` ================
 
+[variant baseline]
 pub fun TestMutRefs::unpack(r: TestMutRefs::R): (u64, TestMutRefs::R) {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R
@@ -84,6 +87,7 @@ pub fun TestMutRefs::unpack(r: TestMutRefs::R): (u64, TestMutRefs::R) {
 }
 
 
+[variant baseline]
 pub fun TestMutRefs::unpack_incorrect(r: TestMutRefs::R): (u64, TestMutRefs::R) {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R

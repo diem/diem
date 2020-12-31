@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun TestPackref::test1(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -28,6 +29,7 @@ fun TestPackref::test1(): TestPackref::R {
 }
 
 
+[variant baseline]
 fun TestPackref::test2(x_ref: &mut u64, v: u64) {
      var $t2: u64
      var $t3: &mut u64
@@ -38,6 +40,7 @@ fun TestPackref::test2(x_ref: &mut u64, v: u64) {
 }
 
 
+[variant baseline]
 pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
      var x_ref: &mut u64
      var $t3: &mut TestPackref::R
@@ -54,6 +57,7 @@ pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
 }
 
 
+[variant baseline]
 fun TestPackref::test4(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -76,6 +80,7 @@ fun TestPackref::test4(): TestPackref::R {
 }
 
 
+[variant baseline]
 pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
      var $t1: &mut TestPackref::R
      var $t2: &mut u64
@@ -85,6 +90,7 @@ pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
 }
 
 
+[variant baseline]
 fun TestPackref::test6(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -113,6 +119,7 @@ fun TestPackref::test6(): TestPackref::R {
 }
 
 
+[variant baseline]
 fun TestPackref::test7(b: bool) {
      var r1: TestPackref::R
      var r2: TestPackref::R
@@ -153,6 +160,7 @@ fun TestPackref::test7(b: bool) {
 }
 
 
+[variant baseline]
 fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
      var r1: TestPackref::R
      var r2: TestPackref::R
@@ -249,6 +257,7 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
 
 ============ after pipeline `memory_instr` ================
 
+[variant baseline]
 fun TestPackref::test1(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -271,6 +280,7 @@ fun TestPackref::test1(): TestPackref::R {
 }
 
 
+[variant baseline]
 fun TestPackref::test2(x_ref: u64, v: u64): u64 {
      var $t2: u64
      var $t3: u64
@@ -284,6 +294,7 @@ fun TestPackref::test2(x_ref: u64, v: u64): u64 {
 }
 
 
+[variant baseline]
 pub fun TestPackref::test3(r_ref: TestPackref::R, v: u64): TestPackref::R {
      var x_ref: &mut u64
      var $t3: TestPackref::R
@@ -307,6 +318,7 @@ pub fun TestPackref::test3(r_ref: TestPackref::R, v: u64): TestPackref::R {
 }
 
 
+[variant baseline]
 fun TestPackref::test4(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -327,6 +339,7 @@ fun TestPackref::test4(): TestPackref::R {
 }
 
 
+[variant baseline]
 pub fun TestPackref::test5(r_ref: TestPackref::R): (&mut u64, TestPackref::R) {
      var $t1: TestPackref::R
      var $t2: &mut TestPackref::R
@@ -340,6 +353,7 @@ pub fun TestPackref::test5(r_ref: TestPackref::R): (&mut u64, TestPackref::R) {
 }
 
 
+[variant baseline]
 fun TestPackref::test6(): TestPackref::R {
      var r: TestPackref::R
      var r_ref: &mut TestPackref::R
@@ -374,6 +388,7 @@ fun TestPackref::test6(): TestPackref::R {
 }
 
 
+[variant baseline]
 fun TestPackref::test7(b: bool) {
      var r1: TestPackref::R
      var r2: TestPackref::R
@@ -412,6 +427,7 @@ fun TestPackref::test7(b: bool) {
 }
 
 
+[variant baseline]
 fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
      var r1: TestPackref::R
      var r2: TestPackref::R

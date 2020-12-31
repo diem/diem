@@ -19,7 +19,10 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use crate::model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
+use crate::{
+    model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter},
+    ty::TypeDisplayContext,
+};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 
@@ -157,6 +160,14 @@ pub struct Condition {
     pub kind: ConditionKind,
     pub properties: PropertyBag,
     pub exp: Exp,
+    pub additional_exps: Vec<Exp>,
+}
+
+impl Condition {
+    /// Return all expressions in the condition, the primary one and the additional ones.
+    pub fn all_exps(&self) -> impl Iterator<Item = &Exp> {
+        std::iter::once(&self.exp).chain(self.additional_exps.iter())
+    }
 }
 
 // =================================================================================================
@@ -252,16 +263,40 @@ pub struct GlobalInvariant {
 // =================================================================================================
 /// # Expressions
 
-#[derive(Debug, Clone, PartialEq)]
+/// The type of expressions.
+///
+/// Expression layout follows the following design principles:
+///
+/// - We try to keep the number of expression variants minimal, for easier treatment in
+///   generic traversals. Builtin and user functions are abstracted into a general
+///   `Call(.., operation, args)` construct.
+/// - Each expression has a unique node id assigned. This id allows to build attribute tables
+///   for additional information, like expression type and source location. The id is globally
+///   unique.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Exp {
-    Error(NodeId),
+    /// Represents an invalid expression. This is used as a stub for algorithms which
+    /// generate expressions but can fail with multiple errors, like a translator from
+    /// some other source into expressions. Consumers of expressions should assume this
+    /// variant is not present and can panic when seeing it.
+    Invalid(NodeId),
+    /// Represents a value.
     Value(NodeId, Value),
+    /// Represents a reference to a local variable.
     LocalVar(NodeId, Symbol),
-    SpecVar(NodeId, ModuleId, SpecVarId),
+    /// Represents a reference to a global specification (ghost) variable.
+    SpecVar(NodeId, ModuleId, SpecVarId, Option<MemoryLabel>),
+    /// Represents a call to an operation. The `Operation` enum covers all builtin functions
+    /// (including operators, constants, ...) as well as user functions.
     Call(NodeId, Operation, Vec<Exp>),
+    /// Represents an invocation of a function value, as a lambda.
     Invoke(NodeId, Box<Exp>, Vec<Exp>),
+    /// Represents a lambda.
     Lambda(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    /// Represents a block which contains a set of variable bindings and an expression
+    /// for which those are defined.
     Block(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    /// Represents a conditional.
     IfElse(NodeId, Box<Exp>, Box<Exp>, Box<Exp>),
 }
 
@@ -269,7 +304,7 @@ impl Exp {
     pub fn node_id(&self) -> NodeId {
         use Exp::*;
         match self {
-            Error(node_id)
+            Invalid(node_id)
             | Value(node_id, ..)
             | LocalVar(node_id, ..)
             | SpecVar(node_id, ..)
@@ -351,37 +386,11 @@ impl Exp {
             _ => {}
         });
     }
-
-    /// Optionally extracts condition and abort code from the special `Operation::CondWithAbortCode`.
-    pub fn extract_cond_and_aborts_code(&self) -> (&Exp, Option<&Exp>) {
-        match self {
-            Exp::Call(_, Operation::CondWithAbortCode, args) if args.len() == 2 => {
-                (&args[0], Some(&args[1]))
-            }
-            _ => (self, None),
-        }
-    }
-
-    /// Optionally extracts list of abort codes from the special `Operation::AbortCodes`.
-    pub fn extract_abort_codes(&self) -> &[Exp] {
-        match self {
-            Exp::Call(_, Operation::AbortCodes, args) => args.as_slice(),
-            _ => &[],
-        }
-    }
-
-    /// Optionally extracts list of modify targets from the special `Operation::ModifyTargets`.
-    pub fn extract_modify_targets(&self) -> &[Exp] {
-        match self {
-            Exp::Call(_, Operation::ModifyTargets, args) => args.as_slice(),
-            _ => &[],
-        }
-    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operation {
-    Function(ModuleId, SpecFunId),
+    Function(ModuleId, SpecFunId, Option<Vec<MemoryLabel>>),
     Pack(ModuleId, StructId),
     Tuple,
     Select(ModuleId, StructId, FieldId),
@@ -390,11 +399,6 @@ pub enum Operation {
     Result(usize),
     Index,
     Slice,
-
-    // Pseudo operators for expressions which have a special treatment in the translation.
-    CondWithAbortCode, // aborts_if E with C
-    AbortCodes,        // aborts_with C1, ..., Cn
-    ModifyTargets,     // modifies E1, ..., En
 
     // Binary operators
     Range,
@@ -427,8 +431,8 @@ pub enum Operation {
     Any,
     TypeValue,
     TypeDomain,
-    Global,
-    Exists,
+    Global(Option<MemoryLabel>),
+    Exists(Option<MemoryLabel>),
     Old,
     Trace,
     Empty,
@@ -438,19 +442,24 @@ pub enum Operation {
     MaxU8,
     MaxU64,
     MaxU128,
+    AbortFlag,
+    AbortCode,
 
     // Operation with no effect
     NoOp,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// A label used for referring to a specific memory in Global, Exists, and SpecVar expressions.
+pub type MemoryLabel = GlobalId;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalVarDecl {
     pub id: NodeId,
     pub name: Symbol,
     pub binding: Option<Exp>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
     Address(BigUint),
     Number(BigInt),
@@ -481,8 +490,8 @@ impl Operation {
     {
         use Operation::*;
         match self {
-            Exists | Global => false,
-            Function(mid, fid) => check_pure(*mid, *fid),
+            Exists(_) | Global(_) => false,
+            Function(mid, fid, _) => check_pure(*mid, *fid),
             _ => true,
         }
     }
@@ -653,8 +662,6 @@ impl<'a> fmt::Display for QualifiedSymbolDisplay<'a> {
 
 impl Exp {
     /// Creates a display of an expression which can be used in formatting.
-    ///
-    /// Current implementation is incomplete.
     pub fn display<'a>(&'a self, env: &'a GlobalEnv) -> ExpDisplay<'a> {
         ExpDisplay { env, exp: self }
     }
@@ -668,28 +675,151 @@ pub struct ExpDisplay<'a> {
 
 impl<'a> fmt::Display for ExpDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        use Exp::*;
         match self.exp {
-            Exp::Value(_, Value::Number(num)) => write!(f, "{}", num)?,
-            Exp::Value(_, Value::Bool(b)) => write!(f, "{}", b)?,
-            Exp::Value(_, Value::Address(num)) => f.write_str(&num.to_str_radix(16))?,
-            Exp::Call(_, Operation::Function(mid, fid), args) => {
+            Invalid(_) => write!(f, "*invalid*"),
+            Value(_, v) => write!(f, "{}", v),
+            LocalVar(_, name) => write!(f, "{}", name.display(self.env.symbol_pool())),
+            SpecVar(_, mid, vid, label) => {
                 let module_env = self.env.get_module(*mid);
-                let fun = module_env.get_spec_fun(*fid);
+                let spec_var = module_env.get_spec_var(*vid);
                 write!(
                     f,
-                    "{}::{}({})",
+                    "{}::{}",
                     module_env.get_name().display(self.env.symbol_pool()),
-                    fun.name.display(self.env.symbol_pool()),
-                    args.iter()
-                        .map(|e| e.display(self.env).to_string())
-                        .join(", ")
-                )?
+                    spec_var.name.display(self.env.symbol_pool())
+                )?;
+                if let Some(label) = label {
+                    write!(f, "[{}]", label)?;
+                }
+                Ok(())
             }
+            Call(node_id, oper, args) => write!(
+                f,
+                "{}({})",
+                oper.display(self.env, *node_id),
+                args.iter()
+                    .map(|e| e.display(self.env).to_string())
+                    .join(", ")
+            ),
             _ => {
-                // TODO(wrwg): implement expression printer
-                f.write_str("<value>")?
+                // TODO(wrwg): implement remaining expression forms.
+                f.write_str("<can't display>")
             }
         }
-        Ok(())
+    }
+}
+
+impl Operation {
+    /// Creates a display of an operation which can be used in formatting.
+    pub fn display<'a>(&'a self, env: &'a GlobalEnv, node_id: NodeId) -> OperationDisplay<'a> {
+        OperationDisplay {
+            env,
+            oper: self,
+            node_id,
+        }
+    }
+}
+
+/// Helper type for operation display.
+pub struct OperationDisplay<'a> {
+    env: &'a GlobalEnv,
+    node_id: NodeId,
+    oper: &'a Operation,
+}
+
+impl<'a> fmt::Display for OperationDisplay<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        use Operation::*;
+        match self.oper {
+            Function(mid, fid, labels_opt) => {
+                write!(f, "{}", self.fun_str(mid, fid))?;
+                if let Some(labels) = labels_opt {
+                    write!(
+                        f,
+                        "[{}]",
+                        labels.iter().map(|l| format!("{}", l)).join(", ")
+                    )?;
+                }
+                Ok(())
+            }
+            Global(label_opt) => {
+                write!(f, "global<{}>", self.resource_access_str(self.node_id))?;
+                if let Some(label) = label_opt {
+                    write!(f, "[{}]", label)?
+                }
+                Ok(())
+            }
+            Exists(label_opt) => {
+                write!(f, "exists<{}>", self.resource_access_str(self.node_id))?;
+                if let Some(label) = label_opt {
+                    write!(f, "[{}]", label)?
+                }
+                Ok(())
+            }
+            Pack(mid, sid) => write!(f, "pack {}", self.struct_str(mid, sid)),
+            Select(mid, sid, fid) => {
+                write!(f, "select {}", self.field_str(mid, sid, fid))
+            }
+            UpdateField(mid, sid, fid) => {
+                write!(f, "update {}", self.field_str(mid, sid, fid))
+            }
+            Local(s) => write!(f, "{}", s.display(self.env.symbol_pool())),
+            Result(t) => write!(f, "result{}", t),
+            _ => write!(f, "{:?}", self.oper),
+        }
+    }
+}
+
+impl<'a> OperationDisplay<'a> {
+    fn fun_str(&self, mid: &ModuleId, fid: &SpecFunId) -> String {
+        let module_env = self.env.get_module(*mid);
+        let fun = module_env.get_spec_fun(*fid);
+        format!(
+            "{}::{}",
+            module_env.get_name().display(self.env.symbol_pool()),
+            fun.name.display(self.env.symbol_pool()),
+        )
+    }
+
+    fn struct_str(&self, mid: &ModuleId, sid: &StructId) -> String {
+        let module_env = self.env.get_module(*mid);
+        let struct_env = module_env.get_struct(*sid);
+        format!(
+            "{}::{}",
+            module_env.get_name().display(self.env.symbol_pool()),
+            struct_env.get_name().display(self.env.symbol_pool()),
+        )
+    }
+
+    fn field_str(&self, mid: &ModuleId, sid: &StructId, fid: &FieldId) -> String {
+        let struct_env = self.env.get_module(*mid).into_struct(*sid);
+        let field_name = struct_env.get_field(*fid).get_name();
+        format!(
+            "{}.{}",
+            self.struct_str(mid, sid),
+            field_name.display(self.env.symbol_pool())
+        )
+    }
+
+    fn resource_access_str(&self, node_id: NodeId) -> String {
+        let ty = &self.env.get_node_instantiation(node_id)[0];
+        let (mid, sid, targs) = ty.require_struct();
+        let tctx = TypeDisplayContext::WithEnv {
+            env: self.env,
+            type_param_names: None,
+        };
+        let targs_str = if targs.is_empty() {
+            "".to_string()
+        } else {
+            format!("<{}>", targs.iter().map(|t| t.display(&tctx)).join(", "))
+        };
+        format!("{}{}", self.struct_str(&mid, &sid), targs_str)
+    }
+}
+
+impl fmt::Display for MemoryLabel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "@{}", self.as_usize())
     }
 }

@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun TestSpecBlock::looping(x: u64): u64 {
      var $t1: u64
      var $t2: u64
@@ -31,6 +32,7 @@ fun TestSpecBlock::looping(x: u64): u64 {
 }
 
 
+[variant baseline]
 fun TestSpecBlock::simple1(x: u64, y: u64) {
      var $t2: u64
      var $t3: u64
@@ -53,6 +55,7 @@ fun TestSpecBlock::simple1(x: u64, y: u64) {
 }
 
 
+[variant baseline]
 fun TestSpecBlock::simple2(x: u64) {
      var y: u64
      var $t2: u64
@@ -67,12 +70,14 @@ fun TestSpecBlock::simple2(x: u64) {
 }
 
 
+[variant baseline]
 fun TestSpecBlock::simple3(x: u64, y: u64) {
   0: spec at 317..386
   1: return ()
 }
 
 
+[variant baseline]
 fun TestSpecBlock::simple4(x: u64, y: u64) {
      var z: u64
      var $t3: u64

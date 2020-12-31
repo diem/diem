@@ -5,14 +5,14 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnnotation,
-    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation, StructDecl, TempIndex},
+    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation, TempIndex},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::model::FunctionEnv;
+use move_model::model::{FunctionEnv, QualifiedId};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
@@ -243,8 +243,8 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         let borrow_annotation = if func_env.is_native() {
             // Native functions have no byte code.
             BorrowAnnotation(BTreeMap::new())
@@ -380,9 +380,9 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                         if livevar_annotation_at.after.contains(&dests[0]) =>
                     {
                         let dest_node = self.borrow_node(dests[0]);
-                        let src_node = BorrowNode::GlobalRoot(StructDecl {
+                        let src_node = BorrowNode::GlobalRoot(QualifiedId {
                             module_id: *mid,
-                            struct_id: *sid,
+                            id: *sid,
                         });
                         state.add_node(dest_node.clone());
                         state.add_edge(src_node, dest_node);

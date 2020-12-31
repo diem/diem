@@ -675,12 +675,12 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                         }
                     }
                     TypeDisplayContext::WithEnv { env, .. } => {
-                        let func_env = env.get_module(*mid).into_struct(*sid);
+                        let struct_env = env.get_module(*mid).into_struct(*sid);
                         write!(
                             f,
                             "{}::{}",
-                            func_env.module_env.get_name().display(env.symbol_pool()),
-                            func_env.get_name().display(env.symbol_pool())
+                            struct_env.module_env.get_name().display(env.symbol_pool()),
+                            struct_env.get_name().display(env.symbol_pool())
                         )?;
                     }
                 }

@@ -2,19 +2,45 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     print_targets_for_test,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
 };
+use itertools::Itertools;
 use log::debug;
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
-use std::{collections::BTreeMap, fs};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Formatter,
+    fs,
+};
 
 /// A data structure which holds data for multiple function targets, and allows to
 /// manipulate them as part of a transformation pipeline.
 #[derive(Debug, Default)]
 pub struct FunctionTargetsHolder {
-    targets: BTreeMap<QualifiedId<FunId>, FunctionTargetData>,
+    targets: BTreeMap<QualifiedId<FunId>, BTreeMap<FunctionVariant, FunctionData>>,
+}
+
+/// Describes a function target variant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FunctionVariant {
+    /// The baseline variant which was created from the original Move bytecode and is then
+    /// subject of multiple transformations.
+    Baseline,
+    /// The variant which is instrumented for verification. Only functions which are target
+    /// of verification have one of those.
+    Verification,
+}
+
+impl std::fmt::Display for FunctionVariant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use FunctionVariant::*;
+        match self {
+            Baseline => write!(f, "baseline"),
+            Verification => write!(f, "verification"),
+        }
+    }
 }
 
 /// A trait for processing a function target. Takes as parameter a target holder which can be
@@ -23,13 +49,17 @@ pub struct FunctionTargetsHolder {
 /// transformation has finished. This allows the processor to take ownership
 /// on the target data. Notice that you can use `FunctionTarget{func_env, &data}` to temporarily
 /// construct a function target for access to the underlying data.
+///
+/// Function processors are only called for the `FunctionVariant::Baseline` variant of
+/// a function. If processing of other variants is needed, this can be achieved by directly
+/// accessing and mutating the `targets` parameter.
 pub trait FunctionTargetProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionTargetData,
-    ) -> FunctionTargetData;
+        data: FunctionData,
+    ) -> FunctionData;
 
     /// Returns a name for this processor. This should be suitable as a file suffix.
     fn name(&self) -> String;
@@ -46,28 +76,70 @@ impl FunctionTargetsHolder {
     pub fn add_target(&mut self, func_env: &FunctionEnv<'_>) {
         let generator = StacklessBytecodeGenerator::new(func_env);
         let data = generator.generate_function();
-        self.targets.insert(func_env.get_qualified_id(), data);
+        self.targets
+            .entry(func_env.get_qualified_id())
+            .or_default()
+            .insert(FunctionVariant::Baseline, data);
     }
 
-    /// Gets a function target for read-only consumption.
-    pub fn get_target<'env>(&'env self, func_env: &'env FunctionEnv<'env>) -> FunctionTarget<'env> {
+    /// Gets a function target for read-only consumption, for the given variant.
+    pub fn get_target<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+        variant: FunctionVariant,
+    ) -> FunctionTarget<'env> {
         let data = self
-            .get_target_data(&func_env.get_qualified_id())
+            .get_target_data(&func_env.get_qualified_id(), variant)
             .expect("function target exists");
         FunctionTarget::new(func_env, &data)
     }
 
-    /// Gets function target data for a qualfied function identifier
-    pub fn get_target_data(&self, id: &QualifiedId<FunId>) -> Option<&FunctionTargetData> {
-        self.targets.get(id)
+    pub fn get_target_variants(&self, func_env: &FunctionEnv<'_>) -> Vec<FunctionVariant> {
+        self.targets
+            .get(&func_env.get_qualified_id())
+            .expect("function targets exist")
+            .iter()
+            .map(|(v, _)| *v)
+            .collect_vec()
     }
 
-    /// Processes the function target data for given function.
+    /// Gets targets for all available variants.
+    pub fn get_targets<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+    ) -> Vec<(FunctionVariant, FunctionTarget<'env>)> {
+        self.targets
+            .get(&func_env.get_qualified_id())
+            .expect("function targets exist")
+            .iter()
+            .map(|(v, d)| (*v, FunctionTarget::new(func_env, d)))
+            .collect_vec()
+    }
+
+    /// Gets function target data for a qualified function identifier and given variant.
+    pub fn get_target_data(
+        &self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> Option<&FunctionData> {
+        self.targets.get(id).and_then(|vs| vs.get(&variant))
+    }
+
+    /// Processes the function target data for given function. This only processes the
+    /// baseline variant (see documentation of FunctionTargetProcessor).
     fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
         let key = func_env.get_qualified_id();
-        let data = self.targets.remove(&key).expect("function target exists");
+        let data = self
+            .targets
+            .get_mut(&key)
+            .expect("function target exists")
+            .remove(&FunctionVariant::Baseline)
+            .expect("baseline variant exists");
         let processed_data = processor.process(self, func_env, data);
-        self.targets.insert(key, processed_data);
+        self.targets
+            .get_mut(&key)
+            .expect("function target exists")
+            .insert(FunctionVariant::Baseline, processed_data);
     }
 }
 
@@ -90,8 +162,13 @@ impl FunctionTargetPipeline {
         dump_to_file: Option<String>,
     ) {
         let mut worklist = vec![];
-        for (key, data) in &targets.targets {
-            worklist.push((*key, data.get_callees()))
+        for (key, variants) in &targets.targets {
+            // Use the union of the callees of all variants
+            let mut callees = BTreeSet::new();
+            for data in variants.values() {
+                callees.extend(data.get_callees());
+            }
+            worklist.push((*key, callees.into_iter().collect_vec()));
         }
         let mut to_remove = vec![];
         let mut topological_order = vec![];
@@ -127,7 +204,11 @@ impl FunctionTargetPipeline {
                 // analysis processors to deal gracefully with the absence of summaries. But for
                 // now, we intentionally fail because recursion is not expected in Diem Framework
                 // code
-                unimplemented!("Recursion or mutual recursion detected in {:?}. Make sure that all analyses in  self.processors are prepared to handle recursion", func_env.get_identifier());
+                unimplemented!(
+                    "Recursion or mutual recursion detected in {:?}. \
+                     Make sure that all analyses in  self.processors are prepared to handle recursion",
+                    func_env.get_identifier()
+                );
             }
             topological_order.push(func_env);
         }

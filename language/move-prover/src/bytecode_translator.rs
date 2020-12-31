@@ -52,6 +52,7 @@ use crate::{
     cli::Options,
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
+use bytecode::function_target_pipeline::FunctionVariant;
 
 const MODIFY_RESOURCE_FAILS_MESSAGE: &str =
     "caller does not have permission for this resource modification";
@@ -519,7 +520,11 @@ impl<'env> ModuleTranslator<'env> {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
-            self.translate_function(&self.targets.get_target(&func_env));
+            self.translate_function(
+                &self
+                    .targets
+                    .get_target(&func_env, FunctionVariant::Baseline),
+            );
         }
         if num_fun > 0 && !self.module_env.is_dependency() {
             debug!(
@@ -1030,6 +1035,9 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
+            Bytecode::Prop(..) | Bytecode::SaveMem(..) | Bytecode::SaveSpecVar(..) => {
+                unimplemented!()
+            }
             SpecBlock(_, block_id) => {
                 self.generate_function_spec_inside_impl(func_target, *block_id);
             }
@@ -1133,7 +1141,7 @@ impl<'env> ModuleTranslator<'env> {
                         let src = srcs[0];
                         match dest {
                             GlobalRoot(struct_decl) => {
-                                let memory = struct_decl.module_id.qualified(struct_decl.struct_id);
+                                let memory = struct_decl.module_id.qualified(struct_decl.id);
                                 let spec_translator = self.new_spec_translator_for_module();
                                 spec_translator.emit_on_update_global_invariant_assumes(memory);
                                 spec_translator.save_memory_for_update_invariants(memory);
@@ -1253,7 +1261,10 @@ impl<'env> ModuleTranslator<'env> {
                     FreezeRef => unreachable!(), // eliminated by eliminate_imm_refs
                     Function(mid, fid, type_actuals) => {
                         let callee_env = self.module_env.env.get_module(*mid).into_function(*fid);
-                        let callee_target = self.targets.get_target(&callee_env).clone();
+                        let callee_target = self
+                            .targets
+                            .get_target(&callee_env, FunctionVariant::Baseline)
+                            .clone();
                         let entry_point =
                             if self.in_top_level_verify() && !callee_target.is_native() {
                                 let inter_module = callee_target.module_env().get_id()

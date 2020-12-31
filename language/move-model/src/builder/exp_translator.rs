@@ -74,7 +74,7 @@ pub(crate) enum OldExpStatus {
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
     pub fn new(parent: &'module_translator mut ModuleBuilder<'env, 'translator>) -> Self {
-        let node_counter_start = parent.node_counter;
+        let node_counter_start = parent.parent.env.next_free_node_number();
         Self {
             parent,
             type_params_table: BTreeMap::new(),
@@ -165,14 +165,48 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         var
     }
 
-    /// Creates a new node id and assigns type and location to it.
-    pub fn new_node_id_with_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
-        self.parent.new_node_id_with_type_loc(ty, loc)
+    /// Shortcut to create a new node id.
+    fn new_node_id(&self) -> NodeId {
+        self.parent.parent.env.new_node_id()
     }
 
-    /// Sets instantiation for the given node id.
-    fn set_instantiation(&mut self, node_id: NodeId, instantiation: Vec<Type>) {
-        self.parent.instantiation_map.insert(node_id, instantiation);
+    /// Shortcut to create a new node id and assigns type and location to it.
+    pub fn new_node_id_with_type_loc(&self, ty: &Type, loc: &Loc) -> NodeId {
+        self.parent.parent.env.new_node(loc.clone(), ty.clone())
+    }
+
+    // Short cut for getting node type.
+    pub fn get_node_type(&self, node_id: NodeId) -> Type {
+        self.parent.parent.env.get_node_type(node_id)
+    }
+
+    // Short cut for getting node type.
+    fn get_node_type_opt(&self, node_id: NodeId) -> Option<Type> {
+        self.parent.parent.env.get_node_type_opt(node_id)
+    }
+
+    // Short cut for getting node location.
+    #[allow(dead_code)]
+    fn get_node_loc(&self, node_id: NodeId) -> Loc {
+        self.parent.parent.env.get_node_loc(node_id)
+    }
+
+    // Short cut for getting node instantiation.
+    fn get_node_instantiation_opt(&self, node_id: NodeId) -> Option<Vec<Type>> {
+        self.parent.parent.env.get_node_instantiation_opt(node_id)
+    }
+
+    /// Shortcut to set node type.
+    pub fn set_node_type(&self, node_id: NodeId, ty: Type) {
+        self.parent.parent.env.set_node_type(node_id, ty);
+    }
+
+    /// Shortcut to set instantiation for the given node id.
+    fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
+        self.parent
+            .parent
+            .env
+            .set_node_instantiation(node_id, instantiation);
     }
 
     /// Finalizes types in this build, producing errors if some could not be inferred
@@ -183,18 +217,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             // useless followup errors.
             return;
         }
-        for i in self.node_counter_start..self.parent.node_counter {
+        for i in self.node_counter_start..self.parent.parent.env.next_free_node_number() {
             let node_id = NodeId::new(i);
-            if let Some(ty) = self.parent.type_map.get(&node_id) {
-                let ty = self.finalize_type(node_id, ty);
-                self.parent.type_map.insert(node_id, ty);
+
+            if let Some(ty) = self.get_node_type_opt(node_id) {
+                let ty = self.finalize_type(node_id, &ty);
+                self.set_node_type(node_id, ty);
             }
-            if let Some(inst) = self.parent.instantiation_map.get(&node_id) {
+            if let Some(inst) = self.get_node_instantiation_opt(node_id) {
                 let inst = inst
                     .iter()
                     .map(|ty| self.finalize_type(node_id, ty))
                     .collect_vec();
-                self.set_instantiation(node_id, inst);
+                self.set_node_instantiation(node_id, inst);
             }
         }
     }
@@ -204,11 +239,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let ty = self.subs.specialize(ty);
         if ty.is_incomplete() {
             // This type could not be fully inferred.
-            let loc = if let Some(loc) = self.parent.loc_map.get(&node_id) {
-                loc.clone()
-            } else {
-                self.parent.parent.env.unknown_loc()
-            };
+            let loc = self.parent.parent.env.get_node_loc(node_id);
             self.error(
                 &loc,
                 &format!(
@@ -226,19 +257,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         if self.parent.parent.env.has_errors() {
             return;
         }
-        for i in self.node_counter_start..self.parent.node_counter {
+        for i in self.node_counter_start..self.parent.parent.env.next_free_node_number() {
             let node_id = NodeId::new(i);
-            if let Some(ty) = self.parent.type_map.get(&node_id).cloned() {
+
+            if let Some(ty) = self.get_node_type_opt(node_id) {
                 let ty = self.fix_type(generated_params, &ty);
-                self.parent.type_map.insert(node_id, ty);
+                self.set_node_type(node_id, ty);
             }
-            if let Some(inst) = self.parent.instantiation_map.get(&node_id) {
+            if let Some(inst) = self.get_node_instantiation_opt(node_id) {
                 let inst = inst
-                    .clone()
-                    .into_iter()
-                    .map(|ty| self.fix_type(generated_params, &ty))
+                    .iter()
+                    .map(|ty| self.fix_type(generated_params, ty))
                     .collect_vec();
-                self.set_instantiation(node_id, inst);
+                self.set_node_instantiation(node_id, inst);
             }
         }
     }
@@ -271,7 +302,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     pub fn new_error_exp(&mut self) -> Exp {
         let id =
             self.new_node_id_with_type_loc(&Type::Error, &self.parent.parent.env.internal_loc());
-        Exp::Error(id)
+        Exp::Invalid(id)
     }
 
     /// Enters a new scope in the locals table.
@@ -648,7 +679,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let loc = self.to_loc(&exp.loc);
         let (_, exp) = self.translate_exp_free(exp);
         match &exp {
-            Exp::Call(_, Operation::Global, _) => exp,
+            Exp::Call(_, Operation::Global(_), _) => exp,
             _ => {
                 self.error(&loc, "global resource access expected");
                 self.new_error_exp()
@@ -852,7 +883,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
         // Ignore assert statement.
         if name == self.parent.parent.assert_symbol() {
-            return Exp::Call(self.parent.new_node_id(), Operation::NoOp, vec![]);
+            return Exp::Call(self.new_node_id(), Operation::NoOp, vec![]);
         }
 
         let is_old = module_name.is_none() && name == self.parent.parent.old_symbol();
@@ -905,7 +936,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             &self.to_loc(&list.loc),
                             "[current restriction] tuples not supported in let",
                         );
-                        return Exp::Error(self.parent.new_node_id());
+                        return Exp::Invalid(self.new_node_id());
                     }
                     let bind_loc = self.to_loc(&list.value[0].loc);
                     match &list.value[0].value {
@@ -932,7 +963,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                                 &bind_loc,
                                 "[current restriction] unpack not supported in let",
                             );
-                            return Exp::Error(self.parent.new_node_id());
+                            return Exp::Invalid(self.new_node_id());
                         }
                     }
                 }
@@ -1033,8 +1064,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let ty = self.check_type(loc, &ty, expected_type, "in spec var expression");
             let id = self.new_node_id_with_type_loc(&ty, loc);
             // Remember the instantiation as an attribute on the expression node.
-            self.set_instantiation(id, instantiation);
-            return Exp::SpecVar(id, module_id, var_id);
+            self.set_node_instantiation(id, instantiation);
+            return Exp::SpecVar(id, module_id, var_id, None);
         }
 
         self.error(
@@ -1150,8 +1181,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let lambda_start = all_args.len();
             for (i, arg) in args.into_iter().enumerate() {
                 let node_id = arg.node_id();
-                let loc = self.parent.loc_map.get(&node_id).cloned().unwrap();
-                let ty = self.parent.type_map.get(&node_id).cloned().unwrap();
+                let env = &self.parent.parent.env;
+                let loc = env.get_node_loc(node_id);
+                let ty = env.get_node_type(node_id);
                 let param_ty = &decl.params[lambda_start + i].1;
                 self.check_type(&loc, &ty, param_ty, "lambda argument");
                 all_args.push(arg);
@@ -1164,10 +1196,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
         // Create the call of the function representing this let.
         let node_id = self.new_node_id_with_type_loc(&return_type, loc);
-        self.set_instantiation(node_id, instantiation);
+        self.set_node_instantiation(node_id, instantiation);
         Exp::Call(
             node_id,
-            Operation::Function(self.parent.module_id, fid),
+            Operation::Function(self.parent.module_id, fid, None),
             all_args,
         )
     }
@@ -1485,9 +1517,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 );
                 // Construct result.
                 let id = self.new_node_id_with_type_loc(&ty, loc);
-                self.set_instantiation(id, instantiation);
+                self.set_node_instantiation(id, instantiation);
 
-                if let Operation::Function(module_id, spec_fun_id) = cand.oper {
+                if let Operation::Function(module_id, spec_fun_id, None) = cand.oper {
                     if !self.translating_fun_as_spec_fun {
                         // Record the usage of spec function in specs, used later
                         // in spec build.
@@ -1574,7 +1606,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 } else {
                     // In skip-lambda mode, just create a fresh type variable. We translate
                     // the expression in a second pass, once the expected type is known.
-                    (self.fresh_type_var(), Exp::Error(NodeId::new(0)))
+                    (self.fresh_type_var(), Exp::Invalid(NodeId::new(0)))
                 };
                 types.push(t);
                 e

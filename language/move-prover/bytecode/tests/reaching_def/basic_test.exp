@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun ReachingDefTest::basic(a: u64, b: u64): u64 {
      var x: u64
      var $t3: u64
@@ -23,6 +24,7 @@ fun ReachingDefTest::basic(a: u64, b: u64): u64 {
 }
 
 
+[variant baseline]
 fun ReachingDefTest::create_resource(sender: &signer) {
      var r: ReachingDefTest::R
      var $t2: &signer
@@ -39,6 +41,7 @@ fun ReachingDefTest::create_resource(sender: &signer) {
 
 ============ after pipeline `reaching_def` ================
 
+[variant baseline]
 fun ReachingDefTest::basic(a: u64, b: u64): u64 {
      var x: u64
      var $t3: u64
@@ -66,6 +69,7 @@ fun ReachingDefTest::basic(a: u64, b: u64): u64 {
 }
 
 
+[variant baseline]
 fun ReachingDefTest::create_resource(sender: signer) {
      var r: ReachingDefTest::R
      var $t2: signer

@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
      var r: TestEliminateImmRefs::R
      var r_ref: &mut TestEliminateImmRefs::R
@@ -28,6 +29,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
      var r: TestEliminateImmRefs::R
      var r_ref: &TestEliminateImmRefs::R
@@ -53,6 +55,7 @@ fun TestEliminateImmRefs::test2(): u64 {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test3(r_ref: &TestEliminateImmRefs::R): u64 {
      var x_ref: &u64
      var $t2: &TestEliminateImmRefs::R
@@ -68,6 +71,7 @@ fun TestEliminateImmRefs::test3(r_ref: &TestEliminateImmRefs::R): u64 {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
      var r: TestEliminateImmRefs::R
      var r_ref: &TestEliminateImmRefs::R
@@ -88,6 +92,7 @@ fun TestEliminateImmRefs::test4(): u64 {
 
 ============ after pipeline `eliminate_imm_refs` ================
 
+[variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
      var r: TestEliminateImmRefs::R
      var r_ref: &mut TestEliminateImmRefs::R
@@ -116,6 +121,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
      var r: TestEliminateImmRefs::R
      var r_ref: TestEliminateImmRefs::R
@@ -141,6 +147,7 @@ fun TestEliminateImmRefs::test2(): u64 {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test3(r_ref: TestEliminateImmRefs::R): u64 {
      var x_ref: u64
      var $t2: TestEliminateImmRefs::R
@@ -156,6 +163,7 @@ fun TestEliminateImmRefs::test3(r_ref: TestEliminateImmRefs::R): u64 {
 }
 
 
+[variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
      var r: TestEliminateImmRefs::R
      var r_ref: TestEliminateImmRefs::R

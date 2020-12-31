@@ -16,6 +16,7 @@ use bytecode::{
     memory_instrumentation::MemoryInstrumentationProcessor,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
+    spec_instrumentation::SpecInstrumenter,
 };
 use move_model::{model::GlobalEnv, run_model_builder};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
@@ -79,6 +80,18 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
             pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
             pipeline.add_processor(Box::new(CleanAndOptimizeProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "spec_instrumentation" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
+            pipeline.add_processor(Box::new(CleanAndOptimizeProcessor {}));
+            pipeline.add_processor(Box::new(SpecInstrumenter {}));
             Ok(Some(pipeline))
         }
 

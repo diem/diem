@@ -6,7 +6,7 @@ use crate::{
     dataflow_analysis::{
         AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
     },
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
 };
@@ -39,7 +39,7 @@ pub fn get_modified_memory<'env>(
 struct UsageState {
     // The memory which is directly and transitively accessed by this function.
     used_memory: SetDomain<QualifiedId<StructId>>,
-    // The memory which is directly and transitiviely modfied by this function.
+    // The memory which is directly and transitively modified by this function.
     modified_memory: SetDomain<QualifiedId<StructId>>,
 }
 
@@ -75,8 +75,8 @@ impl FunctionTargetProcessor for UsageProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        data: FunctionData,
+    ) -> FunctionData {
         let mut initial_state = UsageState::default();
         let func_target = FunctionTarget::new(func_env, &data);
         func_target.get_modify_targets().keys().for_each(|target| {

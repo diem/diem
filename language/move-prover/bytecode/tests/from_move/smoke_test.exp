@@ -1,5 +1,6 @@
 ============ initial translation from Move ================
 
+[variant baseline]
 pub fun Signer::address_of(s: &signer): address {
      var $t1: &signer
      var $t2: &address
@@ -11,10 +12,12 @@ pub fun Signer::address_of(s: &signer): address {
 }
 
 
+[variant baseline]
 pub fun Signer::borrow_address(s: &signer): &address {
 }
 
 
+[variant baseline]
 fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
      var c: u64
      var $t2: u64
@@ -42,6 +45,7 @@ fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
 }
 
 
+[variant baseline]
 fun SmokeTest::bool_ops(a: u64, b: u64): (bool, bool) {
      var c: bool
      var d: bool
@@ -125,6 +129,7 @@ fun SmokeTest::bool_ops(a: u64, b: u64): (bool, bool) {
 }
 
 
+[variant baseline]
 fun SmokeTest::borrow_global_mut_test(a: address) {
      var r: &mut SmokeTest::R
      var r2: &mut SmokeTest::R
@@ -148,6 +153,7 @@ fun SmokeTest::borrow_global_mut_test(a: address) {
 }
 
 
+[variant baseline]
 fun SmokeTest::create_resource(sender: &signer) {
      var $t1: &signer
      var $t2: u64
@@ -160,6 +166,7 @@ fun SmokeTest::create_resource(sender: &signer) {
 }
 
 
+[variant baseline]
 fun SmokeTest::create_resoure_generic(sender: &signer) {
      var $t1: &signer
      var $t2: u64
@@ -172,6 +179,7 @@ fun SmokeTest::create_resoure_generic(sender: &signer) {
 }
 
 
+[variant baseline]
 fun SmokeTest::exists_resource(sender: &signer): bool {
      var $t1: &signer
      var $t2: address
@@ -183,6 +191,7 @@ fun SmokeTest::exists_resource(sender: &signer): bool {
 }
 
 
+[variant baseline]
 fun SmokeTest::identity(a: SmokeTest::A, b: SmokeTest::B, c: SmokeTest::C): (SmokeTest::A, SmokeTest::B, SmokeTest::C) {
      var $t3: SmokeTest::A
      var $t4: SmokeTest::B
@@ -194,6 +203,7 @@ fun SmokeTest::identity(a: SmokeTest::A, b: SmokeTest::B, c: SmokeTest::C): (Smo
 }
 
 
+[variant baseline]
 fun SmokeTest::move_from_addr(a: address) {
      var r: SmokeTest::R
      var $t2: address
@@ -210,6 +220,7 @@ fun SmokeTest::move_from_addr(a: address) {
 }
 
 
+[variant baseline]
 fun SmokeTest::move_from_addr_to_sender(sender: &signer, a: address) {
      var r: SmokeTest::R
      var x: u64
@@ -234,6 +245,7 @@ fun SmokeTest::move_from_addr_to_sender(sender: &signer, a: address) {
 }
 
 
+[variant baseline]
 fun SmokeTest::pack_A(a: address, va: u64): SmokeTest::A {
      var $t2: address
      var $t3: u64
@@ -245,6 +257,7 @@ fun SmokeTest::pack_A(a: address, va: u64): SmokeTest::A {
 }
 
 
+[variant baseline]
 fun SmokeTest::pack_B(a: address, va: u64, vb: u64): SmokeTest::B {
      var var_a: SmokeTest::A
      var var_b: SmokeTest::B
@@ -268,6 +281,7 @@ fun SmokeTest::pack_B(a: address, va: u64, vb: u64): SmokeTest::B {
 }
 
 
+[variant baseline]
 fun SmokeTest::pack_C(a: address, va: u64, vb: u64, vc: u64): SmokeTest::C {
      var var_a: SmokeTest::A
      var var_b: SmokeTest::B
@@ -299,6 +313,7 @@ fun SmokeTest::pack_C(a: address, va: u64, vb: u64, vc: u64): SmokeTest::C {
 }
 
 
+[variant baseline]
 fun SmokeTest::ref_A(a: address, b: bool): SmokeTest::A {
      var b_val_ref: &u64
      var b_var: u64
@@ -365,6 +380,7 @@ fun SmokeTest::ref_A(a: address, b: bool): SmokeTest::A {
 }
 
 
+[variant baseline]
 fun SmokeTest::unpack_A(a: address, va: u64): (address, u64) {
      var aa: address
      var v1: u64
@@ -391,6 +407,7 @@ fun SmokeTest::unpack_A(a: address, va: u64): (address, u64) {
 }
 
 
+[variant baseline]
 fun SmokeTest::unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
      var aa: address
      var v1: u64
@@ -432,6 +449,7 @@ fun SmokeTest::unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
 }
 
 
+[variant baseline]
 fun SmokeTest::unpack_C(a: address, va: u64, vb: u64, vc: u64): (address, u64, u64, u64) {
      var aa: address
      var v1: u64

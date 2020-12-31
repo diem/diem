@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_target::FunctionTargetData,
+    function_target::FunctionData,
     stackless_bytecode::{
         AssignKind, AttrId,
         Bytecode::{self},
@@ -50,7 +50,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
     }
 
-    pub fn generate_function(mut self) -> FunctionTargetData {
+    pub fn generate_function(mut self) -> FunctionData {
         let original_code = self.func_env.get_bytecode();
         let mut label_map = BTreeMap::new();
 
@@ -97,7 +97,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             self.code.push(bytecode);
         }
 
-        FunctionTargetData::new(
+        FunctionData::new(
+            self.func_env,
             self.code,
             self.local_types,
             self.func_env.get_return_types(),

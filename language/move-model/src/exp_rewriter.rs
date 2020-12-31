@@ -1,43 +1,47 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeSet, VecDeque};
 
 use crate::{
     ast::Exp,
-    builder::module_builder::ModuleBuilder,
-    model::{ModuleId, NodeId},
+    model::{GlobalEnv, NodeId},
     symbol::Symbol,
     ty::Type,
 };
 use itertools::Itertools;
 
 /// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
-/// types. Currently used to rewrite conditions and invariants included from schemas.
-pub(crate) struct ExpRewriter<'env, 'translator, 'rewriter> {
-    parent: &'rewriter mut ModuleBuilder<'env, 'translator>,
-    argument_map: &'rewriter BTreeMap<Symbol, Exp>,
+/// types.
+pub struct ExpRewriter<'env, 'rewriter> {
+    env: &'env GlobalEnv,
+    replacer: &'rewriter mut dyn FnMut(NodeId, Symbol) -> Option<Exp>,
     type_args: &'rewriter [Type],
     shadowed: VecDeque<BTreeSet<Symbol>>,
-    originating_module: ModuleId,
 }
 
-impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
-    pub fn new(
-        parent: &'rewriter mut ModuleBuilder<'env, 'translator>,
-        originating_module: ModuleId,
-        argument_map: &'rewriter BTreeMap<Symbol, Exp>,
-        type_args: &'rewriter [Type],
-    ) -> Self {
+impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
+    /// Creates a new rewriter with the given replacer map.
+    pub fn new<F>(env: &'env GlobalEnv, replacer: &'rewriter mut F) -> Self
+    where
+        F: FnMut(NodeId, Symbol) -> Option<Exp>,
+    {
         ExpRewriter {
-            parent,
-            argument_map,
-            type_args,
+            env,
+            replacer,
+            type_args: &[],
             shadowed: VecDeque::new(),
-            originating_module,
         }
     }
 
+    /// Adds a type argument list to this rewriter. Generic type parameters are replaced by
+    /// the given types.
+    pub fn set_type_args(mut self, type_args: &'rewriter [Type]) -> Self {
+        self.type_args = type_args;
+        self
+    }
+
+    /// Runs the rewriter.
     pub fn rewrite(&mut self, exp: &Exp) -> Exp {
         use crate::ast::Exp::*;
         match exp {
@@ -80,7 +84,7 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 Box::new(self.rewrite(then)),
                 Box::new(self.rewrite(else_)),
             ),
-            Error(..) | Value(..) | SpecVar(..) => exp.clone(),
+            Invalid(..) | Value(..) | SpecVar(..) => exp.clone(),
         }
     }
 
@@ -91,15 +95,15 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 return Exp::LocalVar(node_id, sym);
             }
         }
-        if let Some(exp) = self.argument_map.get(&sym) {
-            exp.clone()
+        if let Some(exp) = (*self.replacer)(node_id, sym) {
+            exp
         } else {
             let node_id = self.rewrite_attrs(node_id);
             Exp::LocalVar(node_id, sym)
         }
     }
 
-    fn rewrite_vec(&mut self, exps: &[Exp]) -> Vec<Exp> {
+    pub fn rewrite_vec(&mut self, exps: &[Exp]) -> Vec<Exp> {
         // For some reason, we don't get the lifetime right when we use a map. Figure out
         // why and remove this explicit treatment.
         let mut res = vec![];
@@ -110,47 +114,21 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
     }
 
     fn rewrite_attrs(&mut self, node_id: NodeId) -> NodeId {
-        // Create a new node id and copy attributes over, after instantiation with type args.
-        let (loc, ty, instantiation_opt) = if self.parent.module_id == self.originating_module {
-            let loc = self
-                .parent
-                .loc_map
-                .get(&node_id)
-                .expect("loc defined")
-                .clone();
-            let ty = self
-                .parent
-                .type_map
-                .get(&node_id)
-                .expect("type defined")
-                .instantiate(self.type_args);
-            let instantiation_opt = self.parent.instantiation_map.get(&node_id).cloned();
-            (loc, ty, instantiation_opt)
-        } else {
-            let module_env = self.parent.parent.env.get_module(self.originating_module);
-            let loc = module_env.get_node_loc(node_id);
-            let ty = module_env.get_node_type(node_id);
-            let instantiation = module_env.get_node_instantiation(node_id);
-            (
-                loc,
-                ty,
-                if instantiation.is_empty() {
-                    None
-                } else {
-                    Some(instantiation)
-                },
-            )
-        };
-        let instantiation_opt = instantiation_opt.map(|tys| {
+        if self.type_args.is_empty() {
+            // Can reuse the node_id and attributes
+            return node_id;
+        }
+        // Need to create a new node id because of type instantiation in this rewrite.
+        let loc = self.env.get_node_loc(node_id);
+        let ty = self.env.get_node_type(node_id).instantiate(self.type_args);
+        let inst_opt = self.env.get_node_instantiation_opt(node_id).map(|tys| {
             tys.into_iter()
                 .map(|ty| ty.instantiate(self.type_args))
                 .collect_vec()
         });
-        let new_node_id = self.parent.new_node_id_with_type_loc(&ty, &loc);
-        if let Some(instantiation) = instantiation_opt {
-            self.parent
-                .instantiation_map
-                .insert(new_node_id, instantiation);
+        let new_node_id = self.env.new_node(loc, ty);
+        if let Some(inst) = inst_opt {
+            self.env.set_node_instantiation(new_node_id, inst);
         }
         new_node_id
     }

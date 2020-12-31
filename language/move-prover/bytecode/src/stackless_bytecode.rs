@@ -4,7 +4,10 @@
 use crate::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
-    model::{FunId, ModuleId, StructId},
+    ast::{Exp, MemoryLabel},
+    exp_rewriter::ExpRewriter,
+    model::{FunId, ModuleId, NodeId, QualifiedId, SpecVarId, StructId},
+    symbol::Symbol,
     ty::{Type, TypeDisplayContext},
 };
 use num::BigUint;
@@ -147,15 +150,10 @@ pub enum Operation {
     Neq,
 }
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub struct StructDecl {
-    pub module_id: ModuleId,
-    pub struct_id: StructId,
-}
-
+/// A borrow node -- used in memory operations.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum BorrowNode {
-    GlobalRoot(StructDecl),
+    GlobalRoot(QualifiedId<StructId>),
     LocalRoot(TempIndex),
     Reference(TempIndex),
 }
@@ -170,63 +168,17 @@ impl BorrowNode {
     }
 }
 
-/// A display object for a borrow node.
-pub struct BorrowNodeDisplay<'env> {
-    node: &'env BorrowNode,
-    func_target: &'env FunctionTarget<'env>,
+/// A specification property kind.
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum PropKind {
+    Assert,
+    Assume,
 }
 
-impl BorrowNode {
-    /// Creates a format object for a borrow node in context of a function target.
-    pub fn display<'env>(
-        &'env self,
-        func_target: &'env FunctionTarget<'env>,
-    ) -> BorrowNodeDisplay<'env> {
-        BorrowNodeDisplay {
-            node: self,
-            func_target,
-        }
-    }
-}
-
-impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use BorrowNode::*;
-        match self.node {
-            GlobalRoot(s) => {
-                let ty = Type::Struct(s.module_id, s.struct_id, vec![]);
-                let tctx = TypeDisplayContext::WithEnv {
-                    env: self.func_target.global_env(),
-                    type_param_names: None,
-                };
-                write!(f, "{}", ty.display(&tctx))?;
-            }
-            LocalRoot(idx) => {
-                write!(
-                    f,
-                    "LocalRoot({})",
-                    self.func_target
-                        .get_local_name(*idx)
-                        .display(self.func_target.symbol_pool())
-                )?;
-            }
-            Reference(idx) => {
-                write!(
-                    f,
-                    "Reference({})",
-                    self.func_target
-                        .get_local_name(*idx)
-                        .display(self.func_target.symbol_pool())
-                )?;
-            }
-        }
-        Ok(())
-    }
-}
-
+/// The stackless bytecode.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
-    SpecBlock(AttrId, SpecBlockId),
+    SpecBlock(AttrId, SpecBlockId), // deprecated, to be replaced by Prop(..)
 
     Assign(AttrId, TempIndex, TempIndex, AssignKind),
 
@@ -239,6 +191,10 @@ pub enum Bytecode {
     Label(AttrId, Label),
     Abort(AttrId, TempIndex),
     Nop(AttrId),
+
+    SaveMem(AttrId, MemoryLabel, QualifiedId<StructId>),
+    SaveSpecVar(AttrId, MemoryLabel, QualifiedId<SpecVarId>),
+    Prop(AttrId, PropKind, Exp),
 }
 
 impl Bytecode {
@@ -254,7 +210,10 @@ impl Bytecode {
             | Jump(id, ..)
             | Label(id, ..)
             | Abort(id, ..)
-            | Nop(id) => *id,
+            | Nop(id)
+            | SaveMem(id, ..)
+            | SaveSpecVar(id, ..)
+            | Prop(id, ..) => *id,
         }
     }
 
@@ -331,7 +290,7 @@ impl Bytecode {
     }
 
     /// Remaps variables in the instruction.
-    pub fn remap_vars<F>(self, f: &mut F) -> Self
+    pub fn remap_vars<F>(self, func_target: &FunctionTarget<'_>, f: &mut F) -> Self
     where
         F: FnMut(TempIndex) -> TempIndex,
     {
@@ -358,6 +317,24 @@ impl Bytecode {
             Ret(attr, rets) => Ret(attr, map(f, rets)),
             Branch(attr, if_label, else_label, cond) => Branch(attr, if_label, else_label, f(cond)),
             Abort(attr, cond) => Abort(attr, f(cond)),
+            Prop(attr, kind, exp) => {
+                // TODO(wrwg): we need to get rid of symbols for locals in expressions, and
+                // instead represent them by a unique temp index similar as in the bytecode.
+                // The major blocker for this right now are spec blocks inside code, which
+                // require symbolic resolution the way they are wired with move-lang.
+                let mut replacer = |node_id: NodeId, sym: Symbol| {
+                    if let Some(idx) = func_target.get_local_index(sym) {
+                        let new_idx = f(*idx);
+                        let new_sym = func_target.get_local_name(new_idx);
+                        Some(Exp::LocalVar(node_id, new_sym))
+                    } else {
+                        None
+                    }
+                };
+                let new_exp =
+                    ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp);
+                Prop(attr, kind, new_exp)
+            }
             _ => self,
         }
     }
@@ -456,6 +433,36 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             }
             Nop(_) => {
                 write!(f, "nop")?;
+            }
+            SaveMem(_, label, qid) => {
+                let env = self.func_target.global_env();
+                let struct_env = env.get_module(qid.module_id).into_struct(qid.id);
+                write!(
+                    f,
+                    "@{} := save_mem({}::{})",
+                    label.as_usize(),
+                    struct_env.module_env.get_name().display(env.symbol_pool()),
+                    struct_env.get_name().display(env.symbol_pool())
+                )?;
+            }
+            SaveSpecVar(_, label, qid) => {
+                let env = self.func_target.global_env();
+                let module_env = env.get_module(qid.module_id);
+                let spec_var = module_env.get_spec_var(qid.id);
+                write!(
+                    f,
+                    "@{} := save_spec_var({}::{})",
+                    label.as_usize(),
+                    module_env.get_name().display(env.symbol_pool()),
+                    spec_var.name.display(env.symbol_pool())
+                )?;
+            }
+            Prop(_, kind, exp) => {
+                let exp_display = exp.display(self.func_target.func_env.module_env.env);
+                match kind {
+                    PropKind::Assume => write!(f, "assume {}", exp_display)?,
+                    PropKind::Assert => write!(f, "assert {}", exp_display)?,
+                }
             }
         }
         Ok(())
@@ -702,6 +709,60 @@ impl fmt::Display for Constant {
             U128(x) => write!(f, "{}", x)?,
             Address(x) => write!(f, "0x{}", x.to_str_radix(16))?,
             ByteArray(x) => write!(f, "{:?}", x)?,
+        }
+        Ok(())
+    }
+}
+
+/// A display object for a borrow node.
+pub struct BorrowNodeDisplay<'env> {
+    node: &'env BorrowNode,
+    func_target: &'env FunctionTarget<'env>,
+}
+
+impl BorrowNode {
+    /// Creates a format object for a borrow node in context of a function target.
+    pub fn display<'env>(
+        &'env self,
+        func_target: &'env FunctionTarget<'env>,
+    ) -> BorrowNodeDisplay<'env> {
+        BorrowNodeDisplay {
+            node: self,
+            func_target,
+        }
+    }
+}
+
+impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use BorrowNode::*;
+        match self.node {
+            GlobalRoot(s) => {
+                let ty = Type::Struct(s.module_id, s.id, vec![]);
+                let tctx = TypeDisplayContext::WithEnv {
+                    env: self.func_target.global_env(),
+                    type_param_names: None,
+                };
+                write!(f, "{}", ty.display(&tctx))?;
+            }
+            LocalRoot(idx) => {
+                write!(
+                    f,
+                    "LocalRoot({})",
+                    self.func_target
+                        .get_local_name(*idx)
+                        .display(self.func_target.symbol_pool())
+                )?;
+            }
+            Reference(idx) => {
+                write!(
+                    f,
+                    "Reference({})",
+                    self.func_target
+                        .get_local_name(*idx)
+                        .display(self.func_target.symbol_pool())
+                )?;
+            }
         }
         Ok(())
     }

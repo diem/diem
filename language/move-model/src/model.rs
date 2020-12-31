@@ -52,8 +52,8 @@ use vm::{
 
 use crate::{
     ast::{
-        Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec, SpecBlockInfo,
-        SpecFunDecl, SpecVarDecl, Value,
+        ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
+        SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
     pragmas::{INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA},
     symbol::{Symbol, SymbolPool},
@@ -365,6 +365,14 @@ pub struct GlobalEnv {
     diags: RefCell<Vec<Diagnostic>>,
     /// Pool of symbols -- internalized strings.
     symbol_pool: SymbolPool,
+    /// A counter for allocating node ids.
+    next_free_node_id: RefCell<usize>,
+    /// A map from node id to associated location.
+    loc_map: RefCell<BTreeMap<NodeId, Loc>>,
+    /// A map from node id to associated type.
+    type_map: RefCell<BTreeMap<NodeId, Type>>,
+    /// A map from node id to associated instantiation of type parameters.
+    instantiation_map: RefCell<BTreeMap<NodeId, Vec<Type>>>,
     /// List of loaded modules, in order they have been provided using `add`.
     module_data: Vec<ModuleData>,
     /// A counter for issuing global ids.
@@ -449,6 +457,10 @@ impl GlobalEnv {
             module_id_should_translate: RefCell::new(BTreeSet::new()),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
+            next_free_node_id: Default::default(),
+            loc_map: Default::default(),
+            type_map: Default::default(),
+            instantiation_map: Default::default(),
             module_data: vec![],
             global_id_counter: RefCell::new(0),
             global_invariants: Default::default(),
@@ -697,9 +709,6 @@ impl GlobalEnv {
         spec_vars: Vec<SpecVarDecl>,
         spec_funs: Vec<SpecFunDecl>,
         module_spec: Spec,
-        loc_map: BTreeMap<NodeId, Loc>,
-        type_map: BTreeMap<NodeId, Type>,
-        instantiation_map: BTreeMap<NodeId, Vec<Type>>,
         spec_block_infos: Vec<SpecBlockInfo>,
     ) {
         let idx = self.module_data.len();
@@ -734,14 +743,6 @@ impl GlobalEnv {
             .map(|(i, v)| (SpecFunId::new(i), v))
             .collect();
 
-        let next_free_node_id = loc_map
-            .keys()
-            .chain(type_map.keys())
-            .map(|i| i.as_usize())
-            .max()
-            .unwrap_or(0)
-            + 1;
-
         self.module_data.push(ModuleData {
             name,
             id: ModuleId(idx as RawIndex),
@@ -756,10 +757,6 @@ impl GlobalEnv {
             module_spec,
             source_map,
             loc,
-            next_free_node_id: RefCell::new(next_free_node_id),
-            loc_map: RefCell::new(loc_map),
-            type_map: RefCell::new(type_map),
-            instantiation_map,
             spec_block_infos,
         });
     }
@@ -1059,6 +1056,75 @@ impl GlobalEnv {
             })
         }
     }
+
+    /// Gets the location of the given node.
+    pub fn get_node_loc(&self, node_id: NodeId) -> Loc {
+        self.loc_map
+            .borrow()
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_else(|| self.unknown_loc())
+    }
+
+    /// Gets the type of the given node.
+    pub fn get_node_type(&self, node_id: NodeId) -> Type {
+        self.type_map
+            .borrow()
+            .get(&node_id)
+            .cloned()
+            .unwrap_or(Type::Error)
+    }
+
+    /// Gets the type of the given node, if available.
+    pub fn get_node_type_opt(&self, node_id: NodeId) -> Option<Type> {
+        self.type_map.borrow().get(&node_id).cloned()
+    }
+
+    /// Returns the next free node number.
+    pub fn next_free_node_number(&self) -> usize {
+        *self.next_free_node_id.borrow()
+    }
+
+    /// Allocates a new node id.
+    pub fn new_node_id(&self) -> NodeId {
+        let id = NodeId::new(*self.next_free_node_id.borrow());
+        *self.next_free_node_id.borrow_mut() += 1;
+        id
+    }
+
+    /// Allocates a new node id and assigns location and type to it.
+    pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
+        let id = self.new_node_id();
+        self.loc_map.borrow_mut().insert(id, loc);
+        self.type_map.borrow_mut().insert(id, ty);
+        id
+    }
+
+    /// Sets type for the given node id.
+    pub fn set_node_type(&self, node_id: NodeId, ty: Type) {
+        self.type_map.borrow_mut().insert(node_id, ty);
+    }
+
+    /// Sets instantiation for the given node id.
+    pub fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
+        self.instantiation_map
+            .borrow_mut()
+            .insert(node_id, instantiation);
+    }
+
+    /// Gets the type parameter instantiation associated with the given node.
+    pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
+        self.instantiation_map
+            .borrow()
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_else(Vec::new)
+    }
+
+    /// Gets the type parameter instantiation associated with the given node, if it is available.
+    pub fn get_node_instantiation_opt(&self, node_id: NodeId) -> Option<Vec<Type>> {
+        self.instantiation_map.borrow().get(&node_id).cloned()
+    }
 }
 
 impl Default for GlobalEnv {
@@ -1111,18 +1177,6 @@ pub struct ModuleData {
 
     /// The location of this module.
     pub loc: Loc,
-
-    /// A map from node id to associated location.
-    pub loc_map: RefCell<BTreeMap<NodeId, Loc>>,
-
-    /// A map from node id to associated type.
-    pub type_map: RefCell<BTreeMap<NodeId, Type>>,
-
-    /// A counter for allocating node ids.
-    pub next_free_node_id: RefCell<usize>,
-
-    /// A map from node id to associated instantiation of type parameters.
-    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
 
     /// A list of spec block infos, for documentation generation.
     pub spec_block_infos: Vec<SpecBlockInfo>,
@@ -1228,8 +1282,8 @@ impl<'env> ModuleEnv<'env> {
             let add_usage_of_exp = |usage: &mut BTreeSet<ModuleId>, exp: &Exp| {
                 exp.module_usage(usage);
                 for node_id in exp.node_ids() {
-                    self.get_node_type(node_id).module_usage(usage);
-                    for ty in self.get_node_instantiation(node_id) {
+                    self.env.get_node_type(node_id).module_usage(usage);
+                    for ty in self.env.get_node_instantiation(node_id) {
                         ty.module_usage(usage);
                     }
                 }
@@ -1613,50 +1667,6 @@ impl<'env> ModuleEnv<'env> {
             .spec_funs
             .iter()
             .filter(move |(_, decl)| decl.name == name)
-    }
-
-    /// Gets the location of the given node.
-    pub fn get_node_loc(&self, node_id: NodeId) -> Loc {
-        self.data
-            .loc_map
-            .borrow()
-            .get(&node_id)
-            .cloned()
-            .unwrap_or_else(|| self.env.unknown_loc())
-    }
-
-    /// Gets the type of the given node.
-    pub fn get_node_type(&self, node_id: NodeId) -> Type {
-        self.data
-            .type_map
-            .borrow()
-            .get(&node_id)
-            .cloned()
-            .unwrap_or(Type::Error)
-    }
-
-    /// Allocates a new node id.
-    pub fn new_node_id(&self) -> NodeId {
-        let id = NodeId::new(*self.data.next_free_node_id.borrow());
-        *self.data.next_free_node_id.borrow_mut() += 1;
-        id
-    }
-
-    /// Allocates a new node id and assigns location and type to it.
-    pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
-        let id = self.new_node_id();
-        self.data.loc_map.borrow_mut().insert(id, loc);
-        self.data.type_map.borrow_mut().insert(id, ty);
-        id
-    }
-
-    /// Gets the type parameter instantiation associated with the given node.
-    pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
-        self.data
-            .instantiation_map
-            .get(&node_id)
-            .cloned()
-            .unwrap_or_else(Vec::new)
     }
 }
 
@@ -2369,6 +2379,27 @@ impl<'env> FunctionEnv<'env> {
             .iter()
             .map(|x| self.module_env.get_struct_id(*x))
             .collect()
+    }
+
+    /// Computes the modified targets of the spec clause, as a map from resource type names to
+    /// resource indices (list of types and address).
+    pub fn get_modify_targets(&self) -> BTreeMap<QualifiedId<StructId>, Vec<Exp>> {
+        // Compute the modify targets from `modifies` conditions.
+        let modify_conditions = self.get_spec().filter_kind(ConditionKind::Modifies);
+        let mut modify_targets: BTreeMap<QualifiedId<StructId>, Vec<Exp>> = BTreeMap::new();
+        for cond in modify_conditions {
+            cond.all_exps().for_each(|target| {
+                let node_id = target.node_id();
+                let rty = &self.module_env.env.get_node_instantiation(node_id)[0];
+                let (mid, sid, _) = rty.require_struct();
+                let type_name = mid.qualified(sid);
+                modify_targets
+                    .entry(type_name)
+                    .or_insert_with(Vec::new)
+                    .push(target.clone());
+            });
+        }
+        modify_targets
     }
 
     /// Determine whether the function is target of verification.

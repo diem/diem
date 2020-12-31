@@ -247,7 +247,7 @@ impl<'env> SpecTranslator<'env> {
     /// Sets the location of the code writer from node id.
     fn set_writer_location(&self, node_id: NodeId) {
         self.writer
-            .set_location(&self.module_env().get_node_loc(node_id));
+            .set_location(&self.module_env().env.get_node_loc(node_id));
     }
 
     /// Sets the current invariant target.
@@ -646,13 +646,13 @@ impl<'env> SpecTranslator<'env> {
         for (ty, targets) in func_target.get_modify_targets() {
             let ty_name = boogie_caller_resource_memory_domain_name(env, *ty);
             for target in targets {
-                let loc = self.module_env().get_node_loc(target.node_id());
+                let loc = self.module_env().env.get_node_loc(target.node_id());
                 self.writer.set_location(&loc);
                 self.set_condition_info(&loc, ConditionTag::Requires, MODIFY_TARGET_FAILS_MESSAGE);
                 emit!(self.writer, "requires ");
                 let node_id = target.node_id();
                 let args = target.call_args();
-                let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                let rty = &self.module_env().env.get_node_instantiation(node_id)[0];
                 let (_, _, targs) = rty.require_struct();
                 let type_args = boogie_type_value_array(env, targs);
                 emit!(self.writer, "{}[{}, a#$Address(", ty_name, type_args);
@@ -719,9 +719,8 @@ impl<'env> SpecTranslator<'env> {
                 if !self.options.prover.negative_checks {
                     self.writer.set_location(&c.loc);
                     self.set_condition_info(&c.loc, ConditionTag::Ensures, ABORTS_IF_FAILS_MESSAGE);
-                    let (exp, _) = c.exp.extract_cond_and_aborts_code();
                     emit!(self.writer, "ensures b#$Boolean(old(");
-                    self.translate_exp(exp);
+                    self.translate_exp(&c.exp);
                     emitln!(self.writer, ")) ==> $abort_flag;");
                 }
             }
@@ -743,9 +742,8 @@ impl<'env> SpecTranslator<'env> {
                 );
                 emit!(self.writer, "ensures $abort_flag ==> (");
                 self.translate_seq(aborts_if.iter().copied(), "\n    || ", |c: &Condition| {
-                    let (exp, _) = c.exp.extract_cond_and_aborts_code();
                     emit!(self.writer, "b#$Boolean(old(");
-                    self.translate_exp(exp);
+                    self.translate_exp(&c.exp);
                     emit!(self.writer, "))")
                 });
                 emitln!(self.writer, ");");
@@ -765,9 +763,7 @@ impl<'env> SpecTranslator<'env> {
             // The codes from the aborts_with only apply if none of the aborts
             // conditions are true. This seems to be the most consistent encoding, but this
             // aspect may need to be revisited.
-            let aborts_if_has_codes = aborts_if
-                .iter()
-                .any(|c| c.exp.extract_cond_and_aborts_code().1.is_some());
+            let aborts_if_has_codes = aborts_if.iter().any(|c| !c.additional_exps.is_empty());
             if aborts_if_has_codes || !aborts_with.is_empty() {
                 // TODO(wrwg): we need a location for the spec block of this function.
                 //   The conditions don't give usa a good indication because via
@@ -796,12 +792,11 @@ impl<'env> SpecTranslator<'env> {
                     );
                     emit!(self.writer, "ensures $abort_flag ==> (");
                     self.translate_seq(aborts_if.iter().copied(), "\n    ||", |c: &Condition| {
-                        let (exp, code_opt) = c.exp.extract_cond_and_aborts_code();
                         emit!(self.writer, "(b#$Boolean(old(");
-                        self.translate_exp(exp);
-                        if let Some(code) = code_opt {
+                        self.translate_exp(&c.exp);
+                        if !c.additional_exps.is_empty() {
                             emit!(self.writer, ")) &&\n       $abort_code == i#$Integer(");
-                            self.translate_exp(code);
+                            self.translate_exp(&c.additional_exps[0]);
                             emit!(self.writer, "))");
                         } else {
                             emit!(self.writer, ")))");
@@ -811,8 +806,7 @@ impl<'env> SpecTranslator<'env> {
                         emit!(self.writer, "\n    ||");
                     }
                     self.translate_seq(aborts_with.iter().copied(), "\n    ||", |c: &Condition| {
-                        let codes = c.exp.extract_abort_codes();
-                        self.translate_seq(codes.iter(), " || ", |code| {
+                        self.translate_seq(c.all_exps(), " || ", |code| {
                             emit!(self.writer, "$abort_code == i#$Integer(");
                             self.translate_exp(code);
                             emit!(self.writer, ")");
@@ -825,7 +819,7 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate standalone aborts code checks for `aborts_with [check]` conditions.
         for c in check_aborts_with {
-            let codes = c.exp.extract_abort_codes();
+            let codes = c.all_exps().collect_vec();
             // Generate positive check
             if !self.options.prover.negative_checks {
                 self.writer.set_location(&c.loc);
@@ -845,7 +839,7 @@ impl<'env> SpecTranslator<'env> {
             // Generate negative checks
             if self.options.prover.negative_checks {
                 for code in codes {
-                    let loc = self.module_env().get_node_loc(code.node_id());
+                    let loc = self.module_env().env.get_node_loc(code.node_id());
                     self.writer.set_location(&loc);
                     self.set_negative_condition_info(
                         &loc,
@@ -944,8 +938,7 @@ impl<'env> SpecTranslator<'env> {
                     ""
                 },
             );
-            let (exp, _) = cond.exp.extract_cond_and_aborts_code();
-            self.translate_exp(exp);
+            self.translate_exp(&cond.exp);
             emit!(self.writer, ")");
             if !matches!(
                 cond.kind,
@@ -953,9 +946,8 @@ impl<'env> SpecTranslator<'env> {
             ) && func_target.is_pragma_true(REQUIRES_IF_ABORTS_PRAGMA, || false)
             {
                 for aborts in aborts_if {
-                    let (exp, _) = aborts.exp.extract_cond_and_aborts_code();
                     emit!(self.writer, "\n    || b#$Boolean(");
-                    self.translate_exp(exp);
+                    self.translate_exp(&aborts.exp);
                     emit!(self.writer, ")")
                 }
             }
@@ -1071,7 +1063,7 @@ impl<'env> SpecTranslator<'env> {
             for target in targets {
                 let node_id = target.node_id();
                 let args = target.call_args();
-                let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                let rty = &self.module_env().env.get_node_instantiation(node_id)[0];
                 let (_, _, targs) = rty.require_struct();
                 let env = func_target.global_env();
                 let type_args = boogie_type_value_array(env, targs);
@@ -1097,7 +1089,7 @@ impl<'env> SpecTranslator<'env> {
                     for target in type_name_targets {
                         let node_id = target.node_id();
                         let args = target.call_args();
-                        let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                        let rty = &self.module_env().env.get_node_instantiation(node_id)[0];
                         let (_, _, targs) = rty.require_struct();
                         let env = self.global_env();
                         let type_args = boogie_type_value_array(env, targs);
@@ -1717,8 +1709,8 @@ impl<'env> SpecTranslator<'env> {
                 self.set_writer_location(*node_id);
                 self.translate_local_var(*node_id, *name);
             }
-            Exp::SpecVar(node_id, module_id, var_id) => {
-                let instantiation = &self.module_env().get_node_instantiation(*node_id);
+            Exp::SpecVar(node_id, module_id, var_id, _) => {
+                let instantiation = &self.module_env().env.get_node_instantiation(*node_id);
                 self.trace_value(
                     *node_id,
                     TraceItem::SpecVar(
@@ -1756,11 +1748,11 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_call(*node_id, oper, args);
             }
             Exp::Invoke(node_id, ..) => self.error(
-                &self.module_env().get_node_loc(*node_id),
+                &self.module_env().env.get_node_loc(*node_id),
                 "Invoke not yet supported",
             ),
             Exp::Lambda(node_id, ..) => self.error(
-                &self.module_env().get_node_loc(*node_id),
+                &self.module_env().env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
             Exp::Block(node_id, vars, scope) => {
@@ -1776,7 +1768,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, " else ");
                 self.translate_exp_parenthesised(on_false);
             }
-            Exp::Error(_) => panic!("unexpected error expression"),
+            Exp::Invalid(_) => panic!("unexpected error expression"),
         }
     }
 
@@ -1835,7 +1827,7 @@ impl<'env> SpecTranslator<'env> {
             node_id,
             TraceItem::Local(*self.in_old.borrow(), name),
             || {
-                let mut ty = &self.module_env().get_node_type(node_id);
+                let mut ty = &self.module_env().env.get_node_type(node_id);
                 let mut var_name = self.module_env().symbol_pool().string(name);
                 if let SpecEnv::Function(func_target) = &self.spec_env {
                     // overwrite ty and var_name if func_target provides a binding for name
@@ -1893,7 +1885,7 @@ impl<'env> SpecTranslator<'env> {
         if vars.is_empty() {
             return self.translate_exp(exp);
         }
-        let loc = self.module_env().get_node_loc(node_id);
+        let loc = self.module_env().env.get_node_loc(node_id);
         if let Some((name, binding)) = self.get_decl_var(&loc, vars) {
             let name_str = self.module_env().symbol_pool().string(name);
             emit!(self.writer, "(var {} := ", name_str);
@@ -1907,13 +1899,13 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_call(&self, node_id: NodeId, oper: &Operation, args: &[Exp]) {
-        let loc = self.module_env().get_node_loc(node_id);
+        let loc = self.module_env().env.get_node_loc(node_id);
         match oper {
-            Operation::ModifyTargets | Operation::AbortCodes | Operation::CondWithAbortCode => {
-                panic!("unexpected virtual operator")
-            }
-            Operation::Function(module_id, fun_id) => {
+            Operation::Function(module_id, fun_id, None) => {
                 self.translate_spec_fun_call(node_id, *module_id, *fun_id, args)
+            }
+            Operation::Function(_, _, _) => {
+                unimplemented!()
             }
             Operation::Pack(..) => self.translate_pack(args),
             Operation::Tuple => self.error(&loc, "Tuple not yet supported"),
@@ -1960,8 +1952,10 @@ impl<'env> SpecTranslator<'env> {
             Operation::Not => self.translate_logical_unary_op("!", args),
 
             // Builtin functions
-            Operation::Global => self.translate_resource_access(node_id, args),
-            Operation::Exists => self.translate_resource_exists(node_id, args),
+            Operation::Global(None) => self.translate_resource_access(node_id, args),
+            Operation::Global(_) => unimplemented!(),
+            Operation::Exists(None) => self.translate_resource_exists(node_id, args),
+            Operation::Exists(_) => unimplemented!(),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
@@ -1982,6 +1976,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::MaxU8 => emit!(self.writer, "$Integer($MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "$Integer($MAX_U64)"),
             Operation::MaxU128 => emit!(self.writer, "$Integer($MAX_U128)"),
+            Operation::AbortCode | Operation::AbortFlag => unimplemented!(),
             Operation::NoOp => { /* do nothing. */ }
         }
     }
@@ -2007,7 +2002,7 @@ impl<'env> SpecTranslator<'env> {
         fun_id: SpecFunId,
         args: &[Exp],
     ) {
-        let instantiation = self.module_env().get_node_instantiation(node_id);
+        let instantiation = self.module_env().env.get_node_instantiation(node_id);
         let module_env = self.global_env().get_module(module_id);
         let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
@@ -2090,14 +2085,14 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_type_value(&self, node_id: NodeId) {
-        let ty = &self.module_env().get_node_instantiation(node_id)[0];
+        let ty = &self.module_env().env.get_node_instantiation(node_id)[0];
         let type_value = self.translate_type(ty);
         emit!(self.writer, "$Type({})", type_value);
     }
 
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
         self.trace_value(node_id, TraceItem::Exp, || {
-            let rty = &self.module_env().get_node_instantiation(node_id)[0];
+            let rty = &self.module_env().env.get_node_instantiation(node_id)[0];
             let (mid, sid, targs) = rty.require_struct();
             let env = self.global_env();
             emit!(
@@ -2121,7 +2116,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_resource_exists(&self, node_id: NodeId, args: &[Exp]) {
         self.trace_value(node_id, TraceItem::Exp, || {
-            let rty = &self.module_env().get_node_instantiation(node_id)[0];
+            let rty = &self.module_env().env.get_node_instantiation(node_id)[0];
             let (mid, sid, targs) = rty.require_struct();
             let env = self.global_env();
             emit!(
@@ -2148,7 +2143,7 @@ impl<'env> SpecTranslator<'env> {
         //      (forall $a: Value :: is#T($a) ==> P($a))
         // any(domain<T>(), |a| P(a)) -->
         //      (exists $a: Value :: is#T($a) && P($a))
-        let quant_ty = self.module_env().get_node_type(args[0].node_id());
+        let quant_ty = self.module_env().env.get_node_type(args[0].node_id());
         let connective = if is_all { "==>" } else { "&&" };
         if let Exp::Lambda(_, vars, exp) = &args[1] {
             if let Some((var, _)) = self.get_decl_var(loc, vars) {

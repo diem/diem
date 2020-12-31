@@ -13,6 +13,7 @@ pub mod compositional_analysis;
 pub mod dataflow_analysis;
 pub mod eliminate_imm_refs;
 pub mod eliminate_mut_refs;
+pub mod function_data_builder;
 pub mod function_target;
 pub mod function_target_pipeline;
 pub mod graph;
@@ -20,14 +21,11 @@ pub mod livevar_analysis;
 pub mod memory_instrumentation;
 pub mod packed_types_analysis;
 pub mod reaching_def_analysis;
+pub mod spec_instrumentation;
 pub mod stackless_bytecode;
 pub mod stackless_bytecode_generator;
 pub mod stackless_control_flow_graph;
-pub mod test_instrumenter;
 pub mod usage_analysis;
-
-#[cfg(test)]
-pub mod unit_tests;
 
 /// Print function targets for testing and debugging.
 pub fn print_targets_for_test(
@@ -39,9 +37,10 @@ pub fn print_targets_for_test(
     text.push_str(&format!("============ {} ================\n", header));
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
-            let target = targets.get_target(&func_env);
-            target.register_annotation_formatters_for_test();
-            text += &format!("\n{}\n", target);
+            for (variant, target) in targets.get_targets(&func_env) {
+                target.register_annotation_formatters_for_test();
+                text += &format!("\n[variant {}]\n{}\n", variant, target);
+            }
         }
     }
     text

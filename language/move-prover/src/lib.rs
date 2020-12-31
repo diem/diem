@@ -16,13 +16,12 @@ use bytecode::{
     clean_and_optimize::CleanAndOptimizeProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
-    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
     packed_types_analysis::PackedTypesProcessor,
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{Bytecode, Operation},
-    test_instrumenter::TestInstrumenter,
     usage_analysis::{self, UsageProcessor},
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
@@ -259,13 +258,14 @@ fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
 
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
-            let caller_func_target = targets.get_target(&func_env);
+            let caller_func_target = targets.get_target(&func_env, FunctionVariant::Baseline);
             for code in caller_func_target.get_bytecode() {
                 if let Call(_, _, oper, _) = code {
                     if let Function(mid, fid, _) = oper {
                         let callee = mid.qualified(*fid);
                         let callee_func_env = env.get_function(callee);
-                        let callee_func_target = targets.get_target(&callee_func_env);
+                        let callee_func_target =
+                            targets.get_target(&callee_func_env, FunctionVariant::Baseline);
                         let callee_modified_memory =
                             usage_analysis::get_modified_memory(&callee_func_target);
                         caller_func_target.get_modify_targets().keys().for_each(|target| {
@@ -348,7 +348,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 }
 
 /// Function to create the transformation pipeline.
-fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
+fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
@@ -359,7 +359,6 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     res.add_processor(BorrowAnalysisProcessor::new());
     res.add_processor(MemoryInstrumentationProcessor::new());
     res.add_processor(CleanAndOptimizeProcessor::new());
-    res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
     res.add_processor(UsageProcessor::new());
     res.add_processor(PackedTypesProcessor::new());
 
