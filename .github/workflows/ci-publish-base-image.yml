@@ -1,0 +1,36 @@
+name: Publish Base CI Image To Dockerhub
+
+on:
+  push:
+    branches: [main, master, release-*, gha-test-*]
+    paths:
+      [
+        .github/workflows/ci-publish-base-image.yml,
+        .github/actions/dockerhub_login/action.yml,
+        docker/ci/github/Dockerfile,
+        scripts/dev_setup.sh,
+      ]
+
+jobs:
+  build_docker_images:
+    runs-on: ubuntu-latest-xl
+    continue-on-error: false
+    environment: Docker
+    env:
+      TAG: github-1
+      DOCKERHUB_ORG: libra
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/dockerhub_login
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: build image
+        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }} .
+      - name: Push to dockerhub.
+        run: docker push --disable-content-trust=false ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }}
+        env:
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
