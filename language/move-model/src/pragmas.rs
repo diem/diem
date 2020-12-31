@@ -3,7 +3,7 @@
 
 //! Provides pragmas and properties of the specification language.
 
-use crate::{ast::ConditionKind, builder::model_builder::SpecBlockContext};
+use crate::{ast::ConditionKind, builder::module_builder::SpecBlockContext};
 
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";
@@ -52,7 +52,7 @@ pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 
 /// Checks whether a pragma is valid in a specific spec block.
 pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
-    use crate::builder::model_builder::SpecBlockContext::*;
+    use crate::builder::module_builder::SpecBlockContext::*;
     match target {
         Module => matches!(
             pragma,

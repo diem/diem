@@ -12,17 +12,13 @@ use num::{BigInt, BigUint, FromPrimitive, Num};
 use move_core_types::value::MoveValue;
 use move_ir_types::location::Spanned;
 use move_lang::{
-    expansion,
-    expansion::ast as EA,
-    hlir::ast::{BaseType, SingleType},
-    parser::ast,
-    shared::Name,
+    expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
 };
 
 use crate::{
     ast::{Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, Value},
     builder::{
-        model_builder::{ConstEntry, LocalVarEntry, OldExpStatus, SpecFunEntry},
+        model_builder::{ConstEntry, LocalVarEntry, SpecFunEntry},
         module_builder::ModuleBuilder,
     },
     model::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
@@ -30,8 +26,6 @@ use crate::{
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext},
 };
 
-// =================================================================================================
-/// # Expression and Type Translation
 #[derive(Debug)]
 pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub parent: &'module_translator mut ModuleBuilder<'env, 'translator>,
@@ -69,7 +63,14 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub called_spec_funs: BTreeSet<(ModuleId, SpecFunId)>,
 }
 
-/// ## General
+#[derive(Debug, PartialEq)]
+pub(crate) enum OldExpStatus {
+    NotSupported,
+    OutsideOld,
+    InsideOld,
+}
+
+/// # General
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
     pub fn new(parent: &'module_translator mut ModuleBuilder<'env, 'translator>) -> Self {
@@ -375,7 +376,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// them into the environment. Returns a vector for representing them in the target AST.
     pub fn analyze_and_add_type_params(
         &mut self,
-        type_params: &[(Name, ast::Kind)],
+        type_params: &[(Name, PA::Kind)],
     ) -> Vec<(Symbol, Type)> {
         type_params
             .iter()
@@ -393,7 +394,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// enters them into the environment. Returns a vector for representing them in the target AST.
     pub fn analyze_and_add_params(
         &mut self,
-        params: &[(ast::Var, expansion::ast::Type)],
+        params: &[(PA::Var, EA::Type)],
     ) -> Vec<(Symbol, Type)> {
         params
             .iter()
@@ -446,12 +447,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 }
 
-/// ## Type Translation
+/// # Type Translation
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
     /// Translates an hlir type into a target AST type.
-    pub fn translate_hlir_single_type(&mut self, ty: &SingleType) -> Type {
-        use move_lang::hlir::ast::SingleType_::*;
+    pub fn translate_hlir_single_type(&mut self, ty: &HA::SingleType) -> Type {
+        use HA::SingleType_::*;
         match &ty.value {
             Ref(is_mut, ty) => {
                 let ty = self.translate_hlir_base_type(&*ty);
@@ -465,11 +466,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    fn translate_hlir_base_type(&mut self, ty: &BaseType) -> Type {
-        use move_lang::{
-            hlir::ast::{BaseType_::*, TypeName_::*},
-            naming::ast::{BuiltinTypeName_::*, TParam},
-        };
+    fn translate_hlir_base_type(&mut self, ty: &HA::BaseType) -> Type {
+        use HA::{BaseType_::*, TypeName_::*};
+        use NA::{BuiltinTypeName_::*, TParam};
         match &ty.value {
             Param(TParam {
                 user_specified_name,
@@ -523,18 +522,18 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    fn translate_hlir_base_types(&mut self, tys: &[BaseType]) -> Vec<Type> {
+    fn translate_hlir_base_types(&mut self, tys: &[HA::BaseType]) -> Vec<Type> {
         tys.iter()
             .map(|t| self.translate_hlir_base_type(t))
             .collect()
     }
 
     /// Translates a source AST type into a target AST type.
-    pub fn translate_type(&mut self, ty: &expansion::ast::Type) -> Type {
-        use move_lang::expansion::ast::Type_::*;
+    pub fn translate_type(&mut self, ty: &EA::Type) -> Type {
+        use EA::Type_::*;
         match &ty.value {
             Apply(access, args) => {
-                if let expansion::ast::ModuleAccess_::Name(n) = &access.value {
+                if let EA::ModuleAccess_::Name(n) = &access.value {
                     let check_zero_args = |et: &mut Self, ty: Type| {
                         if args.is_empty() {
                             ty
@@ -628,15 +627,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translates a slice of single types.
-    pub fn translate_types(&mut self, tys: &[expansion::ast::Type]) -> Vec<Type> {
+    pub fn translate_types(&mut self, tys: &[EA::Type]) -> Vec<Type> {
         tys.iter().map(|t| self.translate_type(t)).collect()
     }
 
     /// Translates option a slice of single types.
-    pub fn translate_types_opt(
-        &mut self,
-        tys_opt: &Option<Vec<expansion::ast::Type>>,
-    ) -> Vec<Type> {
+    pub fn translate_types_opt(&mut self, tys_opt: &Option<Vec<EA::Type>>) -> Vec<Type> {
         tys_opt
             .as_deref()
             .map(|tys| self.translate_types(tys))
@@ -644,11 +640,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 }
 
-/// ## Expression Translation
+/// # Expression Translation
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
     /// Translates an expression representing a modify target
-    pub fn translate_modify_target(&mut self, exp: &expansion::ast::Exp) -> Exp {
+    pub fn translate_modify_target(&mut self, exp: &EA::Exp) -> Exp {
         let loc = self.to_loc(&exp.loc);
         let (_, exp) = self.translate_exp_free(exp);
         match &exp {
@@ -661,7 +657,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translates an expression, with given expected type, which might be a type variable.
-    pub fn translate_exp(&mut self, exp: &expansion::ast::Exp, expected_type: &Type) -> Exp {
+    pub fn translate_exp(&mut self, exp: &EA::Exp, expected_type: &Type) -> Exp {
         let loc = self.to_loc(&exp.loc);
         let make_value = |et: &mut ExpTranslator, val: Value, ty: Type| {
             let rty = et.check_type(&loc, &ty, expected_type, "in expression");
@@ -669,14 +665,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             Exp::Value(id, val)
         };
         match &exp.value {
-            expansion::ast::Exp_::Value(v) => {
+            EA::Exp_::Value(v) => {
                 if let Some((v, ty)) = self.translate_value(v) {
                     make_value(self, v, ty)
                 } else {
                     self.new_error_exp()
                 }
             }
-            expansion::ast::Exp_::InferredNum(x) => {
+            EA::Exp_::InferredNum(x) => {
                 // We don't really need to infer type, because all ints are exchangeable.
                 make_value(
                     self,
@@ -684,10 +680,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     Type::new_prim(PrimitiveType::U128),
                 )
             }
-            expansion::ast::Exp_::Name(maccess, type_params) => {
+            EA::Exp_::Name(maccess, type_params) => {
                 self.translate_name(&loc, maccess, type_params.as_deref(), expected_type)
             }
-            expansion::ast::Exp_::Call(maccess, type_params, args) => {
+            EA::Exp_::Call(maccess, type_params, args) => {
                 // Need to make a &[&Exp] out of args.
                 let args = args.value.iter().collect_vec();
                 self.translate_fun_call(
@@ -698,21 +694,21 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     &args,
                 )
             }
-            expansion::ast::Exp_::Pack(maccess, generics, fields) => {
+            EA::Exp_::Pack(maccess, generics, fields) => {
                 self.translate_pack(&loc, maccess, generics, fields, expected_type)
             }
-            expansion::ast::Exp_::IfElse(cond, then, else_) => {
+            EA::Exp_::IfElse(cond, then, else_) => {
                 let then = self.translate_exp(&*then, expected_type);
                 let else_ = self.translate_exp(&*else_, expected_type);
                 let cond = self.translate_exp(&*cond, &Type::new_prim(PrimitiveType::Bool));
                 let id = self.new_node_id_with_type_loc(expected_type, &loc);
                 Exp::IfElse(id, Box::new(cond), Box::new(then), Box::new(else_))
             }
-            expansion::ast::Exp_::Block(seq) => self.translate_seq(&loc, seq, expected_type),
-            expansion::ast::Exp_::Lambda(bindings, exp) => {
+            EA::Exp_::Block(seq) => self.translate_seq(&loc, seq, expected_type),
+            EA::Exp_::Lambda(bindings, exp) => {
                 self.translate_lambda(&loc, bindings, exp, expected_type)
             }
-            expansion::ast::Exp_::BinopExp(l, op, r) => {
+            EA::Exp_::BinopExp(l, op, r) => {
                 let args = vec![l.as_ref(), r.as_ref()];
                 let QualifiedSymbol {
                     module_name,
@@ -720,7 +716,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 } = self.parent.parent.bin_op_symbol(&op.value);
                 self.translate_call(&loc, &Some(module_name), symbol, None, &args, expected_type)
             }
-            expansion::ast::Exp_::UnaryExp(op, exp) => {
+            EA::Exp_::UnaryExp(op, exp) => {
                 let args = vec![exp.as_ref()];
                 let QualifiedSymbol {
                     module_name,
@@ -728,11 +724,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 } = self.parent.parent.unary_op_symbol(&op.value);
                 self.translate_call(&loc, &Some(module_name), symbol, None, &args, expected_type)
             }
-            expansion::ast::Exp_::ExpDotted(dotted) => self.translate_dotted(dotted, expected_type),
-            expansion::ast::Exp_::Index(target, index) => {
+            EA::Exp_::ExpDotted(dotted) => self.translate_dotted(dotted, expected_type),
+            EA::Exp_::Index(target, index) => {
                 self.translate_index(&loc, target, index, expected_type)
             }
-            expansion::ast::Exp_::ExpList(exps) => {
+            EA::Exp_::ExpList(exps) => {
                 let mut types = vec![];
                 let exps = exps
                     .iter()
@@ -751,7 +747,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, exps)
             }
-            expansion::ast::Exp_::Unit { .. } => {
+            EA::Exp_::Unit { .. } => {
                 let ty = self.check_type(
                     &loc,
                     &Type::Tuple(vec![]),
@@ -761,11 +757,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, vec![])
             }
-            expansion::ast::Exp_::Assign(..) => {
+            EA::Exp_::Assign(..) => {
                 self.error(&loc, "assignment only allowed in spec var updates");
                 self.new_error_exp()
             }
-            expansion::ast::Exp_::Dereference(exp) | expansion::ast::Exp_::Borrow(_, exp) => {
+            EA::Exp_::Dereference(exp) | EA::Exp_::Borrow(_, exp) => {
                 if self.translating_fun_as_spec_fun {
                     self.translate_exp(exp, expected_type)
                 } else {
@@ -780,10 +776,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    pub fn translate_value(&mut self, v: &expansion::ast::Value) -> Option<(Value, Type)> {
+    pub fn translate_value(&mut self, v: &EA::Value) -> Option<(Value, Type)> {
         let loc = self.to_loc(&v.loc);
         match &v.value {
-            expansion::ast::Value_::Address(addr) => {
+            EA::Value_::Address(addr) => {
                 let addr_str = &format!("{}", addr);
                 if &addr_str[..2] == "0x" {
                     let digits_only = &addr_str[2..];
@@ -798,22 +794,20 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     None
                 }
             }
-            expansion::ast::Value_::U8(x) => Some((
+            EA::Value_::U8(x) => Some((
                 Value::Number(BigInt::from_u8(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U8),
             )),
-            expansion::ast::Value_::U64(x) => Some((
+            EA::Value_::U64(x) => Some((
                 Value::Number(BigInt::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
-            expansion::ast::Value_::U128(x) => Some((
+            EA::Value_::U128(x) => Some((
                 Value::Number(BigInt::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
             )),
-            expansion::ast::Value_::Bool(x) => {
-                Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool)))
-            }
-            expansion::ast::Value_::Bytearray(x) => {
+            EA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
+            EA::Value_::Bytearray(x) => {
                 let ty = Type::Vector(Box::new(Type::new_prim(PrimitiveType::U8)));
                 Some((Value::ByteArray(x.clone()), ty))
             }
@@ -824,18 +818,18 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         &mut self,
         expected_type: &Type,
         loc: &Loc,
-        maccess: &Spanned<expansion::ast::ModuleAccess_>,
-        generics: Option<&[expansion::ast::Type]>,
-        args: &[&expansion::ast::Exp],
+        maccess: &Spanned<EA::ModuleAccess_>,
+        generics: Option<&[EA::Type]>,
+        args: &[&EA::Exp],
     ) -> Exp {
         // First check for builtin functions.
-        if let expansion::ast::ModuleAccess_::Name(n) = &maccess.value {
+        if let EA::ModuleAccess_::Name(n) = &maccess.value {
             if n.value == "update_field" {
                 return self.translate_update_field(expected_type, loc, generics, args);
             }
         }
         // First check whether this is an Invoke on a function value.
-        if let expansion::ast::ModuleAccess_::Name(n) = &maccess.value {
+        if let EA::ModuleAccess_::Name(n) = &maccess.value {
             let sym = self.symbol_pool().make(&n.value);
             if let Some(entry) = self.lookup_local(sym, false) {
                 // Check whether the local has the expected function type.
@@ -885,19 +879,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Translates an expression without any known type expectation. This creates a fresh type
     /// variable and passes this in as expected type, then returns a pair of this type and the
     /// translated expression.
-    pub fn translate_exp_free(&mut self, exp: &expansion::ast::Exp) -> (Type, Exp) {
+    pub fn translate_exp_free(&mut self, exp: &EA::Exp) -> (Type, Exp) {
         let tvar = self.fresh_type_var();
         let exp = self.translate_exp(exp, &tvar);
         (self.subs.specialize(&tvar), exp)
     }
 
     /// Translates a sequence expression.
-    pub fn translate_seq(
-        &mut self,
-        loc: &Loc,
-        seq: &expansion::ast::Sequence,
-        expected_type: &Type,
-    ) -> Exp {
+    pub fn translate_seq(&mut self, loc: &Loc, seq: &EA::Sequence, expected_type: &Type) -> Exp {
         let n = seq.len();
         if n == 0 {
             self.error(loc, "block sequence cannot be empty");
@@ -909,7 +898,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let seq = seq.iter().collect_vec();
         for item in &seq[0..seq.len() - 1] {
             match &item.value {
-                expansion::ast::SequenceItem_::Bind(list, exp) => {
+                EA::SequenceItem_::Bind(list, exp) => {
                     let (t, e) = self.translate_exp_free(exp);
                     if list.value.len() != 1 {
                         self.error(
@@ -920,10 +909,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     }
                     let bind_loc = self.to_loc(&list.value[0].loc);
                     match &list.value[0].value {
-                        expansion::ast::LValue_::Var(maccess, _) => {
+                        EA::LValue_::Var(maccess, _) => {
                             let name = match &maccess.value {
-                                expansion::ast::ModuleAccess_::Name(n) => n,
-                                expansion::ast::ModuleAccess_::ModuleAccess(_, n) => n,
+                                EA::ModuleAccess_::Name(n) => n,
+                                EA::ModuleAccess_::ModuleAccess(_, n) => n,
                             };
                             // Define the local. Currently we mimic
                             // Rust/ML semantics here, allowing to shadow with each let,
@@ -938,7 +927,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                                 binding: Some(e),
                             });
                         }
-                        expansion::ast::LValue_::Unpack(..) => {
+                        EA::LValue_::Unpack(..) => {
                             self.error(
                                 &bind_loc,
                                 "[current restriction] unpack not supported in let",
@@ -947,7 +936,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         }
                     }
                 }
-                expansion::ast::SequenceItem_::Seq(e) => {
+                EA::SequenceItem_::Seq(e) => {
                     let translated = self.translate_exp(e, expected_type);
                     match translated {
                         Exp::Call(_, Operation::NoOp, _) => { /* allow assert statement */ }
@@ -966,7 +955,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
         // Process the last element, which must be an Exp item.
         let last = match &seq[n - 1].value {
-            expansion::ast::SequenceItem_::Seq(e) => self.translate_exp(e, expected_type),
+            EA::SequenceItem_::Seq(e) => self.translate_exp(e, expected_type),
             _ => {
                 self.error(
                     &self.to_loc(&seq[n - 1].loc),
@@ -989,15 +978,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_name(
         &mut self,
         loc: &Loc,
-        maccess: &expansion::ast::ModuleAccess,
-        type_args: Option<&[expansion::ast::Type]>,
+        maccess: &EA::ModuleAccess,
+        type_args: Option<&[EA::Type]>,
         expected_type: &Type,
     ) -> Exp {
         let global_var_sym = match &maccess.value {
-            expansion::ast::ModuleAccess_::ModuleAccess(..) => {
-                self.parent.module_access_to_qualified(maccess)
-            }
-            expansion::ast::ModuleAccess_::Name(name) => {
+            EA::ModuleAccess_::ModuleAccess(..) => self.parent.module_access_to_qualified(maccess),
+            EA::ModuleAccess_::Name(name) => {
                 // First try to resolve simple name as local.
                 let sym = self.symbol_pool().make(name.value.as_str());
                 if let Some(exp) = self.resolve_local(
@@ -1097,7 +1084,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_let(
         &mut self,
         loc: &Loc,
-        user_type_args: Option<&[expansion::ast::Type]>,
+        user_type_args: Option<&[EA::Type]>,
         args: Vec<Exp>,
         expected_type: &Type,
         fid: SpecFunId,
@@ -1198,8 +1185,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_index(
         &mut self,
         loc: &Loc,
-        target: &expansion::ast::Exp,
-        index: &expansion::ast::Exp,
+        target: &EA::Exp,
+        index: &EA::Exp,
         expected_type: &Type,
     ) -> Exp {
         // We must concretize the type of index to decide whether this is a slice
@@ -1230,14 +1217,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translate a Dotted expression.
-    fn translate_dotted(
-        &mut self,
-        dotted: &expansion::ast::ExpDotted,
-        expected_type: &Type,
-    ) -> Exp {
+    fn translate_dotted(&mut self, dotted: &EA::ExpDotted, expected_type: &Type) -> Exp {
         match &dotted.value {
-            expansion::ast::ExpDotted_::Exp(e) => self.translate_exp(e, expected_type),
-            expansion::ast::ExpDotted_::Dot(e, n) => {
+            EA::ExpDotted_::Exp(e) => self.translate_exp(e, expected_type),
+            EA::ExpDotted_::Dot(e, n) => {
                 let loc = self.to_loc(&dotted.loc);
                 let ty = self.fresh_type_var();
                 let exp = self.translate_dotted(e.as_ref(), &ty);
@@ -1262,8 +1245,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         &mut self,
         expected_type: &Type,
         loc: &Loc,
-        generics: Option<&[expansion::ast::Type]>,
-        args: &[&expansion::ast::Exp],
+        generics: Option<&[EA::Type]>,
+        args: &[&EA::Exp],
     ) -> Exp {
         if generics.is_some() {
             self.error(loc, "`update_field` cannot have type parameters");
@@ -1274,9 +1257,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             return self.new_error_exp();
         }
         let struct_exp = self.translate_exp(&args[0], expected_type);
-        if let expansion::ast::Exp_::Name(
+        if let EA::Exp_::Name(
             Spanned {
-                value: expansion::ast::ModuleAccess_::Name(name),
+                value: EA::ModuleAccess_::Name(name),
                 ..
             },
             None,
@@ -1386,8 +1369,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         loc: &Loc,
         module: &Option<ModuleName>,
         name: Symbol,
-        generics: Option<&[expansion::ast::Type]>,
-        args: &[&expansion::ast::Exp],
+        generics: Option<&[EA::Type]>,
+        args: &[&EA::Exp],
         expected_type: &Type,
     ) -> Exp {
         // Translate generic arguments, if any.
@@ -1579,7 +1562,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Translate a list of expressions and deliver them together with their types.
     fn translate_exp_list(
         &mut self,
-        exps: &[&expansion::ast::Exp],
+        exps: &[&EA::Exp],
         skip_lambda: bool,
     ) -> (Vec<Type>, Vec<Exp>) {
         let mut types = vec![];
@@ -1635,9 +1618,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_pack(
         &mut self,
         loc: &Loc,
-        maccess: &expansion::ast::ModuleAccess,
-        generics: &Option<Vec<expansion::ast::Type>>,
-        fields: &expansion::ast::Fields<expansion::ast::Exp>,
+        maccess: &EA::ModuleAccess,
+        generics: &Option<Vec<EA::Type>>,
+        fields: &EA::Fields<EA::Exp>,
         expected_type: &Type,
     ) -> Exp {
         let struct_name = self.parent.module_access_to_qualified(maccess);
@@ -1721,8 +1704,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_lambda(
         &mut self,
         loc: &Loc,
-        bindings: &expansion::ast::LValueList,
-        body: &expansion::ast::Exp,
+        bindings: &EA::LValueList,
+        body: &EA::Exp,
         expected_type: &Type,
     ) -> Exp {
         // Enter the lambda variables into a new local scope and collect their declarations.
@@ -1732,9 +1715,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         for bind in &bindings.value {
             let loc = self.to_loc(&bind.loc);
             match &bind.value {
-                expansion::ast::LValue_::Var(
+                EA::LValue_::Var(
                     Spanned {
-                        value: expansion::ast::ModuleAccess_::Name(n),
+                        value: EA::ModuleAccess_::Name(n),
                         ..
                     },
                     _,
@@ -1750,7 +1733,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         binding: None,
                     });
                 }
-                expansion::ast::LValue_::Unpack(..) | expansion::ast::LValue_::Var(..) => {
+                EA::LValue_::Unpack(..) | EA::LValue_::Var(..) => {
                     self.error(&loc, "[current restriction] tuples not supported in lambda")
                 }
             }
@@ -1810,7 +1793,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     .collect::<Vec<u8>>();
                 Value::ByteArray(b)
             }
-            _ => unimplemented!("Not yet supported constant Move value {:?}", value),
+            _ => {
+                self.error(
+                    loc,
+                    &format!("Not yet supported constant value: {:?}", value),
+                );
+                Value::Bool(false)
+            }
         }
     }
 }

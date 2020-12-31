@@ -12,8 +12,6 @@ use crate::{
 };
 use itertools::Itertools;
 
-/// ## Expression Rewriting
-
 /// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
 /// types. Currently used to rewrite conditions and invariants included from schemas.
 pub(crate) struct ExpRewriter<'env, 'translator, 'rewriter> {
@@ -37,21 +35,6 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
             type_args,
             shadowed: VecDeque::new(),
             originating_module,
-        }
-    }
-
-    fn replace_local(&mut self, node_id: NodeId, sym: Symbol) -> Exp {
-        for vars in &self.shadowed {
-            if vars.contains(&sym) {
-                let node_id = self.rewrite_attrs(node_id);
-                return Exp::LocalVar(node_id, sym);
-            }
-        }
-        if let Some(exp) = self.argument_map.get(&sym) {
-            exp.clone()
-        } else {
-            let node_id = self.rewrite_attrs(node_id);
-            Exp::LocalVar(node_id, sym)
         }
     }
 
@@ -98,6 +81,21 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 Box::new(self.rewrite(else_)),
             ),
             Error(..) | Value(..) | SpecVar(..) => exp.clone(),
+        }
+    }
+
+    fn replace_local(&mut self, node_id: NodeId, sym: Symbol) -> Exp {
+        for vars in &self.shadowed {
+            if vars.contains(&sym) {
+                let node_id = self.rewrite_attrs(node_id);
+                return Exp::LocalVar(node_id, sym);
+            }
+        }
+        if let Some(exp) = self.argument_map.get(&sym) {
+            exp.clone()
+        } else {
+            let node_id = self.rewrite_attrs(node_id);
+            Exp::LocalVar(node_id, sym)
         }
     }
 

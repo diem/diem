@@ -4,8 +4,8 @@
 //! A helper for generating structured code.
 //!
 //! TODO(wrwg): this should be moved somewhere else. It is currently contained here
-//! so its on the bottom of the dependency relation, and there is no `utility` crate
-//! where it could belong to.
+//!   so its on the bottom of the dependency relation, and there is no `utility` crate
+//!   where it could belong to.
 
 use std::collections::{BTreeMap, Bound};
 

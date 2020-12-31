@@ -23,7 +23,7 @@ use move_lang::{
 
 use crate::{
     ast::ModuleName,
-    builder::model_builder::Builder,
+    builder::model_builder::ModelBuilder,
     model::{GlobalEnv, ModuleId},
 };
 
@@ -124,7 +124,7 @@ fn run_spec_checker(
     units: Vec<CompiledUnit>,
     mut eprog: Program,
 ) -> anyhow::Result<()> {
-    let mut builder = Builder::new(env);
+    let mut builder = ModelBuilder::new(env);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
     let modules = units

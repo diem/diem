@@ -6,17 +6,13 @@
 //! byte code). This includes identifying the Move sub-language supported by the specification
 //! system, as well as type checking it and translating it to the spec language ast.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-    fmt::Formatter,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use num::BigUint;
 
-use move_lang::{compiled_unit::SpecInfo, expansion::ast as EA, parser::ast as PA};
+use move_lang::parser::ast as PA;
 
 use crate::{
     ast::{ModuleName, Operation, QualifiedSymbol, Spec, Value},
@@ -27,12 +23,12 @@ use crate::{
     ty::Type,
 };
 
-/// A build is used to enter a sequence of modules in acyclic dependency order into the model. The
-/// build maintains the incremental state of this process, such that the various tables
+/// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
+/// builder maintains the incremental state of this process, such that the various tables
 /// are extended with each module translated. Each table is a mapping from fully qualified names
 /// (module names plus item name in the module) to the entity.
 #[derive(Debug)]
-pub(crate) struct Builder<'env> {
+pub(crate) struct ModelBuilder<'env> {
     /// The global environment we are building.
     pub env: &'env mut GlobalEnv,
     /// A symbol table for specification functions. Because of overloading, and entry can
@@ -58,7 +54,7 @@ pub(crate) struct Builder<'env> {
     pub move_fun_call_graph: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<SpecFunId>>>,
 }
 
-/// A declaration of a specification function or operator in the build state.
+/// A declaration of a specification function or operator in the builders state.
 #[derive(Debug, Clone)]
 pub(crate) struct SpecFunEntry {
     pub loc: Loc,
@@ -68,7 +64,7 @@ pub(crate) struct SpecFunEntry {
     pub result_type: Type,
 }
 
-/// A declaration of a specification variable in the build state.
+/// A declaration of a specification variable in the builders state.
 #[derive(Debug, Clone)]
 pub(crate) struct SpecVarEntry {
     pub loc: Loc,
@@ -78,7 +74,7 @@ pub(crate) struct SpecVarEntry {
     pub type_: Type,
 }
 
-/// A declaration of a schema in the build state.
+/// A declaration of a schema in the builders state.
 #[derive(Debug)]
 pub(crate) struct SpecSchemaEntry {
     pub loc: Loc,
@@ -126,12 +122,10 @@ pub(crate) struct ConstEntry {
     pub value: Value,
 }
 
-/// ## General
-
-impl<'env> Builder<'env> {
-    /// Creates a build.
+impl<'env> ModelBuilder<'env> {
+    /// Creates a builders.
     pub fn new(env: &'env mut GlobalEnv) -> Self {
-        let mut translator = Builder {
+        let mut translator = ModelBuilder {
             env,
             spec_fun_table: BTreeMap::new(),
             spec_var_table: BTreeMap::new(),
@@ -355,11 +349,7 @@ impl<'env> Builder<'env> {
     pub fn builtin_module(&self) -> ModuleName {
         ModuleName::new(BigUint::default(), self.env.symbol_pool().make("$$"))
     }
-}
 
-/// # Usage of Move functions
-
-impl<'env> Builder<'env> {
     /// Adds a spec function to used_spec_funs set.
     pub fn add_used_spec_fun(&mut self, module_id: ModuleId, spec_fun_id: SpecFunId) {
         let qid = module_id.qualified(spec_fun_id);
@@ -396,58 +386,10 @@ impl<'env> Builder<'env> {
     }
 }
 
-/// # Basic Helpers
-
-/// A value which we pass in to spec block analyzers, describing the resolved target of the spec
-/// block.
-#[derive(Debug)]
-pub enum SpecBlockContext<'a> {
-    Module,
-    Struct(QualifiedSymbol),
-    Function(QualifiedSymbol),
-    FunctionCode(QualifiedSymbol, &'a SpecInfo),
-    Schema(QualifiedSymbol),
-}
-
-impl<'a> fmt::Display for SpecBlockContext<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        use SpecBlockContext::*;
-        match self {
-            Module => write!(f, "module context")?,
-            Struct(..) => write!(f, "struct context")?,
-            Function(..) => write!(f, "function context")?,
-            FunctionCode(..) => write!(f, "code context")?,
-            Schema(..) => write!(f, "schema context")?,
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct LocalVarEntry {
     pub loc: Loc,
     pub type_: Type,
     // If this local is associated with an operation, this is set.
     pub operation: Option<Operation>,
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) enum OldExpStatus {
-    NotSupported,
-    OutsideOld,
-    InsideOld,
-}
-
-/// Extract all accesses of a schema from a schema expression.
-pub(crate) fn extract_schema_access<'a>(exp: &'a EA::Exp, res: &mut Vec<&'a EA::ModuleAccess>) {
-    match &exp.value {
-        EA::Exp_::Name(maccess, _) => res.push(maccess),
-        EA::Exp_::Pack(maccess, ..) => res.push(maccess),
-        EA::Exp_::BinopExp(_, _, rhs) => extract_schema_access(rhs, res),
-        EA::Exp_::IfElse(_, t, e) => {
-            extract_schema_access(t, res);
-            extract_schema_access(e, res);
-        }
-        _ => {}
-    }
 }

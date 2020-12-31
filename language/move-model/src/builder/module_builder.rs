@@ -5,17 +5,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 use regex::Regex;
+use serde::export::{fmt, Formatter};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_ir_types::{ast::ConstantName, location::Spanned};
 use move_lang::{
-    compiled_unit::FunctionInfo,
-    expansion::{ast, ast::PragmaProperty},
-    parser,
-    parser::{
-        ast as PA,
-        ast::{BinOp_, FunctionName},
-    },
+    compiled_unit::{FunctionInfo, SpecInfo},
+    expansion::ast as EA,
+    parser::ast as PA,
     shared::{unique_map::UniqueMap, Name},
 };
 use vm::{
@@ -34,12 +31,11 @@ use crate::{
     builder::{
         exp_rewriter::ExpRewriter,
         exp_translator::ExpTranslator,
-        model_builder,
-        model_builder::{Builder, ConstEntry, LocalVarEntry, SpecBlockContext, SpecFunEntry},
+        model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
     model::{
-        FunId, FunctionData, Loc, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId, NodeId,
-        QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
+        FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId,
+        NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
         TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
     },
     pragmas::{
@@ -53,7 +49,7 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
-    pub parent: &'translator mut Builder<'env>,
+    pub parent: &'translator mut ModelBuilder<'env>,
     /// Counter for NodeId in this module.
     pub node_counter: usize,
     /// A map from node id to associated location.
@@ -85,11 +81,36 @@ pub(crate) struct ModuleBuilder<'env, 'translator> {
     pub spec_block_lets: BTreeMap<Symbol, SpecFunId>,
 }
 
+/// A value which we pass in to spec block analyzers, describing the resolved target of the spec
+/// block.
+#[derive(Debug)]
+pub enum SpecBlockContext<'a> {
+    Module,
+    Struct(QualifiedSymbol),
+    Function(QualifiedSymbol),
+    FunctionCode(QualifiedSymbol, &'a SpecInfo),
+    Schema(QualifiedSymbol),
+}
+
+impl<'a> fmt::Display for SpecBlockContext<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use SpecBlockContext::*;
+        match self {
+            Module => write!(f, "module context")?,
+            Struct(..) => write!(f, "struct context")?,
+            Function(..) => write!(f, "function context")?,
+            FunctionCode(..) => write!(f, "code context")?,
+            Schema(..) => write!(f, "schema context")?,
+        }
+        Ok(())
+    }
+}
+
 /// # Entry Points
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     pub fn new(
-        parent: &'translator mut Builder<'env>,
+        parent: &'translator mut ModelBuilder<'env>,
         module_id: ModuleId,
         module_name: ModuleName,
     ) -> Self {
@@ -132,10 +153,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     pub fn translate(
         &mut self,
         loc: Loc,
-        module_def: ast::ModuleDefinition,
+        module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
-        function_infos: UniqueMap<FunctionName, FunctionInfo>,
+        function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
     ) {
         self.decl_ana(&module_def, &compiled_module, &source_map);
         self.def_ana(&module_def, function_infos);
@@ -182,11 +203,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Converts a ModuleAccess into its parts, an optional ModuleName and base name.
     pub fn module_access_to_parts(
         &self,
-        access: &ast::ModuleAccess,
+        access: &EA::ModuleAccess,
     ) -> (Option<ModuleName>, Symbol) {
         match &access.value {
-            ast::ModuleAccess_::Name(n) => (None, self.symbol_pool().make(n.value.as_str())),
-            ast::ModuleAccess_::ModuleAccess(m, n) => {
+            EA::ModuleAccess_::Name(n) => (None, self.symbol_pool().make(n.value.as_str())),
+            EA::ModuleAccess_::ModuleAccess(m, n) => {
                 let module_name = ModuleName::from_str(
                     &m.0.value.address.to_string(),
                     self.symbol_pool().make(m.0.value.name.0.value.as_str()),
@@ -198,7 +219,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
     /// Converts a ModuleAccess into a qualified symbol which can be used for lookup of
     /// types or functions.
-    pub fn module_access_to_qualified(&self, access: &ast::ModuleAccess) -> QualifiedSymbol {
+    pub fn module_access_to_qualified(&self, access: &EA::ModuleAccess) -> QualifiedSymbol {
         let (module_name_opt, symbol) = self.module_access_to_parts(access);
         let module_name = module_name_opt.unwrap_or_else(|| self.module_name.clone());
         QualifiedSymbol {
@@ -213,11 +234,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// at caller side.
     fn get_spec_block_context<'pa>(
         &self,
-        target: &'pa parser::ast::SpecBlockTarget,
+        target: &'pa PA::SpecBlockTarget,
     ) -> Option<SpecBlockContext<'pa>> {
         match &target.value {
-            parser::ast::SpecBlockTarget_::Code => None,
-            parser::ast::SpecBlockTarget_::Function(name) => {
+            PA::SpecBlockTarget_::Code => None,
+            PA::SpecBlockTarget_::Function(name) => {
                 let qsym = self.qualified_by_module_from_name(&name.0);
                 if self.parent.fun_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Function(qsym))
@@ -225,7 +246,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None
                 }
             }
-            parser::ast::SpecBlockTarget_::Structure(name) => {
+            PA::SpecBlockTarget_::Structure(name) => {
                 let qsym = self.qualified_by_module_from_name(&name.0);
                 if self.parent.struct_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Struct(qsym))
@@ -233,7 +254,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None
                 }
             }
-            parser::ast::SpecBlockTarget_::Schema(name, _) => {
+            PA::SpecBlockTarget_::Schema(name, _) => {
                 let qsym = self.qualified_by_module_from_name(&name);
                 if self.parent.spec_schema_table.contains_key(&qsym) {
                     Some(SpecBlockContext::Schema(qsym))
@@ -241,7 +262,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None
                 }
             }
-            parser::ast::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
+            PA::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
         }
     }
 }
@@ -251,7 +272,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn decl_ana(
         &mut self,
-        module_def: &ast::ModuleDefinition,
+        module_def: &EA::ModuleDefinition,
         compiled_module: &CompiledModule,
         source_map: &SourceMap<MoveIrLoc>,
     ) {
@@ -271,8 +292,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
     fn decl_ana_const(
         &mut self,
-        name: &parser::ast::ConstantName,
-        def: &ast::Constant,
+        name: &PA::ConstantName,
+        def: &EA::Constant,
         compiled_module: &CompiledModule,
         source_map: &SourceMap<MoveIrLoc>,
     ) {
@@ -295,7 +316,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .define_const(qsym, ConstEntry { loc, ty, value });
     }
 
-    fn decl_ana_struct(&mut self, name: &parser::ast::StructName, def: &ast::StructDefinition) {
+    fn decl_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let struct_id = StructId::new(qsym.symbol);
         let mut et = ExpTranslator::new(self);
@@ -311,7 +332,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         );
     }
 
-    fn decl_ana_fun(&mut self, name: &parser::ast::FunctionName, def: &ast::Function) {
+    fn decl_ana_fun(&mut self, name: &PA::FunctionName, def: &EA::Function) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let fun_id = FunId::new(qsym.symbol);
         let mut et = ExpTranslator::new(self);
@@ -362,14 +383,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             is_native: false,
             body: None,
         };
-        if let ast::FunctionBody_::Native = def.body.value {
+        if let EA::FunctionBody_::Native = def.body.value {
             fun_decl.is_native = true;
         }
         self.spec_funs.push(fun_decl);
     }
 
-    fn decl_ana_spec_block(&mut self, block: &ast::SpecBlock) {
-        use move_lang::expansion::ast::SpecBlockMember_::*;
+    fn decl_ana_spec_block(&mut self, block: &EA::SpecBlock) {
+        use EA::SpecBlockMember_::*;
         // Process any spec block members which introduce global declarations.
         for member in &block.value.members {
             let loc = self.parent.env.to_loc(&member.loc);
@@ -390,8 +411,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
         }
         // If this is a schema spec block, process its declaration.
-        if let parser::ast::SpecBlockTarget_::Schema(name, type_params) = &block.value.target.value
-        {
+        if let PA::SpecBlockTarget_::Schema(name, type_params) = &block.value.target.value {
             self.decl_ana_schema(&block, &name, &type_params);
         }
     }
@@ -400,8 +420,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: &Loc,
         uninterpreted: bool,
-        name: &parser::ast::FunctionName,
-        signature: &ast::FunctionSignature,
+        name: &PA::FunctionName,
+        signature: &EA::FunctionSignature,
     ) {
         let name = self.symbol_pool().make(&name.0.value);
         let (type_params, params, result_type) = {
@@ -450,8 +470,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: &Loc,
         name: &Name,
-        type_params: &[(Name, parser::ast::Kind)],
-        type_: &ast::Type,
+        type_params: &[(Name, PA::Kind)],
+        type_: &EA::Type,
     ) {
         let name = self.symbol_pool().make(name.value.as_str());
         let (type_params, type_) = {
@@ -491,9 +511,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
     fn decl_ana_schema(
         &mut self,
-        block: &ast::SpecBlock,
+        block: &EA::SpecBlock,
         name: &Name,
-        type_params: &[(Name, parser::ast::Kind)],
+        type_params: &[(Name, PA::Kind)],
     ) {
         let qsym = self.qualified_by_module_from_name(name);
         let mut et = ExpTranslator::new(self);
@@ -502,7 +522,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // Extract local variables.
         let mut vars = vec![];
         for member in &block.value.members {
-            if let ast::SpecBlockMember_::Variable {
+            if let EA::SpecBlockMember_::Variable {
                 is_global: false,
                 name,
                 type_,
@@ -532,8 +552,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn def_ana(
         &mut self,
-        module_def: &ast::ModuleDefinition,
-        function_infos: UniqueMap<FunctionName, FunctionInfo>,
+        module_def: &EA::ModuleDefinition,
+        function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
     ) {
         // Analyze all structs.
         for (name, def) in &module_def.structs {
@@ -566,13 +586,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // ready for inclusion. We also must do this recursively, so use a visited set to detect
         // cycles.
         {
-            let schema_defs: BTreeMap<QualifiedSymbol, &ast::SpecBlock> = module_def
+            let schema_defs: BTreeMap<QualifiedSymbol, &EA::SpecBlock> = module_def
                 .specs
                 .iter()
                 .filter_map(|block| {
-                    if let parser::ast::SpecBlockTarget_::Schema(name, ..) =
-                        &block.value.target.value
-                    {
+                    if let PA::SpecBlockTarget_::Schema(name, ..) = &block.value.target.value {
                         let qsym = self.qualified_by_module_from_name(name);
                         Some((qsym, block))
                     } else {
@@ -615,7 +633,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 for member in &spec_block.value.members {
                     let loc = &self.parent.env.to_loc(&member.loc);
                     match &member.value {
-                        ast::SpecBlockMember_::Condition {
+                        EA::SpecBlockMember_::Condition {
                             kind,
                             properties,
                             exp,
@@ -663,7 +681,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 /// ## Struct Definition Analysis
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
-    fn def_ana_struct(&mut self, name: &parser::ast::StructName, def: &ast::StructDefinition) {
+    fn def_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let type_params = self
             .parent
@@ -678,7 +696,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             et.define_type_param(&loc, name, ty);
         }
         let fields = match &def.fields {
-            ast::StructFields::Defined(fields) => {
+            EA::StructFields::Defined(fields) => {
                 let mut field_map = BTreeMap::new();
                 for (ref field_name, (idx, ty)) in fields.iter() {
                     let field_sym = et.symbol_pool().make(&field_name.0.value);
@@ -687,7 +705,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 Some(field_map)
             }
-            ast::StructFields::Native(_) => None,
+            EA::StructFields::Native(_) => None,
         };
         self.parent
             .struct_table
@@ -702,13 +720,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Definition analysis for Move functions.
     /// If the function is pure, we translate its body.
-    fn def_ana_fun(
-        &mut self,
-        name: &parser::ast::FunctionName,
-        body: &ast::FunctionBody,
-        fun_idx: usize,
-    ) {
-        if let ast::FunctionBody_::Defined(seq) = &body.value {
+    fn def_ana_fun(&mut self, name: &PA::FunctionName, body: &EA::FunctionBody, fun_idx: usize) {
+        if let EA::FunctionBody_::Defined(seq) = &body.value {
             let full_name = self.qualified_by_module_from_name(&name.0);
             let entry = self
                 .parent
@@ -843,8 +856,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 /// ## Spec Block Definition Analysis
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
-    fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &ast::SpecBlock) {
-        use move_lang::expansion::ast::SpecBlockMember_::*;
+    fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &EA::SpecBlock) {
+        use EA::SpecBlockMember_::*;
 
         assert!(self.spec_block_lets.is_empty());
 
@@ -901,7 +914,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context: &SpecBlockContext<'_>,
         loc: &Loc,
         name: &Name,
-        def: &ast::Exp,
+        def: &EA::Exp,
     ) {
         // Check the expression and extract results. The let expression can access parameters,
         // but not use the `old(..)` function, therefore we treat it like a requires or aborts_if.
@@ -1005,7 +1018,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: &Loc,
         context: &SpecBlockContext,
-        properties: &[ast::PragmaProperty],
+        properties: &[EA::PragmaProperty],
     ) {
         let properties = self.translate_properties(properties, &|prop| {
             if !is_pragma_valid_for_block(context, prop) {
@@ -1023,7 +1036,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// to check their validness.
     fn translate_properties<F>(
         &mut self,
-        properties: &[ast::PragmaProperty],
+        properties: &[EA::PragmaProperty],
         check_prop: &F,
     ) -> PropertyBag
     where
@@ -1044,7 +1057,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let prop_name = self.symbol_pool().make(&prop.value.name.value);
             let value = if let Some(pv) = &prop.value.value {
                 match pv {
-                    ast::PragmaValue::Literal(ev) => {
+                    EA::PragmaValue::Literal(ev) => {
                         let mut et = ExpTranslator::new(self);
                         if let Some((v, _)) = et.translate_value(ev) {
                             PropertyValue::Value(v)
@@ -1053,7 +1066,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             continue;
                         }
                     }
-                    ast::PragmaValue::Ident(ema) => match self.module_access_to_parts(ema) {
+                    EA::PragmaValue::Ident(ema) => match self.module_access_to_parts(ema) {
                         (None, sym) => PropertyValue::Symbol(sym),
                         _ => PropertyValue::QualifiedSymbol(self.module_access_to_qualified(ema)),
                     },
@@ -1081,7 +1094,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     where
         F: FnOnce(&mut Spec),
     {
-        use crate::builder::model_builder::SpecBlockContext::*;
+        use SpecBlockContext::*;
         match context {
             Function(name) => update(
                 &mut self
@@ -1126,7 +1139,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         kind_opt: Option<&ConditionKind>,
         result_as_symbol: bool,
     ) -> ExpTranslator<'env, 'translator, 'module_translator> {
-        use crate::{builder::model_builder::SpecBlockContext::*, model::FieldId};
+        use SpecBlockContext::*;
         let allow_old = if let Some(kind) = kind_opt {
             kind.allows_old()
         } else {
@@ -1279,7 +1292,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         kind: &ConditionKind,
         detail: &str,
     ) -> bool {
-        use crate::builder::model_builder::SpecBlockContext::*;
+        use SpecBlockContext::*;
         let mut notes = vec![];
         let ok = match context {
             Module => kind.allowed_on_module(),
@@ -1413,8 +1426,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context: &SpecBlockContext,
         kind: ConditionKind,
         properties: PropertyBag,
-        exp: &ast::Exp,
-        additional_exps: &[ast::Exp],
+        exp: &EA::Exp,
+        additional_exps: &[EA::Exp],
     ) {
         if kind == ConditionKind::Decreases {
             self.parent
@@ -1503,11 +1516,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn extract_condition_kind<'a>(
         &mut self,
         context: &SpecBlockContext,
-        kind: &parser::ast::SpecConditionKind,
-        exp: &'a ast::Exp,
-    ) -> Option<(ConditionKind, &'a ast::Exp)> {
-        use crate::ast::ConditionKind::*;
-        use move_lang::parser::ast::SpecConditionKind as PK;
+        kind: &PA::SpecConditionKind,
+        exp: &'a EA::Exp,
+    ) -> Option<(ConditionKind, &'a EA::Exp)> {
+        use ConditionKind::*;
+        use PA::SpecConditionKind as PK;
         let loc = self.parent.env.to_loc(&exp.loc);
         match kind {
             PK::Assert => Some((Assert, exp)),
@@ -1555,9 +1568,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn extract_assignment<'a>(
         &mut self,
         context: &SpecBlockContext,
-        exp: &'a ast::Exp,
-    ) -> Option<(ModuleId, SpecVarId, Vec<Type>, &'a ast::Exp)> {
-        if let ast::Exp_::Assign(list, rhs) = &exp.value {
+        exp: &'a EA::Exp,
+    ) -> Option<(ModuleId, SpecVarId, Vec<Type>, &'a EA::Exp)> {
+        if let EA::Exp_::Assign(list, rhs) = &exp.value {
             let var_loc = self.parent.to_loc(&list.loc);
             if list.value.len() != 1 {
                 self.parent.error(
@@ -1566,7 +1579,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 );
                 return None;
             }
-            if let ast::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
+            if let EA::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
                 let var_name = self.module_access_to_qualified(maccess);
                 let mut et = self.exp_translator_for_context(&var_loc, context, None, false);
                 let tys = tys_opt
@@ -1602,8 +1615,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Definition analysis for a specification helper function.
-    fn def_ana_spec_fun(&mut self, _signature: &ast::FunctionSignature, body: &ast::FunctionBody) {
-        if let ast::FunctionBody_::Defined(seq) = &body.value {
+    fn def_ana_spec_fun(&mut self, _signature: &EA::FunctionSignature, body: &EA::FunctionBody) {
+        if let EA::FunctionBody_::Defined(seq) = &body.value {
             let entry = &self.spec_funs[self.spec_fun_index];
             let type_params = entry.type_params.clone();
             let params = entry.params.clone();
@@ -1633,11 +1646,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// schema's content.
     fn def_ana_schema(
         &mut self,
-        schema_defs: &BTreeMap<QualifiedSymbol, &ast::SpecBlock>,
+        schema_defs: &BTreeMap<QualifiedSymbol, &EA::SpecBlock>,
         visited: &mut BTreeSet<QualifiedSymbol>,
         visiting: &mut Vec<QualifiedSymbol>,
         name: QualifiedSymbol,
-        block: &ast::SpecBlock,
+        block: &EA::SpecBlock,
     ) {
         if !visited.insert(name.clone()) {
             // Already analyzed.
@@ -1650,7 +1663,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .iter_schema_includes(&block.value.members)
             .map(|(_, _, exp)| {
                 let mut res = vec![];
-                model_builder::extract_schema_access(exp, &mut res);
+                extract_schema_access(exp, &mut res);
                 res
             })
             .flatten()
@@ -1694,7 +1707,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Analysis of schema after it is ensured that all included schemas are fully analyzed.
-    fn def_ana_schema_content(&mut self, name: QualifiedSymbol, block: &ast::SpecBlock) {
+    fn def_ana_schema_content(&mut self, name: QualifiedSymbol, block: &EA::SpecBlock) {
         let loc = self.parent.env.to_loc(&block.loc);
         let entry = self
             .parent
@@ -1735,7 +1748,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         assert!(self.spec_block_lets.is_empty());
         for member in &block.value.members {
             let member_loc = self.parent.to_loc(&member.loc);
-            if let ast::SpecBlockMember_::Let {
+            if let EA::SpecBlockMember_::Let {
                 name: let_name,
                 def,
             } = &member.value
@@ -1773,12 +1786,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         for member in &block.value.members {
             let member_loc = self.parent.to_loc(&member.loc);
             match &member.value {
-                ast::SpecBlockMember_::Variable {
+                EA::SpecBlockMember_::Variable {
                     is_global: false, ..
                 } => { /* handled during decl analysis */ }
-                ast::SpecBlockMember_::Include { .. } => { /* handled above */ }
-                ast::SpecBlockMember_::Let { .. } => { /* handled above */ }
-                ast::SpecBlockMember_::Condition {
+                EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
+                EA::SpecBlockMember_::Let { .. } => { /* handled above */ }
+                EA::SpecBlockMember_::Condition {
                     kind,
                     properties,
                     exp,
@@ -1816,10 +1829,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Extracts all schema inclusions from a list of spec block members.
     fn iter_schema_includes<'a>(
         &self,
-        members: &'a [ast::SpecBlockMember],
-    ) -> impl Iterator<Item = (&'a MoveIrLoc, &'a Vec<PragmaProperty>, &'a ast::Exp)> {
+        members: &'a [EA::SpecBlockMember],
+    ) -> impl Iterator<Item = (&'a MoveIrLoc, &'a Vec<EA::PragmaProperty>, &'a EA::Exp)> {
         members.iter().filter_map(|m| {
-            if let ast::SpecBlockMember_::Include { properties, exp } = &m.value {
+            if let EA::SpecBlockMember_::Include { properties, exp } = &m.value {
                 Some((&m.loc, properties, exp))
             } else {
                 None
@@ -1852,7 +1865,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         spec: &mut Spec,
         allow_new_vars: bool,
         properties: &PropertyBag,
-        exp: &ast::Exp,
+        exp: &EA::Exp,
     ) {
         self.def_ana_schema_exp_oper(
             context_type_params,
@@ -1875,14 +1888,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         allow_new_vars: bool,
         path_cond: Option<Exp>,
         properties: &PropertyBag,
-        exp: &ast::Exp,
+        exp: &EA::Exp,
     ) {
         let loc = self.parent.to_loc(&exp.loc);
         match &exp.value {
-            ast::Exp_::BinopExp(
+            EA::Exp_::BinopExp(
                 lhs,
                 Spanned {
-                    value: BinOp_::Implies,
+                    value: PA::BinOp_::Implies,
                     ..
                 },
                 rhs,
@@ -1901,10 +1914,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     rhs,
                 );
             }
-            ast::Exp_::BinopExp(
+            EA::Exp_::BinopExp(
                 lhs,
                 Spanned {
-                    value: BinOp_::And, ..
+                    value: PA::BinOp_::And,
+                    ..
                 },
                 rhs,
             ) => {
@@ -1927,7 +1941,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     rhs,
                 );
             }
-            ast::Exp_::IfElse(c, t, e) => {
+            EA::Exp_::IfElse(c, t, e) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
                 let c_exp = et.translate_exp(c, &BOOL_TYPE);
                 et.finalize_types();
@@ -1955,7 +1969,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     e,
                 );
             }
-            ast::Exp_::Name(maccess, type_args_opt) => self.def_ana_schema_exp_leaf(
+            EA::Exp_::Name(maccess, type_args_opt) => self.def_ana_schema_exp_leaf(
                 context_type_params,
                 vars,
                 spec,
@@ -1967,7 +1981,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 type_args_opt,
                 None,
             ),
-            ast::Exp_::Pack(maccess, type_args_opt, fields) => self.def_ana_schema_exp_leaf(
+            EA::Exp_::Pack(maccess, type_args_opt, fields) => self.def_ana_schema_exp_leaf(
                 context_type_params,
                 vars,
                 spec,
@@ -1995,9 +2009,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         path_cond: Option<Exp>,
         schema_properties: &PropertyBag,
         loc: &Loc,
-        maccess: &ast::ModuleAccess,
-        type_args_opt: &Option<Vec<ast::Type>>,
-        args_opt: Option<&ast::Fields<ast::Exp>>,
+        maccess: &EA::ModuleAccess,
+        type_args_opt: &Option<Vec<EA::Type>>,
+        args_opt: Option<&EA::Fields<EA::Exp>>,
     ) {
         let schema_name = self.module_access_to_qualified(maccess);
 
@@ -2240,7 +2254,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context: &SpecBlockContext,
         alt_context_type_params: Option<&[(Symbol, Type)]>,
         context_properties: PropertyBag,
-        exp: &ast::Exp,
+        exp: &EA::Exp,
     ) {
         // Compute the type parameters and variables this spec block uses. We do this by constructing
         // an expression build and immediately extracting  from it. Depending on whether in
@@ -2302,9 +2316,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: &Loc,
         context: &SpecBlockContext,
-        exp: &ast::Exp,
-        patterns: &[parser::ast::SpecApplyPattern],
-        exclusion_patterns: &[parser::ast::SpecApplyPattern],
+        exp: &EA::Exp,
+        patterns: &[PA::SpecApplyPattern],
+        exclusion_patterns: &[PA::SpecApplyPattern],
     ) {
         if !matches!(context, SpecBlockContext::Module) {
             self.parent.error(
@@ -2367,19 +2381,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         is_public: bool,
         type_arg_count: usize,
         ignore_type_args: bool,
-        pattern: &parser::ast::SpecApplyPattern,
+        pattern: &PA::SpecApplyPattern,
     ) -> bool {
         if !ignore_type_args && pattern.value.type_parameters.len() != type_arg_count {
             return false;
         }
         if let Some(v) = &pattern.value.visibility {
             match v {
-                parser::ast::FunctionVisibility::Public(..) => {
+                PA::FunctionVisibility::Public(..) => {
                     if !is_public {
                         return false;
                     }
                 }
-                parser::ast::FunctionVisibility::Internal => {
+                PA::FunctionVisibility::Internal => {
                     if is_public {
                         return false;
                     }
@@ -2393,8 +2407,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .name_pattern
                 .iter()
                 .map(|p| match &p.value {
-                    parser::ast::SpecApplyFragment_::Wildcard => ".*".to_string(),
-                    parser::ast::SpecApplyFragment_::NamePart(n) => n.value.clone(),
+                    PA::SpecApplyFragment_::Wildcard => ".*".to_string(),
+                    PA::SpecApplyFragment_::NamePart(n) => n.value.clone(),
                 })
                 .join("")
         ))
@@ -2596,7 +2610,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Collect location and target information for all spec blocks. This is used for documentation
     /// generation.
-    fn collect_spec_block_infos(&mut self, module_def: &ast::ModuleDefinition) {
+    fn collect_spec_block_infos(&mut self, module_def: &EA::ModuleDefinition) {
         for block in &module_def.specs {
             let block_loc = self.parent.to_loc(&block.loc);
             let member_locs = block
@@ -2762,5 +2776,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             std::mem::take(&mut self.instantiation_map),
             std::mem::take(&mut self.spec_block_infos),
         );
+    }
+}
+
+/// Extract all accesses of a schema from a schema expression.
+pub(crate) fn extract_schema_access<'a>(exp: &'a EA::Exp, res: &mut Vec<&'a EA::ModuleAccess>) {
+    match &exp.value {
+        EA::Exp_::Name(maccess, _) => res.push(maccess),
+        EA::Exp_::Pack(maccess, ..) => res.push(maccess),
+        EA::Exp_::BinopExp(_, _, rhs) => extract_schema_access(rhs, res),
+        EA::Exp_::IfElse(_, t, e) => {
+            extract_schema_access(t, res);
+            extract_schema_access(e, res);
+        }
+        _ => {}
     }
 }

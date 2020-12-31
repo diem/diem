@@ -5,7 +5,7 @@
 
 use crate::{
     ast::{Operation, Value},
-    builder::model_builder::{Builder, ConstEntry, SpecFunEntry},
+    builder::model_builder::{ConstEntry, ModelBuilder, SpecFunEntry},
     ty::{PrimitiveType, Type},
 };
 use move_lang::parser::ast::{self as PA};
@@ -13,7 +13,7 @@ use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators
 /// to the build which will be treated the same as user defined specification functions.
-pub(crate) fn declare_spec_builtins(trans: &mut Builder<'_>) {
+pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
     let loc = trans.env.internal_loc();
     let bool_t = &Type::new_prim(PrimitiveType::Bool);
     let num_t = &Type::new_prim(PrimitiveType::Num);
