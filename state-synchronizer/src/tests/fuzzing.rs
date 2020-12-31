@@ -5,37 +5,37 @@ use crate::{
     chunk_request::{GetChunkRequest, TargetType},
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     coordinator::SyncCoordinator,
+    executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerMsg, StateSynchronizerSender},
-    tests::{
-        helpers::{MockExecutorProxy, SynchronizerEnvHelper},
-        mock_storage::MockStorage,
-    },
 };
+use executor::Executor;
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::{NodeConfig, PeerNetworkId, RoleType},
+    config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use diem_infallible::RwLock;
 use diem_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
     waypoint::Waypoint, PeerId,
 };
-use futures::channel::mpsc;
+use diem_vm::DiemVM;
+use diemdb::DiemDB;
+use futures::{channel::mpsc, executor::block_on};
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::NewNetworkSender,
 };
-use once_cell::sync::Lazy;
 use proptest::{
     arbitrary::{any, Arbitrary},
     option,
     prelude::*,
     strategy::Strategy,
 };
-use std::{collections::HashMap, sync::Arc};
-
-static PEER_ID: Lazy<PeerId> = Lazy::new(|| PeerId::new([0u8; PeerId::LENGTH]));
+use std::collections::HashMap;
+use storage_interface::DbReaderWriter;
+use subscription_service::ReconfigSubscription;
+use diem_types::transaction::{Transaction, WriteSetPayload};
+use executor_test_helpers::bootstrap_genesis;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
@@ -47,18 +47,28 @@ proptest! {
 }
 
 pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
-    // start up coordinator
-    let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();
-    let (mempool_sender, _mempool_receiver) = mpsc::channel(1_024);
-    let config = NodeConfig::default_for_validator();
+    // Generate a genesis change set
+    let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
-    let (signers, validator_info, _keys, _addrs) = SynchronizerEnvHelper::initial_setup(1);
-    let genesis_li = SynchronizerEnvHelper::genesis_li(&validator_info);
-    let storage_inner = MockStorage::new(genesis_li, signers[0].clone());
-    let initial_state = storage_inner.get_local_storage_state();
-    let storage_proxy = Arc::new(RwLock::new(storage_inner));
+    // Create test diem database
+    let db_path = diem_temppath::TempPath::new();
+    db_path.create_as_dir().unwrap();
+    let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(db_path.path()));
 
-    // mock network senders
+    // Boostrap the genesis transaction
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
+    bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
+
+    // Create executor proxy
+    let (subscription, _reconfig_receiver) =
+        ReconfigSubscription::subscribe_all("", vec![], vec![]);
+    let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw));
+    let executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
+
+    // Get initial state
+    let initial_state = executor_proxy.get_local_storage_state().unwrap();
+
+    // Setup network senders
     let (network_reqs_tx, _network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let network_sender = StateSynchronizerSender::new(
@@ -69,25 +79,32 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     let network_senders = vec![(node_network_id.clone(), network_sender)]
         .into_iter()
         .collect::<HashMap<_, _>>();
+
+    // Create channel senders and receivers
+    let (_coordinator_sender, coordinator_receiver) = mpsc::unbounded();
+    let (mempool_sender, _mempool_receiver) = mpsc::channel(1);
+
+    // Start up coordinator
     let mut coordinator = SyncCoordinator::new(
         coordinator_receiver,
         mempool_sender,
         network_senders,
         RoleType::Validator,
         Waypoint::default(),
-        config.state_sync,
-        config.upstream,
-        MockExecutorProxy::new(SynchronizerEnvHelper::default_handler(), storage_proxy),
+        StateSyncConfig::default(),
+        UpstreamConfig::default(),
+        executor_proxy,
         initial_state,
     )
-    .expect("Unable to create sync coordinator");
-    let mut rt = tokio::runtime::Builder::new()
-        .basic_scheduler()
-        .build()
-        .unwrap();
-    rt.block_on(async move {
+    .unwrap();
+
+    // Process the message
+    block_on(async move {
         coordinator
-            .process_one_message(PeerNetworkId(node_network_id, *PEER_ID), msg)
+            .process_one_message(
+                PeerNetworkId(node_network_id, PeerId::new([0u8; PeerId::LENGTH])),
+                msg,
+            )
             .await;
     });
 }

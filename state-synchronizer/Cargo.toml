@@ -21,6 +21,7 @@ itertools = { version = "0.10.0", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
+executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 diem-config = { path = "../config", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
@@ -31,6 +32,7 @@ diem-mempool = { path = "../mempool", version = "0.1.0"}
 diem-metrics = { path = "../common/metrics", version = "0.1.0" }
 diem-network-address = { path = "../network/network-address", version = "0.1.0", optional = true }
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+diem-temppath = { path = "../common/temppath", version = "0.1.0" }
 diem-types = { path = "../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }
@@ -48,14 +50,12 @@ proptest = "0.10.1"
 
 channel = { path = "../common/channel", version = "0.1.0" }
 compiled-stdlib = { path = "../language/stdlib/compiled",  version = "0.1.0" }
-executor = { path = "../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diem-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
 diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
 diem-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
-diem-temppath = { path = "../common/temppath", version = "0.1.0" }
 diemdb = { path = "../storage/diemdb", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0", features = ["testing"] }

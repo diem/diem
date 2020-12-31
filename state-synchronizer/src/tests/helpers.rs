@@ -27,10 +27,6 @@ use std::sync::Arc;
 pub(crate) struct SynchronizerEnvHelper;
 
 impl SynchronizerEnvHelper {
-    pub(crate) fn default_handler() -> MockRpcHandler {
-        Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
-    }
-
     // Returns the initial peers with their signatures
     pub(crate) fn initial_setup(
         count: usize,
