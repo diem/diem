@@ -3,7 +3,7 @@
 
 use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use diem_proptest_helpers::ValueGenerator;
-use state_synchronizer::fuzzing::{state_sync_msg_strategy, test_state_sync_msg_fuzzer_impl};
+use state_synchronizer::fuzzing::{arb_state_sync_msg, test_state_sync_msg_fuzzer_impl};
 
 #[derive(Debug, Default)]
 pub struct StateSyncMsg;
@@ -14,11 +14,11 @@ impl FuzzTargetImpl for StateSyncMsg {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(state_sync_msg_strategy()))
+        Some(corpus_from_strategy(arb_state_sync_msg()))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let msg = fuzz_data_to_value(data, state_sync_msg_strategy());
+        let msg = fuzz_data_to_value(data, arb_state_sync_msg());
         test_state_sync_msg_fuzzer_impl(msg);
     }
 }

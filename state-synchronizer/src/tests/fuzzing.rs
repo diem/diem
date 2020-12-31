@@ -41,7 +41,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_state_sync_msg_fuzzer(input in state_sync_msg_strategy()) {
+    fn test_state_sync_msg_fuzzer(input in arb_state_sync_msg()) {
         test_state_sync_msg_fuzzer_impl(input);
     }
 }
@@ -92,13 +92,13 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     });
 }
 
-pub fn state_sync_msg_strategy() -> impl Strategy<Value = StateSynchronizerMsg> {
+pub fn arb_state_sync_msg() -> impl Strategy<Value = StateSynchronizerMsg> {
     prop_oneof![
-        (any::<GetChunkRequest>()).prop_map(|get_chunk_request| {
-            StateSynchronizerMsg::GetChunkRequest(Box::new(get_chunk_request))
+        (any::<GetChunkRequest>()).prop_map(|chunk_request| {
+            StateSynchronizerMsg::GetChunkRequest(Box::new(chunk_request))
         }),
-        (any::<GetChunkResponse>()).prop_map(|get_chunk_response| {
-            StateSynchronizerMsg::GetChunkResponse(Box::new(get_chunk_response))
+        (any::<GetChunkResponse>()).prop_map(|chunk_response| {
+            StateSynchronizerMsg::GetChunkResponse(Box::new(chunk_response))
         })
     ]
 }
@@ -117,7 +117,6 @@ impl Arbitrary for GetChunkRequest {
             })
             .boxed()
     }
-
     type Strategy = BoxedStrategy<Self>;
 }
 
@@ -126,27 +125,21 @@ impl Arbitrary for TargetType {
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
             (any::<LedgerInfoWithSignatures>()).prop_map(TargetType::TargetLedgerInfo),
-            highest_available_strategy(),
+            (option::of(any::<LedgerInfoWithSignatures>()), any::<u64>()).prop_map(
+                |(target_li, timeout_ms)| TargetType::HighestAvailable {
+                    target_li,
+                    timeout_ms
+                }
+            ),
             (any::<u64>()).prop_map(TargetType::Waypoint)
         ]
         .boxed()
     }
-
     type Strategy = BoxedStrategy<Self>;
-}
-
-fn highest_available_strategy() -> impl Strategy<Value = TargetType> {
-    (option::of(any::<LedgerInfoWithSignatures>()), any::<u64>()).prop_map(
-        |(target_li, timeout_ms)| TargetType::HighestAvailable {
-            target_li,
-            timeout_ms,
-        },
-    )
 }
 
 impl Arbitrary for GetChunkResponse {
     type Parameters = ();
-
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         (
             any::<ResponseLedgerInfo>(),
@@ -157,7 +150,6 @@ impl Arbitrary for GetChunkResponse {
             })
             .boxed()
     }
-
     type Strategy = BoxedStrategy<Self>;
 }
 
@@ -166,37 +158,28 @@ impl Arbitrary for ResponseLedgerInfo {
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
             (any::<LedgerInfoWithSignatures>()).prop_map(ResponseLedgerInfo::VerifiableLedgerInfo),
-            progressive_li_strategy(),
-            li_for_waypoint_strategy()
+            (
+                any::<LedgerInfoWithSignatures>(),
+                option::of(any::<LedgerInfoWithSignatures>())
+            )
+                .prop_map(|(target_li, highest_li)| {
+                    ResponseLedgerInfo::ProgressiveLedgerInfo {
+                        target_li,
+                        highest_li,
+                    }
+                }),
+            (
+                any::<LedgerInfoWithSignatures>(),
+                option::of(any::<LedgerInfoWithSignatures>()),
+            )
+                .prop_map(|(waypoint_li, end_of_epoch_li)| {
+                    ResponseLedgerInfo::LedgerInfoForWaypoint {
+                        waypoint_li,
+                        end_of_epoch_li,
+                    }
+                },)
         ]
         .boxed()
     }
-
     type Strategy = BoxedStrategy<Self>;
-}
-
-fn progressive_li_strategy() -> impl Strategy<Value = ResponseLedgerInfo> {
-    (
-        any::<LedgerInfoWithSignatures>(),
-        option::of(any::<LedgerInfoWithSignatures>()),
-    )
-        .prop_map(
-            |(target_li, highest_li)| ResponseLedgerInfo::ProgressiveLedgerInfo {
-                target_li,
-                highest_li,
-            },
-        )
-}
-
-fn li_for_waypoint_strategy() -> impl Strategy<Value = ResponseLedgerInfo> {
-    (
-        any::<LedgerInfoWithSignatures>(),
-        option::of(any::<LedgerInfoWithSignatures>()),
-    )
-        .prop_map(
-            |(waypoint_li, end_of_epoch_li)| ResponseLedgerInfo::LedgerInfoForWaypoint {
-                waypoint_li,
-                end_of_epoch_li,
-            },
-        )
 }
