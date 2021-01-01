@@ -8,8 +8,7 @@ COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
 #Batch mode and all operations tooling
-RUN /diem/scripts/dev_setup.sh -t -o -b -p -y
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN /diem/scripts/dev_setup.sh -t -o -b -p -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
 
 #Since proper use of sccache demands the exact same path for source and crates, configure it so.

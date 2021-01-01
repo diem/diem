@@ -52,7 +52,7 @@ Dockerhub account username.
 
 ### password ###
 
-Dockerhub account username.
+Dockerhub account password.
 
 ### key_material ###
 

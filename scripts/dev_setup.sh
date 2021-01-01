@@ -618,6 +618,8 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_pkg yamllint "$PACKAGE_MANAGER"
   install_pkg python3 "$PACKAGE_MANAGER"
   install_pkg unzip "$PACKAGE_MANAGER"
+  install_pkg jq "$PACKAGE_MANAGER"
+  install_pkg git "$PACKAGE_MANAGER"
   install_shellcheck
   install_hadolint
   install_vault
