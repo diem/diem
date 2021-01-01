@@ -1,0 +1,72 @@
+name: ci-test
+
+on:
+  push:
+    branches: [auto, gha-test-*]
+  pull_request:
+    branches: [main, master, release-*, gha-test-*]
+
+jobs:
+  #dev-setup-sh-test:
+  #  runs-on: ubuntu-latest-xl
+  #  continue-on-error: false
+  #  strategy:
+  #    matrix:
+  #      target_os: [alpine, arch, centos, github]
+  #  steps:
+  #    - uses: actions/checkout@v2
+  #    - name: build image with dev-setup.sh
+  #      run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t libra/build_environment:test .
+
+  unit-test:
+    runs-on: ubuntu-latest-xl
+    continue-on-error: false
+    container:
+      image: libra/build_environment:github-1
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 25 #this gives us a chance to find the historical last successful build.
+      - name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: ci-test.yml
+          debug: true
+      #- name: configure environment
+      #  run: scripts/dev_setup.sh -t -o -b -p -y
+      - name: configure build
+        run: |
+          echo BASE_GITHASH=$BASE_GITHASH
+          mkdir -p /opt/cargo/
+          export CARGO_HOME=/opt/cargo
+          echo 'CARGO_HOME=/opt/cargo' >> $GITHUB_ENV
+          echo 'TAG=0.1.${CIRCLE_BUILD_NUM}' >> $GITHUB_ENV
+          echo 'IMAGE_NAME=myapp' >> $GITHUB_ENV
+          echo 'LIBRA_DUMP_LOGS=1' >> $GITHUB_ENV
+          echo 'CARGO_INCREMENTAL=0' >> $GITHUB_ENV
+          echo 'CI_TIMEOUT="timeout 70m"' >> $GITHUB_ENV
+          export RUST_NIGHTLY=$(cat cargo-toolchain)
+          echo 'RUST_NIGHTLY='"$RUST_NIGHTLY" >> $GITHUB_ENV
+
+          # Turn on the experimental feature resolver in cargo. See:
+          # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+          echo 'CARGOFLAGS='$(cat cargo-flags) >> $GITHUB_ENV
+          # Use nightly version of cargo to access the new feature resolver
+          echo 'CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $GITHUB_ENV
+          # Pin the version of RUSTC used for all invocations of cargo
+          echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) >> $GITHUB_ENV
+      - name: Setup Env
+        run: |
+          echo target branch ${TARGET_BRANCH}
+          echo pr ${PULL_REQUEST}
+          echo change file ${CHANGED_FILE_OUTPUTFILE}
+          echo base githash ${BASE_GITHASH}
+          # Configure Move prover tools
+          echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
+          echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
+          echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
+      #- name: run unit tests
+      #  run: |
+      #    cargo x test --jobs 8 --unit --changed-since "origin/$TARGET_BRANCH"

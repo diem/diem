@@ -1,0 +1,44 @@
+name: "Github Changes"
+description: "Compute by any means necessary the changes attempting to be merged, or that have been merged in to a branch."
+inputs:
+  workflow-file:
+    description: "local repository path to the workflow file, no leading slash."
+    required: true
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-id }}
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        if [[ $(git log --pretty=format:"%H" -n 26 | wc -l) < 2 ]]; then
+          echo It is likely that checkout did not return more than one commit, recommend calling checkout with fetch-depth: 25 1>&2
+          echo BASE_GITHASH is likely to not be found even if it would otherwise be the immediate prior revision. 1>&2
+        fi
+
+        eval $(./.github/actions/changes/get_pr_info.sh -w "${WORKFLOW}" -b -d)
+
+        echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
+        echo "PULL_REQUEST=${PULL_REQUEST}" >> $GITHUB_ENV
+        echo "CHANGED_FILE_OUTPUTFILE=${CHANGED_FILE_OUTPUTFILE}" >> $GITHUB_ENV
+        echo "BASE_GITHASH=${BASE_GITHASH}" >> $GITHUB_ENV
+
+        echo
+        echo CALCULATED:
+        echo TARGET_BRANCH=${TARGET_BRANCH}
+        echo PULL_REQUEST=${PULL_REQUEST}
+        echo CHANGED_FILE_OUTPUTFILE=${CHANGED_FILE_OUTPUTFILE}
+        echo BASE_GITHASH=${BASE_GITHASH}
+        echo
+        echo CHANGED FILES:
+        cat ${CHANGED_FILE_OUTPUTFILE}
+        echo
+        echo Actions Provided Environment:
+        set | grep GITHUB
+      shell: bash
+      env:
+        WORKFLOW: ${{ inputs.workflow-file }}
+    #- id: random-number-generator
+    #  run: echo "::set-output name=random-id::$(echo $RANDOM)"
+    #  shell: bash

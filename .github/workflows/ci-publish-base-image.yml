@@ -21,15 +21,16 @@ jobs:
       DOCKERHUB_ORG: libra
     steps:
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/dockerhub_login
+      - name: build image
+        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }} .
+      - name: Sign in to dockerhub, install image signing cert.
+        uses: ./.github/actions/dockerhub_login
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
           key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
           key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
-      - name: build image
-        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }} .
       - name: Push to dockerhub.
         run: docker push --disable-content-trust=false ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }}
         env:
