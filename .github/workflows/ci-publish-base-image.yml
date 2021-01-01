@@ -6,7 +6,7 @@ on:
     paths:
       [
         .github/workflows/ci-publish-base-image.yml,
-        .github/actions/dockerhub_login.yml,
+        .github/actions/dockerhub_login/action.yml,
         docker/ci/github/Dockerfile,
         scripts/dev_setup.sh,
       ]
