@@ -33,7 +33,6 @@ function usage() {
   echoerr variables it could calculate.
 }
 
-USERSET_PREVIOUS_GITHASH=;
 #Optional: if a private repo
 GITHUB_USERNAME=;
 GITHUB_PASSWORD=;
@@ -88,17 +87,19 @@ $DEBUG && echo GITHUB_SLUG="$GITHUB_SLUG"
 
 BRANCH=
 #Attempt to determine/normalize the branch.
-if  [[ -n "$GITHUB_ACTION" ]]; then
-  if [[ -n "$GITHUB_REF" ]]; then
-    BRANCH=${GITHUB_REF//*\/}
-  fi
+if  [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+  BRANCH=${GITHUB_REF//*\/}
+fi
+if  [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+  BRANCH=${GITHUB_BASE_REF}
+  TARGET_BRANCH=${BRANCH}
 fi
 $DEBUG && echoerr BRANCH="$BRANCH"
 
 BASE_GITHASH=
-if [[ "${GITHUB_EVENT_NAME}" == "push" ]] && [[ "$BORS" == false || ( "$BRANCH" != "auto" || "$BRANCH" != "canary" ) ]]; then
+if [[ "${GITHUB_EVENT_NAME}" == "push" ]] && [[ "$BORS" == false || ( "$BRANCH" != "auto" && "$BRANCH" != "canary" ) ]]; then
   $DEBUG && echoerr URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed&event=push"
-  QUERIED_GITHASH="$( curl -H 'Accept: application/vnd.github.v3+json' "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed&event=push" 2>/dev/null | jq '.workflow_runs[0].head_sha' | sed 's/"//g')"
+  QUERIED_GITHASH="$( curl "$LOGIN" -H 'Accept: application/vnd.github.v3+json' "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed&event=push" 2>/dev/null | jq '.workflow_runs[0].head_sha' | sed 's/"//g')"
   $DEBUG && echoerr QUERIED_GITHASH="$QUERIED_GITHASH"
   #If we have a git hash, and it exist in the history of the current HEAD, then use it as BASE_GITHASH
   if [[ -n "$QUERIED_GITHASH" ]] && [[ $(git merge-base --is-ancestor "$QUERIED_GITHASH" "$(git rev-parse HEAD)" 2>/dev/null; echo $?) == 0 ]]; then
@@ -115,44 +116,35 @@ if [[ "$BORS" == true ]] &&  [[ "$BRANCH" == "auto" || "$BRANCH" == "canary" ]] 
   PR_NUMBER=$(echo "${commit_message}" | tail -1 | sed 's/Closes: #//')
 else
   #Let's see if this is a pr.
-  #If circle
-  if [[ -n "$CIRCLE_PR_NUMBER" ]]; then
-    PR_NUMBER="$CIRCLE_PR_NUMBER"
-  elif [[ -n "$CIRCLE_BRANCH" ]] && [[ "$CIRCLE_BRANCH" =~ pull/.* ]]; then
-    PR_NUMBER=$(echo "$CIRCLE_BRANCH" | sed 's/pull\///')
-  #Multiple circle pull requests can use the same githash... if their's only one, use it.
-  elif [[ -n "$CIRCLE_PULL_REQUESTS" ]] && [[ ! "$CIRCLE_PULL_REQUESTS" =~ "," ]]; then
-    PR_NUMBER=$(echo "$CIRCLE_PULL_REQUESTS" | sed 's/.*\///')
   #If github actions
-  elif [[ -n "$GITHUB_REF" ]] && [[ "$GITHUB_REF" =~ "/pull/" ]]; then
-    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/pull\///' | sed 's/\/merge//')
+  if [[ -n "$GITHUB_REF" ]] && [[ "$GITHUB_REF" =~ "/pull/" ]]; then
+    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\/pull\///' | sed 's/\/merge//')
   fi
 fi
 $DEBUG && echoerr PR_NUMBER="$PR_NUMBER"
 
 #look up the pr with the pr number
-if [[ -n ${PR_NUMBER} ]]; then
-  PR_RESPONSE=$(curl -s "$LOGIN" "https://api.github.com/repos/${GITHUB_SLUG}/pulls/$PR_NUMBER")
+if [[ -n ${PR_NUMBER} ]] && [[ -z ${TARGET_BRANCH} ]]; then
+  PR_RESPONSE=$(curl -s "$LOGIN" "${GITHUB_API_URL}/repos/${GITHUB_SLUG}/pulls/$PR_NUMBER")
   if [[ -n ${PR_RESPONSE} ]] && [[ $(echo "$PR_RESPONSE" | jq -e '.message') != '"Not Found"' ]]; then
-    #PR_TITLE=$(echo "$PR_RESPONSE" | jq -e '.title' | tr -d '"')
-    #PR_AUTHOR=$(echo "$PR_RESPONSE" | jq -e '.user.login' | tr -d '"')
     PR_BASE_BRANCH=$(echo "$PR_RESPONSE" | jq -e '.base.ref' | tr -d '"')
   fi
-
   #if we have a branch name, and the exact branch exists.
   if [[ -n "$PR_BASE_BRANCH" ]] && [[ $(git branch -l --no-color | tr -d '*' | tr -d ' ' | grep -c '^'"$PR_BASE_BRANCH"'$') == 1 ]]; then
-    BASE_GITHASH=$(git merge-base HEAD origin/"$PR_BASE_BRANCH")
     TARGET_BRANCH="$PR_BASE_BRANCH"
   fi
 fi
 $DEBUG && echoerr TARGET_BRANCH="$TARGET_BRANCH"
+if [[ -n "$TARGET_BRANCH" ]] && [[ -z "$BASE_GITHASH" ]]; then
+  BASE_GITHASH=$(git merge-base HEAD origin/"$TARGET_BRANCH")
+fi
 
 if [[ -n "$BASE_GITHASH" ]]; then
   CHANGED_FILE_OUTPUTFILE=$(mktemp /tmp/changed_files.XXXXXX)
   git --no-pager diff --name-only "$BASE_GITHASH" | sort > "$CHANGED_FILE_OUTPUTFILE"
 fi
 
-echo 'export PULL_REQUEST='"$PR_NUMBER"
-echo 'export BASE_GITHASH='"$BASE_GITHASH"
-echo 'export CHANGED_FILE_OUTPUTFILE='"$CHANGED_FILE_OUTPUTFILE"
-echo 'export TARGET_BRANCH='"$TARGET_BRANCH"
+echo 'export CHANGES_PULL_REQUEST='"$PR_NUMBER"
+echo 'export CHANGES_BASE_GITHASH='"$BASE_GITHASH"
+echo 'export CHANGES_CHANGED_FILE_OUTPUTFILE='"$CHANGED_FILE_OUTPUTFILE"
+echo 'export CHANGES_TARGET_BRANCH='"$TARGET_BRANCH"
