@@ -620,6 +620,10 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_pkg unzip "$PACKAGE_MANAGER"
   install_pkg jq "$PACKAGE_MANAGER"
   install_pkg git "$PACKAGE_MANAGER"
+  #for timeout
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+    install_pkg coreutils "$PACKAGE_MANAGER"
+  fi
   install_shellcheck
   install_hadolint
   install_vault
