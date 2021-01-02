@@ -5,13 +5,20 @@ inputs:
     description: "local repository path to the workflow file, no leading slash."
     required: true
 outputs:
-  random-number:
-    description: "Random number"
-    value: ${{ steps.random-number-generator.outputs.random-id }}
+  changes-base-githash:
+    description: The shared git hash of a pr, a bors target branch, or the last successful build of the workflow-file on the branch.
+    value: ${{ steps.calc.outputs.changes-base-githash }}
+  changes-target-branch:
+    description: If a target branch exists for either bors or a pr, the branch.
+    value: ${{ steps.calc.outputs.changes-target-branch }}
+  changes-pull-request-number:
+    description: If a pullrequest number can be found, either in bors, or in a pr, the number.
+    value: ${{ steps.calc.outputs.changes-pull-request-number }}
 runs:
   using: "composite"
   steps:
-    - run: |
+    - id: calc
+      run: |
         if [[ $(git log --pretty=format:"%H" -n 26 | wc -l) < 2 ]]; then
           echo It is likely that checkout did not return more than one commit, recommend calling checkout with fetch-depth: 25 1>&2
           echo BASE_GITHASH is likely to not be found even if it would otherwise be the immediate prior revision. 1>&2
@@ -19,26 +26,27 @@ runs:
 
         eval $(./.github/actions/changes/get_pr_info.sh -w "${WORKFLOW}" -b -d)
 
-        echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
-        echo "PULL_REQUEST=${PULL_REQUEST}" >> $GITHUB_ENV
-        echo "CHANGED_FILE_OUTPUTFILE=${CHANGED_FILE_OUTPUTFILE}" >> $GITHUB_ENV
-        echo "BASE_GITHASH=${BASE_GITHASH}" >> $GITHUB_ENV
+        echo "CHANGES_TARGET_BRANCH=${CHANGES_TARGET_BRANCH}" >> $GITHUB_ENV
+        echo "CHANGES_PULL_REQUEST=${CHANGES_PULL_REQUEST}" >> $GITHUB_ENV
+        echo "CHANGES_CHANGED_FILE_OUTPUTFILE=${CHANGES_CHANGED_FILE_OUTPUTFILE}" >> $GITHUB_ENV
+        echo "CHANGES_BASE_GITHASH=${CHANGES_BASE_GITHASH}" >> $GITHUB_ENV
+
+        echo "::set-output name=changes-base-githash::$(echo $CHANGES_BASE_GITHASH)"
+        echo "::set-output name=changes-target-branch::$(echo $CHANGES_TARGET_BRANCH)"
+        echo "::set-output name=changes-pull-request-number::$(echo $CHANGES_PULL_REQUEST)"
 
         echo
         echo CALCULATED:
-        echo TARGET_BRANCH=${TARGET_BRANCH}
-        echo PULL_REQUEST=${PULL_REQUEST}
-        echo CHANGED_FILE_OUTPUTFILE=${CHANGED_FILE_OUTPUTFILE}
-        echo BASE_GITHASH=${BASE_GITHASH}
+        echo CHANGES_TARGET_BRANCH=${CHANGES_TARGET_BRANCH}
+        echo CHANGES_PULL_REQUEST=${CHANGES_PULL_REQUEST}
+        echo CHANGES_CHANGED_FILE_OUTPUTFILE=${CHANGES_CHANGED_FILE_OUTPUTFILE}
+        echo CHANGES_BASE_GITHASH=${CHANGES_BASE_GITHASH}
         echo
         echo CHANGED FILES:
-        cat ${CHANGED_FILE_OUTPUTFILE}
+        cat ${CHANGES_CHANGED_FILE_OUTPUTFILE}
         echo
         echo Actions Provided Environment:
         set | grep GITHUB
       shell: bash
       env:
         WORKFLOW: ${{ inputs.workflow-file }}
-    #- id: random-number-generator
-    #  run: echo "::set-output name=random-id::$(echo $RANDOM)"
-    #  shell: bash

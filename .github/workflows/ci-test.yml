@@ -7,35 +7,103 @@ on:
     branches: [main, master, release-*, gha-test-*]
 
 jobs:
-  #dev-setup-sh-test:
-  #  runs-on: ubuntu-latest-xl
-  #  continue-on-error: false
-  #  strategy:
-  #    matrix:
-  #      target_os: [alpine, arch, centos, github]
-  #  steps:
-  #    - uses: actions/checkout@v2
-  #    - name: build image with dev-setup.sh
-  #      run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t libra/build_environment:test .
+  prepare:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    outputs:
+      changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
+      changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
+      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+      test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
+      test-website-build: ${{ steps.website-changes.outputs.changes-found }}
+      test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 #get all the history!!!
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: ci-test.yml
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: ./.github/actions/matches
+        with:
+          pattern: '**.rs\|Cargo.toml\|Cargo.lock'
+      - id: non-rust-lint-changes
+        name: find shell/dockerfile changes
+        uses: ./.github/actions/matches
+        with:
+          pattern: '**.Dockerfile\|**.sh'
+      - id: dev-setup-sh-changes
+        name: find dev-setup.sh/base docker image changes
+        uses: ./.github/actions/matches
+        with:
+          pattern: '.github/workflows/ci-publish-base-image.yml\|docker/ci/**/Dockerfile\|scripts/dev_setup.sh'
+      - id: website-changes
+        name: find website changes.
+        uses: ./.github/actions/matches
+        with:
+          pattern: "documentation/**"
+
+  dev-setup-sh-test:
+    runs-on: ubuntu-latest-xl
+    continue-on-error: false
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
+    strategy:
+      matrix:
+        target_os: [alpine, arch, centos, github]
+    steps:
+      - uses: actions/checkout@v2
+      - name: build image with dev-setup.sh
+        run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t libra/build_environment:test .
+
+  non-rust-lint:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+      - name: shell lints
+        run: |
+          shellcheck scripts/dev_setup.sh && \
+          shellcheck scripts/dockerhub_prune.sh && \
+          shellcheck .github/actions/changes/get_pr_info.sh && \
+          shellcheck docker/build_push.sh && \
+          shellcheck docker/dockerhub_to_novi_ecr.sh
+      - name: docker lints
+        run: |
+          hadolint docker/ci/github/Dockerfile && \
+          hadolint docker/ci/arch/Dockerfile && \
+          hadolint docker/ci/alpine/Dockerfile && \
+          hadolint docker/ci/centos/Dockerfile
 
   unit-test:
     runs-on: ubuntu-latest-xl
     continue-on-error: false
+    needs: prepare
+    #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     env:
       RUST_BACKTRACE: 1
     steps:
+      - name: stats
+        run: |
+          set x
+          cat /proc/meminfo
+          cat /proc/cpuinfo
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 25 #this gives us a chance to find the historical last successful build.
-      - name: determine changes
-        uses: ./.github/actions/changes
-        with:
-          workflow-file: ci-test.yml
-          debug: true
-      #- name: configure environment
-      #  run: scripts/dev_setup.sh -t -o -b -p -y
+          fetch-depth: 0 #get all the history!!!
+      - name: configure environment
+        run: scripts/dev_setup.sh -t -o -b -p -y
       - name: configure build
         run: |
           echo BASE_GITHASH=$BASE_GITHASH
@@ -44,7 +112,7 @@ jobs:
           echo 'CARGO_HOME=/opt/cargo' >> $GITHUB_ENV
           echo 'TAG=0.1.${CIRCLE_BUILD_NUM}' >> $GITHUB_ENV
           echo 'IMAGE_NAME=myapp' >> $GITHUB_ENV
-          echo 'LIBRA_DUMP_LOGS=1' >> $GITHUB_ENV
+          echo 'DIEM_DUMP_LOGS=1' >> $GITHUB_ENV
           echo 'CARGO_INCREMENTAL=0' >> $GITHUB_ENV
           echo 'CI_TIMEOUT="timeout 70m"' >> $GITHUB_ENV
           export RUST_NIGHTLY=$(cat cargo-toolchain)
@@ -57,16 +125,19 @@ jobs:
           echo 'CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $GITHUB_ENV
           # Pin the version of RUSTC used for all invocations of cargo
           echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) >> $GITHUB_ENV
-      - name: Setup Env
+        #run: |
+        # Configure Move prover tools
+        # echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
+        # echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
+        # echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
+      #- name: Setup Env
+      - name: run unit tests
         run: |
-          echo target branch ${TARGET_BRANCH}
-          echo pr ${PULL_REQUEST}
-          echo change file ${CHANGED_FILE_OUTPUTFILE}
-          echo base githash ${BASE_GITHASH}
-          # Configure Move prover tools
-          echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
-          echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
-          echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
-      #- name: run unit tests
-      #  run: |
-      #    cargo x test --jobs 8 --unit --changed-since "origin/$TARGET_BRANCH"
+          set | grep GITHUB
+          set | grep RUST
+          set | grep CARGO
+          echo
+          echo CI_TIMEOUT=$CI_TIMEOUT
+          RUST_BACKTRACE=1 cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
