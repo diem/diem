@@ -5,7 +5,7 @@ const getDarkModeImage = img => `img/${path.parse(img).name}-dark${path.parse(im
 
 const category = (label, items) => {
   return {
-    extra: {iconClasses: ['listTitle']},
+    customProps: {iconClasses: ['listTitle']},
     label,
     type: 'category',
     items
@@ -13,7 +13,7 @@ const category = (label, items) => {
 };
 
 const backToHome = {
-  extra: {
+  customProps: {
     classNames: ['backToHome'],
     icon: 'img/shared/arrow-left.svg',
     iconHover: 'img/shared/arrow-left-hover.svg',
@@ -24,14 +24,14 @@ const backToHome = {
   type: 'link',
 };
 
-const categoryBoilerplate = (id, image, includeOverview = true) => {
+const categoryBoilerplate = (id, image) => {
   const imageUrl = typeof image === 'string' ? image : image.url;
   const imageType = typeof image === 'string' ? 'svg' : image.type;
 
   return [
     backToHome,
     {
-      extra: {
+      customProps: {
         classNames: ['categoryLabel'],
         icon: `img/${imageUrl}.${imageType}`,
         iconDark: `img/${imageUrl}-dark.${imageType}`,
@@ -41,7 +41,7 @@ const categoryBoilerplate = (id, image, includeOverview = true) => {
       type: 'doc',
     },
     {
-      extra: standaloneLinkClasses(),
+      customProps: standaloneLinkClasses(),
       href: `/docs/${id}`,
       label: 'Overview',
       type: 'link',
@@ -52,7 +52,7 @@ const categoryBoilerplate = (id, image, includeOverview = true) => {
 const getReference = (theme = 'secondary') => {
   const defaultType = theme === 'primary' ? 'doc' : 'ref';
   const standaloneReferenceLink = id => ({
-    extra: {
+    customProps: {
       classNames: ['standaloneReferenceLink'],
     },
     id,
@@ -61,7 +61,7 @@ const getReference = (theme = 'secondary') => {
   const referenceLink = ({id, icon, iconDark, isCategory = false}) => ({
     type: isCategory ? 'ref' : defaultType,
     id,
-    extra: {
+    customProps: {
       classNames: ['iconIndented'],
       icon,
       iconDark: iconDark ? iconDark : getDarkModeImage(icon),
@@ -70,7 +70,7 @@ const getReference = (theme = 'secondary') => {
 
   return [
     {
-      extra: {
+      customProps: {
         classNames: [
           theme === 'secondary' && 'referenceVerticalSpacing',
         ],
@@ -129,13 +129,13 @@ const getReference = (theme = 'secondary') => {
 const standaloneLink = (link, label) =>
   isWebUri(link) || link === ''
     ? {
-        extra: standaloneLinkClasses(),
+        customProps: standaloneLinkClasses(),
         href: link,
         label,
         type: 'link',
       }
     : {
-        extra: standaloneLinkClasses(),
+        customProps: standaloneLinkClasses(),
         id: link,
         type: 'doc',
       };
