@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "docusaurus start",
-    "start-with-ada": "TEST_ADA=1 docusaurus start",
     "build": "NODE_ENV=production docusaurus build",
     "build-staging": "SEGMENT=staging docusaurus build",
+    "serve": "docusaurus serve",
+    "start": "docusaurus start",
+    "start-with-ada": "TEST_ADA=1 docusaurus start",
     "swizzle": "docusaurus swizzle",
     "deploy-staging": "npm run build-staging && npx now"
   },
@@ -17,7 +18,8 @@
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",
     "classnames": "^2.2.6",
-    "libra-docusaurus-components": "^0.2.43",
+    "libra-docusaurus-components": "^0.2.50",
+    "object-assign-deep": "^0.4.0",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "valid-url": "^1.0.9"

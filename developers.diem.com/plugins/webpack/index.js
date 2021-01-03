@@ -16,14 +16,6 @@ module.exports = function(context, options) {
             src: path.resolve(__dirname, '../../src'),
           }
         },
-        module: {
-          rules: [
-            {
-              test: /\.svg$/,
-              use: ['@svgr/webpack'],
-            },
-          ],
-        },
         node: {
           fs: 'empty',
         },

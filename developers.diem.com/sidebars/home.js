@@ -4,7 +4,7 @@ const Sidebar = [
   {
     type: 'doc',
     id: 'welcome-to-diem',
-    extra: {
+    customProps: {
       classNames: ['home'],
       icon: 'img/home.svg',
       iconDark: 'img/home-dark.svg',
@@ -17,7 +17,7 @@ const Sidebar = [
       {
         type: 'ref',
         id: 'core/overview',
-        extra: {
+        customProps: {
           classNames: ['iconIndented'],
           icon: 'img/core-contributors.svg',
           iconDark: 'img/core-contributors-dark.svg',
@@ -26,7 +26,7 @@ const Sidebar = [
       {
         type: 'ref',
         id: 'node/overview',
-        extra: {
+        customProps: {
           classNames: ['iconIndented'],
           icon: 'img/node-operators.svg',
           iconDark: 'img/node-operators-dark.svg',
@@ -35,7 +35,7 @@ const Sidebar = [
       {
         type: 'ref',
         id: 'wallet-app/overview',
-        extra: {
+        customProps: {
           classNames: ['iconIndented'],
           icon: 'img/wallet-app.svg',
           iconDark: 'img/wallet-app-dark.svg',
@@ -44,7 +44,7 @@ const Sidebar = [
       {
         type: 'ref',
         id: 'merchant/overview',
-        extra: {
+        customProps: {
           classNames: ['iconIndented'],
           icon: 'img/merchant-solutions.svg',
           iconDark: 'img/merchant-solutions-dark.svg',
@@ -53,7 +53,7 @@ const Sidebar = [
       {
         type: 'ref',
         id: 'move/overview',
-        extra: {
+        customProps: {
           classNames: ['iconIndented'],
           icon: 'img/move.svg',
           iconDark: 'img/move-dark.svg',

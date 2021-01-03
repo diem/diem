@@ -6,29 +6,20 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import useTOCHighlight from '@theme/hooks/useTOCHighlight';
 
-import {OVERFLOW_CONTAINER_CLASS} from '@theme/Layout';
+import { OVERFLOW_CONTAINER_CLASS } from '@theme/Layout';
 
 import Feedback from 'components/docs/Feedback';
 import Pagination from './Pagination';
-import {RightSidebar} from 'libra-docusaurus-components';
+import { RightSidebar } from 'libra-docusaurus-components';
 
 import classnames from 'classnames';
 import styles from './styles.module.css';
 
 function DocItem(props) {
-  const {siteConfig = {}} = useDocusaurusContext();
-  const {url: siteUrl, title: siteTitle} = siteConfig;
-  const {content: DocContent} = props;
-  const {metadata} = DocContent;
   const {
-    description,
-    title,
-    permalink,
-    editUrl,
-    lastUpdatedAt,
-    lastUpdatedBy,
-    version,
-  } = metadata;
+    siteConfig: { url: siteUrl, title: siteTitle },
+  } = useDocusaurusContext();
+  const { content: DocContent } = props;
   const {
     frontMatter: {
       disable_pagination: disablePagination,
@@ -39,7 +30,10 @@ function DocItem(props) {
       hide_table_of_contents: hideTableOfContents,
       wider_content: widerContent,
     },
+    metadata,
+    toc,
   } = DocContent;
+  const { description, title, permalink, editUrl } = metadata;
 
   const metaTitle = title ? `${title} | ${siteTitle}` : siteTitle;
   let metaImageUrl = siteUrl + useBaseUrl(metaImage);
@@ -66,49 +60,39 @@ function DocItem(props) {
         )}
         {permalink && <meta property="og:url" content={siteUrl + permalink} />}
       </Head>
-      <div
-        className={classnames(
-          'container',
-          styles.docItemWrapper,
-        )}>
-          <div className={classnames({
+      <div className={classnames('container', styles.docItemWrapper)}>
+        <div
+          className={classnames({
             [styles.fullWidthContent]: hideRightSidebar,
-          })}>
-            <div className={classnames(styles.docItemContainer, classnames({
-              [styles.wider]: widerContent
-            }))}>
-              <article>
-                {version && (
-                  <div>
-                    <span className="badge badge--secondary">
-                      Version: {version}
-                    </span>
-                  </div>
-                )}
-                {!hideTitle && (
-                  <header>
-                    <h1 className={styles.docTitle}>{title}</h1>
-                  </header>
-                )}
-                <div className="markdown">
-                  <DocContent />
-                </div>
-              </article>
-              <Feedback />
-              <span className={styles.community}>
-                <a href="https://community.diem.com/">Ask the community</a> for support
-              </span>
-              {!disablePagination &&
-                <Pagination metadata={metadata} />
-              }
-            </div>
+          })}
+        >
+          <div
+            className={classnames(
+              styles.docItemContainer,
+              classnames({
+                [styles.wider]: widerContent,
+              })
+            )}
+          >
+            <article>
+              {!hideTitle && (
+                <header>
+                  <h1 className={styles.docTitle}>{title}</h1>
+                </header>
+              )}
+              <div className="markdown">
+                <DocContent />
+              </div>
+            </article>
+            <Feedback />
+            <span className={styles.community}>
+              <a href="https://community.diem.com/">Ask the community</a> for
+              support
+            </span>
+            {!disablePagination && <Pagination metadata={metadata} />}
           </div>
-        {!hideRightSidebar &&
-          <RightSidebar
-            editUrl={editUrl}
-            headings={DocContent.rightToc}
-          />
-        }
+        </div>
+        {!hideRightSidebar && <RightSidebar editUrl={editUrl} headings={toc} />}
       </div>
     </>
   );

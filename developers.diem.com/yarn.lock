@@ -9436,10 +9436,10 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-libra-docusaurus-components@^0.2.43:
-  version "0.2.43"
-  resolved "https://registry.yarnpkg.com/libra-docusaurus-components/-/libra-docusaurus-components-0.2.43.tgz#3e86fac9280fac883c1d89407db8d26c17530bb7"
-  integrity sha512-c8yN6raOUu8CLWvWMMP7gjPvZBxgNUDp4o8kYLb5D/vLnQpyibMCL1ZPnufSw8PYxrP++wJBxmveRnikMvsutQ==
+libra-docusaurus-components@^0.2.50:
+  version "0.2.52"
+  resolved "https://registry.yarnpkg.com/libra-docusaurus-components/-/libra-docusaurus-components-0.2.52.tgz#27c8deb1b678a48a54ed434fe1248b135d73dbe7"
+  integrity sha512-se3+4/wMKwGjHKg5g2qANr5BOR61Z8hHWReujbFL5Zs/UvgwB5OZGqE88JOrf+OgXkp+yby5NlhQPMHSWDXERw==
   dependencies:
     "@svgr/webpack" "^5.4.0"
     prism-react-renderer "^1.1.1"
@@ -10391,6 +10391,11 @@ oauth-sign@~0.9.0:
   version "0.9.0"
   resolved "https://registry.yarnpkg.com/oauth-sign/-/oauth-sign-0.9.0.tgz#47a7b016baa68b5fa0ecf3dee08a85c679ac6455"
   integrity sha512-fexhUFFPTGV8ybAtSIGbV6gOkSv8UtRbDBnAyLQw4QPKkgNlsH2ByPGtMUqdWkos6YCRmAqViwgZrJc/mRDzZQ==
+
+object-assign-deep@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/object-assign-deep/-/object-assign-deep-0.4.0.tgz#43505d3679abb9686ab359b97ac14cc837a9d143"
+  integrity sha512-54Uvn3s+4A/cMWx9tlRez1qtc7pN7pbQ+Yi7mjLjcBpWLlP+XbSHiHbQW6CElDiV4OvuzqnMrBdkgxI1mT8V/Q==
 
 object-assign@^4.0.1, object-assign@^4.1.0, object-assign@^4.1.1:
   version "4.1.1"
