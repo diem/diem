@@ -85,6 +85,20 @@ impl AccessPath {
         let path = AccessPath::code_access_path_vec(key);
         AccessPath { address, path }
     }
+
+    /// Extract the structured resource or module `Path` from `self`
+    pub fn get_path(&self) -> Path {
+        bcs::from_bytes::<Path>(&self.path).expect("Unexpected serialization error")
+    }
+
+    /// Extract a StructTag from `self`. Returns Some if this is a resource access
+    /// path and None otherwise
+    pub fn get_struct_tag(&self) -> Option<StructTag> {
+        match self.get_path() {
+            Path::Resource(s) => Some(s),
+            Path::Code(_) => None,
+        }
+    }
 }
 
 impl fmt::Debug for AccessPath {

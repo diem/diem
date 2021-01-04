@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cached_access_path_table::resource_vec_to_type_tag,
     fat_type::{FatStructType, FatType},
     resolver::Resolver,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
@@ -25,7 +24,6 @@ use std::{
 };
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
-mod cached_access_path_table;
 mod fat_type;
 mod module_cache;
 mod resolver;
@@ -81,10 +79,10 @@ impl<'a> MoveValueAnnotator<'a> {
         access_path: AccessPath,
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
-        self.view_resource(
-            &resource_vec_to_type_tag(access_path.path.as_slice())?,
-            blob,
-        )
+        match access_path.get_struct_tag() {
+            Some(tag) => self.view_resource(&tag, blob),
+            None => bail!("Bad resource access path"),
+        }
     }
 
     pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {
@@ -109,13 +107,14 @@ impl<'a> MoveValueAnnotator<'a> {
     pub fn view_account_state(&self, state: &AccountState) -> Result<AnnotatedAccountStateBlob> {
         let mut output = BTreeMap::new();
         for (k, v) in state.iter() {
-            let ty = if let Ok(ty) = resource_vec_to_type_tag(k.as_slice()) {
-                ty
-            } else {
-                println!("Uncached AccessPath: {:?}", k);
-                continue;
+            let tag = match AccessPath::new(AccountAddress::random(), k.to_vec()).get_struct_tag() {
+                Some(t) => t,
+                None => {
+                    println!("Uncached AccessPath: {:?}", k);
+                    continue;
+                }
             };
-            let ty = self.cache.resolve_struct(&ty)?;
+            let ty = self.cache.resolve_struct(&tag)?;
             let struct_def = (&ty)
                 .try_into()
                 .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
