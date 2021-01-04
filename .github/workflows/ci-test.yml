@@ -125,16 +125,12 @@ jobs:
           echo 'CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $GITHUB_ENV
           # Pin the version of RUSTC used for all invocations of cargo
           echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) >> $GITHUB_ENV
-      - name: Setup Env
-        run: |
-          echo target branch ${TARGET_BRANCH}
-          echo pr ${PULL_REQUEST}
-          echo change file ${CHANGED_FILE_OUTPUTFILE}
-          echo base githash ${BASE_GITHASH}
-          # Configure Move prover tools
-          echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
-          echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
-          echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
+        #run: |
+        # Configure Move prover tools
+        # echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
+        # echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
+        # echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
+      #- name: Setup Env
       - name: run unit tests
         run: |
           RUST_BACTRACE=1 $CI_TIMEOUT cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
