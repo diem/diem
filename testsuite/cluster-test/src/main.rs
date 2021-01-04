@@ -707,8 +707,10 @@ impl ClusterTestRunner {
             Bold {},
             Reset {}
         );
-
+        let mut clock = Instant::now();
+        info!("hhhhhh after experiment health check");
         self.wait_until_all_healthy(deadline).await?;
+        info!("hhhhhh end of after experiment health check {:?}", (Instant::now()-clock).as_millis());
 
         info!("Experiment completed");
         Ok(())
