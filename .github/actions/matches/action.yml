@@ -5,7 +5,7 @@ inputs:
   changes-file:
     description: |
       Full path of file containing a list of files relative to the root of the git repository that has been modified.
-      If not specified then an environment variable named $CHANGED_FILE_OUTPUTFILE will be used as supplied by the
+      If not specified then an environment variable named $CHANGES_CHANGED_FILE_OUTPUTFILE will be used as supplied by the
       changes github action.  Should no file be set, by the environment variable or the parameter, then lacking any
       knowledge of what might have changed, this action assumes changes were made.
     required: false
@@ -21,10 +21,10 @@ runs:
   steps:
     - id: find_matches
       run: |
-        echo Environment variable file CHANGED_FILE_OUTPUTFILE=$CHANGED_FILE_OUTPUTFILE 1>&2
+        echo Environment variable file CHANGES_CHANGED_FILE_OUTPUTFILE=$CHANGES_CHANGED_FILE_OUTPUTFILE 1>&2
         echo Action parameter file changes_file=$CHANGES_FILE 1>&2
         TARGET_FILE=
-        if [[ -n "${CHANGED_FILE_OUTPUTFILE}" ]]; then
+        if [[ -n "${CHANGES_CHANGED_FILE_OUTPUTFILE}" ]]; then
            TARGET_FILE=$CHANGED_FILE_OUTPUTFILE
         fi
         if [[ -n "${CHANGES_FILE}" ]]; then
