@@ -133,6 +133,6 @@ jobs:
       #- name: Setup Env
       - name: run unit tests
         run: |
-          RUST_BACTRACE=1 cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
+          RUST_BACKTRACE=1 cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.target-branch }}

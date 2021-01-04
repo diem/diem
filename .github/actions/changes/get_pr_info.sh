@@ -135,8 +135,9 @@ if [[ -n ${PR_NUMBER} ]] && [[ -z ${TARGET_BRANCH} ]]; then
   fi
 fi
 $DEBUG && echoerr TARGET_BRANCH="$TARGET_BRANCH"
-
-BASE_GITHASH=$(git merge-base HEAD origin/"$TARGET_BRANCH")
+if [[ -n "$TARGET_BRANCH" ]] && [[ -z "$BASE_GITHASH" ]]; then
+  BASE_GITHASH=$(git merge-base HEAD origin/"$TARGET_BRANCH")
+fi
 
 if [[ -n "$BASE_GITHASH" ]]; then
   CHANGED_FILE_OUTPUTFILE=$(mktemp /tmp/changed_files.XXXXXX)
