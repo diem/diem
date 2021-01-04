@@ -180,13 +180,13 @@ impl DiemDB {
             )?
         };
 
+        let ret = Self::new_with_db(db, prune_window);
         info!(
             path = path,
             time_ms = %instant.elapsed().as_millis(),
             "Opened DiemDB.",
         );
-
-        Ok(Self::new_with_db(db, prune_window))
+        Ok(ret)
     }
 
     pub fn open_as_secondary<P: AsRef<Path> + Clone>(

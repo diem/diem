@@ -26,6 +26,7 @@ use crate::{
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
 };
 use anyhow::{ensure, format_err, Result};
+use diem_logger::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
@@ -262,11 +263,7 @@ impl DB {
                 rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
             }),
         )?;
-        Ok(DB {
-            name,
-            inner,
-            column_families,
-        })
+        Ok(Self::log_construct(name, column_families, inner))
     }
 
     fn open_cf_readonly(
@@ -283,11 +280,7 @@ impl DB {
             error_if_log_file_exists,
         )?;
 
-        Ok(DB {
-            name,
-            inner,
-            column_families,
-        })
+        Ok(Self::log_construct(name, column_families, inner))
     }
 
     fn open_cf_as_secondary<P: AsRef<Path>>(
@@ -304,11 +297,20 @@ impl DB {
             &column_families,
         )?;
 
-        Ok(DB {
+        Ok(Self::log_construct(name, column_families, inner))
+    }
+
+    fn log_construct(
+        name: &'static str,
+        column_families: Vec<&'static str>,
+        inner: rocksdb::DB,
+    ) -> DB {
+        info!(rocksdb_name = name, "Opened RocksDB.");
+        DB {
             name,
             inner,
             column_families,
-        })
+        }
     }
 
     /// Reads single record by key.

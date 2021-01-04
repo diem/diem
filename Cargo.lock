@@ -5941,6 +5941,7 @@ dependencies = [
  "anyhow",
  "byteorder",
  "diem-config",
+ "diem-logger",
  "diem-metrics",
  "diem-temppath",
  "diem-workspace-hack",

@@ -4,6 +4,7 @@
 mod handlers;
 
 use crate::handlers::get_routes;
+use diem_logger::prelude::*;
 use diemdb::DiemDB;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
@@ -28,6 +29,7 @@ pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
     //       tokio TcpListener can only be bound inside a tokio context.
     let server = runtime.enter(move || warp::serve(routes).bind(address));
     runtime.handle().spawn(server);
+    info!("Backup service spawned.");
     runtime
 }
 
