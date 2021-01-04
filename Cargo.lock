@@ -150,9 +150,9 @@ checksum = "db55d72333851e17d572bec876e390cd3b11eb1ef53ae821dd9f3b653d2b4569"
 
 [[package]]
 name = "arc-swap"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec5a4539a733493f412c4d0bb962748ea1f90f3dfdba9ff3ee18acbefc3b33f0"
+checksum = "d4d7d63395147b81a9e570bcc6243aaf71c017bd666d4909cfef0085bdda8d73"
 
 [[package]]
 name = "array_tool"
