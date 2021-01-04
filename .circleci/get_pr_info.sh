@@ -2,6 +2,12 @@
 # Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+
+function echoerr() {
+  cat <<< "$@" 1>&2;
+}
+
+
 #Check prerequists.
 function check_command() {
     for var in "$@"; do
@@ -82,6 +88,9 @@ elif  [[ -n "$GITHUB_ACTION" ]]; then
     BRANCH=${GITHUB_REF}
   fi
 fi
+echoerr BRANCH="${BRANCH}"
+
+
 
 #If we have a git hash, and it exist in the history of the current HEAD, then use it as BASE_GITHASH
 if [[ -n "$USERSET_PREVIOUS_GITHASH" ]] && git merge-base --is-ancestor "$USERSET_PREVIOUS_GITHASH" "$(git rev-parse HEAD)" 2>/dev/null ; then
@@ -109,6 +118,8 @@ else
     PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/pull\///' | sed 's/\/merge//')
   fi
 fi
+echoerr PR_NUMBER="${PR_NUMBER}"
+
 
 #look up the pr with the pr number
 if [[ -n ${PR_NUMBER} ]]; then
@@ -125,11 +136,19 @@ if [[ -n ${PR_NUMBER} ]]; then
     TARGET_BRANCH="$PR_BASE_BRANCH"
   fi
 fi
+echoerr TARGET_BRANCH="${TARGET_BRANCH}"
 
 if [[ -n "$BASE_GITHASH" ]]; then
   CHANGED_FILE_OUTPUTFILE=$(mktemp /tmp/changed_files.XXXXXX)
   git --no-pager diff --name-only "$BASE_GITHASH" | sort > "$CHANGED_FILE_OUTPUTFILE"
 fi
+
+echoerr Results:
+echoerr 'PULL_REQUEST='"$PR_NUMBER"
+echoerr 'BASE_GITHASH='"$BASE_GITHASH"
+echoerr 'CHANGED_FILE_OUTPUTFILE='"$CHANGED_FILE_OUTPUTFILE"
+echoerr 'TARGET_BRANCH='"$TARGET_BRANCH"
+
 
 echo 'export PULL_REQUEST='"$PR_NUMBER"
 echo 'export BASE_GITHASH='"$BASE_GITHASH"
