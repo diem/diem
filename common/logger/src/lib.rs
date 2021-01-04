@@ -8,7 +8,7 @@
 //! A set of logging macros (`info!`, `error!`, `warn!`, `debug!`, and `trace!`) is provided for
 //! emitting logs at different levels. All of these macros support the addition of providing
 //! structured data along with a formatted text message.  For guidelines on which level to use,
-//! see the [coding guidelines](https://developers.diem.com/docs/community/coding-guidelines#logging).
+//! see the [coding guidelines](https://developers.diem.com/docs/core/coding-guidelines#logging).
 //!
 //! The below examples do no type checking for structured log fields, and instead just serialize
 //! whatever is given.
