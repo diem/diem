@@ -117,7 +117,10 @@ struct Args {
 
 #[tokio::main]
 pub async fn main() {
+    let mut clock = Instant::now();
+    info!("hhhhhh start of setup log");
     setup_log();
+    info!("hhhhhh end of setup log {:?}", (Instant::now()-clock).as_millis());
 
     let args = Args::from_args();
 
@@ -152,6 +155,8 @@ pub async fn main() {
         None
     };
 
+    clock = Instant::now();
+    info!("hhhhhh start of steup");
     let runner = ClusterTestRunner::setup(&args).await;
     let mut runner = match runner {
         Ok(r) => r,
@@ -166,6 +171,7 @@ pub async fn main() {
             panic!("Failed to setup cluster test runner: {}", e);
         }
     };
+    info!("hhhhhh end of setup {:?}", (Instant::now()-clock).as_millis());
 
     let result = handle_cluster_test_runner_commands(&args, &mut runner).await;
     if let Err(e) = &result {
@@ -179,7 +185,10 @@ pub async fn main() {
         }
     }
     if !args.no_teardown {
+        clock = Instant::now();
+        info!("hhhhhhh start of tear down");
         runner.teardown().await;
+        info!("hhhhhhh end of tear down {:?}", (Instant::now()-clock).as_millis());
     }
     let perf_msg = exit_on_error(result);
 
@@ -205,6 +214,8 @@ async fn handle_cluster_test_runner_commands(
     args: &Args,
     runner: &mut ClusterTestRunner,
 ) -> Result<Option<String>> {
+    let clock = Instant::now();
+    info!("hhhhhh start of health check");
     let startup_timeout = Duration::from_secs(5 * 60);
     runner
         .wait_until_all_healthy(Instant::now() + startup_timeout)
@@ -216,6 +227,7 @@ async fn handle_cluster_test_runner_commands(
             runner.print_report();
             err
         })?;
+    info!("hhhhhh end of health check {:?}", (Instant::now()-clock).as_millis());
     let mut perf_msg = None;
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
@@ -482,21 +494,30 @@ impl ClusterTestRunner {
     /// Discovers cluster, setup log, etc
     pub async fn setup(args: &Args) -> Result<Self> {
         let current_tag = args.deploy.as_deref().unwrap_or("master");
+        let mut clock = Instant::now();
+        info!("hhhhhhh swarm kube new");
         let cluster_swarm = ClusterSwarmKube::new()
             .await
             .map_err(|e| format_err!("Failed to initialize ClusterSwarmKube: {}", e))?;
+        info!("hhhhhh swarm kube end {:?}", (Instant::now()-clock).as_millis());
         let prometheus_ip = "diem-testnet-prometheus-server.default.svc.cluster.local";
+        clock = Instant::now();
+        info!("hhhhhh grafana start");
         let grafana_base_url = cluster_swarm
             .get_grafana_baseurl()
             .await
             .expect("Failed to discover grafana url in k8s");
+        info!("hhhhhh grafana end {:?}", (Instant::now()-clock).as_millis());
         let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
         let cluster_builder = ClusterBuilder::new(current_tag.to_string(), cluster_swarm.clone());
         let cluster_builder_params = args.cluster_builder_params.clone();
+        clock = Instant::now();
+        info!("hhhhhh cluster builder start");
         let cluster = cluster_builder
             .setup_cluster(&cluster_builder_params, true)
             .await
             .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
+        info!("hhhhhh cluster builder end {:?}", (Instant::now()-clock).as_millis());
         let log_tail_started = Instant::now();
         let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
