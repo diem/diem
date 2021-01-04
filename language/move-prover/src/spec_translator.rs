@@ -48,6 +48,7 @@ use crate::{
 };
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
+const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
 const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
 const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
@@ -514,7 +515,7 @@ impl<'a> ConditionDistribution<'a> {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires => self.requires.push(cond),
-                    Ensures => self.ensures.push(cond),
+                    Emits | Ensures => self.ensures.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if !assumed => self.ensures.push(cond),
                     _ => {}
@@ -524,7 +525,7 @@ impl<'a> ConditionDistribution<'a> {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires => self.requires.push(cond),
-                    Ensures if export_ensures => self.ensures.push(cond),
+                    Emits | Ensures if export_ensures => self.ensures.push(cond),
                     AbortsIf | SucceedsIf if asserted => self.requires.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if assumed => self.entry_assumes.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if export_ensures => self.ensures.push(cond),
@@ -535,7 +536,7 @@ impl<'a> ConditionDistribution<'a> {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires | RequiresModule => self.requires.push(cond),
-                    Ensures => self.ensures.push(cond),
+                    Emits | Ensures => self.ensures.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if !assumed => self.ensures.push(cond),
                     _ => {}
@@ -545,7 +546,7 @@ impl<'a> ConditionDistribution<'a> {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires | RequiresModule => self.requires.push(cond),
-                    Ensures if export_ensures => self.ensures.push(cond),
+                    Emits | Ensures if export_ensures => self.ensures.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if assumed => self.entry_assumes.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if export_ensures => self.ensures.push(cond),
@@ -555,7 +556,7 @@ impl<'a> ConditionDistribution<'a> {
             Indirect if propagated_to_inter_caller && opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
-                    Ensures if propagated_to_inter_caller || export_ensures => {
+                    Emits | Ensures if propagated_to_inter_caller || export_ensures => {
                         self.ensures.push(cond)
                     }
                     AbortsIf | AbortsWith | SucceedsIf
@@ -571,7 +572,7 @@ impl<'a> ConditionDistribution<'a> {
             Indirect if propagated_to_inter_caller && !opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
-                    Ensures if export_ensures => self.ensures.push(cond),
+                    Emits | Ensures if export_ensures => self.ensures.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf if assumed || asserted => {
                         self.entry_assumes.push(cond)
                     }
@@ -584,7 +585,7 @@ impl<'a> ConditionDistribution<'a> {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires | RequiresModule => self.entry_assumes.push(cond),
-                    Ensures => self.ensures.push(cond),
+                    Emits | Ensures => self.ensures.push(cond),
                     AbortsIf | AbortsWith | SucceedsIf => self.ensures.push(cond),
                     _ => {}
                 }
@@ -887,6 +888,41 @@ impl<'env> SpecTranslator<'env> {
                 self.writer.set_location(&cond.loc);
                 self.set_condition_info(&cond.loc, ConditionTag::Ensures, ENSURES_FAILS_MESSAGE);
                 emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
+                self.translate_exp(&cond.exp);
+                emit!(self.writer, "));")
+            });
+            *self.in_ensures.borrow_mut() = false;
+            emitln!(self.writer);
+        }
+
+        // Generate emits
+        let emits = distribution
+            .ensures
+            .iter()
+            .filter(kind_filter(ConditionKind::Emits))
+            .copied()
+            .collect_vec();
+
+        if !emits.is_empty() {
+            *self.in_ensures.borrow_mut() = true;
+            self.translate_seq(emits.iter(), "\n", |cond| {
+                self.writer.set_location(&cond.loc);
+                self.set_condition_info(&cond.loc, ConditionTag::Ensures, EMITS_FAILS_MESSAGE);
+                emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
+
+                if cond.additional_exps.len() > 1 {
+                    self.translate_exp(&cond.additional_exps[1]);
+                } else {
+                    emit!(self.writer, "$Boolean(true)");
+                }
+                emit!(self.writer, ")) ==> (");
+                emit!(
+                    self.writer,
+                    "$ContainValueArray(streams#$EventStore($es)[$SelectField("
+                );
+                self.translate_exp(&cond.additional_exps[0]);
+                emit!(self.writer, ", $Event_EventHandle_guid)");
+                emit!(self.writer, "],");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
             });

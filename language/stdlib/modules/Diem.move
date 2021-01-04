@@ -365,9 +365,9 @@ module Diem {
         pragma opaque;
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
+        include MintEmits<CoinType>;
     }
     spec schema MintAbortsIf<CoinType> {
         value: u64;
@@ -380,9 +380,18 @@ module Diem {
         result: Diem<CoinType>;
         let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        ensures currency_info
-            == update_field(old(currency_info), total_value, old(currency_info.total_value) + value);
+        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + value);
         ensures result.value == value;
+    }
+    spec schema MintEmits<CoinType> {
+        value: u64;
+        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let handle = currency_info.mint_events;
+        let msg = MintEvent{
+            amount: value,
+            currency_code: currency_info.currency_code,
+        };
+        emits msg to handle if !currency_info.is_synthetic;
     }
 
     /// Add the `coin` to the `preburn.to_burn` field in the `Preburn` resource
@@ -1074,7 +1083,9 @@ module Diem {
     spec fun update_xdx_exchange_rate {
         include UpdateXDXExchangeRateAbortsIf<FromCoinType>;
         include UpdateXDXExchangeRateEnsures<FromCoinType>;
+        include UpdateXDXExchangeRateEmits<FromCoinType>;
     }
+
     spec schema UpdateXDXExchangeRateAbortsIf<FromCoinType> {
         tc_account: signer;
         /// Must abort if the account does not have the TreasuryCompliance Role [[H5]][PERMISSION].
@@ -1085,6 +1096,16 @@ module Diem {
     spec schema UpdateXDXExchangeRateEnsures<FromCoinType> {
         xdx_exchange_rate: FixedPoint32;
         ensures spec_currency_info<FromCoinType>().to_xdx_exchange_rate == xdx_exchange_rate;
+    }
+
+    spec schema UpdateXDXExchangeRateEmits<FromCoinType> {
+        xdx_exchange_rate: FixedPoint32;
+        let handle = global<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).exchange_rate_update_events;
+        let msg = ToXDXExchangeRateUpdateEvent {
+            currency_code: global<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code,
+            new_to_xdx_exchange_rate: FixedPoint32::get_raw_value(xdx_exchange_rate)
+        };
+        emits msg to handle;
     }
 
     /// Returns the (rough) exchange rate between `CoinType` and `XDX`

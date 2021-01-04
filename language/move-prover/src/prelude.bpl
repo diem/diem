@@ -327,6 +327,10 @@ function {:inline} $IsNormalizedValueArray(a: $ValueArray, len: int): bool {
     (forall i: int :: i < 0 || i >= len ==> v#$ValueArray(a)[i] == $DefaultValue())
 }
 
+function {{backend.func_inline}} $ContainValueArray(a: $ValueArray, v: $Value): bool {
+    (var len := l#$ValueArray(a);
+     (exists i: int :: i >= 0 && i < len && $IsEqual(v#$ValueArray(a)[i], v)))
+}
 
 {{/if}} //end of backend.vector_using_sequences
 
@@ -563,6 +567,31 @@ const $EmptyMemory: $Memory;
 axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
 axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent($DefaultValue());
 
+// ============================================================================================
+// EventStore
+
+// Representation of EventStore that consists of event streams. The map `streams` takes GUIDs (with type of $Value),
+// and returns sequences of messages (with type of $ValueArray).
+type {:datatype} $EventStore;
+function {:constructor} $EventStore(streams: [$Value]$ValueArray): $EventStore;
+
+function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
+    true
+}
+
+function {:inline} $EventStore__is_empty(es: $EventStore): bool {
+    (forall guid: $Value ::
+        (var stream := streams#$EventStore(es)[guid];
+        $IsEmpty(stream) && $IsNormalizedValueArray(stream, 0)))
+}
+
+function {:builtin "MapConst"} $ConstEventStoreContent(v: $Value): [$Value]$ValueArray;
+
+const $EmptyEventStore: $EventStore;
+axiom streams#$EventStore($EmptyEventStore) == $ConstEventStoreContent($DefaultValue());
+
+var $es: $EventStore;
+
 var $abort_flag: bool;
 var $abort_code: int;
 
@@ -582,9 +611,11 @@ procedure {:inline 1} $ExecFailureAbort() {
 }
 
 procedure {:inline 1} $InitVerification() {
-  // Set abort_flag to false, and havoc abort_code
-  $abort_flag := false;
-  havoc $abort_code;
+    // Set abort_flag to false, and havoc abort_code
+    $abort_flag := false;
+    havoc $abort_code;
+    // Assume that the EventStore is initially empty.
+    assume $EventStore__is_empty($es);
 }
 
 // ============================================================================================
@@ -1406,6 +1437,24 @@ procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: $Value) ret
 procedure {:inline 1} $Event_publish_generator(account: $Value) {
 }
 
+// This boogie procedure is the model of `emit_event`. This model abstracts away the `counter` behavior, thus not
+// mutating (or increasing) `counter`.
 procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Value) returns (res: $Value) {
+    var guid: $Value;
+    // TODO: The literal `1` is used as the field name here although `$Event_EventHandle_guid` is the right one to use.
+    // It's because `$Event_EventHandle_guid` is not available until the Event module is translated, and we know that
+    // $Event_EventHandle_guid == 1 once it is translated.
+    guid := $SelectField(handler, 1);
+    call $Event_write_to_event_store(t, guid, $Integer(0), msg);
     res := handler;
+}
+
+procedure {:inline 1} $Event_write_to_event_store(t: $TypeValue, guid: $Value, count: $Value, msg: $Value) {
+    var stream, stream_new: $ValueArray;
+    stream := streams#$EventStore($es)[guid];
+    stream_new := $ExtendValueArray(stream, msg);
+    $es := $EventStore(streams#$EventStore($es)[guid := stream_new]);
+}
+
+procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: $Value) {
 }

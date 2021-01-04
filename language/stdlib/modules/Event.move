@@ -86,13 +86,8 @@ module Event {
     spec module {} // switch documentation context to module
 
     spec module {
-        /// > NOTE: specification and verification of event related functionality is currently not happening.
-        /// > Since events cannot be observed from Move programs, this does not affect the verification of
-        /// > other functionality; however, this should be completed at a later point to ensure the framework
-        /// > generates events as expected.
-        ///
         /// Functions of the event module are mocked out using the intrinsic
-        /// pragma. They are implemented in the prover's prelude as no-ops.
+        /// pragma. They are implemented in the prover's prelude.
         pragma intrinsic = true;
     }
 }

@@ -68,6 +68,8 @@ spec fun update_exchange_rate {
         new_exchange_rate_denominator
     );
     include Diem::UpdateXDXExchangeRateAbortsIf<Currency>;
+    include Diem::UpdateXDXExchangeRateEnsures<Currency>{xdx_exchange_rate: rate};
+    include Diem::UpdateXDXExchangeRateEmits<Currency>{xdx_exchange_rate: rate};
 
     aborts_with [check]
         Errors::INVALID_ARGUMENT,
