@@ -120,7 +120,7 @@ if [[ -n ${PR_NUMBER} ]]; then
   fi
 
   #if we have a branch name, and the exact branch exists.
-  if [[ -n "$PR_BASE_BRANCH" ]] && [[ $(git branch -l --no-color | tr -d '*' | tr -d ' ' | grep -c '^'"$PR_BASE_BRANCH"'$') == 1 ]]; then
+  if [[ -n "$PR_BASE_BRANCH" ]] && [[ $(git branch -r --no-color | tr -d '*' | tr -d ' ' | grep -c '^origin/'"$PR_BASE_BRANCH"'$') == 1 ]]; then
     BASE_GITHASH=$(git merge-base HEAD origin/"$PR_BASE_BRANCH")
     TARGET_BRANCH="$PR_BASE_BRANCH"
   fi
