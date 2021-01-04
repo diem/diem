@@ -27,4 +27,4 @@ sha-1 = { version = "0.9.2", features = ["std"] }
 subtle = { version = "2.4.0", features = ["i128", "std"] }
 
 [build-dependencies]
-syn = { version = "1.0.56", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
+syn = { version = "1.0.57", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
