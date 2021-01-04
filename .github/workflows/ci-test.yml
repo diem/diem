@@ -137,6 +137,6 @@ jobs:
           echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
       - name: run unit tests
         run: |
-          cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
+          RUST_BACTRACE=1 $CI_TIMEOUT cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.target-branch }}
