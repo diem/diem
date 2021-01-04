@@ -92,6 +92,7 @@ impl NetworkBuilder {
         max_concurrent_network_notifs: usize,
         inbound_connection_limit: usize,
         inbound_rate_limit_config: Option<RateLimitConfig>,
+        outbound_rate_limit_config: Option<RateLimitConfig>,
     ) -> Self {
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
@@ -108,6 +109,7 @@ impl NetworkBuilder {
             enable_proxy_protocol,
             inbound_connection_limit,
             inbound_rate_limit_config,
+            outbound_rate_limit_config,
         );
 
         NetworkBuilder {
@@ -143,6 +145,7 @@ impl NetworkBuilder {
             MAX_CONCURRENT_NETWORK_REQS,
             MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
+            None,
             None,
         );
 
@@ -192,6 +195,7 @@ impl NetworkBuilder {
             config.max_concurrent_network_notifs,
             config.max_inbound_connections,
             config.inbound_rate_limit_config,
+            config.outbound_rate_limit_config,
         );
 
         network_builder.add_connection_monitoring(

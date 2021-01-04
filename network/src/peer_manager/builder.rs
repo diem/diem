@@ -192,6 +192,7 @@ pub struct PeerManagerBuilder {
     max_frame_size: usize,
     enable_proxy_protocol: bool,
     inbound_token_bucket_config: TokenBucketConfig,
+    outbound_token_bucket_config: TokenBucketConfig,
 }
 
 impl PeerManagerBuilder {
@@ -209,6 +210,7 @@ impl PeerManagerBuilder {
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
         inbound_rate_config: Option<RateLimitConfig>,
+        outbound_rate_config: Option<RateLimitConfig>,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -221,6 +223,17 @@ impl PeerManagerBuilder {
             diem_channel::new(QueueStyle::FIFO, channel_size, None);
 
         let inbound_token_bucket_config = if let Some(config) = inbound_rate_config {
+            TokenBucketConfig::new(
+                config.initial_bucket_fill_percentage,
+                config.ip_byte_bucket_size,
+                config.ip_byte_bucket_rate,
+                false,
+            )
+        } else {
+            TokenBucketConfig::open()
+        };
+
+        let outbound_token_bucket_config = if let Some(config) = outbound_rate_config {
             TokenBucketConfig::new(
                 config.initial_bucket_fill_percentage,
                 config.ip_byte_bucket_size,
@@ -260,6 +273,7 @@ impl PeerManagerBuilder {
             max_frame_size,
             enable_proxy_protocol,
             inbound_token_bucket_config,
+            outbound_token_bucket_config,
         }
     }
 
@@ -367,6 +381,8 @@ impl PeerManagerBuilder {
             .expect("PeerManager can only be built once");
         let inbound_rate_limiters =
             TokenBucketRateLimiter::new_from_config(self.inbound_token_bucket_config);
+        let outbound_rate_limiters =
+            TokenBucketRateLimiter::new_from_config(self.outbound_token_bucket_config);
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -384,6 +400,7 @@ impl PeerManagerBuilder {
             self.max_frame_size,
             pm_context.inbound_connection_limit,
             inbound_rate_limiters,
+            outbound_rate_limiters,
         );
 
         // PeerManager constructor appends a public key to the listen_address.

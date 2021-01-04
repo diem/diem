@@ -100,6 +100,8 @@ pub struct NetworkConfig {
     pub max_inbound_connections: usize,
     // Inbound rate limiting configuration, if not specified, no rate limiting
     pub inbound_rate_limit_config: Option<RateLimitConfig>,
+    // Outbound rate limiting configuration, if not specified, no rate limiting
+    pub outbound_rate_limit_config: Option<RateLimitConfig>,
 }
 
 impl Default for NetworkConfig {
@@ -133,6 +135,7 @@ impl NetworkConfig {
             max_outbound_connections: MAX_FULLNODE_OUTBOUND_CONNECTIONS,
             max_inbound_connections: MAX_INBOUND_CONNECTIONS,
             inbound_rate_limit_config: Some(RateLimitConfig::default()),
+            outbound_rate_limit_config: Some(RateLimitConfig::default()),
         };
         config.prepare_identity();
         config

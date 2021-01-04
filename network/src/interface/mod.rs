@@ -75,6 +75,7 @@ where
         channel_size: usize,
         max_frame_size: usize,
         inbound_rate_limiter: Option<SharedBucket>,
+        outbound_rate_limiter: Option<SharedBucket>,
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,
@@ -104,6 +105,7 @@ where
             constants::MAX_CONCURRENT_INBOUND_RPCS,
             max_frame_size,
             inbound_rate_limiter,
+            outbound_rate_limiter,
         );
         executor.spawn(peer.start());
 

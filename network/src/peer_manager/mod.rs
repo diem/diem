@@ -287,6 +287,8 @@ where
     inbound_connection_limit: usize,
     /// Keyed storage of all inbound rate limiters
     inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
+    /// Keyed storage of all outbound rate limiters
+    outbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -314,6 +316,7 @@ where
         max_frame_size: usize,
         inbound_connection_limit: usize,
         inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
+        outbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
@@ -355,6 +358,7 @@ where
             max_frame_size,
             inbound_connection_limit,
             inbound_rate_limiters,
+            outbound_rate_limiters,
         }
     }
 
@@ -541,6 +545,8 @@ where
 
                 // Garbage collect unused rate limit buckets
                 self.inbound_rate_limiters.try_garbage_collect_key(&ip_addr);
+                self.outbound_rate_limiters
+                    .try_garbage_collect_key(&ip_addr);
             }
         }
     }
@@ -775,6 +781,7 @@ where
             .find_ip_addr()
             .unwrap_or(IpAddr::V4(Ipv4Addr::UNSPECIFIED));
         let inbound_rate_limiter = self.inbound_rate_limiters.bucket(ip_addr);
+        let outbound_rate_limiter = self.outbound_rate_limiters.bucket(ip_addr);
 
         // Initialize a new network stack for this connection.
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
@@ -787,6 +794,7 @@ where
             self.channel_size,
             self.max_frame_size,
             Some(inbound_rate_limiter),
+            Some(outbound_rate_limiter),
         );
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.

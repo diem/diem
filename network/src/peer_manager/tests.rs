@@ -106,6 +106,7 @@ fn build_test_peer_manager(
         constants::MAX_FRAME_SIZE,
         MAX_INBOUND_CONNECTIONS,
         TokenBucketRateLimiter::open(),
+        TokenBucketRateLimiter::open(),
     );
 
     (
@@ -119,7 +120,8 @@ fn build_test_peer_manager(
 
 async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
     let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
-    let mut msg_tx = NetworkMessageSink::new(IoCompat::new(write_half), constants::MAX_FRAME_SIZE);
+    let mut msg_tx =
+        NetworkMessageSink::new(IoCompat::new(write_half), constants::MAX_FRAME_SIZE, None);
     let mut msg_rx =
         NetworkMessageStream::new(IoCompat::new(read_half), constants::MAX_FRAME_SIZE, None);
 
