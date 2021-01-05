@@ -70,7 +70,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 
 <a name="@Module_Utility_Diemries_5"></a>
 
-### Module Utility Diemries
+### Module Utility Libraries
 
 * <code><a href="Errors.md#0x1_Errors">Errors</a></code>
 * <code><a href="CoreAddresses.md#0x1_CoreAddresses">CoreAddresses</a></code>
