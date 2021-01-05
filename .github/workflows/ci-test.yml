@@ -91,8 +91,6 @@ jobs:
     #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
-    env:
-      RUST_BACKTRACE: 1
     steps:
       - name: stats
         run: |
@@ -102,42 +100,8 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 #get all the history!!!
-      - name: configure environment
-        run: scripts/dev_setup.sh -t -o -b -p -y
-      - name: configure build
-        run: |
-          echo BASE_GITHASH=$BASE_GITHASH
-          mkdir -p /opt/cargo/
-          export CARGO_HOME=/opt/cargo
-          echo 'CARGO_HOME=/opt/cargo' >> $GITHUB_ENV
-          echo 'TAG=0.1.${CIRCLE_BUILD_NUM}' >> $GITHUB_ENV
-          echo 'IMAGE_NAME=myapp' >> $GITHUB_ENV
-          echo 'DIEM_DUMP_LOGS=1' >> $GITHUB_ENV
-          echo 'CARGO_INCREMENTAL=0' >> $GITHUB_ENV
-          echo 'CI_TIMEOUT="timeout 70m"' >> $GITHUB_ENV
-          export RUST_NIGHTLY=$(cat cargo-toolchain)
-          echo 'RUST_NIGHTLY='"$RUST_NIGHTLY" >> $GITHUB_ENV
-
-          # Turn on the experimental feature resolver in cargo. See:
-          # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
-          echo 'CARGOFLAGS='$(cat cargo-flags) >> $GITHUB_ENV
-          # Use nightly version of cargo to access the new feature resolver
-          echo 'CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $GITHUB_ENV
-          # Pin the version of RUSTC used for all invocations of cargo
-          echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) >> $GITHUB_ENV
-        #run: |
-        # Configure Move prover tools
-        # echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
-        # echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
-        # echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
-      #- name: Setup Env
+      - uses: ./.github/actions/build-setup
       - name: run unit tests
-        run: |
-          set | grep GITHUB
-          set | grep RUST
-          set | grep CARGO
-          echo
-          echo CI_TIMEOUT=$CI_TIMEOUT
-          RUST_BACKTRACE=1 cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
+        run: cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
