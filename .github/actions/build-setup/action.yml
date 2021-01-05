@@ -1,0 +1,31 @@
+name: "CI Environment Setup"
+description: "Setup a common environment for CI jobs"
+
+runs:
+  using: "composite"
+  steps:
+    - name: install common dependencies
+      shell: bash
+      run: scripts/dev_setup.sh -t -o -b -p -y
+    - id: rust-environment
+      shell: bash
+      run: |
+        echo 'RUST_BACKTRACE=1' | tee -a $GITHUB_ENV
+        echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
+        echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV
+        echo 'RUST_NIGHTLY='$(cat cargo-toolchain) | tee -a $GITHUB_ENV
+
+        # Turn on the experimental feature resolver in cargo. See:
+        # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+        echo 'CARGOFLAGS='$(cat cargo-flags) | tee -a $GITHUB_ENV
+        # Use nightly version of cargo to access the new feature resolver
+        echo 'CARGO='$(rustup which cargo --toolchain "$(cat cargo-toolchain)") | tee -a $GITHUB_ENV
+        # Pin the version of RUSTC used for all invocations of cargo
+        echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) | tee -a $GITHUB_ENV
+    # TODO: Temporarily disable setting up the move prover dependencies till the base image is ready
+    # - id: move-prover-environment
+    #   shell: bash
+    #   run: |
+    #     echo 'Z3_EXE='$HOME/bin/z3 | tee -a $GITHUB_ENV
+    #     echo 'DOTNET_ROOT='$HOME/.dotnet | tee -a $GITHUB_ENV
+    #     echo 'BOOGIE_EXE='$HOME/.dotnet/tools/boogie | tee -a $GITHUB_ENV
