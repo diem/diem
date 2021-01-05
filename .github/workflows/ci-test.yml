@@ -155,3 +155,22 @@ jobs:
       - name: run e2e tests
         run: cargo x test --package smoke-test -- --test-threads 2 --nocapture
       - uses: ./.github/actions/build-teardown
+
+  crypto-unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: false
+    needs: prepare
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - name: run crypto unit tests
+        run: |
+          cd crypto/crypto
+          $CARGO $CARGOFLAGS test --features='vanilla-u64' --no-default-features
+          $CARGO $CARGOFLAGS test --features='vanilla-u32' --no-default-features
+      - uses: ./.github/actions/build-teardown
