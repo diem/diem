@@ -289,6 +289,7 @@ pub enum VMStatusView {
     MoveAbort {
         location: String,
         abort_code: u64,
+        explanation: Option<MoveAbortExplanationView>,
     },
     ExecutionFailure {
         location: String,
@@ -308,7 +309,14 @@ impl std::fmt::Display for VMStatusView {
             VMStatusView::MoveAbort {
                 location,
                 abort_code,
-            } => write!(f, "Move Abort: {} at {}", abort_code, location),
+                explanation,
+            } => {
+                write!(f, "Move Abort: {} at {}", abort_code, location)?;
+                if let Some(explanation) = explanation {
+                    write!(f, "\nExplanation:\n{}", explanation)?
+                }
+                Ok(())
+            }
             VMStatusView::ExecutionFailure {
                 location,
                 function_index,
@@ -322,6 +330,25 @@ impl std::fmt::Display for VMStatusView {
             VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
             VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
         }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
+pub struct MoveAbortExplanationView {
+    pub category: String,
+    pub category_description: String,
+    pub reason: String,
+    pub reason_description: String,
+}
+
+impl std::fmt::Display for MoveAbortExplanationView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Error Category: {}", self.category)?;
+        writeln!(f, "\tCategory Description: {}", self.category_description)?;
+        writeln!(f, "Error Reason: {}", self.reason)?;
+        writeln!(f, "\tReason Description: {}", self.reason_description)
     }
 }
 
@@ -806,6 +833,7 @@ pub mod fuzzing {
                 VMStatusView::MoveAbort {
                     location,
                     abort_code,
+                    explanation: None,
                 }
             }),
             (any::<String>(), any::<u16>(), any::<u16>()).prop_map(
