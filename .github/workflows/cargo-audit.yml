@@ -1,0 +1,24 @@
+name: cargo-audit
+
+on:
+  schedule:
+    - cron: '14 14 * * *'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/build-setup
+      - name: install cargo-audit
+        run: cargo install --force cargo-audit
+      # NOTE ignored advisory rules
+      # RUSTSEC-2018-0015 - term
+      # RUSTSEC-2019-0031 - spin
+      - name: audit crates
+        run: |
+          $CARGO $CARGOFLAGS audit --deny-warnings \
+            --ignore RUSTSEC-2018-0015 \
+            --ignore RUSTSEC-2019-0031 \
+            --ignore RUSTSEC-2020-0016
+      - uses: ./.github/actions/build-teardown
