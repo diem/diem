@@ -1,0 +1,123 @@
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:10:17 ───
+    │
+ 10 │             f1: 0,
+    │                 ^ Invalid argument for field 'f1' for '0x42::M::S'
+    ·
+ 10 │             f1: 0,
+    │                 - The type: integer
+    ·
+  4 │         f1: Option<u64>,
+    │             ----------- Is not compatible with: '0x1::Option::Option<u64>'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:16:14 ───
+    │
+ 16 │         _a1: Option<u64, u64>,
+    │              ^^^^^^^^^^^^^^^^ Invalid instantiation of '0x1::Option::Option'. Expected 1 type argument(s) but got 2
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:19:9 ───
+    │
+ 19 │         Option::none<u64>(0);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::Option::none'. The call expected 0 argument(s) but got 1
+    ·
+ 19 │         Option::none<u64>(0);
+    │                          --- Found 1 argument(s) here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:20:9 ───
+    │
+ 20 │         Option::some();
+    │         ^^^^^^^^^^^^^^ Invalid call of '0x1::Option::some'. The call expected 1 argument(s) but got 0
+    ·
+ 20 │         Option::some();
+    │                     -- Found 0 argument(s) here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:20:9 ───
+    │
+ 20 │         Option::some();
+    │         ^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    │
+
+    ┌── ../stdlib/modules/Option.move:10:19 ───
+    │
+ 40 │     public fun some<Element>(e: Element): Option<Element> {
+    │                                           --------------- The type: '0x1::Option::Option<_>'
+    ·
+ 10 │     struct Option<Element> {
+    │                   ------- Is found to be a non-copyable type here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:21:9 ───
+    │
+ 21 │         Signer::borrow_address(0x0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::Signer::borrow_address'. Invalid argument for parameter 's'
+    ·
+ 21 │         Signer::borrow_address(0x0);
+    │                                --- The type: 'address'
+    │
+
+    ┌── ../stdlib/modules/Signer.move:10:41 ───
+    │
+ 10 │     native public fun borrow_address(s: &signer): &address;
+    │                                         ------- Is not compatible with: '&signer'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:22:9 ───
+    │
+ 22 │         Signer::address_of(0x0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::Signer::address_of'. Invalid argument for parameter 's'
+    ·
+ 22 │         Signer::address_of(0x0);
+    │                            --- The type: 'address'
+    │
+
+    ┌── ../stdlib/modules/Signer.move:13:30 ───
+    │
+ 13 │     public fun address_of(s: &signer): address {
+    │                              ------- Is not compatible with: '&signer'
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:23:9 ───
+    │
+ 23 │         Vector::empty<u64>(0);
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::Vector::empty'. The call expected 0 argument(s) but got 1
+    ·
+ 23 │         Vector::empty<u64>(0);
+    │                           --- Found 1 argument(s) here
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/diem_prelude_errors.move:24:9 ───
+    │
+ 24 │         Vector::push_back(0, 0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::Vector::push_back'. Invalid argument for parameter 'v'
+    ·
+ 24 │         Vector::push_back(0, 0);
+    │                           - The type: integer
+    │
+
+    ┌── ../stdlib/modules/Vector.move:29:45 ───
+    │
+ 29 │     native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
+    │                                             -------------------- Is not compatible with: '&mut vector<_>'
+    │
+

@@ -19,16 +19,13 @@ module DiemAccount {
     use 0x1::DiemConfig;
     use 0x1::DiemTimestamp;
     use 0x1::DiemTransactionPublishingOption;
-    use 0x1::Signer;
     use 0x1::SlidingNonce;
     use 0x1::TransactionFee;
     use 0x1::ValidatorConfig;
     use 0x1::ValidatorOperatorConfig;
     use 0x1::VASP;
-    use 0x1::Vector;
     use 0x1::DesignatedDealer;
     use 0x1::Diem::{Self, Diem};
-    use 0x1::Option::{Self, Option};
     use 0x1::Roles;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.

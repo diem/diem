@@ -36,11 +36,27 @@ struct Context {
 }
 impl Context {
     fn new(module_members: UniqueMap<ModuleIdent, ModuleMembers>) -> Self {
+        let mut aliases = AliasMap::new();
+        let module_is_defined = |m: &ModuleIdent| -> bool { module_members.contains_key(m) };
+        let member_is_defined = |(m, member): &(ModuleIdent, Name)| -> bool {
+            module_members
+                .get(m)
+                .map(|members| members.contains_key(member))
+                .unwrap_or(false)
+        };
+        // TODO find a way to make the prelude configurable
+        let prelude_modules = super::aliases::all_prelude_modules()
+            .into_iter()
+            .filter(module_is_defined);
+        let prelude_module_members = super::aliases::all_prelude_module_members()
+            .into_iter()
+            .filter(member_is_defined);
+        aliases.add_prelude(prelude_modules, prelude_module_members);
         Self {
+            aliases,
             module_members,
             errors: vec![],
             address: None,
-            aliases: AliasMap::new(),
             is_source_module: false,
             in_spec_context: false,
             exp_specs: BTreeMap::new(),
@@ -237,10 +253,10 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         .filter_map(|member| aliases_from_member(context, &mut new_scope, &current_module, member))
         .collect::<Vec<_>>();
     let old_aliases = context.new_alias_scope(new_scope);
-    assert!(
-        old_aliases.is_empty(),
-        "ICE there should be no aliases entering a module"
-    );
+    // assert!(
+    //     old_aliases.is_empty(),
+    //     "ICE there should be no aliases entering a module"
+    // );
 
     let mut functions = UniqueMap::new();
     let mut constants = UniqueMap::new();
@@ -298,10 +314,10 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
         use_(context, &mut new_scope, u);
     }
     let old_aliases = context.new_alias_scope(new_scope);
-    assert!(
-        old_aliases.is_empty(),
-        "ICE there should be no aliases entering a script"
-    );
+    // assert!(
+    //     old_aliases.is_empty(),
+    //     "ICE there should be no aliases entering a script"
+    // );
 
     let mut constants = UniqueMap::new();
     for c in pconstants {

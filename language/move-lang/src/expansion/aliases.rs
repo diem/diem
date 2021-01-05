@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    parser::ast::ModuleIdent,
+    parser::ast::{ModuleIdent, ModuleIdent_, ModuleName},
     shared::{remembering_unique_map::RememberingUniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -20,6 +20,57 @@ pub struct AliasMap {
     members: RememberingUniqueMap<Name, (ModuleIdent, Name)>,
     current_scope: AliasSet,
 }
+
+// unsafe function for creating ModuleIdent for auto-imported modules
+// This usage is "safe" as the location should never be used
+fn unsafe_no_loc_diem_module_ident(s: &str) -> ModuleIdent {
+    ModuleIdent(Spanned::unsafe_no_loc(ModuleIdent_ {
+        name: ModuleName(Spanned::unsafe_no_loc(s.to_string())),
+        address: Address::DIEM_CORE,
+    }))
+}
+
+macro_rules! prelude_modules {
+    ($(const $const:ident = $v:tt; fn $fn:ident),*) => {
+        $(
+            const $const: &'static str = $v;
+            fn $fn() -> ModuleIdent {
+                unsafe_no_loc_diem_module_ident($const)
+            }
+        )*
+
+        pub(super) fn all_prelude_modules() -> Vec<ModuleIdent> {
+            vec![$($fn(),)*]
+        }
+    };
+}
+
+macro_rules! prelude_members {
+    ($(mod $module_fn:ident; const $const:ident = $v:tt; fn $fn:ident),*) => {
+        $(
+            const $const: &'static str = $v;
+            fn $fn() -> Name {
+                Spanned::unsafe_no_loc($const.to_string())
+            }
+        )*
+
+        pub(super) fn all_prelude_module_members() -> Vec<(ModuleIdent, Name)> {
+            vec![$(($module_fn(), $fn()),)*]
+        }
+    };
+}
+
+// auto included Diem modules
+prelude_modules!(
+    const OPTION_NAME = "Option"; fn option_ident,
+    const SIGNER_NAME = "Signer"; fn signer_ident,
+    const VECTOR_NAME = "Vector"; fn vector_ident
+);
+
+// auto included Diem module members
+prelude_members!(
+    mod option_ident; const OPTION_STRUCT_NAME = OPTION_NAME; fn option_struct_name
+);
 
 impl AliasSet {
     pub fn new() -> Self {
@@ -51,7 +102,8 @@ impl AliasMap {
             current_scope,
         } = self;
         let is_empty = modules.is_empty() && members.is_empty();
-        assert!(current_scope.is_empty() == is_empty);
+        // is_empty ==> current_scope.is_empty();
+        assert!(!is_empty || current_scope.is_empty());
         is_empty
     }
 
@@ -135,6 +187,25 @@ impl AliasMap {
 
     pub fn member_alias_get(&mut self, n: &Name) -> Option<&(ModuleIdent, Name)> {
         self.members.get(n)
+    }
+
+    // Adds prelude modules and module members if they are defined in the current program
+    // If they are not defined, no alias is added,
+    // see prelude_modules and prelude_members for a list of modules/members added
+    pub fn add_prelude(
+        &mut self,
+        prelude_modules: impl Iterator<Item = ModuleIdent>,
+        prelude_module_members: impl Iterator<Item = (ModuleIdent, Name)>,
+    ) {
+        debug_assert!(self.is_empty(), "ICE prelude should be added on empty");
+        for m in prelude_modules {
+            let res = self.add_implicit_module_alias(m.0.value.name.0.clone(), m);
+            debug_assert!(res.is_ok(), "ICE duplicate prelude module")
+        }
+        for (m, member) in prelude_module_members {
+            let res = self.add_implicit_member_alias(member.clone(), m, member);
+            debug_assert!(res.is_ok(), "ICE duplicate prelude module member")
+        }
     }
 
     pub fn add_and_shadow_all(&mut self, shadowing: AliasMap) {

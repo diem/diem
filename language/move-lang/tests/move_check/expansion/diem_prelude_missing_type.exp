@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/diem_prelude_missing_type.move:4:13 ───
+   │
+ 4 │         f1: Option::No,
+   │             ^^^^^^^^^^ Invalid module access. Unbound struct 'No' in module '0x1::Option'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/diem_prelude_missing_type.move:5:13 ───
+   │
+ 5 │         f2: Signer::No,
+   │             ^^^^^^^^^^ Invalid module access. Unbound struct 'No' in module '0x1::Signer'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/diem_prelude_missing_type.move:6:13 ───
+   │
+ 6 │         f3: Vector::No,
+   │             ^^^^^^^^^^ Invalid module access. Unbound struct 'No' in module '0x1::Vector'
+   │
+
