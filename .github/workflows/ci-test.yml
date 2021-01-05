@@ -94,11 +94,21 @@ jobs:
     env:
       RUST_BACKTRACE: 1
     steps:
-      - name: stats
+      - name: Work around gha docker image user :(
         run: |
-          set x
-          cat /proc/meminfo
-          cat /proc/cpuinfo
+          set -x
+          echo HOME=$HOME
+          echo USER=$(whoami)
+          cp -r /root/bin/ ${HOME}/bin/
+          ls -la ${HOME}/bin/
+          cp -r /root/.dotnet/ ${HOME}/.dotnet/
+          ls -la ${HOME}/.dotnet/
+          cp -r /root/.dotnet/ ${HOME}/.rustup/
+          ls -la ${HOME}/.rustup/
+          cp -r /root/.dotnet/ ${HOME}/.cargo/
+          ls -la ${HOME}/.cargo/
+          cp -r /root/.local/ ${HOME}/.local/
+          ls -la ${HOME}/.local/
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 #get all the history!!!
@@ -125,17 +135,20 @@ jobs:
           echo 'CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $GITHUB_ENV
           # Pin the version of RUSTC used for all invocations of cargo
           echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) >> $GITHUB_ENV
-        #run: |
-        # Configure Move prover tools
-        # echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
-        # echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
-        # echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
-      #- name: Setup Env
+      - name: Setup Env
+        run: |
+          echo 'Z3_EXE="$HOME/bin/z3"' >> $GITHUB_ENV
+          echo 'DOTNET_ROOT="$HOME/.dotnet"' >> $GITHUB_ENV
+          echo 'BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $GITHUB_ENV
+
       - name: run unit tests
         run: |
           set | grep GITHUB
           set | grep RUST
           set | grep CARGO
+          set | grep Z3_EXE
+          set | grep DOTNET_ROOT
+          set | grep BOOGIE
           echo
           echo CI_TIMEOUT=$CI_TIMEOUT
           RUST_BACKTRACE=1 cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
