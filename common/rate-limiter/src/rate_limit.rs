@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_infallible::{Mutex, RwLock};
-use std::{
-    cmp::min, collections::HashMap, fmt::Debug, hash::Hash, num::NonZeroUsize, sync::Arc,
-    time::Instant,
-};
+use std::{cmp::min, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};
 use tokio::time::Duration;
 
 pub type SharedBucket = Arc<Mutex<Bucket>>;
@@ -54,78 +51,50 @@ const ONE_SEC: Duration = Duration::from_secs(1);
 ///
 pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
     buckets: RwLock<HashMap<Key, SharedBucket>>,
-    config: TokenBucketConfig,
-}
-
-/// A configuration of token bucket settings, in the future it can be used for
-/// setting overrides for specific keys
-#[derive(Debug, Copy, Clone)]
-pub struct TokenBucketConfig {
     new_bucket_start_percentage: u8,
     default_bucket_size: usize,
     default_fill_rate: usize,
     open: bool,
 }
 
-impl TokenBucketConfig {
-    /// Input is `NonZeroUsize` to ensure the config doesn't just block all traffic
+impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
     pub fn new(
         new_bucket_start_percentage: u8,
         default_bucket_size: usize,
         default_fill_rate: usize,
-        open: bool,
     ) -> Self {
-        assert!(
-            new_bucket_start_percentage <= 100,
-            "Start percentage must be less than or equal to 100%"
-        );
+        // Ensure that we can actually use the rate limiter
+        assert!(new_bucket_start_percentage <= 100);
+        assert!(default_bucket_size > 0);
+        assert!(default_fill_rate > 0);
+
         Self {
+            buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage,
-            default_bucket_size: NonZeroUsize::new(default_bucket_size)
-                .expect("Bucket size must not be 0")
-                .get(),
-            default_fill_rate: NonZeroUsize::new(default_fill_rate)
-                .expect("Fill rate must not be 0")
-                .get(),
-            open,
+            default_bucket_size,
+            default_fill_rate,
+            open: false,
         }
     }
 
+    pub fn new_full(default_bucket_size: usize, default_fill_rate: usize) -> Self {
+        Self::new(100, default_bucket_size, default_fill_rate)
+    }
+
+    /// Used for testing and to not have a rate limiter
     pub fn open() -> Self {
-        TokenBucketConfig {
+        Self {
+            buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage: 100,
             default_bucket_size: std::usize::MAX,
             default_fill_rate: std::usize::MAX,
             open: true,
         }
     }
-}
-
-impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
-    pub fn new_from_config(config: TokenBucketConfig) -> Self {
-        Self {
-            buckets: RwLock::new(HashMap::new()),
-            config,
-        }
-    }
-
-    pub fn new(default_bucket_size: usize, default_fill_rate: usize) -> Self {
-        Self::new_from_config(TokenBucketConfig {
-            new_bucket_start_percentage: 100,
-            default_bucket_size,
-            default_fill_rate,
-            open: false,
-        })
-    }
-
-    /// Used for testing and to not have a rate limiter
-    pub fn open() -> Self {
-        Self::new_from_config(TokenBucketConfig::open())
-    }
 
     /// Retrieve bucket, or create a new one
     pub fn bucket(&self, key: Key) -> SharedBucket {
-        if !self.config.open {
+        if !self.open {
             self.bucket_inner(key, |initial, size, rate| {
                 Arc::new(Mutex::new(Bucket::new(initial, size, rate)))
             })
@@ -146,8 +115,8 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         if let Some(bucket) = maybe_bucket {
             bucket
         } else {
-            let size = self.config.default_bucket_size;
-            let rate = self.config.default_fill_rate;
+            let size = self.default_bucket_size;
+            let rate = self.default_fill_rate;
 
             // Write in a bucket, but make sure again that it isn't there first
             self.buckets
@@ -155,7 +124,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
                 .entry(key)
                 .or_insert_with(|| {
                     bucket_create(
-                        size.saturating_mul(self.config.new_bucket_start_percentage as usize) / 100,
+                        size.saturating_mul(self.new_bucket_start_percentage as usize) / 100,
                         size,
                         rate,
                     )
@@ -338,7 +307,7 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 1;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
@@ -358,7 +327,7 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 3;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
@@ -387,7 +356,7 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 1;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
@@ -410,7 +379,7 @@ mod tests {
     fn test_time_checks() {
         let bucket_size = 5;
         let bucket_rate = 1;
-        let rate_limiter = TokenBucketRateLimiter::new(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket("Key");
         let mut bucket = bucket_arc.lock();
@@ -442,7 +411,7 @@ mod tests {
     #[test]
     fn test_bucket_creation() {
         let key = "key";
-        let rate_limiter = TokenBucketRateLimiter::new(1, 1);
+        let rate_limiter = TokenBucketRateLimiter::new_full(1, 1);
         assert_num_keys(&rate_limiter, 0);
 
         // Ensure the buckets aren't being recreated
@@ -457,7 +426,7 @@ mod tests {
     fn test_garbage_collection() {
         let key_to_keep = "don't gc";
         let key_to_gc = "do gc";
-        let rate_limiter = TokenBucketRateLimiter::new(1, 1);
+        let rate_limiter = TokenBucketRateLimiter::new_full(1, 1);
         assert_num_keys(&rate_limiter, 0);
 
         // Create a bucket to hold onto

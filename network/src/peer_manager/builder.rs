@@ -22,7 +22,7 @@ use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address::NetworkAddress;
-use diem_rate_limiter::rate_limit::{TokenBucketConfig, TokenBucketRateLimiter};
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_types::{chain_id::ChainId, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
@@ -34,6 +34,7 @@ use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
     fmt::Debug,
+    net::IpAddr,
     sync::Arc,
 };
 use tokio::runtime::Handle;
@@ -191,8 +192,8 @@ pub struct PeerManagerBuilder {
     state: State,
     max_frame_size: usize,
     enable_proxy_protocol: bool,
-    inbound_token_bucket_config: TokenBucketConfig,
-    outbound_token_bucket_config: TokenBucketConfig,
+    inbound_rate_limit_config: Option<RateLimitConfig>,
+    outbound_rate_limit_config: Option<RateLimitConfig>,
 }
 
 impl PeerManagerBuilder {
@@ -209,8 +210,8 @@ impl PeerManagerBuilder {
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
-        inbound_rate_config: Option<RateLimitConfig>,
-        outbound_rate_config: Option<RateLimitConfig>,
+        inbound_rate_limit_config: Option<RateLimitConfig>,
+        outbound_rate_limit_config: Option<RateLimitConfig>,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -221,28 +222,6 @@ impl PeerManagerBuilder {
         // Setup channel to send connection requests to peer manager.
         let (connection_reqs_tx, connection_reqs_rx) =
             diem_channel::new(QueueStyle::FIFO, channel_size, None);
-
-        let inbound_token_bucket_config = if let Some(config) = inbound_rate_config {
-            TokenBucketConfig::new(
-                config.initial_bucket_fill_percentage,
-                config.ip_byte_bucket_size,
-                config.ip_byte_bucket_rate,
-                false,
-            )
-        } else {
-            TokenBucketConfig::open()
-        };
-
-        let outbound_token_bucket_config = if let Some(config) = outbound_rate_config {
-            TokenBucketConfig::new(
-                config.initial_bucket_fill_percentage,
-                config.ip_byte_bucket_size,
-                config.ip_byte_bucket_rate,
-                false,
-            )
-        } else {
-            TokenBucketConfig::open()
-        };
 
         Self {
             network_context,
@@ -272,8 +251,8 @@ impl PeerManagerBuilder {
             state: State::CREATED,
             max_frame_size,
             enable_proxy_protocol,
-            inbound_token_bucket_config,
-            outbound_token_bucket_config,
+            inbound_rate_limit_config,
+            outbound_rate_limit_config,
         }
     }
 
@@ -379,10 +358,8 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-        let inbound_rate_limiters =
-            TokenBucketRateLimiter::new_from_config(self.inbound_token_bucket_config);
-        let outbound_rate_limiters =
-            TokenBucketRateLimiter::new_from_config(self.outbound_token_bucket_config);
+        let inbound_rate_limiters = token_bucket_rate_limiter(self.inbound_rate_limit_config);
+        let outbound_rate_limiters = token_bucket_rate_limiter(self.outbound_rate_limit_config);
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -477,5 +454,17 @@ impl PeerManagerBuilder {
             ConnectionRequestSender::new(pm_context.connection_reqs_tx.clone()),
             connection_notifs_rx,
         )
+    }
+}
+
+fn token_bucket_rate_limiter(input: Option<RateLimitConfig>) -> TokenBucketRateLimiter<IpAddr> {
+    if let Some(config) = input {
+        TokenBucketRateLimiter::new(
+            config.initial_bucket_fill_percentage,
+            config.ip_byte_bucket_size,
+            config.ip_byte_bucket_rate,
+        )
+    } else {
+        TokenBucketRateLimiter::open()
     }
 }
