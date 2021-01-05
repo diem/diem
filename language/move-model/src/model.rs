@@ -352,6 +352,8 @@ pub struct GlobalEnv {
     file_id_is_dep: BTreeSet<FileId>,
     /// A set indicating whether a module should be translated or not.
     module_id_should_translate: RefCell<BTreeSet<ModuleId>>,
+    /// A set indicating whether a function not in target module should be verified or not.
+    fun_id_should_verify: RefCell<BTreeSet<QualifiedId<FunId>>>,
     /// A special constant location representing an unknown location.
     /// This uses a pseudo entry in `source_files` to be safely represented.
     unknown_loc: Loc,
@@ -455,6 +457,7 @@ impl GlobalEnv {
             file_idx_to_id,
             file_id_is_dep: BTreeSet::new(),
             module_id_should_translate: RefCell::new(BTreeSet::new()),
+            fun_id_should_verify: RefCell::new(BTreeSet::new()),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             next_free_node_id: Default::default(),
@@ -686,6 +689,14 @@ impl GlobalEnv {
             .get(&memory)
             .map(|ids| ids.iter().cloned().collect_vec())
             .unwrap_or_else(Default::default)
+    }
+
+    pub fn get_global_invariants_by_module(&self, module_id: ModuleId) -> BTreeSet<GlobalId> {
+        self.global_invariants
+            .iter()
+            .filter(|(_, inv)| inv.declaring_module == module_id)
+            .map(|(id, _)| *id)
+            .collect()
     }
 
     /// Returns true if a spec fun is used in specs.
@@ -1227,6 +1238,14 @@ impl<'env> ModuleEnv<'env> {
             .module_id_should_translate
             .borrow()
             .contains(&module_id)
+    }
+
+    pub fn add_fun_to_should_verify(&self, fun_id: FunId) {
+        let module_id = self.get_id();
+        self.env
+            .fun_id_should_verify
+            .borrow_mut()
+            .insert(module_id.qualified(fun_id));
     }
 
     /// Returns the path to source file of this module.
@@ -2403,12 +2422,17 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Determine whether the function is target of verification.
-    /// TODO(emmazzz): return true if a function is not in the target
-    /// module but should be verified because it modifies a resource
-    /// mentioned in a target global invariant.
     pub fn should_verify(&self, default_scope: VerificationScope) -> bool {
-        if self.module_env.is_dependency() {
-            // Never generate verify method for functions from dependencies.
+        if self.module_env.is_dependency()
+            && !self
+                .module_env
+                .env
+                .fun_id_should_verify
+                .borrow()
+                .contains(&self.module_env.get_id().qualified(self.get_id()))
+        {
+            // Don't generate verify method for functions from dependencies unless
+            // they are marked as should_verify by our analysis.
             return false;
         }
         // We look up the `verify` pragma property first in this function, then in

@@ -34,6 +34,16 @@ pub fn get_modified_memory<'env>(
         .modified_memory
 }
 
+pub fn get_directly_modified_memory<'env>(
+    target: &'env FunctionTarget,
+) -> &'env BTreeSet<QualifiedId<StructId>> {
+    &target
+        .get_annotations()
+        .get::<UsageState>()
+        .expect("Invariant violation: target not analyzed")
+        .directly_modified_memory
+}
+
 /// The annotation for usage of functions. This is computed by the function target processor.
 #[derive(Clone, Default, Eq, PartialOrd, PartialEq)]
 struct UsageState {
@@ -41,6 +51,7 @@ struct UsageState {
     used_memory: SetDomain<QualifiedId<StructId>>,
     // The memory which is directly and transitively modified by this function.
     modified_memory: SetDomain<QualifiedId<StructId>>,
+    directly_modified_memory: SetDomain<QualifiedId<StructId>>,
 }
 
 impl AbstractDomain for UsageState {
@@ -49,8 +60,12 @@ impl AbstractDomain for UsageState {
         match (
             self.used_memory.join(&other.used_memory),
             self.modified_memory.join(&other.modified_memory),
+            self.directly_modified_memory
+                .join(&other.directly_modified_memory),
         ) {
-            (JoinResult::Unchanged, JoinResult::Unchanged) => JoinResult::Unchanged,
+            (JoinResult::Unchanged, JoinResult::Unchanged, JoinResult::Unchanged) => {
+                JoinResult::Unchanged
+            }
             _ => JoinResult::Changed,
         }
     }
@@ -111,6 +126,7 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                 }
                 MoveTo(mid, sid, _) | MoveFrom(mid, sid, _) | BorrowGlobal(mid, sid, _) => {
                     state.modified_memory.insert(mid.qualified(*sid));
+                    state.directly_modified_memory.insert(mid.qualified(*sid));
                     state.used_memory.insert(mid.qualified(*sid));
                 }
                 Exists(mid, sid, _) | GetField(mid, sid, ..) | GetGlobal(mid, sid, _) => {

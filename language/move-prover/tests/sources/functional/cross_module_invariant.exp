@@ -1,0 +1,64 @@
+Move prover returns: exiting with boogie verification errors
+error: global memory invariant does not hold
+
+    ┌── tests/sources/functional/cross_module_invariant.move:18:9 ───
+    │
+ 18 │         invariant [global] forall addr: address: exists<DiemAccount::Balance<XUS::XUS>>(addr) ==> addr == 0x1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at ../stdlib/modules/DiemAccount.move:1337:5: add_currency
+    =         account = <redacted>
+    =     at ../stdlib/modules/DiemAccount.move:1339:15: add_currency
+    =     at ../stdlib/modules/Roles.move:228:5: can_hold_balance
+    =         account = <redacted>,
+    =         result = <redacted>
+    =     at ../stdlib/modules/Roles.move:214:5: has_parent_VASP_role
+    =         account = <redacted>,
+    =         result = <redacted>
+    =     at ../stdlib/modules/Roles.move:188:5: has_role
+    =         account = <redacted>,
+    =         role_id = <redacted>,
+    =         tmp#$3 = <redacted>,
+    =         result = <redacted>
+    =     at ../stdlib/modules/Roles.move:189:27: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:191:15: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:188:9: has_role
+    =     at ../stdlib/modules/Roles.move:215:9: has_parent_VASP_role
+    =     at ../stdlib/modules/Roles.move:214:16: has_parent_VASP_role
+    =     at ../stdlib/modules/Roles.move:232:9: can_hold_balance
+    =     at ../stdlib/modules/Roles.move:218:5: has_child_VASP_role
+    =         account = <redacted>,
+    =         result = <redacted>
+    =     at ../stdlib/modules/Roles.move:188:5: has_role
+    =     at ../stdlib/modules/Roles.move:189:27: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:191:15: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:188:9: has_role
+    =     at ../stdlib/modules/Roles.move:219:9: has_child_VASP_role
+    =     at ../stdlib/modules/Roles.move:218:16: has_child_VASP_role
+    =     at ../stdlib/modules/Roles.move:232:9: can_hold_balance
+    =     at ../stdlib/modules/Roles.move:202:5: has_designated_dealer_role
+    =         account = <redacted>,
+    =         result = <redacted>
+    =     at ../stdlib/modules/Roles.move:188:5: has_role
+    =     at ../stdlib/modules/Roles.move:189:27: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:191:15: has_role
+    =     at ../stdlib/modules/Roles.move:190:8: has_role
+    =     at ../stdlib/modules/Roles.move:188:9: has_role
+    =     at ../stdlib/modules/Roles.move:203:9: has_designated_dealer_role
+    =     at ../stdlib/modules/Roles.move:202:16: has_designated_dealer_role
+    =     at ../stdlib/modules/Roles.move:232:9: can_hold_balance
+    =     at ../stdlib/modules/DiemAccount.move:1342:20: add_currency
+    =     at ../stdlib/modules/DiemAccount.move:1343:21: add_currency
+    =     at ../stdlib/modules/DiemAccount.move:1341:9: add_currency
+    =     at ../stdlib/modules/DiemAccount.move:1346:28: add_currency
+    =     at ../stdlib/modules/DiemAccount.move:1347:55: add_currency
+    =     at ../stdlib/modules/Diem.move:723:5: zero
+    =         result = <redacted>
+    =     at ../stdlib/modules/Diem.move:1135:16: assert_is_currency
+    =     at ../stdlib/modules/Diem.move:725:9: zero
+    =     at ../stdlib/modules/DiemAccount.move:1349:54: add_currency
