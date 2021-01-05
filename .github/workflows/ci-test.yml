@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - id: changes
         name: determine changes
@@ -58,6 +61,8 @@ jobs:
         target_os: [alpine, arch, centos, github]
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: build image with dev-setup.sh
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t libra/build_environment:test .
 
@@ -70,6 +75,8 @@ jobs:
       image: libra/build_environment:github-1
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: shell lints
         run: |
           shellcheck scripts/dev_setup.sh && \
@@ -100,6 +107,7 @@ jobs:
           cat /proc/cpuinfo
       - uses: actions/checkout@v2
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
       - name: run unit tests
