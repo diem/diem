@@ -25,6 +25,8 @@ jobs:
           # On `push` this value will be empty and will "do-the-right-thing"
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
       - id: changes
         name: determine changes
         uses: ./.github/actions/changes
