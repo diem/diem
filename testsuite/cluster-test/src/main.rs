@@ -479,16 +479,25 @@ impl BasicSwarmUtil {
 
 impl ClusterTestRunner {
     pub async fn teardown(&mut self) {
+        let mut clock = Instant::now();
+        info!("hhhhhhh start of tear down- cleanup");
         self.cluster_swarm.cleanup().await.expect("Cleanup failed");
+        info!("hhhhhhh end of tear down- cleanup {:?}", (Instant::now()-clock).as_millis());
+        clock = Instant::now();
+        info!("hhhhhhh start of get_workspace - cleanup");
         let workspace = self
             .cluster_swarm
             .get_workspace()
             .await
             .expect("Failed to get workspace");
+        info!("hhhhhhh get_workspace - cleanup {:?}", (Instant::now()-clock).as_millis());
         let asg_name = format!("{}-k8s-testnet-validators", workspace);
+        clock = Instant::now();
+        info!("hhhhhhh start of set_asg_size - cleanup");
         aws::set_asg_size(0, 0.0, &asg_name, false, true)
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
+        info!("hhhhhhh set_asg_size - cleanup {:?}", (Instant::now()-clock).as_millis());
     }
 
     /// Discovers cluster, setup log, etc

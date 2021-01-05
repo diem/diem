@@ -33,6 +33,7 @@ use diem_network_address::NetworkAddress;
 use diem_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
 use diem_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::str::FromStr;
+use std::time::Instant;
 
 const VAULT_TOKEN: &str = "root";
 const VAULT_PORT: u32 = 8200;
@@ -80,10 +81,13 @@ impl ClusterBuilder {
         params: &ClusterBuilderParams,
         clean_data: bool,
     ) -> Result<Cluster> {
+        let mut clock = Instant::now();
+        info!("hhhhhhh start cleanup - cluster builder");
         self.cluster_swarm
             .cleanup()
             .await
             .map_err(|e| format_err!("cleanup on startup failed: {}", e))?;
+        info!("hhhhhh end cleanup - cluster builder {:?}", (Instant::now()-clock).as_millis());
         let current_tag = &self.current_tag;
         info!(
             "Deploying with {} tag for validators and fullnodes",
@@ -116,6 +120,8 @@ impl ClusterBuilder {
                 .await
                 .map_err(|err| format_err!("{} scale up failed: {}", asg_name, err))?;
         }
+        clock = Instant::now();
+        info!("hhhhhhh start spawn nodes - cluster builder");
         let (validators, lsrs, vaults, fullnodes, waypoint) = self
             .spawn_validator_and_fullnode_set(
                 params.num_validators,
@@ -127,6 +133,7 @@ impl ClusterBuilder {
             )
             .await
             .map_err(|e| format_err!("Failed to spawn_validator_and_fullnode_set: {}", e))?;
+        info!("hhhhhh end spawn nodes - cluster builder {:?}", (Instant::now()-clock).as_millis());
         let cluster = Cluster::new(validators, fullnodes, lsrs, vaults, waypoint);
 
         info!(
