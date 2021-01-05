@@ -4,17 +4,20 @@
 use anyhow::{format_err, Result};
 use diem_types::{account_address::AccountAddress, transaction::Transaction};
 use diem_writeset_generator::{
-    encode_custom_script, encode_halt_network_transaction, encode_remove_validators_transaction,
+    encode_custom_script, encode_halt_network_payload, encode_remove_validators_payload,
 };
 use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
-    /// Path to the local DiemDB file
+    /// Path to the output serialized bytes
     #[structopt(long, short, parse(from_os_str))]
     output: PathBuf,
-    #[structopt(subcommand)] // Note that we mark a field as a subcommand
+    /// Output as serialized WriteSet payload. Set this flag if this payload is submitted to AOS portal.
+    #[structopt(long)]
+    output_payload: bool,
+    #[structopt(subcommand)]
     cmd: Command,
 }
 
@@ -28,23 +31,43 @@ enum Command {
     HaltNetwork,
     /// Build a custom file in templates into admin script
     #[structopt(name = "build-custom-script")]
-    BuildCustomScript { script_name: String, args: String },
+    BuildCustomScript {
+        script_name: String,
+        args: String,
+        execute_as: Option<AccountAddress>,
+    },
 }
 
-fn save_transaction(txn: Transaction, path: PathBuf) -> Result<()> {
-    let bytes = bcs::to_bytes(&txn).map_err(|_| format_err!("Transaction Serialize Error"))?;
+fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
     std::fs::write(path.as_path(), bytes.as_slice())
         .map_err(|_| format_err!("Unable to write to path"))
 }
 
 fn main() -> Result<()> {
     let opt = Opt::from_args();
-    let transaction = match opt.cmd {
-        Command::RemoveValidators { addresses } => encode_remove_validators_transaction(addresses),
-        Command::HaltNetwork => encode_halt_network_transaction(),
-        Command::BuildCustomScript { script_name, args } => {
-            encode_custom_script(&script_name, &serde_json::from_str(args.as_str())?)
-        }
+    let payload = match opt.cmd {
+        Command::RemoveValidators { addresses } => encode_remove_validators_payload(addresses),
+        Command::HaltNetwork => encode_halt_network_payload(),
+        Command::BuildCustomScript {
+            script_name,
+            args,
+            execute_as,
+        } => encode_custom_script(
+            &script_name,
+            &serde_json::from_str::<serde_json::Value>(args.as_str())?,
+            execute_as,
+        ),
     };
-    save_transaction(transaction, opt.output)
+    if opt.output_payload {
+        save_bytes(
+            bcs::to_bytes(&payload).map_err(|_| format_err!("Transaction Serialize Error"))?,
+            opt.output,
+        )
+    } else {
+        save_bytes(
+            bcs::to_bytes(&Transaction::GenesisTransaction(payload))
+                .map_err(|_| format_err!("Transaction Serialize Error"))?,
+            opt.output,
+        )
+    }
 }

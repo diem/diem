@@ -5,7 +5,7 @@ use anyhow::Result;
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
-    transaction::{Script, Transaction, WriteSetPayload},
+    transaction::{Script, WriteSetPayload},
 };
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -29,7 +29,7 @@ pub fn template_path() -> PathBuf {
     path
 }
 
-pub fn encode_remove_validators_transaction(validators: Vec<AccountAddress>) -> Transaction {
+pub fn encode_remove_validators_payload(validators: Vec<AccountAddress>) -> WriteSetPayload {
     assert!(!validators.is_empty(), "Unexpected validator set length");
     let mut script = template_path();
     script.push("remove_validators.move");
@@ -46,13 +46,17 @@ pub fn encode_remove_validators_transaction(validators: Vec<AccountAddress>) -> 
         compile_admin_script(output.as_str()).unwrap()
     };
 
-    Transaction::GenesisTransaction(WriteSetPayload::Script {
+    WriteSetPayload::Script {
         script,
         execute_as: diem_root_address(),
-    })
+    }
 }
 
-pub fn encode_custom_script<T: Serialize>(script_name_in_templates: &str, args: &T) -> Transaction {
+pub fn encode_custom_script<T: Serialize>(
+    script_name_in_templates: &str,
+    args: &T,
+    execute_as: Option<AccountAddress>,
+) -> WriteSetPayload {
     let mut script = template_path();
     script.push(script_name_in_templates);
 
@@ -65,22 +69,22 @@ pub fn encode_custom_script<T: Serialize>(script_name_in_templates: &str, args: 
         compile_admin_script(output.as_str()).unwrap()
     };
 
-    Transaction::GenesisTransaction(WriteSetPayload::Script {
+    WriteSetPayload::Script {
         script,
-        execute_as: diem_root_address(),
-    })
+        execute_as: execute_as.unwrap_or_else(diem_root_address),
+    }
 }
 
-pub fn encode_halt_network_transaction() -> Transaction {
+pub fn encode_halt_network_payload() -> WriteSetPayload {
     let mut script = template_path();
     script.push("halt_transactions.move");
 
-    Transaction::GenesisTransaction(WriteSetPayload::Script {
+    WriteSetPayload::Script {
         script: Script::new(
             compile_script(script.to_str().unwrap().to_owned()),
             vec![],
             vec![],
         ),
         execute_as: diem_root_address(),
-    })
+    }
 }
