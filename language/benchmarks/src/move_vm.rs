@@ -35,7 +35,7 @@ fn compile_module(addr: &[u8; AccountAddress::LENGTH]) -> CompiledModule {
     let s = path.to_str().expect("no path specified").to_owned();
 
     let (_files, mut compiled_units) =
-        move_lang::move_compile_and_report(&[s], &[], Some(Address::new(*addr)), None)
+        move_lang::move_compile_and_report(&[s], &[], Some(Address::new(*addr)), None, false)
             .expect("Error compiling...");
     match compiled_units.remove(0) {
         CompiledUnit::Module { module, .. } => module,

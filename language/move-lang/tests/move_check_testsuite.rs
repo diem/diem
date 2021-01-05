@@ -51,7 +51,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let exp_path = path.with_extension(EXP_EXT);
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None)?;
+    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None, false)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

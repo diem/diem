@@ -83,6 +83,10 @@ pub enum PassResult {
 
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
+/// - If the `sources_shadow_deps` flag is set, modules defined in targets can shadow (i.e.,
+///   override) the modules in dependencies, and the checker will not complain about it. In other
+///   words, if the same module id (<address::name>) is found in both targets and dependencies, the
+///   module definition in targets takes priority.
 /// Does not run compile to Move bytecode
 /// Very large programs might fail on compilation even though they have been checked due to size
 ///   limitations of the Move bytecode
@@ -91,6 +95,7 @@ pub fn move_check(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
     let (files, pprog_and_comments_res) =
         move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
@@ -98,6 +103,13 @@ pub fn move_check(
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
+
+    let pprog = if sources_shadow_deps {
+        shadow_lib_module_definitions(pprog, sender_opt)
+    } else {
+        pprog
+    };
+
     let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::CFGIR) {
         Ok(PassResult::CFGIR(_)) => Ok(()),
         Ok(_) => unreachable!(),
@@ -112,8 +124,15 @@ pub fn move_check_and_report(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<FilesSourceText> {
-    let (files, errors_result) = move_check(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let (files, errors_result) = move_check(
+        targets,
+        deps,
+        sender_opt,
+        interface_files_dir_opt,
+        sources_shadow_deps,
+    )?;
     unwrap_or_report_errors!(files, errors_result);
     Ok(files)
 }
@@ -121,6 +140,9 @@ pub fn move_check_and_report(
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
 /// - Compiles the targets to Move bytecode
+/// - If the `sources_shadow_deps` flag is set, modules defined in targets can shadow (i.e.,
+///   override) the modules in dependencies. In other words, if the same module id (<address::name>)
+///   is found in both targets and dependencies, the module definition in targets takes priority.
 /// Does not run the Move bytecode verifier on the compiled targets, as the Move front end should
 ///   be more restrictive
 pub fn move_compile(
@@ -128,6 +150,7 @@ pub fn move_compile(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
     let (files, pprog_and_comments_res) =
         move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
@@ -135,6 +158,13 @@ pub fn move_compile(
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
+
+    let pprog = if sources_shadow_deps {
+        shadow_lib_module_definitions(pprog, sender_opt)
+    } else {
+        pprog
+    };
+
     let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::Compilation)
     {
         Ok(PassResult::Compilation(units)) => Ok(units),
@@ -150,8 +180,15 @@ pub fn move_compile_and_report(
     deps: &[String],
     sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, units_res) = move_compile(targets, deps, sender_opt, interface_files_dir_opt)?;
+    let (files, units_res) = move_compile(
+        targets,
+        deps,
+        sender_opt,
+        interface_files_dir_opt,
+        sources_shadow_deps,
+    )?;
     let units = unwrap_or_report_errors!(files, units_res);
     Ok((files, units))
 }
@@ -178,41 +215,6 @@ pub fn move_parse(
 /// The stopping point is inclusive, meaning the pass specified by `until: Pass` will be run
 pub fn move_continue_up_to(pass: PassResult, until: Pass) -> Result<PassResult, Errors> {
     run(pass, until)
-}
-
-/// Similar to `move_compile`, but with an additional `allow_shadow` flag to indicate that modules
-/// defined in targets can shadow (i.e., override) the modules in dependencies. In other words,
-/// if the same module id (<address::name>) is found in both targets and dependencies, the module
-/// definition in targets takes priority.
-///
-/// This function also allows to specify a stopping point of the compilation process. Similar to
-/// `move_continue_up_to`, the stopping point is inclusive, meaning that the pass specified by
-/// `until: Pass` will be run
-pub fn move_compile_up_to(
-    targets: &[String],
-    deps: &[String],
-    sender_opt: Option<Address>,
-    interface_files_dir_opt: Option<String>,
-    allow_shadow: bool,
-    until: Pass,
-) -> anyhow::Result<(FilesSourceText, Result<PassResult, Errors>)> {
-    let (files, pprog_and_comments_res) =
-        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
-    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
-        Err(errors) => return Ok((files, Err(errors))),
-        Ok(res) => res,
-    };
-
-    let pprog = if allow_shadow {
-        shadow_lib_module_definitions(pprog, sender_opt)
-    } else {
-        pprog
-    };
-
-    Ok((
-        files,
-        move_continue_up_to(PassResult::Parser(sender_opt, pprog), until),
-    ))
 }
 
 //**************************************************************************************************

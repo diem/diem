@@ -144,7 +144,8 @@ pub fn script_files() -> Vec<String> {
 
 pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_files, compiled_units) =
-        move_compile_and_report(&stdlib_files(), &[], Some(Address::DIEM_CORE), None).unwrap();
+        move_compile_and_report(&stdlib_files(), &[], Some(Address::DIEM_CORE), None, false)
+            .unwrap();
     let mut modules = BTreeMap::new();
     for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
         let name = compiled_unit.name();
@@ -169,6 +170,7 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
         &stdlib_files(),
         Some(Address::DIEM_CORE),
         None,
+        false,
     )
     .unwrap();
     let mut script_bytes = vec![];

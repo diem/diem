@@ -44,6 +44,15 @@ pub struct Options {
         long = cli::OUT_DIR,
     )]
     pub out_dir: Option<String>,
+
+    /// If set, allow modules defined in source_files to shadow modules of the same id that exist
+    /// in dependencies
+    #[structopt(
+        name = "SOURCES_SHADOW_DEPS",
+        short = cli::SHADOW_SHORT,
+        long = cli::SHADOW,
+    )]
+    pub shadow: bool,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -52,8 +61,10 @@ pub fn main() -> anyhow::Result<()> {
         dependencies,
         sender,
         out_dir,
+        shadow,
     } = Options::from_args();
 
-    let _files = move_lang::move_check_and_report(&source_files, &dependencies, sender, out_dir)?;
+    let _files =
+        move_lang::move_check_and_report(&source_files, &dependencies, sender, out_dir, shadow)?;
     Ok(())
 }

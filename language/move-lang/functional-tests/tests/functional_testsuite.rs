@@ -56,7 +56,7 @@ impl Compiler for MoveSourceCompiler {
 
         let targets = &vec![cur_path.clone()];
         let sender = Some(sender_addr);
-        let (files, units_or_errors) = move_compile(targets, &self.deps, sender, None)?;
+        let (files, units_or_errors) = move_compile(targets, &self.deps, sender, None, false)?;
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = if read_bool_env_var(testsuite::PRETTY) {

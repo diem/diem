@@ -13,6 +13,9 @@ pub const OUT_DIR: &str = "out-dir";
 pub const OUT_DIR_SHORT: &str = "o";
 pub const DEFAULT_OUTPUT_DIR: &str = "build";
 
+pub const SHADOW: &str = "shadow";
+pub const SHADOW_SHORT: &str = "f";
+
 pub const SOURCE_MAP: &str = "source-map";
 pub const SOURCE_MAP_SHORT: &str = "m";
 

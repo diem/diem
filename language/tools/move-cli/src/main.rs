@@ -15,9 +15,7 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{
-    self, compiled_unit::CompiledUnit, Pass as MovePass, PassResult as MovePassResult,
-};
+use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
@@ -200,15 +198,13 @@ fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: boo
     if verbose {
         println!("Checking Move files...");
     }
-    let (files, result) = move_lang::move_compile_up_to(
+    move_lang::move_check_and_report(
         files,
         &[state.interface_files_dir()?],
         None,
         None,
         republish,
-        MovePass::CFGIR,
     )?;
-    move_lang::unwrap_or_report_errors!(files, result);
     Ok(())
 }
 
@@ -223,18 +219,13 @@ fn publish(
         println!("Compiling Move modules...")
     }
 
-    let (files, result) = move_lang::move_compile_up_to(
+    let (_, compiled_units) = move_lang::move_compile_and_report(
         files,
         &[state.interface_files_dir()?],
         None,
         None,
         republish,
-        MovePass::Compilation,
     )?;
-    let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
-        MovePassResult::Compilation(units) => units,
-        _ => unreachable!(),
-    };
 
     let num_modules = compiled_units
         .iter()
@@ -310,6 +301,7 @@ fn run(
             &[state.interface_files_dir()?],
             None,
             None,
+            false,
         )?;
 
         let mut script_opt = None;

@@ -26,7 +26,7 @@ fn sanity_check_testsuite_impl(
 
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None)?;
+    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None, false)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,
