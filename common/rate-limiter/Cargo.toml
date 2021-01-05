@@ -11,7 +11,8 @@ edition = "2018"
 
 [dependencies]
 diem-infallible = { path="../infallible", version = "0.1.0" }
-diem-workspace-hack = { path = "..//workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../logger", version = "0.1.0" }
 futures = "0.3.8"
 pin-project = "1.0.2"
 tokio = { version = "0.2.22", features = ["full"] }

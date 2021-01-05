@@ -233,6 +233,8 @@ impl ConnectionRequestSender {
     }
 }
 
+pub type IpAddrTokenBucketLimiter = TokenBucketRateLimiter<IpAddr>;
+
 /// Responsible for handling and maintaining connections to other Peers
 pub struct PeerManager<TTransport, TSocket>
 where
@@ -286,9 +288,9 @@ where
     /// Inbound connection limit separate of outbound connections
     inbound_connection_limit: usize,
     /// Keyed storage of all inbound rate limiters
-    inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
+    inbound_rate_limiters: IpAddrTokenBucketLimiter,
     /// Keyed storage of all outbound rate limiters
-    outbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
+    outbound_rate_limiters: IpAddrTokenBucketLimiter,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -315,8 +317,8 @@ where
         max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         inbound_connection_limit: usize,
-        inbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
-        outbound_rate_limiters: TokenBucketRateLimiter<IpAddr>,
+        inbound_rate_limiters: IpAddrTokenBucketLimiter,
+        outbound_rate_limiters: IpAddrTokenBucketLimiter,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,

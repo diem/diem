@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_infallible::{Mutex, RwLock};
+use diem_logger::debug;
 use std::{cmp::min, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};
 use tokio::time::Duration;
 
@@ -50,6 +51,7 @@ const ONE_SEC: Duration = Duration::from_secs(1);
 /// asynchronously.
 ///
 pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
+    label: &'static str,
     buckets: RwLock<HashMap<Key, SharedBucket>>,
     new_bucket_start_percentage: u8,
     default_bucket_size: usize,
@@ -59,6 +61,7 @@ pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
 
 impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
     pub fn new(
+        label: &'static str,
         new_bucket_start_percentage: u8,
         default_bucket_size: usize,
         default_fill_rate: usize,
@@ -69,6 +72,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         assert!(default_fill_rate > 0);
 
         Self {
+            label,
             buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage,
             default_bucket_size,
@@ -77,13 +81,14 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         }
     }
 
-    pub fn new_full(default_bucket_size: usize, default_fill_rate: usize) -> Self {
-        Self::new(100, default_bucket_size, default_fill_rate)
+    pub fn test(default_bucket_size: usize, default_fill_rate: usize) -> Self {
+        Self::new("test", 100, default_bucket_size, default_fill_rate)
     }
 
     /// Used for testing and to not have a rate limiter
-    pub fn open() -> Self {
+    pub fn open(label: &'static str) -> Self {
         Self {
+            label,
             buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage: 100,
             default_bucket_size: std::usize::MAX,
@@ -94,16 +99,16 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 
     /// Retrieve bucket, or create a new one
     pub fn bucket(&self, key: Key) -> SharedBucket {
-        if !self.open {
-            self.bucket_inner(key, |initial, size, rate| {
-                Arc::new(Mutex::new(Bucket::new(initial, size, rate)))
-            })
-        } else {
-            self.bucket_inner(key, |_, _, _| Arc::new(Mutex::new(Bucket::open())))
-        }
+        self.bucket_inner(key, |label, initial, size, rate| {
+            Arc::new(Mutex::new(if self.open {
+                Bucket::open(label)
+            } else {
+                Bucket::new(label, initial, size, rate)
+            }))
+        })
     }
 
-    fn bucket_inner<F: FnOnce(usize, usize, usize) -> SharedBucket>(
+    fn bucket_inner<F: FnOnce(String, usize, usize, usize) -> SharedBucket>(
         &self,
         key: Key,
         bucket_create: F,
@@ -121,9 +126,11 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
             // Write in a bucket, but make sure again that it isn't there first
             self.buckets
                 .write()
-                .entry(key)
+                .entry(key.clone())
                 .or_insert_with(|| {
+                    let label = Self::stringify_key(self.label, key);
                     bucket_create(
+                        label,
                         size.saturating_mul(self.new_bucket_start_percentage as usize) / 100,
                         size,
                         rate,
@@ -135,15 +142,18 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 
     /// Garbage collects a single key, if we know what it is
     pub fn try_garbage_collect_key(&self, key: &Key) -> bool {
-        let mut write = self.buckets.write();
-        let arc = write.get(key);
-        let remove = arc.map(|arc| Arc::strong_count(arc) <= 1).unwrap_or(false);
-
+        let mut buckets = self.buckets.write();
+        let remove = buckets
+            .get(key)
+            .map_or(false, |bucket| Arc::strong_count(bucket) <= 1);
         if remove {
-            write.remove(key);
+            buckets.remove(key);
         }
-
         remove
+    }
+
+    fn stringify_key(label: &'static str, key: Key) -> String {
+        format!("{}:{:?}", label, key)
     }
 }
 
@@ -152,6 +162,8 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 /// it should be wrapped in an `Arc` and a `Mutex` to be shared across threads.
 #[derive(Debug)]
 pub struct Bucket {
+    /// Label for what rate limiter it's attached to for logging purposes
+    label: String,
     /// The current number of available tokens to be used
     tokens: usize,
     /// Maximum number of `tokens` in the bucket
@@ -162,31 +174,42 @@ pub struct Bucket {
     last_refresh_time: Instant,
     /// Determines whether the rate limiting should be ignored, useful for testing
     open: bool,
+    /// Number of requests allowed through prior to next fill
+    allowed_in_period: usize,
+    /// Number of requests throttled prior to next fill
+    throttled_in_period: usize,
 }
 
 impl Bucket {
-    pub fn new(initial: usize, size: usize, rate: usize) -> Self {
+    pub fn new(label: String, initial: usize, size: usize, rate: usize) -> Self {
         assert!(
             size >= rate,
             "Bucket size must be greater than or equal to fill rate"
         );
+        // Store the stringified version of the key for logging
         Self {
+            label,
             tokens: initial,
             size,
             rate,
             last_refresh_time: Instant::now(),
             open: false,
+            allowed_in_period: 0,
+            throttled_in_period: 0,
         }
     }
 
     /// A fully open rate limiter, to allow for ignoring rate limiting for tests
-    pub fn open() -> Self {
+    pub fn open(label: String) -> Self {
         Self {
+            label,
             tokens: std::usize::MAX,
             size: std::usize::MAX,
             rate: std::usize::MAX,
             last_refresh_time: Instant::now(),
             open: true,
+            allowed_in_period: 0,
+            throttled_in_period: 0,
         }
     }
 
@@ -194,6 +217,16 @@ impl Bucket {
     pub(crate) fn refill(&mut self) {
         let num_intervals = self.last_refresh_time.elapsed().as_secs();
         if num_intervals > 0 {
+            // Log how many were throttled in the period before refill
+            if self.allowed_in_period > 0 || self.throttled_in_period > 0 {
+                debug!(
+                    throttle_label = self.label,
+                    num_allowed_in_period = self.allowed_in_period,
+                    num_throttled_in_period = self.throttled_in_period,
+                );
+            }
+            self.allowed_in_period = 0;
+            self.throttled_in_period = 0;
             self.add_tokens((num_intervals as usize).saturating_mul(self.rate));
 
             // We have to base everything off the original time, or we'll have drift where we slowly slow the bucket refill rate
@@ -216,8 +249,11 @@ impl Bucket {
 
         if self.tokens >= requested {
             self.deduct_tokens(requested);
+            self.allowed_in_period = self.allowed_in_period.saturating_add(requested);
             Ok(())
         } else {
+            // Keep track of the requests we've throttled
+            self.throttled_in_period = self.throttled_in_period.saturating_add(requested);
             Err(self.time_of_tokens_needed(requested))
         }
     }
@@ -235,8 +271,11 @@ impl Bucket {
 
         let allowed = self.deduct_tokens(requested);
         if allowed > 0 {
+            self.allowed_in_period = self.allowed_in_period.saturating_add(allowed);
             Ok(allowed)
         } else {
+            // Keep track of the requests we've throttled
+            self.throttled_in_period = self.throttled_in_period.saturating_add(requested);
             Err(self.time_of_next_refill())
         }
     }
@@ -271,10 +310,16 @@ impl Bucket {
         }
     }
 
-    /// Add new tokens, this can also be used to add unused tokens back
+    /// Add new tokens
     /// Ensures bucket doesn't overfill
-    pub fn add_tokens(&mut self, new_tokens: usize) {
+    fn add_tokens(&mut self, new_tokens: usize) {
         self.tokens = min(self.size, self.tokens.saturating_add(new_tokens));
+    }
+
+    /// Returns tokens that were unused
+    pub fn return_tokens(&mut self, new_tokens: usize) {
+        self.allowed_in_period = self.allowed_in_period.saturating_sub(new_tokens);
+        self.add_tokens(new_tokens);
     }
 }
 
@@ -307,18 +352,18 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 1;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::test(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
         assert_acquire(&mut bucket, bucket_size);
 
         // After adding 2 token, only 2 should be allowed
-        bucket.add_tokens(2);
+        bucket.return_tokens(2);
         assert_acquire(&mut bucket, 2);
 
         // Adding more tokens than the bucket size, should only give bucket size
-        bucket.add_tokens(bucket_size + 1);
+        bucket.return_tokens(bucket_size + 1);
         assert_acquire(&mut bucket, bucket_size);
     }
 
@@ -327,7 +372,7 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 3;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::test(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
@@ -356,7 +401,7 @@ mod tests {
         let bucket_size = 5;
         let bucket_rate = 1;
         let key = "Key";
-        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::test(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket(key);
         let mut bucket = bucket_arc.lock();
@@ -379,7 +424,7 @@ mod tests {
     fn test_time_checks() {
         let bucket_size = 5;
         let bucket_rate = 1;
-        let rate_limiter = TokenBucketRateLimiter::new_full(bucket_size, bucket_rate);
+        let rate_limiter = TokenBucketRateLimiter::test(bucket_size, bucket_rate);
 
         let bucket_arc = rate_limiter.bucket("Key");
         let mut bucket = bucket_arc.lock();
@@ -411,7 +456,7 @@ mod tests {
     #[test]
     fn test_bucket_creation() {
         let key = "key";
-        let rate_limiter = TokenBucketRateLimiter::new_full(1, 1);
+        let rate_limiter = TokenBucketRateLimiter::test(1, 1);
         assert_num_keys(&rate_limiter, 0);
 
         // Ensure the buckets aren't being recreated
@@ -426,7 +471,7 @@ mod tests {
     fn test_garbage_collection() {
         let key_to_keep = "don't gc";
         let key_to_gc = "do gc";
-        let rate_limiter = TokenBucketRateLimiter::new_full(1, 1);
+        let rate_limiter = TokenBucketRateLimiter::test(1, 1);
         assert_num_keys(&rate_limiter, 0);
 
         // Create a bucket to hold onto

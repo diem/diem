@@ -21,7 +21,8 @@ struct PollRateLimiter {
 
 impl PollRateLimiter {
     fn new(bucket: Option<SharedBucket>) -> Self {
-        let bucket = bucket.unwrap_or_else(|| Arc::new(Mutex::new(Bucket::open())));
+        let bucket =
+            bucket.unwrap_or_else(|| Arc::new(Mutex::new(Bucket::open(String::from("None")))));
         PollRateLimiter {
             bucket,
             delay: None,
@@ -70,7 +71,7 @@ impl PollRateLimiter {
             Poll::Ready(Ok(actual)) => allowed.saturating_sub(*actual),
             _ => allowed,
         };
-        self.bucket.lock().add_tokens(tokens_to_return);
+        self.bucket.lock().return_tokens(tokens_to_return);
 
         result
     }
@@ -175,7 +176,7 @@ mod tests {
     #[tokio::test]
     async fn test_async_read() {
         let source: &[u8] = b"12345678901234567890123456";
-        let rate_limiter = Arc::new(Mutex::new(Bucket::new(15, 15, 5)));
+        let rate_limiter = Arc::new(Mutex::new(Bucket::new("test".to_string(), 15, 15, 5)));
         let mut reader = AsyncRateLimiter::new(source, Some(rate_limiter));
 
         let mut buf: [u8; 30] = [0; 30];

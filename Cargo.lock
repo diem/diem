@@ -2000,6 +2000,7 @@ name = "diem-rate-limiter"
 version = "0.1.0"
 dependencies = [
  "diem-infallible",
+ "diem-logger",
  "diem-workspace-hack",
  "futures 0.3.8",
  "pin-project 1.0.3",

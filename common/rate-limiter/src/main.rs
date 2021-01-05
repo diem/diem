@@ -39,6 +39,7 @@ struct RunStats {
 
 /// A main function for testing rate limiting throughput and backpressure
 fn main() {
+    diem_logger::DiemLogger::init_for_testing();
     println!("Starting experiments");
     println!(
         "Bytes to test: {}, Expected Throughput(actions/s): {}, Expected Throughput(bytes/s): {}, ",
@@ -204,8 +205,8 @@ async fn test_rate_limiter<
     results
 }
 
-fn simple_shared_bucket(size: usize) -> SharedBucket {
-    Arc::new(Mutex::new(Bucket::new(size, size, size)))
+fn simple_shared_bucket(label: &'static str, size: usize) -> SharedBucket {
+    Arc::new(Mutex::new(Bucket::new(label.to_string(), size, size, size)))
 }
 
 /// For comparison, no rate limiting
@@ -217,7 +218,7 @@ async fn test_no_rate_limit(num_bytes: usize) -> Vec<RunStats> {
 /// that causes the backpressure only to occur after a large amount of traffic first. (> 500k bytes)
 /// > 55 chunks could cause backpressure, for a proper test > 100 or > 200 give good results.
 async fn test_rate_limit_read(num_bytes: usize, throughput: usize) -> Vec<RunStats> {
-    let inbound_rate_limiter = simple_shared_bucket(throughput);
+    let inbound_rate_limiter = simple_shared_bucket("read", throughput);
     test_rate_limiter(
         num_bytes,
         |reader| AsyncRateLimiter::new(reader, Some(inbound_rate_limiter)),
@@ -228,7 +229,7 @@ async fn test_rate_limit_read(num_bytes: usize, throughput: usize) -> Vec<RunSta
 
 /// Tests only if the writer is rate limited, which should provide a smoother read rate
 async fn test_rate_limit_write(num_bytes: usize, throughput: usize) -> Vec<RunStats> {
-    let outbound_rate_limiter = simple_shared_bucket(throughput);
+    let outbound_rate_limiter = simple_shared_bucket("write", throughput);
     test_rate_limiter(
         num_bytes,
         |reader| reader,
@@ -240,8 +241,8 @@ async fn test_rate_limit_write(num_bytes: usize, throughput: usize) -> Vec<RunSt
 /// Tests if both are rate limited.  Results should be roughly the same in the long term as
 /// the other two
 async fn test_rate_limit_read_write(num_bytes: usize, throughput: usize) -> Vec<RunStats> {
-    let inbound_rate_limiter = simple_shared_bucket(throughput);
-    let outbound_rate_limiter = simple_shared_bucket(throughput);
+    let inbound_rate_limiter = simple_shared_bucket("read", throughput);
+    let outbound_rate_limiter = simple_shared_bucket("write", throughput);
     test_rate_limiter(
         num_bytes,
         |reader| AsyncRateLimiter::new(reader, Some(inbound_rate_limiter)),

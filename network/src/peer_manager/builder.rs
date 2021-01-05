@@ -358,8 +358,10 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-        let inbound_rate_limiters = token_bucket_rate_limiter(self.inbound_rate_limit_config);
-        let outbound_rate_limiters = token_bucket_rate_limiter(self.outbound_rate_limit_config);
+        let inbound_rate_limiters =
+            token_bucket_rate_limiter("inbound", self.inbound_rate_limit_config);
+        let outbound_rate_limiters =
+            token_bucket_rate_limiter("outbound", self.outbound_rate_limit_config);
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -457,14 +459,18 @@ impl PeerManagerBuilder {
     }
 }
 
-fn token_bucket_rate_limiter(input: Option<RateLimitConfig>) -> TokenBucketRateLimiter<IpAddr> {
+fn token_bucket_rate_limiter(
+    label: &'static str,
+    input: Option<RateLimitConfig>,
+) -> TokenBucketRateLimiter<IpAddr> {
     if let Some(config) = input {
         TokenBucketRateLimiter::new(
+            label,
             config.initial_bucket_fill_percentage,
             config.ip_byte_bucket_size,
             config.ip_byte_bucket_rate,
         )
     } else {
-        TokenBucketRateLimiter::open()
+        TokenBucketRateLimiter::open(label)
     }
 }
