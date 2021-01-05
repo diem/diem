@@ -130,7 +130,7 @@ if [[ -n ${PR_NUMBER} ]] && [[ -z ${TARGET_BRANCH} ]]; then
     PR_BASE_BRANCH=$(echo "$PR_RESPONSE" | jq -e '.base.ref' | tr -d '"')
   fi
   #if we have a branch name, and the exact branch exists.
-  if [[ -n "$PR_BASE_BRANCH" ]] && [[ $(git branch -l --no-color | tr -d '*' | tr -d ' ' | grep -c '^'"$PR_BASE_BRANCH"'$') == 1 ]]; then
+  if [[ -n "$PR_BASE_BRANCH" ]] && [[ $(git branch -r --no-color | tr -d '*' | tr -d ' ' | grep -c '^origin/'"$PR_BASE_BRANCH"'$') == 1 ]]; then
     TARGET_BRANCH="$PR_BASE_BRANCH"
   fi
 fi
