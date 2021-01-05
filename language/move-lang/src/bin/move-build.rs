@@ -42,14 +42,14 @@ pub struct Options {
     )]
     pub out_dir: String,
 
-    /// If set, allow modules defined in source_files to shadow modules of the same id that exist
-    /// in dependencies
+    /// If set, do not allow modules defined in source_files to shadow modules of the same id that
+    /// exist in dependencies. Compilation will fail in this case.
     #[structopt(
-        name = "SOURCES_SHADOW_DEPS",
-        short = cli::SHADOW_SHORT,
-        long = cli::SHADOW,
+        name = "SOURCES_DO_NOT_SHADOW_DEPS",
+        short = cli::NO_SHADOW_SHORT,
+        long = cli::NO_SHADOW,
     )]
-    pub shadow: bool,
+    pub no_shadow: bool,
 
     /// Save bytecode source map to disk
     #[structopt(
@@ -66,7 +66,7 @@ pub fn main() -> anyhow::Result<()> {
         dependencies,
         sender,
         out_dir,
-        shadow,
+        no_shadow,
         emit_source_map,
     } = Options::from_args();
 
@@ -76,7 +76,7 @@ pub fn main() -> anyhow::Result<()> {
         &dependencies,
         sender,
         Some(interface_files_dir),
-        shadow,
+        !no_shadow,
     )?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }
