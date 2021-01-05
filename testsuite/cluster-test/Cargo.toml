@@ -19,7 +19,7 @@ rand = "0.7.3"
 regex = { version = "1.4.2", default-features = false, features = ["std", "perf"] }
 reqwest = { version = "0.10.10", features = ["blocking", "json"] }
 serde_json = "1.0.61"
-serde_yaml = "0.8.14"
+serde_yaml = "0.8.15"
 termion = "1.5.5"
 serde = { version = "1.0.117", features = ["derive"] }
 structopt = "0.3.21"
