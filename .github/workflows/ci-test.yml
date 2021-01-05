@@ -86,6 +86,7 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-latest-xl
+    timeout-minutes: 70
     continue-on-error: false
     needs: prepare
     #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
