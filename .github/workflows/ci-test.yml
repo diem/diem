@@ -106,3 +106,4 @@ jobs:
         run: cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+      - uses: ./.github/actions/build-teardown
