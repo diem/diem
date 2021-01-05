@@ -19,8 +19,6 @@ use diem_jellyfish_merkle::StaleNodeIndex;
 use diem_logger::prelude::*;
 use diem_types::transaction::Version;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
-#[cfg(test)]
-use std::thread::sleep;
 use std::{
     iter::Peekable,
     sync::{
@@ -28,7 +26,7 @@ use std::{
         mpsc::{channel, Receiver, Sender},
         Arc,
     },
-    thread::JoinHandle,
+    thread::{sleep, JoinHandle},
     time::{Duration, Instant},
 };
 
@@ -47,9 +45,6 @@ pub(crate) struct Pruner {
     worker_thread: Option<JoinHandle<()>>,
     /// The sender side of the channel talking to the worker thread.
     command_sender: Mutex<Sender<Command>>,
-    /// On start up, we query and store where the stale node index starts, before a pruning
-    /// request hits beyond that, we don't need to wake the worker thread.
-    initial_least_readable_version: Version,
     /// (For tests) A way for the worker thread to inform the `Pruner` the pruning progress. If it
     /// sets this atomic value to `V`, all versions before `V` can no longer be accessed.
     #[allow(dead_code)]
@@ -61,31 +56,19 @@ impl Pruner {
     pub fn new(db: Arc<DB>, historical_versions_to_keep: u64) -> Self {
         let (command_sender, command_receiver) = channel();
 
-        let initial_least_readable_version = {
-            let mut iter = db
-                .iter::<StaleNodeIndexSchema>(ReadOptions::default())
-                .expect("Create DB iter should succeed.");
-            iter.seek_to_first();
-            iter.next()
-                .transpose()
-                .expect("Seeking stale node index should succeed.")
-                .map_or(0, |(index, _)| index.stale_since_version)
-        };
-
-        let worker_progress = Arc::new(AtomicU64::new(initial_least_readable_version));
+        let worker_progress = Arc::new(AtomicU64::new(0));
         let worker_progress_clone = Arc::clone(&worker_progress);
 
         DIEM_STORAGE_PRUNE_WINDOW.set(historical_versions_to_keep as i64);
         let worker_thread = std::thread::Builder::new()
             .name("diemdb_pruner".into())
-            .spawn(move || Worker::new(db, command_receiver, worker_progress_clone).work_loop())
+            .spawn(move || Worker::new(db, command_receiver, worker_progress_clone).work())
             .expect("Creating pruner thread should succeed.");
 
         Self {
             historical_versions_to_keep,
             worker_thread: Some(worker_thread),
             command_sender: Mutex::new(command_sender),
-            initial_least_readable_version,
             worker_progress,
         }
     }
@@ -94,14 +77,12 @@ impl Pruner {
     pub fn wake(&self, latest_version: Version) {
         if latest_version > self.historical_versions_to_keep {
             let least_readable_version = latest_version - self.historical_versions_to_keep;
-            if least_readable_version > self.initial_least_readable_version {
-                self.command_sender
-                    .lock()
-                    .send(Command::Prune {
-                        least_readable_version,
-                    })
-                    .expect("Receiver should not destruct prematurely.");
-            }
+            self.command_sender
+                .lock()
+                .send(Command::Prune {
+                    least_readable_version,
+                })
+                .expect("Receiver should not destruct prematurely.");
         }
     }
 
@@ -182,7 +163,9 @@ impl Worker {
         }
     }
 
-    fn work_loop(mut self) {
+    fn work(mut self) {
+        self.initialize();
+
         while self.receive_commands() {
             // Process a reasonably small batch of work before trying to receive commands again,
             // in case `Command::Quit` is received (that's when we should quit.)
@@ -193,15 +176,11 @@ impl Worker {
                 Self::MAX_VERSIONS_TO_PRUNE_PER_BATCH,
             ) {
                 Ok(least_readable_version) => {
+                    self.record_progress(least_readable_version);
+
                     // Make next recv() blocking if all done.
                     self.blocking_recv =
                         least_readable_version == self.target_least_readable_version;
-
-                    // Log the progress.
-                    self.least_readable_version
-                        .store(least_readable_version, Ordering::Relaxed);
-                    DIEM_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION
-                        .set(least_readable_version as i64);
 
                     // Try to purge the log.
                     if let Err(e) = self.maybe_purge_index() {
@@ -221,6 +200,51 @@ impl Worker {
                 }
             }
         }
+    }
+
+    /// Find out the first undeleted item in the stale node index.
+    ///
+    /// Seeking from the beginning (version 0) is potentially costly, we do it once upon worker
+    /// thread start, record the progress and seek from that position afterwards.
+    fn initialize(&mut self) {
+        loop {
+            match self.get_least_readable_version() {
+                Ok(least_readable_version) => {
+                    info!(
+                        least_readable_version = least_readable_version,
+                        "[state pruner worker] initialized."
+                    );
+                    self.target_least_readable_version = least_readable_version;
+                    self.record_progress(least_readable_version);
+                    return;
+                }
+                Err(e) => {
+                    error!(
+                        error = ?e,
+                        "[state pruner worker] Error on first seek. Retrying in 1 second.",
+                    );
+                    sleep(Duration::from_secs(1));
+                }
+            }
+        }
+    }
+
+    fn get_least_readable_version(&self) -> Result<Version> {
+        let mut iter = self
+            .db
+            .iter::<StaleNodeIndexSchema>(ReadOptions::default())?;
+        iter.seek_to_first();
+        Ok(iter
+            .next()
+            .transpose()?
+            .map_or(0, |(index, _)| index.stale_since_version))
+    }
+
+    /// Log the progress.
+    fn record_progress(&mut self, least_readable_version: Version) {
+        self.least_readable_version
+            .store(least_readable_version, Ordering::Relaxed);
+        DIEM_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION.set(least_readable_version as i64);
     }
 
     /// Tries to receive all pending commands, blocking waits for the next command if no work needs

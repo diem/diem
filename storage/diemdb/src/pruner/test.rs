@@ -149,7 +149,7 @@ fn test_worker_quit_eagerly() {
             .unwrap();
         command_sender.send(Command::Quit).unwrap();
         // Worker quits immediately although `Command::Quit` is not the first command sent.
-        worker.work_loop();
+        worker.work();
         verify_state_in_store(state_store, address, Some(&value0), 0);
         verify_state_in_store(state_store, address, Some(&value1), 1);
         verify_state_in_store(state_store, address, Some(&value2), 2);
