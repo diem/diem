@@ -93,6 +93,28 @@ jobs:
           hadolint docker/ci/alpine/Dockerfile && \
           hadolint docker/ci/centos/Dockerfile
 
+  lint:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    continue-on-error: false
+    needs: prepare
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - name: cargo lint
+        run: cargo x lint
+      - name: cargo clippy
+        run: cargo xclippy --workspace --all-targets
+      - name: cargo clippy tcb
+        run: cargo xclippy --members lec --members lsr --members key-manager
+      - name: cargo fmt
+        run: cargo xfmt --check
+      - uses: ./.github/actions/build-teardown
+
   unit-test:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 70
