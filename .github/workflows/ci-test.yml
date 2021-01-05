@@ -174,3 +174,20 @@ jobs:
           $CARGO $CARGOFLAGS test --features='vanilla-u64' --no-default-features
           $CARGO $CARGOFLAGS test --features='vanilla-u32' --no-default-features
       - uses: ./.github/actions/build-teardown
+
+  # Compile (but don't run) the benchmarks, to insulate against bit rot
+  build-benchmarks:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    continue-on-error: false
+    needs: prepare
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - name: build benchmarks
+        run: cargo x bench --no-run
+      - uses: ./.github/actions/build-teardown
