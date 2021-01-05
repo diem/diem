@@ -139,3 +139,19 @@ jobs:
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - uses: ./.github/actions/build-teardown
+
+  e2e-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 40
+    continue-on-error: false
+    needs: prepare
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - name: run e2e tests
+        run: cargo x test --package smoke-test -- --test-threads 2 --nocapture
+      - uses: ./.github/actions/build-teardown
