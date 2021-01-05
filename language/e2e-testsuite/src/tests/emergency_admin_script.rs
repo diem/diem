@@ -5,11 +5,11 @@ use diem_crypto::HashValue;
 use diem_types::{
     account_config::diem_root_address,
     on_chain_config::new_epoch_event_key,
-    transaction::{TransactionPayload, TransactionStatus},
+    transaction::{Transaction, TransactionPayload, TransactionStatus},
     vm_status::KeptVMStatus,
 };
 use diem_writeset_generator::{
-    encode_custom_script, encode_halt_network_transaction, encode_remove_validators_transaction,
+    encode_custom_script, encode_halt_network_payload, encode_remove_validators_payload,
 };
 use language_e2e_tests::{
     account::Account, common_transactions::peer_to_peer_txn, current_function_name,
@@ -160,15 +160,16 @@ fn validator_batch_remove() {
             .sign(),
     );
 
-    let txn1 = encode_remove_validators_transaction(vec![
+    let txn1 = Transaction::GenesisTransaction(encode_remove_validators_payload(vec![
         *validator_account_0.address(),
         *validator_account_1.address(),
-    ]);
+    ]));
 
-    let txn2 = encode_custom_script(
+    let txn2 = Transaction::GenesisTransaction(encode_custom_script(
         "remove_validators.move",
         &json!({ "addresses": [validator_account_0.address().to_string(), validator_account_1.address().to_string()]}),
-    );
+        Some(diem_root_address()),
+    ));
 
     assert_eq!(txn1, txn2);
     // Remove two newly added validators.
@@ -228,7 +229,9 @@ fn halt_network() {
 
     executor.new_block();
     let output = executor
-        .execute_transaction_block(vec![encode_halt_network_transaction()])
+        .execute_transaction_block(vec![Transaction::GenesisTransaction(
+            encode_halt_network_payload(),
+        )])
         .unwrap()
         .pop()
         .unwrap();
