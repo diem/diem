@@ -1,8 +1,8 @@
-@value small-tablet-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value small-tablet-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
-@value medium-tablet-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
-@value large-tablet-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value large-desktop-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
+@value small-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value small-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value medium-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-desktop-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
 
 /*
  * The nature of this component is that, due to how it is designed,

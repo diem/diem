@@ -1,4 +1,4 @@
-@value small-tablet-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
+@value small-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
 
 .root {
   --border-width: 1px;

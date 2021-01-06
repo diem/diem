@@ -12,13 +12,14 @@
     "deploy-staging": "npm run build-staging && npx now"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.53",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.53",
+    "@docusaurus/core": "^2.0.0-alpha.70",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.70",
+    "@libra-opensource/libra-client-sdk-typescript": "1.0.2",
     "@libra-opensource/diem-cli": "^0.8.1",
+    "@libra-opensource/diem-docusaurus-components": "^0.1.1",
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",
     "classnames": "^2.2.6",
-    "libra-docusaurus-components": "^0.2.50",
     "object-assign-deep": "^0.4.0",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",

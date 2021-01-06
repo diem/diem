@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import BaseContainer from '../BaseContainer';
-import {WithBackgroundImage} from 'libra-docusaurus-components';
+import {WithBackgroundImage} from 'diem-docusaurus-components';
 
 import styles from './styles.module.css';
 

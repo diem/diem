@@ -10,7 +10,7 @@ import { OVERFLOW_CONTAINER_CLASS } from '@theme/Layout';
 
 import Feedback from 'components/docs/Feedback';
 import Pagination from './Pagination';
-import { RightSidebar } from 'libra-docusaurus-components';
+import { RightSidebar } from 'diem-docusaurus-components';
 
 import classnames from 'classnames';
 import styles from './styles.module.css';
@@ -62,7 +62,7 @@ function DocItem(props) {
       </Head>
       <div className={classnames('container', styles.docItemWrapper)}>
         <div
-          className={classnames({
+          className={classnames('main-content', {
             [styles.fullWidthContent]: hideRightSidebar,
           })}
         >
