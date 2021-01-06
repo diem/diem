@@ -19,6 +19,7 @@ diem-validator-interface = { path = "../diem-validator-interface", version = "0.
 diemdb = { path = "../../../storage/diemdb", version = "0.1.0" }
 diem-vm = { path = "../../diem-vm", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0"}
+move-cli = { path = "../../tools/move-cli", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }

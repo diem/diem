@@ -18,6 +18,9 @@ struct Opt {
     /// Full URL address to connect to - should include port number, if applicable
     #[structopt(short = "u", long)]
     url: Option<String>,
+    /// If true, persist the effects of replaying transactions via `cmd` to disk in a format understood by the Move CLI
+    #[structopt(short = "s", global = true)]
+    save_write_sets: bool,
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
     cmd: Command,
 }
@@ -74,7 +77,10 @@ fn main() -> Result<()> {
 
     match opt.cmd {
         Command::ReplayTransactions { start, limit } => {
-            println!("{:#?}", debugger.execute_past_transactions(start, limit));
+            println!(
+                "{:#?}",
+                debugger.execute_past_transactions(start, limit, opt.save_write_sets)
+            );
         }
         Command::ReplayRecentTransactions { txns } => {
             let latest_version = debugger
@@ -83,7 +89,11 @@ fn main() -> Result<()> {
             assert!(latest_version >= txns);
             println!(
                 "{:#?}",
-                debugger.execute_past_transactions(latest_version - txns, txns)
+                debugger.execute_past_transactions(
+                    latest_version - txns,
+                    txns,
+                    opt.save_write_sets
+                )
             );
         }
         Command::ReplayTransactionBySequence { account, seq } => {
@@ -93,7 +103,7 @@ fn main() -> Result<()> {
             println!(
                 "Executing transaction at version: {:?}\n{:#?}",
                 version,
-                debugger.execute_past_transactions(version, 1)
+                debugger.execute_past_transactions(version, 1, opt.save_write_sets)
             );
         }
         Command::AnnotateAccount { account, version } => println!(

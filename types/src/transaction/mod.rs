@@ -738,6 +738,10 @@ impl TransactionOutput {
         }
     }
 
+    pub fn into(self) -> (WriteSet, Vec<ContractEvent>) {
+        (self.write_set, self.events)
+    }
+
     pub fn write_set(&self) -> &WriteSet {
         &self.write_set
     }

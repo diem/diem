@@ -31,7 +31,7 @@ fn test_replay_tooling() {
         .unwrap();
 
     let replay_result = json_debugger
-        .execute_past_transactions(txn.version, 1)
+        .execute_past_transactions(txn.version, 1, false)
         .unwrap()
         .pop()
         .unwrap();
