@@ -408,7 +408,9 @@ fn run(
 fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
     let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
     let cost_strategy = if let Some(gas_budget) = gas_budget {
-        let max_gas_budget = u64::MAX / gas_schedule.gas_constants.gas_unit_scaling_factor;
+        let max_gas_budget = u64::MAX
+            .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
+            .unwrap();
         if gas_budget >= max_gas_budget {
             bail!("Gas budget set too high; maximum is {}", max_gas_budget)
         }
