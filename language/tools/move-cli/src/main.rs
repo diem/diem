@@ -40,7 +40,7 @@ use structopt::StructOpt;
     about = "CLI frontend for Move compiler and VM",
     rename_all = "kebab-case"
 )]
-struct Move {
+pub struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by module publishing
     /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
@@ -64,7 +64,7 @@ struct Move {
 }
 
 #[derive(StructOpt)]
-enum Command {
+pub enum Command {
     /// Type check and verify the specified script and modules against the modules in `storage`
     #[structopt(name = "check")]
     Check {

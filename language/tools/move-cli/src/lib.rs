@@ -279,14 +279,23 @@ impl OnDiskStateView {
         layout: MoveTypeLayout,
         resource: Value,
     ) -> Result<()> {
+        let bcs = resource
+            .simple_serialize(&layout)
+            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
+        self.save_resource_bytes(addr, tag, &bcs)
+    }
+
+    pub fn save_resource_bytes(
+        &self,
+        addr: AccountAddress,
+        tag: StructTag,
+        bcs_bytes: &[u8],
+    ) -> Result<()> {
         let path = self.get_resource_path(addr, tag);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
-        let bcs = resource
-            .simple_serialize(&layout)
-            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
-        Ok(fs::write(path, &bcs)?)
+        Ok(fs::write(path, bcs_bytes)?)
     }
 
     pub fn save_event(
@@ -301,10 +310,17 @@ impl OnDiskStateView {
         let event_data = event_value
             .simple_serialize(event_layout)
             .ok_or_else(|| anyhow!("Failed to serialize event"))?;
-        let event = ContractEvent::new(key, event_sequence_number, event_type, event_data);
+        self.save_contract_event(ContractEvent::new(
+            key,
+            event_sequence_number,
+            event_type,
+            event_data,
+        ))
+    }
 
+    pub fn save_contract_event(&self, event: ContractEvent) -> Result<()> {
         // save event data in handle_address/EVENTS_DIR/handle_number
-        let path = self.get_event_path(&key);
+        let path = self.get_event_path(event.key());
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
@@ -315,15 +331,17 @@ impl OnDiskStateView {
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
-    fn save_module(&self, module: &CompiledModule) -> Result<()> {
-        let path = self.get_module_path(&module.self_id());
+    pub fn save_module(&self, module: &CompiledModule) -> Result<()> {
+        let mut module_bytes = vec![];
+        module.serialize(&mut module_bytes)?;
+        self.save_module_bytes(&module.self_id(), &module_bytes)
+    }
+
+    pub fn save_module_bytes(&self, id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
+        let path = self.get_module_path(id);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
-
-        let mut module_bytes = vec![];
-        module.serialize(&mut module_bytes)?;
-
         Ok(fs::write(path, &module_bytes)?)
     }
 
@@ -353,6 +371,18 @@ impl OnDiskStateView {
             )?;
         }
 
+        Ok(())
+    }
+
+    pub fn delete_module(&self, id: &ModuleId) -> Result<()> {
+        let path = self.get_module_path(id);
+        fs::remove_file(path)?;
+
+        // delete addr directory if this address is now empty
+        let addr_path = self.get_addr_path(id.address());
+        if addr_path.read_dir()?.next().is_none() {
+            fs::remove_dir(addr_path)?
+        }
         Ok(())
     }
 

@@ -2179,6 +2179,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "difference",
+ "move-cli",
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
