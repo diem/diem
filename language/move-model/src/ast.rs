@@ -65,6 +65,7 @@ pub enum ConditionKind {
     AbortsWith,
     SucceedsIf,
     Modifies,
+    Emits,
     Ensures,
     Requires,
     RequiresModule,
@@ -90,7 +91,7 @@ impl ConditionKind {
     /// Returns true of this condition allows the `old(..)` expression.
     pub fn allows_old(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Ensures | InvariantUpdate | VarUpdate(..))
+        matches!(self, Emits | Ensures | InvariantUpdate | VarUpdate(..))
     }
 
     /// Returns true if this condition is allowed on a public function declaration.
@@ -98,7 +99,14 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
+            Requires
+                | RequiresModule
+                | AbortsIf
+                | AbortsWith
+                | SucceedsIf
+                | Emits
+                | Ensures
+                | Modifies
         )
     }
 
@@ -107,7 +115,14 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
+            Requires
+                | RequiresModule
+                | AbortsIf
+                | AbortsWith
+                | SucceedsIf
+                | Emits
+                | Ensures
+                | Modifies
         )
     }
 
@@ -141,6 +156,7 @@ impl std::fmt::Display for ConditionKind {
             AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
             Modifies => write!(f, "modifies"),
+            Emits => write!(f, "emits"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),

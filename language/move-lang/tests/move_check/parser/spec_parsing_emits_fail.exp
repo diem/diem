@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/spec_parsing_emits_fail.move:3:19 ───
+   │
+ 3 │         emits _msg;
+   │                   ^ Unexpected ';'
+   ·
+ 3 │         emits _msg;
+   │                   - Expected 'to'
+   │
+

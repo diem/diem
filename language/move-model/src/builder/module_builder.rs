@@ -1437,11 +1437,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let first = exps.remove(0);
                 (first, exps)
             }
+            ConditionKind::Emits => {
+                // TODO: `first` is the "message" part, and `second` is the "handle" part.
+                //       `second` should have type 0x1::Event::EventHandle<T>, and `first`
+                //       should have type T.
+                let (_, first) = et.translate_exp_free(exp);
+                let (_, second) = et.translate_exp_free(&additional_exps[0]);
+                let mut exps = vec![second];
+                if additional_exps.len() > 1 {
+                    exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE));
+                }
+                (first, exps)
+            }
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
                        loc,
-                       "additional expressions only allowed with `aborts_if`, `aborts_with`, or `modifies`",
+                       "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
                    );
                 }
                 (et.translate_exp(exp, &expected_type), vec![])
@@ -1502,6 +1514,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             PK::Assume => Some((Assume, exp)),
             PK::Decreases => Some((Decreases, exp)),
             PK::Modifies => Some((Modifies, exp)),
+            PK::Emits => Some((Emits, exp)),
             PK::Ensures => Some((Ensures, exp)),
             PK::Requires => Some((Requires, exp)),
             PK::AbortsIf => Some((AbortsIf, exp)),
