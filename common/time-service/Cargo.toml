@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-enum_dispatch = "0.3.4"
+enum_dispatch = "0.3.5"
 futures = "0.3.8"
 pin-project = "1.0.3"
 thiserror = "1.0.23"
