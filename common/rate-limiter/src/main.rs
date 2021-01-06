@@ -21,11 +21,15 @@ use tokio::{
 /// Where to run the test read/write
 const ADDRESS: &str = "localhost:7777";
 /// Total # of bytes to transfer.  May transfer more, but won't transfer less
-const BYTES_TO_TRANSFER: usize = 1_000_000;
+const BYTES_TO_TRANSFER: usize = 100_000_000;
 /// Expected throughput to be configured on the rate limiter
 const ALLOWED_BYTES_PER_SEC: usize = 10_000;
 /// Chunk size to write bytes to the stream at a time
 const CHUNK_SIZE: usize = 10_000;
+/// Buffer size used by Tokio when reading, backpressure only occurs after this is full
+const READ_BUFFER_SIZE: usize = 100;
+/// Buffer size used by Tokio when writing
+const WRITE_BUFFER_SIZE: usize = 100;
 
 /// Holder for statistics of a single experiment and reader/writer
 struct RunStats {
@@ -42,9 +46,9 @@ fn main() {
     diem_logger::DiemLogger::init_for_testing();
     println!("Starting experiments");
     println!(
-        "Bytes to test: {}, Expected Throughput(actions/s): {}, Expected Throughput(bytes/s): {}, ",
+        "Bytes to test: {}, Expected Throughput(actions/s): {}, Expected Throughput(bytes/s): {}",
         BYTES_TO_TRANSFER,
-        ALLOWED_BYTES_PER_SEC / CHUNK_SIZE,
+        ALLOWED_BYTES_PER_SEC as f64 / CHUNK_SIZE as f64,
         ALLOWED_BYTES_PER_SEC
     );
 
@@ -68,7 +72,29 @@ fn main() {
     run_experiment(
         "Read & Write Limited",
         &runtime,
-        test_rate_limit_read_write(BYTES_TO_TRANSFER, ALLOWED_BYTES_PER_SEC),
+        test_rate_limit_read_write(
+            BYTES_TO_TRANSFER,
+            ALLOWED_BYTES_PER_SEC,
+            ALLOWED_BYTES_PER_SEC,
+        ),
+    );
+    run_experiment(
+        "Write 2x Read Limited",
+        &runtime,
+        test_rate_limit_read_write(
+            BYTES_TO_TRANSFER,
+            ALLOWED_BYTES_PER_SEC,
+            ALLOWED_BYTES_PER_SEC.saturating_mul(2),
+        ),
+    );
+    run_experiment(
+        "Read 2x Write Limited",
+        &runtime,
+        test_rate_limit_read_write(
+            BYTES_TO_TRANSFER,
+            ALLOWED_BYTES_PER_SEC.saturating_mul(2),
+            ALLOWED_BYTES_PER_SEC,
+        ),
     );
 }
 
@@ -80,6 +106,7 @@ fn run_experiment<F: Future<Output = Vec<RunStats>> + 'static + Send>(
 ) {
     println!("\n== {} ==", label);
     let stats = block_on(runtime.spawn(experiment)).expect("Expect experiment to finish");
+    println!("-- Stats --");
     for run in stats {
         println!(
             "{} stats\t|\tTotal actions: {}\t|\tTotal bytes: {}\t|\tThroughput(actions/s): {}\t|\tThroughput(bytes/s): {}\t|\tTime elapsed: {:?}",
@@ -135,7 +162,7 @@ async fn test_rate_limiter<
 
     // Shrink the buffer to increase the affects of backpressure
     out_stream
-        .set_send_buffer_size(CHUNK_SIZE)
+        .set_send_buffer_size(WRITE_BUFFER_SIZE)
         .expect("Should be able to change buffer size");
     let mut writer = writer(out_stream);
 
@@ -153,7 +180,7 @@ async fn test_rate_limiter<
 
         // Shrink the buffer to increase the affects of backpressure
         in_stream
-            .set_recv_buffer_size(CHUNK_SIZE)
+            .set_recv_buffer_size(READ_BUFFER_SIZE)
             .expect("Should be able to change buffer size");
 
         // Read in the expected number of bytes
@@ -240,9 +267,13 @@ async fn test_rate_limit_write(num_bytes: usize, throughput: usize) -> Vec<RunSt
 
 /// Tests if both are rate limited.  Results should be roughly the same in the long term as
 /// the other two
-async fn test_rate_limit_read_write(num_bytes: usize, throughput: usize) -> Vec<RunStats> {
-    let inbound_rate_limiter = simple_shared_bucket("read", throughput);
-    let outbound_rate_limiter = simple_shared_bucket("write", throughput);
+async fn test_rate_limit_read_write(
+    num_bytes: usize,
+    read_throughput: usize,
+    write_throughput: usize,
+) -> Vec<RunStats> {
+    let inbound_rate_limiter = simple_shared_bucket("read", read_throughput);
+    let outbound_rate_limiter = simple_shared_bucket("write", write_throughput);
     test_rate_limiter(
         num_bytes,
         |reader| AsyncRateLimiter::new(reader, Some(inbound_rate_limiter)),
