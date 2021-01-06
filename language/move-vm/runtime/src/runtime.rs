@@ -48,8 +48,6 @@ impl VMRuntime {
         &self,
         module: Vec<u8>,
         sender: AccountAddress,
-        allow_republish: bool,
-        allow_breaking_changes: bool,
         data_store: &mut impl DataStore,
         _cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
@@ -78,33 +76,28 @@ impl VMRuntime {
 
         let module_id = compiled_module.self_id();
 
-        if !allow_republish {
-            // Make sure that there is not already a module with this name published under the
-            // transaction sender's account.
-            if data_store.exists_module(&module_id)? {
-                return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)
-                    .finish(Location::Undefined));
-            };
-        } else if !allow_breaking_changes {
-            // Make sure that the to-be-published module do not introduce breaking changes if there
-            // exists an old module with the same module id in data store
-            if let Ok(old_module_bytes) = data_store.load_module(&module_id) {
-                let old_module = match CompiledModule::deserialize(&old_module_bytes) {
-                    Ok(module) => module,
-                    Err(err) => {
-                        warn!(*log_context, "[VM] module deserialization failed {:?}", err);
-                        return Err(err.finish(Location::Undefined));
-                    }
-                };
-                let old_m = normalized::Module::new(&old_module);
-                let new_m = normalized::Module::new(&compiled_module);
-                let compat = Compatibility::check(&old_m, &new_m);
-                if !compat.is_fully_compatible() {
-                    return Err(PartialVMError::new(
-                        StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-                    )
-                    .finish(Location::Undefined));
+        // For now, we assume that all modules can be republished, as long as the new module is
+        // backward compatible with the old module.
+        //
+        // TODO: in the future, we may want to add restrictions on module republishing, possibly by
+        // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
+        if data_store.exists_module(&module_id)? {
+            let old_module_bytes = data_store.load_module(&module_id)?;
+            let old_module = match CompiledModule::deserialize(&old_module_bytes) {
+                Ok(module) => module,
+                Err(err) => {
+                    warn!(*log_context, "[VM] module deserialization failed {:?}", err);
+                    return Err(err.finish(Location::Undefined));
                 }
+            };
+            let old_m = normalized::Module::new(&old_module);
+            let new_m = normalized::Module::new(&compiled_module);
+            let compat = Compatibility::check(&old_m, &new_m);
+            if !compat.is_fully_compatible() {
+                return Err(
+                    PartialVMError::new(StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE)
+                        .finish(Location::Undefined),
+                );
             }
         }
 

@@ -1,8 +1,8 @@
+// Publishing a compatible module should be allowed
+
 module Currency {
 }
 
 //! new-transaction
 module Currency {
 }
-
-// check: DUPLICATE_MODULE_NAME

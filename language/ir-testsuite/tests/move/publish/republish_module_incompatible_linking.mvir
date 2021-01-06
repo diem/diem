@@ -1,0 +1,12 @@
+module Duplicate {
+  public f() { return; }
+  public g() { return; }
+}
+
+//! new-transaction
+
+module Duplicate {
+  public f() { return; }
+}
+
+// check: BACKWARD_INCOMPATIBLE_MODULE_UPDATE

@@ -1,0 +1,11 @@
+module Duplicate {
+  resource T { f: u64 }
+}
+
+//! new-transaction
+
+module Duplicate {
+  resource T { f: u64, g: bool }
+}
+
+// check: BACKWARD_INCOMPATIBLE_MODULE_UPDATE

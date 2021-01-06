@@ -258,41 +258,48 @@ fn publish(
         }
     }
 
-    // use the interfaces from the VM
-    let vm = MoveVM::new();
-    let mut cost_strategy = get_cost_strategy(None)?;
-    let log_context = NoContextLog::new();
-    let mut session = vm.new_session(&state);
+    // use the the publish_module API frm the VM if we do not allow breaking changes
+    if !ignore_breaking_changes {
+        let vm = MoveVM::new();
+        let mut cost_strategy = get_cost_strategy(None)?;
+        let log_context = NoContextLog::new();
+        let mut session = vm.new_session(&state);
 
-    let mut has_error = false;
-    for module in &modules {
-        let mut module_bytes = vec![];
-        module.serialize(&mut module_bytes)?;
+        let mut has_error = false;
+        for module in &modules {
+            let mut module_bytes = vec![];
+            module.serialize(&mut module_bytes)?;
 
-        let id = module.self_id();
-        let sender = *id.address();
+            let id = module.self_id();
+            let sender = *id.address();
 
-        let res = session.publish_module_ext(
-            module_bytes,
-            sender,
-            republish,
-            ignore_breaking_changes,
-            &mut cost_strategy,
-            &log_context,
-        );
-        if let Err(err) = res {
-            explain_publish_error(err, &state, module)?;
-            has_error = true;
-            break;
+            let res =
+                session.publish_module(module_bytes, sender, &mut cost_strategy, &log_context);
+            if let Err(err) = res {
+                explain_publish_error(err, &state, module)?;
+                has_error = true;
+                break;
+            }
         }
-    }
 
-    if !has_error {
-        let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        if verbose {
-            explain_publish_effects(&effects, &state)?
+        if !has_error {
+            let effects = session.finish().map_err(|e| e.into_vm_status())?;
+            if verbose {
+                explain_publish_effects(&effects, &state)?
+            }
+            state.save_modules(&effects.modules)?;
         }
-        state.save_modules(&effects.modules)?;
+    } else {
+        // NOTE: the VM enforces the most strict way of module republishing and does not allow
+        // backward incompatible changes, as as result, if this flag is set, we skip the VM process
+        // and force the CLI to override the on-disk state directly
+        let mut serialized_modules = vec![];
+        for module in modules {
+            let mut module_bytes = vec![];
+            module.serialize(&mut module_bytes)?;
+            serialized_modules.push((module.self_id(), module_bytes));
+        }
+        state.save_modules(&serialized_modules)?;
     }
 
     Ok(())
