@@ -24,7 +24,7 @@ termion = "1.5.5"
 serde = { version = "1.0.117", features = ["derive"] }
 structopt = "0.3.21"
 rusoto_core = { version = "0.45.0" }
-rusoto_autoscaling = { version = "0.45.0" }
+rusoto_autoscaling = { version = "0.46.0" }
 rusoto_sts = { version = "0.45.0" }
 rusoto_s3 = { version = "0.45.0" }
 chrono = "0.4.19"
