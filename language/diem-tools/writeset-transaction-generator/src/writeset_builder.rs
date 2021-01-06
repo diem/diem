@@ -123,7 +123,7 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
             TransactionArgument::Bool(b) => Value::bool(*b),
             TransactionArgument::AddressVector(v) => Value::vector_address(v.clone()),
             TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-            TransactionArgument::U64Vector(v)=>Value::vector_u64(v.clone()),
+            TransactionArgument::U64Vector(v) => Value::vector_u64(v.clone()),
         })
         .collect()
 }

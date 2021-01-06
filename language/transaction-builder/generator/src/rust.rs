@@ -450,21 +450,21 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
                     } else {
                         "Bytes".into()
                     }
-                },
+                }
                 U64 => {
                     if local_types {
                         "Vec<u64>".into()
-                    } else{
+                    } else {
                         "U64Vector".into()
                     }
-                },
+                }
                 Address => {
                     if local_types {
                         "Vec<AccountAddress>".into()
                     } else {
                         "AddressVector".into()
                     }
-                },
+                }
                 _ => common::type_not_allowed(type_tag),
             },
 

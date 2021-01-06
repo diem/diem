@@ -27,9 +27,11 @@ impl fmt::Debug for TransactionArgument {
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
             TransactionArgument::U8Vector(vector) => {
                 write!(f, "{{U8Vector: 0x{}}}", hex::encode(vector))
-            },
+            }
             TransactionArgument::U64Vector(vector) => write!(f, "{{U64Vector: {:?}}}", vector),
-            TransactionArgument::AddressVector(vector) => write!(f, "{{AddressVector: {:?}}}", vector),
+            TransactionArgument::AddressVector(vector) => {
+                write!(f, "{{AddressVector: {:?}}}", vector)
+            }
         }
     }
 }
