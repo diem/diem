@@ -449,7 +449,9 @@ fn run(
             TransactionArgument::U128(i) => Value::u128(*i),
             TransactionArgument::Address(a) => Value::address(*a),
             TransactionArgument::Bool(b) => Value::bool(*b),
+            TransactionArgument::AddressVector(v) => Value::vector_address(v.clone()),
             TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+            TransactionArgument::U64Vector(v)=>Value::vector_u64(v.clone()),
         })
         .collect();
 
