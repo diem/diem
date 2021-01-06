@@ -1,3 +1,3 @@
-import {CodeBlock} from 'libra-docusaurus-components';
+import {CodeBlock} from 'diem-docusaurus-components';
 
 export default CodeBlock;

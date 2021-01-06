@@ -1,6 +1,6 @@
 import React, {useContext, useState} from 'react';
 
-import { CookieContext } from 'libra-docusaurus-components';
+import { CookieContext } from 'diem-docusaurus-components';
 
 import ThumbsUp from 'img/thumbs-up.svg';
 import ThumbsDown from 'img/thumbs-down.svg';

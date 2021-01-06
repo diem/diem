@@ -1,5 +1,5 @@
-@value large-tablet-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value desktop-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
 
 .root {
   --text-color: #354052;

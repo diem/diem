@@ -1,6 +1,6 @@
-@value large-desktop-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value desktop-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value larget-tablet-breakpoint-size from '~libra-docusaurus-components/src/variables.module.css';
+@value large-desktop-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value larget-tablet-breakpoint-size from '~diem-docusaurus-components/src/variables.module.css';
 
 .docItemContainer {
   margin: 0 auto;
