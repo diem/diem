@@ -21,8 +21,7 @@ use vm::{
     compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::SignatureToken,
-    normalized::Module,
-    CompiledModule, IndexKind,
+    normalized, CompiledModule, IndexKind,
 };
 
 /// An instantiation of the MoveVM.
@@ -97,12 +96,14 @@ impl VMRuntime {
                         return Err(err.finish(Location::Undefined));
                     }
                 };
-                let old_m = Module::new(&old_module);
-                let new_m = Module::new(&compiled_module);
+                let old_m = normalized::Module::new(&old_module);
+                let new_m = normalized::Module::new(&compiled_module);
                 let compat = Compatibility::check(&old_m, &new_m);
                 if !compat.is_fully_compatible() {
-                    return Err(PartialVMError::new(StatusCode::INCOMPATIBLE_MODULE)
-                        .finish(Location::Undefined));
+                    return Err(PartialVMError::new(
+                        StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+                    )
+                    .finish(Location::Undefined));
                 }
             }
         }

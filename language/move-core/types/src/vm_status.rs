@@ -557,7 +557,7 @@ pub enum StatusCode {
     // contains a module with this name.
     DUPLICATE_MODULE_NAME = 1095,
     // The sender is trying to publish a module that breaks the compatibility checks
-    INCOMPATIBLE_MODULE = 1096,
+    BACKWARD_INCOMPATIBLE_MODULE_UPDATE = 1096,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

@@ -573,7 +573,7 @@ fn explain_publish_error(
                 module_id
             );
         }
-        VMStatus::Error(INCOMPATIBLE_MODULE) => {
+        VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
             if let Ok(old_m) = state.get_compiled_module(&module_id) {
                 let old_api = Module::new(&old_m);
                 let new_api = Module::new(module);
