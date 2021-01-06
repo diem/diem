@@ -145,7 +145,7 @@ pub struct RunBoogieWithSeeds {
 
 #[async_trait]
 impl ProverTask for RunBoogieWithSeeds {
-    type TaskResult = Output;
+    type TaskResult = std::io::Result<Output>;
     type TaskId = usize;
 
     fn init(&mut self, num_instances: usize) -> Vec<Self::TaskId> {
@@ -169,15 +169,19 @@ impl ProverTask for RunBoogieWithSeeds {
             .kill_on_drop(true)
             .output()
             .await
-            .unwrap()
     }
 
     fn is_success(&self, task_result: &Self::TaskResult) -> bool {
-        if !task_result.status.success() {
-            return false;
+        match task_result {
+            Ok(res) => {
+                if !res.status.success() {
+                    return false;
+                }
+                let output = String::from_utf8_lossy(&res.stdout);
+                self.contains_compilation_error(&output) || !self.contains_timeout(&output)
+            }
+            Err(_) => true, // Count this as success so we terminate everything else
         }
-        let output = String::from_utf8_lossy(&task_result.stdout);
-        self.contains_compilation_error(&output) || !self.contains_timeout(&output)
     }
 }
 
