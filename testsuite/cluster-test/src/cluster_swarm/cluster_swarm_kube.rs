@@ -9,7 +9,7 @@ use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
 use diem_logger::*;
-use futures::{future::try_join_all, lock::Mutex, Future, TryFuture};
+use futures::{future::try_join_all, lock::Mutex, Future, TryFuture, FutureExt, join};
 use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
     api::{Api, DeleteParams, PostParams},
@@ -656,9 +656,11 @@ impl ClusterSwarmKube {
     }
 
     pub async fn delete_all(&self) -> Result<()> {
-        self.delete::<Pod>().await?;
-        self.delete::<Service>().await?;
-        self.delete::<Job>().await
+        let a = self.delete::<Pod>().boxed();
+        let b = self.delete::<Service>().boxed();
+        let c = self.delete::<Job>().boxed();
+        let (_, _, _) = join!(a, b, c);
+        Ok(())
     }
 
     /// Runs command on the provided host in separate utility container based on cluster-test-util image
