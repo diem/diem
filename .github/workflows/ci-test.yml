@@ -36,7 +36,7 @@ jobs:
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
         with:
-          pattern: '**.rs\|Cargo.toml\|Cargo.lock'
+          pattern: '**.rs\|**.move\|Cargo.toml\|Cargo.lock'
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes
         uses: ./.github/actions/matches
@@ -98,6 +98,7 @@ jobs:
     timeout-minutes: 30
     continue-on-error: false
     needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:
@@ -120,15 +121,10 @@ jobs:
     timeout-minutes: 70
     continue-on-error: false
     needs: prepare
-    #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:
-      - name: stats
-        run: |
-          set x
-          cat /proc/meminfo
-          cat /proc/cpuinfo
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -145,6 +141,7 @@ jobs:
     timeout-minutes: 40
     continue-on-error: false
     needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:
@@ -161,6 +158,7 @@ jobs:
     timeout-minutes: 20
     continue-on-error: false
     needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:
@@ -181,6 +179,7 @@ jobs:
     timeout-minutes: 30
     continue-on-error: false
     needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:
@@ -197,6 +196,7 @@ jobs:
     timeout-minutes: 30
     continue-on-error: false
     needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
     steps:

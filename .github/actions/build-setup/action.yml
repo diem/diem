@@ -22,10 +22,16 @@ runs:
         echo 'CARGO='$(rustup which cargo --toolchain "$(cat cargo-toolchain)") | tee -a $GITHUB_ENV
         # Pin the version of RUSTC used for all invocations of cargo
         echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) | tee -a $GITHUB_ENV
-    # TODO: Temporarily disable setting up the move prover dependencies till the base image is ready
-    # - id: move-prover-environment
-    #   shell: bash
-    #   run: |
-    #     echo 'Z3_EXE='$HOME/bin/z3 | tee -a $GITHUB_ENV
-    #     echo 'DOTNET_ROOT='$HOME/.dotnet | tee -a $GITHUB_ENV
-    #     echo 'BOOGIE_EXE='$HOME/.dotnet/tools/boogie | tee -a $GITHUB_ENV
+
+        #prepare new user's home directory
+        cp -r /root/bin ${HOME}/bin
+        cp -r /root/.dotnet ${HOME}/.dotnet
+        cp -r /root/.rustup ${HOME}/.rustup
+        cp -r /root/.cargo ${HOME}/.cargo
+        cp -r /root/.local ${HOME}/.local
+        cp -r /root/.nuget ${HOME}/.nuget
+
+        #prepare move lang prover tooling.
+        echo 'Z3_EXE='${HOME}/bin/z3 | tee -a $GITHUB_ENV
+        echo 'DOTNET_ROOT='${HOME}/.dotnet/ | tee -a $GITHUB_ENV
+        echo 'BOOGIE_EXE='${HOME}/.dotnet/tools/boogie | tee -a $GITHUB_ENV
