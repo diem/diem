@@ -2955,12 +2955,26 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@libra-opensource/diem-cli@^0.7.12":
-  version "0.7.12"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-cli/-/diem-cli-0.7.12.tgz#644c513e62667434994a94cb145884bcef872ead"
-  integrity sha512-v7TrQ/GQIxTyDtgPvo8o17G9yC3SNjYNBs8tzE0YlCO/mlasbdnSzzJ0eo3kjEr8KPSmeFWM9tvAwKaKKP3WWA==
+"@libra-opensource/client-sdk-typescript@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/client-sdk-typescript/-/client-sdk-typescript-1.0.7.tgz#7c06ca8ba00f919145371454c7a807f8efe59116"
+  integrity sha512-jb6pHGFm/CMgPdwy09SyPegGh83ZPVMGPsPmoZcFEHixX0YXT/j/xrO5mfbPd4LBeF9Gq6i3oHbaQhCwBZ+EmA==
   dependencies:
-    "@libra-opensource/libra-client-sdk-typescript" "1.0.4"
+    axios "^0.21.1"
+    bech32 "^1.1.4"
+    bip39 "^3.0.2"
+    elliptic "^6.5.3"
+    json-bigint "^1.0.0"
+    sha3 "^2.1.3"
+    ts-proto "^1.37.0"
+    util "^0.12.3"
+
+"@libra-opensource/diem-cli@^0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-cli/-/diem-cli-0.8.1.tgz#dda3f332282718e275ecd4bdd4893ec605dc737f"
+  integrity sha512-bsvTqRX3OctUy9r86Equv9mS7u677F0aGEsMmzhFsuV6kMi5NGMMTFRxhYnunbbNowyhrwVCkKb040N/rfYP6w==
+  dependencies:
+    "@libra-opensource/client-sdk-typescript" "^1.0.7"
     json-bigint "^1.0.0"
     local-echo "github:wavesoft/local-echo"
     react "^16.13.1"
@@ -2969,34 +2983,6 @@
     xterm-addon-fit "^0.4.0"
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
-
-"@libra-opensource/libra-client-sdk-typescript@1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/libra-client-sdk-typescript/-/libra-client-sdk-typescript-1.0.2.tgz#775b2082060d6020061a015eddd9ad9c4778f1ab"
-  integrity sha512-bqBZzSftR3LmpCl2RMo8+Z8ad/PpC8NsErwtgE+kLMD7l0e9v+vurT1FzLXoGbjEHFGRkms4IVFPEz7av8cSag==
-  dependencies:
-    axios "^0.19.2"
-    bech32 "^1.1.4"
-    bip39 "^3.0.2"
-    elliptic "^6.5.3"
-    json-bigint "^1.0.0"
-    sha3 "^2.1.3"
-    ts-proto "^1.37.0"
-    util "^0.12.3"
-
-"@libra-opensource/libra-client-sdk-typescript@1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/libra-client-sdk-typescript/-/libra-client-sdk-typescript-1.0.4.tgz#79fccaa13e339dbe02f8c97fcd89f8eb752746a1"
-  integrity sha512-nCcTSJ0k1rtZZG0EK9n6TAhG4qRHHHIETSVg2CCNlnoq3YeYN2LIxMMVJ7Pb6VTgNe2ncjMyLL450zhbtGXqCw==
-  dependencies:
-    axios "^0.19.2"
-    bech32 "^1.1.4"
-    bip39 "^3.0.2"
-    elliptic "^6.5.3"
-    json-bigint "^1.0.0"
-    sha3 "^2.1.3"
-    ts-proto "^1.37.0"
-    util "^0.12.3"
 
 "@mdx-js/mdx@^1.5.8":
   version "1.5.9"
@@ -4328,12 +4314,12 @@ axe-core@^3.5.0:
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-3.5.3.tgz#5b7c0ee7c5197d546bd3a07c3ef701896f5773e9"
   integrity sha512-HZpLE7xu05+8AbpqXITGdxp1Xwk8ysAXrg7MiKRY27py3DAyEJpoJQo1727pWF3F+O79V3r+cTWhOzfB49P89w==
 
-axios@^0.19.2:
-  version "0.19.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.19.2.tgz#3ea36c5d8818d0d5f8a8a97a6d36b86cdc00cb27"
-  integrity sha512-fjgm5MvRHLhx+osE2xoekY70AhARk3a6hkN+3Io1jc00jtquGvxYlKlsFUhmUET0V5te6CcZI7lcv2Ym61mjHA==
+axios@^0.21.1:
+  version "0.21.1"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.21.1.tgz#22563481962f4d6bde9a76d516ef0e5d3c09b2b8"
+  integrity sha512-dKQiRHxGD9PPRIUNIWvZhPTPpl1rf/OxTYKsqKUDjBwYylTvV7SjSHJb9ratfyzM6wCdLCOYLzs73qpg5c4iGA==
   dependencies:
-    follow-redirects "1.5.10"
+    follow-redirects "^1.10.0"
 
 axobject-query@^2.0.2:
   version "2.2.0"
@@ -5956,13 +5942,6 @@ debug@2.6.9, debug@^2.2.0, debug@^2.3.3, debug@^2.6.0, debug@^2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@=3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-3.1.0.tgz#5bb5a0672628b64149566ba16819e61518c67261"
-  integrity sha512-OX8XqP7/1a9cqkxYw2yXss15f26NKWBpDXQd0/uK/KPqdQhxbPa994hnzjcE2VqQpDslf55723cKPUOGSmMY3g==
-  dependencies:
-    ms "2.0.0"
-
 debug@^3.0.0, debug@^3.1.1, debug@^3.2.5:
   version "3.2.6"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.6.tgz#e83d17de16d8a7efb7717edbe5fb10135eee629b"
@@ -7251,19 +7230,17 @@ flush-write-stream@^1.0.0:
     inherits "^2.0.3"
     readable-stream "^2.3.6"
 
-follow-redirects@1.5.10:
-  version "1.5.10"
-  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.5.10.tgz#7b7a9f9aea2fdff36786a94ff643ed07f4ff5e2a"
-  integrity sha512-0V5l4Cizzvqt5D44aTXbFZz+FtyXV1vrDN6qrelxtfYQKW0KO0W2T/hkE8xvGa/540LkZlkaUjO4ailYTFtHVQ==
-  dependencies:
-    debug "=3.1.0"
-
 follow-redirects@^1.0.0:
   version "1.11.0"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.11.0.tgz#afa14f08ba12a52963140fe43212658897bc0ecb"
   integrity sha512-KZm0V+ll8PfBrKwMzdo5D13b1bur9Iq9Zd/RMmAoQQcl2PxxFml8cxXPaaPYVbV0RjNjq1CU7zIzAOqtUPudmA==
   dependencies:
     debug "^3.0.0"
+
+follow-redirects@^1.10.0:
+  version "1.13.1"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.13.1.tgz#5f69b813376cee4fd0474a3aba835df04ab763b7"
+  integrity sha512-SSG5xmZh1mkPGyKzjZP8zLjltIfpW32Y5QpdNJyjcfGxK3qo3NDDkZOZSFiGn1A6SclQxY9GzEwAHQ3dmYRWpg==
 
 for-in@^0.1.3:
   version "0.1.8"
