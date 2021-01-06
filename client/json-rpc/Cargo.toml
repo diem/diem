@@ -15,10 +15,10 @@ async-trait = "0.1.42"
 futures = "0.3.12"
 hex = "0.4.2"
 rand = "0.7.3"
-reqwest = { version = "0.10.10", features = ["blocking", "json"], default_features = false }
+reqwest = { version = "0.11.0", features = ["blocking", "json"], default_features = false }
 serde = { version = "1.0.120", default-features = false }
 serde_json = "1.0.61"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "1.0.1", features = ["full"] }
 
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 bcs = "0.1.2"
@@ -28,7 +28,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 
 
 [dev-dependencies]
-warp = "0.2.5"
+warp = "0.3.0"
 diem-config = { path = "../../config", version = "0.1.0" }
 
 

@@ -432,14 +432,15 @@ impl OutboundRpcs {
         // A future that waits for the rpc response with a timeout. We create the
         // timeout out here to start the timer as soon as we push onto the queue
         // (as opposed to whenever it first gets polled on the queue).
-        let mut wait_for_response = tokio::time::timeout(timeout, response_rx).map(|result| {
-            // Flatten errors.
-            match result {
-                Ok(Ok(response)) => Ok(Bytes::from(response.raw_response)),
-                Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
-                Err(_elapsed) => Err(RpcError::TimedOut),
-            }
-        });
+        let mut wait_for_response =
+            Box::pin(tokio::time::timeout(timeout, response_rx).map(|result| {
+                // Flatten errors.
+                match result {
+                    Ok(Ok(response)) => Ok(Bytes::from(response.raw_response)),
+                    Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
+                    Err(_elapsed) => Err(RpcError::TimedOut),
+                }
+            }));
 
         // A future that waits for the response and sends it to the application.
         let notify_application = async move {

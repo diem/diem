@@ -6,6 +6,8 @@
 //! Abstract time service
 
 use enum_dispatch::enum_dispatch;
+#[cfg(any(test, feature = "async"))]
+use pin_project::pin_project;
 use std::{fmt::Debug, time::Duration};
 #[cfg(any(test, feature = "async"))]
 use std::{
@@ -192,14 +194,28 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
 /// simulated, depending on the parent [`TimeService`]).
 ///
 /// `Sleep` is modeled after [`tokio::time::Delay`].
-#[enum_dispatch(SleepTrait)]
+#[pin_project(project = SleepProject)]
 #[derive(Debug)]
 #[cfg(any(test, feature = "async"))]
 pub enum Sleep {
-    RealSleep(RealSleep),
+    RealSleep(#[pin] RealSleep),
 
     #[cfg(any(test, feature = "testing"))]
     MockSleep(MockSleep),
+}
+
+#[cfg(any(test, feature = "async"))]
+impl From<RealSleep> for Sleep {
+    fn from(sleep: RealSleep) -> Self {
+        Sleep::RealSleep(sleep)
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+impl From<MockSleep> for Sleep {
+    fn from(sleep: MockSleep) -> Self {
+        Sleep::MockSleep(sleep)
+    }
 }
 
 #[cfg(any(test, feature = "async"))]
@@ -207,20 +223,38 @@ impl Future for Sleep {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.get_mut() {
-            Sleep::RealSleep(inner) => Pin::new(inner).poll(cx),
+        match self.project() {
+            SleepProject::RealSleep(inner) => inner.poll(cx),
             #[cfg(any(test, feature = "testing"))]
-            Sleep::MockSleep(inner) => Pin::new(inner).poll(cx),
+            SleepProject::MockSleep(inner) => Pin::new(inner).poll(cx),
         }
     }
 }
 
-#[enum_dispatch]
 #[cfg(any(test, feature = "async"))]
-pub trait SleepTrait: Future<Output = ()> + Send + Sync + Unpin + Debug {
+pub trait SleepTrait: Future<Output = ()> + Send + Sync + Debug {
     /// Returns `true` if this `Sleep`'s requested wait duration has elapsed.
     fn is_elapsed(&self) -> bool;
 
     /// Resets this `Sleep`'s wait duration.
-    fn reset(&mut self, duration: Duration);
+    fn reset(self: Pin<&mut Self>, duration: Duration);
+}
+
+#[cfg(any(test, feature = "async"))]
+impl SleepTrait for Sleep {
+    fn is_elapsed(&self) -> bool {
+        match self {
+            Sleep::RealSleep(inner) => inner.is_elapsed(),
+            #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+            Sleep::MockSleep(inner) => inner.is_elapsed(),
+        }
+    }
+
+    fn reset(self: Pin<&mut Self>, duration: Duration) {
+        match self.project() {
+            SleepProject::RealSleep(inner) => SleepTrait::reset(inner, duration),
+            #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+            SleepProject::MockSleep(inner) => Pin::new(inner).reset(duration),
+        }
+    }
 }

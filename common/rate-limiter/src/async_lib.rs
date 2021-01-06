@@ -4,19 +4,19 @@
 use crate::rate_limit::{Bucket, SharedBucket};
 use diem_infallible::Mutex;
 use futures::{
-    io::{AsyncRead, Error},
+    io::AsyncRead,
     ready,
     task::{Context, Poll},
     AsyncWrite, Future,
 };
 use pin_project::pin_project;
 use std::{io, pin::Pin, sync::Arc};
-use tokio::time::{delay_until, Delay};
+use tokio::time::{sleep_until, Sleep};
 
 /// An inner struct for keeping track of the delay, and bucket of rate limiting
 struct PollRateLimiter {
     bucket: SharedBucket,
-    delay: Option<Delay>,
+    delay: Option<Pin<Box<Sleep>>>,
 }
 
 impl PollRateLimiter {
@@ -44,7 +44,9 @@ impl PollRateLimiter {
             match self.bucket.lock().acquire_tokens(requested) {
                 Ok(allowed) => return Poll::Ready(allowed),
                 Err(wait_time) => {
-                    self.delay = Some(delay_until(tokio::time::Instant::from_std(wait_time)));
+                    self.delay = Some(Box::pin(sleep_until(tokio::time::Instant::from_std(
+                        wait_time,
+                    ))));
                 }
             }
         }
@@ -132,46 +134,46 @@ impl<T: AsyncWrite> AsyncWrite for AsyncRateLimiter<T> {
     }
 }
 
-impl<T: tokio::io::AsyncRead> tokio::io::AsyncRead for AsyncRateLimiter<T> {
-    fn poll_read(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<io::Result<usize>> {
-        let this = self.project();
-        this.rate_limiter
-            .poll_limited(this.inner, cx, buf.len(), |resource, cx, allowed| {
-                resource.poll_read(cx, &mut buf[..allowed])
-            })
-    }
-}
+// impl<T: tokio::io::AsyncRead> tokio::io::AsyncRead for AsyncRateLimiter<T> {
+//     fn poll_read(
+//         self: Pin<&mut Self>,
+//         cx: &mut Context<'_>,
+//         buf: &mut [u8],
+//     ) -> Poll<io::Result<usize>> {
+//         let this = self.project();
+//         this.rate_limiter
+//             .poll_limited(this.inner, cx, buf.len(), |resource, cx, allowed| {
+//                 resource.poll_read(cx, &mut buf[..allowed])
+//             })
+//     }
+// }
 
-impl<T: tokio::io::AsyncWrite> tokio::io::AsyncWrite for AsyncRateLimiter<T> {
-    fn poll_write(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<io::Result<usize>> {
-        let this = self.project();
-        this.rate_limiter
-            .poll_limited(this.inner, cx, buf.len(), |resource, cx, allowed| {
-                resource.poll_write(cx, &buf[..allowed])
-            })
-    }
+// impl<T: tokio::io::AsyncWrite> tokio::io::AsyncWrite for AsyncRateLimiter<T> {
+//     fn poll_write(
+//         self: Pin<&mut Self>,
+//         cx: &mut Context<'_>,
+//         buf: &[u8],
+//     ) -> Poll<io::Result<usize>> {
+//         let this = self.project();
+//         this.rate_limiter
+//             .poll_limited(this.inner, cx, buf.len(), |resource, cx, allowed| {
+//                 resource.poll_write(cx, &buf[..allowed])
+//             })
+//     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.project().inner.poll_flush(cx)
-    }
+//     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+//         self.project().inner.poll_flush(cx)
+//     }
 
-    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        self.project().inner.poll_shutdown(cx)
-    }
-}
+//     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+//         self.project().inner.poll_shutdown(cx)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::AsyncReadExt as TokioAsyncReadExt;
+    use futures::io::AsyncReadExt;
 
     #[tokio::test]
     async fn test_async_read() {

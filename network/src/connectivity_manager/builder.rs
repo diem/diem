@@ -18,13 +18,11 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::{
-    runtime::Handle,
-    time::{interval, Interval},
-};
+use tokio::{runtime::Handle, time::interval};
 use tokio_retry::strategy::ExponentialBackoff;
+use tokio_stream::wrappers::IntervalStream;
 
-pub type ConnectivityManagerService = ConnectivityManager<Fuse<Interval>, ExponentialBackoff>;
+pub type ConnectivityManagerService = ConnectivityManager<Fuse<IntervalStream>, ExponentialBackoff>;
 
 /// The configuration fields for ConnectivityManager
 struct ConnectivityManagerBuilderConfig {
@@ -105,22 +103,24 @@ impl ConnectivityManagerBuilder {
             .take()
             .expect("Config must exist in order to build");
 
+        let _guard = executor.enter();
         self.connectivity_manager = Some({
-            executor.enter(|| {
-                ConnectivityManager::new(
-                    config.network_context,
-                    config.eligible,
-                    config.seed_addrs,
-                    config.seed_pubkeys,
-                    interval(Duration::from_millis(config.connectivity_check_interval_ms)).fuse(),
-                    config.connection_reqs_tx,
-                    config.connection_notifs_rx,
-                    config.requests_rx,
-                    ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
-                    config.max_connection_delay_ms,
-                    config.outbound_connection_limit,
-                )
-            })
+            ConnectivityManager::new(
+                config.network_context,
+                config.eligible,
+                config.seed_addrs,
+                config.seed_pubkeys,
+                IntervalStream::new(interval(Duration::from_millis(
+                    config.connectivity_check_interval_ms,
+                )))
+                .fuse(),
+                config.connection_reqs_tx,
+                config.connection_notifs_rx,
+                config.requests_rx,
+                ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
+                config.max_connection_delay_ms,
+                config.outbound_connection_limit,
+            )
         });
     }
 

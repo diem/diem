@@ -8,10 +8,8 @@ use diem_config::network_id::NetworkContext;
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
 use std::{sync::Arc, time::Duration};
-use tokio::{
-    runtime::Handle,
-    time::{interval, Interval},
-};
+use tokio::{runtime::Handle, time::interval};
+use tokio_stream::wrappers::IntervalStream;
 
 /// Configuration for a HealthCheckerBuilder.
 struct HealthCheckerBuilderConfig {
@@ -43,7 +41,7 @@ impl HealthCheckerBuilderConfig {
     }
 }
 
-pub type HealthCheckerService = HealthChecker<Fuse<Interval>>;
+pub type HealthCheckerService = HealthChecker<Fuse<IntervalStream>>;
 
 pub struct HealthCheckerBuilder {
     config: Option<HealthCheckerBuilderConfig>,
@@ -86,16 +84,16 @@ impl HealthCheckerBuilder {
         assert!(!self.started);
         self.built = true;
         if let Some(config) = self.config.take() {
-            let service = executor.enter(|| {
-                HealthChecker::new(
-                    config.network_context,
-                    interval(Duration::from_millis(config.ping_interval_ms)).fuse(),
-                    config.network_tx,
-                    config.network_rx,
-                    Duration::from_millis(config.ping_timeout_ms),
-                    config.ping_failures_tolerated,
-                )
-            });
+            let _guard = executor.enter();
+            let service = HealthChecker::new(
+                config.network_context,
+                IntervalStream::new(interval(Duration::from_millis(config.ping_interval_ms)))
+                    .fuse(),
+                config.network_tx,
+                config.network_rx,
+                Duration::from_millis(config.ping_timeout_ms),
+                config.ping_failures_tolerated,
+            );
             self.service = Some(service);
         }
         self

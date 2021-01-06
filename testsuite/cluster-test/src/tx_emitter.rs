@@ -553,7 +553,7 @@ impl TxEmitter {
         let mut prev_stats: Option<TxStats> = None;
         while Instant::now() < deadline {
             let window = Duration::from_secs(interval_secs);
-            tokio::time::delay_for(window).await;
+            tokio::time::sleep(window).await;
             let stats = self.peek_job_stats(job);
             let delta = &stats - &prev_stats.unwrap_or_default();
             prev_stats = Some(stats);
@@ -567,7 +567,7 @@ impl TxEmitter {
         emit_job_request: EmitJobRequest,
     ) -> Result<TxStats> {
         let job = self.start_job(emit_job_request).await?;
-        tokio::time::delay_for(duration).await;
+        tokio::time::sleep(duration).await;
         let stats = self.stop_job(job).await;
         Ok(stats)
     }
@@ -717,7 +717,7 @@ impl SubmissionWorker {
             }
             let now = Instant::now();
             if wait_util > now {
-                time::delay_for(wait_util - now).await;
+                time::sleep(wait_util - now).await;
             }
         }
         self.accounts
@@ -775,7 +775,7 @@ async fn wait_for_accounts_sequence(
                     "Failed to query ledger info on accounts {:?} for instance {:?} : {:?}",
                     addresses, client, e
                 );
-                time::delay_for(Duration::from_millis(300)).await;
+                time::sleep(Duration::from_millis(300)).await;
             }
             Ok(sequence_numbers) => {
                 if is_sequence_equal(accounts, &sequence_numbers) {
@@ -794,7 +794,7 @@ async fn wait_for_accounts_sequence(
                 }
             }
         }
-        time::delay_for(Duration::from_millis(100)).await;
+        time::sleep(Duration::from_millis(100)).await;
     }
     Ok(())
 }

@@ -51,17 +51,14 @@ use futures::{
     sink::{Sink, SinkExt},
     stream::{self, FuturesUnordered, Stream, StreamExt},
 };
-use netcore::{
-    compat::IoCompat,
-    transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
-};
+use netcore::transport::{memory::MemoryTransport, tcp::TcpTransport, Transport};
 use network::{constants, protocols::wire::messaging::v1::network_message_frame_codec};
 use socket_bench_server::{
     build_memsocket_noise_transport, build_tcp_noise_transport, start_stream_server, Args,
 };
 use std::{fmt::Debug, io, time::Duration};
 use tokio::runtime::{Builder, Runtime};
-use tokio_util::codec::Framed;
+use tokio_util::{codec::Framed, compat::FuturesAsyncReadCompatExt};
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
@@ -116,7 +113,7 @@ where
         .block_on(client_transport.dial(server_peer_id, server_addr).unwrap())
         .unwrap();
     let codec = network_message_frame_codec(constants::MAX_FRAME_SIZE);
-    let mut client_stream = Framed::new(IoCompat::new(client_socket), codec);
+    let mut client_stream = Framed::new(client_socket.compat(), codec);
 
     // Benchmark client sending data to server.
     bench_client_send(b, msg_len, &mut client_stream);
@@ -323,9 +320,8 @@ fn bench_client_connection<F, T, S>(
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     let peer_id = PeerId::random();
-    let mut runtime = Builder::new()
-        .threaded_scheduler()
-        .core_threads(concurrency as usize)
+    let runtime = Builder::new_multi_thread()
+        .worker_threads(concurrency as usize)
         .enable_all()
         .build()
         .unwrap();

@@ -36,7 +36,7 @@ use futures::{
 };
 use itertools::zip;
 use std::cmp::min;
-use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
+use tokio::time::{sleep, sleep_until, Instant as TokioInstant};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -158,7 +158,7 @@ pub async fn main() {
                     "Setting up runner failed with {}, waiting for {:?} before terminating",
                     e, wait_on_failure
                 );
-                delay_for(wait_on_failure).await;
+                sleep(wait_on_failure).await;
             }
             panic!("Failed to setup cluster test runner: {}", e);
         }
@@ -171,7 +171,7 @@ pub async fn main() {
                 "Command failed with {}, waiting for {:?} before terminating",
                 e, wait_on_failure
             );
-            delay_for(wait_on_failure).await;
+            sleep(wait_on_failure).await;
             warn!("Tearing down cluster now");
         }
     }
@@ -450,7 +450,7 @@ impl BasicSwarmUtil {
                 if Instant::now() > deadline {
                     bail!("Not all full nodes were updated and transaction expired");
                 }
-                tokio::time::delay_for(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
         println!("Looks like all full nodes are healthy!");
@@ -708,8 +708,12 @@ impl ClusterTestRunner {
             &self.cluster_swarm,
             &self.current_tag[..],
         );
-        let mut deadline_future = delay_until(TokioInstant::from_std(deadline)).fuse();
+        let deadline_future = sleep_until(TokioInstant::from_std(deadline)).fuse();
         let mut run_future = experiment.run(&mut context).fuse();
+        let sleep = sleep(HEALTH_POLL_INTERVAL).fuse();
+        tokio::pin!(sleep);
+        tokio::pin!(deadline_future);
+
         loop {
             select! {
                 _delay = deadline_future => {
@@ -718,7 +722,7 @@ impl ClusterTestRunner {
                 result = run_future => {
                     return result.map_err(|e|format_err!("Failed to run experiment: {}", e));
                 }
-                _delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
+                _delay = sleep => {
                     let events = self.logs.recv_all();
                     if let Err(s) = self.health_check_runner.run(
                         &events,

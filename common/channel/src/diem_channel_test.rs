@@ -10,7 +10,7 @@ use futures::{
     stream::{FusedStream, StreamExt},
 };
 use std::time::Duration;
-use tokio::{runtime::Runtime, time::delay_for};
+use tokio::{runtime::Runtime, time::sleep};
 
 #[test]
 fn test_send_recv_order() {
@@ -49,14 +49,14 @@ fn test_waker() {
         assert_eq!(receiver.select_next_some().await, 2);
     };
     let f2 = async {
-        delay_for(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         sender.push(0, 0).unwrap();
-        delay_for(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         sender.push(0, 1).unwrap();
-        delay_for(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(100)).await;
         sender.push(0, 2).unwrap();
     };
-    let mut rt = Runtime::new().unwrap();
+    let rt = Runtime::new().unwrap();
     rt.block_on(join(f1, f2));
 }
 

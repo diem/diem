@@ -7,7 +7,7 @@ use diem_types::transaction::Version;
 use diemdb::backup::backup_handler::DbState;
 use futures::TryStreamExt;
 use structopt::StructOpt;
-use tokio::prelude::*;
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 #[derive(StructOpt)]

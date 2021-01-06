@@ -53,10 +53,7 @@ static CONNECTION_ID_GENERATOR: ConnectionIdGenerator = ConnectionIdGenerator::n
 /// tcp::Transport with Diem-specific configuration applied.
 pub const DIEM_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.
-    recv_buffer_size: None,
-    send_buffer_size: None,
     ttl: None,
-    keepalive: None,
     // Use TCP_NODELAY for diem tcp connections.
     nodelay: Some(true),
 };

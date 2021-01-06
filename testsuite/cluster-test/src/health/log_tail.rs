@@ -69,7 +69,7 @@ impl LogTail {
 impl TraceTail {
     pub async fn capture_trace(&self, duration: Duration) -> Vec<(String, DebugInterfaceEvent)> {
         self.trace_enabled.store(true, Ordering::Relaxed);
-        tokio::time::delay_for(duration).await;
+        tokio::time::sleep(duration).await;
         self.trace_enabled.store(false, Ordering::Relaxed);
         let mut events = vec![];
         while let Ok(event) = self.trace_receiver.lock().try_recv() {

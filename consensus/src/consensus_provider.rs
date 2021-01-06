@@ -33,9 +33,8 @@ pub fn start_consensus(
     diem_db: Arc<dyn DbReader>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
-    let runtime = runtime::Builder::new()
+    let runtime = runtime::Builder::new_multi_thread()
         .thread_name("consensus")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!");

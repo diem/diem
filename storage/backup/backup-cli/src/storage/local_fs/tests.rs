@@ -21,7 +21,7 @@ proptest! {
         tmpdir.create_as_dir().unwrap();
         let store = LocalFs::new(tmpdir.path().to_path_buf());
 
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(test_write_and_read_impl(Box::new(store), backups));
     }
 
@@ -33,7 +33,7 @@ proptest! {
         tmpdir.create_as_dir().unwrap();
         let store = LocalFs::new(tmpdir.path().to_path_buf());
 
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(test_save_and_list_metadata_files_impl(Box::new(store), input));
     }
 }

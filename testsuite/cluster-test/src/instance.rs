@@ -248,7 +248,7 @@ impl Instance {
             if Instant::now() > deadline {
                 return Err(format_err!("wait_json_rpc for {} timed out", self));
             }
-            time::delay_for(Duration::from_secs(3)).await;
+            time::sleep(Duration::from_secs(3)).await;
         }
         Ok(())
     }
@@ -366,7 +366,7 @@ impl Instance {
         if mute {
             cmd.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let child = cmd.spawn().map_err(|e| {
+        let mut child = cmd.spawn().map_err(|e| {
             format_err!(
                 "Failed to spawn child process {} on {}: {}",
                 command,
@@ -375,6 +375,7 @@ impl Instance {
             )
         })?;
         let status = child
+            .wait()
             .await
             .map_err(|e| format_err!("Error running {} on {}: {}", command, self.peer_name(), e))?;
         if !status.success() {

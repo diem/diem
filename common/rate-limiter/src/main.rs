@@ -6,16 +6,22 @@ use diem_rate_limiter::{
     async_lib::AsyncRateLimiter,
     rate_limit::{Bucket, SharedBucket},
 };
-use futures::{channel::mpsc::channel, executor::block_on, Future, SinkExt, StreamExt};
+use futures::{
+    channel::mpsc::channel,
+    executor::block_on,
+    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    Future, SinkExt, StreamExt,
+};
+
 use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     runtime::Runtime,
 };
+use tokio_util::compat::*;
 
 // Parameters for running the tests, change the port if there's a conflict
 /// Where to run the test read/write
@@ -27,9 +33,9 @@ const ALLOWED_BYTES_PER_SEC: usize = 10_000;
 /// Chunk size to write bytes to the stream at a time
 const CHUNK_SIZE: usize = 10_000;
 /// Buffer size used by Tokio when reading, backpressure only occurs after this is full
-const READ_BUFFER_SIZE: usize = 100;
+// const READ_BUFFER_SIZE: usize = 100;
 /// Buffer size used by Tokio when writing
-const WRITE_BUFFER_SIZE: usize = 100;
+// const WRITE_BUFFER_SIZE: usize = 100;
 
 /// Holder for statistics of a single experiment and reader/writer
 struct RunStats {
@@ -145,25 +151,27 @@ async fn stats<F: Future<Output = (usize, usize)>, Block: FnOnce() -> F>(
 async fn test_rate_limiter<
     R: AsyncRead + Unpin + Send,
     W: AsyncWrite + Unpin + Send,
-    Reader: FnOnce(TcpStream) -> R + Send + 'static,
-    Writer: FnOnce(TcpStream) -> W + Send + 'static,
+    Reader: FnOnce(Compat<TcpStream>) -> R + Send + 'static,
+    Writer: FnOnce(Compat<TcpStream>) -> W + Send + 'static,
 >(
     total_test_bytes: usize,
     reader: Reader,
     writer: Writer,
 ) -> Vec<RunStats> {
     // Startup the socket connections first, and the stats line
-    let mut listener = TcpListener::bind(ADDRESS)
+    let listener = TcpListener::bind(ADDRESS)
         .await
         .expect("Must bind to address");
     let out_stream = TcpStream::connect(ADDRESS)
         .await
-        .expect("Must connect to address");
+        .expect("Must connect to address")
+        .compat();
 
+    // Can't do this with tokio 1.0 api
     // Shrink the buffer to increase the affects of backpressure
-    out_stream
-        .set_send_buffer_size(WRITE_BUFFER_SIZE)
-        .expect("Should be able to change buffer size");
+    // out_stream
+    //     .set_send_buffer_size(WRITE_BUFFER_SIZE)
+    //     .expect("Should be able to change buffer size");
     let mut writer = writer(out_stream);
 
     let (stats_sender, mut stats_receiver) = channel(2);
@@ -172,16 +180,17 @@ async fn test_rate_limiter<
 
     // Ensure we're listening first
     let read_future = async move {
-        let in_stream = listener
-            .next()
+        let (in_stream, _) = listener
+            .accept()
             .await
-            .expect("Should not have an error connecting")
-            .expect("Should have an incoming connection");
+            .expect("Should not have an error connecting");
+        let in_stream = in_stream.compat();
 
+        // Can't do this with tokio 1.0 api
         // Shrink the buffer to increase the affects of backpressure
-        in_stream
-            .set_recv_buffer_size(READ_BUFFER_SIZE)
-            .expect("Should be able to change buffer size");
+        // in_stream
+        //     .set_recv_buffer_size(READ_BUFFER_SIZE)
+        //     .expect("Should be able to change buffer size");
 
         // Read in the expected number of bytes
         let mut reader = reader(in_stream);

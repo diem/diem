@@ -82,9 +82,8 @@ impl Experiment for LoadTest {
         let vfn = context.cluster.random_fullnode_instance();
         info!("Node {:?} is selected", vfn.peer_name());
         let vfn_endpoint = format!("http://{}:{}/v1", vfn.ip(), vfn.ac_port());
-        let network_runtime = Builder::new()
+        let network_runtime = Builder::new_multi_thread()
             .thread_name("stubbed-node-network")
-            .threaded_scheduler()
             .enable_all()
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");
@@ -152,7 +151,7 @@ impl Experiment for LoadTest {
         }
 
         // await on all spawned tasks
-        tokio::time::delay_for(Duration::from_secs(self.duration)).await;
+        tokio::time::sleep(Duration::from_secs(self.duration)).await;
         if let Some(j) = emit_job {
             let stats = context.tx_emitter.stop_job(j).await;
             let full_node = context.cluster.random_fullnode_instance();

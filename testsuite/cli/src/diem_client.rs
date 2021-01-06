@@ -53,9 +53,8 @@ impl DiemClient {
 
         Ok(DiemClient {
             runtime: diem_infallible::Mutex::new(
-                tokio::runtime::Builder::new()
+                tokio::runtime::Builder::new_multi_thread()
                     .thread_name("cli-client")
-                    .threaded_scheduler()
                     .enable_all()
                     .build()
                     .expect("failed to create runtime"),

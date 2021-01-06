@@ -4,6 +4,8 @@
 use crate::TimeServiceTrait;
 #[cfg(any(test, feature = "async"))]
 use crate::{Sleep, SleepTrait};
+#[cfg(any(test, feature = "async"))]
+use std::pin::Pin;
 use std::{thread, time::Duration};
 
 /// The real production tokio [`TimeService`](crate::TimeService).
@@ -14,7 +16,7 @@ use std::{thread, time::Duration};
 pub struct RealTimeService;
 
 #[cfg(any(test, feature = "async"))]
-pub type RealSleep = tokio::time::Delay;
+pub type RealSleep = tokio::time::Sleep;
 
 impl RealTimeService {
     pub fn new() -> Self {
@@ -29,7 +31,7 @@ impl TimeServiceTrait for RealTimeService {
 
     #[cfg(any(test, feature = "async"))]
     fn sleep(&self, duration: Duration) -> Sleep {
-        tokio::time::delay_for(duration).into()
+        tokio::time::sleep(duration).into()
     }
 
     fn sleep_blocking(&self, duration: Duration) {
@@ -43,7 +45,7 @@ impl SleepTrait for RealSleep {
         RealSleep::is_elapsed(self)
     }
 
-    fn reset(&mut self, duration: Duration) {
+    fn reset(self: Pin<&mut Self>, duration: Duration) {
         let deadline = self.deadline() + duration;
         RealSleep::reset(self, deadline);
     }

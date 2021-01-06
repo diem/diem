@@ -17,7 +17,6 @@ use structopt::StructOpt;
 use tokio::{
     fs::{create_dir, create_dir_all, read_dir, OpenOptions},
     io::{AsyncRead, AsyncWrite, AsyncWriteExt},
-    stream::StreamExt,
 };
 
 #[derive(StructOpt)]
@@ -107,7 +106,7 @@ impl BackupStorage for LocalFs {
         let mut res = Vec::new();
         if path_exists(&dir).await {
             let mut entries = read_dir(&dir).await?;
-            while let Some(entry) = entries.try_next().await? {
+            while let Some(entry) = entries.next_entry().await? {
                 res.push(rel_path.join(entry.file_name()).path_to_string()?)
             }
         }

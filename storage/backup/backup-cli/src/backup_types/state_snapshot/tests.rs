@@ -34,7 +34,7 @@ fn end_to_end() {
     let version = latest_tree_state.num_transactions - 1;
     let state_root_hash = latest_tree_state.account_state_root_hash;
 
-    let (mut rt, port) = start_local_backup_service(src_db);
+    let (rt, port) = start_local_backup_service(src_db);
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port

@@ -13,9 +13,8 @@ pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
 
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("backup")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[backup] failed to create runtime");
@@ -27,7 +26,8 @@ pub fn start_backup_service(address: SocketAddr, db: Arc<DiemDB>) -> Runtime {
     //
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
-    let server = runtime.enter(move || warp::serve(routes).bind(address));
+    let _guard = runtime.enter();
+    let server = warp::serve(routes).bind(address);
     runtime.handle().spawn(server);
     info!("Backup service spawned.");
     runtime

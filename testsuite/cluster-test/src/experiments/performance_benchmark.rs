@@ -208,7 +208,7 @@ impl Experiment for PerformanceBenchmark {
         let trace = self.trace;
         let capture_trace = async move {
             if trace {
-                tokio::time::delay_for(trace_delay).await;
+                tokio::time::sleep(trace_delay).await;
                 Some(trace_tail.capture_trace(Duration::from_secs(5)).await)
             } else {
                 None

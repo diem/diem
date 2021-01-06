@@ -57,8 +57,7 @@ impl ProverTaskRunner {
     where
         T: ProverTask + Clone + Send + 'static,
     {
-        let rt = tokio::runtime::Builder::new()
-            .threaded_scheduler()
+        let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap();

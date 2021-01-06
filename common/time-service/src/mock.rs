@@ -334,17 +334,18 @@ impl SleepTrait for MockSleep {
         !inner.is_sleep_registered(self.deadline, self.index)
     }
 
-    fn reset(&mut self, duration: Duration) {
-        let mut inner = self.time_service.lock();
+    fn reset(self: Pin<&mut Self>, duration: Duration) {
+        let this = self.get_mut();
+        let mut inner = this.time_service.lock();
 
         // Unregister us from the time service (if we're not triggered yet)
         // and pull out our waker (if it's there).
-        let maybe_waker = inner.unregister_sleep(self.deadline, self.index).flatten();
+        let maybe_waker = inner.unregister_sleep(this.deadline, this.index).flatten();
 
         // Register us with the time service with our new deadline.
         let (deadline, index) = inner.register_sleep(duration, maybe_waker);
-        self.deadline = deadline;
-        self.index = index;
+        this.deadline = deadline;
+        this.index = index;
     }
 }
 
@@ -418,7 +419,7 @@ mod test {
         assert_ready!(sleep.poll());
 
         // Resetting the sleep future should register it again.
-        sleep.reset(ms(5));
+        sleep.enter(|_c, sleep| sleep.reset(ms(5)));
         assert!(!sleep.is_woken());
         assert_eq!(time.num_waiters(), 1);
         assert_pending!(sleep.poll());
@@ -430,7 +431,7 @@ mod test {
         assert_ready!(sleep.poll());
 
         // Should still work if we don't poll the sleep future before advance.
-        sleep.reset(ms(5));
+        sleep.enter(|_c, sleep| sleep.reset(ms(5)));
         assert!(!sleep.is_woken());
 
         assert_eq!(time.advance_async(ms(5)).await, 1);

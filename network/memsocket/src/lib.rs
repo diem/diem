@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytes::{buf::BufExt, Buf, Bytes};
+use bytes::{Buf, Bytes};
 use diem_infallible::Mutex;
 use futures::{
     channel::mpsc::{self, UnboundedReceiver, UnboundedSender},

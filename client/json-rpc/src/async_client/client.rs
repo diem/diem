@@ -95,7 +95,7 @@ impl<R: RetryStrategy> Client<R> {
                     ));
                 }
             }
-            tokio::time::delay_for(delay.unwrap_or(defaults::WAIT_DELAY)).await;
+            tokio::time::sleep(delay.unwrap_or(defaults::WAIT_DELAY)).await;
         }
         Err(WaitForTransactionError::Timeout(start.elapsed()))
     }
@@ -323,7 +323,7 @@ impl<R: RetryStrategy> Client<R> {
                 }
                 _ => return Err(err),
             };
-            tokio::time::delay_for(retry.delay(&err, retries)).await;
+            tokio::time::sleep(retry.delay(&err, retries)).await;
             Ok(retries)
         } else {
             Err(err)

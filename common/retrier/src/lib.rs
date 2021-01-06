@@ -41,7 +41,7 @@ where
             Err(err) => {
                 if let Some(delay) = iterator.next() {
                     debug!("{}. Retrying in {} seconds..", err, delay.as_secs());
-                    tokio::time::delay_for(delay).await;
+                    tokio::time::sleep(delay).await;
                 } else {
                     return Err(err);
                 }

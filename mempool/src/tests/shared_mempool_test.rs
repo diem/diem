@@ -90,9 +90,8 @@ fn init_single_shared_mempool(
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
     let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("shared-mem")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[shared mempool] failed to create runtime");
@@ -156,9 +155,8 @@ fn init_smp_multiple_networks(
     let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
     let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
 
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("shared-mem")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[shared mempool] failed to create runtime");

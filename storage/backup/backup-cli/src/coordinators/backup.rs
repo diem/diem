@@ -26,6 +26,7 @@ use tokio::{
     sync::watch,
     time::{interval, Duration},
 };
+use tokio_stream::wrappers::IntervalStream;
 
 #[derive(StructOpt)]
 pub struct BackupCoordinatorOpt {
@@ -103,7 +104,7 @@ impl BackupCoordinator {
         let (tx2, rx2) = watch::channel::<Option<DbState>>(None);
 
         // Schedule work streams.
-        let watch_db_state = interval(Duration::from_secs(1))
+        let watch_db_state = IntervalStream::new(interval(Duration::from_secs(1)))
             .then(|_| self.try_refresh_db_state(&tx1))
             .boxed_local();
 
@@ -157,7 +158,7 @@ impl BackupCoordinator {
                     warn!("DB not bootstrapped.");
                 } else {
                     db_state_broadcast
-                        .broadcast(s)
+                        .send(s)
                         .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
                         .unwrap()
                 }
@@ -201,7 +202,7 @@ impl BackupCoordinator {
         }
 
         downstream_db_state_broadcaster
-            .broadcast(Some(db_state))
+            .send(Some(db_state))
             .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
             .unwrap();
         Ok(last_epoch_ending_epoch_in_backup)
@@ -289,11 +290,8 @@ impl BackupCoordinator {
         stream::unfold(
             (initial_state, db_state_rx.clone()),
             move |(s, mut rx)| async move {
-                let db_state = rx
-                    .recv()
-                    .await
-                    .ok_or_else(|| anyhow!("The broadcaster has been dropped."))
-                    .unwrap();
+                rx.changed().await.unwrap();
+                let db_state = *rx.borrow();
                 if let Some(db_state) = db_state {
                     let next_state = worker(self, s, db_state).await.unwrap_or_else(|e| {
                         warn!("backup failed: {}. Keep trying with state {:?}.", e, s);

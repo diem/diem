@@ -122,8 +122,7 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
         config::DEFAULT_BATCH_SIZE_LIMIT,
         config::DEFAULT_PAGE_SIZE_LIMIT,
     );
-    let mut rt = tokio::runtime::Builder::new()
-        .basic_scheduler()
+    let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();

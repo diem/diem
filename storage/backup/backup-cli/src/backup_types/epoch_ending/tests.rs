@@ -35,7 +35,7 @@ fn end_to_end() {
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
     let port = get_available_port();
-    let mut rt = start_backup_service(
+    let rt = start_backup_service(
         SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
         src_db,
     );

@@ -1082,7 +1082,7 @@ fn test_transaction_submission() {
     let mock_db = mock_db();
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
-    let mut runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
+    let runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
     let client = JsonRpcAsyncClient::new(
         reqwest::Url::from_str(format!("http://{}:{}/v1", "127.0.0.1", port).as_str())
             .expect("invalid url"),
@@ -1103,7 +1103,7 @@ fn test_transaction_submission() {
     });
 
     // closure that checks transaction submission for given account
-    let mut txn_submission = move |sender| {
+    let txn_submission = move |sender| {
         let privkey = Ed25519PrivateKey::generate_for_testing();
         let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
         let mut batch = JsonRpcBatch::default();
@@ -1236,7 +1236,7 @@ fn test_get_metadata() {
 
 #[test]
 fn test_limit_batch_size() {
-    let (_, client, mut runtime) = create_database_client_and_runtime();
+    let (_, client, runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
 
@@ -1252,7 +1252,7 @@ fn test_limit_batch_size() {
 
 #[test]
 fn test_get_events_page_limit() {
-    let (_, client, mut runtime) = create_database_client_and_runtime();
+    let (_, client, runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
 
@@ -1270,7 +1270,7 @@ fn test_get_events_page_limit() {
 
 #[test]
 fn test_get_transactions_page_limit() {
-    let (_, client, mut runtime) = create_database_client_and_runtime();
+    let (_, client, runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
     batch.add_get_transactions_request(0, 1001, false);

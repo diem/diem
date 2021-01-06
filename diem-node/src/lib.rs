@@ -39,6 +39,7 @@ use std::{
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
 use tokio::runtime::{Builder, Runtime};
+use tokio_stream::wrappers::IntervalStream;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -210,9 +211,13 @@ async fn periodic_state_dump(node_config: NodeConfig, db: DbReaderWriter) {
     let args: Vec<String> = ::std::env::args().collect();
 
     // Once an hour
-    let mut config_interval = tokio::time::interval(std::time::Duration::from_secs(60 * 60)).fuse();
+    let mut config_interval = IntervalStream::new(tokio::time::interval(
+        std::time::Duration::from_secs(60 * 60),
+    ))
+    .fuse();
     // Once a minute
-    let mut version_interval = tokio::time::interval(std::time::Duration::from_secs(60)).fuse();
+    let mut version_interval =
+        IntervalStream::new(tokio::time::interval(std::time::Duration::from_secs(60))).fuse();
 
     info!("periodic_state_dump task started");
 
@@ -374,13 +379,12 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     for network_builder in &mut network_builders {
         let network_context = network_builder.network_context();
         debug!("Creating runtime for {}", network_context);
-        let runtime = Builder::new()
+        let runtime = Builder::new_multi_thread()
             .thread_name(format!(
                 "network-{}-{}",
                 network_context.role(),
                 network_context.network_id()
             ))
-            .threaded_scheduler()
             .enable_all()
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");

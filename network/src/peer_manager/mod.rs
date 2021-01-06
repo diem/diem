@@ -329,15 +329,14 @@ where
         //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
         // rethink how we init the PeerManager so we don't have to do this funny thing.
         let transport_notifs_tx_clone = transport_notifs_tx.clone();
-        let (transport_handler, listen_addr) = executor.enter(|| {
-            TransportHandler::new(
-                network_context.clone(),
-                transport,
-                listen_addr,
-                transport_reqs_rx,
-                transport_notifs_tx_clone,
-            )
-        });
+        let _guard = executor.enter();
+        let (transport_handler, listen_addr) = TransportHandler::new(
+            network_context.clone(),
+            transport,
+            listen_addr,
+            transport_reqs_rx,
+            transport_notifs_tx_clone,
+        );
 
         Self {
             network_context,

@@ -67,7 +67,7 @@ fn test_end_to_end_impl(d: TestData) {
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
-    let (mut rt, port) = start_local_backup_service(Arc::clone(&d.db));
+    let (rt, port) = start_local_backup_service(Arc::clone(&d.db));
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port

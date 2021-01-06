@@ -82,7 +82,7 @@ impl DebugPortLogWorker {
                     if print_failures {
                         info!("Failed to get events from {}: {:?}", self.instance, e);
                     }
-                    time::delay_for(Duration::from_secs(1)).await;
+                    time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(resp) => {
                     let mut sent_events = 0i64;
@@ -94,7 +94,7 @@ impl DebugPortLogWorker {
                     }
                     self.pending_messages
                         .fetch_add(sent_events, Ordering::Relaxed);
-                    time::delay_for(Duration::from_millis(100)).await;
+                    time::sleep(Duration::from_millis(100)).await;
                 }
             }
             if let Some(started_sender) = self.started_sender.take() {

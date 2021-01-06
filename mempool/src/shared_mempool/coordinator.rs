@@ -34,6 +34,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
+use tokio_stream::wrappers::IntervalStream;
 use vm_validator::vm_validator::TransactionValidation;
 
 /// Coordinator that handles inbound network events and outbound txn broadcasts.
@@ -208,7 +209,7 @@ pub(crate) async fn coordinator<V>(
 /// Garbage collect all expired transactions by SystemTTL.
 pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
     info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Start));
-    let mut interval = interval(Duration::from_millis(gc_interval_ms));
+    let mut interval = IntervalStream::new(interval(Duration::from_millis(gc_interval_ms)));
     while let Some(_interval) = interval.next().await {
         sample!(
             SampleRate::Duration(Duration::from_secs(60)),
@@ -227,7 +228,7 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
 /// In the future we may want an interactive way to directly query mempool's internal state.
 /// For now, we will rely on this periodic snapshot to observe the internal state.
 pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_interval_secs: u64) {
-    let mut interval = interval(Duration::from_secs(snapshot_interval_secs));
+    let mut interval = IntervalStream::new(interval(Duration::from_secs(snapshot_interval_secs)));
     while let Some(_interval) = interval.next().await {
         let snapshot = mempool.lock().gen_snapshot();
         debug!(LogSchema::new(LogEntry::MempoolSnapshot).txns(snapshot));

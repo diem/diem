@@ -16,7 +16,8 @@ futures = "0.3.12"
 serde = { version = "1.0.120", default-features = false }
 once_cell = "1.4.1"
 rand = "0.7.3"
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "1.0.1", features = ["full"] }
+tokio-stream = "0.1.1"
 itertools = { version = "0.10.0", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 
@@ -46,7 +47,7 @@ bcs = "0.1.2"
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-bytes = "0.5.6"
+bytes = "1.0.0"
 proptest = "0.10.1"
 
 channel = { path = "../common/channel", version = "0.1.0" }
@@ -59,7 +60,7 @@ diem-network-address = { path = "../network/network-address", version = "0.1.0",
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 diemdb = { path = "../storage/diemdb", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0" }
-network = { path = "../network", version = "0.1.0", features = ["fuzzing"] }
+network = { path = "../network", version = "0.1.0", features = ["fuzzing", "testing"] }
 network-builder = {path  = "../network/builder", version = "0.1.0"}
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }

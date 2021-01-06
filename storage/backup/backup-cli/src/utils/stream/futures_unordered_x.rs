@@ -135,7 +135,7 @@ mod tests {
             sleeps_ms in vec(0u64..10, 0..100),
             max_in_progress in 1usize..100,
         ) {
-            let mut rt = Runtime::new().unwrap();
+            let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 let num_sleeps = sleeps_ms.len();
                 let mut futures = FuturesUnorderedX::new(max_in_progress);
@@ -151,7 +151,7 @@ mod tests {
                         _n_running.fetch_add(1, Ordering::Relaxed);
 
                         // yield
-                        tokio::time::delay_for(Duration::from_millis(sleep_ms)).await;
+                        tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
 
                         let r = _n_running.fetch_sub(1, Ordering::Relaxed);
                         assert!(r > 0 && r <= min(max_in_progress, num_sleeps));

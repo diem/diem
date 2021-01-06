@@ -99,9 +99,8 @@ pub fn bootstrap(
     state_sync_requests: Receiver<CommitNotification>,
     mempool_reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("shared-mem")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[shared mempool] failed to create runtime");

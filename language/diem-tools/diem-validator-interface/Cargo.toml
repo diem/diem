@@ -12,7 +12,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.10.10", features = ["blocking", "json"] }
+reqwest = { version = "0.11.0", features = ["blocking", "json"] }
 anyhow = "1.0.38"
 diem-config = { path = "../../../config", version = "0.1.0" }
 diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }

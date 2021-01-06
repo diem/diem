@@ -15,13 +15,10 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use memsocket::MemorySocket;
-use netcore::{
-    compat::IoCompat,
-    transport::{
-        memory::MemoryTransport,
-        tcp::{TcpSocket, TcpTransport},
-        Transport, TransportExt,
-    },
+use netcore::transport::{
+    memory::MemoryTransport,
+    tcp::{TcpSocket, TcpTransport},
+    Transport, TransportExt,
 };
 use network::{
     constants,
@@ -31,7 +28,7 @@ use network::{
 use rand::prelude::*;
 use std::{env, ffi::OsString, io, sync::Arc};
 use tokio::runtime::Handle;
-use tokio_util::codec::Framed;
+use tokio_util::{codec::Framed, compat::FuturesAsyncReadCompatExt};
 
 #[derive(Debug)]
 pub struct Args {
@@ -141,7 +138,7 @@ where
                     match f_stream.await {
                         Ok(stream) => {
                             let codec = network_message_frame_codec(constants::MAX_FRAME_SIZE);
-                            let mut stream = Framed::new(IoCompat::new(stream), codec);
+                            let mut stream = Framed::new(stream.compat(), codec);
 
                             tokio::task::spawn(async move {
                                 // Drain all messages from the client.
@@ -174,7 +171,8 @@ where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     E: ::std::error::Error + Send + Sync + 'static,
 {
-    let (listener, server_addr) = executor.enter(move || transport.listen_on(listen_addr).unwrap());
+    let _gaurd = executor.enter();
+    let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
     executor.spawn(server_stream_handler(listener));
     server_addr
 }

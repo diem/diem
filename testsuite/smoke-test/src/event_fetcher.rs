@@ -5,7 +5,7 @@ use crate::test_utils::{diem_swarm_utils::get_diem_event_fetcher, setup_swarm_an
 
 #[test]
 fn test_event_fetcher() {
-    let mut runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
 
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
     let events_fetcher = get_diem_event_fetcher(&env.validator_swarm, 0);

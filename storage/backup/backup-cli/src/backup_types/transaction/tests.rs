@@ -30,7 +30,7 @@ fn end_to_end() {
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
-    let (mut rt, port) = start_local_backup_service(src_db);
+    let (rt, port) = start_local_backup_service(src_db);
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port

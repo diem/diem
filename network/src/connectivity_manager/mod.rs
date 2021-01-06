@@ -407,7 +407,7 @@ where
             let now = Instant::now();
             let dial_delay =
                 dial_state.next_backoff_delay(Duration::from_millis(self.max_delay_ms));
-            let f_delay = time::delay_for(dial_delay);
+            let f_delay = time::sleep(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
 

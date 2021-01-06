@@ -58,8 +58,7 @@ pub fn fuzz(data: &[u8]) {
     // runtime and sometimes blocks when trying to shutdown the runtime.
     //
     // https://github.com/tokio-rs/tokio/pull/2649
-    let mut rt = tokio::runtime::Builder::new()
-        .basic_scheduler()
+    let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();

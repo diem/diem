@@ -118,15 +118,15 @@ impl Experiment for TwinValidators {
         info!("Stopping origin validators");
         let futures: Vec<_> = origin_instances.iter().map(|ic| ic.stop()).collect();
         try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_secs(10)).await;
         info!("Stopping twin validators");
         let futures: Vec<_> = new_instances.iter().map(|ic| ic.stop()).collect();
         try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_secs(10)).await;
         info!("Restarting origin validators");
         let futures: Vec<_> = origin_instances.iter().map(|ic| ic.start()).collect();
         try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(10)).await;
+        time::sleep(Duration::from_secs(10)).await;
 
         for inst in origin_instances.iter() {
             info!("Waiting for origin node to be up: {}", inst);

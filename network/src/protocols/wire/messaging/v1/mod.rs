@@ -17,7 +17,6 @@ use futures::{
     sink::Sink,
     stream::Stream,
 };
-use netcore::compat::IoCompat;
 use pin_project::pin_project;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -28,7 +27,10 @@ use std::{
     task::{Context, Poll},
 };
 use thiserror::Error;
-use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+use tokio_util::{
+    codec::{FramedRead, FramedWrite, LengthDelimitedCodec},
+    compat::{Compat, FuturesAsyncReadCompatExt, FuturesAsyncWriteCompatExt},
+};
 
 #[cfg(test)]
 mod test;
@@ -156,14 +158,14 @@ pub fn network_message_frame_codec(max_frame_size: usize) -> LengthDelimitedCode
 #[pin_project]
 pub struct NetworkMessageStream<TReadSocket: AsyncRead + Unpin> {
     #[pin]
-    framed_read: FramedRead<IoCompat<AsyncRateLimiter<TReadSocket>>, LengthDelimitedCodec>,
+    framed_read: FramedRead<Compat<AsyncRateLimiter<TReadSocket>>, LengthDelimitedCodec>,
 }
 
 impl<TReadSocket: AsyncRead + Unpin> NetworkMessageStream<TReadSocket> {
     pub fn new(socket: TReadSocket, max_frame_size: usize, bucket: Option<SharedBucket>) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
         let rate_limited_socket = AsyncRateLimiter::new(socket, bucket);
-        let compat_socket = IoCompat::new(rate_limited_socket);
+        let compat_socket = rate_limited_socket.compat();
         let framed_read = FramedRead::new(compat_socket, frame_codec);
         Self { framed_read }
     }
@@ -202,14 +204,14 @@ impl<TReadSocket: AsyncRead + Unpin> Stream for NetworkMessageStream<TReadSocket
 #[pin_project]
 pub struct NetworkMessageSink<TWriteSocket: AsyncWrite> {
     #[pin]
-    framed_write: FramedWrite<IoCompat<AsyncRateLimiter<TWriteSocket>>, LengthDelimitedCodec>,
+    framed_write: FramedWrite<Compat<AsyncRateLimiter<TWriteSocket>>, LengthDelimitedCodec>,
 }
 
 impl<TWriteSocket: AsyncWrite> NetworkMessageSink<TWriteSocket> {
     pub fn new(socket: TWriteSocket, max_frame_size: usize, bucket: Option<SharedBucket>) -> Self {
         let frame_codec = network_message_frame_codec(max_frame_size);
         let rate_limited_socket = AsyncRateLimiter::new(socket, bucket);
-        let compat_socket = IoCompat::new(rate_limited_socket);
+        let compat_socket = rate_limited_socket.compat_write();
         let framed_write = FramedWrite::new(compat_socket, frame_codec);
         Self { framed_write }
     }

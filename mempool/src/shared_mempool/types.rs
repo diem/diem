@@ -81,7 +81,7 @@ impl ScheduledBroadcast {
         if deadline > Instant::now() {
             let tokio_instant = tokio::time::Instant::from_std(deadline);
             executor.spawn(async move {
-                tokio::time::delay_until(tokio_instant).await;
+                tokio::time::sleep_until(tokio_instant).await;
                 let mut waker = waker_clone.lock();
                 if let Some(waker) = waker.take() {
                     waker.wake()

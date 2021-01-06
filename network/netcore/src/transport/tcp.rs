@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! TCP Transport
-use crate::{compat::IoCompat, transport::Transport};
+use crate::transport::Transport;
 use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress};
 use diem_types::PeerId;
 use futures::{
@@ -19,46 +19,27 @@ use std::{
     net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{lookup_host, TcpListener, TcpStream},
 };
+use tokio_util::compat::Compat;
 use url::Url;
 
 /// Transport to build TCP connections
 #[derive(Debug, Clone, Default)]
 pub struct TcpTransport {
-    /// Size of the recv buffer size to set for opened sockets, or `None` to keep default.
-    pub recv_buffer_size: Option<usize>,
-    /// Size of the send buffer size to set for opened sockets, or `None` to keep default.
-    pub send_buffer_size: Option<usize>,
     /// TTL to set for opened sockets, or `None` to keep default.
     pub ttl: Option<u32>,
-    /// Keep alive duration to set for opened sockets, or `None` to keep default.
-    #[allow(clippy::option_option)]
-    pub keepalive: Option<Option<Duration>>,
     /// `TCP_NODELAY` to set for opened sockets, or `None` to keep default.
     pub nodelay: Option<bool>,
 }
 
 impl TcpTransport {
     fn apply_config(&self, stream: &TcpStream) -> ::std::io::Result<()> {
-        if let Some(size) = self.recv_buffer_size {
-            stream.set_recv_buffer_size(size)?;
-        }
-
-        if let Some(size) = self.send_buffer_size {
-            stream.set_send_buffer_size(size)?;
-        }
-
         if let Some(ttl) = self.ttl {
             stream.set_ttl(ttl)?;
-        }
-
-        if let Some(keepalive) = self.keepalive {
-            stream.set_keepalive(keepalive)?;
         }
 
         if let Some(nodelay) = self.nodelay {
@@ -87,6 +68,7 @@ impl Transport for TcpTransport {
         }
 
         let listener = ::std::net::TcpListener::bind((ipaddr, port))?;
+        listener.set_nonblocking(true)?;
         let listener = TcpListener::try_from(listener)?;
         let listen_addr = NetworkAddress::from(listener.local_addr()?);
 
@@ -250,23 +232,19 @@ pub struct TcpListenerStream {
 impl Stream for TcpListenerStream {
     type Item = io::Result<(future::Ready<io::Result<TcpSocket>>, NetworkAddress)>;
 
-    fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
-        match Pin::new(&mut self.inner.incoming()).poll_next(context) {
-            Poll::Ready(Some(Ok(socket))) => {
+    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
+        match self.inner.poll_accept(context) {
+            Poll::Ready(Ok((socket, addr))) => {
                 if let Err(e) = self.config.apply_config(&socket) {
                     return Poll::Ready(Some(Err(e)));
                 }
-                let dialer_addr = match socket.peer_addr() {
-                    Ok(addr) => NetworkAddress::from(addr),
-                    Err(e) => return Poll::Ready(Some(Err(e))),
-                };
+                let dialer_addr = NetworkAddress::from(addr);
                 Poll::Ready(Some(Ok((
                     future::ready(Ok(TcpSocket::new(socket))),
                     dialer_addr,
                 ))))
             }
-            Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(e))),
-            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e))),
             Poll::Pending => Poll::Pending,
         }
     }
@@ -297,13 +275,15 @@ impl Future for TcpOutbound {
 //TODO Probably should add some tests for this
 #[derive(Debug)]
 pub struct TcpSocket {
-    inner: IoCompat<TcpStream>,
+    inner: Compat<TcpStream>,
 }
 
 impl TcpSocket {
     fn new(socket: TcpStream) -> Self {
+        use tokio_util::compat::TokioAsyncReadCompatExt;
+
         Self {
-            inner: IoCompat::new(socket),
+            inner: socket.compat(),
         }
     }
 }
@@ -395,7 +375,7 @@ mod test {
 
     #[test]
     fn test_resolve_with_filter() {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         // note: we only lookup "localhost", which is not really a DNS name, but
         // should always resolve to something and keep this test from being flaky.

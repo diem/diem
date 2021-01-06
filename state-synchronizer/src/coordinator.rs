@@ -36,6 +36,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::time::{interval, timeout};
+use tokio_stream::wrappers::IntervalStream;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {
@@ -228,7 +229,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         )>,
     ) {
         info!(LogSchema::new(LogEntry::RuntimeStart));
-        let mut interval = interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
+        let mut interval = IntervalStream::new(interval(Duration::from_millis(
+            self.config.tick_interval_ms,
+        )))
+        .fuse();
 
         let events: Vec<_> = network_handles
             .into_iter()

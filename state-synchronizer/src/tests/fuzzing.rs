@@ -24,7 +24,7 @@ use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use executor::Executor;
 use executor_test_helpers::bootstrap_genesis;
-use futures::{channel::mpsc, executor::block_on};
+use futures::channel::mpsc;
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::NewNetworkSender,
@@ -102,7 +102,10 @@ proptest! {
 }
 
 pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
-    block_on(async move {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    rt.block_on(async move {
         SYNC_COORDINATOR
             .lock()
             .process_one_message(

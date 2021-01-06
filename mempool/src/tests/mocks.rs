@@ -42,9 +42,8 @@ impl MockSharedMempool {
     /// Returns the runtime on which the shared mempool is running
     /// and the channel through which shared mempool receives client events.
     pub fn new(state_sync: Option<mpsc::Receiver<CommitNotification>>) -> Self {
-        let runtime = Builder::new()
+        let runtime = Builder::new_multi_thread()
             .thread_name("mock-shared-mem")
-            .threaded_scheduler()
             .enable_all()
             .build()
             .expect("[mock shared mempool] failed to create runtime");

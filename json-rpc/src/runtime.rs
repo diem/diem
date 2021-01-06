@@ -87,9 +87,8 @@ pub fn bootstrap(
     role: RoleType,
     chain_id: ChainId,
 ) -> Runtime {
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("json-rpc")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[json-rpc] failed to create runtime");
@@ -158,7 +157,8 @@ pub fn bootstrap(
     //
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
-    let server = runtime.enter(move || warp::serve(full_route).bind(address));
+    let _guard = runtime.enter();
+    let server = warp::serve(full_route).bind(address);
     runtime.handle().spawn(server);
     runtime
 }

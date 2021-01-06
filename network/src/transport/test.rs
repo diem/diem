@@ -200,18 +200,17 @@ fn test_transport_success<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         _trusted_peers,
         supported_protocols,
     ) = setup(base_transport, auth);
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
     let supported_protocols_clone = supported_protocols.clone();
 
@@ -283,7 +282,7 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
@@ -293,11 +292,10 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     // remove dialer from trusted_peers set
     trusted_peers.write().remove(&dialer_peer_id).unwrap();
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
 
     // we try to accept one inbound connection from the dialer. however, the
@@ -337,18 +335,17 @@ fn test_transport_maybe_mutual<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
         supported_protocols,
     ) = setup(base_transport, Auth::MaybeMutual);
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
     let supported_protocols_clone = supported_protocols.clone();
 

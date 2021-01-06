@@ -16,7 +16,7 @@ use fail::fail_point;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
 use std::time::Duration;
-use tokio::time::{delay_for, timeout};
+use tokio::time::{sleep, timeout};
 
 const NO_TXN_DELAY: u64 = 30;
 
@@ -98,7 +98,7 @@ impl TxnManager for MempoolProxy {
             count -= 1;
             let txns = self.pull_internal(max_size, exclude_txns.clone()).await?;
             if txns.is_empty() && no_pending_txns && count > 0 {
-                delay_for(Duration::from_millis(NO_TXN_DELAY)).await;
+                sleep(Duration::from_millis(NO_TXN_DELAY)).await;
                 continue;
             }
             break txns;

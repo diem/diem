@@ -83,7 +83,7 @@ impl Experiment for RecoveryTime {
             .counter("diem_consensus_last_committed_round")
             .is_err()
         {
-            time::delay_for(Duration::from_secs(1)).await;
+            time::sleep(Duration::from_secs(1)).await;
         }
         let time_to_recover = start_instant.elapsed();
         let recovery_rate =
