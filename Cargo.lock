@@ -2206,6 +2206,7 @@ dependencies = [
  "reqwest",
  "scratchpad",
  "storage-interface",
+ "vm",
 ]
 
 [[package]]

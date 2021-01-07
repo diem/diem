@@ -41,7 +41,7 @@ use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_T
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -143,5 +143,21 @@ impl From<&ModuleId> for AccessPath {
             address: *id.address(),
             path: id.access_vector(),
         }
+    }
+}
+
+impl TryFrom<&[u8]> for Path {
+    type Error = bcs::Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        bcs::from_bytes::<Path>(bytes)
+    }
+}
+
+impl TryFrom<&Vec<u8>> for Path {
+    type Error = bcs::Error;
+
+    fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+        bcs::from_bytes::<Path>(bytes)
     }
 }

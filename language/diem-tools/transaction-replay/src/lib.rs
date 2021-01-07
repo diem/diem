@@ -25,7 +25,7 @@ use std::{
     convert::TryFrom,
     path::{Path, PathBuf},
 };
-use vm::errors::VMResult;
+use vm::{errors::VMResult, file_format::CompiledModule};
 
 #[cfg(test)]
 mod unit_tests;
@@ -135,6 +135,23 @@ impl DiemDebugger {
             state_view.save_contract_event(event.clone())?
         }
         Ok(())
+    }
+
+    pub fn get_diem_framework_modules_at_version(
+        &self,
+        version: Version,
+        save_write_sets: bool,
+    ) -> Result<Vec<CompiledModule>> {
+        let modules = self
+            .debugger
+            .get_diem_framework_modules_by_version(version)?;
+        if save_write_sets {
+            let state_view = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
+            for m in &modules {
+                state_view.save_module(m)?
+            }
+        }
+        Ok(modules)
     }
 
     pub fn annotate_account_state_at_version(

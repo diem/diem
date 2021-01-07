@@ -50,6 +50,9 @@ enum Command {
         base_version: Version,
         revision: Version,
     },
+    /// Get the bytecode for all Diem Framework modules at `version`
+    #[structopt(name = "get-modules")]
+    GetModules { version: Version },
     #[structopt(name = "bisect-transaction")]
     BisectTransaction {
         #[structopt(parse(from_os_str))]
@@ -133,6 +136,11 @@ fn main() -> Result<()> {
                 "{}",
                 Changeset::new(&base_annotation, &revision_annotation, "\n")
             );
+        }
+        Command::GetModules { version } => {
+            let modules =
+                debugger.get_diem_framework_modules_at_version(version, opt.save_write_sets)?;
+            println!("Fetched {} modules", modules.len())
         }
         Command::BisectTransaction {
             sender,
