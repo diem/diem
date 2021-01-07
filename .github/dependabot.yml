@@ -4,7 +4,7 @@ updates:
     directory: "/"
     allow:
       # The undocumented default is to open prs for only direct dependencies.
-      - dependency-type: all
+      - dependency-type: direct
     schedule:
       interval: "daily"
     labels:
