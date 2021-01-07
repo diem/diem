@@ -1,0 +1,240 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun Test::get_and_incr(addr: address): u64 {
+     var r: &mut Test::R
+     var v: u64
+     var $t3: address
+     var $t4: bool
+     var $t5: bool
+     var $t6: u64
+     var $t7: address
+     var $t8: &mut Test::R
+     var $t9: &mut Test::R
+     var $t10: &u64
+     var $t11: u64
+     var $t12: &mut Test::R
+     var $t13: &u64
+     var $t14: u64
+     var $t15: u64
+     var $t16: u64
+     var $t17: &mut Test::R
+     var $t18: &mut u64
+     var $t19: u64
+  0: $t3 := copy(addr)
+  1: $t4 := exists<Test::R>($t3)
+  2: $t5 := !($t4)
+  3: if ($t5) goto L0 else goto L1
+  4: L1:
+  5: goto L2
+  6: L0:
+  7: $t6 := 33
+  8: abort($t6)
+  9: L2:
+ 10: $t7 := copy(addr)
+ 11: $t8 := borrow_global<Test::R>($t7)
+ 12: r := $t8
+ 13: $t9 := copy(r)
+ 14: $t10 := borrow_field<Test::R>.v($t9)
+ 15: $t11 := read_ref($t10)
+ 16: v := $t11
+ 17: $t12 := copy(r)
+ 18: $t13 := borrow_field<Test::R>.v($t12)
+ 19: $t14 := read_ref($t13)
+ 20: $t15 := 1
+ 21: $t16 := +($t14, $t15)
+ 22: $t17 := move(r)
+ 23: $t18 := borrow_field<Test::R>.v($t17)
+ 24: write_ref($t18, $t16)
+ 25: $t19 := copy(v)
+ 26: return $t19
+}
+
+
+[variant baseline]
+fun Test::incr_twice() {
+     var $t0: address
+     var $t1: u64
+     var $t2: address
+     var $t3: u64
+  0: $t0 := 0x1
+  1: $t1 := Test::get_and_incr($t0)
+  2: destroy($t1)
+  3: $t2 := 0x1
+  4: $t3 := Test::get_and_incr($t2)
+  5: destroy($t3)
+  6: return ()
+}
+
+============ after pipeline `spec_instrumentation` ================
+
+[variant baseline]
+fun Test::get_and_incr(addr: address): u64 {
+     var r: &mut Test::R
+     var v: u64
+     var $t3: bool
+     var $t4: bool
+     var $t5: u64
+     var $t6: num
+     var $t7: u64
+     var $t8: u64
+     var $t9: u64
+     var $t10: &mut u64
+  0: assume Neq(addr, 0)
+  1: $t3 := exists<Test::R>(addr)
+  2: $t4 := !($t3)
+  3: if ($t4) goto L0 else goto L1
+  4: L1:
+  5: goto L2
+  6: L0:
+  7: $t5 := 33
+  8: $t6 := move($t5)
+  9: goto L4
+ 10: L2:
+ 11: r := borrow_global<Test::R>(addr)
+ 12: on_abort(L4, $t6)
+ 13: unpack_ref(r)
+ 14: v := get_field<Test::R>.v(r)
+ 15: $t7 := get_field<Test::R>.v(r)
+ 16: $t8 := 1
+ 17: $t9 := +($t7, $t8)
+ 18: on_abort(L4, $t6)
+ 19: $t10 := borrow_field<Test::R>.v(r)
+ 20: unpack_ref($t10)
+ 21: write_ref($t10, $t9)
+ 22: pack_ref($t10)
+ 23: write_back[Reference(r)]($t10)
+ 24: pack_ref(r)
+ 25: write_back[Test::R](r)
+ 26: L3:
+ 27: return v
+ 28: L4:
+ 29: abort($t6)
+}
+
+
+[variant verification]
+fun Test::get_and_incr(addr: address): u64 {
+     var r: &mut Test::R
+     var v: u64
+     var $t3: bool
+     var $t4: bool
+     var $t5: u64
+     var $t6: num
+     var $t7: u64
+     var $t8: u64
+     var $t9: u64
+     var $t10: &mut u64
+  0: assume Neq(addr, 0)
+  1: @0 := save_mem(Test::R)
+  2: $t3 := exists<Test::R>(addr)
+  3: $t4 := !($t3)
+  4: if ($t4) goto L0 else goto L1
+  5: L1:
+  6: goto L2
+  7: L0:
+  8: $t5 := 33
+  9: $t6 := move($t5)
+ 10: goto L4
+ 11: L2:
+ 12: r := borrow_global<Test::R>(addr)
+ 13: on_abort(L4, $t6)
+ 14: unpack_ref(r)
+ 15: v := get_field<Test::R>.v(r)
+ 16: $t7 := get_field<Test::R>.v(r)
+ 17: $t8 := 1
+ 18: $t9 := +($t7, $t8)
+ 19: on_abort(L4, $t6)
+ 20: $t10 := borrow_field<Test::R>.v(r)
+ 21: unpack_ref($t10)
+ 22: write_ref($t10, $t9)
+ 23: pack_ref($t10)
+ 24: write_back[Reference(r)]($t10)
+ 25: pack_ref(r)
+ 26: write_back[Test::R](r)
+ 27: L3:
+ 28: assert Not(Not(exists<Test::R>[@0](addr)))
+ 29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
+ 30: assert Eq(select Test::R.v(global<Test::R>(addr)), Add(select Test::R.v(global<Test::R>[@0](addr)), 1))
+ 31: assert Eq(v, select Test::R.v(global<Test::R>(addr)))
+ 32: return v
+ 33: L4:
+ 34: assert Or(And(Not(exists<Test::R>[@0](addr)), Eq(33, $t6)), Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
+ 35: abort($t6)
+}
+
+
+[variant baseline]
+fun Test::incr_twice() {
+     var $t0: address
+     var $t1: bool
+     var $t2: num
+     var $t3: u64
+     var $t4: address
+     var $t5: bool
+     var $t6: u64
+  0: $t0 := 0x1
+  1: assert Neq(addr, 0)
+  2: @6 := save_mem(Test::R)
+  3: modifies global<Test::R>($t0)
+  4: assume Eq($t1, Or(And(Not(exists<Test::R>[@6]($t0)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@6]($t0)), 1), 18446744073709551615)))
+  5: if ($t1) goto L2 else goto L3
+  6: L3:
+  7: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@6]($t0)), 1))
+  8: assume Eq($t3, select Test::R.v(global<Test::R>($t0)))
+  9: destroy($t3)
+ 10: $t4 := 0x1
+ 11: assert Neq(addr, 0)
+ 12: @7 := save_mem(Test::R)
+ 13: modifies global<Test::R>($t4)
+ 14: assume Eq($t5, Or(And(Not(exists<Test::R>[@7]($t4)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@7]($t4)), 1), 18446744073709551615)))
+ 15: if ($t5) goto L2 else goto L4
+ 16: L4:
+ 17: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@7]($t4)), 1))
+ 18: assume Eq($t6, select Test::R.v(global<Test::R>($t4)))
+ 19: destroy($t6)
+ 20: L1:
+ 21: return ()
+ 22: L2:
+ 23: abort($t2)
+}
+
+
+[variant verification]
+fun Test::incr_twice() {
+     var $t0: address
+     var $t1: bool
+     var $t2: num
+     var $t3: u64
+     var $t4: address
+     var $t5: bool
+     var $t6: u64
+  0: @2 := save_mem(Test::R)
+  1: $t0 := 0x1
+  2: assert Neq(addr, 0)
+  3: @3 := save_mem(Test::R)
+  4: modifies global<Test::R>($t0)
+  5: assume Eq($t1, Or(And(Not(exists<Test::R>[@3]($t0)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@3]($t0)), 1), 18446744073709551615)))
+  6: if ($t1) goto L2 else goto L3
+  7: L3:
+  8: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@3]($t0)), 1))
+  9: assume Eq($t3, select Test::R.v(global<Test::R>($t0)))
+ 10: destroy($t3)
+ 11: $t4 := 0x1
+ 12: assert Neq(addr, 0)
+ 13: @4 := save_mem(Test::R)
+ 14: modifies global<Test::R>($t4)
+ 15: assume Eq($t5, Or(And(Not(exists<Test::R>[@4]($t4)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@4]($t4)), 1), 18446744073709551615)))
+ 16: if ($t5) goto L2 else goto L4
+ 17: L4:
+ 18: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@4]($t4)), 1))
+ 19: assume Eq($t6, select Test::R.v(global<Test::R>($t4)))
+ 20: destroy($t6)
+ 21: L1:
+ 22: assert Not(Not(exists<Test::R>[@2](1)))
+ 23: assert Eq(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global<Test::R>[@2](1)), 2))
+ 24: return ()
+ 25: L2:
+ 26: assert And(Not(exists<Test::R>[@2](1)), Eq(33, $t2))
+ 27: abort($t2)
+}

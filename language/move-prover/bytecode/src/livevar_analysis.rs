@@ -37,11 +37,18 @@ impl LiveVarAnnotation {
     }
 }
 
-pub struct LiveVarAnalysisProcessor {}
+pub struct LiveVarAnalysisProcessor {
+    /// Whether the processor should attach `LiveVarAnnotation` to the function data.
+    annotate: bool,
+}
 
 impl LiveVarAnalysisProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(LiveVarAnalysisProcessor {})
+        Box::new(LiveVarAnalysisProcessor { annotate: true })
+    }
+
+    pub fn new_no_annotate() -> Box<Self> {
+        Box::new(LiveVarAnalysisProcessor { annotate: false })
     }
 }
 
@@ -52,36 +59,37 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
     ) -> FunctionData {
-        let offset_to_live_refs = if func_env.is_native() {
+        if func_env.is_native() {
             // Native functions have no byte code.
-            LiveVarAnnotation(BTreeMap::new())
-        } else {
-            let code = std::mem::take(&mut data.code);
-            let func_target = FunctionTarget::new(func_env, &data);
+            return data;
+        }
 
-            // Call 1st time
-            let (code, _) = Self::analyze_and_transform(&func_target, code);
+        let code = std::mem::take(&mut data.code);
+        let func_target = FunctionTarget::new(func_env, &data);
 
-            // Eliminate unused locals after dead code elimination.
-            let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
-            data.rename_vars(&|idx| {
-                if let Some(new_idx) = remap.get(&idx) {
-                    *new_idx
-                } else {
-                    idx
-                }
-            });
-            data.local_types = local_types;
-            data.code = code;
-            let func_target = FunctionTarget::new(func_env, &data);
+        // Call 1st time
+        let (code, _) = Self::analyze_and_transform(&func_target, code);
 
+        // Eliminate unused locals after dead code elimination.
+        let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
+        data.rename_vars(&|idx| {
+            if let Some(new_idx) = remap.get(&idx) {
+                *new_idx
+            } else {
+                idx
+            }
+        });
+        data.local_types = local_types;
+        data.code = code;
+
+        if self.annotate {
             // Call analysis 2nd time on transformed code.
-            let annotations = Self::analyze(&func_target, &data.code);
-            LiveVarAnnotation(annotations)
-        };
-        // Annotate function target with computed life variable data.
-        data.annotations
-            .set::<LiveVarAnnotation>(offset_to_live_refs);
+            let func_target = FunctionTarget::new(func_env, &data);
+            let offset_to_live_refs = LiveVarAnnotation(Self::analyze(&func_target, &data.code));
+            // Annotate function target with computed life variable data.
+            data.annotations
+                .set::<LiveVarAnnotation>(offset_to_live_refs);
+        }
         data
     }
 
@@ -179,9 +187,9 @@ impl LiveVarState {
         removed
     }
 
-    fn insert(&mut self, vars: Vec<TempIndex>) {
+    fn insert(&mut self, vars: &[TempIndex]) {
         for v in vars {
-            self.livevars.insert(v);
+            self.livevars.insert(*v);
         }
     }
 }
@@ -334,7 +342,7 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
         match instr {
             Assign(_, dst, src, _) => {
                 if state.remove(&[*dst]) {
-                    state.insert(vec![*src]);
+                    state.insert(&[*src]);
                 }
             }
             Load(_, dst, _) => {
@@ -342,16 +350,27 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
             }
             Call(_, dsts, oper, srcs) => {
                 state.remove(dsts);
-                state.insert(srcs.clone());
+                state.insert(srcs);
                 if let Operation::Splice(map) = oper {
-                    state.insert(map.values().cloned().collect());
+                    state.insert(&map.values().cloned().collect_vec());
                 }
             }
             Ret(_, srcs) => {
-                state.insert(srcs.clone());
+                state.insert(srcs);
             }
             Abort(_, src) | Branch(_, _, _, src) => {
-                state.insert(vec![*src]);
+                state.insert(&[*src]);
+            }
+            OnAbort(_, _, dst) => {
+                state.remove(&[*dst]);
+            }
+            Prop(_, _, exp) => {
+                let usage = exp
+                    .locals()
+                    .iter()
+                    .filter_map(|name| self.func_target.get_local_index(*name))
+                    .collect_vec();
+                state.insert(&usage);
             }
             _ => {}
         }

@@ -609,13 +609,13 @@ fun TestBorrow::test8(b: bool, n: u64, r_ref: TestBorrow::R): TestBorrow::R {
      var r2: TestBorrow::R
      var t_ref: &mut TestBorrow::R
      var $t6: bool
-     var $t7: TestBorrow::R
-     var $t8: &mut TestBorrow::R
-     var $t9: u64
+     var $t7: u64
+     var $t8: TestBorrow::R
+     var $t9: &mut TestBorrow::R
      var $t10: u64
      var $t11: u64
-     var $t12: bool
-     var $t13: u64
+     var $t12: u64
+     var $t13: bool
      var $t14: u64
      var $t15: u64
      var $t16: u64
@@ -630,315 +630,319 @@ fun TestBorrow::test8(b: bool, n: u64, r_ref: TestBorrow::R): TestBorrow::R {
      // live_nodes: LocalRoot(n), LocalRoot(r_ref), LocalRoot($t6)
      // unchecked_nodes: LocalRoot(r_ref)
      // moved_nodes: LocalRoot(b)
-  1: $t7 := move(r_ref)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7)
-     // unchecked_nodes: LocalRoot($t7)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-  2: $t8 := borrow_local($t7)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t7)}
-  3: $t9 := 3
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t7)}
-  4: r1 := pack TestBorrow::R($t9)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t7)}
-  5: $t10 := 4
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t7)}
-  6: r2 := pack TestBorrow::R($t10)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t7)}
-  7: t_ref := borrow_local(r2)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
-  8: goto L7
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
-  9: L7:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 10: $t11 := 0
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 11: $t12 := <($t11, $t13)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 12: if ($t12) goto L0 else goto L1
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 13: L1:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 14: goto L2
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 15: L0:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 16: destroy(t_ref)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 17: $t14 := 2
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 18: $t15 := /($t13, $t14)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 19: $t16 := 0
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 20: $t17 := ==($t15, $t16)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 21: if ($t17) goto L3 else goto L4
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 22: L4:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 23: goto L5
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 24: L3:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 25: t_ref := borrow_local(r1)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 26: goto L6
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 27: L5:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 28: t_ref := borrow_local(r2)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 29: goto L6
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 30: L6:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 31: $t18 := 1
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 32: $t13 := -($t13, $t18)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 33: goto L7
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 34: L2:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 35: if ($t6) goto L8 else goto L9
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 36: L9:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 37: goto L10
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 38: L8:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 39: destroy(t_ref)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 40: $t19 := 0
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 41: $t20 := read_ref($t8)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 42: $t20 := TestBorrow::test3($t20, $t19)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 43: write_ref($t8, $t20)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 44: goto L11
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 45: L10:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref), Reference($t8)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 46: destroy($t8)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 47: $t21 := 0
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 48: $t20 := read_ref(t_ref)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 49: $t20 := TestBorrow::test3($t20, $t21)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7), Reference(t_ref)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 50: write_ref(t_ref, $t20)
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 51: goto L11
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 52: L11:
-     // live_nodes: LocalRoot(n), LocalRoot($t6), LocalRoot($t7)
-     // unchecked_nodes: LocalRoot($t7), Reference($t8)
-     // moved_nodes: LocalRoot(b), LocalRoot(r_ref)
-     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t7) -> {Reference($t8)}
-     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t8) -> {LocalRoot($t7)}
- 53: return $t7
+  1: $t7 := move(n)
+     // live_nodes: LocalRoot(r_ref), LocalRoot($t6), LocalRoot($t7)
+     // unchecked_nodes: LocalRoot(r_ref)
+     // moved_nodes: LocalRoot(b), LocalRoot(n)
+  2: $t8 := move(r_ref)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
+     // unchecked_nodes: LocalRoot($t8)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+  3: $t9 := borrow_local($t8)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot($t8)}
+  4: $t10 := 3
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot($t8)}
+  5: r1 := pack TestBorrow::R($t10)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot($t8)}
+  6: $t11 := 4
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot($t8)}
+  7: r2 := pack TestBorrow::R($t11)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot($t8)}
+  8: t_ref := borrow_local(r2)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+  9: goto L7
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 10: L7:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 11: $t12 := 0
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 12: $t13 := <($t12, $t7)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 13: if ($t13) goto L0 else goto L1
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 14: L1:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 15: goto L2
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 16: L0:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 17: destroy(t_ref)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 18: $t14 := 2
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 19: $t15 := /($t7, $t14)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 20: $t16 := 0
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 21: $t17 := ==($t15, $t16)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 22: if ($t17) goto L3 else goto L4
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 23: L4:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 24: goto L5
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 25: L3:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 26: t_ref := borrow_local(r1)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 27: goto L6
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 28: L5:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 29: t_ref := borrow_local(r2)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 30: goto L6
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 31: L6:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 32: $t18 := 1
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 33: $t7 := -($t7, $t18)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 34: goto L7
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 35: L2:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 36: if ($t6) goto L8 else goto L9
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 37: L9:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 38: goto L10
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 39: L8:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 40: destroy(t_ref)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 41: $t19 := 0
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 42: $t20 := read_ref($t9)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 43: $t20 := TestBorrow::test3($t20, $t19)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 44: write_ref($t9, $t20)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 45: goto L11
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 46: L10:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref), Reference($t9)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 47: destroy($t9)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 48: $t21 := 0
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 49: $t20 := read_ref(t_ref)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 50: $t20 := TestBorrow::test3($t20, $t21)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference(t_ref)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 51: write_ref(t_ref, $t20)
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 52: goto L11
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 53: L11:
+     // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
+     // unchecked_nodes: LocalRoot($t8), Reference($t9)
+     // moved_nodes: LocalRoot(b), LocalRoot(n), LocalRoot(r_ref)
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}, LocalRoot($t8) -> {Reference($t9)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}, Reference($t9) -> {LocalRoot($t8)}
+ 54: return $t8
 }

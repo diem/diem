@@ -1840,9 +1840,9 @@ impl<'env> SpecTranslator<'env> {
                     if let Some(local_index) = func_target.get_local_index(name) {
                         if *self.in_assert_or_assume.borrow() {
                             let proxy = if ty.is_reference() {
-                                func_target.get_ref_proxy_index(*local_index)
+                                func_target.get_ref_proxy_index(local_index)
                             } else {
-                                func_target.get_proxy_index(*local_index)
+                                func_target.get_proxy_index(local_index)
                             };
                             if let Some(proxy_index) = proxy {
                                 var_name = func_target
@@ -1850,17 +1850,17 @@ impl<'env> SpecTranslator<'env> {
                                     .string(func_target.get_local_name(*proxy_index));
                                 ty = func_target.get_local_type(*proxy_index);
                             } else {
-                                ty = func_target.get_local_type(*local_index);
+                                ty = func_target.get_local_type(local_index);
                             }
                         } else if *self.in_ensures.borrow() && !*self.in_old.borrow() {
-                            if let Some(return_index) = func_target.get_return_index(*local_index) {
+                            if let Some(return_index) = func_target.get_return_index(local_index) {
                                 var_name = Rc::new(format!("$ret{}", return_index));
                                 ty = func_target.get_return_type(*return_index);
                             } else {
-                                ty = func_target.get_local_type(*local_index);
+                                ty = func_target.get_local_type(local_index);
                             }
                         } else {
-                            ty = func_target.get_local_type(*local_index);
+                            ty = func_target.get_local_type(local_index);
                         }
                     }
                 };

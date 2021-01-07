@@ -28,70 +28,70 @@ fn get_tested_transformation_pipeline(
         "from_move" => Ok(None),
         "eliminate_imm_refs" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
             Ok(Some(pipeline))
         }
         "eliminate_mut_refs" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
             Ok(Some(pipeline))
         }
         "reaching_def" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
             Ok(Some(pipeline))
         }
         "livevar" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
             Ok(Some(pipeline))
         }
         "borrow" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
+            pipeline.add_processor(BorrowAnalysisProcessor::new());
             Ok(Some(pipeline))
         }
         "memory_instr" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
+            pipeline.add_processor(BorrowAnalysisProcessor::new());
+            pipeline.add_processor(MemoryInstrumentationProcessor::new());
             Ok(Some(pipeline))
         }
         "clean_and_optimize" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
-            pipeline.add_processor(Box::new(CleanAndOptimizeProcessor {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
+            pipeline.add_processor(BorrowAnalysisProcessor::new());
+            pipeline.add_processor(MemoryInstrumentationProcessor::new());
+            pipeline.add_processor(CleanAndOptimizeProcessor::new());
             Ok(Some(pipeline))
         }
         "spec_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
-            pipeline.add_processor(Box::new(CleanAndOptimizeProcessor {}));
-            pipeline.add_processor(Box::new(SpecInstrumenter {}));
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
+            pipeline.add_processor(BorrowAnalysisProcessor::new());
+            pipeline.add_processor(MemoryInstrumentationProcessor::new());
+            pipeline.add_processor(CleanAndOptimizeProcessor::new());
+            pipeline.add_processor(SpecInstrumenter::new());
             Ok(Some(pipeline))
         }
 

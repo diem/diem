@@ -49,10 +49,6 @@ impl std::fmt::Display for FunctionVariant {
 /// transformation has finished. This allows the processor to take ownership
 /// on the target data. Notice that you can use `FunctionTarget{func_env, &data}` to temporarily
 /// construct a function target for access to the underlying data.
-///
-/// Function processors are only called for the `FunctionVariant::Baseline` variant of
-/// a function. If processing of other variants is needed, this can be achieved by directly
-/// accessing and mutating the `targets` parameter.
 pub trait FunctionTargetProcessor {
     fn process(
         &self,
@@ -94,12 +90,13 @@ impl FunctionTargetsHolder {
         FunctionTarget::new(func_env, &data)
     }
 
+    /// Gets all available variants for function.
     pub fn get_target_variants(&self, func_env: &FunctionEnv<'_>) -> Vec<FunctionVariant> {
         self.targets
             .get(&func_env.get_qualified_id())
             .expect("function targets exist")
-            .iter()
-            .map(|(v, _)| *v)
+            .keys()
+            .cloned()
             .collect_vec()
     }
 
@@ -116,7 +113,7 @@ impl FunctionTargetsHolder {
             .collect_vec()
     }
 
-    /// Gets function target data for a qualified function identifier and given variant.
+    /// Gets function data for a variant.
     pub fn get_target_data(
         &self,
         id: &QualifiedId<FunId>,
@@ -125,21 +122,39 @@ impl FunctionTargetsHolder {
         self.targets.get(id).and_then(|vs| vs.get(&variant))
     }
 
-    /// Processes the function target data for given function. This only processes the
-    /// baseline variant (see documentation of FunctionTargetProcessor).
-    fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
-        let key = func_env.get_qualified_id();
-        let data = self
-            .targets
-            .get_mut(&key)
-            .expect("function target exists")
-            .remove(&FunctionVariant::Baseline)
-            .expect("baseline variant exists");
-        let processed_data = processor.process(self, func_env, data);
+    /// Removes function data for a variant.
+    pub fn remove_target_data(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> FunctionData {
         self.targets
-            .get_mut(&key)
+            .get_mut(id)
             .expect("function target exists")
-            .insert(FunctionVariant::Baseline, processed_data);
+            .remove(&variant)
+            .expect("variant exists")
+    }
+
+    /// Sets function data for a function's variant.
+    pub fn insert_target_data(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+        data: FunctionData,
+    ) {
+        self.targets.entry(*id).or_default().insert(variant, data);
+    }
+
+    /// Processes the function target data for given function.
+    fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
+        let id = func_env.get_qualified_id();
+        for variant in self.get_target_variants(func_env) {
+            // Remove data so we can own it.
+            let data = self.remove_target_data(&id, variant);
+            let processed_data = processor.process(self, func_env, data);
+            // Put back processed data.
+            self.insert_target_data(&id, variant, processed_data);
+        }
     }
 }
 

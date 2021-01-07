@@ -182,8 +182,17 @@ impl<'env> FunctionTarget<'env> {
     }
 
     /// Get the index corresponding to a local name
-    pub fn get_local_index(&self, name: Symbol) -> Option<&usize> {
-        self.data.name_to_index.get(&name)
+    pub fn get_local_index(&self, name: Symbol) -> Option<usize> {
+        self.data.name_to_index.get(&name).cloned().or_else(|| {
+            // TODO(wrwg): remove this hack once we have Exp::Local using an index
+            //   instead of a symbol.
+            let str = self.global_env().symbol_pool().string(name);
+            if let Some(s) = str.strip_prefix("$t") {
+                Some(s.parse::<usize>().unwrap())
+            } else {
+                None
+            }
+        })
     }
 
     /// Gets the number of locals of this function, including parameters.
@@ -342,11 +351,27 @@ impl FunctionData {
         }
     }
 
-    /// Gets the next available index for AttrId.
+    /// Computes the next available index for AttrId.
     pub fn next_free_attr_index(&self) -> usize {
         self.code
             .iter()
             .map(|b| b.get_attr_id().as_usize())
+            .max()
+            .unwrap_or(0)
+            + 1
+    }
+
+    /// Computes the next available index for Label.
+    pub fn next_free_label_index(&self) -> usize {
+        self.code
+            .iter()
+            .filter_map(|b| {
+                if let Bytecode::Label(_, l) = b {
+                    Some(l.as_usize())
+                } else {
+                    None
+                }
+            })
             .max()
             .unwrap_or(0)
             + 1
@@ -383,11 +408,13 @@ impl FunctionData {
             .map(|(x, y)| (f(x), f(y)))
             .collect();
     }
+}
 
-    /// Create a clone of this function data, without code and annotations.
-    pub fn clone_without_code(&self) -> Self {
+impl Clone for FunctionData {
+    /// Create a clone of this function data, without annotations.
+    fn clone(&self) -> Self {
         FunctionData {
-            code: vec![],
+            code: self.code.clone(),
             local_types: self.local_types.clone(),
             return_types: self.return_types.clone(),
             param_proxy_map: self.param_proxy_map.clone(),

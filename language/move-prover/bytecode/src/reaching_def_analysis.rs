@@ -18,7 +18,7 @@ use move_model::model::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-/// The reaching definitions we are capturing. Currently we only
+/// The reaching definitions we are capturing. Currently we only capture
 /// aliases (assignment).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Def {
@@ -30,13 +30,25 @@ pub enum Def {
 #[derive(Default)]
 pub struct ReachingDefAnnotation(BTreeMap<CodeOffset, BTreeMap<TempIndex, BTreeSet<Def>>>);
 
-pub struct ReachingDefProcessor {}
+pub struct ReachingDefProcessor {
+    /// An option to work around restrictions in the boogie backend. If true, copy
+    /// propagation will leave proxies untouched.
+    preserve_proxies: bool,
+}
 
 type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
 
 impl ReachingDefProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(ReachingDefProcessor {})
+        Box::new(ReachingDefProcessor {
+            preserve_proxies: true,
+        })
+    }
+
+    pub fn new_no_preserve_proxies() -> Box<Self> {
+        Box::new(ReachingDefProcessor {
+            preserve_proxies: false,
+        })
     }
 
     /// Returns Some(temp, def) if temp has a unique reaching definition and None otherwise.
@@ -119,6 +131,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let analyzer = ReachingDefAnalysis {
                 target: FunctionTarget::new(func_env, &data),
+                preserve_proxies: self.preserve_proxies,
             };
             let block_state_map = analyzer.analyze_function(
                 ReachingDefState {
@@ -141,7 +154,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 
             // Currently we do not need reaching defs after this phase. If so in the future, we
             // need to uncomment this statement.
-            // data.annotations.set(annotations);
+            //data.annotations.set(annotations);
             data
         }
     }
@@ -153,6 +166,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 
 struct ReachingDefAnalysis<'a> {
     target: FunctionTarget<'a>,
+    preserve_proxies: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -172,11 +186,13 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
             Assign(_, dst, src, _) => {
                 // Only define aliases for temporaries. We want to keep names for user
                 // declared variables for better debugging. Also don't skip assigns
-                // from proxied parameters. The later is currently needed because the
+                // from proxied parameters if configured so. The later is currently needed because the
                 // Boogie backend does not allow to write to such values, which happens via
                 // WriteBack instructions.
                 // TODO(remove): this restriction should be handled in the backend instead of here.
-                if self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none() {
+                if self.target.is_temporary(*dst)
+                    && (!self.preserve_proxies || self.target.get_proxy_index(*src).is_none())
+                {
                     state.def_alias(*dst, *src);
                 }
             }
@@ -194,17 +210,19 @@ impl<'a> DataflowAnalysis for ReachingDefAnalysis<'a> {}
 impl AbstractDomain for ReachingDefState {
     fn join(&mut self, other: &Self) -> JoinResult {
         let mut result = JoinResult::Unchanged;
-        for (idx, other_defs) in &other.map {
-            if !self.map.contains_key(idx) {
-                self.map.insert(*idx, other_defs.clone());
-                result = JoinResult::Changed;
-            } else {
-                let defs = self.map.get_mut(idx).unwrap();
+        for idx in self.map.keys().cloned().collect_vec() {
+            if let Some(other_defs) = other.map.get(&idx) {
+                // Union of definitions
+                let defs = self.map.get_mut(&idx).unwrap();
                 for d in other_defs {
                     if defs.insert(d.clone()) {
                         result = JoinResult::Changed;
                     }
                 }
+            } else {
+                // Kill this definition as it is not contained in both incoming states.
+                self.map.remove(&idx);
+                result = JoinResult::Changed;
             }
         }
         result

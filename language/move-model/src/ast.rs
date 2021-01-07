@@ -347,41 +347,88 @@ impl Exp {
         ids
     }
 
+    /// Returns the locals used in this expression.
+    pub fn locals(&self) -> BTreeSet<Symbol> {
+        let mut locals = BTreeSet::new();
+        let mut shadowed = vec![]; // Should be multiset but don't have this
+        let mut visitor = |up: bool, e: &Exp| {
+            use Exp::*;
+            let decls = match e {
+                Lambda(_, decls, _) | Block(_, decls, _) => decls.as_slice(),
+                _ => &[],
+            };
+            if !up {
+                shadowed.extend(decls.iter().map(|d| d.name));
+            } else {
+                for sym in decls.iter().map(|d| d.name) {
+                    if let Some(pos) = shadowed.iter().position(|s| *s == sym) {
+                        // Remove one instance of this symbol. The same symbol can appear
+                        // multiple times in `shadowed`.
+                        shadowed.remove(pos);
+                    }
+                }
+                if let LocalVar(_, sym) = e {
+                    if !shadowed.contains(sym) {
+                        locals.insert(*sym);
+                    }
+                }
+            }
+        };
+        self.visit_pre_post(&mut visitor);
+        locals
+    }
+
     /// Visits expression, calling visitor on each sub-expression, depth first.
     pub fn visit<F>(&self, visitor: &mut F)
     where
         F: FnMut(&Exp),
     {
+        self.visit_pre_post(&mut |up, e| {
+            if up {
+                visitor(e);
+            }
+        });
+    }
+
+    /// Visits expression, calling visitor on each sub-expression. `visitor(false, ..)` will
+    /// be called before descending into expression, and `visitor(true, ..)` after. Notice
+    /// we use one function instead of two so a lambda can be passed which encapsulates mutable
+    /// references.
+    pub fn visit_pre_post<F>(&self, visitor: &mut F)
+    where
+        F: FnMut(bool, &Exp),
+    {
         use Exp::*;
+        visitor(false, self);
         match self {
             Call(_, _, args) => {
                 for exp in args {
-                    exp.visit(visitor);
+                    exp.visit_pre_post(visitor);
                 }
             }
             Invoke(_, target, args) => {
-                target.visit(visitor);
+                target.visit_pre_post(visitor);
                 for exp in args {
-                    exp.visit(visitor);
+                    exp.visit_pre_post(visitor);
                 }
             }
-            Lambda(_, _, body) => body.visit(visitor),
+            Lambda(_, _, body) => body.visit_pre_post(visitor),
             Block(_, decls, body) => {
                 for decl in decls {
                     if let Some(def) = &decl.binding {
-                        def.visit(visitor);
+                        def.visit_pre_post(visitor);
                     }
                 }
-                body.visit(visitor)
+                body.visit_pre_post(visitor)
             }
             IfElse(_, c, t, e) => {
-                c.visit(visitor);
-                t.visit(visitor);
-                e.visit(visitor);
+                c.visit_pre_post(visitor);
+                t.visit_pre_post(visitor);
+                e.visit_pre_post(visitor);
             }
             _ => {}
         }
-        visitor(self);
+        visitor(true, self);
     }
 
     /// Returns the set of module ids used by this expression.

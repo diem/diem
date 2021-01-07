@@ -1035,7 +1035,10 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
-            Bytecode::Prop(..) | Bytecode::SaveMem(..) | Bytecode::SaveSpecVar(..) => {
+            Bytecode::Prop(..)
+            | Bytecode::SaveMem(..)
+            | Bytecode::SaveSpecVar(..)
+            | Bytecode::OnAbort(..) => {
                 unimplemented!()
             }
             SpecBlock(_, block_id) => {

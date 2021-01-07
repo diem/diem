@@ -150,6 +150,57 @@ pub enum Operation {
     Neq,
 }
 
+impl Operation {
+    /// Returns true of the operation can cause abort.
+    pub fn can_abort(&self) -> bool {
+        match self {
+            Operation::Function(_, _, _) => true,
+            Operation::Pack(_, _, _) => false,
+            Operation::Unpack(_, _, _) => false,
+            Operation::MoveTo(_, _, _) => true,
+            Operation::MoveFrom(_, _, _) => true,
+            Operation::Exists(_, _, _) => false,
+            Operation::BorrowLoc => false,
+            Operation::BorrowField(_, _, _, _) => false,
+            Operation::BorrowGlobal(_, _, _) => true,
+            Operation::GetField(_, _, _, _) => false,
+            Operation::GetGlobal(_, _, _) => true,
+            Operation::Destroy => false,
+            Operation::ReadRef => false,
+            Operation::WriteRef => false,
+            Operation::FreezeRef => false,
+            Operation::WriteBack(_) => false,
+            Operation::Splice(_) => false,
+            Operation::UnpackRef => false,
+            Operation::PackRef => false,
+            Operation::UnpackRefDeep => false,
+            Operation::PackRefDeep => false,
+            Operation::CastU8 => true,
+            Operation::CastU64 => true,
+            Operation::CastU128 => true,
+            Operation::Not => false,
+            Operation::Add => true,
+            Operation::Sub => true,
+            Operation::Mul => true,
+            Operation::Div => true,
+            Operation::Mod => true,
+            Operation::BitOr => false,
+            Operation::BitAnd => false,
+            Operation::Xor => false,
+            Operation::Shl => false,
+            Operation::Shr => false,
+            Operation::Lt => false,
+            Operation::Gt => false,
+            Operation::Le => false,
+            Operation::Ge => false,
+            Operation::Or => false,
+            Operation::And => false,
+            Operation::Eq => false,
+            Operation::Neq => false,
+        }
+    }
+}
+
 /// A borrow node -- used in memory operations.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum BorrowNode {
@@ -173,6 +224,7 @@ impl BorrowNode {
 pub enum PropKind {
     Assert,
     Assume,
+    Modifies,
 }
 
 /// The stackless bytecode.
@@ -187,6 +239,7 @@ pub enum Bytecode {
 
     Load(AttrId, TempIndex, Constant),
     Branch(AttrId, Label, Label, TempIndex),
+    OnAbort(AttrId, Label, TempIndex),
     Jump(AttrId, Label),
     Label(AttrId, Label),
     Abort(AttrId, TempIndex),
@@ -207,6 +260,7 @@ impl Bytecode {
             | Ret(id, ..)
             | Load(id, ..)
             | Branch(id, ..)
+            | OnAbort(id, ..)
             | Jump(id, ..)
             | Label(id, ..)
             | Abort(id, ..)
@@ -233,7 +287,7 @@ impl Bytecode {
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        matches!(self, Bytecode::Branch(..))
+        matches!(self, Bytecode::Branch(..) | Bytecode::OnAbort(..))
     }
 
     pub fn is_branch(&self) -> bool {
@@ -244,7 +298,7 @@ impl Bytecode {
     pub fn branch_dests(&self) -> Vec<Label> {
         match self {
             Bytecode::Branch(_, then_label, else_label, _) => vec![*then_label, *else_label],
-            Bytecode::Jump(_, label) => vec![*label],
+            Bytecode::Jump(_, label) | Bytecode::OnAbort(_, label, _) => vec![*label],
             _ => vec![],
         }
     }
@@ -272,6 +326,10 @@ impl Bytecode {
         let mut v = vec![];
         for label in bytecode.branch_dests() {
             v.push(*label_offsets.get(&label).expect("label defined"));
+        }
+        if matches!(bytecode, Bytecode::OnAbort(..)) {
+            // Falls through.
+            v.push(pc + 1);
         }
         // always give successors in ascending order
         if v.len() > 1 && v[0] > v[1] {
@@ -316,6 +374,7 @@ impl Bytecode {
             Call(attr, dests, op, srcs) => Call(attr, map(f, dests), op, map(f, srcs)),
             Ret(attr, rets) => Ret(attr, map(f, rets)),
             Branch(attr, if_label, else_label, cond) => Branch(attr, if_label, else_label, f(cond)),
+            OnAbort(attr, label, code) => OnAbort(attr, label, f(code)),
             Abort(attr, cond) => Abort(attr, f(cond)),
             Prop(attr, kind, exp) => {
                 // TODO(wrwg): we need to get rid of symbols for locals in expressions, and
@@ -324,7 +383,7 @@ impl Bytecode {
                 // require symbolic resolution the way they are wired with move-lang.
                 let mut replacer = |node_id: NodeId, sym: Symbol| {
                     if let Some(idx) = func_target.get_local_index(sym) {
-                        let new_idx = f(*idx);
+                        let new_idx = f(idx);
                         let new_sym = func_target.get_local_name(new_idx);
                         Some(Exp::LocalVar(node_id, new_sym))
                     } else {
@@ -351,6 +410,7 @@ impl Bytecode {
             | Call(_, _, WriteBack(Reference(dest)), ..) => vec![*dest],
             Call(_, _, WriteRef, srcs) => vec![srcs[0]],
             Call(_, dests, ..) => dests.clone(),
+            OnAbort(_, _, code) => vec![*code],
             _ => vec![],
         }
     }
@@ -422,6 +482,9 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
                     else_label.as_usize()
                 )?;
             }
+            OnAbort(_, label, code) => {
+                write!(f, "on_abort(L{}, {})", label.as_usize(), self.lstr(*code))?;
+            }
             Jump(_, label) => {
                 write!(f, "goto L{}", label.as_usize())?;
             }
@@ -462,6 +525,7 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
                 match kind {
                     PropKind::Assume => write!(f, "assume {}", exp_display)?,
                     PropKind::Assert => write!(f, "assert {}", exp_display)?,
+                    PropKind::Modifies => write!(f, "modifies {}", exp_display)?,
                 }
             }
         }
