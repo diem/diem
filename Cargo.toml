@@ -123,7 +123,6 @@ members = [
     "secure/storage",
     "secure/storage/github",
     "secure/storage/vault",
-    "secure/time",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup/backup-cli",

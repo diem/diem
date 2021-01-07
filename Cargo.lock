@@ -2088,14 +2088,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diem-secure-time"
-version = "0.1.0"
-dependencies = [
- "diem-infallible",
- "diem-workspace-hack",
-]
-
-[[package]]
 name = "diem-smoke-test-attribute"
 version = "0.1.0"
 dependencies = [
