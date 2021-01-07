@@ -14,9 +14,9 @@ pub struct GitHubStorage {
 }
 
 impl GitHubStorage {
-    pub fn new(owner: String, repository: String, token: String) -> Self {
+    pub fn new(owner: String, repository: String, branch: String, token: String) -> Self {
         Self {
-            client: Client::new(owner, repository, token),
+            client: Client::new(owner, repository, branch, token),
             time_service: RealTimeService::new(),
         }
     }

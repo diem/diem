@@ -41,6 +41,7 @@ const CRYPTO_NAME: &str = "Test_Key_Name";
 
 /// Executes all storage tests on a given storage backend.
 pub fn execute_all_storage_tests(storage: &mut Storage) {
+    storage.reset_and_clear().unwrap();
     for test in STORAGE_TESTS.iter() {
         test(storage);
         storage.reset_and_clear().unwrap();
