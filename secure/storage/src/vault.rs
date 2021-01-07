@@ -10,7 +10,7 @@ use diem_crypto::{
     hash::CryptoHash,
 };
 use diem_infallible::RwLock;
-use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
+use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
@@ -51,7 +51,7 @@ impl VaultStorage {
     ) -> Self {
         Self {
             client: Client::new(host, token, certificate),
-            time_service: RealTimeService::new().into(),
+            time_service: TimeService::real(),
             namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),

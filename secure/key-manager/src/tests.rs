@@ -16,7 +16,7 @@ use diem_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
 use diem_secure_storage::{InMemoryStorage, KVStorage};
-use diem_time_service::{MockTimeService, TimeServiceTrait};
+use diem_time_service::{MockTimeService, TimeService, TimeServiceTrait};
 use diem_types::{
     account_address::AccountAddress,
     account_config,
@@ -351,27 +351,27 @@ fn setup_node<T: DiemInterface + Clone>(
     executor: Executor<DiemVM>,
     diem: T,
 ) -> Node<T> {
-    let time = MockTimeService::new();
+    let time = TimeService::mock();
     let diem_test_harness = DiemInterfaceTestHarness::new(diem);
     let storage = setup_secure_storage(&node_config, time.clone());
 
     let key_manager = KeyManager::new(
         diem_test_harness.clone(),
         storage,
-        time.clone().into(),
+        time.clone(),
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
         diem_types::chain_id::ChainId::test(),
     );
 
-    Node::new(executor, diem_test_harness, key_manager, time)
+    Node::new(executor, diem_test_harness, key_manager, time.into_mock())
 }
 
 // Creates and returns a secure storage implementation (based on an in memory storage engine) for
 // testing. As part of the initialization, the consensus key is created.
-fn setup_secure_storage(config: &NodeConfig, time: MockTimeService) -> InMemoryStorage {
-    let mut sec_storage = InMemoryStorage::new_with_time_service(time.into());
+fn setup_secure_storage(config: &NodeConfig, time: TimeService) -> InMemoryStorage {
+    let mut sec_storage = InMemoryStorage::new_with_time_service(time);
     let test_config = config.clone().test.unwrap();
 
     // Initialize the owner key and account address in storage

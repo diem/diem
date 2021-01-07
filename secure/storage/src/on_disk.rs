@@ -3,7 +3,7 @@
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
 use diem_temppath::TempPath;
-use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
+use diem_time_service::{TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::{
@@ -28,7 +28,7 @@ pub struct OnDiskStorage {
 
 impl OnDiskStorage {
     pub fn new(file_path: PathBuf) -> Self {
-        Self::new_with_time_service(file_path, RealTimeService::new().into())
+        Self::new_with_time_service(file_path, TimeService::real())
     }
 
     fn new_with_time_service(file_path: PathBuf, time_service: TimeService) -> Self {

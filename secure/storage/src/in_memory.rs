@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
-use diem_time_service::{RealTimeService, TimeService, TimeServiceTrait};
+use diem_time_service::{TimeService, TimeServiceTrait};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
@@ -20,7 +20,7 @@ pub struct InMemoryStorage {
 
 impl InMemoryStorage {
     pub fn new() -> Self {
-        Self::new_with_time_service(RealTimeService::new().into())
+        Self::new_with_time_service(TimeService::real())
     }
 }
 
