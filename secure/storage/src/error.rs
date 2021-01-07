@@ -67,7 +67,7 @@ impl From<diem_github_client::Error> for Error {
     fn from(error: diem_github_client::Error) -> Self {
         match error {
             diem_github_client::Error::NotFound(key) => Self::KeyNotSet(key),
-            diem_github_client::Error::HttpError(403, _) => Self::PermissionDenied,
+            diem_github_client::Error::HttpError(403, _, _) => Self::PermissionDenied,
             _ => Self::InternalError(format!("{}", error)),
         }
     }

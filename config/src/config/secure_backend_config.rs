@@ -24,6 +24,8 @@ pub struct GitHubConfig {
     pub repository_owner: String,
     /// The repository where storage will mount
     pub repository: String,
+    /// The branch containing storage, defaults to master
+    pub branch: Option<String>,
     /// The authorization token for accessing the repository
     pub token: Token,
     /// A namespace is an optional portion of the path to a key stored within GitHubConfig. For
@@ -146,6 +148,11 @@ impl From<&SecureBackend> for Storage {
                 let storage = Storage::from(GitHubStorage::new(
                     config.repository_owner.clone(),
                     config.repository.clone(),
+                    config
+                        .branch
+                        .as_ref()
+                        .cloned()
+                        .unwrap_or_else(|| "master".to_string()),
                     config.token.read_token().expect("Unable to read token"),
                 ));
                 if let Some(namespace) = &config.namespace {
