@@ -7,16 +7,18 @@ mod storage_interface;
 pub use crate::storage_interface::DBDebuggerInterface;
 pub use json_rpc_interface::JsonRpcDebuggerInterface;
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     transaction::{Transaction, Version},
 };
 use std::convert::TryFrom;
+use vm::file_format::CompiledModule;
 
 pub trait DiemValidatorInterface {
     fn get_account_state_by_version(
@@ -31,6 +33,26 @@ pub trait DiemValidatorInterface {
         account: AccountAddress,
         seq: u64,
     ) -> Result<Option<Version>>;
+
+    fn get_diem_framework_modules_by_version(
+        &self,
+        version: Version,
+    ) -> Result<Vec<CompiledModule>> {
+        let mut acc = vec![];
+        for module_bytes in AccountState::try_from(
+            &self
+                .get_account_state_by_version(account_config::CORE_CODE_ADDRESS, version)?
+                .ok_or_else(|| anyhow!("Failure reading diem root address state"))?,
+        )?
+        .get_modules()
+        {
+            acc.push(
+                CompiledModule::deserialize(module_bytes)
+                    .map_err(|e| anyhow!("Failure deserializing module: {:?}", e))?,
+            )
+        }
+        Ok(acc)
+    }
 }
 
 pub struct DebuggerStateView<'a> {

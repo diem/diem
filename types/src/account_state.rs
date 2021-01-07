@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    access_path::Path,
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChainIdResource,
@@ -199,6 +200,16 @@ impl AccountState {
 
     pub fn get_resource<T: MoveResource + DeserializeOwned>(&self) -> Result<Option<T>> {
         self.get_resource_impl(&T::struct_tag().access_vector())
+    }
+
+    /// Return an iterator over the module values stored under this account
+    pub fn get_modules(&self) -> impl Iterator<Item = &Vec<u8>> {
+        self.0.iter().filter_map(
+            |(k, v)| match Path::try_from(k).expect("Invalid access path") {
+                Path::Code(_) => Some(v),
+                Path::Resource(_) => None,
+            },
+        )
     }
 }
 
