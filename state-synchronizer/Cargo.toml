@@ -22,6 +22,7 @@ proptest = { version = "0.10.1", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
+executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0", optional = true }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
 diem-config = { path = "../config", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
@@ -68,4 +69,4 @@ vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 [features]
 default = []
 failpoints = ["fail/failpoints"]
-fuzzing = ["vm-genesis", "proptest", "diem-network-address/fuzzing", "diem-config/fuzzing", "diem-mempool/fuzzing", "diem-types/fuzzing", "diem-proptest-helpers", "memsocket/fuzzing"]
+fuzzing = ["vm-genesis", "proptest", "executor-test-helpers", "diem-network-address/fuzzing", "diem-config/fuzzing", "diem-mempool/fuzzing", "diem-types/fuzzing", "diem-proptest-helpers", "memsocket/fuzzing"]

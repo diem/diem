@@ -12,4 +12,5 @@ mod on_chain_config;
 #[cfg(test)]
 mod request_manager;
 
+#[cfg(any(feature = "fuzzing", test))]
 pub mod fuzzing;

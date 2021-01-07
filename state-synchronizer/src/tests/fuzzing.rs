@@ -8,23 +8,28 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerMsg, StateSynchronizerSender},
 };
-use executor::Executor;
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
     config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
+use diem_infallible::Mutex;
 use diem_types::{
-    ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
-    waypoint::Waypoint, PeerId,
+    ledger_info::LedgerInfoWithSignatures,
+    transaction::{Transaction, TransactionListWithProof, WriteSetPayload},
+    waypoint::Waypoint,
+    PeerId,
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
+use executor::Executor;
+use executor_test_helpers::bootstrap_genesis;
 use futures::{channel::mpsc, executor::block_on};
 use network::{
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::NewNetworkSender,
 };
+use once_cell::sync::Lazy;
 use proptest::{
     arbitrary::{any, Arbitrary},
     option,
@@ -33,20 +38,8 @@ use proptest::{
 };
 use std::collections::HashMap;
 use storage_interface::DbReaderWriter;
-use subscription_service::ReconfigSubscription;
-use diem_types::transaction::{Transaction, WriteSetPayload};
-use executor_test_helpers::bootstrap_genesis;
 
-proptest! {
-    #![proptest_config(ProptestConfig::with_cases(10))]
-
-    #[test]
-    fn test_state_sync_msg_fuzzer(input in arb_state_sync_msg()) {
-        test_state_sync_msg_fuzzer_impl(input);
-    }
-}
-
-pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
+static SYNC_COORDINATOR: Lazy<Mutex<SyncCoordinator<ExecutorProxy>>> = Lazy::new(|| {
     // Generate a genesis change set
     let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -55,15 +48,13 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     db_path.create_as_dir().unwrap();
     let (db, db_rw) = DbReaderWriter::wrap(DiemDB::new_for_test(db_path.path()));
 
-    // Boostrap the genesis transaction
+    // Bootstrap the genesis transaction
     let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
     bootstrap_genesis::<DiemVM>(&db_rw, &genesis_txn).unwrap();
 
     // Create executor proxy
-    let (subscription, _reconfig_receiver) =
-        ReconfigSubscription::subscribe_all("", vec![], vec![]);
     let chunk_executor = Box::new(Executor::<DiemVM>::new(db_rw));
-    let executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
+    let executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![]);
 
     // Get initial state
     let initial_state = executor_proxy.get_local_storage_state().unwrap();
@@ -76,7 +67,7 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
         ConnectionRequestSender::new(connection_reqs_tx),
     );
     let node_network_id = NodeNetworkId::new(NetworkId::Validator, 0);
-    let network_senders = vec![(node_network_id.clone(), network_sender)]
+    let network_senders = vec![(node_network_id, network_sender)]
         .into_iter()
         .collect::<HashMap<_, _>>();
 
@@ -85,7 +76,7 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     let (mempool_sender, _mempool_receiver) = mpsc::channel(1);
 
     // Start up coordinator
-    let mut coordinator = SyncCoordinator::new(
+    let coordinator = SyncCoordinator::new(
         coordinator_receiver,
         mempool_sender,
         network_senders,
@@ -98,11 +89,27 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     )
     .unwrap();
 
-    // Process the message
+    Mutex::new(coordinator)
+});
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10))]
+
+    #[test]
+    fn test_state_sync_msg_fuzzer(input in arb_state_sync_msg()) {
+        test_state_sync_msg_fuzzer_impl(input);
+    }
+}
+
+pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     block_on(async move {
-        coordinator
+        SYNC_COORDINATOR
+            .lock()
             .process_one_message(
-                PeerNetworkId(node_network_id, PeerId::new([0u8; PeerId::LENGTH])),
+                PeerNetworkId(
+                    NodeNetworkId::new(NetworkId::Validator, 0),
+                    PeerId::new([0u8; PeerId::LENGTH]),
+                ),
                 msg,
             )
             .await;
