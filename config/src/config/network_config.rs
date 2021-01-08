@@ -134,8 +134,8 @@ impl NetworkConfig {
             ping_failures_tolerated: PING_FAILURES_TOLERATED,
             max_outbound_connections: MAX_FULLNODE_OUTBOUND_CONNECTIONS,
             max_inbound_connections: MAX_INBOUND_CONNECTIONS,
-            inbound_rate_limit_config: Some(RateLimitConfig::default()),
-            outbound_rate_limit_config: Some(RateLimitConfig::default()),
+            inbound_rate_limit_config: None,
+            outbound_rate_limit_config: None,
         };
         config.prepare_identity();
         config
@@ -189,6 +189,18 @@ impl NetworkConfig {
             return Err(Error::InvariantViolation(
                 "Set NetworkId::Validator network for a non-validator network".to_string(),
             ));
+        }
+
+        // Fullnodes require a rate limiting config
+        if role == RoleType::FullNode {
+            self.inbound_rate_limit_config = Some(
+                self.inbound_rate_limit_config
+                    .map_or(RateLimitConfig::default(), |config| config),
+            );
+            self.outbound_rate_limit_config = Some(
+                self.outbound_rate_limit_config
+                    .map_or(RateLimitConfig::default(), |config| config),
+            );
         }
 
         self.prepare_identity();
