@@ -56,7 +56,7 @@ pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
     new_bucket_start_percentage: u8,
     default_bucket_size: usize,
     default_fill_rate: usize,
-    open: bool,
+    enabled: bool,
 }
 
 impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
@@ -77,7 +77,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
             new_bucket_start_percentage,
             default_bucket_size,
             default_fill_rate,
-            open: false,
+            enabled: true,
         }
     }
 
@@ -93,17 +93,17 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
             new_bucket_start_percentage: 100,
             default_bucket_size: std::usize::MAX,
             default_fill_rate: std::usize::MAX,
-            open: true,
+            enabled: false,
         }
     }
 
     /// Retrieve bucket, or create a new one
     pub fn bucket(&self, key: Key) -> SharedBucket {
         self.bucket_inner(key, |label, initial, size, rate| {
-            Arc::new(Mutex::new(if self.open {
-                Bucket::open(label)
-            } else {
+            Arc::new(Mutex::new(if self.enabled {
                 Bucket::new(label, initial, size, rate)
+            } else {
+                Bucket::open(label)
             }))
         })
     }
@@ -173,7 +173,7 @@ pub struct Bucket {
     /// The last time buckets were refilled, to keep track of for amount to refill
     last_refresh_time: Instant,
     /// Determines whether the rate limiting should be ignored, useful for testing
-    open: bool,
+    enabled: bool,
     /// Number of requests allowed through prior to next fill
     allowed_in_period: usize,
     /// Number of requests throttled prior to next fill
@@ -193,7 +193,7 @@ impl Bucket {
             size,
             rate,
             last_refresh_time: Instant::now(),
-            open: false,
+            enabled: true,
             allowed_in_period: 0,
             throttled_in_period: 0,
         }
@@ -207,7 +207,7 @@ impl Bucket {
             size: std::usize::MAX,
             rate: std::usize::MAX,
             last_refresh_time: Instant::now(),
-            open: true,
+            enabled: false,
             allowed_in_period: 0,
             throttled_in_period: 0,
         }
@@ -240,7 +240,7 @@ impl Bucket {
     /// ever be allowed through, as it's bigger than the size of the bucket.
     pub fn acquire_all_tokens(&mut self, requested: usize) -> Result<(), Option<Instant>> {
         // Skip over if we purposely have an open throttle
-        if self.open || requested == 0 {
+        if !self.enabled || requested == 0 {
             return Ok(());
         }
 
@@ -262,7 +262,7 @@ impl Bucket {
     /// For best effort, caller should return unused tokens with `add_tokens`
     pub fn acquire_tokens(&mut self, requested: usize) -> Result<usize, Instant> {
         // Skip over if we purposely have an open throttle
-        if self.open || requested == 0 {
+        if !self.enabled || requested == 0 {
             return Ok(requested);
         }
 
@@ -297,7 +297,7 @@ impl Bucket {
     /// Tells us when an entire batch will make it through.  Useful for Async work to wait until
     /// all tokens are ready.  Returns `None` if it is never possible.
     pub fn time_of_tokens_needed(&self, requested: usize) -> Option<Instant> {
-        if self.open {
+        if !self.enabled {
             Some(Instant::now())
         } else if self.size < requested {
             // This means the batch can never succeed

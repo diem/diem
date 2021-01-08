@@ -458,13 +458,14 @@ fn token_bucket_rate_limiter(
     input: Option<RateLimitConfig>,
 ) -> TokenBucketRateLimiter<IpAddr> {
     if let Some(config) = input {
-        TokenBucketRateLimiter::new(
-            label,
-            config.initial_bucket_fill_percentage,
-            config.ip_byte_bucket_size,
-            config.ip_byte_bucket_rate,
-        )
-    } else {
-        TokenBucketRateLimiter::open(label)
+        if config.enabled {
+            return TokenBucketRateLimiter::new(
+                label,
+                config.initial_bucket_fill_percentage,
+                config.ip_byte_bucket_size,
+                config.ip_byte_bucket_rate,
+            );
+        }
     }
+    TokenBucketRateLimiter::open(label)
 }

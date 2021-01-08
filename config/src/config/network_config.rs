@@ -187,18 +187,6 @@ impl NetworkConfig {
             ));
         }
 
-        // Fullnodes require a rate limiting config
-        if role == RoleType::FullNode {
-            self.inbound_rate_limit_config = Some(
-                self.inbound_rate_limit_config
-                    .map_or(RateLimitConfig::default(), |config| config),
-            );
-            self.outbound_rate_limit_config = Some(
-                self.outbound_rate_limit_config
-                    .map_or(RateLimitConfig::default(), |config| config),
-            );
-        }
-
         self.prepare_identity();
         Ok(())
     }
@@ -327,6 +315,8 @@ pub struct RateLimitConfig {
     pub ip_byte_bucket_size: usize,
     /// Initial amount of tokens initially in the bucket
     pub initial_bucket_fill_percentage: u8,
+    /// Allow for disabling the throttles
+    pub enabled: bool,
 }
 
 impl Default for RateLimitConfig {
@@ -335,6 +325,7 @@ impl Default for RateLimitConfig {
             ip_byte_bucket_rate: INBOUND_IP_BYTE_BUCKET_RATE,
             ip_byte_bucket_size: INBOUND_IP_BYTE_BUCKET_SIZE,
             initial_bucket_fill_percentage: 25,
+            enabled: true,
         }
     }
 }
