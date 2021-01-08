@@ -3,10 +3,13 @@
 
 use anyhow::{format_err, Result};
 use diem_types::{account_address::AccountAddress, transaction::Transaction};
+use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
 use diem_writeset_generator::{
-    encode_custom_script, encode_halt_network_payload, encode_remove_validators_payload,
+    create_release_writeset, encode_custom_script, encode_halt_network_payload,
+    encode_remove_validators_payload,
 };
 use std::path::PathBuf;
+use stdlib::build_stdlib;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -36,6 +39,14 @@ enum Command {
         args: String,
         execute_as: Option<AccountAddress>,
     },
+    /// Create a release writeset by comparing local Diem Framework against a remote blockchain state.
+    #[structopt(name = "create-release")]
+    CreateDiemFrameworkRelease {
+        /// Public JSON-rpc endpoint URL.
+        url: String,
+        /// Blockchain height
+        version: u64,
+    },
 }
 
 fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
@@ -57,6 +68,12 @@ fn main() -> Result<()> {
             &serde_json::from_str::<serde_json::Value>(args.as_str())?,
             execute_as,
         ),
+        Command::CreateDiemFrameworkRelease { url, version } => {
+            let remote = JsonRpcDebuggerInterface::new(url.as_str())?;
+            let remote_modules = remote.get_diem_framework_modules_by_version(version)?;
+            let local_modules = build_stdlib().into_iter().map(|(_, m)| m).collect();
+            create_release_writeset(remote_modules, local_modules)?
+        }
     };
     if opt.output_payload {
         save_bytes(
