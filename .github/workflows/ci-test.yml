@@ -18,6 +18,7 @@ jobs:
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
       test-website-build: ${{ steps.website-changes.outputs.changes-found }}
       test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
+      max-threads: "16"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -36,26 +37,28 @@ jobs:
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
         with:
-          pattern: '**.rs\|**.move\|Cargo.toml\|Cargo.lock'
+          pattern: '^documentation\|^docker\|^scripts'
+          invert: "true"
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes
         uses: ./.github/actions/matches
         with:
-          pattern: '**.Dockerfile\|**.sh'
+          pattern: 'Dockerfile$\|.sh$'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
         with:
-          pattern: '.github/workflows/ci-publish-base-image.yml\|docker/ci/**/Dockerfile\|scripts/dev_setup.sh'
+          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh'
       - id: website-changes
         name: find website changes.
         uses: ./.github/actions/matches
         with:
-          pattern: "documentation/**"
+          pattern: "^documentation"
 
   dev-setup-sh-test:
     runs-on: ubuntu-latest-xl
     continue-on-error: false
+    timeout-minutes: 30
     needs: prepare
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
@@ -71,6 +74,7 @@ jobs:
   non-rust-lint:
     runs-on: ubuntu-latest
     continue-on-error: false
+    timeout-minutes: 5
     needs: prepare
     if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
     container:
@@ -118,12 +122,14 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-latest-xl
-    timeout-minutes: 70
+    timeout-minutes: 40
     continue-on-error: false
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
+    env:
+      max_threads: ${{ needs.prepare.outputs.max-threads }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -131,7 +137,7 @@ jobs:
           fetch-depth: 0 #get all the history!!!
       - uses: ./.github/actions/build-setup
       - name: run unit tests
-        run: cargo x test --jobs 16 --unit --changed-since "origin/$TARGET_BRANCH"
+        run: cargo x test --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - uses: ./.github/actions/build-teardown
@@ -199,14 +205,16 @@ jobs:
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
+    env:
+      max_threads: ${{ needs.prepare.outputs.max-threads }}
     steps:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
-      - run: cargo xcheck -j 16 --members production
-      - run: cargo xcheck -j 8 --workspace --all-targets
+      - run: cargo xcheck -j ${max_threads} --members production
+      - run: cargo xcheck -j ${max_threads} --workspace --all-targets
       - run: |
           rustup target add powerpc-unknown-linux-gnu
-          cargo xcheck -j 8 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+          cargo xcheck -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - uses: ./.github/actions/build-teardown
