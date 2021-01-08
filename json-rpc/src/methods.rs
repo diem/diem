@@ -237,7 +237,9 @@ async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<
     let (req_sender, callback) = oneshot::channel();
 
     fail_point!("jsonrpc::method::submit::mempool_sender", |_| {
-        Err(anyhow::anyhow!("Injected error for mempool_sender call error").into())
+        Err(anyhow::anyhow!(
+            "Injected error for mempool_sender call error"
+        ))
     });
 
     service
