@@ -1,6 +1,7 @@
 Command `publish src/modules -v`:
 Compiling Move modules...
 Found and compiled 1 modules
+Publishing a new module 00000000000000000000000000000002::Test
 Command `run src/scripts/script.move --signers 0xA 0xB --args 6 7 --dry-run -v`:
 Compiling transaction script...
 Changed resource(s) under 2 address(es):

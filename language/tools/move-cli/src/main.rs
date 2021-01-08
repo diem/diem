@@ -23,7 +23,7 @@ use vm::{
     compatibility::Compatibility,
     errors::VMError,
     file_format::{CompiledModule, CompiledScript, SignatureToken},
-    normalized::Module,
+    normalized,
 };
 
 use anyhow::{bail, Result};
@@ -429,11 +429,17 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
     Ok(cost_strategy)
 }
 
-fn explain_publish_effects(effects: &TransactionEffects, _state: &OnDiskStateView) -> Result<()> {
+fn explain_publish_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Result<()> {
     // publish effects should contain no events and resources
     assert!(effects.events.is_empty());
     assert!(effects.resources.is_empty());
-    // TODO
+    for (module_id, _) in &effects.modules {
+        if state.has_module(module_id) {
+            println!("Updating an existing module {}", module_id);
+        } else {
+            println!("Publishing a new module {}", module_id);
+        }
+    }
     Ok(())
 }
 
@@ -583,25 +589,25 @@ fn explain_publish_error(
             );
         }
         VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
-            if let Ok(old_m) = state.get_compiled_module(&module_id) {
-                let old_api = Module::new(&old_m);
-                let new_api = Module::new(module);
-                let compat = Compatibility::check(&old_api, &new_api);
-                if !compat.is_fully_compatible() {
-                    println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
-                }
-                if !compat.struct_layout {
-                    // TODO: we could choose to make this more precise by walking the global state and looking for published
-                    // structs of this type. but probably a bad idea
-                    println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
-                } else if !compat.struct_and_function_linking {
-                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
-                    // but this is not easy to check without walking the global state and looking for everything
-                    println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)
-                }
+            println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");
+
+            let old_module = state.get_compiled_module(&module_id)?;
+            let old_api = normalized::Module::new(&old_module);
+            let new_api = normalized::Module::new(module);
+            let compat = Compatibility::check(&old_api, &new_api);
+            // the only way we get this error code is compatibility checking failed, so assert here
+            assert!(!compat.is_fully_compatible());
+
+            if !compat.struct_layout {
+                // TODO: we could choose to make this more precise by walking the global state and looking for published
+                // structs of this type. but probably a bad idea
+                println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
+            } else if !compat.struct_and_function_linking {
+                // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
+                // but this is not easy to check without walking the global state and looking for everything
+                println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)
             }
         }
-        // TODO: handle more error codes
         VMStatus::Error(status_code) => {
             println!("Publishing failed with unexpected error {:?}", status_code)
         }

@@ -339,6 +339,8 @@ impl OnDiskStateView {
         Ok(fs::write(path, &module_bytes)?)
     }
 
+    // keep the mv_interfaces generated in the build_dir in-sync with the modules on storage. The
+    // mv_interfaces will be used for compilation and the modules will be used for linking.
     fn sync_interface_files(&self) -> Result<()> {
         move_lang::generate_interface_files(
             &[self
