@@ -4332,6 +4332,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-visibility"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "diem-types",
+ "diem-workspace-hack",
+ "hex",
+ "move-core-types",
+ "move-vm-runtime",
+ "move-vm-types",
+ "once_cell",
+ "petgraph",
+ "serde",
+ "serde_json",
+ "stdlib",
+ "structopt 0.3.21",
+ "vm",
+]
+
+[[package]]
 name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
