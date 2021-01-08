@@ -13,7 +13,6 @@ use crate::{
     counters,
     logging::{LogEntry, LogEvent, LogSchema, TxnsLog},
 };
-use anyhow::{format_err, Result};
 use diem_config::config::MempoolConfig;
 use diem_logger::prelude::*;
 use diem_types::{
@@ -93,11 +92,33 @@ impl TransactionStore {
         txn: MempoolTransaction,
         current_sequence_number: u64,
     ) -> MempoolStatus {
-        if self.handle_gas_price_update(&txn).is_err() {
-            return MempoolStatus::new(MempoolStatusCode::InvalidUpdate).with_message(format!(
-                "Failed to update gas price to {}",
-                txn.get_gas_price()
-            ));
+        let address = txn.get_sender();
+        let sequence_number = txn.get_sequence_number();
+
+        // check if transaction is already present in Mempool
+        // e.g. given request is update
+        // we allow increase in gas price to speed up process.
+        // ignores the case transaction hash is same for retrying submit transaction.
+        if let Some(txns) = self.transactions.get_mut(&address) {
+            if let Some(current_version) = txns.get_mut(&sequence_number) {
+                if current_version.txn == txn.txn {
+                    return MempoolStatus::new(MempoolStatusCode::Accepted);
+                }
+                if current_version.txn.max_gas_amount() == txn.txn.max_gas_amount()
+                    && current_version.txn.payload() == txn.txn.payload()
+                    && current_version.txn.expiration_timestamp_secs()
+                        == txn.txn.expiration_timestamp_secs()
+                    && current_version.get_gas_price() < txn.get_gas_price()
+                {
+                    if let Some(txn) = txns.remove(&txn.get_sequence_number()) {
+                        self.index_remove(&txn);
+                    }
+                } else {
+                    return MempoolStatus::new(MempoolStatusCode::InvalidUpdate).with_message(
+                        format!("Failed to update gas price to {}", txn.get_gas_price()),
+                    );
+                }
+            }
         }
 
         if self.check_is_full_after_eviction(&txn, current_sequence_number) {
@@ -107,9 +128,6 @@ impl TransactionStore {
                 self.capacity,
             ));
         }
-
-        let address = txn.get_sender();
-        let sequence_number = txn.get_sequence_number();
 
         self.transactions
             .entry(address)
@@ -212,31 +230,6 @@ impl TransactionStore {
             }
         }
         false
-    }
-
-    /// check if transaction is already present in Mempool
-    /// e.g. given request is update
-    /// we allow increase in gas price to speed up process
-    fn handle_gas_price_update(&mut self, txn: &MempoolTransaction) -> Result<()> {
-        if let Some(txns) = self.transactions.get_mut(&txn.get_sender()) {
-            if let Some(current_version) = txns.get_mut(&txn.get_sequence_number()) {
-                if current_version.txn.max_gas_amount() == txn.txn.max_gas_amount()
-                    && current_version.txn.payload() == txn.txn.payload()
-                    && current_version.txn.expiration_timestamp_secs()
-                        == txn.txn.expiration_timestamp_secs()
-                    && current_version.get_gas_price() < txn.get_gas_price()
-                {
-                    if let Some(txn) = txns.remove(&txn.get_sequence_number()) {
-                        self.index_remove(&txn);
-                    }
-                } else {
-                    return Err(format_err!("Invalid gas price update. txn gas price: {}, current_version gas price: {}",
-                            txn.get_gas_price(),
-                            current_version.get_gas_price()));
-                }
-            }
-        }
-        Ok(())
     }
 
     /// fixes following invariants:
