@@ -150,6 +150,24 @@ fn test_update_transaction_in_mempool() {
 }
 
 #[test]
+fn test_ignore_same_transaction_submitted_to_mempool() {
+    let (mut mempool, _) = setup_mempool();
+    let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0)]);
+    let ret = add_txn(&mut mempool, TestTransaction::new(0, 0, 0));
+    assert!(ret.is_ok())
+}
+
+#[test]
+fn test_fail_for_same_gas_amount_and_not_same_expiration_time() {
+    let (mut mempool, _) = setup_mempool();
+    let _ = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 0)]);
+    let txn = TestTransaction::new(0, 0, 0)
+        .make_signed_transaction_with_expiration_time(u64::max_value() - 1000);
+    let ret = add_signed_txn(&mut mempool, txn);
+    assert!(ret.is_err())
+}
+
+#[test]
 fn test_update_invalid_transaction_in_mempool() {
     let (mut mempool, mut consensus) = setup_mempool();
     let txns = add_txns_to_mempool(
