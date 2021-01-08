@@ -22,8 +22,8 @@ use diem_types::{
     account_config,
     block_metadata::BlockMetadata,
     transaction::{
-        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionArgument,
-        TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
+        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionOutput,
+        TransactionPayload, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
@@ -33,12 +33,11 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
+    transaction_argument::convert_txn_args,
+    value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::LogContext, session::Session};
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use rayon::prelude::*;
 use std::{
     collections::HashSet,
@@ -428,20 +427,19 @@ impl DiemVM {
         let mut session = self.0.new_session(remote_cache);
 
         let (round, timestamp, previous_vote, proposer) = block_metadata.into_inner();
-        let args = vec![
-            Value::transaction_argument_signer_reference(txn_data.sender),
-            Value::u64(round),
-            Value::u64(timestamp),
-            Value::vector_address(previous_vote),
-            Value::address(proposer),
-        ];
+        let args = serialize_values(&vec![
+            MoveValue::Signer(txn_data.sender),
+            MoveValue::U64(round),
+            MoveValue::U64(timestamp),
+            MoveValue::Vector(previous_vote.into_iter().map(MoveValue::Address).collect()),
+            MoveValue::Address(proposer),
+        ]);
         session
             .execute_function(
                 &DIEM_BLOCK_MODULE,
                 &BLOCK_PROLOGUE,
                 vec![],
                 args,
-                txn_data.sender,
                 &mut cost_strategy,
                 log_context,
             )
@@ -807,20 +805,6 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
         0,
         TransactionStatus::Discard(err),
     )
-}
-
-/// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect()
 }
 
 impl AsRef<DiemVMImpl> for DiemVM {

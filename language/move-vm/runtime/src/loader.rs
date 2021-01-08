@@ -82,14 +82,23 @@ impl ScriptCache {
         }
     }
 
-    fn get(&self, hash: &HashValue) -> Option<Arc<Function>> {
-        self.scripts.get(hash).map(|script| script.entry_point())
+    fn get(&self, hash: &HashValue) -> Option<(Arc<Function>, Vec<Type>)> {
+        self.scripts
+            .get(hash)
+            .map(|script| (script.entry_point(), script.parameter_tys.clone()))
     }
 
-    fn insert(&mut self, hash: HashValue, script: Script) -> PartialVMResult<Arc<Function>> {
+    fn insert(
+        &mut self,
+        hash: HashValue,
+        script: Script,
+    ) -> PartialVMResult<(Arc<Function>, Vec<Type>)> {
         match self.get(&hash) {
-            Some(script) => Ok(script),
-            None => Ok(self.scripts.insert(hash, script).entry_point()),
+            Some(cached) => Ok(cached),
+            None => {
+                let script = self.scripts.insert(hash, script);
+                Ok((script.entry_point(), script.parameter_tys.clone()))
+            }
         }
     }
 }
@@ -444,18 +453,18 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
-    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
-        let opt_main = self.scripts.lock().get(&hash_value);
-        let main = match opt_main {
+
+        let mut scripts = self.scripts.lock();
+        let (main, parameter_tys) = match scripts.get(&hash_value) {
             Some(main) => main,
             None => {
                 let ver_script =
                     self.deserialize_and_verify_script(script_blob, data_store, log_context)?;
                 let script = Script::new(ver_script, &hash_value, &self.module_cache.lock())?;
-                self.scripts
-                    .lock()
+                scripts
                     .insert(hash_value, script)
                     .map_err(|e| e.finish(Location::Script))?
             }
@@ -469,7 +478,7 @@ impl Loader {
         self.verify_ty_args(main.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Script))?;
 
-        Ok((main, type_params))
+        Ok((main, type_params, parameter_tys))
     }
 
     // The process of deserialization and verification is not and it must not be under lock.
@@ -557,8 +566,9 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
-    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-        self.load_module_expect_no_missing_dependencies(module_id, data_store, log_context)?;
+    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
+        let module =
+            self.load_module_expect_no_missing_dependencies(module_id, data_store, log_context)?;
         let idx = self
             .module_cache
             .lock()
@@ -567,6 +577,13 @@ impl Loader {
                 expect_no_verification_errors(err.finish(Location::Undefined), log_context)
             })?;
         let func = self.module_cache.lock().function_at(idx);
+        let parameter_tys = func
+            .parameters
+            .0
+            .iter()
+            .map(|tok| self.module_cache.lock().make_type(module.module(), tok))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
 
         // verify type arguments
         let mut type_params = vec![];
@@ -576,7 +593,7 @@ impl Loader {
         self.verify_ty_args(func.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
-        Ok((func, type_params))
+        Ok((func, type_params, parameter_tys))
     }
 
     // Entry point for module publishing (`MoveVM::publish_module`).
@@ -1334,6 +1351,9 @@ struct Script {
 
     // entry point
     main: Arc<Function>,
+
+    // parameters of main
+    parameter_tys: Vec<Type>,
 }
 
 impl Script {
@@ -1391,6 +1411,13 @@ impl Script {
         let compiled_script = script.as_inner();
         let code: Vec<Bytecode> = compiled_script.code.code.clone();
         let parameters = script.signature_at(compiled_script.parameters).clone();
+
+        let parameter_tys = parameters
+            .0
+            .iter()
+            .map(|tok| cache.make_type(&module, tok))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
         let return_ = Signature(vec![]);
         let locals = Signature(
             parameters
@@ -1422,6 +1449,7 @@ impl Script {
             function_refs,
             function_instantiations,
             main,
+            parameter_tys,
         })
     }
 
@@ -1553,6 +1581,7 @@ impl Function {
         &self.type_parameters
     }
 
+    #[allow(dead_code)]
     pub(crate) fn parameters(&self) -> &Signature {
         &self.parameters
     }

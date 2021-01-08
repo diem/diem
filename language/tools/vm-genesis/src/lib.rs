@@ -22,8 +22,7 @@ use diem_types::{
     contract_event::ContractEvent,
     on_chain_config::VMPublishingOption,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
-        WriteSetPayload,
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, WriteSetPayload,
     },
 };
 use diem_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
@@ -32,6 +31,8 @@ use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
+    transaction_argument::convert_txn_args,
+    value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{
     data_cache::TransactionEffects,
@@ -39,14 +40,11 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     session::Session,
 };
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use transaction_builder::encode_create_designated_dealer_script;
-use vm::{file_format::SignatureToken, CompiledModule};
+use vm::CompiledModule;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -171,28 +169,13 @@ pub fn encode_genesis_change_set(
     ChangeSet::new(write_set, events)
 }
 
-/// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect()
-}
-
 fn exec_function(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    sender: AccountAddress,
     module_name: &str,
     function_name: &str,
     ty_args: Vec<TypeTag>,
-    args: Vec<Value>,
+    args: Vec<Vec<u8>>,
 ) {
     session
         .execute_function(
@@ -203,7 +186,6 @@ fn exec_function(
             &Identifier::new(function_name).unwrap(),
             ty_args,
             args,
-            sender,
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
             log_context,
         )
@@ -251,14 +233,13 @@ fn create_and_initialize_main_accounts(
     let root_diem_root_address = account_config::diem_root_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
 
-    let initial_allow_list = Value::constant_vector_generic(
+    let initial_allow_list = MoveValue::Vector(
         publishing_option
             .script_allow_list
             .into_iter()
-            .map(|hash| Value::vector_u8(hash.to_vec().into_iter())),
-        &Box::new(SignatureToken::Vector(Box::new(SignatureToken::U8))),
-    )
-    .unwrap();
+            .map(|hash| MoveValue::vector_u8(hash.to_vec().into_iter().collect()))
+            .collect(),
+    );
 
     let genesis_gas_schedule = &INITIAL_GAS_SCHEDULE;
     let instr_gas_costs = bcs::to_bytes(&genesis_gas_schedule.instruction_table)
@@ -269,21 +250,20 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_diem_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
-        vec![
-            Value::transaction_argument_signer_reference(root_diem_root_address),
-            Value::transaction_argument_signer_reference(tc_account_address),
-            Value::vector_u8(diem_root_auth_key.to_vec()),
-            Value::vector_u8(treasury_compliance_auth_key.to_vec()),
+        serialize_values(&vec![
+            MoveValue::Signer(root_diem_root_address),
+            MoveValue::Signer(tc_account_address),
+            MoveValue::vector_u8(diem_root_auth_key.to_vec()),
+            MoveValue::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
-            Value::bool(publishing_option.is_open_module),
-            Value::vector_u8(instr_gas_costs),
-            Value::vector_u8(native_gas_costs),
-            Value::u8(chain_id.id()),
-        ],
+            MoveValue::Bool(publishing_option.is_open_module),
+            MoveValue::vector_u8(instr_gas_costs),
+            MoveValue::vector_u8(native_gas_costs),
+            MoveValue::U8(chain_id.id()),
+        ]),
     );
 
     // Bump the sequence number for the Association account. If we don't do this and a
@@ -293,17 +273,16 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_diem_root_address,
         "DiemAccount",
         "epilogue",
         vec![xdx_ty.clone()],
-        vec![
-            Value::transaction_argument_signer_reference(root_diem_root_address),
-            Value::u64(/* txn_sequence_number */ 0),
-            Value::u64(/* txn_gas_price */ 0),
-            Value::u64(/* txn_max_gas_units */ 0),
-            Value::u64(/* gas_units_remaining */ 0),
-        ],
+        serialize_values(&vec![
+            MoveValue::Signer(root_diem_root_address),
+            MoveValue::U64(/* txn_sequence_number */ 0),
+            MoveValue::U64(/* txn_gas_price */ 0),
+            MoveValue::U64(/* txn_max_gas_units */ 0),
+            MoveValue::U64(/* gas_units_remaining */ 0),
+        ]),
     );
 }
 
@@ -340,18 +319,15 @@ fn create_and_initialize_testnet_minting(
     exec_function(
         session,
         log_context,
-        account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
         vec![account_config::xus_tag()],
-        vec![
-            Value::transaction_argument_signer_reference(
-                account_config::treasury_compliance_account_address(),
-            ),
-            Value::address(account_config::testnet_dd_account_address()),
-            Value::u64(3),
-            Value::u64(std::u64::MAX),
-        ],
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::treasury_compliance_account_address()),
+            MoveValue::Address(account_config::testnet_dd_account_address()),
+            MoveValue::U64(3),
+            MoveValue::U64(std::u64::MAX),
+        ]),
     );
 
     // mint XUS.
@@ -456,14 +432,13 @@ fn create_and_initialize_owners_operators(
         exec_function(
             session,
             log_context,
-            diem_root_address,
             "DiemSystem",
             "add_validator",
             vec![],
-            vec![
-                Value::transaction_argument_signer_reference(diem_root_address),
-                Value::address(owner_address),
-            ],
+            serialize_values(&vec![
+                MoveValue::Signer(diem_root_address),
+                MoveValue::Address(owner_address),
+            ]),
         );
     }
 }
@@ -502,7 +477,6 @@ fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogCont
     exec_function(
         session,
         log_context,
-        account_config::diem_root_address(),
         "DiemConfig",
         "emit_genesis_reconfiguration_event",
         vec![],

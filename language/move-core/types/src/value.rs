@@ -54,6 +54,18 @@ impl MoveValue {
     }
 }
 
+pub fn serialize_values<'a, I>(vals: I) -> Vec<Vec<u8>>
+where
+    I: IntoIterator<Item = &'a MoveValue>,
+{
+    vals.into_iter()
+        .map(|val| {
+            val.simple_serialize()
+                .expect("serialization should succeed")
+        })
+        .collect()
+}
+
 impl MoveStruct {
     pub fn new(value: Vec<MoveValue>) -> Self {
         MoveStruct(value)

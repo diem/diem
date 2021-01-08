@@ -28,16 +28,12 @@ use diem_vm::{
     VMExecutor, VMValidator,
 };
 use move_core_types::{
-    account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use vm::CompiledModule;
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
@@ -337,8 +333,7 @@ impl FakeExecutor {
         module_name: &str,
         function_name: &str,
         type_params: Vec<TypeTag>,
-        args: Vec<Value>,
-        sender: &AccountAddress,
+        args: Vec<Vec<u8>>,
     ) {
         let write_set = {
             let cost_table = zero_cost_schedule();
@@ -353,7 +348,6 @@ impl FakeExecutor {
                     &Self::name(function_name),
                     type_params,
                     args,
-                    *sender,
                     &mut cost_strategy,
                     &log_context,
                 )
@@ -378,8 +372,7 @@ impl FakeExecutor {
         module_name: &str,
         function_name: &str,
         type_params: Vec<TypeTag>,
-        args: Vec<Value>,
-        sender: &AccountAddress,
+        args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
         let cost_table = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
@@ -393,7 +386,6 @@ impl FakeExecutor {
                 &Self::name(function_name),
                 type_params,
                 args,
-                *sender,
                 &mut cost_strategy,
                 &log_context,
             )

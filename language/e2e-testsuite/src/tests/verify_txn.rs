@@ -22,8 +22,8 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    value::{serialize_values, MoveValue},
 };
-use move_vm_types::values::Value;
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm::file_format::CompiledModule;
 
@@ -1249,11 +1249,10 @@ pub fn publish_and_register_new_currency() {
         "DesignatedDealer",
         "add_currency",
         vec![coin_tag.clone()],
-        vec![
-            Value::transaction_argument_signer_reference(*dd.address()),
-            Value::transaction_argument_signer_reference(*tc_account.address()),
-        ],
-        tc_account.address(),
+        serialize_values(&vec![
+            MoveValue::Signer(*dd.address()),
+            MoveValue::Signer(*tc_account.address()),
+        ]),
     );
 
     let txn = tc_account
@@ -1300,10 +1299,7 @@ pub fn publish_and_register_new_currency() {
         "TransactionFee",
         "add_txn_fee_currency",
         vec![coin_tag],
-        vec![Value::transaction_argument_signer_reference(
-            *tc_account.address(),
-        )],
-        tc_account.address(),
+        serialize_values(&vec![MoveValue::Signer(*tc_account.address())]),
     );
 
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);

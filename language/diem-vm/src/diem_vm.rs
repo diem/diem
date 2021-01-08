@@ -25,6 +25,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::IdentStr,
+    value::{serialize_values, MoveValue},
 };
 
 use move_vm_runtime::{
@@ -33,10 +34,7 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     session::Session,
 };
-use move_vm_types::{
-    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy};
 use std::{convert::TryFrom, sync::Arc};
 use vm::errors::Location;
 
@@ -226,17 +224,16 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &SCRIPT_PROLOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                    Value::vector_u8(txn_data.script_hash.clone()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                    MoveValue::vector_u8(txn_data.script_hash.clone()),
+                ]),
                 cost_strategy,
                 log_context,
             )
@@ -266,16 +263,15 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &MODULE_PROLOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                ]),
                 cost_strategy,
                 log_context,
             )
@@ -309,14 +305,13 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(gas_remaining),
+                ]),
                 cost_strategy,
                 log_context,
             )
@@ -344,14 +339,13 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(gas_remaining),
+                ]),
                 cost_strategy,
                 log_context,
             )
@@ -380,14 +374,13 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_PROLOGUE_NAME,
                 vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                ]),
                 &mut cost_strategy,
                 log_context,
             )
@@ -410,12 +403,11 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_EPILOGUE_NAME,
                 vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_data.sequence_number),
-                    Value::bool(should_trigger_reconfiguration),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_data.sequence_number),
+                    MoveValue::Bool(should_trigger_reconfiguration),
+                ]),
                 &mut cost_strategy,
                 log_context,
             )

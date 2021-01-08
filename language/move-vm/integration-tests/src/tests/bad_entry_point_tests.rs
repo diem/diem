@@ -7,6 +7,7 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::ModuleId,
+    value::{serialize_values, MoveValue},
     vm_status::StatusType,
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
@@ -32,8 +33,7 @@ fn call_non_existent_module() {
             &module_id,
             &fun_name,
             vec![],
-            vec![],
-            TEST_ADDR,
+            serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
             &mut cost_strategy,
             &context,
         )
@@ -70,8 +70,7 @@ fn call_non_existent_function() {
             &module_id,
             &fun_name,
             vec![],
-            vec![],
-            TEST_ADDR,
+            serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
             &mut cost_strategy,
             &context,
         )

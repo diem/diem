@@ -15,8 +15,10 @@ use language_e2e_tests::{
     account::Account, common_transactions::peer_to_peer_txn, current_function_name,
     executor::FakeExecutor,
 };
-use move_core_types::vm_status::StatusCode;
-use move_vm_types::values::Value;
+use move_core_types::{
+    value::{serialize_values, MoveValue},
+    vm_status::StatusCode,
+};
 use serde_json::json;
 use transaction_builder::*;
 
@@ -196,11 +198,10 @@ fn validator_batch_remove() {
             "DiemSystem",
             "remove_validator",
             vec![],
-            vec![
-                Value::transaction_argument_signer_reference(diem_root_address()),
-                Value::address(*validator_account_0.address())
-            ],
-            diem_root_account.address()
+            serialize_values(&vec![
+                MoveValue::Signer(*diem_root_account.address()),
+                MoveValue::Address(*validator_account_0.address())
+            ]),
         )
         .is_err());
     assert!(executor
@@ -208,11 +209,10 @@ fn validator_batch_remove() {
             "DiemSystem",
             "remove_validator",
             vec![],
-            vec![
-                Value::transaction_argument_signer_reference(diem_root_address()),
-                Value::address(*validator_account_1.address())
-            ],
-            diem_root_account.address()
+            serialize_values(&vec![
+                MoveValue::Signer(*diem_root_account.address()),
+                MoveValue::Address(*validator_account_1.address())
+            ]),
         )
         .is_err());
 }

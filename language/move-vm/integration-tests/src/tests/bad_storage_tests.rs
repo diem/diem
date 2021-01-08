@@ -7,16 +7,14 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
+    value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{
     convert_txn_effects_to_move_changeset_and_events, ChangeSet, DeltaStorage, InMemoryStorage,
 };
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
@@ -191,7 +189,6 @@ fn test_malformed_module() {
             &fun_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -219,7 +216,6 @@ fn test_malformed_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -262,7 +258,6 @@ fn test_unverifiable_module() {
             &fun_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -290,7 +285,6 @@ fn test_unverifiable_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -346,7 +340,6 @@ fn test_missing_module_dependency() {
             &fun_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -368,7 +361,6 @@ fn test_missing_module_dependency() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -424,7 +416,6 @@ fn test_malformed_module_denpency() {
             &fun_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -452,7 +443,6 @@ fn test_malformed_module_denpency() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -509,7 +499,6 @@ fn test_unverifiable_module_dependency() {
             &fun_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -538,7 +527,6 @@ fn test_unverifiable_module_dependency() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -597,7 +585,6 @@ fn test_storage_returns_bogus_error_when_loading_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                TEST_ADDR,
                 &mut cost_strategy,
                 &log_context,
             )
@@ -666,7 +653,6 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             &foo_name,
             vec![],
             vec![],
-            TEST_ADDR,
             &mut cost_strategy,
             &log_context,
         )
@@ -677,8 +663,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
                 &m_id,
                 &bar_name,
                 vec![],
-                vec![Value::transaction_argument_signer_reference(TEST_ADDR)],
-                TEST_ADDR,
+                serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
                 &mut cost_strategy,
                 &log_context,
             )

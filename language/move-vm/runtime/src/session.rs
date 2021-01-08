@@ -11,7 +11,7 @@ use move_core_types::{
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_types::{gas_schedule::CostStrategy, values::Value};
+use move_vm_types::gas_schedule::CostStrategy;
 use vm::errors::*;
 
 pub struct Session<'r, 'l, R> {
@@ -40,8 +40,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
-        args: Vec<Value>,
-        _sender: AccountAddress,
+        args: Vec<Vec<u8>>,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
@@ -72,7 +71,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         &mut self,
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
-        args: Vec<Value>,
+        args: Vec<Vec<u8>>,
         senders: Vec<AccountAddress>,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,

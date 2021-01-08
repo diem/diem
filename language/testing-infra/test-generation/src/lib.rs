@@ -29,10 +29,11 @@ use module_generation::generate_module;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     language_storage::TypeTag,
+    value::MoveValue,
     vm_status::VMStatus,
 };
 use move_vm_runtime::logging::NoContextLog;
-use move_vm_types::{gas_schedule::CostStrategy, values::Value};
+use move_vm_types::gas_schedule::CostStrategy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use vm::{
@@ -64,15 +65,17 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
         let sig_idx = module.function_handle_at(handle).parameters;
         module.signature_at(sig_idx).clone()
     };
-    let main_args: Vec<Value> = function_signature
+    let main_args: Vec<Vec<u8>> = function_signature
         .0
         .iter()
         .map(|sig_tok| match sig_tok {
-            SignatureToken::Address => Value::address(AccountAddress::ZERO),
-            SignatureToken::U64 => Value::u64(0),
-            SignatureToken::Bool => Value::bool(true),
+            SignatureToken::Address => MoveValue::Address(AccountAddress::ZERO)
+                .simple_serialize()
+                .unwrap(),
+            SignatureToken::U64 => MoveValue::U64(0).simple_serialize().unwrap(),
+            SignatureToken::Bool => MoveValue::Bool(true).simple_serialize().unwrap(),
             SignatureToken::Vector(inner_tok) if **inner_tok == SignatureToken::U8 => {
-                Value::vector_u8(vec![])
+                MoveValue::Vector(vec![]).simple_serialize().unwrap()
             }
             _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })
@@ -93,7 +96,7 @@ fn execute_function_in_module<S: StateView>(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
-    args: Vec<Value>,
+    args: Vec<Vec<u8>>,
     state_view: &S,
 ) -> Result<(), VMStatus> {
     let module_id = module.self_id();
@@ -125,7 +128,6 @@ fn execute_function_in_module<S: StateView>(
                     &entry_name,
                     ty_args,
                     args,
-                    sender,
                     &mut cost_strategy,
                     &log_context,
                 )

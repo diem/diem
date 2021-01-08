@@ -8,8 +8,10 @@ use diem_types::{
     account_config, transaction::authenticator::AuthenticationKey, vm_status::KeptVMStatus,
 };
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
-use move_core_types::vm_status::VMStatus;
-use move_vm_types::values::Value;
+use move_core_types::{
+    value::{serialize_values, MoveValue},
+    vm_status::VMStatus,
+};
 use transaction_builder::*;
 
 #[test]
@@ -41,11 +43,10 @@ fn valid_creator_already_vasp() {
             "VASP",
             "publish_parent_vasp_credential",
             vec![],
-            vec![
-                Value::transaction_argument_signer_reference(*account.address()),
-                Value::transaction_argument_signer_reference(*treasury_compliance.address()),
-            ],
-            treasury_compliance.address(),
+            serialize_values(&vec![
+                MoveValue::Signer(*account.address()),
+                MoveValue::Signer(*treasury_compliance.address()),
+            ]),
         )
         .unwrap_err();
     if let VMStatus::MoveAbort(_, code) = err {

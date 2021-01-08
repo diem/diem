@@ -12,12 +12,12 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     language_storage::TypeTag,
     parser,
-    transaction_argument::TransactionArgument,
+    transaction_argument::{convert_txn_args, TransactionArgument},
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
 use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::{gas_schedule::CostStrategy, values::Value};
+use move_vm_types::gas_schedule::CostStrategy;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     compatibility::Compatibility,
@@ -369,17 +369,7 @@ fn run(
         .map(|s| AccountAddress::from_hex_literal(&s))
         .collect::<Result<Vec<AccountAddress>>>()?;
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
-    let vm_args: Vec<Value> = txn_args
-        .iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect();
+    let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
     let vm = MoveVM::new();
     let mut cost_strategy = get_cost_strategy(gas_budget)?;

@@ -25,7 +25,7 @@ use move_vm_types::{
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
     errors::*,
-    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature},
+    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
     file_format_common::Opcodes,
 };
 
@@ -127,7 +127,6 @@ impl<L: LogContext> Interpreter<L> {
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        verify_args(function.parameters(), &args).map_err(|e| self.set_location(e))?;
         let mut locals = Locals::new(function.local_count());
         for (i, value) in args.into_iter().enumerate() {
             locals
@@ -1150,25 +1149,4 @@ impl Frame {
             Some(id) => Location::Module(id.clone()),
         }
     }
-}
-
-// Verify the the type of the arguments in input from the outside is restricted (`is_valid_arg()`)
-// and it honors the signature of the function invoked.
-fn verify_args(signature: &Signature, args: &[Value]) -> PartialVMResult<()> {
-    if signature.len() != args.len() {
-        return Err(
-            PartialVMError::new(StatusCode::TYPE_MISMATCH).with_message(format!(
-                "argument length mismatch: expected {} got {}",
-                signature.len(),
-                args.len()
-            )),
-        );
-    }
-    for (tok, val) in signature.0.iter().zip(args) {
-        if !val.is_valid_arg(tok) {
-            return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
-                .with_message(format!("unexpected type: {:?}, arg: {:?}", tok, val)));
-        }
-    }
-    Ok(())
 }

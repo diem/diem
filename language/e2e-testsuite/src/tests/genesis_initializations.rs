@@ -3,8 +3,10 @@
 
 use diem_types::account_config;
 use language_e2e_tests::executor::FakeExecutor;
-use move_core_types::account_address::AccountAddress;
-use move_vm_types::values::Value;
+use move_core_types::{
+    account_address::AccountAddress,
+    value::{serialize_values, MoveValue},
+};
 
 #[test]
 fn test_diem_initialize() {
@@ -15,10 +17,9 @@ fn test_diem_initialize() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
     assert_eq!(output.unwrap_err().move_abort_code(), Some(5));
 
@@ -27,10 +28,9 @@ fn test_diem_initialize() {
         "Roles",
         "grant_diem_root_role",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     // Now initialize, it should all succeed.
@@ -38,10 +38,9 @@ fn test_diem_initialize() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     // Second time you try though you'll get an already published error with EMODIFY_CAPABILITY
@@ -50,10 +49,9 @@ fn test_diem_initialize() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(262));
@@ -68,10 +66,9 @@ fn test_diem_initialize_tc_account() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
     assert_eq!(output.unwrap_err().move_abort_code(), Some(5));
 
@@ -80,10 +77,9 @@ fn test_diem_initialize_tc_account() {
         "Roles",
         "grant_diem_root_role",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     // Grant the TC role
@@ -91,13 +87,10 @@ fn test_diem_initialize_tc_account() {
         "Roles",
         "grant_treasury_compliance_role",
         vec![],
-        vec![
-            Value::transaction_argument_signer_reference(
-                account_config::treasury_compliance_account_address(),
-            ),
-            Value::transaction_argument_signer_reference(account_config::diem_root_address()),
-        ],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::treasury_compliance_account_address()),
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     // Try to initialize, invalid sender so role check will fail
@@ -105,10 +98,9 @@ fn test_diem_initialize_tc_account() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
+        serialize_values(&vec![MoveValue::Signer(
             account_config::treasury_compliance_account_address(),
-        )],
-        &account_config::treasury_compliance_account_address(),
+        )]),
     );
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(2));
@@ -118,10 +110,9 @@ fn test_diem_initialize_tc_account() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     // Second time you try though you'll get an already published error with EMODIFY_CAPABILITY
@@ -130,10 +121,9 @@ fn test_diem_initialize_tc_account() {
         "Diem",
         "initialize",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
+        serialize_values(&vec![MoveValue::Signer(
             account_config::treasury_compliance_account_address(),
-        )],
-        &account_config::treasury_compliance_account_address(),
+        )]),
     );
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(2));
@@ -149,10 +139,7 @@ fn test_diem_timestamp_time_has_started() {
         "DiemTimestamp",
         "set_time_has_started",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_address,
-        )],
-        &account_address,
+        serialize_values(&vec![MoveValue::Signer(account_address)]),
     );
     assert_eq!(output.unwrap_err().move_abort_code(), Some(2));
 
@@ -160,20 +147,18 @@ fn test_diem_timestamp_time_has_started() {
         "DiemTimestamp",
         "set_time_has_started",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     let output = executor.try_exec(
         "DiemTimestamp",
         "set_time_has_started",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(1));
@@ -187,30 +172,27 @@ fn test_diem_block_double_init() {
         "Event",
         "publish_generator",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     executor.exec(
         "DiemBlock",
         "initialize_block_metadata",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     let output = executor.try_exec(
         "DiemBlock",
         "initialize_block_metadata",
         vec![],
-        vec![Value::transaction_argument_signer_reference(
-            account_config::diem_root_address(),
-        )],
-        &account_config::diem_root_address(),
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::diem_root_address()),
+        ]),
     );
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(6));

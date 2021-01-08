@@ -560,6 +560,10 @@ pub enum StatusCode {
     BACKWARD_INCOMPATIBLE_MODULE_UPDATE = 1096,
     // The updated module introduces a cyclic dependency (i.e., A uses B and B also uses A)
     CYCLIC_MODULE_DEPENDENCY = 1097,
+    NUMBER_OF_ARGUMENTS_MISMATCH = 1098,
+    INVALID_PARAM_TYPE_FOR_DESERIALIZATION = 1099,
+    FAILED_TO_DESERIALIZE_ARGUMENT = 1100,
+    NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH = 1101,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
