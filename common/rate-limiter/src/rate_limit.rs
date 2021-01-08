@@ -3,6 +3,7 @@
 
 use diem_infallible::{Mutex, RwLock};
 use diem_logger::debug;
+use diem_metrics::HistogramVec;
 use std::{cmp::min, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};
 use tokio::time::Duration;
 
@@ -57,6 +58,7 @@ pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
     default_bucket_size: usize,
     default_fill_rate: usize,
     enabled: bool,
+    metrics: Option<HistogramVec>,
 }
 
 impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
@@ -65,6 +67,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         new_bucket_start_percentage: u8,
         default_bucket_size: usize,
         default_fill_rate: usize,
+        metrics: Option<HistogramVec>,
     ) -> Self {
         // Ensure that we can actually use the rate limiter
         assert!(new_bucket_start_percentage <= 100);
@@ -78,11 +81,12 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
             default_bucket_size,
             default_fill_rate,
             enabled: true,
+            metrics,
         }
     }
 
     pub fn test(default_bucket_size: usize, default_fill_rate: usize) -> Self {
-        Self::new("test", 100, default_bucket_size, default_fill_rate)
+        Self::new("test", 100, default_bucket_size, default_fill_rate, None)
     }
 
     /// Used for testing and to not have a rate limiter
@@ -94,21 +98,24 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
             default_bucket_size: std::usize::MAX,
             default_fill_rate: std::usize::MAX,
             enabled: false,
+            metrics: None,
         }
     }
 
     /// Retrieve bucket, or create a new one
     pub fn bucket(&self, key: Key) -> SharedBucket {
-        self.bucket_inner(key, |label, initial, size, rate| {
+        self.bucket_inner(key, |label, key, initial, size, rate, metrics| {
             Arc::new(Mutex::new(if self.enabled {
-                Bucket::new(label, initial, size, rate)
+                Bucket::new(label, key, initial, size, rate, metrics)
             } else {
                 Bucket::open(label)
             }))
         })
     }
 
-    fn bucket_inner<F: FnOnce(String, usize, usize, usize) -> SharedBucket>(
+    fn bucket_inner<
+        F: FnOnce(String, String, usize, usize, usize, Option<HistogramVec>) -> SharedBucket,
+    >(
         &self,
         key: Key,
         bucket_create: F,
@@ -128,12 +135,13 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
                 .write()
                 .entry(key.clone())
                 .or_insert_with(|| {
-                    let label = Self::stringify_key(self.label, key);
                     bucket_create(
-                        label,
+                        self.label.to_string(),
+                        format!("{:?}", key),
                         size.saturating_mul(self.new_bucket_start_percentage as usize) / 100,
                         size,
                         rate,
+                        self.metrics.clone(),
                     )
                 })
                 .clone()
@@ -151,10 +159,6 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
         }
         remove
     }
-
-    fn stringify_key(label: &'static str, key: Key) -> String {
-        format!("{}:{:?}", label, key)
-    }
 }
 
 /// A token bucket object that keeps track of everything related to a key
@@ -164,6 +168,8 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 pub struct Bucket {
     /// Label for what rate limiter it's attached to for logging purposes
     label: String,
+    /// The key for metrics purposes
+    key: String,
     /// The current number of available tokens to be used
     tokens: usize,
     /// Maximum number of `tokens` in the bucket
@@ -178,10 +184,18 @@ pub struct Bucket {
     allowed_in_period: usize,
     /// Number of requests throttled prior to next fill
     throttled_in_period: usize,
+    metrics: Option<HistogramVec>,
 }
 
 impl Bucket {
-    pub fn new(label: String, initial: usize, size: usize, rate: usize) -> Self {
+    pub fn new(
+        label: String,
+        key: String,
+        initial: usize,
+        size: usize,
+        rate: usize,
+        metrics: Option<HistogramVec>,
+    ) -> Self {
         assert!(
             size >= rate,
             "Bucket size must be greater than or equal to fill rate"
@@ -189,6 +203,7 @@ impl Bucket {
         // Store the stringified version of the key for logging
         Self {
             label,
+            key,
             tokens: initial,
             size,
             rate,
@@ -196,6 +211,7 @@ impl Bucket {
             enabled: true,
             allowed_in_period: 0,
             throttled_in_period: 0,
+            metrics,
         }
     }
 
@@ -203,6 +219,7 @@ impl Bucket {
     pub fn open(label: String) -> Self {
         Self {
             label,
+            key: String::new(),
             tokens: std::usize::MAX,
             size: std::usize::MAX,
             rate: std::usize::MAX,
@@ -210,6 +227,7 @@ impl Bucket {
             enabled: false,
             allowed_in_period: 0,
             throttled_in_period: 0,
+            metrics: None,
         }
     }
 
@@ -221,9 +239,20 @@ impl Bucket {
             if self.allowed_in_period > 0 || self.throttled_in_period > 0 {
                 debug!(
                     throttle_label = self.label,
+                    throttle_key = self.key,
                     num_allowed_in_period = self.allowed_in_period,
                     num_throttled_in_period = self.throttled_in_period,
                 );
+            }
+
+            // Optional metrics
+            if let Some(metrics) = self.metrics.as_ref() {
+                metrics
+                    .with_label_values(&[self.label.as_str(), self.key.as_str(), "allowed"])
+                    .observe(self.allowed_in_period as f64);
+                metrics
+                    .with_label_values(&[self.label.as_str(), self.key.as_str(), "throttled"])
+                    .observe(self.throttled_in_period as f64);
             }
             self.allowed_in_period = 0;
             self.throttled_in_period = 0;

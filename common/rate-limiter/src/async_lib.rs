@@ -178,7 +178,14 @@ mod tests {
     #[tokio::test]
     async fn test_async_read() {
         let source: &[u8] = b"12345678901234567890123456";
-        let rate_limiter = Arc::new(Mutex::new(Bucket::new("test".to_string(), 15, 15, 5)));
+        let rate_limiter = Arc::new(Mutex::new(Bucket::new(
+            "test".to_string(),
+            "test".to_string(),
+            15,
+            15,
+            5,
+            None,
+        )));
         let mut reader = AsyncRateLimiter::new(source, Some(rate_limiter));
 
         let mut buf: [u8; 30] = [0; 30];

@@ -464,6 +464,7 @@ fn token_bucket_rate_limiter(
                 config.initial_bucket_fill_percentage,
                 config.ip_byte_bucket_size,
                 config.ip_byte_bucket_rate,
+                None,
             );
         }
     }
