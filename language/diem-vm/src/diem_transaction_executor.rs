@@ -151,9 +151,9 @@ impl DiemVM {
         ))
     }
 
-    fn execute_script(
+    fn execute_script<R: RemoteCache>(
         &self,
-        remote_cache: &StateViewCache<'_>,
+        mut session: Session<R>,
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         script: &Script,
@@ -167,7 +167,6 @@ impl DiemVM {
         });
 
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
-        let mut session = self.0.new_session(remote_cache);
 
         // Run the execution logic
         {
@@ -199,9 +198,9 @@ impl DiemVM {
         }
     }
 
-    fn execute_module(
+    fn execute_module<R: RemoteCache>(
         &self,
-        remote_cache: &StateViewCache<'_>,
+        mut session: Session<R>,
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         module: &Module,
@@ -215,7 +214,6 @@ impl DiemVM {
         });
 
         let gas_schedule = self.0.get_gas_schedule(log_context)?;
-        let mut session = self.0.new_session(remote_cache);
 
         // Publish the module
         let module_address = if self.0.publishing_option(log_context)?.is_open_module() {
@@ -264,13 +262,19 @@ impl DiemVM {
         }
 
         // Revalidate the transaction.
-        let account_currency_symbol =
-            match validate_signature_checked_transaction(&self.0, txn, remote_cache, false) {
-                Ok((_, currency_code)) => currency_code,
-                Err(err) => {
-                    return discard_error_vm_status(err);
-                }
-            };
+        let mut session = self.0.new_session(remote_cache);
+        let account_currency_symbol = match validate_signature_checked_transaction(
+            &self.0,
+            &mut session,
+            txn,
+            remote_cache,
+            false,
+        ) {
+            Ok((_, currency_code)) => currency_code,
+            Err(err) => {
+                return discard_error_vm_status(err);
+            }
+        };
 
         let gas_schedule = unwrap_or_discard!(self.0.get_gas_schedule(log_context));
         let txn_data = TransactionMetadata::new(txn);
@@ -278,7 +282,7 @@ impl DiemVM {
 
         let result = match txn.payload() {
             TransactionPayload::Script(s) => self.execute_script(
-                remote_cache,
+                session,
                 &mut cost_strategy,
                 &txn_data,
                 s,
@@ -286,7 +290,7 @@ impl DiemVM {
                 log_context,
             ),
             TransactionPayload::Module(m) => self.execute_module(
-                remote_cache,
+                session,
                 &mut cost_strategy,
                 &txn_data,
                 m,
@@ -469,7 +473,10 @@ impl DiemVM {
         });
 
         // Revalidate the transaction.
-        if let Err(e) = validate_signature_checked_transaction(&self.0, &txn, remote_cache, false) {
+        let mut session = self.0.new_session(remote_cache);
+        if let Err(e) =
+            validate_signature_checked_transaction(&self.0, &mut session, &txn, remote_cache, false)
+        {
             return Ok(discard_error_vm_status(e));
         };
         self.execute_writeset_transaction(
