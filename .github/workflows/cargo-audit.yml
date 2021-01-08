@@ -3,9 +3,6 @@ name: cargo-audit
 on:
   schedule:
     - cron: "14 14 * * *"
-  #temporary
-  pull_request:
-    branches: [main, master, release-*, gha-test-*]
 
 jobs:
   audit:

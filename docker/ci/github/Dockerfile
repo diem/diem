@@ -16,6 +16,16 @@ ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
 RUN mkdir -p /opt/cargo/
 RUN mkdir -p /opt/git/
 
+#Since github actions may not run as root in the docker image, and it's behavior
+#is undocument, and all request for information about any invarients are not responded to....
+#So we may symlink this locations to whatever home directory gha creates, currently /github/home/
+RUN chmod -R o+rwx /root/bin
+RUN chmod -R o+rwx /root/.dotnet
+RUN chmod -R o+rwx /root/.rustup
+RUN chmod -R o+rwx /root/.cargo
+RUN chmod -R o+rwx /root/.local
+RUN chmod -R o+rwx /root/.nuget
+
 FROM setup_ci as tested_ci
 
 #Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
