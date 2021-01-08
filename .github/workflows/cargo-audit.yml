@@ -2,11 +2,16 @@ name: cargo-audit
 
 on:
   schedule:
-    - cron: '14 14 * * *'
+    - cron: "14 14 * * *"
+  #temporary
+  pull_request:
+    branches: [main, master, release-*, gha-test-*]
 
 jobs:
   audit:
     runs-on: ubuntu-latest
+    container:
+      image: libra/build_environment:github-1
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/build-setup
