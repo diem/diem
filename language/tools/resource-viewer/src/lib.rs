@@ -13,7 +13,7 @@ use diem_types::{
 };
 use move_core_types::{
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
     value::{MoveStruct, MoveValue},
 };
 use move_vm_runtime::data_cache::RemoteCache;
@@ -49,7 +49,7 @@ pub enum AnnotatedMoveValue {
     U128(u128),
     Bool(bool),
     Address(AccountAddress),
-    Vector(Vec<AnnotatedMoveValue>),
+    Vector(TypeTag, Vec<AnnotatedMoveValue>),
     Bytes(Vec<u8>),
     Struct(AnnotatedMoveStruct),
 }
@@ -170,6 +170,7 @@ impl<'a> MoveValueAnnotator<'a> {
                         .collect::<Result<_>>()?,
                 ),
                 _ => AnnotatedMoveValue::Vector(
+                    ty.type_tag().unwrap(),
                     a.iter()
                         .map(|v| self.annotate_value(v, ty.as_ref()))
                         .collect::<Result<_>>()?,
@@ -207,7 +208,7 @@ fn pretty_print_value(
         AnnotatedMoveValue::U64(v) => write!(f, "{}", v),
         AnnotatedMoveValue::U128(v) => write!(f, "{}u128", v),
         AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str_lossless()),
-        AnnotatedMoveValue::Vector(v) => {
+        AnnotatedMoveValue::Vector(_, v) => {
             writeln!(f, "[")?;
             for value in v.iter() {
                 write_indent(f, indent + 4)?;
