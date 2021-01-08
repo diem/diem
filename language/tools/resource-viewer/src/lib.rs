@@ -33,9 +33,9 @@ pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
 #[derive(Debug)]
 pub struct AnnotatedMoveStruct {
-    is_resource: bool,
-    type_: StructTag,
-    value: Vec<(Identifier, AnnotatedMoveValue)>,
+    pub is_resource: bool,
+    pub type_: StructTag,
+    pub value: Vec<(Identifier, AnnotatedMoveValue)>,
 }
 
 /// AnnotatedMoveValue is a fully expanded version of on chain Move data. This should only be used
