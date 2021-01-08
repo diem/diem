@@ -6,7 +6,7 @@ use crate::TimeServiceTrait;
 use crate::{Sleep, SleepTrait};
 use std::{thread, time::Duration};
 
-/// The real production tokio [`TimeService`].
+/// The real production tokio [`TimeService`](crate::TimeService).
 ///
 /// Note: `RealTimeService` is just a zero-sized type whose methods only delegate
 /// to the respective [`tokio::time`] functions.

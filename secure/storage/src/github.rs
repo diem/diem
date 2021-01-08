@@ -44,7 +44,7 @@ impl KVStorage for GitHubStorage {
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
-        let now = self.time_service.now().as_secs();
+        let now = self.time_service.now_secs();
         let data = GetResponse::new(value, now);
         let data = serde_json::to_string(&data)?;
         let data = base64::encode(&data);

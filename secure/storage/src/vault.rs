@@ -63,7 +63,7 @@ impl VaultStorage {
     // Made into an accessor so we can get auto-renewal
     fn client(&self) -> &Client {
         if self.renew_ttl_secs.is_some() {
-            let now = self.time_service.now().as_secs();
+            let now = self.time_service.now_secs();
             let next_renewal = self.next_renewal.load(Ordering::Relaxed);
             if now >= next_renewal {
                 let result = self.client.renew_token_self(self.renew_ttl_secs);

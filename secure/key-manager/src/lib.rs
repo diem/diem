@@ -256,7 +256,7 @@ where
 
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.diem.retrieve_sequence_number(operator_account)?;
-        let expiration = self.time_service.now().as_secs() + self.txn_expiration_secs;
+        let expiration = self.time_service.now_secs() + self.txn_expiration_secs;
 
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
@@ -324,9 +324,7 @@ where
         match self.compare_storage_to_config() {
             Ok(()) => { /* Expected */ }
             Err(Error::ConfigStorageKeyMismatch(..)) => {
-                return if last_rotation + self.txn_expiration_secs
-                    <= self.time_service.now().as_secs()
-                {
+                return if last_rotation + self.txn_expiration_secs <= self.time_service.now_secs() {
                     Ok(Action::SubmitKeyRotationTransaction)
                 } else {
                     Ok(Action::WaitForTransactionExecution)
@@ -335,7 +333,7 @@ where
             Err(e) => return Err(e),
         };
 
-        if last_rotation + self.rotation_period_secs <= self.time_service.now().as_secs() {
+        if last_rotation + self.rotation_period_secs <= self.time_service.now_secs() {
             Ok(Action::FullKeyRotation)
         } else {
             Ok(Action::NoAction)

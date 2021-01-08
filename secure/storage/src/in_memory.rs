@@ -48,7 +48,7 @@ impl KVStorage for InMemoryStorage {
     }
 
     fn set<V: Serialize>(&mut self, key: &str, value: V) -> Result<(), Error> {
-        let now = self.time_service.now().as_secs();
+        let now = self.time_service.now_secs();
         self.data.insert(
             key.to_string(),
             serde_json::to_vec(&GetResponse::new(value, now))?,

@@ -38,16 +38,23 @@ const ZERO_DURATION: Duration = Duration::from_nanos(0);
 /// to infect everything with a generic tag.
 ///
 /// `TimeService` is async-focused: the `sleep`, `interval`, and `timeout` methods
-/// all return `Future`s and `Stream`s.
+/// all return `Future`s and `Stream`s. That said, `TimeService` supports non-async
+/// clients as well; simply use the `sleep_blocking` method instead of `sleep`.
+/// Note that the blocking call will actually block the current thread until the
+/// sleep time has elapsed.
 ///
 /// `TimeService` tries to mirror the API provided by [`tokio::time`] to an
-/// extent. The key difference is that all time is expressed in relative
+/// extent. The primary difference is that all time is expressed in relative
 /// [`Duration`]s. In other words, "sleep for 5s" vs "sleep until unix time
 /// 1607734460". Absolute time is provided by [`TimeService::now`] which returns
 /// the current unix time.
 ///
+/// Note: you must also include the [`TimeServiceTrait`] to use the actual
+/// time-related functionality.
+///
 /// Note: we have to provide our own [`Timeout`] and [`Interval`] types that
-/// use the [`Sleep`] future.
+/// use the [`Sleep`] future, since tokio's implementations are coupled to its
+/// internal Sleep future.
 ///
 /// Note: `TimeService`'s should be free (or very cheap) to clone and send around
 /// between threads. In production (without test features), this enum is a
@@ -62,10 +69,18 @@ pub enum TimeService {
 }
 
 impl TimeService {
+    /// Create a new real, production time service that actually uses the systemtime.
+    ///
+    /// See [`RealTimeService`].
     pub fn real() -> Self {
         RealTimeService::new().into()
     }
 
+    /// Create a mock, simulated time service that does not query the system time
+    /// and allows fine-grained control over advancing time and waking sleeping
+    /// tasks.
+    ///
+    /// See [`MockTimeService`].
     #[cfg(any(test, feature = "testing"))]
     pub fn mock() -> Self {
         MockTimeService::new().into()
@@ -88,8 +103,38 @@ impl Default for TimeService {
 
 #[enum_dispatch]
 pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
-    /// Query the time service for the current unix timestamp.
+    /// Query the current unix timestamp as a [`Duration`].
+    ///
+    /// When used on a `TimeService::real()`, this is equivalent to
+    /// `SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)`.
+    ///
+    /// Note: the [`Duration`] returned from this function is _NOT_ guaranteed to
+    /// be monotonic.
+    ///
+    /// From the [`SystemTime`] docs:
+    ///
+    /// > Distinct from the [`Instant`] type, this time measurement is
+    /// > not monotonic. This means that you can save a file to the file system,
+    /// > then save another file to the file system, and the second file has a
+    /// > [`SystemTime`] measurement earlier than the first. In other words, an
+    /// > operation that happens after another operation in real time may have
+    /// > an earlier SystemTime!
+    ///
+    /// For example, the system administrator could [`clock_settime`] into the
+    /// past, breaking clock time monotonicity.
+    ///
+    /// [`Duration`]: std::time::Duration
+    /// [`Instant`]: std::time::Instant
+    /// [`SystemTime`]: std::time::SystemTime
+    /// [`clock_settime`]: https://linux.die.net/man/3/clock_settime
     fn now(&self) -> Duration;
+
+    /// Query the current unix timestamp in seconds.
+    ///
+    /// Equivalent to `self.now().as_secs()`. See [`now`](#method.now).
+    fn now_secs(&self) -> u64 {
+        self.now().as_secs()
+    }
 
     /// Return a [`Future`] that waits until `duration` has passed.
     ///

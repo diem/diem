@@ -82,7 +82,7 @@ impl KVStorage for OnDiskStorage {
     }
 
     fn set<V: Serialize>(&mut self, key: &str, value: V) -> Result<(), Error> {
-        let now = self.time_service.now().as_secs();
+        let now = self.time_service.now_secs();
         let mut data = self.read()?;
         data.insert(
             key.to_string(),

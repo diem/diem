@@ -15,6 +15,8 @@ use std::{
 };
 
 /// TODO(philiphayes): Use `Duration::MAX` once it stabilizes.
+#[inline]
+#[allow(clippy::integer_arithmetic)]
 fn duration_max() -> Duration {
     Duration::new(std::u64::MAX, 1_000_000_000 - 1)
 }
@@ -23,8 +25,8 @@ fn duration_max() -> Duration {
 /// with the same deadline.
 type SleepIndex = usize;
 
-/// A [`TimeService`] that simulates time and allows for fine-grained control over
-/// advancing time and waking up sleeping tasks.
+/// A [`TimeService`](crate::TimeService) that simulates time and allows for
+/// fine-grained control over advancing time and waking up sleeping tasks.
 ///
 /// ### Auto Advance
 ///
@@ -32,7 +34,7 @@ type SleepIndex = usize;
 /// crated. When we're auto advancing, new `Sleep`s are immediately resolved and
 /// the simulation time is advanced to the wait deadline. New `Sleep`s whose deadlines
 /// are after the auto advance deadline will be pending and must be manually
-/// woken by the `MockTimeService::advance_` methods.
+/// woken by the `MockTimeService::advance_{..}` methods.
 #[derive(Clone, Debug)]
 pub struct MockTimeService {
     inner: Arc<Mutex<Inner>>,
@@ -62,7 +64,7 @@ struct Inner {
 /// `MockTimeService`'s `pending` queue.
 #[derive(Debug)]
 pub struct MockSleep {
-    /// A handle to the `MockTimeService` so we can get the underlying `SleepEntry`.
+    /// A handle to the `MockTimeService` so we can get the underlying sleep entry.
     time_service: MockTimeService,
     /// Wait until the simulated time has at least passed this `deadline`.
     deadline: Duration,
@@ -76,7 +78,7 @@ pub struct MockSleep {
 
 impl MockTimeService {
     /// Create a new `MockTimeService` with no auto advance. Time will only advance
-    /// by manually calling the `MockTimeService::advance_*` methods.
+    /// by manually calling the `MockTimeService::advance_{..}` methods.
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
@@ -127,6 +129,16 @@ impl MockTimeService {
         self.lock().advance(duration)
     }
 
+    /// Advance time by `duration` seconds. See [`advance`](#method.advance).
+    pub fn advance_secs(&self, duration: u64) -> usize {
+        self.lock().advance(Duration::from_secs(duration))
+    }
+
+    /// Advance time by `duration` milliseconds. See [`advance`](#method.advance).
+    pub fn advance_ms(&self, duration: u64) -> usize {
+        self.lock().advance(Duration::from_millis(duration))
+    }
+
     /// Advance time to the next pending waiter, wake it up, and return the wake
     /// time, or `None` if there are no waiters.
     ///
@@ -151,6 +163,18 @@ impl MockTimeService {
         // creating new `Sleep`s or letting existing `Sleep`s run.
         tokio::task::yield_now().await;
         num_woken
+    }
+
+    /// Advance time by `duration` seconds.
+    /// See [`advance_async`](#method.advance_async).
+    pub async fn advance_secs_async(&self, duration: u64) -> usize {
+        self.advance_async(Duration::from_secs(duration)).await
+    }
+
+    /// Advance time by `duration` milliseconds.
+    /// See [`advance_async`](#method.advance_async).
+    pub async fn advance_ms_async(&self, duration: u64) -> usize {
+        self.advance_async(Duration::from_millis(duration)).await
     }
 }
 
