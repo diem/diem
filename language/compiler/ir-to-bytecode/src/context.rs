@@ -58,7 +58,8 @@ pub fn ident_str(s: &str) -> Result<&IdentStr> {
     IdentStr::new(s)
 }
 
-struct CompiledDependency<'a> {
+#[derive(Clone, Debug)]
+pub struct CompiledDependency<'a> {
     structs: HashMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
     functions: HashMap<&'a IdentStr, TableIndex>,
 
@@ -75,6 +76,8 @@ impl<'a> CompiledDependency<'a> {
         let mut structs = HashMap::new();
         let mut functions = HashMap::new();
 
+        let self_handle = dep.self_handle_idx();
+
         for shandle in dep.struct_handles() {
             let mhandle = dep.module_handle_at(shandle.module);
             let mname = dep.identifier_at(mhandle.name);
@@ -90,7 +93,7 @@ impl<'a> CompiledDependency<'a> {
             .function_handles()
             .iter()
             .enumerate()
-            .filter(|(_idx, fhandle)| fhandle.module.0 == 0);
+            .filter(|(_idx, fhandle)| fhandle.module == self_handle);
         for (idx, fhandle) in defined_function_handles {
             let fname = dep.identifier_at(fhandle.name);
             functions.insert(fname, idx as u16);
@@ -131,11 +134,11 @@ impl<'a> CompiledDependency<'a> {
         Some((ident, name))
     }
 
-    fn struct_handle(&self, name: &QualifiedStructIdent) -> Option<&'a StructHandle> {
+    fn struct_handle(&self, module: &ModuleName, name: &StructName) -> Option<&'a StructHandle> {
         self.structs
             .get(&(
-                ident_str(name.module.as_inner()).ok()?,
-                ident_str(name.name.as_inner()).ok()?,
+                ident_str(module.as_inner()).ok()?,
+                ident_str(name.as_inner()).ok()?,
             ))
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
@@ -226,20 +229,10 @@ impl<'a> Context<'a> {
     /// Given the dependencies and the current module, creates an empty context.
     /// The current module is a dummy `Self` for CompiledScript.
     /// It initializes an "import" of `Self` as the alias for the current_module.
-    pub fn new<T: 'a + ModuleAccess>(
-        dependencies_iter: impl IntoIterator<Item = &'a T>,
+    pub fn new(
+        dependencies: HashMap<QualifiedModuleIdent, CompiledDependency<'a>>,
         current_module_opt: Option<QualifiedModuleIdent>,
     ) -> Result<Self> {
-        let dependencies = dependencies_iter
-            .into_iter()
-            .map(|dep| {
-                let ident = QualifiedModuleIdent {
-                    address: *dep.address(),
-                    name: ModuleName::new(dep.name().to_string()),
-                };
-                Ok((ident, CompiledDependency::new(dep)?))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
         let context = Self {
             dependencies,
             aliases: HashMap::new(),
@@ -266,6 +259,27 @@ impl<'a> Context<'a> {
         };
 
         Ok(context)
+    }
+
+    pub fn dependencies(&self) -> &HashMap<QualifiedModuleIdent, CompiledDependency<'a>> {
+        &self.dependencies
+    }
+
+    pub fn add_compiled_dependency<T: 'a + ModuleAccess>(
+        &mut self,
+        compiled_dep: &'a T,
+    ) -> Result<()> {
+        let ident = QualifiedModuleIdent {
+            address: *compiled_dep.address(),
+            name: ModuleName::new(compiled_dep.name().to_string()),
+        };
+        match self.dependencies.get(&ident) {
+            None => self
+                .dependencies
+                .insert(ident, CompiledDependency::new(compiled_dep)?),
+            Some(_previous) => bail!("Duplicate dependency module for {}", ident),
+        };
+        Ok(())
     }
 
     fn materialize_pool<T: Clone>(
@@ -341,7 +355,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the identifier for the alias, fails if it is not bound.
-    fn module_ident(&self, module_name: &ModuleName) -> Result<&QualifiedModuleIdent> {
+    pub fn module_ident(&self, module_name: &ModuleName) -> Result<&QualifiedModuleIdent> {
         match self.modules.get(module_name) {
             None => bail!("Unbound module alias {}", module_name),
             Some((id, _)) => Ok(id),
@@ -349,7 +363,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the module handle index for the alias, fails if it is not bound.
-    fn module_handle_index(&self, module_name: &ModuleName) -> Result<ModuleHandleIndex> {
+    pub fn module_handle_index(&self, module_name: &ModuleName) -> Result<ModuleHandleIndex> {
         Ok(ModuleHandleIndex(
             *self
                 .module_handles
@@ -642,7 +656,7 @@ impl<'a> Context<'a> {
         }
         let mident = self.module_ident(&s.module)?.clone();
         let dep = self.dependency(&mident)?;
-        match dep.struct_handle(s) {
+        match dep.struct_handle(&mident.name, &s.name) {
             None => bail!("Unbound struct {}", s),
             Some(shandle) => Ok((shandle.is_nominal_resource, shandle.type_parameters.clone())),
         }
@@ -753,7 +767,7 @@ impl<'a> Context<'a> {
         let mident = self.module_ident(m)?.clone();
         let dep = self.dependency(&mident)?;
         match dep.function_signature(f) {
-            None => bail!("Unbound function {}.{}", m, f),
+            None => bail!("Unbound function {}.{}", mident, f),
             Some(sig) => self.reindex_function_signature(&mident, sig),
         }
     }

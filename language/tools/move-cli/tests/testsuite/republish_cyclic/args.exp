@@ -8,7 +8,7 @@ module 42.M {
 
 
 public foo() {
-	0: Call[0](bar())
+	0: Call[1](bar())
 	1: Ret
 }
 }
@@ -31,7 +31,7 @@ module 42.M {
 
 
 public foo() {
-	0: Call[0](bar())
+	0: Call[1](bar())
 	1: Ret
 }
 }

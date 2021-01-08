@@ -26,7 +26,7 @@ Call Stack:
             [2] MutBorrowLoc(0)
             [3] StLoc(1)
             [4] LdU64(4)
-          > [5] Call(0)
+          > [5] Call(1)
             [6] StLoc(2)
             [7] MoveLoc(1)
             [8] Pop
@@ -43,7 +43,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)
@@ -59,7 +59,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)
@@ -75,7 +75,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)
@@ -116,7 +116,7 @@ Call Stack:
             [2] MutBorrowLoc(0)
             [3] StLoc(1)
             [4] LdU64(4)
-          > [5] Call(0)
+          > [5] Call(1)
             [6] StLoc(2)
             [7] MoveLoc(1)
             [8] Pop
@@ -133,7 +133,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)
@@ -149,7 +149,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)
@@ -165,7 +165,7 @@ Call Stack:
             [10] CopyLoc(0)
             [11] LdU64(1)
             [12] Sub
-          > [13] Call(1)
+          > [13] Call(0)
             [14] Add
             [15] StLoc(1)
             [16] MoveLoc(1)

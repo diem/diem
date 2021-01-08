@@ -1,3 +1,12 @@
+module Cup {
+    struct Cup<T> { f: T }
+    public cup<T>(f: T): Self.Cup<T> {
+        return Cup<T> { f: move(f) };
+    }
+}
+
+//! new-transaction
+
 module M0 {
     struct Foo { f: Self.Foo }
 }
@@ -7,12 +16,12 @@ module M0 {
 //! new-transaction
 
 module M1 {
-    struct Cup<T> { f: T }
-    struct Foo { f: Self.Cup<Self.Foo> }
+    import {{default}}.Cup;
+    struct Foo { f: Cup.Cup<Self.Foo> }
 
     // blows up the stack
     public foo(): Self.Foo {
-        return Foo { f: Cup<Self.Foo> { f: Self.foo() }};
+        return Foo { f: Cup.cup<Self.Foo>(Self.foo()) };
     }
 
 }
@@ -43,9 +52,9 @@ module M2 {
 
 //! new-transaction
 module M3 {
-    import {{default}}.M1;
+    import {{default}}.Cup;
 
-    struct Foo { f: M1.Cup<Self.Foo> }
+    struct Foo { f: Cup.Cup<Self.Foo> }
 
 }
 
@@ -53,12 +62,12 @@ module M3 {
 
 //! new-transaction
 module M3 {
-    import {{default}}.M1;
+    import {{default}}.Cup;
 
     struct A { b: Self.B }
     struct B { c: Self.C }
     struct C { d: vector<Self.D> }
-    struct D { x: M1.Cup<M1.Cup<M1.Cup<Self.A>>> }
+    struct D { x: Cup.Cup<Cup.Cup<Cup.Cup<Self.A>>> }
 
 }
 

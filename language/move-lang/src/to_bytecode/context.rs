@@ -69,18 +69,18 @@ impl<'a> Context<'a> {
     ) -> (Vec<IR::ImportDefinition>, Vec<IR::ModuleDependency>) {
         let Context {
             current_module: _current_module,
-            seen_structs,
+            mut seen_structs,
             seen_functions,
             ..
         } = self;
         let mut module_dependencies = BTreeMap::new();
-        Self::struct_dependencies(struct_declarations, &mut module_dependencies, seen_structs);
         Self::function_dependencies(
-            struct_declarations,
             function_declarations,
             &mut module_dependencies,
+            &mut seen_structs,
             seen_functions,
         );
+        Self::struct_dependencies(struct_declarations, &mut module_dependencies, seen_structs);
         let mut imports = vec![];
         let mut ordered_dependencies = vec![];
         for (module, (structs, functions)) in module_dependencies {
@@ -168,10 +168,6 @@ impl<'a> Context<'a> {
     }
 
     fn function_dependencies(
-        struct_declarations: &HashMap<
-            (ModuleIdent, StructName),
-            (bool, Vec<(IR::TypeVar, IR::Kind)>),
-        >,
         function_declarations: &HashMap<
             (ModuleIdent, FunctionName),
             (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
@@ -180,13 +176,14 @@ impl<'a> Context<'a> {
             ModuleIdent,
             (Vec<IR::StructDependency>, Vec<IR::FunctionDependency>),
         >,
+        seen_structs: &mut BTreeSet<(ModuleIdent, StructName)>,
         seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
     ) {
         for (module, fname) in seen_functions {
-            let (seen_structs, function_dep) =
+            let (functions_seen_structs, function_dep) =
                 Self::function_dependency(function_declarations, &module, fname);
             Self::insert_function_dependency(module_dependencies, module, function_dep);
-            Self::struct_dependencies(struct_declarations, module_dependencies, seen_structs)
+            seen_structs.extend(functions_seen_structs)
         }
     }
 

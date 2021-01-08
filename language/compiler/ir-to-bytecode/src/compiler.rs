@@ -411,13 +411,22 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     script: Script,
     dependencies: impl IntoIterator<Item = &'a T>,
 ) -> Result<(CompiledScript, SourceMap<Loc>)> {
-    let mut context = Context::new(dependencies, None)?;
+    let mut context = Context::new(HashMap::new(), None)?;
+    for dep in dependencies {
+        context.add_compiled_dependency(dep)?;
+    }
 
-    compile_imports(&mut context, address, script.imports)?;
-    compile_explicit_dependency_declarations(
+    compile_imports(&mut context, address, script.imports.clone())?;
+    // Add explicit handles/dependency declarations to `dependencies`
+    let explicit_deps = compile_explicit_dependency_declarations(
         &mut context,
+        None,
+        script.imports,
         script.explicit_dependency_declarations,
     )?;
+    for dep in &explicit_deps {
+        context.add_compiled_dependency(dep)?;
+    }
     for ir_constant in script.constants {
         let constant = compile_constant(&mut context, ir_constant.signature, ir_constant.value)?;
         context.declare_constant(ir_constant.name.clone(), constant.clone())?;
@@ -483,11 +492,24 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         address,
         name: module.name,
     };
-    let mut context = Context::new(dependencies, Some(current_module.clone()))?;
+    let mut context = Context::new(HashMap::new(), Some(current_module.clone()))?;
+    for dep in dependencies {
+        context.add_compiled_dependency(dep)?;
+    }
     let self_name = ModuleName::new(ModuleName::self_name().into());
     let self_module_handle_idx = context.declare_import(current_module, self_name.clone())?;
     // Explicitly declare all imports as they will be included even if not used
-    compile_imports(&mut context, Some(address), module.imports)?;
+    compile_imports(&mut context, Some(address), module.imports.clone())?;
+    // Add explicit handles/dependency declarations to `dependencies`
+    let explicit_deps = compile_explicit_dependency_declarations(
+        &mut context,
+        Some(address),
+        module.imports,
+        module.explicit_dependency_declarations,
+    )?;
+    for dep in &explicit_deps {
+        context.add_compiled_dependency(dep)?;
+    }
 
     // Explicitly declare all structs as they will be included even if not used
     for s in &module.structs {
@@ -498,12 +520,6 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         let kinds = type_parameter_kinds(&s.value.type_formals);
         context.declare_struct_handle_index(ident, s.value.is_nominal_resource, kinds)?;
     }
-
-    // Add explicit handles/dependency declarations to the pools
-    compile_explicit_dependency_declarations(
-        &mut context,
-        module.explicit_dependency_declarations,
-    )?;
 
     for ir_constant in module.constants {
         let constant = compile_constant(&mut context, ir_constant.signature, ir_constant.value)?;
@@ -563,15 +579,27 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
 }
 
 fn compile_explicit_dependency_declarations(
-    context: &mut Context,
+    outer_context: &mut Context,
+    address_opt: Option<AccountAddress>,
+    imports: Vec<ImportDefinition>,
     dependencies: Vec<ModuleDependency>,
-) -> Result<()> {
+) -> Result<Vec<CompiledModule>> {
+    let outer_depedencies = outer_context.dependencies().clone();
+    let mut compiled_deps = vec![];
     for dependency in dependencies {
         let ModuleDependency {
             name: mname,
             structs,
             functions,
         } = dependency;
+        let current_module = outer_context.module_ident(&mname)?;
+        let mut context = Context::new(outer_depedencies.clone(), Some(current_module.clone()))?;
+        // TODO find a way to accumulate depedencies. Borrow issues galore on attempts
+        for compiled_dep in &compiled_deps {
+            context.add_compiled_dependency(compiled_dep)?;
+        }
+        compile_imports(&mut context, address_opt, imports.clone())?;
+        let self_module_handle_idx = context.module_handle_index(&mname)?;
         for struct_dep in structs {
             let StructDependency {
                 is_nominal_resource,
@@ -584,11 +612,50 @@ fn compile_explicit_dependency_declarations(
         }
         for function_dep in functions {
             let FunctionDependency { name, signature } = function_dep;
-            let sig = function_signature(context, &signature)?;
+            let sig = function_signature(&mut context, &signature)?;
             context.declare_function(mname.clone(), name, sig)?;
         }
+
+        let (
+            MaterializedPools {
+                module_handles,
+                struct_handles,
+                function_handles,
+                field_handles,
+                signatures,
+                identifiers,
+                address_identifiers,
+                constant_pool,
+                function_instantiations,
+                struct_def_instantiations,
+                field_instantiations,
+            },
+            _source_map,
+        ) = context.materialize_pools();
+        let compiled_module = CompiledModuleMut {
+            module_handles,
+            self_module_handle_idx,
+            struct_handles,
+            function_handles,
+            field_handles,
+            struct_def_instantiations,
+            function_instantiations,
+            field_instantiations,
+            signatures,
+            identifiers,
+            address_identifiers,
+            constant_pool,
+            struct_defs: vec![],
+            function_defs: vec![],
+        }
+        .freeze()
+        .map_err(|e| {
+            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined))
+        })?;
+
+        compiled_deps.push(compiled_module)
     }
-    Ok(())
+    Ok(compiled_deps)
 }
 
 fn compile_imports(
