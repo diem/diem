@@ -293,6 +293,8 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     if let Some(genesis) = get_genesis_txn(&node_config) {
         maybe_bootstrap::<DiemVM>(&db_rw, genesis, genesis_waypoint)
             .expect("Db-bootstrapper should not fail.");
+    } else {
+        info!("Genesis txn not provided, it's fine if you don't expect to apply it otherwise please double check config");
     }
 
     debug!(
