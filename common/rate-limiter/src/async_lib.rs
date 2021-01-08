@@ -181,6 +181,7 @@ mod tests {
         let rate_limiter = Arc::new(Mutex::new(Bucket::new(
             "test".to_string(),
             "test".to_string(),
+            "test".to_string(),
             15,
             15,
             5,

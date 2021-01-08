@@ -452,3 +452,12 @@ pub static PENDING_PEER_NETWORK_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static NETWORK_RATE_LIMIT_METRICS: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "diem_network_rate_limit_test",
+        "Network Rate Limiting Metrics",
+        &["direction", "key", "metric"]
+    )
+    .unwrap()
+});

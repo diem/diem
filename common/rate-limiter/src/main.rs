@@ -244,6 +244,7 @@ async fn test_rate_limiter<
 fn simple_shared_bucket(label: &'static str, size: usize) -> SharedBucket {
     Arc::new(Mutex::new(Bucket::new(
         label.to_string(),
+        String::new(),
         "key".to_string(),
         size,
         size,

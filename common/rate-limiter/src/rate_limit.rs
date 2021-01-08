@@ -53,6 +53,7 @@ const ONE_SEC: Duration = Duration::from_secs(1);
 ///
 pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
     label: &'static str,
+    log_info: String,
     buckets: RwLock<HashMap<Key, SharedBucket>>,
     new_bucket_start_percentage: u8,
     default_bucket_size: usize,
@@ -64,6 +65,7 @@ pub struct TokenBucketRateLimiter<Key: Eq + Hash + Clone + Debug> {
 impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
     pub fn new(
         label: &'static str,
+        log_info: String,
         new_bucket_start_percentage: u8,
         default_bucket_size: usize,
         default_fill_rate: usize,
@@ -76,6 +78,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 
         Self {
             label,
+            log_info,
             buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage,
             default_bucket_size,
@@ -86,13 +89,21 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
     }
 
     pub fn test(default_bucket_size: usize, default_fill_rate: usize) -> Self {
-        Self::new("test", 100, default_bucket_size, default_fill_rate, None)
+        Self::new(
+            "test",
+            "test".to_string(),
+            100,
+            default_bucket_size,
+            default_fill_rate,
+            None,
+        )
     }
 
     /// Used for testing and to not have a rate limiter
     pub fn open(label: &'static str) -> Self {
         Self {
             label,
+            log_info: String::new(),
             buckets: RwLock::new(HashMap::new()),
             new_bucket_start_percentage: 100,
             default_bucket_size: std::usize::MAX,
@@ -104,9 +115,9 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 
     /// Retrieve bucket, or create a new one
     pub fn bucket(&self, key: Key) -> SharedBucket {
-        self.bucket_inner(key, |label, key, initial, size, rate, metrics| {
+        self.bucket_inner(key, |label, log_info, key, initial, size, rate, metrics| {
             Arc::new(Mutex::new(if self.enabled {
-                Bucket::new(label, key, initial, size, rate, metrics)
+                Bucket::new(label, log_info, key, initial, size, rate, metrics)
             } else {
                 Bucket::open(label)
             }))
@@ -114,7 +125,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
     }
 
     fn bucket_inner<
-        F: FnOnce(String, String, usize, usize, usize, Option<HistogramVec>) -> SharedBucket,
+        F: FnOnce(String, String, String, usize, usize, usize, Option<HistogramVec>) -> SharedBucket,
     >(
         &self,
         key: Key,
@@ -137,6 +148,7 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
                 .or_insert_with(|| {
                     bucket_create(
                         self.label.to_string(),
+                        self.log_info.clone(),
                         format!("{:?}", key),
                         size.saturating_mul(self.new_bucket_start_percentage as usize) / 100,
                         size,
@@ -166,8 +178,10 @@ impl<Key: Eq + Hash + Clone + Debug> TokenBucketRateLimiter<Key> {
 /// it should be wrapped in an `Arc` and a `Mutex` to be shared across threads.
 #[derive(Debug)]
 pub struct Bucket {
-    /// Label for what rate limiter it's attached to for logging purposes
+    /// Label for what rate limiter it's attached to for logging & metrics purposes
     label: String,
+    /// Information to be logged, but can't be put in the metrics for performance reasons
+    log_info: String,
     /// The key for metrics purposes
     key: String,
     /// The current number of available tokens to be used
@@ -190,6 +204,7 @@ pub struct Bucket {
 impl Bucket {
     pub fn new(
         label: String,
+        log_info: String,
         key: String,
         initial: usize,
         size: usize,
@@ -203,6 +218,7 @@ impl Bucket {
         // Store the stringified version of the key for logging
         Self {
             label,
+            log_info,
             key,
             tokens: initial,
             size,
@@ -219,6 +235,7 @@ impl Bucket {
     pub fn open(label: String) -> Self {
         Self {
             label,
+            log_info: String::new(),
             key: String::new(),
             tokens: std::usize::MAX,
             size: std::usize::MAX,
@@ -239,19 +256,27 @@ impl Bucket {
             if self.allowed_in_period > 0 || self.throttled_in_period > 0 {
                 debug!(
                     throttle_label = self.label,
+                    throttle_log_info = self.log_info,
                     throttle_key = self.key,
                     num_allowed_in_period = self.allowed_in_period,
                     num_throttled_in_period = self.throttled_in_period,
+                    "{}-{}-{}={}/{}",
+                    self.label,
+                    self.log_info,
+                    self.key,
+                    self.allowed_in_period,
+                    self.allowed_in_period
+                        .saturating_add(self.throttled_in_period),
                 );
             }
 
             // Optional metrics
             if let Some(metrics) = self.metrics.as_ref() {
                 metrics
-                    .with_label_values(&[self.label.as_str(), self.key.as_str(), "allowed"])
+                    .with_label_values(&[self.label.as_str(), "allowed"])
                     .observe(self.allowed_in_period as f64);
                 metrics
-                    .with_label_values(&[self.label.as_str(), self.key.as_str(), "throttled"])
+                    .with_label_values(&[self.label.as_str(), "throttled"])
                     .observe(self.throttled_in_period as f64);
             }
             self.allowed_in_period = 0;

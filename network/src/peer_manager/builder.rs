@@ -3,6 +3,7 @@
 
 use crate::{
     counters,
+    counters::NETWORK_RATE_LIMIT_METRICS,
     noise::{stream::NoiseStream, HandshakeAuthMode},
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
@@ -353,10 +354,16 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-        let inbound_rate_limiters =
-            token_bucket_rate_limiter("inbound", self.inbound_rate_limit_config);
-        let outbound_rate_limiters =
-            token_bucket_rate_limiter("outbound", self.outbound_rate_limit_config);
+        let inbound_rate_limiters = token_bucket_rate_limiter(
+            &self.network_context,
+            "inbound",
+            self.inbound_rate_limit_config,
+        );
+        let outbound_rate_limiters = token_bucket_rate_limiter(
+            &self.network_context,
+            "outbound",
+            self.outbound_rate_limit_config,
+        );
         let peer_mgr = PeerManager::new(
             executor.clone(),
             transport,
@@ -454,6 +461,7 @@ impl PeerManagerBuilder {
 }
 
 fn token_bucket_rate_limiter(
+    network_context: &Arc<NetworkContext>,
     label: &'static str,
     input: Option<RateLimitConfig>,
 ) -> TokenBucketRateLimiter<IpAddr> {
@@ -461,10 +469,11 @@ fn token_bucket_rate_limiter(
         if config.enabled {
             return TokenBucketRateLimiter::new(
                 label,
+                network_context.to_string(),
                 config.initial_bucket_fill_percentage,
                 config.ip_byte_bucket_size,
                 config.ip_byte_bucket_rate,
-                None,
+                Some(NETWORK_RATE_LIMIT_METRICS.clone()),
             );
         }
     }
