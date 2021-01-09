@@ -478,45 +478,56 @@ fn check_chunk_response(
     }
 }
 
+// Starts a new state sync with the validator role.
+fn start_default_validator(env: &mut SynchronizerEnv) {
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::Validator,
+        Waypoint::default(),
+        false,
+        None,
+    );
+}
+
+// Starts a new state sync with the fullnode role.
+fn start_default_fullnode(env: &mut SynchronizerEnv) {
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        false,
+        None,
+    );
+}
+
 #[test]
 fn test_basic_catch_up() {
-    let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    let num_peers = 2;
+    let mut env = SynchronizerEnv::new(num_peers);
 
-    // test small sequential syncs
-    for version in 1..5 {
+    for _ in 0..num_peers {
+        start_default_validator(&mut env);
+    }
+
+    // Test small sequential syncs, batch sync for multiple transactions and
+    // batch sync for multiple chunks.
+    let synced_versions = vec![1, 2, 3, 4, 5, 20, 2000];
+    for version in synced_versions {
         env.commit(0, version);
         let target_li = env.latest_li(0);
+
         env.sync_to(1, target_li);
         assert_eq!(env.latest_li(1).ledger_info().version(), version);
     }
-    // test batch sync for multiple transactions
-    env.commit(0, 20);
-    env.sync_to(1, env.latest_li(0));
-    assert_eq!(env.latest_li(1).ledger_info().version(), 20);
-
-    // test batch sync for multiple chunks
-    env.commit(0, 2000);
-    env.sync_to(1, env.latest_li(0));
-    assert_eq!(env.latest_li(1).ledger_info().version(), 2000);
 }
 
 #[test]
 fn test_flaky_peer_sync() {
-    // create handler that causes error, but has successful retries
+    let mut env = SynchronizerEnv::new(2);
+
+    start_default_validator(&mut env);
+
+    // Create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
     let handler = Box::new(move |resp| -> Result<TransactionListWithProof> {
         let fail_request = attempt.load(Ordering::Relaxed) == 0;
@@ -527,14 +538,6 @@ fn test_flaky_peer_sync() {
             Ok(resp)
         }
     });
-    let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
     env.start_next_synchronizer(
         handler,
         RoleType::Validator,
@@ -542,17 +545,20 @@ fn test_flaky_peer_sync() {
         false,
         None,
     );
-    env.commit(0, 20);
+
+    let synced_version = 20;
+    env.commit(0, synced_version);
     env.sync_to(1, env.latest_li(0));
-    assert_eq!(env.latest_li(1).ledger_info().version(), 20);
+    assert_eq!(env.latest_li(1).ledger_info().version(), synced_version);
 }
 
 #[test]
 #[should_panic]
 fn test_request_timeout() {
+    let mut env = SynchronizerEnv::new(2);
+
     let handler =
         Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
-    let mut env = SynchronizerEnv::new(2);
     env.start_next_synchronizer(
         handler,
         RoleType::Validator,
@@ -560,6 +566,7 @@ fn test_request_timeout() {
         false,
         None,
     );
+
     env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
@@ -569,6 +576,7 @@ fn test_request_timeout() {
         false,
         None,
     );
+
     env.commit(0, 1);
     env.sync_to(1, env.latest_li(0));
 }
@@ -576,23 +584,14 @@ fn test_request_timeout() {
 #[test]
 fn test_full_node() {
     let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::FullNode,
-        Waypoint::default(),
-        false,
-        None,
-    );
+
+    start_default_validator(&mut env);
+    start_default_fullnode(&mut env);
+
     env.commit(0, 10);
     // first sync should be fulfilled immediately after peer discovery
     assert!(env.wait_for_version(1, 10, None));
+
     env.commit(0, 20);
     // second sync will be done via long polling cause first node should send new request
     // after receiving first chunk immediately
@@ -601,21 +600,12 @@ fn test_full_node() {
 
 #[test]
 fn catch_up_through_epochs_validators() {
-    let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    let num_peers = 2;
+    let mut env = SynchronizerEnv::new(num_peers);
+
+    for _ in 0..num_peers {
+        start_default_validator(&mut env);
+    }
 
     // catch up to the next epoch starting from the middle of the current one
     env.commit(0, 20);
@@ -641,13 +631,9 @@ fn catch_up_through_epochs_validators() {
 #[test]
 fn catch_up_through_epochs_full_node() {
     let mut env = SynchronizerEnv::new(3);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+
+    start_default_validator(&mut env);
+
     // catch up through multiple epochs
     for epoch in 1..10 {
         env.commit(0, epoch * 100);
@@ -655,24 +641,12 @@ fn catch_up_through_epochs_full_node() {
     }
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::FullNode,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    start_default_fullnode(&mut env);
     assert!(env.wait_for_version(1, 950, None));
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::FullNode,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    start_default_fullnode(&mut env);
     assert!(env.wait_for_version(2, 950, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
 }
@@ -680,13 +654,9 @@ fn catch_up_through_epochs_full_node() {
 #[test]
 fn catch_up_with_waypoints() {
     let mut env = SynchronizerEnv::new(3);
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+
+    start_default_validator(&mut env);
+
     let mut curr_version = 0;
     for _two_epochs in 1..10 {
         curr_version += 100;
@@ -720,13 +690,7 @@ fn catch_up_with_waypoints() {
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 19);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    env.start_next_synchronizer(
-        SynchronizerEnv::default_handler(),
-        RoleType::FullNode,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    start_default_fullnode(&mut env);
     assert!(env.wait_for_version(2, 5250, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 19);
 }
@@ -734,6 +698,7 @@ fn catch_up_with_waypoints() {
 #[test]
 fn test_lagging_upstream_long_poll() {
     let mut env = SynchronizerEnv::new(4);
+
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
@@ -741,6 +706,7 @@ fn test_lagging_upstream_long_poll() {
         true,
         None,
     );
+
     env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
@@ -750,6 +716,7 @@ fn test_lagging_upstream_long_poll() {
         true,
         Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
     );
+
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
@@ -757,6 +724,7 @@ fn test_lagging_upstream_long_poll() {
         true,
         Some(vec![NetworkId::vfn_network()]),
     );
+
     // we treat this a standalone node whose local state we use as the baseline
     // to clone state to the other nodes
     env.start_next_synchronizer(
@@ -859,6 +827,7 @@ fn test_lagging_upstream_long_poll() {
 #[test]
 fn test_sync_pending_ledger_infos() {
     let mut env = SynchronizerEnv::new(2);
+
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
@@ -866,6 +835,7 @@ fn test_sync_pending_ledger_infos() {
         true,
         None,
     );
+
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
