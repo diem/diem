@@ -13,126 +13,37 @@ use vm::{
     file_format::{Bytecode, CompiledModule, CompiledScript},
 };
 
-struct Edge {}
+struct VizEdge {}
 
-impl fmt::Display for Edge {
+impl fmt::Display for VizEdge {
     fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
         Ok(())
     }
 }
 
-// module-level granularity
 #[derive(Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
-enum NodeModuleOrScript {
-    Module(ModuleId),
-    Script(String),
-}
-
-impl fmt::Display for NodeModuleOrScript {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            NodeModuleOrScript::Module(module_id) => writeln!(f, "{}", module_id.name()),
-            NodeModuleOrScript::Script(script_name) => writeln!(f, "{}", script_name),
-        }
-    }
-}
-
-pub struct GraphModuleOrScript {
-    graph: Graph<NodeModuleOrScript, Edge>,
-    nodes: BTreeMap<NodeModuleOrScript, NodeIndex>,
-}
-
-impl GraphModuleOrScript {
-    pub fn new() -> Self {
-        Self {
-            graph: Graph::new(),
-            nodes: BTreeMap::new(),
-        }
-    }
-
-    pub fn add_script(&mut self, script_name: String) {
-        let node = NodeModuleOrScript::Script(script_name);
-        let exists = self.nodes.insert(node.clone(), self.graph.add_node(node));
-        assert!(exists.is_none());
-    }
-
-    pub fn add_module(&mut self, module_id: ModuleId) {
-        let node = NodeModuleOrScript::Module(module_id);
-        let exists = self.nodes.insert(node.clone(), self.graph.add_node(node));
-        assert!(exists.is_none());
-    }
-
-    pub fn add_call_from_script(&mut self, script_name: String, callee_module_id: ModuleId) {
-        let node_src = NodeModuleOrScript::Script(script_name);
-        let index_src = self.nodes.get(&node_src).unwrap();
-        let node_dst = NodeModuleOrScript::Module(callee_module_id);
-        if let Some(index_dst) = self.nodes.get(&node_dst) {
-            self.graph.update_edge(*index_src, *index_dst, Edge {});
-        }
-    }
-
-    pub fn add_call_from_module(&mut self, module_id: ModuleId, callee_module_id: ModuleId) {
-        // don't add self edges
-        if module_id == callee_module_id {
-            return;
-        }
-
-        let node_src = NodeModuleOrScript::Module(module_id);
-        let index_src = self.nodes.get(&node_src).unwrap();
-        let node_dst = NodeModuleOrScript::Module(callee_module_id);
-        if let Some(index_dst) = self.nodes.get(&node_dst) {
-            self.graph.update_edge(*index_src, *index_dst, Edge {});
-        }
-    }
-
-    pub fn prune(&mut self) {
-        self.graph
-            .retain_nodes(|graph, index| graph.neighbors_undirected(index).count() != 0);
-
-        self.nodes = self
-            .graph
-            .node_indices()
-            .map(|index| (self.graph.node_weight(index).unwrap().clone(), index))
-            .collect();
-    }
-
-    pub fn to_dot(&self) -> String {
-        format!(
-            "{}",
-            Dot::with_attr_getters(&self.graph, &[], &|_, _| "".to_string(), &|_, (_, node)| {
-                match node {
-                    NodeModuleOrScript::Script(_) => "".to_string(),
-                    NodeModuleOrScript::Module(_) => "shape=box".to_string(),
-                }
-            })
-        )
-    }
-}
-
-// function-level granularity
-#[derive(Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
-enum NodeFunctionOrScript {
+enum VizNode {
     Function(ModuleId, Identifier),
     Script(String),
 }
 
-impl fmt::Display for NodeFunctionOrScript {
+impl fmt::Display for VizNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            NodeFunctionOrScript::Function(module_id, function_name) => {
+            Self::Function(module_id, function_name) => {
                 writeln!(f, "{}::{}", module_id.name(), function_name)
             }
-            NodeFunctionOrScript::Script(script_name) => writeln!(f, "{}", script_name),
+            Self::Script(script_name) => writeln!(f, "{}", script_name),
         }
     }
 }
 
-pub struct GraphFunctionOrScript {
-    graph: Graph<NodeFunctionOrScript, Edge>,
-    nodes: BTreeMap<NodeFunctionOrScript, NodeIndex>,
+pub struct VizGraph {
+    graph: Graph<VizNode, VizEdge>,
+    nodes: BTreeMap<VizNode, NodeIndex>,
 }
 
-impl GraphFunctionOrScript {
+impl VizGraph {
     pub fn new() -> Self {
         Self {
             graph: Graph::new(),
@@ -141,13 +52,13 @@ impl GraphFunctionOrScript {
     }
 
     pub fn add_script(&mut self, script_name: String) {
-        let node = NodeFunctionOrScript::Script(script_name);
+        let node = VizNode::Script(script_name);
         let exists = self.nodes.insert(node.clone(), self.graph.add_node(node));
         assert!(exists.is_none());
     }
 
     pub fn add_function(&mut self, module_id: ModuleId, function_name: Identifier) {
-        let node = NodeFunctionOrScript::Function(module_id, function_name);
+        let node = VizNode::Function(module_id, function_name);
         let exists = self.nodes.insert(node.clone(), self.graph.add_node(node));
         assert!(exists.is_none());
     }
@@ -158,11 +69,11 @@ impl GraphFunctionOrScript {
         callee_module_id: ModuleId,
         callee_function_name: Identifier,
     ) {
-        let node_src = NodeFunctionOrScript::Script(script_name);
+        let node_src = VizNode::Script(script_name);
         let index_src = self.nodes.get(&node_src).unwrap();
-        let node_dst = NodeFunctionOrScript::Function(callee_module_id, callee_function_name);
+        let node_dst = VizNode::Function(callee_module_id, callee_function_name);
         if let Some(index_dst) = self.nodes.get(&node_dst) {
-            self.graph.update_edge(*index_src, *index_dst, Edge {});
+            self.graph.update_edge(*index_src, *index_dst, VizEdge {});
         }
     }
 
@@ -178,11 +89,11 @@ impl GraphFunctionOrScript {
             return;
         }
 
-        let node_src = NodeFunctionOrScript::Function(module_id, function_name);
+        let node_src = VizNode::Function(module_id, function_name);
         let index_src = self.nodes.get(&node_src).unwrap();
-        let node_dst = NodeFunctionOrScript::Function(callee_module_id, callee_function_name);
+        let node_dst = VizNode::Function(callee_module_id, callee_function_name);
         if let Some(index_dst) = self.nodes.get(&node_dst) {
-            self.graph.update_edge(*index_src, *index_dst, Edge {});
+            self.graph.update_edge(*index_src, *index_dst, VizEdge {});
         }
     }
 
@@ -202,8 +113,8 @@ impl GraphFunctionOrScript {
             "{}",
             Dot::with_attr_getters(&self.graph, &[], &|_, _| "".to_string(), &|_, (_, node)| {
                 match node {
-                    NodeFunctionOrScript::Script(_) => "".to_string(),
-                    NodeFunctionOrScript::Function(_, _) => "shape=box".to_string(),
+                    VizNode::Script(_) => "".to_string(),
+                    VizNode::Function(_, _) => "shape=box".to_string(),
                 }
             })
         )
@@ -216,23 +127,19 @@ pub(crate) trait Package {
     fn get_scripts(&self) -> &[(String, CompiledScript)];
 
     // dependency graph construction
-    fn build_dep_graph(&self) -> (GraphModuleOrScript, GraphFunctionOrScript) {
-        // maintain both module-level and function-level dependency graphs
-        let mut graph_module = GraphModuleOrScript::new();
-        let mut graph_function = GraphFunctionOrScript::new();
+    fn build_viz_graph(&self) -> VizGraph {
+        let mut graph = VizGraph::new();
 
         // add nodes from script
         for (script_name, _) in self.get_scripts() {
-            graph_module.add_script(script_name.clone());
-            graph_function.add_script(script_name.clone());
+            graph.add_script(script_name.clone());
         }
 
         // add nodes from modules
         for module in self.get_modules() {
             let module_id = module.self_id();
-            graph_module.add_module(module_id.clone());
             for function_def in module.function_defs() {
-                graph_function.add_function(
+                graph.add_function(
                     module_id.clone(),
                     module
                         .identifier_at(module.function_handle_at(function_def.function).name)
@@ -263,8 +170,7 @@ pub(crate) trait Package {
                 );
                 let callee_function_name = script.identifier_at(callee_handle.name).to_owned();
 
-                graph_module.add_call_from_script(script_name.clone(), callee_module_id.clone());
-                graph_function.add_call_from_script(
+                graph.add_call_from_script(
                     script_name.clone(),
                     callee_module_id,
                     callee_function_name,
@@ -300,9 +206,7 @@ pub(crate) trait Package {
                         let callee_function_name =
                             module.identifier_at(callee_handle.name).to_owned();
 
-                        graph_module
-                            .add_call_from_module(module.self_id(), callee_module_id.clone());
-                        graph_function.add_call_from_function(
+                        graph.add_call_from_function(
                             module.self_id(),
                             function_name.to_owned(),
                             callee_module_id,
@@ -313,11 +217,8 @@ pub(crate) trait Package {
             }
         }
 
-        // remove redudant nodes
-        graph_module.prune();
-        graph_function.prune();
-
-        // return both dependency graphs
-        (graph_module, graph_function)
+        // remove redundant nodes before returning it
+        graph.prune();
+        graph
     }
 }

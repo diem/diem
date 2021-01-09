@@ -68,13 +68,10 @@ impl PackageStdlib {
     }
 
     pub fn run(&self, workdir: &Path) -> Result<()> {
-        let (graph_module, graph_function) = self.build_dep_graph();
+        let graph = self.build_viz_graph();
 
-        let mut file_module = File::create(workdir.join("dep-module.dot"))?;
-        file_module.write_all(graph_module.to_dot().as_bytes())?;
-
-        let mut file_function = File::create(workdir.join("dep-function.dot"))?;
-        file_function.write_all(graph_function.to_dot().as_bytes())?;
+        let mut file_graph = File::create(workdir.join("graph.dot"))?;
+        file_graph.write_all(graph.to_dot().as_bytes())?;
 
         Ok(())
     }
