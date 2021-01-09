@@ -11,5 +11,5 @@ pub use admin_script_builder::{
     encode_custom_script, encode_halt_network_payload, encode_remove_validators_payload,
 };
 
-pub use release::create_release_writeset;
+pub use release::{create_release_writeset, verify_payload_change};
 pub use writeset_builder::{build_changeset, build_stdlib_upgrade_changeset, GenesisSession};

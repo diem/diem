@@ -6,7 +6,7 @@ use diem_types::{account_address::AccountAddress, transaction::Transaction};
 use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
 use diem_writeset_generator::{
     create_release_writeset, encode_custom_script, encode_halt_network_payload,
-    encode_remove_validators_payload,
+    encode_remove_validators_payload, verify_payload_change,
 };
 use std::path::PathBuf;
 use stdlib::build_stdlib;
@@ -72,7 +72,9 @@ fn main() -> Result<()> {
             let remote = JsonRpcDebuggerInterface::new(url.as_str())?;
             let remote_modules = remote.get_diem_framework_modules_by_version(version)?;
             let local_modules = build_stdlib().into_iter().map(|(_, m)| m).collect();
-            create_release_writeset(remote_modules, local_modules)?
+            let payload = create_release_writeset(remote_modules, local_modules)?;
+            verify_payload_change(&remote, Some(version), &payload)?;
+            payload
         }
     };
     if opt.output_payload {

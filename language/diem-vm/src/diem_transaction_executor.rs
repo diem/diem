@@ -458,7 +458,7 @@ impl DiemVM {
 
     fn process_writeset_transaction(
         &mut self,
-        remote_cache: &mut StateViewCache<'_>,
+        remote_cache: &StateViewCache<'_>,
         txn: SignatureCheckedTransaction,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
@@ -472,35 +472,46 @@ impl DiemVM {
         if let Err(e) = validate_signature_checked_transaction(&self.0, &txn, remote_cache, false) {
             return Ok(discard_error_vm_status(e));
         };
-
-        let change_set = match txn.payload() {
-            TransactionPayload::WriteSet(writeset_payload) => {
-                match self.execute_writeset(
-                    remote_cache,
-                    writeset_payload,
-                    Some(txn.sender()),
-                    log_context,
-                ) {
-                    Ok(change_set) => change_set,
-                    Err(e) => return e,
+        self.execute_writeset_transaction(
+            remote_cache,
+            match txn.payload() {
+                TransactionPayload::WriteSet(writeset_payload) => writeset_payload,
+                TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
+                    log_context.alert();
+                    error!(*log_context, "[diem_vm] UNREACHABLE");
+                    return Ok(discard_error_vm_status(VMStatus::Error(
+                        StatusCode::UNREACHABLE,
+                    )));
                 }
-            }
-            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
-                log_context.alert();
-                error!(*log_context, "[diem_vm] UNREACHABLE");
-                return Ok(discard_error_vm_status(VMStatus::Error(
-                    StatusCode::UNREACHABLE,
-                )));
-            }
+            },
+            TransactionMetadata::new(&txn),
+            log_context,
+        )
+    }
+
+    pub fn execute_writeset_transaction(
+        &mut self,
+        remote_cache: &StateViewCache<'_>,
+        writeset_payload: &WriteSetPayload,
+        txn_data: TransactionMetadata,
+        log_context: &impl LogContext,
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        let change_set = match self.execute_writeset(
+            remote_cache,
+            writeset_payload,
+            Some(txn_data.sender()),
+            log_context,
+        ) {
+            Ok(change_set) => change_set,
+            Err(e) => return e,
         };
 
         // Run the epilogue function.
         let mut session = self.0.new_session(remote_cache);
-        let txn_data = TransactionMetadata::new(&txn);
         self.0.run_writeset_epilogue(
             &mut session,
             &txn_data,
-            txn.payload().should_trigger_reconfiguration_by_default(),
+            writeset_payload.should_trigger_reconfiguration_by_default(),
             log_context,
         )?;
 
