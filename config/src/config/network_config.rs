@@ -39,8 +39,8 @@ pub const MAX_FULLNODE_OUTBOUND_CONNECTIONS: usize = 3;
 pub const MAX_INBOUND_CONNECTIONS: usize = 100;
 pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024; /* 8 MiB */
 pub const CONNECTION_BACKOFF_BASE: u64 = 2;
-pub const INBOUND_IP_BYTE_BUCKET_RATE: usize = MAX_FRAME_SIZE;
-pub const INBOUND_IP_BYTE_BUCKET_SIZE: usize = INBOUND_IP_BYTE_BUCKET_RATE;
+pub const IP_BYTE_BUCKET_RATE: usize = 102400 /* 100 KiB */;
+pub const IP_BYTE_BUCKET_SIZE: usize = IP_BYTE_BUCKET_RATE;
 
 pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
@@ -321,8 +321,8 @@ pub struct RateLimitConfig {
 impl Default for RateLimitConfig {
     fn default() -> Self {
         Self {
-            ip_byte_bucket_rate: INBOUND_IP_BYTE_BUCKET_RATE,
-            ip_byte_bucket_size: INBOUND_IP_BYTE_BUCKET_SIZE,
+            ip_byte_bucket_rate: IP_BYTE_BUCKET_RATE,
+            ip_byte_bucket_size: IP_BYTE_BUCKET_SIZE,
             initial_bucket_fill_percentage: 25,
             enabled: true,
         }
