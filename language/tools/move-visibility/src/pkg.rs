@@ -4,8 +4,12 @@
 use petgraph::{
     dot::Dot,
     graph::{Graph, NodeIndex},
+    Direction,
 };
-use std::{collections::BTreeMap, fmt};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use vm::{
@@ -117,6 +121,75 @@ impl VizGraph {
                     VizNode::Function(_, _) => "shape=box".to_string(),
                 }
             })
+        )
+    }
+
+    pub fn friends(
+        &self,
+    ) -> (
+        BTreeMap<ModuleId, BTreeSet<ModuleId>>,               // m2m
+        BTreeMap<ModuleId, BTreeSet<(ModuleId, Identifier)>>, // m2f
+        BTreeMap<(ModuleId, Identifier), BTreeSet<ModuleId>>, // f2m
+        BTreeMap<(ModuleId, Identifier), BTreeSet<(ModuleId, Identifier)>>, // f2f
+        BTreeMap<(ModuleId, Identifier), BTreeSet<String>>,   // script funs
+    ) {
+        let mut result_m2m = BTreeMap::new();
+        let mut result_m2f = BTreeMap::new();
+        let mut result_f2m = BTreeMap::new();
+        let mut result_f2f = BTreeMap::new();
+        let mut result_script_funs = BTreeMap::new();
+
+        for index in self.graph.node_indices() {
+            let node = self.graph.node_weight(index).unwrap();
+            match node {
+                VizNode::Function(module_id, function_name) => {
+                    let fl_m2m = result_m2m
+                        .entry(module_id.clone())
+                        .or_insert_with(BTreeSet::new);
+                    let fl_m2f = result_m2f
+                        .entry(module_id.clone())
+                        .or_insert_with(BTreeSet::new);
+                    let fl_f2m = result_f2m
+                        .entry((module_id.clone(), function_name.clone()))
+                        .or_insert_with(BTreeSet::new);
+                    let fl_f2f = result_f2f
+                        .entry((module_id.clone(), function_name.clone()))
+                        .or_insert_with(BTreeSet::new);
+                    let fl_script = result_script_funs
+                        .entry((module_id.clone(), function_name.clone()))
+                        .or_insert_with(BTreeSet::new);
+
+                    for incoming in self.graph.neighbors_directed(index, Direction::Incoming) {
+                        let caller = self.graph.node_weight(incoming).unwrap();
+                        match caller {
+                            VizNode::Function(caller_module_id, caller_function_name) => {
+                                fl_m2m.insert(caller_module_id.clone());
+                                fl_m2f.insert((
+                                    caller_module_id.clone(),
+                                    caller_function_name.clone(),
+                                ));
+                                fl_f2m.insert(caller_module_id.clone());
+                                fl_f2f.insert((
+                                    caller_module_id.clone(),
+                                    caller_function_name.clone(),
+                                ));
+                            }
+                            VizNode::Script(caller_script_name) => {
+                                fl_script.insert(caller_script_name.clone());
+                            }
+                        }
+                    }
+                }
+                VizNode::Script(_) => {}
+            }
+        }
+
+        (
+            result_m2m,
+            result_m2f,
+            result_f2m,
+            result_f2f,
+            result_script_funs,
         )
     }
 }
