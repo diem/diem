@@ -1,4 +1,4 @@
-#while using circle we'll use circle's base image.
+# while using circle we'll use circle's base image.
 FROM cimg/base:2020.12@sha256:a9adc0fb9b3d2440961a8042c5b03a387b3a0d6e2ab9e73ce20bff1ae84d64be  AS setup_ci
 
 WORKDIR /diem
@@ -6,7 +6,7 @@ COPY rust-toolchain /diem/rust-toolchain
 COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
-#Batch mode and all operations tooling
+# Batch mode and all operations tooling
 RUN scripts/dev_setup.sh -t -o -b -p -y
 USER root
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -15,8 +15,8 @@ ENV PATH "/home/circleci/.cargo/bin:$PATH"
 
 FROM setup_ci as tested_ci
 
-#Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
-#Test that all commands we need are installed and on the PATH
+# Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
+# Test that all commands we need are installed and on the PATH
 RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v hadolint)" ] \
     && [ -x "$(command -v vault)" ] \
@@ -33,7 +33,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
 
-#should be a no-op
+# should be a no-op
 # sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.
 RUN scripts/dev_setup.sh -b -p
 

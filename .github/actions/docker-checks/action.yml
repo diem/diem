@@ -1,0 +1,34 @@
+name: "Verify Debian Docker Images Have SHAs"
+description: "Verify Debian Docker Images Have SHAs"
+inputs:
+  username:
+    description: "Dockerhub Username"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: check debian images have sha tags.
+      shell: bash
+      run: |
+        # We are using debian for our base images.   Get all debain tags in FROM lines, strip the "AS .*" part
+        ALL_DEBIAN_TAGS=$(grep --include=\*Dockerfile -r '.' -e 'FROM debian:' | sed 's/[ ]*[a|A][s|S] .*$//g')
+        while IFS= read -r line ; do
+          # if the line does not end in a git tag, echo the line and mark the build as bad.
+          if [[ ! $line =~ '@sha256:' ]]; then
+            echo "Give this docker image FROM line a sha256 in it's tag.   Failing the build."
+            echo "$line";
+            SHOULD_FAIL="true";
+          else
+            echo checked "$line"
+          fi
+        done <<< "$ALL_DEBIAN_TAGS"
+        if [[ "$SHOULD_FAIL" == "true" ]]; then
+          exit 1
+        fi
+    - name: Hadolint Docker Images.
+      shell: bash
+      run: |
+        hadolint docker/ci/github/Dockerfile && \
+        hadolint docker/ci/arch/Dockerfile && \
+        hadolint docker/ci/alpine/Dockerfile && \
+        hadolint docker/ci/centos/Dockerfile
