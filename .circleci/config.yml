@@ -379,56 +379,6 @@ jobs:
             echo $CARGO $CARGOFLAGS fetch
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
-  lint:
-    working_directory: *working_directory
-    executor: docker-xlarge-executor
-    description: Run Rust linting tools.
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: cargo lint
-          command: cargo x lint
-      - run:
-          name: cargo clippy
-          command: cargo xclippy --workspace --all-targets
-      - run:
-          name: cargo clippy tcb
-          command: cargo xclippy --members lec --members lsr --members key-manager
-      - run:
-          name: cargo fmt
-          command: cargo xfmt --check
-      - run:
-          name: shell lints
-          command: |
-            shellcheck scripts/dev_setup.sh && \
-            shellcheck scripts/dockerhub_prune.sh && \
-            shellcheck .circleci/get_pr_info.sh && \
-            shellcheck docker/build_push.sh && \
-            shellcheck docker/dockerhub_to_novi_ecr.sh
-      - run:
-          name: docker lints
-          command: |
-            hadolint docker/ci/circleci/Dockerfile && \
-            hadolint docker/ci/arch/Dockerfile && \
-            hadolint docker/ci/alpine/Dockerfile && \
-            hadolint docker/ci/centos/Dockerfile
-  build-dev:
-    working_directory: *working_directory
-    executor: docker-xlarge-executor
-    description: Development Build
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 16 --members production
-      - run:
-          command: RUST_BACKTRACE=1 cargo xcheck -j 8 --workspace --all-targets
-      - run:
-          command: |
-            rustup target add powerpc-unknown-linux-gnu
-            RUST_BACKTRACE=1 cargo xcheck -j 8 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
-      - build_teardown
   run-e2e-test:
     working_directory: *working_directory
     executor: docker-xlarge-executor
@@ -496,106 +446,6 @@ jobs:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
           webhook: "${WEBHOOK_FLAKY_TESTS}"
-  run-unit-test:
-    working_directory: *working_directory
-    executor: vm-xlarge-executor
-    description: Run affected unit tests, excluding E2E and flaky tests that are
-      explicitly ignored.
-    steps:
-      - vm_build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Run affected unit tests
-          command: |
-            eval $(.circleci/get_pr_info.sh -b)
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit --changed-since "origin/$TARGET_BRANCH"
-  run-crypto-unit-test:
-    working_directory: *working_directory
-    executor: docker-medium-executor
-    description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Run crypto unit tests
-          command: |
-            cd crypto/crypto && \
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test \
-              --features='vanilla-u64' \
-              --no-default-features && \
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test \
-              --features='vanilla-u32' \
-              --no-default-features
-  build-benchmark:
-    working_directory: *working_directory
-    executor: vm-xlarge-executor
-    description: Compile (but don't run) the benchmarks, to insulate against bit rot
-    steps:
-      - vm_build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Build benchmark targets without running
-          command: |
-            RUST_BACKTRACE=1 cargo x bench \
-              --no-run
-  run-flaky-unit-test:
-    working_directory: *working_directory
-    executor: test-executor
-    description: Run a list of known flaky tests.
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Run flaky tests
-          command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT \
-            ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
-  audit:
-    working_directory: *working_directory
-    executor: docker-medium-executor
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Install Cargo Audit
-          command: |
-            cargo install --force cargo-audit
-      - run:
-          # NOTE ignored advisory rules
-          # RUSTSEC-2018-0015 - term
-          # RUSTSEC-2019-0031 - spin
-          name: Audit crates
-          command: |
-            $CARGO $CARGOFLAGS audit --deny-warnings \
-              --ignore RUSTSEC-2018-0015 \
-              --ignore RUSTSEC-2019-0031 \
-              --ignore RUSTSEC-2020-0016
-      - build_teardown
-  lint-docker:
-    working_directory: *working_directory
-    executor: docker-medium-executor
-    description: Lint changed Dockerfiles
-    steps:
-      - run:
-          command: |
-            sudo mkdir -p /opt/cargo/
-            sudo chown circleci /opt/cargo/
-            sudo mkdir -p /opt/git/
-            sudo chown circleci /opt/git/
-          working_directory: ~/project
-      - checkout:
-          path: *working_directory
-      - run:
-          name: Lint DockerFile changes
-          command: |
-            eval $(.circleci/get_pr_info.sh -b)
-            if  [[ -n "$BASE_GITHASH" ]] && [[ -n "$CHANGED_FILE_OUTPUTFILE" ]]; then
-              CHANGED_DOCKER_FILE_LIST=$( (grep Dockerfile $CHANGED_FILE_OUTPUTFILE || true) | tr '\n' ' ' )
-              if [[ -n "$CHANGED_DOCKER_FILE_LIST" ]]; then
-                hadolint -c .lintrules/hadolint.yaml "$CHANGED_DOCKER_FILE_LIST" || true
-              fi
-            fi
-      - fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256
   check-breaking-change:
     working_directory: *working_directory
     executor: docker-medium-executor
@@ -662,108 +512,6 @@ jobs:
           fail_only: true
           webhook: "${WEBHOOK_BREAKING_CHANGE}"
           failure_message: ":red_circle: <@channel> breaking change in *${GIT_REV}*"
-  ######################################################################################################
-  # Building docker ci base image if relevant files have changed                                       #
-  # Only if "release" parameter is true, will docker images be pushed to Dockerhub and Novi AWS ECR    #
-  # Dockerhub Image prunning also occurs after a push removing old Dockerhub Images                    #
-  # The "target-image" parameter determines which docker image in to build:                            #
-  #   libra/docker/ci/< target-image >/Dockerfile                                                      #
-  # Only circlci images need to be released, others general should not be and only exist to test the   #
-  # dev_setup.sh script                                                                                #
-  ######################################################################################################
-  docker-ci-build:
-    working_directory: *working_directory
-    executor: vm-large-executor
-    parameters:
-      target-image:
-        description: |
-          The "target-image" parameter determines which docker image in to build:
-          ex: libra/docker/ci/< target-image >/Dockerfile
-        type: enum
-        enum: ["circleci", "alpine", "arch", "centos"]
-      release:
-        description: Should we push to dockerhub/novi aws ecr.
-        type: boolean
-        default: false
-      version:
-        description: |
-          increment this number if you make a backwards breaking change in the dev_setup.sh
-          You must also bump &image at the start of this file.
-        type: integer
-        default: 0
-    steps:
-      - run:
-          command: |
-            sudo mkdir -p /opt/cargo/
-            sudo chown circleci /opt/cargo/
-            sudo mkdir -p /opt/git/
-            sudo chown circleci /opt/git/
-          working_directory: ~/project
-      - checkout:
-          path: *working_directory
-      - run:
-          name: Define relevant files
-          command: |
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/<< parameters.target-image >>/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh -t" >> /tmp/ci_docker_files
-      - halt_if_no_relevant_files_changed_since_last_evaluation:
-          cache_key_part: "dockerbuild"
-          file_of_relevant_git_files: "/tmp/ci_docker_files"
-      - run:
-          name: Build/test << parameters.target-image >>-<< parameters.version >> docker image file
-          command: |
-            docker build -f docker/ci/<< parameters.target-image >>/Dockerfile -t libra/build_environment:<< parameters.target-image >>-<< parameters.version >> .
-      - when:
-          condition: << parameters.release >>
-          steps:
-            - setup_docker_signing
-            - run:
-                name: push libra/build_environment:<< parameters.target-image >>-<< parameters.version >> docker image
-                command: |
-                  #signs the pushed image
-                  docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-<< parameters.version >>
-
-  docker-update-base-images:
-    working_directory: *working_directory
-    executor: vm-medium-executor
-    steps:
-      - run:
-          command: |
-            sudo mkdir -p /opt/cargo/
-            sudo chown circleci /opt/cargo/
-            sudo mkdir -p /opt/git/
-            sudo chown circleci /opt/git/
-          working_directory: ~/project
-      - checkout:
-          path: *working_directory
-      - run:
-          name: Define relevant files
-          command: |
-            grep --include=\*Dockerfile -r '.' -e 'FROM debian:' | sed 's/:.*//g' | sed 's/\.\///g' | sort | uniq > /tmp/ci_docker_files
-      - halt_if_no_relevant_files_changed_since_last_evaluation:
-          cache_key_part: docker_base_image
-          file_of_relevant_git_files: /tmp/ci_docker_files
-      - setup_aws
-      - run:
-          name: Push base images to ecr if needed for cluster test.
-          command: |
-            # We are using debian buster for our base images.   Get all debian tags in a unique sorted list.
-            BUSTER_TAGS=`grep --include=\*Dockerfile -rh '.' -e 'FROM debian:' | sed 's/FROM debian://g' | sed 's/[ ]*[a|A][s|S] .*$//g' | sort | uniq`
-            echo "$BUSTER_TAGS" | while IFS= read -r tag ; do
-              docker pull debian:$tag
-            done
-            #login to docker aws ecr account
-            aws ecr get-login-password --region ${AWS_REGION} | \
-            docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
-            #push all base docker images to aws.
-            set -x
-            echo "$BUSTER_TAGS" | while IFS= read -r tag ; do
-              tag_no_sha=`echo $tag | sed 's/@.*//'`
-              docker tag debian:$tag ${AWS_ECR_ACCOUNT_URL}/library/debian:${tag_no_sha}
-              docker push ${AWS_ECR_ACCOUNT_URL}/library/debian:${tag_no_sha}
-            done
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors.               #
@@ -931,23 +679,12 @@ jobs:
 
 workflows:
   ######################################################################################################################
-  # Once a day when a change lands on master, rebuild the CI base image and code coverage.
-  # Will build the CI base image when relevant files are changed vs on master, on either master or test branches.
+  # Once a day when a change lands on master coverage
   ######################################################################################################################
   latched-publish-workflow:
     jobs:
       - code_coverage:
           context: libra_ci
-          filters:
-            branches:
-              only:
-                - /^test-[\d|.]+$/
-                - master
-      - docker-ci-build:
-          context: docker
-          release: true
-          target-image: circleci
-          version: 2
           filters:
             branches:
               only:
@@ -968,12 +705,6 @@ workflows:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
-      - docker-update-base-images:
-          context: docker
-          filters:
-            branches:
-              only:
-                - master
 
   ######################################################################################################################
   # Updates documentation when code is committed to master, and checks for breaking changes.
@@ -984,9 +715,6 @@ workflows:
           filters:
             branches:
               only: master
-      - lint:
-          requires:
-            - prefetch-crates
       - check-breaking-change:
           requires:
             - prefetch-crates
@@ -998,46 +726,12 @@ workflows:
   ######################################################################################################################
   commit-workflow:
     jobs:
-      - lint-docker:
-          filters: *filter-only-auto-canary
       - prefetch-crates:
           filters: *filter-only-auto-canary
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          context: libra_ci
-          requires:
-            - prefetch-crates
       - run-e2e-test:
           context: libra_ci
           requires:
             - prefetch-crates
-      - run-unit-test:
-          context: libra_ci
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          context: libra_ci
-          requires:
-            - prefetch-crates
-      - build-benchmark:
-          context: libra_ci
-          requires:
-            - prefetch-crates
-      - docker-ci-build:
-          target-image: circleci
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          target-image: centos
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          #sccache fails to execute in alpine.
-          target-image: alpine
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          target-image: arch
-          filters: *filter-only-auto-canary
       - docker-pre-publish:
           context: docker
           filters:
@@ -1046,48 +740,8 @@ workflows:
 
   pull-request-workflow:
     jobs:
-      - lint-docker:
-          filters: *filter-only-prs-dependabot
       - prefetch-crates:
           filters: *filter-only-prs-dependabot
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          requires:
-            - prefetch-crates
       - run-e2e-test:
           requires:
             - prefetch-crates
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-      - build-benchmark:
-          requires:
-            - prefetch-crates
-      - docker-ci-build:
-          target-image: circleci
-          filters: *filter-only-prs-dependabot
-      - docker-ci-build:
-          target-image: centos
-          filters: *filter-only-prs-dependabot
-      - docker-ci-build:
-          #sccache fails to execute in alpine.
-          target-image: alpine
-          filters: *filter-only-prs-dependabot
-      - docker-ci-build:
-          target-image: arch
-          filters: *filter-only-prs-dependabot
-
-  scheduled-workflow:
-    triggers:
-      - schedule:
-          cron: "14 14 * * *"
-          filters:
-            branches:
-              only: master
-    jobs:
-      - audit
