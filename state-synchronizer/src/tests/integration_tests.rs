@@ -12,7 +12,7 @@ use crate::{
 use anyhow::{bail, Result};
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::RoleType,
+    config::{NodeConfig, RoleType},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_crypto::x25519;
@@ -51,24 +51,28 @@ use std::{
 };
 use tokio::runtime::Runtime;
 
+struct SynchronizerPeer {
+    client: Option<StateSynchronizerClient>,
+    mempool: Option<MockSharedMempool>,
+    multi_peer_ids: Option<Vec<PeerId>>, // Holds the peer's PeerIds, to support nodes with multiple network IDs.
+    network_addr: NetworkAddress,
+    network_key: x25519::PrivateKey,
+    peer_id: PeerId,
+    public_key: ValidatorInfo,
+    signer: ValidatorSigner,
+    storage_proxy: Option<Arc<RwLock<MockStorage>>>,
+    synchronizer: Option<StateSynchronizer>,
+}
+
 struct SynchronizerEnv {
-    runtime: Runtime,
-    synchronizers: Vec<StateSynchronizer>,
-    clients: Vec<StateSynchronizerClient>,
-    storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
-    signers: Vec<ValidatorSigner>,
-    network_keys: Vec<x25519::PrivateKey>,
-    network_addrs: Vec<NetworkAddress>,
-    public_keys: Vec<ValidatorInfo>,
+    network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     network_id: NetworkId,
-    peer_ids: Vec<PeerId>,
-    mempools: Vec<MockSharedMempool>,
-    network_reqs_rxs:
-        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
     network_notifs_txs:
         HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
-    multi_peer_ids: Vec<Vec<PeerId>>, // maps peer's synchronizer env index to that peer's PeerIds, to support node with multiple network IDs
+    network_reqs_rxs:
+        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
+    peers: Vec<SynchronizerPeer>,
+    runtime: Runtime,
 }
 
 impl SynchronizerEnv {
@@ -76,61 +80,74 @@ impl SynchronizerEnv {
     // their new signers: they're going to learn about the new epoch public key through state
     // synchronization, but private keys are discovered separately.
     pub fn move_to_next_epoch(&self) {
-        let num_peers = self.public_keys.len();
+        let num_peers = self.peers.len();
         let (signers, _verifier) = random_validator_verifier(num_peers, None, true);
         let new_keys = self
-            .public_keys
+            .peers
             .iter()
             .enumerate()
-            .map(|(idx, validator_keys)| {
+            .map(|(idx, peer)| {
                 ValidatorInfo::new(
                     signers[idx].author(),
-                    validator_keys.consensus_voting_power(),
-                    validator_keys.config().clone(),
+                    peer.public_key.consensus_voting_power(),
+                    peer.public_key.config().clone(),
                 )
             })
             .collect::<Vec<ValidatorInfo>>();
         let validator_set = ValidatorSet::new(new_keys);
-        self.storage_proxies[0]
+        self.peers[0]
+            .storage_proxy
+            .as_ref()
+            .unwrap()
             .write()
             .move_to_next_epoch(signers[0].clone(), validator_set);
     }
 
     fn new(num_peers: usize) -> Self {
         ::diem_logger::Logger::init_for_testing();
-        let runtime = Runtime::new().unwrap();
+
         let (signers, public_keys, network_keys, network_addrs) =
             SynchronizerEnvHelper::initial_setup(num_peers);
-        let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
+
+        let mut peers = vec![];
+        for peer_index in 0..num_peers {
+            let peer = SynchronizerPeer {
+                client: None,
+                mempool: None,
+                multi_peer_ids: None,
+                network_addr: network_addrs[peer_index].clone(),
+                network_key: network_keys[peer_index].clone(),
+                peer_id: signers[peer_index].author(),
+                public_key: public_keys[peer_index].clone(),
+                signer: signers[peer_index].clone(),
+                storage_proxy: None,
+                synchronizer: None,
+            };
+            peers.push(peer);
+        }
 
         Self {
-            runtime,
-            synchronizers: vec![],
-            clients: vec![],
-            storage_proxies: vec![],
-            signers,
-            network_id: NetworkId::Validator,
-            network_keys,
-            network_addrs,
-            public_keys,
-            peer_ids,
-            mempools: vec![],
-            network_reqs_rxs: HashMap::new(),
-            network_notifs_txs: HashMap::new(),
             network_conn_event_notifs_txs: HashMap::new(),
-            multi_peer_ids: vec![],
+            network_id: NetworkId::Validator,
+            network_notifs_txs: HashMap::new(),
+            network_reqs_rxs: HashMap::new(),
+            peers,
+            runtime: Runtime::new().unwrap(),
         }
     }
 
-    fn start_next_synchronizer(
+    // Sets up and starts the synchronizer at the given node index.
+    fn start_synchronizer_peer(
         &mut self,
+        index: usize,
         handler: MockRpcHandler,
         role: RoleType,
         waypoint: Waypoint,
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
     ) {
-        self.setup_next_synchronizer(
+        self.setup_synchronizer_peer(
+            index,
             handler,
             role,
             waypoint,
@@ -141,8 +158,9 @@ impl SynchronizerEnv {
         );
     }
 
-    fn setup_next_synchronizer(
+    fn setup_synchronizer_peer(
         &mut self,
+        index: usize,
         handler: MockRpcHandler,
         role: RoleType,
         waypoint: Waypoint,
@@ -151,34 +169,54 @@ impl SynchronizerEnv {
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
     ) {
-        let new_peer_idx = self.synchronizers.len();
+        let (config, network_id) = SynchronizerEnv::setup_state_sync_config(
+            index,
+            role,
+            timeout_ms,
+            multicast_timeout_ms,
+            &upstream_networks,
+        );
+        let network_handles = self.setup_network_handles(index, &role, mock_network, network_id);
 
-        // set up config
-        let mut config = diem_config::config::NodeConfig::default_for_validator();
-        config.base.role = role;
-        config.state_sync.sync_request_timeout_ms = timeout_ms;
-        config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
-        // Too many tests expect this, so we overwrite the value
-        config.state_sync.chunk_limit = 250;
+        let validators: Vec<ValidatorInfo> = self
+            .peers
+            .iter()
+            .map(|peer| peer.public_key.clone())
+            .collect();
+        let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
+            SynchronizerEnvHelper::genesis_li(&validators),
+            self.peers[index].signer.clone(),
+        )));
 
-        let network = config.validator_network.unwrap();
-        let network_id = if role.is_validator() {
-            NetworkId::Validator
-        } else {
-            NetworkId::vfn_network()
-        };
-        if !role.is_validator() {
-            config.full_node_networks = vec![network];
-            config.validator_network = None;
-            // setup upstream network for FN
-            if let Some(upstream_networks) = &upstream_networks {
-                config.upstream.networks = upstream_networks.clone();
-            } else if new_peer_idx > 0 {
-                config.upstream.networks.push(network_id.clone());
-            }
-        }
+        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
+        let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
+            Runtime::new().unwrap(),
+            network_handles,
+            mempool_channel,
+            role,
+            waypoint,
+            &config.state_sync,
+            config.upstream,
+            MockExecutorProxy::new(handler, storage_proxy.clone()),
+        );
 
-        // setup network
+        self.peers[index].client = Some(synchronizer.create_client());
+        self.peers[index].mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
+        self.peers[index].synchronizer = Some(synchronizer);
+        self.peers[index].storage_proxy = Some(storage_proxy);
+    }
+
+    fn setup_network_handles(
+        &mut self,
+        index: usize,
+        role: &RoleType,
+        mock_network: bool,
+        network_id: NetworkId,
+    ) -> Vec<(
+        NodeNetworkId,
+        StateSynchronizerSender,
+        StateSynchronizerEvents,
+    )> {
         let mut network_handles = vec![];
         if mock_network {
             let networks = if role.is_validator() {
@@ -220,27 +258,25 @@ impl SynchronizerEnv {
                     network_events,
                 ));
             }
-
-            self.multi_peer_ids.push(network_ids);
+            self.peers[index].multi_peer_ids = Some(network_ids);
         } else {
-            let auth_mode = AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
+            let auth_mode = AuthenticationMode::Mutual(self.peers[index].network_key.clone());
             let network_context = Arc::new(NetworkContext::new(
                 self.network_id.clone(),
                 RoleType::Validator,
-                self.peer_ids[new_peer_idx],
+                self.peers[index].peer_id,
             ));
 
             let seed_addrs: HashMap<_, _> = self
-                .network_addrs
+                .peers
                 .iter()
-                .enumerate()
-                .map(|(idx, addr)| (self.peer_ids[idx], vec![addr.clone()]))
+                .map(|peer| (peer.peer_id, vec![peer.network_addr.clone()]))
                 .collect();
             let seed_pubkeys = HashMap::new();
             let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
             // Recover the base address we bound previously.
-            let addr_protos = self.network_addrs[new_peer_idx].as_slice();
+            let addr_protos = self.peers[index].network_addr.as_slice();
             let (port, _suffix) = parse_memory(addr_protos).unwrap();
             let base_addr = NetworkAddress::from(Protocol::Memory(port));
 
@@ -259,29 +295,42 @@ impl SynchronizerEnv {
             network_builder.build(self.runtime.handle().clone()).start();
             network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
         };
+        network_handles
+    }
 
-        let genesis_li = SynchronizerEnvHelper::genesis_li(&self.public_keys);
-        let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
-            genesis_li,
-            self.signers[new_peer_idx].clone(),
-        )));
-        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
-        let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
-            Runtime::new().unwrap(),
-            network_handles,
-            mempool_channel,
-            role,
-            waypoint,
-            &config.state_sync,
-            config.upstream,
-            MockExecutorProxy::new(handler, storage_proxy.clone()),
-        );
-        self.mempools
-            .push(MockSharedMempool::new(Some(mempool_requests)));
-        let client = synchronizer.create_client();
-        self.synchronizers.push(synchronizer);
-        self.clients.push(client);
-        self.storage_proxies.push(storage_proxy);
+    fn setup_state_sync_config(
+        index: usize,
+        role: RoleType,
+        timeout_ms: u64,
+        multicast_timeout_ms: u64,
+        upstream_networks: &Option<Vec<NetworkId>>,
+    ) -> (NodeConfig, NetworkId) {
+        let mut config = diem_config::config::NodeConfig::default_for_validator();
+        config.base.role = role;
+        config.state_sync.sync_request_timeout_ms = timeout_ms;
+        config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
+
+        // Too many tests expect this, so we overwrite the value
+        config.state_sync.chunk_limit = 250;
+
+        let network_id = if role.is_validator() {
+            NetworkId::Validator
+        } else {
+            NetworkId::vfn_network()
+        };
+
+        if !role.is_validator() {
+            config.full_node_networks = vec![config.validator_network.unwrap()];
+            config.validator_network = None;
+            // setup upstream network for FN
+            if let Some(upstream_networks) = upstream_networks {
+                config.upstream.networks = upstream_networks.clone();
+            } else if index > 0 {
+                config.upstream.networks.push(network_id.clone());
+            }
+        }
+
+        (config, network_id)
     }
 
     fn default_handler() -> MockRpcHandler {
@@ -289,33 +338,53 @@ impl SynchronizerEnv {
     }
 
     fn sync_to(&self, peer_id: usize, target: LedgerInfoWithSignatures) {
-        block_on(self.clients[peer_id].sync_to(target)).unwrap()
+        block_on(self.peers[peer_id].client.as_ref().unwrap().sync_to(target)).unwrap()
     }
 
     // commit new txns up to the given version
     fn commit(&self, peer_id: usize, version: u64) {
-        let mut storage = self.storage_proxies[peer_id].write();
+        let mut storage = self.peers[peer_id].storage_proxy.as_ref().unwrap().write();
         let num_txns = version - storage.version();
         assert!(num_txns > 0);
+
         let (committed_txns, signed_txns) = storage.commit_new_txns(num_txns);
         drop(storage);
-        // add txns to mempool
-        assert!(self.mempools[peer_id].add_txns(signed_txns.clone()).is_ok());
+        assert!(self.peers[peer_id]
+            .mempool
+            .as_ref()
+            .unwrap()
+            .add_txns(signed_txns.clone())
+            .is_ok());
 
         // we need to run StateSyncClient::commit on a tokio runtime to support tokio::timeout
         // in commit()
         assert!(Runtime::new()
             .unwrap()
-            .block_on(self.clients[peer_id].commit(committed_txns, vec![]))
+            .block_on(
+                self.peers[peer_id]
+                    .client
+                    .as_ref()
+                    .unwrap()
+                    .commit(committed_txns, vec![])
+            )
             .is_ok());
-        let mempool_txns = self.mempools[peer_id].read_timeline(0, signed_txns.len());
+        let mempool_txns = self.peers[peer_id]
+            .mempool
+            .as_ref()
+            .unwrap()
+            .read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {
             assert!(!mempool_txns.contains(txn));
         }
     }
 
     fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {
-        self.storage_proxies[peer_id].read().highest_local_li()
+        self.peers[peer_id]
+            .storage_proxy
+            .as_ref()
+            .unwrap()
+            .read()
+            .highest_local_li()
     }
 
     // Find LedgerInfo for a epoch boundary version
@@ -324,7 +393,10 @@ impl SynchronizerEnv {
         peer_id: usize,
         version: u64,
     ) -> Result<LedgerInfoWithSignatures> {
-        self.storage_proxies[peer_id]
+        self.peers[peer_id]
+            .storage_proxy
+            .as_ref()
+            .unwrap()
             .read()
             .get_epoch_ending_ledger_info(version)
     }
@@ -337,7 +409,7 @@ impl SynchronizerEnv {
     ) -> bool {
         let max_retries = 30;
         for _ in 0..max_retries {
-            let state = block_on(self.clients[peer_id].get_state()).unwrap();
+            let state = block_on(self.peers[peer_id].client.as_ref().unwrap().get_state()).unwrap();
             if state.synced_version() == target_version {
                 return highest_li_version
                     .map_or(true, |li_version| li_version == state.committed_version());
@@ -348,7 +420,13 @@ impl SynchronizerEnv {
     }
 
     fn wait_until_initialized(&self, peer_id: usize) -> Result<()> {
-        block_on(self.synchronizers[peer_id].wait_until_initialized())
+        block_on(
+            self.peers[peer_id]
+                .synchronizer
+                .as_ref()
+                .unwrap()
+                .wait_until_initialized(),
+        )
     }
 
     fn send_connection_event(
@@ -394,30 +472,29 @@ impl SynchronizerEnv {
         assert!(network_reqs_rx.select_next_some().now_or_never().is_none());
     }
 
-    fn get_peer_network_id(&mut self, peer: (usize, usize)) -> PeerId {
-        *self
-            .multi_peer_ids
-            .get(peer.0)
-            .expect("env idx out of range for peer")
-            .get(peer.1)
-            .expect("network idx out of range for peer")
+    fn get_peer_network_id(&mut self, peer_indices: (usize, usize)) -> PeerId {
+        let peer = &self.peers[peer_indices.0];
+        peer.multi_peer_ids.as_ref().unwrap()[peer_indices.1]
     }
 
     fn get_env_idx(&self, peer_id: &PeerId) -> usize {
-        for (idx, peer_ids) in self.multi_peer_ids.iter().enumerate() {
-            if peer_ids.contains(peer_id) {
-                return idx;
+        for (index, peer) in self.peers.iter().enumerate() {
+            if peer.multi_peer_ids.as_ref().unwrap().contains(peer_id) {
+                return index;
             }
         }
         panic!("could not find env index for peer");
     }
 
     fn clone_storage(&mut self, from_idx: usize, to_idx: usize) {
-        let storage_0_lock = self.storage_proxies[from_idx].read();
-        let storage_0 = storage_0_lock;
-        let mut storage_1_lock = self.storage_proxies[to_idx].write();
-        let storage_1 = storage_1_lock.deref_mut();
-        *storage_1 = storage_0.clone();
+        let storage_0 = self.peers[from_idx].storage_proxy.as_ref().unwrap();
+        let storage_read = storage_0.read();
+
+        let storage_1 = self.peers[to_idx].storage_proxy.as_ref().unwrap();
+        let mut storage_write = storage_1.write();
+        let storage_write = storage_write.deref_mut();
+
+        *storage_write = storage_read.clone();
     }
 
     fn send_peer_event(
@@ -479,8 +556,9 @@ fn check_chunk_response(
 }
 
 // Starts a new state sync with the validator role.
-fn start_default_validator(env: &mut SynchronizerEnv) {
-    env.start_next_synchronizer(
+fn start_default_validator(peer_index: usize, env: &mut SynchronizerEnv) {
+    env.start_synchronizer_peer(
+        peer_index,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -490,8 +568,9 @@ fn start_default_validator(env: &mut SynchronizerEnv) {
 }
 
 // Starts a new state sync with the fullnode role.
-fn start_default_fullnode(env: &mut SynchronizerEnv) {
-    env.start_next_synchronizer(
+fn start_default_fullnode(peer_index: usize, env: &mut SynchronizerEnv) {
+    env.start_synchronizer_peer(
+        peer_index,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -505,8 +584,8 @@ fn test_basic_catch_up() {
     let num_peers = 2;
     let mut env = SynchronizerEnv::new(num_peers);
 
-    for _ in 0..num_peers {
-        start_default_validator(&mut env);
+    for index in 0..num_peers {
+        start_default_validator(index, &mut env);
     }
 
     // Test small sequential syncs, batch sync for multiple transactions and
@@ -525,7 +604,7 @@ fn test_basic_catch_up() {
 fn test_flaky_peer_sync() {
     let mut env = SynchronizerEnv::new(2);
 
-    start_default_validator(&mut env);
+    start_default_validator(0, &mut env);
 
     // Create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
@@ -538,7 +617,8 @@ fn test_flaky_peer_sync() {
             Ok(resp)
         }
     });
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        1,
         handler,
         RoleType::Validator,
         Waypoint::default(),
@@ -559,7 +639,8 @@ fn test_request_timeout() {
 
     let handler =
         Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        0,
         handler,
         RoleType::Validator,
         Waypoint::default(),
@@ -567,7 +648,8 @@ fn test_request_timeout() {
         None,
     );
 
-    env.setup_next_synchronizer(
+    env.setup_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -585,8 +667,8 @@ fn test_request_timeout() {
 fn test_full_node() {
     let mut env = SynchronizerEnv::new(2);
 
-    start_default_validator(&mut env);
-    start_default_fullnode(&mut env);
+    start_default_validator(0, &mut env);
+    start_default_fullnode(1, &mut env);
 
     env.commit(0, 10);
     // first sync should be fulfilled immediately after peer discovery
@@ -603,8 +685,8 @@ fn catch_up_through_epochs_validators() {
     let num_peers = 2;
     let mut env = SynchronizerEnv::new(num_peers);
 
-    for _ in 0..num_peers {
-        start_default_validator(&mut env);
+    for index in 0..num_peers {
+        start_default_validator(index, &mut env);
     }
 
     // catch up to the next epoch starting from the middle of the current one
@@ -632,7 +714,7 @@ fn catch_up_through_epochs_validators() {
 fn catch_up_through_epochs_full_node() {
     let mut env = SynchronizerEnv::new(3);
 
-    start_default_validator(&mut env);
+    start_default_validator(0, &mut env);
 
     // catch up through multiple epochs
     for epoch in 1..10 {
@@ -641,12 +723,12 @@ fn catch_up_through_epochs_full_node() {
     }
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
-    start_default_fullnode(&mut env);
+    start_default_fullnode(1, &mut env);
     assert!(env.wait_for_version(1, 950, None));
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    start_default_fullnode(&mut env);
+    start_default_fullnode(2, &mut env);
     assert!(env.wait_for_version(2, 950, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
 }
@@ -655,7 +737,7 @@ fn catch_up_through_epochs_full_node() {
 fn catch_up_with_waypoints() {
     let mut env = SynchronizerEnv::new(3);
 
-    start_default_validator(&mut env);
+    start_default_validator(0, &mut env);
 
     let mut curr_version = 0;
     for _two_epochs in 1..10 {
@@ -674,7 +756,8 @@ fn catch_up_with_waypoints() {
     let waypoint_li = env.get_epoch_ending_ledger_info(0, 3500).unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         waypoint,
@@ -690,7 +773,7 @@ fn catch_up_with_waypoints() {
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 19);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    start_default_fullnode(&mut env);
+    start_default_fullnode(2, &mut env);
     assert!(env.wait_for_version(2, 5250, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 19);
 }
@@ -699,7 +782,8 @@ fn catch_up_with_waypoints() {
 fn test_lagging_upstream_long_poll() {
     let mut env = SynchronizerEnv::new(4);
 
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        0,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -707,7 +791,8 @@ fn test_lagging_upstream_long_poll() {
         None,
     );
 
-    env.setup_next_synchronizer(
+    env.setup_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -717,7 +802,8 @@ fn test_lagging_upstream_long_poll() {
         Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
     );
 
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        2,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -727,7 +813,8 @@ fn test_lagging_upstream_long_poll() {
 
     // we treat this a standalone node whose local state we use as the baseline
     // to clone state to the other nodes
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        3,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -828,7 +915,8 @@ fn test_lagging_upstream_long_poll() {
 fn test_sync_pending_ledger_infos() {
     let mut env = SynchronizerEnv::new(2);
 
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        0,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -836,7 +924,8 @@ fn test_sync_pending_ledger_infos() {
         None,
     );
 
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -905,14 +994,16 @@ fn test_sync_pending_ledger_infos() {
 #[ignore] // TODO: https://github.com/diem/diem/issues/5771
 fn test_fn_failover() {
     let mut env = SynchronizerEnv::new(5);
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        0,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
         true,
         None,
     );
-    env.setup_next_synchronizer(
+    env.setup_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -923,8 +1014,9 @@ fn test_fn_failover() {
     );
 
     // start up 3 publicly available VFN
-    for _ in 0..3 {
-        env.start_next_synchronizer(
+    for index in 0..3 {
+        env.start_synchronizer_peer(
+            index,
             SynchronizerEnv::default_handler(),
             RoleType::FullNode,
             Waypoint::default(),
@@ -1144,7 +1236,8 @@ fn test_fn_failover() {
 #[ignore]
 fn test_multicast_failover() {
     let mut env = SynchronizerEnv::new(4);
-    env.start_next_synchronizer(
+    env.start_synchronizer_peer(
+        0,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
@@ -1155,7 +1248,8 @@ fn test_multicast_failover() {
     // set up node with more than 2 upstream networks, which is more than in standard prod setting
     // just to be safe
     let multicast_timeout_ms = 5_000;
-    env.setup_next_synchronizer(
+    env.setup_synchronizer_peer(
+        1,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -1170,8 +1264,9 @@ fn test_multicast_failover() {
     );
 
     // setup the other FN upstream peer
-    for _ in 0..2 {
-        env.start_next_synchronizer(
+    for index in 3..5 {
+        env.start_synchronizer_peer(
+            index,
             SynchronizerEnv::default_handler(),
             RoleType::FullNode,
             Waypoint::default(),
