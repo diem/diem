@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.37"
+anyhow = "1.0.38"
 byteorder = "1.4.2"
 mirai-annotations = "1.10.1"
 num-derive = "0.3.3"
