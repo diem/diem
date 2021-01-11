@@ -6,11 +6,11 @@ use anyhow::{anyhow, Result};
 use diem_config::config::RocksdbConfig;
 use diem_types::{
     account_address::AccountAddress,
-    account_state_blob::AccountStateBlob,
+    account_state::AccountState,
     transaction::{Transaction, Version},
 };
 use diemdb::DiemDB;
-use std::{path::Path, sync::Arc};
+use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_interface::DbReader;
 
 pub struct DBDebuggerInterface(Arc<dyn DbReader>);
@@ -31,11 +31,12 @@ impl DiemValidatorInterface for DBDebuggerInterface {
         &self,
         account: AccountAddress,
         version: Version,
-    ) -> Result<Option<AccountStateBlob>> {
-        Ok(self
-            .0
+    ) -> Result<Option<AccountState>> {
+        self.0
             .get_account_state_with_proof_by_version(account, version)?
-            .0)
+            .0
+            .map(|s| AccountState::try_from(&s))
+            .transpose()
     }
 
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {

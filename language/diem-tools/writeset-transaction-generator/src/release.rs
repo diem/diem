@@ -1,23 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use diem_transaction_replay::DiemDebugger;
 use diem_types::{
     access_path::{AccessPath, Path},
-    account_config::diem_root_address,
-    account_state::AccountState,
     transaction::{ChangeSet, TransactionStatus, Version, WriteSetPayload},
     write_set::{WriteOp, WriteSetMut},
 };
-use diem_validator_interface::{DebuggerStateView, DiemValidatorInterface};
-use diem_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, DiemVM};
-use move_core_types::vm_status::{KeptVMStatus, VMStatus};
-use move_vm_runtime::logging::NoContextLog;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    convert::TryFrom,
-};
-use stdlib::build_stdlib;
+use diem_validator_interface::DiemValidatorInterface;
+use move_core_types::vm_status::KeptVMStatus;
+use std::collections::{BTreeMap, BTreeSet};
 use vm::CompiledModule;
 
 pub fn create_release_writeset(
@@ -84,8 +78,8 @@ pub fn create_release_writeset(
 
 /// Make sure that given a remote state, applying the `payload` will make sure the new on-chain
 /// states contains the exact same Diem Framework modules as the locally compiled stdlib.
-pub fn verify_payload_change<I: DiemValidatorInterface>(
-    validator: &I,
+pub fn verify_payload_change(
+    validator: Box<dyn DiemValidatorInterface>,
     block_height_opt: Option<Version>,
     payload: &WriteSetPayload,
 ) -> Result<()> {
@@ -93,27 +87,18 @@ pub fn verify_payload_change<I: DiemValidatorInterface>(
         Some(h) => h,
         None => validator.get_latest_version()?,
     };
-    let state_view = DebuggerStateView::new(validator, block_height);
-    let mut vm = DiemVM::new(&state_view);
-    let cache = StateViewCache::new(&state_view);
-    let log_context = NoContextLog::new();
-    let mut txn_data = TransactionMetadata::default();
-    txn_data.sequence_number =
-        match validator.get_account_state_by_version(diem_root_address(), block_height)? {
-            Some(account) => AccountState::try_from(&account)?
-                .get_account_resource()?
-                .ok_or_else(|| anyhow!("Diem root account doesn't exist"))?
-                .sequence_number(),
-            None => bail!("Diem root account blob doesn't exist"),
-        };
-    txn_data.sender = diem_root_address();
 
-    let (result, output) =
-        vm.execute_writeset_transaction(&cache, payload, txn_data, &log_context)?;
+    // Applying this writeset should make Diem framework equal to its on-disk status
+    let mut old_modules = validator
+        .get_diem_framework_modules_by_version(block_height)?
+        .into_iter()
+        .map(|m| (m.self_id(), m))
+        .collect::<BTreeMap<_, _>>();
 
-    if result != VMStatus::Executed {
-        bail!("Unexpected abort from running WriteSetPayload")
-    }
+    let output = {
+        let txn_replay = DiemDebugger::new(validator);
+        txn_replay.execute_writeset_at_version(block_height, payload, false)?
+    };
 
     if output.status() != &TransactionStatus::Keep(KeptVMStatus::Executed) {
         bail!("Unexpected transaction status from running WriteSetPayload")
@@ -128,13 +113,6 @@ pub fn verify_payload_change<I: DiemValidatorInterface>(
     {
         bail!("Output WriteSet won't trigger a reconfiguration")
     }
-
-    // Applying this writeset should make Diem framework equal to its on-disk status
-    let mut old_modules = validator
-        .get_diem_framework_modules_by_version(block_height)?
-        .into_iter()
-        .map(|m| (m.self_id(), m))
-        .collect::<BTreeMap<_, _>>();
 
     for (access_path, write_op) in output.write_set() {
         let path = bcs::from_bytes::<Path>(access_path.path.as_slice())?;
@@ -167,9 +145,9 @@ pub fn verify_payload_change<I: DiemValidatorInterface>(
         }
     }
 
-    let local_modules = build_stdlib()
-        .into_iter()
-        .map(|(_, m)| (m.self_id(), m))
+    let local_modules = stdlib_modules(StdLibOptions::Compiled)
+        .iter()
+        .map(|m| (m.self_id(), m.clone()))
         .collect::<BTreeMap<_, _>>();
     if local_modules.len() != old_modules.len() {
         bail!(

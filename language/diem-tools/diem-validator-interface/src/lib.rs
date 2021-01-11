@@ -14,10 +14,9 @@ use diem_types::{
     account_address::AccountAddress,
     account_config,
     account_state::AccountState,
-    account_state_blob::AccountStateBlob,
+    on_chain_config::ValidatorSet,
     transaction::{Transaction, Version},
 };
-use std::convert::TryFrom;
 use vm::file_format::CompiledModule;
 
 pub trait DiemValidatorInterface {
@@ -25,7 +24,7 @@ pub trait DiemValidatorInterface {
         &self,
         account: AccountAddress,
         version: Version,
-    ) -> Result<Option<AccountStateBlob>>;
+    ) -> Result<Option<AccountState>>;
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>>;
     fn get_latest_version(&self) -> Result<Version>;
     fn get_version_by_account_sequence(
@@ -39,12 +38,10 @@ pub trait DiemValidatorInterface {
         version: Version,
     ) -> Result<Vec<CompiledModule>> {
         let mut acc = vec![];
-        for module_bytes in AccountState::try_from(
-            &self
-                .get_account_state_by_version(account_config::CORE_CODE_ADDRESS, version)?
-                .ok_or_else(|| anyhow!("Failure reading diem root address state"))?,
-        )?
-        .get_modules()
+        for module_bytes in self
+            .get_account_state_by_version(account_config::CORE_CODE_ADDRESS, version)?
+            .ok_or_else(|| anyhow!("Failure reading diem root address state"))?
+            .get_modules()
         {
             acc.push(
                 CompiledModule::deserialize(module_bytes)
@@ -52,6 +49,50 @@ pub trait DiemValidatorInterface {
             )
         }
         Ok(acc)
+    }
+
+    /// Get the account states of the most critical accounts, including:
+    /// 1. Diem Framework code address
+    /// 2. Diem Root address
+    /// 3. Treasury Compliance address
+    /// 4. All validator addresses
+    fn get_admin_accounts(&self, version: Version) -> Result<Vec<(AccountAddress, AccountState)>> {
+        let mut result = vec![];
+        let diem_root = self
+            .get_account_state_by_version(account_config::diem_root_address(), version)?
+            .ok_or_else(|| anyhow!("diem_root_address doesn't exist"))?;
+
+        // Get all validator accounts
+        let validators = diem_root
+            .get_config::<ValidatorSet>()?
+            .ok_or_else(|| anyhow!("validator_config doesn't exist"))?;
+
+        // Get code account, diem_root and treasury compliance accounts.
+        result.push((
+            account_config::CORE_CODE_ADDRESS,
+            self.get_account_state_by_version(account_config::CORE_CODE_ADDRESS, version)?
+                .ok_or_else(|| anyhow!("core_code_address doesn't exist"))?,
+        ));
+        result.push((account_config::diem_root_address(), diem_root));
+        result.push((
+            account_config::treasury_compliance_account_address(),
+            self.get_account_state_by_version(
+                account_config::treasury_compliance_account_address(),
+                version,
+            )?
+            .ok_or_else(|| anyhow!("treasury_compliance_account doesn't exist"))?,
+        ));
+
+        // Get all validator accounts
+        for validator_info in validators.payload() {
+            let addr = *validator_info.account_address();
+            result.push((
+                addr,
+                self.get_account_state_by_version(addr, version)?
+                    .ok_or_else(|| anyhow!("validator {:?} doesn't exist", addr))?,
+            ));
+        }
+        Ok(result)
     }
 }
 
@@ -76,9 +117,7 @@ impl<'a> StateView for DebuggerStateView<'a> {
                 .db
                 .get_account_state_by_version(access_path.address, self.version - 1)?
             {
-                Some(blob) => AccountState::try_from(&blob)?
-                    .get(&access_path.path)
-                    .cloned(),
+                Some(blob) => blob.get(&access_path.path).cloned(),
                 None => None,
             },
         )
