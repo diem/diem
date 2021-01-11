@@ -556,25 +556,25 @@ fn check_chunk_response(
 }
 
 // Starts a new state sync with the validator role.
-fn start_default_validator(peer_index: usize, env: &mut SynchronizerEnv) {
+fn start_default_validator(peer_index: usize, env: &mut SynchronizerEnv, mock_network: bool) {
     env.start_synchronizer_peer(
         peer_index,
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         Waypoint::default(),
-        false,
+        mock_network,
         None,
     );
 }
 
 // Starts a new state sync with the fullnode role.
-fn start_default_fullnode(peer_index: usize, env: &mut SynchronizerEnv) {
+fn start_default_fullnode(peer_index: usize, env: &mut SynchronizerEnv, mock_network: bool) {
     env.start_synchronizer_peer(
         peer_index,
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
-        false,
+        mock_network,
         None,
     );
 }
@@ -585,7 +585,7 @@ fn test_basic_catch_up() {
     let mut env = SynchronizerEnv::new(num_peers);
 
     for index in 0..num_peers {
-        start_default_validator(index, &mut env);
+        start_default_validator(index, &mut env, false);
     }
 
     // Test small sequential syncs, batch sync for multiple transactions and
@@ -604,7 +604,7 @@ fn test_basic_catch_up() {
 fn test_flaky_peer_sync() {
     let mut env = SynchronizerEnv::new(2);
 
-    start_default_validator(0, &mut env);
+    start_default_validator(0, &mut env, false);
 
     // Create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
@@ -667,8 +667,8 @@ fn test_request_timeout() {
 fn test_full_node() {
     let mut env = SynchronizerEnv::new(2);
 
-    start_default_validator(0, &mut env);
-    start_default_fullnode(1, &mut env);
+    start_default_validator(0, &mut env, false);
+    start_default_fullnode(1, &mut env, false);
 
     env.commit(0, 10);
     // first sync should be fulfilled immediately after peer discovery
@@ -686,7 +686,7 @@ fn catch_up_through_epochs_validators() {
     let mut env = SynchronizerEnv::new(num_peers);
 
     for index in 0..num_peers {
-        start_default_validator(index, &mut env);
+        start_default_validator(index, &mut env, false);
     }
 
     // catch up to the next epoch starting from the middle of the current one
@@ -714,7 +714,7 @@ fn catch_up_through_epochs_validators() {
 fn catch_up_through_epochs_full_node() {
     let mut env = SynchronizerEnv::new(3);
 
-    start_default_validator(0, &mut env);
+    start_default_validator(0, &mut env, false);
 
     // catch up through multiple epochs
     for epoch in 1..10 {
@@ -723,12 +723,12 @@ fn catch_up_through_epochs_full_node() {
     }
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
-    start_default_fullnode(1, &mut env);
+    start_default_fullnode(1, &mut env, false);
     assert!(env.wait_for_version(1, 950, None));
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    start_default_fullnode(2, &mut env);
+    start_default_fullnode(2, &mut env, false);
     assert!(env.wait_for_version(2, 950, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
 }
@@ -737,7 +737,7 @@ fn catch_up_through_epochs_full_node() {
 fn catch_up_with_waypoints() {
     let mut env = SynchronizerEnv::new(3);
 
-    start_default_validator(0, &mut env);
+    start_default_validator(0, &mut env, false);
 
     let mut curr_version = 0;
     for _two_epochs in 1..10 {
@@ -773,7 +773,7 @@ fn catch_up_with_waypoints() {
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 19);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    start_default_fullnode(2, &mut env);
+    start_default_fullnode(2, &mut env, false);
     assert!(env.wait_for_version(2, 5250, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 19);
 }
@@ -782,14 +782,7 @@ fn catch_up_with_waypoints() {
 fn test_lagging_upstream_long_poll() {
     let mut env = SynchronizerEnv::new(4);
 
-    env.start_synchronizer_peer(
-        0,
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        true,
-        None,
-    );
+    start_default_validator(0, &mut env, true);
 
     env.setup_synchronizer_peer(
         1,
@@ -813,14 +806,7 @@ fn test_lagging_upstream_long_poll() {
 
     // we treat this a standalone node whose local state we use as the baseline
     // to clone state to the other nodes
-    env.start_synchronizer_peer(
-        3,
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        true,
-        None,
-    );
+    start_default_validator(3, &mut env, true);
 
     // network handles for each node
     let validator = (0, 0);
@@ -915,23 +901,8 @@ fn test_lagging_upstream_long_poll() {
 fn test_sync_pending_ledger_infos() {
     let mut env = SynchronizerEnv::new(2);
 
-    env.start_synchronizer_peer(
-        0,
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        true,
-        None,
-    );
-
-    env.start_synchronizer_peer(
-        1,
-        SynchronizerEnv::default_handler(),
-        RoleType::FullNode,
-        Waypoint::default(),
-        true,
-        None,
-    );
+    start_default_validator(0, &mut env, true);
+    start_default_fullnode(1, &mut env, true);
 
     let validator = (0, 0);
     let full_node = (1, 0);
@@ -994,14 +965,8 @@ fn test_sync_pending_ledger_infos() {
 #[ignore] // TODO: https://github.com/diem/diem/issues/5771
 fn test_fn_failover() {
     let mut env = SynchronizerEnv::new(5);
-    env.start_synchronizer_peer(
-        0,
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        true,
-        None,
-    );
+
+    start_default_validator(0, &mut env, true);
     env.setup_synchronizer_peer(
         1,
         SynchronizerEnv::default_handler(),
@@ -1015,14 +980,7 @@ fn test_fn_failover() {
 
     // start up 3 publicly available VFN
     for index in 0..3 {
-        env.start_synchronizer_peer(
-            index,
-            SynchronizerEnv::default_handler(),
-            RoleType::FullNode,
-            Waypoint::default(),
-            true,
-            None,
-        );
+        start_default_fullnode(index, &mut env, true);
     }
 
     // connect everyone
@@ -1236,14 +1194,8 @@ fn test_fn_failover() {
 #[ignore]
 fn test_multicast_failover() {
     let mut env = SynchronizerEnv::new(4);
-    env.start_synchronizer_peer(
-        0,
-        SynchronizerEnv::default_handler(),
-        RoleType::Validator,
-        Waypoint::default(),
-        true,
-        None,
-    );
+
+    start_default_validator(0, &mut env, true);
 
     // set up node with more than 2 upstream networks, which is more than in standard prod setting
     // just to be safe
@@ -1265,14 +1217,7 @@ fn test_multicast_failover() {
 
     // setup the other FN upstream peer
     for index in 3..5 {
-        env.start_synchronizer_peer(
-            index,
-            SynchronizerEnv::default_handler(),
-            RoleType::FullNode,
-            Waypoint::default(),
-            true,
-            None,
-        );
+        start_default_fullnode(index, &mut env, true);
     }
 
     // connect everyone
