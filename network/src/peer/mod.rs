@@ -36,8 +36,8 @@ use futures::{
     FutureExt, SinkExt, TryFutureExt,
 };
 use netcore::compat::IoCompat;
-use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, sync::Arc, time::Duration};
+use serde::Serialize;
+use std::{fmt, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 #[cfg(test)]
@@ -65,8 +65,8 @@ pub enum DisconnectReason {
     ConnectionLost,
 }
 
-impl std::fmt::Display for DisconnectReason {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DisconnectReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",

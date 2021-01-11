@@ -12,7 +12,7 @@
 
 use diem_config::network_id::NetworkId;
 use diem_types::chain_id::ChainId;
-use serde::{export::Formatter, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 use thiserror::Error;
 
@@ -119,13 +119,13 @@ pub enum MessagingProtocolVersion {
 }
 
 impl fmt::Debug for MessagingProtocolVersion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl fmt::Display for MessagingProtocolVersion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -232,13 +232,13 @@ impl HandshakeMsg {
 }
 
 impl fmt::Debug for HandshakeMsg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl fmt::Display for HandshakeMsg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "[{},{},{:?}]",

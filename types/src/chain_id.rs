@@ -1,12 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use anyhow::{ensure, format_err, Error, Result};
-use serde::{de::Visitor, export::fmt::Debug, Deserialize, Deserializer, Serialize};
-use std::{
-    convert::TryFrom,
-    fmt::{Display, Formatter},
-    str::FromStr,
-};
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use std::{convert::TryFrom, fmt, str::FromStr};
 
 /// A registry of named chain IDs
 /// Its main purpose is to improve human readability of reserved chain IDs in config files and CLI
@@ -75,8 +71,8 @@ where
     impl<'de> Visitor<'de> for ChainIdVisitor {
         type Value = ChainId;
 
-        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            formatter.write_str("ChainId as string or u8")
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("ChainId as string or u8")
         }
 
         fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
@@ -99,14 +95,14 @@ where
     deserializer.deserialize_any(ChainIdVisitor)
 }
 
-impl Debug for ChainId {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+impl fmt::Debug for ChainId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl Display for ChainId {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+impl fmt::Display for ChainId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -116,8 +112,8 @@ impl Display for ChainId {
     }
 }
 
-impl Display for NamedChain {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+impl fmt::Display for NamedChain {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",

@@ -23,12 +23,11 @@ use futures::{
     stream::{Stream, StreamExt, TryStreamExt},
 };
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
-use serde::{export::Formatter, Serialize};
+use serde::Serialize;
 use std::{
     collections::BTreeMap,
     convert::TryFrom,
-    fmt::Debug,
-    io,
+    fmt, io,
     pin::Pin,
     sync::{
         atomic::{AtomicU32, Ordering},
@@ -63,9 +62,9 @@ pub const DIEM_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
 };
 
 /// A trait alias for "socket-like" things.
-pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+pub trait TSocket: AsyncRead + AsyncWrite + Send + fmt::Debug + Unpin + 'static {}
 
-impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + fmt::Debug + Unpin + 'static {}
 
 /// Unique local identifier for a connection.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize)]
@@ -151,14 +150,14 @@ impl ConnectionMetadata {
     }
 }
 
-impl std::fmt::Debug for ConnectionMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for ConnectionMetadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl std::fmt::Display for ConnectionMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ConnectionMetadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "[{},{},{},{},{:?}]",

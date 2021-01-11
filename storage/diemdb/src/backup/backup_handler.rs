@@ -22,8 +22,8 @@ use diem_types::{
     transaction::{Transaction, TransactionInfo, Version},
 };
 use itertools::zip_eq;
-use serde::{export::Formatter, Deserialize, Serialize};
-use std::{fmt::Display, sync::Arc};
+use serde::{Deserialize, Serialize};
+use std::{fmt, sync::Arc};
 
 /// `BackupHandler` provides functionalities for DiemDB data backup.
 #[derive(Clone)]
@@ -190,8 +190,8 @@ pub struct DbState {
     pub synced_version: Version,
 }
 
-impl Display for DbState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DbState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "epoch: {}, committed_version: {}, synced_version: {}",

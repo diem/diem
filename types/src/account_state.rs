@@ -19,7 +19,7 @@ use crate::{
 };
 use anyhow::{format_err, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
-use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
 #[derive(Default, Deserialize, PartialEq, Serialize)]
@@ -214,7 +214,7 @@ impl AccountState {
 }
 
 impl fmt::Debug for AccountState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: add support for other types of resources
         let account_resource_str = self
             .get_account_resource()

@@ -1,11 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 use itertools::Itertools;
 use regex::Regex;
-use serde::export::{fmt, Formatter};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_ir_types::{ast::ConstantName, location::Spanned};
@@ -85,7 +87,7 @@ pub enum SpecBlockContext<'a> {
 }
 
 impl<'a> fmt::Display for SpecBlockContext<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use SpecBlockContext::*;
         match self {
             Module => write!(f, "module context")?,

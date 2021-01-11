@@ -47,7 +47,7 @@ use rand::{
     prelude::{SeedableRng, SmallRng},
     seq::SliceRandom,
 };
-use serde::{export::Formatter, Serialize};
+use serde::Serialize;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
@@ -110,13 +110,13 @@ pub enum DiscoverySource {
 }
 
 impl fmt::Debug for DiscoverySource {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl fmt::Display for DiscoverySource {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",

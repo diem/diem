@@ -39,10 +39,10 @@ use futures::{
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
 use netcore::transport::{ConnectionOrigin, Transport};
-use serde::{export::Formatter, Serialize};
+use serde::Serialize;
 use std::{
     collections::{hash_map::Entry, HashMap},
-    fmt::Debug,
+    fmt,
     marker::PhantomData,
     net::{IpAddr, Ipv4Addr},
     sync::Arc,
@@ -97,14 +97,14 @@ pub enum ConnectionNotification {
     LostPeer(ConnectionMetadata, Arc<NetworkContext>, DisconnectReason),
 }
 
-impl std::fmt::Debug for ConnectionNotification {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for ConnectionNotification {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl std::fmt::Display for ConnectionNotification {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ConnectionNotification {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConnectionNotification::NewPeer(metadata, context) => {
                 write!(f, "[{},{}]", metadata, context)
