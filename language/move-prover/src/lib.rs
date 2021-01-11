@@ -14,13 +14,15 @@ use anyhow::anyhow;
 use bytecode::{
     borrow_analysis::BorrowAnalysisProcessor,
     clean_and_optimize::CleanAndOptimizeProcessor,
+    debug_instrumentation::DebugInstrumenter,
     eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
-    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
     packed_types_analysis::PackedTypesProcessor,
     reaching_def_analysis::ReachingDefProcessor,
+    spec_instrumentation::SpecInstrumenter,
     stackless_bytecode::{Bytecode, Operation},
     usage_analysis::{self, UsageProcessor},
 };
@@ -85,6 +87,10 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_warnings(error_writer);
     }
 
+    // Add the prover options as an extension to the environment, so they can be accessed
+    // from there.
+    env.set_extension(options.prover.clone());
+
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.run_docgen {
         return run_docgen(&env, &options, error_writer, now);
@@ -117,8 +123,18 @@ pub fn run_move_prover<W: WriteColor>(
     }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
-    let mut translator = BoogieTranslator::new(&env, &options, &targets, &writer);
-    translator.translate();
+    if options.trans_v2 {
+        let mut translator = boogie_backend::bytecode_translator::BoogieTranslator::new(
+            &env,
+            &options.backend,
+            &targets,
+            &writer,
+        );
+        translator.translate();
+    } else {
+        let mut translator = BoogieTranslator::new(&env, &options, &targets, &writer);
+        translator.translate();
+    }
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
@@ -262,14 +278,13 @@ fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
 
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
-            let caller_func_target = targets.get_target(&func_env, FunctionVariant::Baseline);
+            let caller_func_target = targets.get_annotated_target(&func_env);
             for code in caller_func_target.get_bytecode() {
                 if let Call(_, _, oper, _) = code {
                     if let Function(mid, fid, _) = oper {
                         let callee = mid.qualified(*fid);
                         let callee_func_env = env.get_function(callee);
-                        let callee_func_target =
-                            targets.get_target(&callee_func_env, FunctionVariant::Baseline);
+                        let callee_func_target = targets.get_annotated_target(&callee_func_env);
                         let callee_modified_memory =
                             usage_analysis::get_modified_memory(&callee_func_target);
                         caller_func_target.get_modify_targets().keys().for_each(|target| {
@@ -342,7 +357,7 @@ fn verification_analysis(env: &mut GlobalEnv, targets: &FunctionTargetsHolder) {
                 }
             }
 
-            let fun_target = targets.get_target(&func_env, FunctionVariant::Baseline);
+            let fun_target = targets.get_annotated_target(&func_env);
             let directly_modified_structs =
                 usage_analysis::get_directly_modified_memory(&fun_target);
             // Verify the function if it modifies one of the target resources
@@ -402,19 +417,32 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 }
 
 /// Function to create the transformation pipeline.
-fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipeline {
+fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
-    res.add_processor(EliminateImmRefsProcessor::new());
-    res.add_processor(EliminateMutRefsProcessor::new());
-    res.add_processor(ReachingDefProcessor::new());
-    res.add_processor(LiveVarAnalysisProcessor::new());
-    res.add_processor(BorrowAnalysisProcessor::new());
-    res.add_processor(MemoryInstrumentationProcessor::new());
-    res.add_processor(CleanAndOptimizeProcessor::new());
-    res.add_processor(UsageProcessor::new());
-    res.add_processor(PackedTypesProcessor::new());
+    if options.trans_v2 {
+        res.add_processor(DebugInstrumenter::new());
+        res.add_processor(EliminateImmRefsProcessor::new());
+        res.add_processor(EliminateMutRefsProcessor::new());
+        res.add_processor(ReachingDefProcessor::new());
+        res.add_processor(LiveVarAnalysisProcessor::new());
+        res.add_processor(BorrowAnalysisProcessor::new());
+        res.add_processor(MemoryInstrumentationProcessor::new());
+        res.add_processor(CleanAndOptimizeProcessor::new());
+        res.add_processor(UsageProcessor::new());
+        res.add_processor(SpecInstrumenter::new());
+    } else {
+        res.add_processor(EliminateImmRefsProcessor::new());
+        res.add_processor(EliminateMutRefsProcessor::new());
+        res.add_processor(ReachingDefProcessor::new());
+        res.add_processor(LiveVarAnalysisProcessor::new());
+        res.add_processor(BorrowAnalysisProcessor::new());
+        res.add_processor(MemoryInstrumentationProcessor::new());
+        res.add_processor(CleanAndOptimizeProcessor::new());
+        res.add_processor(UsageProcessor::new());
+        res.add_processor(PackedTypesProcessor::new());
+    }
 
     res
 }

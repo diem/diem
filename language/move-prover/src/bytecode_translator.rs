@@ -1933,6 +1933,7 @@ impl<'env> ModuleTranslator<'env> {
                         );
                     }
                     Destroy => {}
+                    TraceLocal(..) | TraceReturn(..) | TraceAbort => unimplemented!(),
                 }
             }
             Abort(_, src) => {

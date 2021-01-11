@@ -1,5 +1,5 @@
+// flag: --v2
 module TestDefines {
-
     spec module {
         pragma verify = true;
     }

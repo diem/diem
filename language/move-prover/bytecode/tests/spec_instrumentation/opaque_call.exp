@@ -79,7 +79,9 @@ fun Test::get_and_incr(addr: address): u64 {
      var $t7: u64
      var $t8: u64
      var $t9: u64
-     var $t10: &mut u64
+     var $t10: u64
+     var $t11: &mut u64
+     // VC: `precondition does not hold at this call` for requires
   0: assume Neq(addr, 0)
   1: $t3 := exists<Test::R>(addr)
   2: $t4 := !($t3)
@@ -94,20 +96,20 @@ fun Test::get_and_incr(addr: address): u64 {
  11: r := borrow_global<Test::R>(addr)
  12: on_abort(L4, $t6)
  13: unpack_ref(r)
- 14: v := get_field<Test::R>.v(r)
- 15: $t7 := get_field<Test::R>.v(r)
- 16: $t8 := 1
- 17: $t9 := +($t7, $t8)
+ 14: $t7 := get_field<Test::R>.v(r)
+ 15: $t8 := get_field<Test::R>.v(r)
+ 16: $t9 := 1
+ 17: $t10 := +($t8, $t9)
  18: on_abort(L4, $t6)
- 19: $t10 := borrow_field<Test::R>.v(r)
- 20: unpack_ref($t10)
- 21: write_ref($t10, $t9)
- 22: pack_ref($t10)
- 23: write_back[Reference(r)]($t10)
+ 19: $t11 := borrow_field<Test::R>.v(r)
+ 20: unpack_ref($t11)
+ 21: write_ref($t11, $t10)
+ 22: pack_ref($t11)
+ 23: write_back[Reference(r)]($t11)
  24: pack_ref(r)
  25: write_back[Test::R](r)
  26: L3:
- 27: return v
+ 27: return $t7
  28: L4:
  29: abort($t6)
 }
@@ -124,7 +126,9 @@ fun Test::get_and_incr(addr: address): u64 {
      var $t7: u64
      var $t8: u64
      var $t9: u64
-     var $t10: &mut u64
+     var $t10: u64
+     var $t11: &mut u64
+     // VC: `precondition does not hold at this call` for requires
   0: assume Neq(addr, 0)
   1: @0 := save_mem(Test::R)
   2: $t3 := exists<Test::R>(addr)
@@ -140,27 +144,34 @@ fun Test::get_and_incr(addr: address): u64 {
  12: r := borrow_global<Test::R>(addr)
  13: on_abort(L4, $t6)
  14: unpack_ref(r)
- 15: v := get_field<Test::R>.v(r)
- 16: $t7 := get_field<Test::R>.v(r)
- 17: $t8 := 1
- 18: $t9 := +($t7, $t8)
+ 15: $t7 := get_field<Test::R>.v(r)
+ 16: $t8 := get_field<Test::R>.v(r)
+ 17: $t9 := 1
+ 18: $t10 := +($t8, $t9)
  19: on_abort(L4, $t6)
- 20: $t10 := borrow_field<Test::R>.v(r)
- 21: unpack_ref($t10)
- 22: write_ref($t10, $t9)
- 23: pack_ref($t10)
- 24: write_back[Reference(r)]($t10)
+ 20: $t11 := borrow_field<Test::R>.v(r)
+ 21: unpack_ref($t11)
+ 22: write_ref($t11, $t10)
+ 23: pack_ref($t11)
+ 24: write_back[Reference(r)]($t11)
  25: pack_ref(r)
  26: write_back[Test::R](r)
  27: L3:
+     // VC: `function does not abort under this condition` for ensures
  28: assert Not(Not(exists<Test::R>[@0](addr)))
+     // VC: `function does not abort under this condition` for ensures
  29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
+     // VC: `post-condition does not hold` for ensures
  30: assert Eq(select Test::R.v(global<Test::R>(addr)), Add(select Test::R.v(global<Test::R>[@0](addr)), 1))
- 31: assert Eq(v, select Test::R.v(global<Test::R>(addr)))
- 32: return v
+     // VC: `post-condition does not hold` for ensures
+ 31: assert Eq($t7, select Test::R.v(global<Test::R>(addr)))
+ 32: return $t7
  33: L4:
- 34: assert Or(And(Not(exists<Test::R>[@0](addr)), Eq(33, $t6)), Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
- 35: abort($t6)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 34: assert Or(Not(exists<Test::R>[@0](addr)), Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 35: assert Implies(Not(exists<Test::R>[@0](addr)), Eq($t6, 33))
+ 36: abort($t6)
 }
 
 
@@ -174,10 +185,11 @@ fun Test::incr_twice() {
      var $t5: bool
      var $t6: u64
   0: $t0 := 0x1
+     // VC: `precondition does not hold at this call` for requires
   1: assert Neq(addr, 0)
   2: @6 := save_mem(Test::R)
   3: modifies global<Test::R>($t0)
-  4: assume Eq($t1, Or(And(Not(exists<Test::R>[@6]($t0)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@6]($t0)), 1), 18446744073709551615)))
+  4: assume Eq($t1, And(Or(Not(exists<Test::R>[@6]($t0)), Ge(Add(select Test::R.v(global<Test::R>[@6]($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@6]($t0)), Eq($t2, 33))))
   5: if ($t1) goto L2 else goto L3
   6: L3:
   7: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@6]($t0)), 1))
@@ -187,7 +199,7 @@ fun Test::incr_twice() {
  11: assert Neq(addr, 0)
  12: @7 := save_mem(Test::R)
  13: modifies global<Test::R>($t4)
- 14: assume Eq($t5, Or(And(Not(exists<Test::R>[@7]($t4)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@7]($t4)), 1), 18446744073709551615)))
+ 14: assume Eq($t5, And(Or(Not(exists<Test::R>[@7]($t4)), Ge(Add(select Test::R.v(global<Test::R>[@7]($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@7]($t4)), Eq($t2, 33))))
  15: if ($t5) goto L2 else goto L4
  16: L4:
  17: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@7]($t4)), 1))
@@ -211,10 +223,11 @@ fun Test::incr_twice() {
      var $t6: u64
   0: @2 := save_mem(Test::R)
   1: $t0 := 0x1
+     // VC: `precondition does not hold at this call` for requires
   2: assert Neq(addr, 0)
   3: @3 := save_mem(Test::R)
   4: modifies global<Test::R>($t0)
-  5: assume Eq($t1, Or(And(Not(exists<Test::R>[@3]($t0)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@3]($t0)), 1), 18446744073709551615)))
+  5: assume Eq($t1, And(Or(Not(exists<Test::R>[@3]($t0)), Ge(Add(select Test::R.v(global<Test::R>[@3]($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@3]($t0)), Eq($t2, 33))))
   6: if ($t1) goto L2 else goto L3
   7: L3:
   8: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@3]($t0)), 1))
@@ -224,17 +237,22 @@ fun Test::incr_twice() {
  12: assert Neq(addr, 0)
  13: @4 := save_mem(Test::R)
  14: modifies global<Test::R>($t4)
- 15: assume Eq($t5, Or(And(Not(exists<Test::R>[@4]($t4)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>[@4]($t4)), 1), 18446744073709551615)))
+ 15: assume Eq($t5, And(Or(Not(exists<Test::R>[@4]($t4)), Ge(Add(select Test::R.v(global<Test::R>[@4]($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@4]($t4)), Eq($t2, 33))))
  16: if ($t5) goto L2 else goto L4
  17: L4:
  18: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@4]($t4)), 1))
  19: assume Eq($t6, select Test::R.v(global<Test::R>($t4)))
  20: destroy($t6)
  21: L1:
+     // VC: `function does not abort under this condition` for ensures
  22: assert Not(Not(exists<Test::R>[@2](1)))
+     // VC: `post-condition does not hold` for ensures
  23: assert Eq(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global<Test::R>[@2](1)), 2))
  24: return ()
  25: L2:
- 26: assert And(Not(exists<Test::R>[@2](1)), Eq(33, $t2))
- 27: abort($t2)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 26: assert Not(exists<Test::R>[@2](1))
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 27: assert Implies(Not(exists<Test::R>[@2](1)), Eq($t2, 33))
+ 28: abort($t2)
 }

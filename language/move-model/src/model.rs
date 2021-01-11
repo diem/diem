@@ -18,6 +18,7 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     ffi::OsStr,
+    fmt,
     rc::Rc,
 };
 
@@ -59,6 +60,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
+use std::any::{Any, TypeId};
 
 // =================================================================================================
 /// # Constants
@@ -387,6 +389,8 @@ pub struct GlobalEnv {
     global_invariants_for_memory: BTreeMap<QualifiedId<StructId>, BTreeSet<GlobalId>>,
     /// A set containing spec functions which are called/used in specs.
     pub used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
+    /// A type-indexed container for storing extension data in the environment.
+    extensions: BTreeMap<TypeId, Box<dyn Any>>,
 }
 
 /// Information about a verification condition stored in the environment.
@@ -470,7 +474,22 @@ impl GlobalEnv {
             global_invariants_for_memory: Default::default(),
             global_invariants_for_spec_var: Default::default(),
             used_spec_funs: BTreeSet::new(),
+            extensions: Default::default(),
         }
+    }
+
+    /// Stores extension data in the environment. This can be arbitrary data which is
+    /// indexed by type. Used by tools which want to store their own data in the environment,
+    /// like a set of tool dependent options/flags.
+    pub fn set_extension<T: Any>(&mut self, x: T) {
+        let id = TypeId::of::<T>();
+        self.extensions.insert(id, Box::new(x));
+    }
+
+    /// Retrieves extension data from the environment. Use as in `env.get_extension::<T>()`.
+    pub fn get_extension<T: Any>(&self) -> Option<&T> {
+        let id = TypeId::of::<T>();
+        self.extensions.get(&id).and_then(|d| d.downcast_ref::<T>())
     }
 
     /// Create a new global id unique to this environment.
@@ -1002,12 +1021,27 @@ impl GlobalEnv {
             .unwrap_or("")
     }
 
-    /// Get verification condition info associated with location.
+    /// Get verification condition info associated with location and tag.
     pub fn get_condition_info(&self, loc: &Loc, tag: ConditionTag) -> Option<ConditionInfo> {
         self.condition_infos
             .borrow()
             .get(&(loc.clone(), tag))
             .cloned()
+    }
+
+    /// Get all verification condition info associated with location.
+    pub fn get_condition_infos(&self, loc: &Loc) -> Vec<(ConditionTag, ConditionInfo)> {
+        self.condition_infos
+            .borrow()
+            .iter()
+            .filter_map(|((l, t), i)| {
+                if l == loc {
+                    Some((*t, i.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect_vec()
     }
 
     /// Set verification condition info.
@@ -2590,5 +2624,25 @@ impl<'env> FunctionEnv<'env> {
                 .module
                 .function_def_at(self.data.def_idx),
         )
+    }
+}
+
+// =================================================================================================
+/// # Formatting
+
+impl fmt::Display for ConditionTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ConditionTag::*;
+        match self {
+            Requires => write!(f, "requires"),
+            Ensures => write!(f, "ensures"),
+            NegativeTest => write!(f, "negative-test"),
+        }
+    }
+}
+
+impl fmt::Display for ConditionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "`{}`", self.message)
     }
 }

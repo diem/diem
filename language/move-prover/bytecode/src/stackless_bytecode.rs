@@ -148,6 +148,11 @@ pub enum Operation {
     And,
     Eq,
     Neq,
+
+    // Debugging
+    TraceLocal(TempIndex),
+    TraceReturn(usize),
+    TraceAbort,
 }
 
 impl Operation {
@@ -197,6 +202,9 @@ impl Operation {
             Operation::And => false,
             Operation::Eq => false,
             Operation::Neq => false,
+            Operation::TraceLocal(..) => false,
+            Operation::TraceAbort => false,
+            Operation::TraceReturn(..) => false,
         }
     }
 }
@@ -322,14 +330,18 @@ impl Bytecode {
         label_offsets: &BTreeMap<Label, CodeOffset>,
     ) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
-        assert!(bytecode.is_branch(), "{:?} at {}", bytecode, pc);
         let mut v = vec![];
-        for label in bytecode.branch_dests() {
-            v.push(*label_offsets.get(&label).expect("label defined"));
-        }
-        if matches!(bytecode, Bytecode::OnAbort(..)) {
-            // Falls through.
+        if !bytecode.is_branch() {
+            // Fall through situation, just return the next pc.
             v.push(pc + 1);
+        } else {
+            for label in bytecode.branch_dests() {
+                v.push(*label_offsets.get(&label).expect("label defined"));
+            }
+            if matches!(bytecode, Bytecode::OnAbort(..)) {
+                // Falls through.
+                v.push(pc + 1);
+            }
         }
         // always give successors in ascending order
         if v.len() > 1 && v[0] > v[1] {
@@ -729,6 +741,11 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             And => write!(f, "&&")?,
             Eq => write!(f, "==")?,
             Neq => write!(f, "!=")?,
+
+            // Debugging
+            TraceLocal(l) => write!(f, "trace_local[{}]", self.lstr(*l))?,
+            TraceAbort => write!(f, "trace_abort")?,
+            TraceReturn(r) => write!(f, "trace_return[{}]", r)?,
         }
         Ok(())
     }
@@ -760,6 +777,12 @@ impl<'env> OperationDisplay<'env> {
             type_param_names: None,
         };
         format!("{}", ty.display(&tctx))
+    }
+
+    fn lstr(&self, idx: TempIndex) -> Rc<String> {
+        self.func_target
+            .symbol_pool()
+            .string(self.func_target.get_local_name(idx))
     }
 }
 

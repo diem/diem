@@ -1411,6 +1411,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .error(loc, "decreases specification not supported currently");
             return;
         }
+        if matches!(kind, ConditionKind::SucceedsIf) {
+            self.parent.error(loc, "condition kind is not supported");
+            return;
+        }
         let expected_type = self.expected_type_for_condition(&kind);
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind), false);
         let (translated, translated_additional) = match kind {

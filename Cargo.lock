@@ -475,6 +475,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
+name = "boogie-backend"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode",
+ "codespan",
+ "codespan-reporting",
+ "datatest-stable",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "itertools 0.10.0",
+ "log",
+ "move-core-types",
+ "move-model",
+ "move-prover-test-utils",
+ "num 0.3.1",
+ "serde",
+ "serde_json",
+ "vm",
+]
+
+[[package]]
 name = "borrow-graph"
 version = "0.0.1"
 dependencies = [
@@ -545,6 +568,9 @@ dependencies = [
  "move-model",
  "move-prover-test-utils",
  "num 0.3.1",
+ "once_cell",
+ "serde",
+ "serde_json",
  "vm",
 ]
 
@@ -4182,6 +4208,7 @@ dependencies = [
  "abigen",
  "anyhow",
  "async-trait",
+ "boogie-backend",
  "bytecode",
  "bytecode-source-map",
  "clap",

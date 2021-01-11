@@ -210,13 +210,19 @@ fun Test::branching_result(is_div: bool, a: u64, b: u64): u64 {
   9: on_abort(L5, $t4)
  10: L3:
  11: L4:
+     // VC: `function does not abort under this condition` for ensures
  12: assert Not(And(is_div, Eq(b, 0)))
+     // VC: `post-condition does not hold` for ensures
  13: assert Implies(is_div, Eq(tmp#$3, Div(a, b)))
+     // VC: `post-condition does not hold` for ensures
  14: assert Implies(Not(is_div), Eq(tmp#$3, Mul(a, b)))
  15: return tmp#$3
  16: L5:
- 17: assert And(And(is_div, Eq(b, 0)), Eq(-1, $t4))
- 18: abort($t4)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 17: assert And(is_div, Eq(b, 0))
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 18: assert Implies(And(is_div, Eq(b, 0)), Eq($t4, -1))
+ 19: abort($t4)
 }
 
 
@@ -266,13 +272,19 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
  10: $t6 := /(a, b)
  11: on_abort(L4, $t5)
  12: L3:
+     // VC: `function does not abort under this condition` for ensures
  13: assert Not(Eq(b, 0))
+     // VC: `function does not abort under this condition` for ensures
  14: assert Not(Eq(a, 0))
+     // VC: `post-condition does not hold` for ensures
  15: assert Eq($t6, Div(a, b))
  16: return $t6
  17: L4:
- 18: assert Or(And(Eq(b, 0), Eq(22, $t5)), Eq(a, 0))
- 19: abort($t5)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 18: assert Or(Eq(b, 0), Eq(a, 0))
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 19: assert Implies(Eq(b, 0), Eq($t5, 22))
+ 20: abort($t5)
 }
 
 
@@ -302,13 +314,19 @@ fun Test::multiple_results(a: u64, b: u64): (u64, u64) {
   2: $t4 := %(a, b)
   3: on_abort(L2, $t3)
   4: L1:
+     // VC: `function does not abort under this condition` for ensures
   5: assert Not(Eq(b, 0))
+     // VC: `post-condition does not hold` for ensures
   6: assert Eq($t2, Div(a, b))
+     // VC: `post-condition does not hold` for ensures
   7: assert Eq($t4, Mod(a, b))
   8: return ($t2, $t4)
   9: L2:
- 10: assert And(Eq(b, 0), Eq(-1, $t3))
- 11: abort($t3)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 10: assert Eq(b, 0)
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 11: assert Implies(Eq(b, 0), Eq($t3, -1))
+ 12: abort($t3)
 }
 
 
@@ -320,23 +338,24 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
      var $t4: u64
      var $t5: u64
      var $t6: u64
-     var $t7: num
-     var $t8: &mut u64
+     var $t7: u64
+     var $t8: num
+     var $t9: &mut u64
   0: $t2 := move(r)
   1: $t3 := borrow_local(r)
-  2: x := get_field<Test::R>.v($t3)
-  3: $t4 := get_field<Test::R>.v($t3)
-  4: $t5 := 1
-  5: $t6 := -($t4, $t5)
-  6: on_abort(L2, $t7)
-  7: $t8 := borrow_field<Test::R>.v($t3)
-  8: write_ref($t8, $t6)
-  9: write_back[Reference($t3)]($t8)
+  2: $t4 := get_field<Test::R>.v($t3)
+  3: $t5 := get_field<Test::R>.v($t3)
+  4: $t6 := 1
+  5: $t7 := -($t5, $t6)
+  6: on_abort(L2, $t8)
+  7: $t9 := borrow_field<Test::R>.v($t3)
+  8: write_ref($t9, $t7)
+  9: write_back[Reference($t3)]($t9)
  10: write_back[LocalRoot(r)]($t3)
  11: L1:
- 12: return (x, $t2)
+ 12: return ($t4, $t2)
  13: L2:
- 14: abort($t7)
+ 14: abort($t8)
 }
 
 
@@ -348,27 +367,34 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
      var $t4: u64
      var $t5: u64
      var $t6: u64
-     var $t7: num
-     var $t8: &mut u64
+     var $t7: u64
+     var $t8: num
+     var $t9: &mut u64
   0: $t2 := move(r)
   1: $t3 := borrow_local(r)
-  2: x := get_field<Test::R>.v($t3)
-  3: $t4 := get_field<Test::R>.v($t3)
-  4: $t5 := 1
-  5: $t6 := -($t4, $t5)
-  6: on_abort(L2, $t7)
-  7: $t8 := borrow_field<Test::R>.v($t3)
-  8: write_ref($t8, $t6)
-  9: write_back[Reference($t3)]($t8)
+  2: $t4 := get_field<Test::R>.v($t3)
+  3: $t5 := get_field<Test::R>.v($t3)
+  4: $t6 := 1
+  5: $t7 := -($t5, $t6)
+  6: on_abort(L2, $t8)
+  7: $t9 := borrow_field<Test::R>.v($t3)
+  8: write_ref($t9, $t7)
+  9: write_back[Reference($t3)]($t9)
  10: write_back[LocalRoot(r)]($t3)
  11: L1:
+     // VC: `function does not abort under this condition` for ensures
  12: assert Not(Eq(select Test::R.v(r), 0))
- 13: assert Eq(x, select Test::R.v(r))
+     // VC: `post-condition does not hold` for ensures
+ 13: assert Eq($t4, select Test::R.v(r))
+     // VC: `post-condition does not hold` for ensures
  14: assert Eq(select Test::R.v($t2), Add(select Test::R.v(r), 1))
- 15: return (x, $t2)
+ 15: return ($t4, $t2)
  16: L2:
- 17: assert And(Eq(select Test::R.v(r), 0), Eq(-1, $t7))
- 18: abort($t7)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 17: assert Eq(select Test::R.v(r), 0)
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 18: assert Implies(Eq(select Test::R.v(r), 0), Eq($t8, -1))
+ 19: abort($t8)
 }
 
 
@@ -386,6 +412,7 @@ fun Test::ref_param(r: Test::R): u64 {
      var $t1: u64
   0: $t1 := get_field<Test::R>.v(r)
   1: L1:
+     // VC: `post-condition does not hold` for ensures
   2: assert Eq($t1, select Test::R.v(r))
   3: return $t1
 }
@@ -405,6 +432,7 @@ fun Test::ref_param_return_ref(r: Test::R): u64 {
      var $t1: u64
   0: $t1 := get_field<Test::R>.v(r)
   1: L1:
+     // VC: `post-condition does not hold` for ensures
   2: assert Eq($t1, select Test::R.v(r))
   3: return $t1
 }
@@ -495,11 +523,17 @@ fun Test::resource_with_old(val: u64) {
  25: pack_ref(r)
  26: write_back[Test::R](r)
  27: L3:
+     // VC: `function does not abort under this condition` for ensures
  28: assert Not(Not(exists<Test::R>[@0](0)))
+     // VC: `function does not abort under this condition` for ensures
  29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0](0)), val), 18446744073709551615))
+     // VC: `post-condition does not hold` for ensures
  30: assert Eq(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global<Test::R>[@0](0)), val))
  31: return ()
  32: L4:
- 33: assert Or(And(Not(exists<Test::R>[@0](0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global<Test::R>[@0](0)), val), 18446744073709551615))
- 34: abort($t6)
+     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
+ 33: assert Or(Not(exists<Test::R>[@0](0)), Ge(Add(select Test::R.v(global<Test::R>[@0](0)), val), 18446744073709551615))
+     // VC: `function aborts under this condition but with the wrong code` for ensures
+ 34: assert Implies(Not(exists<Test::R>[@0](0)), Eq($t6, 33))
+ 35: abort($t6)
 }

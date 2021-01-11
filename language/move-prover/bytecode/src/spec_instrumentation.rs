@@ -8,6 +8,7 @@ use crate::{
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnalysisProcessor,
+    options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{AssignKind, AttrId, Bytecode, Label, Operation, PropKind, TempIndex},
 };
@@ -15,29 +16,26 @@ use itertools::Itertools;
 use move_model::{
     ast,
     ast::{ConditionKind, Exp, LocalVarDecl, MemoryLabel},
-    model::{
-        FunId, FunctionEnv, Loc, ModuleId, QualifiedId, SpecVarId, StructId, VerificationScope,
-    },
+    model::{ConditionTag, FunId, FunctionEnv, Loc, ModuleId, QualifiedId, SpecVarId, StructId},
+    pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA},
     symbol::Symbol,
-    ty::{BOOL_TYPE, NUM_TYPE},
+    ty::NUM_TYPE,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-pub struct SpecInstrumenterOptions {
-    pub verification_scope: VerificationScope,
-}
+const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
+const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
+const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
+const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
+const WRONG_ABORTS_CODE: &str = "function aborts under this condition but with the wrong code";
+const ABORTS_CODE_NOT_COVERED: &str =
+    "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
 
-pub struct SpecInstrumenter {
-    options: SpecInstrumenterOptions,
-}
+pub struct SpecInstrumenter {}
 
 impl SpecInstrumenter {
     pub fn new() -> Box<Self> {
-        Box::new(Self {
-            options: SpecInstrumenterOptions {
-                verification_scope: VerificationScope::All,
-            },
-        })
+        Box::new(Self {})
     }
 }
 
@@ -46,7 +44,7 @@ impl FunctionTargetProcessor for SpecInstrumenter {
         &self,
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'_>,
-        data: FunctionData,
+        mut data: FunctionData,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do
@@ -55,12 +53,25 @@ impl FunctionTargetProcessor for SpecInstrumenter {
 
         // If verification is enabled for this function, create a new variant for verification
         // purposes.
-        if fun_env.should_verify(self.options.verification_scope) {
-            let verification_data = Instrumenter::run(
+        let options = fun_env
+            .module_env
+            .env
+            .get_extension::<ProverOptions>()
+            .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
+        if fun_env.should_verify(options.verify_scope) {
+            // Create a clone of the function data, moving annotations
+            // out of this data and into the clone.
+            // TODO(refactoring): we cannot clone annotations because they use the Any type.
+            //   In any case, function variants should be revisited once refactoring is
+            //   finished and all the old boilerplate is removed.
+            let annotations = std::mem::take(&mut data.annotations);
+            let mut verification_data = data.clone();
+            verification_data.annotations = annotations;
+            verification_data = Instrumenter::run(
                 targets,
                 fun_env,
                 FunctionVariant::Verification,
-                data.clone(),
+                verification_data,
             );
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
@@ -84,6 +95,7 @@ struct Instrumenter<'a> {
     spec: TranslatedSpec,
     ret_locals: Vec<TempIndex>,
     ret_label: Label,
+    can_return: bool,
     abort_local: TempIndex,
     abort_label: Label,
     can_abort: bool,
@@ -127,6 +139,7 @@ impl<'a> Instrumenter<'a> {
             spec,
             ret_locals,
             ret_label,
+            can_return: false,
             abort_local,
             abort_label,
             can_abort: false,
@@ -137,7 +150,7 @@ impl<'a> Instrumenter<'a> {
         // elimination (live vars). This cleans up some redundancy created by
         // the instrumentation scheme.
         let mut data = instrumenter.builder.data;
-        let reach_def = ReachingDefProcessor::new_no_preserve_proxies();
+        let reach_def = ReachingDefProcessor::new_no_preserve_user_locals();
         let live_vars = LiveVarAnalysisProcessor::new_no_annotate();
         data = reach_def.process(targets, fun_env, data);
         live_vars.process(targets, fun_env, data)
@@ -173,12 +186,14 @@ impl<'a> Instrumenter<'a> {
 
         // Instrument and generate new code
         for bc in old_code {
-            self.instrument_bytecode(bc)
+            self.instrument_bytecode(bc.clone());
         }
 
         // Generate return and abort blocks
-        self.generate_return_block();
-        if self.can_abort || !self.spec.aborts_with.is_empty() || !self.spec.aborts.is_empty() {
+        if self.can_return {
+            self.generate_return_block();
+        }
+        if self.can_abort {
             self.generate_abort_block();
         }
     }
@@ -195,6 +210,7 @@ impl<'a> Instrumenter<'a> {
                 }
                 let ret_label = self.ret_label;
                 self.builder.emit_with(|id| Jump(id, ret_label));
+                self.can_return = true;
             }
             Abort(id, code) => {
                 self.builder.set_loc_from_attr(id);
@@ -244,7 +260,8 @@ impl<'a> Instrumenter<'a> {
 
         // Emit pre conditions as assertions.
         for (loc, cond) in std::mem::take(&mut spec.pre) {
-            self.builder.set_loc(loc);
+            self.builder
+                .set_loc_and_vc_info(loc, ConditionTag::Requires, REQUIRES_FAILS_MESSAGE);
             self.builder.emit_with(|id| Prop(id, Assert, cond));
         }
 
@@ -266,16 +283,9 @@ impl<'a> Instrumenter<'a> {
         //   assume <temp> == <abort_cond>
         //   if <temp> goto abort_label
         //
-        if let Some(abort_cond) = self.generate_abort_cond(&spec) {
-            let abort_cond_temp = self.builder.new_temp(BOOL_TYPE.clone());
-            let abort_assumption = self.builder.mk_bool_call(
-                ast::Operation::Eq,
-                vec![self.builder.mk_local(abort_cond_temp), abort_cond],
-            );
+        if let Some(abort_cond_temp) = self.generate_abort_opaque_cond(&spec) {
             let abort_label = self.abort_label;
             let no_abort_label = self.builder.new_label();
-            self.builder
-                .emit_with(move |id| Prop(id, Assume, abort_assumption));
             self.builder
                 .emit_with(|id| Branch(id, abort_label, no_abort_label, abort_cond_temp));
             self.builder.emit_with(|id| Label(id, no_abort_label));
@@ -290,17 +300,14 @@ impl<'a> Instrumenter<'a> {
 
     fn generate_abort_block(&mut self) {
         use Bytecode::*;
-        use PropKind::*;
-
         // Set the location to the function and emit label.
-        self.builder.set_loc(self.builder.fun_env.get_loc());
+        let fun_loc = self.builder.fun_env.get_loc();
+        self.builder.set_loc(fun_loc);
         let abort_label = self.abort_label;
         self.builder.emit_with(|id| Label(id, abort_label));
 
         if self.variant == FunctionVariant::Verification {
-            if let Some(cond) = self.generate_abort_cond(&self.spec) {
-                self.builder.emit_with(move |id| Prop(id, Assert, cond));
-            }
+            self.generate_abort_verify();
         }
 
         // Emit abort
@@ -308,53 +315,151 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Abort(id, abort_local));
     }
 
-    fn generate_abort_cond(&self, spec: &TranslatedSpec) -> Option<Exp> {
-        // Create a disjunction of the form:
-        //
-        //        P1 && code == C1
-        //     || ..
-        //     || Pj && code == Cj
-        //     || Pk
-        //     || ..
-        //     || Pl
-        //     || code == Cm
-        //     || ..
-        //     || code == Cn
-        //
-        // Here the P1..Pj are aborts_if with a code, the Pk..Pl aborts_if
-        // without a code, and the Cm..Cn standalone aborts codes from an
-        // aborts_with.
-        let code_exp = self.builder.mk_local(self.abort_local);
-        let mut abort_conds = spec
-            .aborts
-            .iter()
-            .map(|(_, e, c)| {
-                let mut prop = e.clone();
-                if let Some(c) = c {
-                    let code_eq = self
-                        .builder
-                        .mk_bool_call(ast::Operation::Eq, vec![c.clone(), code_exp.clone()]);
-                    prop = self
-                        .builder
-                        .mk_bool_call(ast::Operation::And, vec![prop, code_eq])
-                };
-                prop
-            })
-            .chain(
-                spec.aborts_with
-                    .iter()
-                    .map(|(_, codes)| {
-                        codes.iter().map(|c| {
-                            self.builder
-                                .mk_bool_call(ast::Operation::Eq, vec![c.clone(), code_exp.clone()])
-                        })
-                    })
-                    .flatten(),
-            )
-            .peekable();
-        if abort_conds.peek().is_some() {
-            let disjunction = self.builder.mk_join_bool(ast::Operation::Or, abort_conds);
-            Some(disjunction)
+    /// Generates verification conditions for abort block. Note that some of the complexity
+    /// of this stems from that we aim to get as much detailed as possible diagnosis of
+    /// verification failures, by splitting this into multiple asserts.
+    ///
+    /// Let (P1, C1)..(Pj, Cj) be aborts_if with a code, Pk..Pl aborts_if without a code, and the
+    /// Cm..Cn standalone aborts codes from an aborts_with. We generate:
+    ///
+    ///  ```notrust
+    ///   let P_with_code = P1 || .. || Pj
+    ///   let P_without_code = Pk || .. || Pl
+    ///   assert P_with_code || P_without_code    [if not partial]
+    ///   assert P1 ==> abort_code == C1
+    ///   ..
+    ///   assert Pj ==> abort_code == Cj
+    ///   assert !P_with_code ==> abort_code == Cm || .. || abort_code == Cn
+    /// ```
+    ///
+    /// Each of the asserts has its own related ConditionInfo for failure reporting.
+    fn generate_abort_verify(&mut self) {
+        use Bytecode::*;
+        use PropKind::*;
+
+        let is_partial = self
+            .builder
+            .fun_env
+            .is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
+
+        let actual_code = self.builder.mk_local(self.abort_local);
+        let mut p_with_code = self.spec.aborts_if_with_code_disjunction(&self.builder);
+        let p_without_code = self.spec.aborts_if_without_code_disjunction(&self.builder);
+        let p_implies_code = self
+            .spec
+            .aborts_if_with_code_implication(&self.builder, &actual_code);
+        let aborts_with_codes = self
+            .spec
+            .aborts_with_code_disjunction(&self.builder, &actual_code);
+
+        if aborts_with_codes.is_some() && p_with_code.is_some() && !is_partial {
+            // We need the p_with_code expression two times: first for asserting
+            // the aborts condition, and second for asserting the aborts_with codes.
+            // Save it into a temporary.
+            p_with_code = p_with_code.map(|e| self.builder.emit_let(e).1);
+        }
+
+        // If !is_partial, assert the abort condition.
+        if !is_partial {
+            let p_overall = self.builder.mk_join_opt_bool(
+                ast::Operation::Or,
+                p_with_code.clone(),
+                p_without_code,
+            );
+            if let Some(p) = p_overall {
+                // TODO(wrwg): we need a location for the spec block of this function.
+                //   The conditions don't give us a good indication because via
+                //   schemas, they can come from anywhere. For now we use the
+                //   function location.
+                let loc = self.builder.fun_env.get_loc();
+                self.builder
+                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, ABORTS_NOT_COVERED);
+                self.builder.emit_with(move |id| Prop(id, Assert, p));
+            }
+        }
+
+        // Next assert implications for aborts_if with code.
+        for (loc, implies) in p_implies_code {
+            self.builder
+                .set_loc_and_vc_info(loc, ConditionTag::Ensures, WRONG_ABORTS_CODE);
+            self.builder.emit_with(move |id| Prop(id, Assert, implies));
+        }
+
+        // Finally emit aborts_with.
+        if aborts_with_codes.is_some() {
+            let not_p_with_code = p_with_code.map(|e| self.builder.mk_not(e));
+            let aborts_with_cond = self
+                .builder
+                .mk_join_opt_bool(ast::Operation::Implies, not_p_with_code, aborts_with_codes)
+                .unwrap();
+            self.builder.set_loc_and_vc_info(
+                self.builder.fun_env.get_loc().at_start(),
+                ConditionTag::Ensures,
+                ABORTS_CODE_NOT_COVERED,
+            );
+            self.builder
+                .emit_with(move |id| Prop(id, Assert, aborts_with_cond));
+        }
+    }
+
+    /// Generates an abort condition for assumption in opaque calls. In contrast
+    /// to `generate_abort_verify`, this function does not need to consider failure
+    /// reporting. We generate (see `generate_abort_if` for definitions):
+    ///
+    ///  ```notrust
+    ///   let P_with_code = P1 || .. || Pj
+    ///   let P_without_code = Pk || .. || Pl
+    ///   let result = (P_with_code || P_without_code)
+    ///             && (P1 ==> abort_code == C1)
+    ///             ..
+    ///             && (Pj ==> abort_code == Cj)
+    ///             && (!P_with_code ==> abort_code == Cm || .. || abort_code == Cn)
+    /// ```
+    ///
+    /// `result` is stored in a temporary which is returned and can be used to branch
+    /// under this condition.
+    fn generate_abort_opaque_cond(&mut self, spec: &TranslatedSpec) -> Option<TempIndex> {
+        // TODO(refactoring): we expect that opaque functions are `aborts_if_is_partial`. Need
+        //   to check whether we check this in the frontend.
+        let actual_code = self.builder.mk_local(self.abort_local);
+        let mut p_with_code = spec.aborts_if_with_code_disjunction(&self.builder);
+        let p_without_code = spec.aborts_if_without_code_disjunction(&self.builder);
+        let p_implies_code = spec.aborts_if_with_code_implication(&self.builder, &actual_code);
+        let abort_with_codes = spec.aborts_with_code_disjunction(&self.builder, &actual_code);
+
+        if abort_with_codes.is_some() && p_with_code.is_some() {
+            // We need the p_with_code expression two times: first for the
+            // aborts condition, and second for the aborts_with codes.
+            // Save it into a temporary.
+            p_with_code = p_with_code.map(|e| self.builder.emit_let(e).1);
+        }
+
+        let mut p_overall =
+            self.builder
+                .mk_join_opt_bool(ast::Operation::Or, p_with_code.clone(), p_without_code);
+
+        // Next add implications for aborts_if with code.
+        for (_, implies) in p_implies_code {
+            p_overall =
+                self.builder
+                    .mk_join_opt_bool(ast::Operation::And, p_overall, Some(implies));
+        }
+
+        // Finally add aborts_with.
+        if abort_with_codes.is_some() {
+            let not_p_with_code = p_with_code.map(|e| self.builder.mk_not(e));
+            let aborts_with_cond = self.builder.mk_join_opt_bool(
+                ast::Operation::Implies,
+                not_p_with_code,
+                abort_with_codes,
+            );
+            p_overall =
+                self.builder
+                    .mk_join_opt_bool(ast::Operation::And, p_overall, aborts_with_cond);
+        }
+
+        if let Some(p) = p_overall {
+            Some(self.builder.emit_let(p).0)
         } else {
             None
         }
@@ -370,17 +475,24 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Label(id, ret_label));
 
         if self.variant == FunctionVariant::Verification {
-            // Emit the negation of all aborts conditions. If we reach the return,
-            // those negations must hold.
+            // Emit the negation of all aborts conditions.
             for (loc, abort_cond, _) in &self.spec.aborts {
-                self.builder.set_loc(loc.clone());
+                self.builder.set_loc_and_vc_info(
+                    loc.clone(),
+                    ConditionTag::Ensures,
+                    ABORTS_IF_FAILS_MESSAGE,
+                );
                 let exp = self.builder.mk_not(abort_cond.clone());
                 self.builder.emit_with(|id| Prop(id, Assert, exp))
             }
 
             // Emit all post-conditions which must hold as we do not abort.
             for (loc, cond) in &self.spec.post {
-                self.builder.set_loc(loc.clone());
+                self.builder.set_loc_and_vc_info(
+                    loc.clone(),
+                    ConditionTag::Ensures,
+                    ENSURES_FAILS_MESSAGE,
+                );
                 self.builder
                     .emit_with(move |id| Prop(id, Assert, cond.clone()))
             }
@@ -403,6 +515,8 @@ struct SpecTranslator<'a, 'b> {
     param_locals: Option<&'b [TempIndex]>,
     /// A substitution for return vales.
     ret_locals: &'b [TempIndex],
+    /// A set of locals which are declared by outer block, lambda, or quant expressions.
+    shadowed: Vec<BTreeSet<Symbol>>,
     /// The translated spec.
     result: TranslatedSpec,
 }
@@ -419,6 +533,67 @@ struct TranslatedSpec {
     modifies: Vec<(Loc, Exp)>,
 }
 
+impl TranslatedSpec {
+    /// Creates a disjunction of all abort conditions which come with a code.
+    fn aborts_if_with_code_disjunction(&self, builder: &FunctionDataBuilder<'_>) -> Option<Exp> {
+        builder.mk_join_bool(
+            ast::Operation::Or,
+            self.aborts
+                .iter()
+                .filter_map(|(_, e, c)| if c.is_some() { Some(e.clone()) } else { None }),
+        )
+    }
+
+    /// Creates a disjunction of all abort conditions which come without a code.
+    fn aborts_if_without_code_disjunction(&self, builder: &FunctionDataBuilder<'_>) -> Option<Exp> {
+        builder.mk_join_bool(
+            ast::Operation::Or,
+            self.aborts
+                .iter()
+                .filter_map(|(_, e, c)| if c.is_none() { Some(e.clone()) } else { None }),
+        )
+    }
+
+    /// Creates a list of implications that if an aborts condition with a code holds, the
+    /// abort code must have the expected value.
+    fn aborts_if_with_code_implication(
+        &self,
+        builder: &FunctionDataBuilder<'_>,
+        actual_code: &Exp,
+    ) -> Vec<(Loc, Exp)> {
+        self.aborts
+            .iter()
+            .filter_map(|(_, e, c)| {
+                if let Some(expected_code) = c {
+                    let loc = builder.global_env().get_node_loc(expected_code.node_id());
+                    let matches = builder.mk_eq(actual_code.clone(), expected_code.clone());
+                    Some((loc, builder.mk_implies(e.clone(), matches)))
+                } else {
+                    None
+                }
+            })
+            .collect_vec()
+    }
+
+    /// Creates a disjunction that the actual aborts code must be one of the codes specified
+    /// with aborts_with.
+    fn aborts_with_code_disjunction(
+        &self,
+        builder: &FunctionDataBuilder<'_>,
+        actual_code: &Exp,
+    ) -> Option<Exp> {
+        let codes = self
+            .aborts_with
+            .iter()
+            .map(|(_, v)| v.iter())
+            .flatten()
+            .cloned();
+        let equalities =
+            codes.map(|expected_code| builder.mk_eq(actual_code.clone(), expected_code));
+        builder.mk_join_bool(ast::Operation::Or, equalities)
+    }
+}
+
 impl<'a, 'b> SpecTranslator<'a, 'b> {
     fn translate(
         builder: &'b mut FunctionDataBuilder<'a>,
@@ -431,6 +606,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             fun_env,
             param_locals,
             ret_locals,
+            shadowed: Default::default(),
             result: Default::default(),
         };
         translator.translate_spec();
@@ -463,6 +639,21 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             self.result.aborts_with.push((cond.loc.clone(), codes));
         }
 
+        // If there are no aborts_if and aborts_with, and the pragma `aborts_if_is_strict` is set,
+        // add an implicit aborts_if false.
+        if self.result.aborts.is_empty()
+            && self.result.aborts_with.is_empty()
+            && self
+                .fun_env
+                .is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
+        {
+            self.result.aborts.push((
+                self.fun_env.get_loc(),
+                self.builder.mk_bool_const(false),
+                None,
+            ));
+        }
+
         for cond in spec.filter_kind(ConditionKind::Ensures) {
             let exp = self.translate_exp(&cond.exp, false);
             self.result.post.push((cond.loc.clone(), exp));
@@ -478,8 +669,8 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         use ast::Operation::*;
         use Exp::*;
         match exp {
-            LocalVar(node_id, name) => {
-                // Compute the effective name of a local.
+            LocalVar(node_id, name) if !self.is_parameter(name) => {
+                // Compute the effective name of parameter.
                 let (idx, mut_ret_opt) = self.get_param_index_and_ret_proxy(*name);
                 let effective_name = match (in_old, mut_ret_opt) {
                     (false, Some(mut_ret_idx)) => {
@@ -569,11 +760,17 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             }
             Lambda(node_id, decls, body) => {
                 let decls = self.eliminate_old_decls(decls, in_old);
-                Lambda(*node_id, decls, Box::new(self.translate_exp(body, in_old)))
+                self.shadowed.push(decls.iter().map(|d| d.name).collect());
+                let res = Lambda(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
+                self.shadowed.pop();
+                res
             }
             Block(node_id, decls, body) => {
                 let decls = self.eliminate_old_decls(decls, in_old);
-                Block(*node_id, decls, Box::new(self.translate_exp(body, in_old)))
+                self.shadowed.push(decls.iter().map(|d| d.name).collect());
+                let res = Block(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
+                self.shadowed.pop();
+                res
             }
             IfElse(node_id, cond, if_true, if_false) => IfElse(
                 *node_id,
@@ -583,6 +780,12 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ),
             _ => exp.clone(),
         }
+    }
+
+    /// Returns true if the local name is shadowed, i.e. declared in a block, lambda, or quant
+    /// instead of being a function parameter.
+    fn is_parameter(&self, name: &Symbol) -> bool {
+        self.shadowed.iter().any(|s| s.contains(name))
     }
 
     /// Get index of a parameter without having access to FunctionData (we do not have this access
@@ -606,7 +809,15 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 mut_ref_count += 1;
             }
         }
-        panic!("cannot determine index of local")
+        panic!(
+            "cannot determine index of parameter `{}` in `{}::{}`",
+            name.display(self.fun_env.symbol_pool()),
+            self.fun_env
+                .module_env
+                .get_name()
+                .display(self.fun_env.symbol_pool()),
+            self.fun_env.get_name().display(self.fun_env.symbol_pool()),
+        )
     }
 
     fn eliminate_old_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {

@@ -1,5 +1,5 @@
 module TestAbortsIfAssumeAssert {
-
+    // TODO(refactoring): remove this test because we do not plan to support this feature in v2 right now
     spec module {
         pragma verify = true;
 

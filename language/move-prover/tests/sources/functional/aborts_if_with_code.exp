@@ -1,21 +1,21 @@
 Move prover returns: exiting with boogie verification errors
-error: function does not abort with any of the expected codes
+error: function aborts under this condition but with the wrong code
 
-    ┌── tests/sources/functional/aborts_if_with_code.move:69:5 ───
+    ┌── tests/sources/functional/aborts_if_with_code.move:79:31 ───
     │
- 69 │     fun aborts_if_with_code_mixed_invalid(x: u64) {
-    │     ^
+ 79 │         aborts_if x == 2 with 1;
+    │                               ^
     ·
  74 │             abort(2)
     │             -------- abort happened here with code `0x2`
     │
     =     at tests/sources/functional/aborts_if_with_code.move:69:5: aborts_if_with_code_mixed_invalid
     =         x = <redacted>
-    =     at tests/sources/functional/aborts_if_with_code.move:70:9: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:70:18: aborts_if_with_code_mixed_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:73:9: aborts_if_with_code_mixed_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:74:13: aborts_if_with_code_mixed_invalid (ABORTED)
 
-error: function does not abort with any of the expected codes
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
      ┌── tests/sources/functional/aborts_if_with_code.move:97:5 ───
      │
@@ -27,11 +27,11 @@ error: function does not abort with any of the expected codes
      │
      =     at tests/sources/functional/aborts_if_with_code.move:97:5: aborts_with_invalid
      =         x = <redacted>
-     =     at tests/sources/functional/aborts_if_with_code.move:98:9: aborts_with_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:98:18: aborts_with_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:101:9: aborts_with_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:102:13: aborts_with_invalid (ABORTED)
 
-error: function does not abort with any of the expected codes
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
 
      ┌── tests/sources/functional/aborts_if_with_code.move:123:5 ───
      │
@@ -43,16 +43,33 @@ error: function does not abort with any of the expected codes
      │
      =     at tests/sources/functional/aborts_if_with_code.move:123:5: aborts_with_mixed_invalid
      =         x = <redacted>
-     =     at tests/sources/functional/aborts_if_with_code.move:124:9: aborts_with_mixed_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:124:18: aborts_with_mixed_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:127:9: aborts_with_mixed_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:128:13: aborts_with_mixed_invalid (ABORTED)
 
-error: function does not abort with any of the expected codes
+error: function aborts under this condition but with the wrong code
 
-    ┌── tests/sources/functional/aborts_if_with_code.move:29:5 ───
+    ┌── tests/sources/functional/aborts_if_with_code.move:24:40 ───
     │
- 29 │     fun conditional_abort_invalid(x: u64, y: u64): u64 {
-    │     ^
+ 24 │         aborts_if x + y > MAX_U64 with EXECUTION_FAILURE;
+    │                                        ^^^^^^^^^^^^^^^^^
+    ·
+ 16 │             abort 3
+    │             ------- abort happened here with code `0x3`
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:11:5: conditional_abort
+    =         x = <redacted>,
+    =         y = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:12:18: conditional_abort
+    =     at tests/sources/functional/aborts_if_with_code.move:15:9: conditional_abort
+    =     at tests/sources/functional/aborts_if_with_code.move:16:13: conditional_abort (ABORTED)
+
+error: function aborts under this condition but with the wrong code
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:39:31 ───
+    │
+ 39 │         aborts_if x == 1 with 1; // wrong code
+    │                               ^
     ·
  31 │             abort 2
     │             ------- abort happened here with code `0x2`
@@ -60,19 +77,19 @@ error: function does not abort with any of the expected codes
     =     at tests/sources/functional/aborts_if_with_code.move:29:5: conditional_abort_invalid
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts_if_with_code.move:30:9: conditional_abort_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:30:18: conditional_abort_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:31:13: conditional_abort_invalid (ABORTED)
 
-error: function does not abort with any of the expected codes
+error: function aborts under this condition but with the wrong code
 
-    ┌── tests/sources/functional/aborts_if_with_code.move:45:5 ───
+    ┌── tests/sources/functional/aborts_if_with_code.move:49:31 ───
     │
- 45 │     fun exec_failure_invalid(x: u64): u64 {
-    │     ^
+ 49 │         aborts_if x == 0 with 1; // wrong code
+    │                               ^
     ·
  46 │         10 / x
-    │            - abort happened here with execution failure
+    │         -- abort happened here with execution failure
     │
     =     at tests/sources/functional/aborts_if_with_code.move:45:5: exec_failure_invalid
     =         x = <redacted>
-    =     at tests/sources/functional/aborts_if_with_code.move:46:12: exec_failure_invalid (ABORTED)
+    =     at tests/sources/functional/aborts_if_with_code.move:46:9: exec_failure_invalid (ABORTED)

@@ -343,8 +343,8 @@ impl<'env> BoogieWrapper<'env> {
                     }
                     // DEBUG
                     //warn!(
-                    //   "checking abort at {}.{}",
-                    //   source_pos.1.line, source_pos.1.column
+                    //    "checking abort at {}.{}",
+                    //    source_pos.1.line, source_pos.1.column
                     //);
                     // END DEBUG
                     let abort_marker = error.model.as_ref().and_then(|model| {

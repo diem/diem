@@ -31,9 +31,8 @@ pub enum Def {
 pub struct ReachingDefAnnotation(BTreeMap<CodeOffset, BTreeMap<TempIndex, BTreeSet<Def>>>);
 
 pub struct ReachingDefProcessor {
-    /// An option to work around restrictions in the boogie backend. If true, copy
-    /// propagation will leave proxies untouched.
-    preserve_proxies: bool,
+    /// If true, user locals will not be renamed during copy propagation.
+    preserve_user_locals: bool,
 }
 
 type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
@@ -41,13 +40,13 @@ type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
 impl ReachingDefProcessor {
     pub fn new() -> Box<Self> {
         Box::new(ReachingDefProcessor {
-            preserve_proxies: true,
+            preserve_user_locals: true,
         })
     }
 
-    pub fn new_no_preserve_proxies() -> Box<Self> {
+    pub fn new_no_preserve_user_locals() -> Box<Self> {
         Box::new(ReachingDefProcessor {
-            preserve_proxies: false,
+            preserve_user_locals: false,
         })
     }
 
@@ -131,7 +130,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let analyzer = ReachingDefAnalysis {
                 target: FunctionTarget::new(func_env, &data),
-                preserve_proxies: self.preserve_proxies,
+                preserve_user_locals: self.preserve_user_locals,
             };
             let block_state_map = analyzer.analyze_function(
                 ReachingDefState {
@@ -166,7 +165,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 
 struct ReachingDefAnalysis<'a> {
     target: FunctionTarget<'a>,
-    preserve_proxies: bool,
+    preserve_user_locals: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -184,14 +183,15 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
         use Bytecode::*;
         match instr {
             Assign(_, dst, src, _) => {
-                // Only define aliases for temporaries. We want to keep names for user
-                // declared variables for better debugging. Also don't skip assigns
-                // from proxied parameters if configured so. The later is currently needed because the
+                // On `self.preserve_user_locals`, only define aliases for temporaries.
+                // Also don't alias proxied parameters. The later is currently needed because the
                 // Boogie backend does not allow to write to such values, which happens via
                 // WriteBack instructions.
-                // TODO(remove): this restriction should be handled in the backend instead of here.
-                if self.target.is_temporary(*dst)
-                    && (!self.preserve_proxies || self.target.get_proxy_index(*src).is_none())
+                // TODO(refactoring): this can be removed once the old boogie backend is retired,
+                //   as in the new world, we emit `trace_local` instructions before this phase,
+                //   and this way remember user local names.
+                if !self.preserve_user_locals
+                    || self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none()
                 {
                     state.def_alias(*dst, *src);
                 }

@@ -5,18 +5,22 @@
 
 //! Functionality related to the command line interface of the Move prover.
 
-use abigen::AbigenOptions;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use anyhow::anyhow;
 use clap::{App, Arg};
-use docgen::DocgenOptions;
-use errmapgen::ErrmapOptions;
 use log::LevelFilter;
-use move_model::model::VerificationScope;
 use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+
+use abigen::AbigenOptions;
+use boogie_backend::options::BoogieOptions;
+use bytecode::options::ProverOptions;
+use docgen::DocgenOptions;
+use errmapgen::ErrmapOptions;
+use move_model::model::VerificationScope;
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";
@@ -64,7 +68,9 @@ pub struct Options {
     /// Options for the prover.
     pub prover: ProverOptions,
     /// Options for the prover backend.
-    pub backend: BackendOptions,
+    pub backend: BoogieOptions,
+    /// Whether to use the v2 translation schema.
+    pub trans_v2: bool,
     /// Options for the documentation generator.
     pub docgen: DocgenOptions,
     /// Options for the ABI generator.
@@ -88,157 +94,11 @@ impl Default for Options {
             move_sources: vec![],
             move_deps: vec![],
             prover: ProverOptions::default(),
-            backend: BackendOptions::default(),
+            backend: BoogieOptions::default(),
+            trans_v2: false,
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct ProverOptions {
-    /// Whether to only generate backend code.
-    pub generate_only: bool,
-    /// Whether to generate stubs for native functions.
-    pub native_stubs: bool,
-    /// Whether to minimize execution traces in errors.
-    pub minimize_execution_trace: bool,
-    /// Whether to omit debug information in generated model.
-    pub omit_model_debug: bool,
-    /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
-    /// output.
-    pub stable_test_output: bool,
-    /// Scope of what functions to verify.
-    pub verify_scope: VerificationScope,
-    /// [deprecated] Whether to emit global axiom that resources are well-formed.
-    pub resource_wellformed_axiom: bool,
-    /// Whether to assume wellformedness when elements are read from memory, instead of on
-    /// function entry.
-    pub assume_wellformed_on_access: bool,
-    /// Whether to assume a global invariant when the related memory
-    /// is accessed, instead of on function entry. This is currently known to be slower
-    /// if one than off, so off by default.
-    pub assume_invariant_on_access: bool,
-    /// Whether pack/unpack should recurse over the structure.
-    pub deep_pack_unpack: bool,
-    /// Whether to automatically debug trace values of specification expression leafs.
-    pub debug_trace: bool,
-    /// Report warnings. This is not on by default. We may turn it on if the warnings
-    /// are better filtered, e.g. do not contain unused schemas intended for other modules.
-    pub report_warnings: bool,
-    /// Whether to dump the transformed stackless bytecode to a file
-    pub dump_bytecode: bool,
-    /// Number of Boogie instances to be run concurrently.
-    pub num_instances: usize,
-    /// Whether to run Boogie instances sequentially.
-    pub sequential_task: bool,
-    /// Run negative verification checks.
-    pub negative_checks: bool,
-}
-
-impl Default for ProverOptions {
-    fn default() -> Self {
-        Self {
-            generate_only: false,
-            native_stubs: false,
-            minimize_execution_trace: true,
-            omit_model_debug: false,
-            stable_test_output: false,
-            verify_scope: VerificationScope::All,
-            resource_wellformed_axiom: false,
-            assume_wellformed_on_access: false,
-            deep_pack_unpack: false,
-            debug_trace: false,
-            report_warnings: false,
-            assume_invariant_on_access: false,
-            dump_bytecode: false,
-            num_instances: 1,
-            sequential_task: false,
-            negative_checks: false,
-        }
-    }
-}
-
-/// Backend options.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct BackendOptions {
-    /// Path to the boogie executable.
-    pub boogie_exe: String,
-    /// Path to the z3 executable.
-    pub z3_exe: String,
-    /// Whether to use cvc4.
-    pub use_cvc4: bool,
-    /// Path to the cvc4 executable.
-    pub cvc4_exe: String,
-    /// List of flags to pass on to boogie.
-    pub boogie_flags: Vec<String>,
-    /// Whether to use native array theory.
-    pub use_array_theory: bool,
-    /// Whether to produce an SMT file for each verification problem.
-    pub generate_smt: bool,
-    /// Whether native instead of stratified equality should be used.
-    pub native_equality: bool,
-    /// A string determining the type of requires used for parameter type checks. Can be
-    /// `"requires"` or `"free requires`".
-    pub type_requires: String,
-    /// The depth until which stratified functions are expanded.
-    pub stratification_depth: usize,
-    /// A string to be used to inline a function of medium size. Can be empty or `{:inline}`.
-    pub aggressive_func_inline: String,
-    /// A string to be used to inline a function of small size. Can be empty or `{:inline}`.
-    pub func_inline: String,
-    /// A bound to apply to the length of serialization results.
-    pub serialize_bound: usize,
-    /// How many times to call the prover backend for the verification problem. This is used for
-    /// benchmarking.
-    pub bench_repeat: usize,
-    /// Whether to use the sequence theory as the internal representation for $Vector type.
-    pub vector_using_sequences: bool,
-    /// A seed for the prover.
-    pub random_seed: usize,
-    /// The number of cores to use for parallel processing of verification conditions.
-    pub proc_cores: usize,
-    /// A (soft) timeout for the solver, per verification condition, in seconds.
-    pub vc_timeout: usize,
-    /// Whether Boogie output and log should be saved.
-    pub keep_artifacts: bool,
-    /// Eager threshold for quantifier instantiation.
-    pub eager_threshold: usize,
-    /// Lazy threshold for quantifier instantiation.
-    pub lazy_threshold: usize,
-    /// Whether to use the new Boogie `{:debug ..}` attribute for tracking debug values.
-    pub use_boogie_debug_attrib: bool,
-}
-
-impl Default for BackendOptions {
-    fn default() -> Self {
-        let get_env = |s| std::env::var(s).unwrap_or_else(|_| String::new());
-        Self {
-            bench_repeat: 1,
-            boogie_exe: get_env("BOOGIE_EXE"),
-            z3_exe: get_env("Z3_EXE"),
-            use_cvc4: false,
-            cvc4_exe: get_env("CVC4_EXE"),
-            boogie_flags: vec![],
-            use_array_theory: false,
-            generate_smt: false,
-            native_equality: false,
-            type_requires: "free requires".to_owned(),
-            stratification_depth: 4,
-            aggressive_func_inline: "".to_owned(),
-            func_inline: "{:inline}".to_owned(),
-            serialize_bound: 0,
-            vector_using_sequences: false,
-            random_seed: 1,
-            proc_cores: 1,
-            vc_timeout: 40,
-            keep_artifacts: false,
-            eager_threshold: 100,
-            lazy_threshold: 100,
-            use_boogie_debug_attrib: true,
         }
     }
 }
@@ -334,6 +194,11 @@ impl Options {
                     .long("keep")
                     .short("k")
                     .help("keep intermediate artifacts of the backend around")
+            )
+            .arg(
+                Arg::with_name("trans_v2")
+                    .long("v2")
+                    .help("whether to use the new v2 translation and backend")
             )
             .arg(
                 Arg::with_name("negative")
@@ -576,6 +441,9 @@ impl Options {
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
+        }
+        if matches.is_present("trans_v2") {
+            options.trans_v2 = true;
         }
         if matches.is_present("negative") {
             options.prover.negative_checks = true;

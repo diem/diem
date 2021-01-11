@@ -43,8 +43,8 @@ impl<'env> Clone for FunctionTarget<'env> {
     }
 }
 
-/// Holds the owned data belonging to a FunctionTarget, which can be rewritten using
-/// the `FunctionTargetsHolder::rewrite` method.
+/// Holds the owned data belonging to a FunctionTarget, contained in a
+/// `FunctionTargetsHolder`.
 #[derive(Debug)]
 pub struct FunctionData {
     /// The bytecode.
@@ -391,9 +391,7 @@ impl FunctionData {
         for instr in &self.code {
             if let Call(_, _, Function(mid, fid, _), _) = instr {
                 let callee = mid.qualified(*fid);
-                if !callees.contains(&callee) {
-                    callees.insert(callee);
-                }
+                callees.insert(callee);
             }
         }
         callees
@@ -527,6 +525,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 self.get_local_type(i).display(&tctx)
             )?;
         }
+        let mut loc_vc_shown = BTreeSet::new();
         for (offset, code) in self.get_bytecode().iter().enumerate() {
             let annotations = self
                 .annotation_formatters
@@ -537,6 +536,13 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 .join("\n");
             if !annotations.is_empty() {
                 writeln!(f, "{}", annotations)?;
+            }
+            if let Some(loc) = self.data.locations.get(&code.get_attr_id()) {
+                if matches!(code, Bytecode::Prop(..)) && loc_vc_shown.insert(loc.clone()) {
+                    for (tag, info) in self.func_env.module_env.env.get_condition_infos(loc) {
+                        writeln!(f, "     // VC: {} for {}", info, tag)?;
+                    }
+                }
             }
             writeln!(f, "{:>3}: {}", offset, code.display(self))?;
         }

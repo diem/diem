@@ -1,9 +1,9 @@
+// Test works with v2:
+// flag: --v2
 module TestArithmetic {
-
     spec module {
         pragma verify = true;
     }
-
     // --------------------------
     // Basic arithmetic operation
     // --------------------------

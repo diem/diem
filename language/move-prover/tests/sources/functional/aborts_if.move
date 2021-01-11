@@ -1,5 +1,5 @@
+// flag: --v2
 module TestAbortsIf {
-
     spec module {
         pragma verify = true;
     }
@@ -157,24 +157,5 @@ module TestAbortsIf {
     spec fun abort_at_2_or_3_strict_incorrect {
         // When the strict mode is enabled, no aborts_if clause means aborts_if false.
         pragma aborts_if_is_strict = true;
-    }
-
-    // -------------------------------
-    // `succeeds_if`
-    // -------------------------------
-
-    fun succeed(x: u64) {
-        if (x == 2 || x == 3) abort 1;
-    }
-    spec fun succeed {
-        succeeds_if x != 2 && x != 3;
-    }
-
-    fun succeed_incorrect(x: u64) {
-        if (x == 2 || x == 3) abort 1;
-    }
-    spec fun succeed_incorrect {
-        succeeds_if x == 2;
-        succeeds_if x == 4;
     }
 }

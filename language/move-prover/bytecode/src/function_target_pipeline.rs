@@ -90,6 +90,23 @@ impl FunctionTargetsHolder {
         FunctionTarget::new(func_env, &data)
     }
 
+    /// Gets the function target from the variant which owns the annotations.
+    /// TODO(refactoring): the need for this function should be removed once refactoring
+    ///    finishes and old boilerplate can be removed.
+    pub fn get_annotated_target<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+    ) -> FunctionTarget<'env> {
+        if self
+            .get_target_variants(func_env)
+            .contains(&FunctionVariant::Verification)
+        {
+            self.get_target(func_env, FunctionVariant::Verification)
+        } else {
+            self.get_target(func_env, FunctionVariant::Baseline)
+        }
+    }
+
     /// Gets all available variants for function.
     pub fn get_target_variants(&self, func_env: &FunctionEnv<'_>) -> Vec<FunctionVariant> {
         self.targets

@@ -1,5 +1,5 @@
+// flag: --v2
 module TestCast {
-
     spec module {
         pragma verify = true;
     }

@@ -6,13 +6,15 @@
 
 use crate::{
     function_target::FunctionData,
-    stackless_bytecode::{AttrId, Bytecode, Label, TempIndex},
+    stackless_bytecode::{AttrId, Bytecode, Label, PropKind, TempIndex},
 };
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::Exp,
-    model::{FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId},
+    ast::{Exp, Value},
+    model::{
+        ConditionInfo, ConditionTag, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId,
+    },
     ty::{Type, BOOL_TYPE, NUM_TYPE},
 };
 
@@ -24,6 +26,8 @@ pub struct FunctionDataBuilder<'env> {
     next_free_label_index: usize,
     current_loc: Loc,
 }
+
+impl<'env> FunctionDataBuilder<'env> {}
 
 impl<'env> FunctionDataBuilder<'env> {
     /// Creates a new builder.
@@ -56,10 +60,23 @@ impl<'env> FunctionDataBuilder<'env> {
         self.current_loc = loc;
     }
 
+    /// Sets the default location as well as information about verification conditions
+    /// at this location. The later is stored in the global environment where it can later be
+    /// retrieved based on location when mapping verification failures back to source level.
+    pub fn set_loc_and_vc_info(&mut self, loc: Loc, tag: ConditionTag, message: &str) {
+        self.global_env()
+            .set_condition_info(loc.clone(), tag, ConditionInfo::for_message(message));
+        self.set_loc(loc);
+    }
+
     /// Sets the default location from a code attribute id.
     pub fn set_loc_from_attr(&mut self, attr_id: AttrId) {
-        let loc = self.data.locations.get(&attr_id).expect("location");
-        self.current_loc = loc.clone();
+        let loc = if let Some(l) = self.data.locations.get(&attr_id) {
+            l.clone()
+        } else {
+            self.global_env().unknown_loc()
+        };
+        self.current_loc = loc;
     }
 
     /// Sets the default location from a node id.
@@ -92,6 +109,14 @@ impl<'env> FunctionDataBuilder<'env> {
         label
     }
 
+    /// Make a boolean constant expression.
+    pub fn mk_bool_const(&self, value: bool) -> Exp {
+        let node_id = self
+            .global_env()
+            .new_node(self.current_loc.clone(), BOOL_TYPE.clone());
+        Exp::Value(node_id, Value::Bool(value))
+    }
+
     /// Makes a Call expression.
     pub fn mk_call(&self, ty: &Type, oper: ast::Operation, args: Vec<Exp>) -> Exp {
         let node_id = self
@@ -110,15 +135,55 @@ impl<'env> FunctionDataBuilder<'env> {
         self.mk_bool_call(ast::Operation::Not, vec![arg])
     }
 
-    /// Make a numerical constant expression.
-    pub fn mk_num_const(&self, oper: ast::Operation) -> Exp {
+    /// Make an equality expression.
+    pub fn mk_eq(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(ast::Operation::Eq, vec![arg1, arg2])
+    }
+
+    /// Make an and expression.
+    pub fn mk_and(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(ast::Operation::And, vec![arg1, arg2])
+    }
+
+    /// Make an or expression.
+    pub fn mk_or(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(ast::Operation::Or, vec![arg1, arg2])
+    }
+
+    /// Make an implies expression.
+    pub fn mk_implies(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(ast::Operation::Implies, vec![arg1, arg2])
+    }
+
+    /// Make a numerical expression for some of the builtin constants.
+    pub fn mk_builtin_num_const(&self, oper: ast::Operation) -> Exp {
+        use ast::Operation::*;
+        assert!(matches!(oper, MaxU8 | MaxU64 | MaxU128));
         self.mk_call(&NUM_TYPE, oper, vec![])
     }
 
     /// Join an iterator of boolean expressions with a boolean binary operator.
-    pub fn mk_join_bool(&self, oper: ast::Operation, args: impl Iterator<Item = Exp>) -> Exp {
+    pub fn mk_join_bool(
+        &self,
+        oper: ast::Operation,
+        args: impl Iterator<Item = Exp>,
+    ) -> Option<Exp> {
         args.fold1(|a, b| self.mk_bool_call(oper.clone(), vec![a, b]))
-            .expect("at least one argument")
+    }
+
+    /// Join two boolean optional expression with binary operator.
+    pub fn mk_join_opt_bool(
+        &self,
+        oper: ast::Operation,
+        arg1: Option<Exp>,
+        arg2: Option<Exp>,
+    ) -> Option<Exp> {
+        match (arg1, arg2) {
+            (Some(a1), Some(a2)) => Some(self.mk_bool_call(oper, vec![a1, a2])),
+            (Some(a1), None) => Some(a1),
+            (None, Some(a2)) => Some(a2),
+            _ => None,
+        }
     }
 
     /// Makes a local for a temporary.
@@ -159,5 +224,18 @@ impl<'env> FunctionDataBuilder<'env> {
     {
         let attr_id = self.new_attr();
         self.emit(f(attr_id))
+    }
+
+    /// Emits a let: this creates a new temporary and emits an assumption that this temporary
+    /// is equal to the given expression. This can be used to abbreviate large expressions
+    /// which are used multiple times, or get the value of an expression into a temporary for
+    /// bytecode. Returns the temporary and a local expression referring to it.
+    pub fn emit_let(&mut self, def: Exp) -> (TempIndex, Exp) {
+        let ty = self.global_env().get_node_type(def.node_id());
+        let temp = self.new_temp(ty);
+        let temp_exp = self.mk_local(temp);
+        let definition = self.mk_eq(temp_exp.clone(), def);
+        self.emit_with(|id| Bytecode::Prop(id, PropKind::Assume, definition));
+        (temp, temp_exp)
     }
 }

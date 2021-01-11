@@ -1,6 +1,6 @@
+// flag: --v2
 module TestResources {
     use 0x1::Signer;
-
     spec module {
         pragma verify = true;
     }

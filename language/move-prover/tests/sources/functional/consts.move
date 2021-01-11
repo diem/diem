@@ -1,10 +1,10 @@
+// flag: --v2
 module TestConst {
     struct T {
         x: u64,
         b: bool,
         a: address,
     }
-
     const INIT_VAL_U64: u64 = 40 + 2;
     const FORTY_TWO: u64 = 42;
     const INIT_VAL_BOOL: bool = true;

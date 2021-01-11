@@ -1,5 +1,5 @@
+// flag: --v2
 module TestOpaque {
-
     spec module {
         pragma verify = true;
     }
