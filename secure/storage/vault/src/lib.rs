@@ -15,6 +15,7 @@ use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
     sync::Arc,
+    time::Duration,
 };
 use thiserror::Error;
 use ureq::Response;
@@ -26,8 +27,9 @@ pub mod fuzzing;
 /// Keys are trimmed in FIFO order.
 const MAX_NUM_KEY_VERSIONS: u32 = 4;
 
-/// Request timeout for vault operations
-const TIMEOUT: u64 = 10_000;
+/// Request timeouts for vault operations.
+const CONNECT_TIMEOUT_MILLISECS: u64 = 10_000;
+const TIMEOUT_MILLISECS: u64 = 10_000;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
@@ -41,6 +43,8 @@ pub enum Error {
     NotFound(String, String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    #[error("Synthetic error returned: {0}")]
+    SyntheticError(String),
 }
 
 impl From<base64::DecodeError> for Error {
@@ -63,16 +67,17 @@ impl From<std::io::Error> for Error {
 
 impl From<ureq::Response> for Error {
     fn from(resp: ureq::Response) -> Self {
-        if let Some(e) = resp.synthetic_error() {
-            // Local error
-            Error::InternalError(e.to_string())
+        if resp.synthetic() {
+            match resp.into_string() {
+                Ok(resp) => Error::SyntheticError(resp),
+                Err(error) => Error::InternalError(error.to_string()),
+            }
         } else {
-            // Clear the buffer
             let status = resp.status();
             let status_text = resp.status_text().to_string();
             match resp.into_string() {
                 Ok(body) => Error::HttpError(status, status_text, body),
-                Err(e) => Error::InternalError(e.to_string()),
+                Err(error) => Error::InternalError(error.to_string()),
             }
         }
     }
@@ -451,7 +456,8 @@ impl Client {
     }
 
     fn upgrade_request_without_token(&self, mut request: ureq::Request) -> ureq::Request {
-        request.timeout_connect(TIMEOUT);
+        request.timeout_connect(CONNECT_TIMEOUT_MILLISECS);
+        request.timeout(Duration::from_millis(TIMEOUT_MILLISECS));
         request.set_tls_connector(self.tls_connector.clone());
         request
     }
