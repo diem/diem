@@ -124,7 +124,6 @@ members = [
     "diem-retrier",
     "diem-smoke-test-attribute",
     "diem-swarm",
-    "diem-transaction-replay",
     "diem-wallet",
     "executor-benchmark",
     "executor-test-helpers",

@@ -6,10 +6,12 @@ use anyhow::{bail, Result};
 use diem_json_rpc_client::{JsonRpcBatch, JsonRpcClient, JsonRpcResponse};
 use diem_types::{
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::AccountStateBlob,
     transaction::{Transaction, Version},
 };
 use reqwest::Url;
+use std::convert::TryFrom;
 
 pub struct JsonRpcDebuggerInterface {
     client: JsonRpcClient,
@@ -37,14 +39,18 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
         &self,
         account: AccountAddress,
         version: Version,
-    ) -> Result<Option<AccountStateBlob>> {
+    ) -> Result<Option<AccountState>> {
         let mut batch = JsonRpcBatch::new();
         batch.add_get_account_state_with_proof_request(account, Some(version), None);
 
         let resp = self.execute_single_command(batch)?;
         if let JsonRpcResponse::AccountStateWithProofResponse(account_state) = resp {
             Ok(match account_state.blob {
-                Some(bytes) => Some(bcs::from_bytes(&bytes.into_bytes()?)?),
+                Some(bytes) => {
+                    let account_state_blob =
+                        bcs::from_bytes::<AccountStateBlob>(&bytes.into_bytes()?)?;
+                    Some(AccountState::try_from(&account_state_blob)?)
+                }
                 None => None,
             })
         } else {

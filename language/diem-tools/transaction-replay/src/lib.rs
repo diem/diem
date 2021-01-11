@@ -1,13 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{anyhow, bail, format_err, Result};
 use diem_types::{
     access_path,
     account_address::AccountAddress,
     account_config::diem_root_address,
     account_state::AccountState,
-    transaction::{ChangeSet, Transaction, TransactionOutput, Version},
+    transaction::{ChangeSet, Transaction, TransactionOutput, Version, WriteSetPayload},
     write_set::WriteOp,
 };
 use diem_validator_interface::{
@@ -116,6 +116,38 @@ impl DiemDebugger {
         Ok(ret)
     }
 
+    pub fn execute_writeset_at_version(
+        &self,
+        version: Version,
+        payload: &WriteSetPayload,
+        save_write_set: bool,
+    ) -> Result<TransactionOutput> {
+        let state_view = DebuggerStateView::new(&*self.debugger, version + 1);
+        let mut vm = DiemVM::new(&state_view);
+        let cache = diem_vm::data_cache::StateViewCache::new(&state_view);
+        let log_context = NoContextLog::new();
+        let mut txn_data = diem_vm::transaction_metadata::TransactionMetadata::default();
+        txn_data.sequence_number = match self
+            .debugger
+            .get_account_state_by_version(diem_root_address(), version)?
+        {
+            Some(account) => account
+                .get_account_resource()?
+                .ok_or_else(|| anyhow!("Diem root account doesn't exist"))?
+                .sequence_number(),
+            None => bail!("Diem root account blob doesn't exist"),
+        };
+        txn_data.sender = diem_root_address();
+
+        let (_, output) = vm
+            .execute_writeset_transaction(&cache, &payload, txn_data, &log_context)
+            .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
+        if save_write_set {
+            self.save_write_sets(&output)?;
+        }
+        Ok(output)
+    }
+
     fn save_write_sets(&self, o: &TransactionOutput) -> Result<()> {
         let state_view = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
         for (ap, op) in o.write_set() {
@@ -133,6 +165,24 @@ impl DiemDebugger {
         }
         for event in o.events() {
             state_view.save_contract_event(event.clone())?
+        }
+        Ok(())
+    }
+
+    fn save_account_state(
+        &self,
+        account: AccountAddress,
+        account_state: &AccountState,
+    ) -> Result<()> {
+        let disk_view = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
+        for (key, value) in account_state.iter() {
+            let key: access_path::Path = bcs::from_bytes(key)?;
+            match key {
+                access_path::Path::Code(m) => disk_view.save_module(&m, value)?,
+                access_path::Path::Resource(struct_tag) => {
+                    disk_view.save_resource_bytes(account, struct_tag, value)?
+                }
+            }
         }
         Ok(())
     }
@@ -160,6 +210,7 @@ impl DiemDebugger {
         &self,
         account: AccountAddress,
         version: Version,
+        save_write_sets: bool,
     ) -> Result<Option<AnnotatedAccountStateBlob>> {
         let state_view = DebuggerStateView::new(&*self.debugger, version);
         let remote_storage = RemoteStorage::new(&state_view);
@@ -169,13 +220,35 @@ impl DiemDebugger {
                 .debugger
                 .get_account_state_by_version(account, version)?
             {
-                Some(s) => {
-                    let account_state = AccountState::try_from(&s)?;
+                Some(account_state) => {
+                    if save_write_sets {
+                        self.save_account_state(account, &account_state)?;
+                    }
                     Some(annotator.view_account_state(&account_state)?)
                 }
                 None => None,
             },
         )
+    }
+
+    pub fn annotate_key_accounts_at_version(
+        &self,
+        version: Version,
+        save_write_sets: bool,
+    ) -> Result<Vec<(AccountAddress, AnnotatedAccountStateBlob)>> {
+        let accounts = self.debugger.get_admin_accounts(version)?;
+        let state_view = DebuggerStateView::new(&*self.debugger, version);
+        let remote_storage = RemoteStorage::new(&state_view);
+        let annotator = MoveValueAnnotator::new(&remote_storage);
+
+        let mut result = vec![];
+        for (addr, state) in accounts.into_iter() {
+            if save_write_sets {
+                self.save_account_state(addr, &state)?;
+            }
+            result.push((addr, annotator.view_account_state(&state)?));
+        }
+        Ok(result)
     }
 
     pub fn get_latest_version(&self) -> Result<Version> {

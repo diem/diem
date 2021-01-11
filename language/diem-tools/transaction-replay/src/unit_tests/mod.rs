@@ -74,8 +74,12 @@ impl DiemValidatorInterface for TestInterface {
         &self,
         account: AccountAddress,
         version: Version,
-    ) -> Result<Option<AccountStateBlob>> {
-        Ok(self.state_db.get(&(version, account)).cloned())
+    ) -> Result<Option<AccountState>> {
+        Ok(self
+            .state_db
+            .get(&(version, account))
+            .map(AccountState::try_from)
+            .transpose()?)
     }
 
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {

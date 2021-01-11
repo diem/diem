@@ -178,6 +178,7 @@ default-members = [
     "language/tools/move-cli",
     "language/tools/move-coverage",
     "language/diem-tools/diem-events-fetcher",
+    "language/diem-tools/transaction-replay",
     "language/diem-tools/writeset-transaction-generator",
     "language/tools/move-explain",
     "language/transaction-builder/generator",

@@ -43,7 +43,7 @@ impl NamedChain {
         *self as u8
     }
 
-    fn from_chain_id(chain_id: &ChainId) -> Result<NamedChain, String> {
+    pub fn from_chain_id(chain_id: &ChainId) -> Result<NamedChain, String> {
         match chain_id.id() {
             1 => Ok(NamedChain::MAINNET),
             2 => Ok(NamedChain::TESTNET),
