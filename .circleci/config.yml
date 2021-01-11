@@ -379,73 +379,6 @@ jobs:
             echo $CARGO $CARGOFLAGS fetch
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
-  run-e2e-test:
-    working_directory: *working_directory
-    executor: docker-xlarge-executor
-    parallelism: 2
-    description: Run E2E tests in parallel. Each container runs a subset of
-      test targets.
-    environment:
-      E2E_RETRIES: 3
-      FLAKY_TESTS_FILE: "/tmp/flaky_tests"
-      MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Determine test targets for this container.
-          # NOTE Currently the tests are distributed by name order. Once test
-          # metadata is enabled, the tests can be distributed by run time to
-          # speed up this job.
-          command: |
-            RUST_BACKTRACE=1 cargo x test --package smoke-test -- --list | \
-              grep "::" | sed 's/: .*$//' > e2e_tests
-            cat e2e_tests
-            echo -e "Found $(wc -l e2e_tests) tests."
-            cat e2e_tests | circleci tests split > /tmp/tests_to_run
-            echo -e "This runner will run these tests\n$(cat /tmp/tests_to_run)"
-      - run:
-          name: Run E2E tests
-          # NOTE
-          # +e to disable exit immediately when test timeout in the retry loop
-          command: |
-            set +e
-            num_fails=0
-            failed_tests=
-            for target in $(cat /tmp/tests_to_run) ; do
-              retry=0
-              status=1
-              while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
-                RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
-                  cargo x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
-                status=$?
-                retry=$((retry + 1))
-                if [[ $status != 0 ]] ; then
-                   echo Failed to execute $target, $retry times
-                fi
-                sleep 10
-              done
-              if [[ $status != 0 ]] ; then
-                num_fails=$((num_fails + 1))
-                echo failed to execute $target
-                failed_tests="${target}\n${failed_tests}"
-              elif [[ $retry > 1 ]]; then
-                echo "$target passed after $retry tries" >> ${FLAKY_TESTS_FILE}
-              fi
-            done
-            if [ -e ${FLAKY_TESTS_FILE} ]; then
-              msg="Found flaky tests\n$(cat ${FLAKY_TESTS_FILE})"
-              echo -e $msg
-              echo -e $msg > ${MESSAGE_PAYLOAD_FILE}
-            fi
-            if [[ $num_fails != 0 ]]; then
-              echo -e "$num_fails test(s) failed:\n${failed_tests}"
-            fi
-            exit $num_fails
-      - send_message:
-          payload_file: "${MESSAGE_PAYLOAD_FILE}"
-          build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
-          webhook: "${WEBHOOK_FLAKY_TESTS}"
   check-breaking-change:
     working_directory: *working_directory
     executor: docker-medium-executor
@@ -726,22 +659,8 @@ workflows:
   ######################################################################################################################
   commit-workflow:
     jobs:
-      - prefetch-crates:
-          filters: *filter-only-auto-canary
-      - run-e2e-test:
-          context: libra_ci
-          requires:
-            - prefetch-crates
       - docker-pre-publish:
           context: docker
           filters:
             branches:
               only: auto
-
-  pull-request-workflow:
-    jobs:
-      - prefetch-crates:
-          filters: *filter-only-prs-dependabot
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
