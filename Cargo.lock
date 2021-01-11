@@ -3822,6 +3822,8 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.7.3",
+ "serde",
+ "serde_json",
  "vm",
  "vm-genesis",
 ]
