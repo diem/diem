@@ -70,7 +70,7 @@ pub struct TxEmitter {
     accounts: Vec<AccountData>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     chain_id: ChainId,
-    premainnet: bool,
+    vasp: bool,
     invalid_tx: u64,
 }
 
@@ -182,12 +182,12 @@ impl EmitJobRequest {
 }
 
 impl TxEmitter {
-    pub fn new(cluster: &Cluster, premainnet: bool, invalid_tx: u64) -> Self {
+    pub fn new(cluster: &Cluster, vasp: bool, invalid_tx: u64) -> Self {
         Self {
             accounts: vec![],
             mint_key_pair: cluster.mint_key_pair().clone(),
             chain_id: cluster.chain_id,
-            premainnet,
+            vasp,
             invalid_tx,
         }
     }
@@ -250,7 +250,7 @@ impl TxEmitter {
             workers_per_ac, num_clients
         );
         let num_accounts = req.accounts_per_client * num_clients;
-        if self.premainnet {
+        if self.vasp {
             assert!(
                 num_accounts <= MAX_VASP_ACCOUNT_NUM * MAX_CHILD_VASP_NUM,
                 "VASP only supports to create max {} child accounts, but try to create {} accounts",
@@ -389,7 +389,7 @@ impl TxEmitter {
         coins_total: u64,
     ) -> Result<AccountData> {
         let client = self.pick_mint_instance(instances).json_rpc_client();
-        let faucet_account = if !self.premainnet {
+        let faucet_account = if !self.vasp {
             info!("Creating and minting faucet account");
             let mut account = self.load_faucet_account(&client).await?;
             let mint_txn = gen_mint_request(&mut account, coins_total, self.chain_id);
@@ -424,7 +424,7 @@ impl TxEmitter {
         seed_account_num: usize,
     ) -> Result<Vec<AccountData>> {
         let client = self.pick_mint_instance(instances).json_rpc_client();
-        let seed_accounts = if !self.premainnet {
+        let seed_accounts = if !self.vasp {
             info!("Creating and minting seeds accounts");
             let mut account = self.load_tc_account(&client).await?;
             let seed_accounts = create_seed_accounts(
@@ -510,7 +510,7 @@ impl TxEmitter {
                     20,
                     client,
                     self.chain_id,
-                    self.premainnet || *REUSE_ACC,
+                    self.vasp || *REUSE_ACC,
                     seed_rngs[i].clone(),
                 )
             });
