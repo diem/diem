@@ -86,12 +86,11 @@ Finally, the user key's privilage to sign any repo can be revoked/granted at any
 
 ## Example Docker Key Commands ##
 
-Below you can find a set of commands useful to different roles of key holds, fir
+Below you can find a set of commands useful to different roles of key holds.
 
 ### Create a local User Key for use in image signing ###
 
 ``` bash
-TODO: check
 docker trust key generate ${login_username}
 ```
 
@@ -100,12 +99,11 @@ You can find the key here:  `~/.docker/trust/private/${key_name}.key`.
 ### Sign a User Key to allow it to sign docker images as a Orginaztion Administrator ###
 
 ``` bash
-TODO: check
-docker trust signer add --key dev2.pub ${dev_login_username} ${docker_org}/${repository}
+docker trust signer add --key dev2.pub ${login_username} ${docker_org}/${repository}
 ```
 
 ### Disable a User Key to remove it's signing power as an Orginaztion Administrator ###
 
 ``` bash
-TODO
+docker trust signer remove ${login_username} ${docker_org}/${repository}
 ```
