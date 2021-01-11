@@ -286,7 +286,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hex",
  "itertools 0.10.0",
  "num_cpus",
@@ -320,7 +320,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hyper",
  "once_cell",
  "reqwest",
@@ -486,7 +486,7 @@ name = "bounded-executor"
 version = "0.1.0"
 dependencies = [
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "tokio 0.2.24",
 ]
 
@@ -689,7 +689,7 @@ dependencies = [
  "diem-metrics",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "tokio 0.2.24",
 ]
 
@@ -824,7 +824,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "flate2",
- "futures 0.3.8",
+ "futures 0.3.9",
  "generate-key",
  "hex",
  "itertools 0.10.0",
@@ -959,7 +959,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
- "futures 0.3.8",
+ "futures 0.3.9",
  "itertools 0.10.0",
  "mirai-annotations",
  "network",
@@ -1471,7 +1471,7 @@ dependencies = [
  "diem-json-rpc-client",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hex",
  "reqwest",
  "structopt 0.3.21",
@@ -1663,7 +1663,7 @@ dependencies = [
  "executor",
  "executor-types",
  "fail",
- "futures 0.3.8",
+ "futures 0.3.9",
  "generate-key",
  "hex",
  "hyper",
@@ -1697,7 +1697,7 @@ dependencies = [
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hex",
  "rand 0.7.3",
  "reqwest",
@@ -1750,7 +1750,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "futures 0.3.8",
+ "futures 0.3.9",
  "once_cell",
  "rand 0.7.3",
  "serde",
@@ -1832,7 +1832,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "fail",
- "futures 0.3.8",
+ "futures 0.3.9",
  "itertools 0.10.0",
  "mirai-annotations",
  "netcore",
@@ -1859,7 +1859,7 @@ dependencies = [
  "diem-logger",
  "diem-metrics-core",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hyper",
  "once_cell",
  "prometheus",
@@ -1946,7 +1946,7 @@ dependencies = [
  "executor",
  "executor-types",
  "fail",
- "futures 0.3.8",
+ "futures 0.3.9",
  "jemallocator",
  "network-builder",
  "state-synchronizer",
@@ -2002,7 +2002,7 @@ dependencies = [
  "diem-infallible",
  "diem-logger",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "pin-project 1.0.3",
  "tokio 0.2.24",
 ]
@@ -2030,7 +2030,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hex",
  "proptest",
  "proxy",
@@ -2963,9 +2963,9 @@ checksum = "4c7e4c2612746b0df8fed4ce0c69156021b704c9aefa360311c04e6e9e002eed"
 
 [[package]]
 name = "futures"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b3b0c040a1fe6529d30b3c5944b280c7f0dcb2930d2c3062bca967b602583d0"
+checksum = "c70be434c505aee38639abccb918163b63158a4b4bb791b45b7023044bdc3c9c"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -2978,9 +2978,9 @@ dependencies = [
 
 [[package]]
 name = "futures-channel"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b7109687aa4e177ef6fe84553af6280ef2778bdb7783ba44c9dc3399110fe64"
+checksum = "f01c61843314e95f96cc9245702248733a3a3d744e43e2e755e3c7af8348a0a9"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -2988,15 +2988,15 @@ dependencies = [
 
 [[package]]
 name = "futures-core"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "847ce131b72ffb13b6109a221da9ad97a64cbe48feb1028356b836b47b8f1748"
+checksum = "db8d3b0917ff63a2a96173133c02818fac4a746b0a57569d3baca9ec0e945e08"
 
 [[package]]
 name = "futures-executor"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4caa2b2b68b880003057c1dd49f1ed937e38f22fcf6c212188a121f08cf40a65"
+checksum = "9ee9ca2f7eb4475772cf39dd1cd06208dce2670ad38f4d9c7262b3e15f127068"
 dependencies = [
  "futures-core",
  "futures-task",
@@ -3005,15 +3005,15 @@ dependencies = [
 
 [[package]]
 name = "futures-io"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "611834ce18aaa1bd13c4b374f5d653e1027cf99b6b502584ff8c9a64413b30bb"
+checksum = "e37c1a51b037b80922864b8eed90692c5cd8abd4c71ce49b77146caa47f3253b"
 
 [[package]]
 name = "futures-macro"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77408a692f1f97bcc61dc001d752e00643408fbc922e4d634c655df50d595556"
+checksum = "0f8719ca0e1f3c5e34f3efe4570ef2c0610ca6da85ae7990d472e9cbfba13664"
 dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.24",
@@ -3023,24 +3023,24 @@ dependencies = [
 
 [[package]]
 name = "futures-sink"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f878195a49cee50e006b02b93cf7e0a95a38ac7b776b4c4d9cc1207cd20fcb3d"
+checksum = "f6adabac1290109cfa089f79192fb6244ad2c3f1cc2281f3e1dd987592b71feb"
 
 [[package]]
 name = "futures-task"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c554eb5bf48b2426c4771ab68c6b14468b6e76cc90996f528c3338d761a4d0d"
+checksum = "a92a0843a2ff66823a8f7c77bffe9a09be2b64e533562c412d63075643ec0038"
 dependencies = [
  "once_cell",
 ]
 
 [[package]]
 name = "futures-util"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d304cff4a7b99cfb7986f7d43fbe93d175e72e704a8860787cc95e9ffd85cbd2"
+checksum = "036a2107cdeb57f6d7322f1b6c363dad67cd63ca3b7d1b925bdf75bd5d96cda9"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -3049,7 +3049,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project 1.0.3",
+ "pin-project-lite 0.2.0",
  "pin-utils",
  "proc-macro-hack",
  "proc-macro-nested",
@@ -3754,7 +3754,7 @@ dependencies = [
  "chrono",
  "dirs-next",
  "either",
- "futures 0.3.8",
+ "futures 0.3.9",
  "futures-util",
  "http",
  "jsonpath_lib",
@@ -3928,7 +3928,7 @@ version = "0.1.0"
 dependencies = [
  "channel",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "structopt 0.3.21",
 ]
 
@@ -3978,7 +3978,7 @@ dependencies = [
  "bytes 0.5.6",
  "diem-infallible",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "once_cell",
 ]
 
@@ -4298,7 +4298,7 @@ dependencies = [
  "diem-workspace-hack",
  "docgen",
  "errmapgen",
- "futures 0.3.8",
+ "futures 0.3.9",
  "handlebars",
  "hex",
  "itertools 0.10.0",
@@ -4479,7 +4479,7 @@ dependencies = [
  "diem-network-address",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "memsocket",
  "pin-project 1.0.3",
  "proxy",
@@ -4509,7 +4509,7 @@ dependencies = [
  "diem-rate-limiter",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "futures-util",
  "hex",
  "memsocket",
@@ -4549,7 +4549,7 @@ dependencies = [
  "diem-secure-storage",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "netcore",
  "network",
  "network-simple-onchain-discovery",
@@ -4575,7 +4575,7 @@ dependencies = [
  "diem-network-address-encryption",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "move-core-types",
  "network",
  "once_cell",
@@ -5704,7 +5704,7 @@ checksum = "7af1c42491edaa3b2582c6f3a0221f5ef4ed7a02c71cf1f614bb12877e1d44dd"
 dependencies = [
  "async-trait",
  "bytes 0.5.6",
- "futures 0.3.8",
+ "futures 0.3.9",
  "rusoto_core",
  "serde_urlencoded 0.6.1",
  "xml-rs",
@@ -5720,7 +5720,7 @@ dependencies = [
  "base64 0.12.3",
  "bytes 0.5.6",
  "crc32fast",
- "futures 0.3.8",
+ "futures 0.3.9",
  "http",
  "hyper",
  "hyper-tls",
@@ -5747,7 +5747,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dirs 2.0.2",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hyper",
  "pin-project 0.4.27",
  "regex",
@@ -5766,7 +5766,7 @@ checksum = "1146e37a7c1df56471ea67825fe09bbbd37984b5f6e201d8b2e0be4ee15643d8"
 dependencies = [
  "async-trait",
  "bytes 0.5.6",
- "futures 0.3.8",
+ "futures 0.3.9",
  "rusoto_core",
  "xml-rs",
 ]
@@ -5779,7 +5779,7 @@ checksum = "97a740a88dde8ded81b6f2cff9cd5e054a5a2e38a38397260f7acdd2c85d17dd"
 dependencies = [
  "base64 0.12.3",
  "bytes 0.5.6",
- "futures 0.3.8",
+ "futures 0.3.9",
  "hex",
  "hmac 0.8.1",
  "http",
@@ -5805,7 +5805,7 @@ dependencies = [
  "async-trait",
  "bytes 0.5.6",
  "chrono",
- "futures 0.3.8",
+ "futures 0.3.9",
  "rusoto_core",
  "serde_urlencoded 0.6.1",
  "tempfile",
@@ -6417,7 +6417,7 @@ dependencies = [
  "diem-network-address",
  "diem-types",
  "diem-workspace-hack",
- "futures 0.3.8",
+ "futures 0.3.9",
  "memsocket",
  "netcore",
  "network",
@@ -6480,7 +6480,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
- "futures 0.3.8",
+ "futures 0.3.9",
  "itertools 0.10.0",
  "memsocket",
  "netcore",
@@ -6640,7 +6640,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
- "futures 0.3.8",
+ "futures 0.3.9",
  "itertools 0.10.0",
  "proptest",
  "rand 0.7.3",
@@ -6986,7 +6986,7 @@ dependencies = [
  "diem-infallible",
  "diem-workspace-hack",
  "enum_dispatch",
- "futures 0.3.8",
+ "futures 0.3.9",
  "pin-project 1.0.3",
  "thiserror",
  "tokio 0.2.24",
@@ -7562,7 +7562,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f41be6df54c97904af01aa23e613d4521eed7ab23537cede692d4058f6449407"
 dependencies = [
  "bytes 0.5.6",
- "futures 0.3.8",
+ "futures 0.3.9",
  "headers",
  "http",
  "hyper",
