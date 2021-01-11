@@ -208,11 +208,11 @@ Adding fake Diem Coins with no real-world value to accounts on testnet is done v
 To mint fake Diem Coins and add them to Alice’s account, enter this command:
 
 
-`libra% account mint 0 110 Coin1`
+`libra% account mint 0 110 XUS`
 
 * 0 is the index of Alice’s account.
 * 110 is the amount of fake Diem Coins to be added to Alice’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 A successful account “mint” command will also create Alice’s account on the blockchain.  Note that “minting” on Testnet means adding new fake Diem Coins to an account.
 
@@ -221,7 +221,7 @@ Sample output on success:
 
 ```
 >> Sending coins from faucet
-Request submitted to faucet
+Finished sending coins from faucet!
 ```
 
 When the request is submitted, it means that it has been added to the mempool (of a validator node on testnet) successfully. It does not necessarily imply that it will be successfully completed. Later, we will query the account balance to confirm whether the minting was successful.
@@ -233,11 +233,11 @@ If your account “mint” command did not submit your request successfully, ref
 To mint fake Diem Coins and add them to Bob’s account, enter this command:
 
 
-`libra% account mint 1 52 Coin1`
+`libra% account mint 1 52 XUS`
 
 * 1 is the index of Bob’s account.
 * 52 is the amount of Diem to be added to Bob’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 A successful account “mint” command can also create Bob’s account on the blockchain. Another way to create Bob’s account on the blockchain is to transfer money from Alice’s account to Bob’s account.
 
@@ -245,7 +245,7 @@ Sample output on success:
 
 ```
 >> Sending coins from faucet
-Request submitted to faucet
+Finished sending coins from faucet!
 ```
 
 If your account mint command did not submit your request successfully, refer to [Troubleshooting](#minting-and-adding-money-to-account)
@@ -259,7 +259,7 @@ To check the balance in Alice’s account, enter this command:
 
 Sample output on success:
 
-`Balance is: 110.000000Coin1`
+`Balance is: 110.000000XUS`
 
 To check the balance in Bob’s account, enter this command:
 
@@ -267,7 +267,7 @@ To check the balance in Bob’s account, enter this command:
 
 Sample output on success:
 
-`Balance is: 52.000000Coin1`
+`Balance is: 52.000000XUS`
 
 ### Submit a transaction
 
@@ -290,12 +290,12 @@ In `query sequence 0`, 0 is the index of Alice’s account. A sequence number of
 
 To submit a transaction to transfer 10 Diem Coins from Alice’s account to Bob’s account, enter this command:
 
-`libra% transfer 0 1 10 Diem`
+`libra% transfer 0 1 10 XUS`
 
 * 0 is the index of Alice’s account.
 * 1 is the index of Bob’s account.
 * 10 is the number of fake Diem Coins to transfer from Alice’s account to Bob’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 
 Sample output on success:
@@ -314,7 +314,7 @@ To troubleshoot the transfer command, refer to [Troubleshooting](#the-transfer-c
 
 **The Blocking Transfer Command**: You can use the `transferb` command (as shown below), instead of the `transfer` command. `transferb` will submit the transaction and return to the client prompt only after the transaction has been committed to the blockchain. An example is shown below:
 
-`libra% transferb 0 1 10 Coin`
+`libra% transferb 0 1 10 XUS`
 
 Refer to [Life of a Transaction](life-of-a-transaction.md) for an understanding of the lifecycle of a transaction from submission to execution and storage.
 
@@ -337,9 +337,9 @@ To check the final balance in both accounts, query the balance again for each ac
 
 ```
 libra% query balance 0
-Balance is: 100.000000Coin1
+Balance is: 100.000000XUS
 libra% query balance 1
-Balance is: 62.000000Coin1
+Balance is: 62.000000XUS
 ```
 
 ### Congratulations!
@@ -376,7 +376,7 @@ If your client did not connect to the testnet:
 * If the validator node you connected to on testnet is unavailable, you will get a “Server unavailable” message as shown below:
 
 ```
-libra% account mint 0 110 Coin1
+libra% account mint 0 110 XUS
 >> Minting coins
 [ERROR] Error minting coins: Server unavailable, please retry and/or check **if** host passed to the client is running
 ```
@@ -392,7 +392,7 @@ libra% account mint 0 110 Coin1
 If the testnet validator node (your client was connected to) is unavailable or your connection to the testnet has timed-out, you will see this error:
 
 ```
-libra% transfer 0 1 10 Coin1
+libra% transfer 0 1 10 XUS
 >> Transferring
 [ERROR] Failed to perform transaction: Server unavailable, please retry and/or check if host passed to the client is running
 ```
@@ -422,7 +422,7 @@ Committed transaction: TransactionView {
         chain_id: 2,
         max_gas_amount: 1000000,
         gas_unit_price: 0,
-        gas_currency: "Coin1",
+        gas_currency: "XUS",
         expiration_timestamp_secs: 1603827098,
         script_hash: "61749d43d8f10940be6944df85ddf13f0f8fb830269c601f481cc5ee3de731c8",
         script_bytes: BytesView(
@@ -445,7 +445,7 @@ Committed transaction: TransactionView {
             ),
             type_arguments: Some(
                 [
-                    "Coin1",
+                    "XUS",
                 ],
             ),
             receiver: Some(
@@ -455,7 +455,7 @@ Committed transaction: TransactionView {
                 10000000,
             ),
             currency: Some(
-                "Coin1",
+                "XUS",
             ),
             metadata: Some(
                 BytesView(
@@ -483,7 +483,7 @@ Committed transaction: TransactionView {
             data: SentPayment {
                 amount: AmountView {
                     amount: 10000000,
-                    currency: "Coin1",
+                    currency: "XUS",
                 },
                 receiver: BytesView(
                     "701901dad4e06079cc701452ac48a99d",
@@ -505,7 +505,7 @@ Committed transaction: TransactionView {
             data: ReceivedPayment {
                 amount: AmountView {
                     amount: 10000000,
-                    currency: "Coin1",
+                    currency: "XUS",
                 },
                 sender: BytesView(
                     "5261f913eab22cfc448a815a0e672143",
@@ -534,12 +534,12 @@ In the following example, we will query for “sent” events from the account a
 ```
 libra% query event 0 sent 0 10
 >> Getting events by account and event type.
-EventView { key: BytesView("0100000000000000cc2219df031a68115fad9aee98e051e9"), sequence_number: 0, transaction_version: 2168, data: SentPayment { amount: AmountView { amount: 10000000, currency: "Coin1" }, receiver: BytesView("33138303ce638c8fa469435250f5f1c3"), metadata: BytesView("") } }
+EventView { key: BytesView("0100000000000000cc2219df031a68115fad9aee98e051e9"), sequence_number: 0, transaction_version: 2168, data: SentPayment { amount: AmountView { amount: 10000000, currency: "XUS" }, receiver: BytesView("33138303ce638c8fa469435250f5f1c3"), metadata: BytesView("") } }
 Last event state: AccountView {
     balances: [
         AmountView {
             amount: 100000000,
-            currency: "Coin1",
+            currency: "XUS",
         },
     ],
     sequence_number: 1,
