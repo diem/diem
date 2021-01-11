@@ -15,7 +15,7 @@ move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 bcs = "0.1.2"
 
 # external dependencies
-log = "0.4.11"
+log = "0.4.13"
 anyhow = "1.0.38"
 heck = "0.3.2"
 serde = { version = "1.0.117", features = ["derive"] }
