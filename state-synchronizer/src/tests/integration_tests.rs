@@ -5,27 +5,31 @@ use crate::{
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     state_synchronizer::{StateSynchronizer, StateSynchronizerClient},
     tests::{
-        mock_executor_proxy::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
+        mock_executor_proxy::{MockExecutorProxy, MockRpcHandler},
         mock_storage::MockStorage,
     },
 };
 use anyhow::{bail, Result};
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::{NodeConfig, RoleType},
+    config::{NodeConfig, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use diem_crypto::x25519;
+use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use diem_infallible::RwLock;
 use diem_mempool::mocks::MockSharedMempool;
-use diem_network_address::{parse_memory, NetworkAddress, Protocol};
+use diem_network_address::{
+    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
+    parse_memory, NetworkAddress, Protocol,
+};
 use diem_types::{
     chain_id::ChainId, ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
-    transaction::TransactionListWithProof, validator_info::ValidatorInfo,
-    validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
-    waypoint::Waypoint, PeerId,
+    transaction::TransactionListWithProof, validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
 };
 use futures::{executor::block_on, future::FutureExt, StreamExt};
+use memsocket::MemoryListener;
 use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
 use network::{
     peer_manager::{
@@ -41,6 +45,7 @@ use network::{
     DisconnectReason, ProtocolId,
 };
 use network_builder::builder::NetworkBuilder;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
     ops::DerefMut,
@@ -106,8 +111,7 @@ impl SynchronizerEnv {
     fn new(num_peers: usize) -> Self {
         ::diem_logger::Logger::init_for_testing();
 
-        let (signers, public_keys, network_keys, network_addrs) =
-            SynchronizerEnvHelper::initial_setup(num_peers);
+        let (signers, public_keys, network_keys, network_addrs) = Self::initial_setup(num_peers);
 
         let mut peers = vec![];
         for peer_index in 0..num_peers {
@@ -184,7 +188,7 @@ impl SynchronizerEnv {
             .map(|peer| peer.public_key.clone())
             .collect();
         let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
-            SynchronizerEnvHelper::genesis_li(&validators),
+            Self::genesis_li(&validators),
             self.peers[index].signer.clone(),
         )));
 
@@ -486,6 +490,65 @@ impl SynchronizerEnv {
             .get_mut(&receiver_id)
             .unwrap();
         conn_notifs_tx.push(sender_id, notif).unwrap();
+    }
+
+    // Returns the initial peers with their signatures
+    fn initial_setup(
+        count: usize,
+    ) -> (
+        Vec<ValidatorSigner>,
+        Vec<ValidatorInfo>,
+        Vec<x25519::PrivateKey>,
+        Vec<NetworkAddress>,
+    ) {
+        let (signers, _verifier) = random_validator_verifier(count, None, true);
+
+        // Setup identity public keys.
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        let network_keys: Vec<_> = (0..count)
+            .map(|_| x25519::PrivateKey::generate(&mut rng))
+            .collect();
+
+        let mut validator_infos = vec![];
+        let mut network_addrs = vec![];
+
+        for (idx, signer) in signers.iter().enumerate() {
+            let peer_id = signer.author();
+
+            // Reserve an unused `/memory/<port>` address by binding port 0; we
+            // can immediately discard the listener here and safely rebind to this
+            // address later.
+            let port = MemoryListener::bind(0).unwrap().local_addr();
+            let addr = NetworkAddress::from(Protocol::Memory(port));
+            let addr = addr.append_prod_protos(network_keys[idx].public_key(), HANDSHAKE_VERSION);
+
+            let enc_addr = addr.clone().encrypt(
+                &TEST_SHARED_VAL_NETADDR_KEY,
+                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+                &peer_id,
+                0, /* seq_num */
+                0, /* addr_idx */
+            );
+
+            // The voting power of peer 0 is enough to generate an LI that passes validation.
+            let voting_power = if idx == 0 { 1000 } else { 1 };
+            let validator_config = ValidatorConfig::new(
+                signer.public_key(),
+                bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+                bcs::to_bytes(&vec![addr.clone()]).unwrap(),
+            );
+            let validator_info = ValidatorInfo::new(peer_id, voting_power, validator_config);
+            validator_infos.push(validator_info);
+            network_addrs.push(addr);
+        }
+        (signers, validator_infos, network_keys, network_addrs)
+    }
+
+    fn genesis_li(validators: &[ValidatorInfo]) -> LedgerInfoWithSignatures {
+        LedgerInfoWithSignatures::genesis(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
+            ValidatorSet::new(validators.to_vec()),
+        )
     }
 }
 
