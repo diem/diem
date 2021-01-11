@@ -387,20 +387,6 @@ impl SynchronizerEnv {
             .highest_local_li()
     }
 
-    // Find LedgerInfo for a epoch boundary version
-    fn get_epoch_ending_ledger_info(
-        &self,
-        peer_id: usize,
-        version: u64,
-    ) -> Result<LedgerInfoWithSignatures> {
-        self.peers[peer_id]
-            .storage_proxy
-            .as_ref()
-            .unwrap()
-            .read()
-            .get_epoch_ending_ledger_info(version)
-    }
-
     fn wait_for_version(
         &self,
         peer_id: usize,
@@ -417,30 +403,6 @@ impl SynchronizerEnv {
             std::thread::sleep(std::time::Duration::from_millis(1000));
         }
         false
-    }
-
-    fn wait_until_initialized(&self, peer_id: usize) -> Result<()> {
-        block_on(
-            self.peers[peer_id]
-                .synchronizer
-                .as_ref()
-                .unwrap()
-                .wait_until_initialized(),
-        )
-    }
-
-    fn send_connection_event(
-        &mut self,
-        receiver: (usize, usize),
-        sender: PeerId,
-        notif: ConnectionNotification,
-    ) {
-        let receiver_id = self.get_peer_network_id(receiver);
-        let conn_notifs_tx = self
-            .network_conn_event_notifs_txs
-            .get_mut(&receiver_id)
-            .unwrap();
-        conn_notifs_tx.push(sender, notif).unwrap();
     }
 
     /// Delivers next message from peer with index `sender` in this SynchronizerEnv
@@ -518,7 +480,12 @@ impl SynchronizerEnv {
             )
         };
 
-        self.send_connection_event(receiver, sender_id, notif);
+        let receiver_id = self.get_peer_network_id(receiver);
+        let conn_notifs_tx = self
+            .network_conn_event_notifs_txs
+            .get_mut(&receiver_id)
+            .unwrap();
+        conn_notifs_tx.push(sender_id, notif).unwrap();
     }
 }
 
@@ -753,7 +720,13 @@ fn catch_up_with_waypoints() {
     env.commit(0, 5250); // At this point peer 0 is at epoch 19 and version 5250
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
-    let waypoint_li = env.get_epoch_ending_ledger_info(0, 3500).unwrap();
+    let waypoint_li = env.peers[0]
+        .storage_proxy
+        .as_ref()
+        .unwrap()
+        .read()
+        .get_epoch_ending_ledger_info(3500)
+        .unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
     env.start_synchronizer_peer(
@@ -764,7 +737,14 @@ fn catch_up_with_waypoints() {
         false,
         None,
     );
-    env.wait_until_initialized(1).unwrap();
+    block_on(
+        env.peers[1]
+            .synchronizer
+            .as_ref()
+            .unwrap()
+            .wait_until_initialized(),
+    )
+    .unwrap();
     assert!(env.latest_li(1).ledger_info().version() >= 3500);
     assert!(env.latest_li(1).ledger_info().epoch() >= 14);
 
