@@ -234,10 +234,12 @@ impl Worker {
             .db
             .iter::<StaleNodeIndexSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        Ok(iter
-            .next()
-            .transpose()?
-            .map_or(0, |(index, _)| index.stale_since_version))
+        Ok(iter.next().transpose()?.map_or(0, |(index, _)| {
+            index
+                .stale_since_version
+                .checked_sub(1)
+                .expect("Nothing is stale since version 0.")
+        }))
     }
 
     /// Log the progress.
