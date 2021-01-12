@@ -67,6 +67,21 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
                 self.shadowed.pop_front();
                 res
             }
+            Quant(id, kind, ranges, body) => {
+                self.shadowed
+                    .push_front(ranges.iter().map(|(decl, _)| decl.name).collect());
+                let res = Quant(
+                    self.rewrite_attrs(*id),
+                    *kind,
+                    ranges
+                        .iter()
+                        .map(|(decl, range)| (decl.clone(), self.rewrite(range)))
+                        .collect(),
+                    Box::new(self.rewrite(body)),
+                );
+                self.shadowed.pop_front();
+                res
+            }
             Block(id, vars, body) => {
                 self.shadowed
                     .push_front(vars.iter().map(|decl| decl.name).collect());

@@ -170,6 +170,22 @@ impl std::fmt::Display for ConditionKind {
     }
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+pub enum QuantKind {
+    Forall,
+    Exists,
+}
+
+impl std::fmt::Display for QuantKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use QuantKind::*;
+        match self {
+            Forall => write!(f, "forall"),
+            Exists => write!(f, "exists"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Condition {
     pub loc: Loc,
@@ -309,6 +325,8 @@ pub enum Exp {
     Invoke(NodeId, Box<Exp>, Vec<Exp>),
     /// Represents a lambda.
     Lambda(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    /// Represents a quantified formula over multiple variables and ranges.
+    Quant(NodeId, QuantKind, Vec<(LocalVarDecl, Exp)>, Box<Exp>),
     /// Represents a block which contains a set of variable bindings and an expression
     /// for which those are defined.
     Block(NodeId, Vec<LocalVarDecl>, Box<Exp>),
@@ -327,6 +345,7 @@ impl Exp {
             | Call(node_id, ..)
             | Invoke(node_id, ..)
             | Lambda(node_id, ..)
+            | Quant(node_id, ..)
             | Block(node_id, ..)
             | IfElse(node_id, ..) => *node_id,
         }
@@ -413,6 +432,12 @@ impl Exp {
                 }
             }
             Lambda(_, _, body) => body.visit_pre_post(visitor),
+            Quant(_, _, ranges, body) => {
+                for (_, range) in ranges {
+                    range.visit_pre_post(visitor);
+                }
+                body.visit_pre_post(visitor);
+            }
             Block(_, decls, body) => {
                 for decl in decls {
                     if let Some(def) = &decl.binding {

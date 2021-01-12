@@ -14,7 +14,7 @@ use bytecode::{
     stackless_bytecode::SpecBlockId, usage_analysis,
 };
 use move_model::{
-    ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
+    ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, QuantKind, Value},
     code_writer::CodeWriter,
     emit, emitln,
     model::{
@@ -1759,6 +1759,18 @@ impl<'env> SpecTranslator<'env> {
                 &self.module_env().env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
+            Exp::Quant(node_id, kind, ranges, exp) => {
+                self.set_writer_location(*node_id);
+                let loc = self.module_env().env.get_node_loc(*node_id);
+                if ranges.len() == 1 {
+                    self.translate_all_or_exists(&loc, *kind, &ranges[0].0, &ranges[0].1, exp);
+                } else {
+                    self.error(
+                        &loc,
+                        "only one variable per quantifier is currently supported",
+                    );
+                }
+            }
             Exp::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
                 self.translate_block(*node_id, vars, scope)
@@ -1890,15 +1902,15 @@ impl<'env> SpecTranslator<'env> {
             return self.translate_exp(exp);
         }
         let loc = self.module_env().env.get_node_loc(node_id);
-        if let Some((name, binding)) = self.get_decl_var(&loc, vars) {
-            let name_str = self.module_env().symbol_pool().string(name);
+        if let [var] = vars {
+            let name_str = self.module_env().symbol_pool().string(var.name);
             emit!(self.writer, "(var {} := ", name_str);
-            self.translate_exp(binding.as_ref().expect("binding"));
+            self.translate_exp(var.binding.as_ref().expect("binding"));
             emit!(self.writer, "; ");
             self.translate_exp(exp);
             emit!(self.writer, ")");
         } else {
-            // Error reported.
+            self.error(&loc, "currently only single variable binding supported");
         }
     }
 
@@ -1961,8 +1973,24 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(None) => self.translate_resource_exists(node_id, args),
             Operation::Exists(_) => unimplemented!(),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
-            Operation::All => self.translate_all_or_exists(&loc, true, args),
-            Operation::Any => self.translate_all_or_exists(&loc, false, args),
+            Operation::All => {
+                let range = &args[0];
+                match &args[1] {
+                    Exp::Lambda(_, vars, exp) if vars.len() == 1 => {
+                        self.translate_all_or_exists(&loc, QuantKind::Forall, &vars[0], range, exp)
+                    }
+                    _ => self.error(&loc, "2nd argument must be a 1-adic lambda"),
+                }
+            }
+            Operation::Any => {
+                let range = &args[0];
+                match &args[1] {
+                    Exp::Lambda(_, vars, exp) if vars.len() == 1 => {
+                        self.translate_all_or_exists(&loc, QuantKind::Exists, &vars[0], range, exp)
+                    }
+                    _ => self.error(&loc, "2nd argument must be a 1-adic lambda"),
+                }
+            }
             Operation::TypeValue => self.translate_type_value(node_id),
             Operation::TypeDomain => self.error(
                 &loc,
@@ -2134,7 +2162,14 @@ impl<'env> SpecTranslator<'env> {
         });
     }
 
-    fn translate_all_or_exists(&self, loc: &Loc, is_all: bool, args: &[Exp]) {
+    fn translate_all_or_exists(
+        &self,
+        loc: &Loc,
+        kind: QuantKind,
+        var: &LocalVarDecl,
+        range: &Exp,
+        exp: &Exp,
+    ) {
         // all(v, |x| x > 0) -->
         //      (var $r := v; forall $i: int :: $InVectorRange($v, $i) ==> (var x:=$r[$i]; x > 0))
         // all(r, |x| x > 0) -->
@@ -2147,112 +2182,90 @@ impl<'env> SpecTranslator<'env> {
         //      (forall $a: Value :: is#T($a) ==> P($a))
         // any(domain<T>(), |a| P(a)) -->
         //      (exists $a: Value :: is#T($a) && P($a))
-        let quant_ty = self.module_env().env.get_node_type(args[0].node_id());
-        let connective = if is_all { "==>" } else { "&&" };
-        if let Exp::Lambda(_, vars, exp) = &args[1] {
-            if let Some((var, _)) = self.get_decl_var(loc, vars) {
-                let var_name = self.module_env().symbol_pool().string(var);
-                let quant_var = self.fresh_var_name("i");
-                let mut is_vector = false;
-                let mut is_domain: Option<Type> = None;
-                match quant_ty {
-                    Type::Vector(..) => is_vector = true,
-                    Type::TypeDomain(t) => is_domain = Some(t.as_ref().clone()),
-                    Type::Primitive(PrimitiveType::Range) => (),
-                    Type::Reference(_, b) => {
-                        if let Type::Vector(..) = *b {
-                            is_vector = true
-                        } else {
-                            panic!("unexpected type")
-                        }
-                    }
-                    _ => panic!("unexpected type"),
-                };
-                if let Some(domain_ty) = is_domain {
-                    let type_check = boogie_well_formed_expr(
-                        self.global_env(),
-                        &var_name,
-                        &domain_ty,
-                        WellFormedMode::WithInvariant,
-                    );
-                    if type_check.is_empty() {
-                        let tctx = TypeDisplayContext::WithEnv {
-                            env: self.global_env(),
-                            type_param_names: None,
-                        };
-                        self.error(
-                            loc,
-                            &format!(
-                                "cannot quantify over `{}` because the type is not concrete",
-                                Type::TypeDomain(Box::new(domain_ty)).display(&tctx)
-                            ),
-                        );
-                    } else {
-                        emit!(
-                            self.writer,
-                            "$Boolean(({} {}: $Value :: {} {} ",
-                            if is_all { "forall" } else { "exists" },
-                            var_name,
-                            type_check,
-                            connective
-                        );
-                        emit!(self.writer, "b#$Boolean(");
-                        self.translate_exp(exp.as_ref());
-                        emit!(self.writer, ")))");
-                    }
+        let quant_ty = self.module_env().env.get_node_type(range.node_id());
+        let connective = match kind {
+            QuantKind::Forall => "==>",
+            QuantKind::Exists => "&&",
+        };
+        let var_name = self.module_env().symbol_pool().string(var.name);
+        let quant_var = self.fresh_var_name("i");
+        let mut is_vector = false;
+        let mut is_domain: Option<Type> = None;
+        match quant_ty {
+            Type::Vector(..) => is_vector = true,
+            Type::TypeDomain(t) => is_domain = Some(t.as_ref().clone()),
+            Type::Primitive(PrimitiveType::Range) => (),
+            Type::Reference(_, b) => {
+                if let Type::Vector(..) = *b {
+                    is_vector = true
                 } else {
-                    let range_tmp = self.fresh_var_name("range");
-                    emit!(self.writer, "$Boolean((var {} := ", range_tmp);
-                    self.translate_exp(&args[0]);
-                    if is_all {
-                        emit!(self.writer, "; (forall {}: int :: ", quant_var);
-                    } else {
-                        emit!(self.writer, "; (exists {}: int :: ", quant_var);
-                    }
-                    if is_vector {
-                        emit!(
-                            self.writer,
-                            "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
-                            range_tmp,
-                            quant_var,
-                            connective,
-                            var_name,
-                            range_tmp,
-                            quant_var,
-                        );
-                    } else {
-                        emit!(
-                            self.writer,
-                            "$InRange({}, {}) {} (var {} := $Integer({}); ",
-                            range_tmp,
-                            quant_var,
-                            connective,
-                            var_name,
-                            quant_var,
-                        );
-                    }
-                    emit!(self.writer, "b#$Boolean(");
-                    self.translate_exp(exp.as_ref());
-                    emit!(self.writer, ")))))");
+                    panic!("unexpected type")
                 }
+            }
+            _ => panic!("unexpected type"),
+        };
+        if let Some(domain_ty) = is_domain {
+            let type_check = boogie_well_formed_expr(
+                self.global_env(),
+                &var_name,
+                &domain_ty,
+                WellFormedMode::WithInvariant,
+            );
+            if type_check.is_empty() {
+                let tctx = TypeDisplayContext::WithEnv {
+                    env: self.global_env(),
+                    type_param_names: None,
+                };
+                self.error(
+                    loc,
+                    &format!(
+                        "cannot quantify over `{}` because the type is not concrete",
+                        Type::TypeDomain(Box::new(domain_ty)).display(&tctx)
+                    ),
+                );
             } else {
-                // error reported
+                emit!(
+                    self.writer,
+                    "$Boolean(({} {}: $Value :: {} {} ",
+                    kind,
+                    var_name,
+                    type_check,
+                    connective
+                );
+                emit!(self.writer, "b#$Boolean(");
+                self.translate_exp(exp);
+                emit!(self.writer, ")))");
             }
         } else {
-            self.error(loc, "currently 2nd argument must be a lambda");
-        }
-    }
-
-    fn get_decl_var<'a>(
-        &self,
-        loc: &Loc,
-        vars: &'a [LocalVarDecl],
-    ) -> Option<(Symbol, &'a Option<Exp>)> {
-        if let [var] = vars {
-            Some((var.name, &var.binding))
-        } else {
-            self.error(loc, "currently only single variable binding supported");
-            None
+            let range_tmp = self.fresh_var_name("range");
+            emit!(self.writer, "$Boolean((var {} := ", range_tmp);
+            self.translate_exp(&range);
+            emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
+            if is_vector {
+                emit!(
+                    self.writer,
+                    "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
+                    range_tmp,
+                    quant_var,
+                    connective,
+                    var_name,
+                    range_tmp,
+                    quant_var,
+                );
+            } else {
+                emit!(
+                    self.writer,
+                    "$InRange({}, {}) {} (var {} := $Integer({}); ",
+                    range_tmp,
+                    quant_var,
+                    connective,
+                    var_name,
+                    quant_var,
+                );
+            }
+            emit!(self.writer, "b#$Boolean(");
+            self.translate_exp(exp);
+            emit!(self.writer, ")))))");
         }
     }
 
