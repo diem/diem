@@ -13,7 +13,7 @@ edition = "2018"
 bytes = "0.5.6"
 futures = "0.3.9"
 pin-project = "1.0.4"
-serde = { version = "1.0.117", default-features = false }
+serde = { version = "1.0.119", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 url = { version = "2.1.1" }
 

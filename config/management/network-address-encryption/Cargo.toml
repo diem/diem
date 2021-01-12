@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.13.0"
-serde = { version = "1.0.117", features = ["rc"], default-features = false }
+serde = { version = "1.0.119", features = ["rc"], default-features = false }
 thiserror = "1.0.23"
 
 bcs = "0.1.2"
