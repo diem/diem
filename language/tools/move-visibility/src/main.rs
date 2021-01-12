@@ -5,7 +5,7 @@ use anyhow::Result;
 use std::path::Path;
 use structopt::StructOpt;
 
-use move_visibility::pkg_stdlib::PackageStdlib;
+use move_visibility::{pkg::Package, pkg_stdlib::PackageStdlib};
 
 #[derive(StructOpt)]
 #[structopt(rename_all = "kebab-case")]

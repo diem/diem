@@ -1,14 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use petgraph::{
     dot::Dot,
-    graph::{Graph, NodeIndex},
+    graph::{Graph, NodeIndex, UnGraph},
     Direction,
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
+    fs::File,
+    io::Write,
+    path::Path,
 };
 
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
@@ -194,7 +198,18 @@ impl VizGraph {
     }
 }
 
-pub(crate) trait Package {
+#[derive(Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
+struct VizModuleBundleNode {
+    module_id: ModuleId,
+}
+
+impl fmt::Display for VizModuleBundleNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.module_id.name())
+    }
+}
+
+pub trait Package {
     // interfaces to get modules and scripts
     fn get_modules(&self) -> &[CompiledModule];
     fn get_scripts(&self) -> &[(String, CompiledScript)];
@@ -293,5 +308,112 @@ pub(crate) trait Package {
         // remove redundant nodes before returning it
         graph.prune();
         graph
+    }
+
+    fn run(&self, workdir: &Path) -> Result<()> {
+        let graph = self.build_viz_graph();
+
+        // dump the graph
+        let mut file_graph = File::create(workdir.join("graph.dot"))?;
+        file_graph.write_all(graph.to_dot().as_bytes())?;
+
+        // dump friendship candidates
+        let (fl_m2m, fl_m2f, fl_f2m, fl_f2f, fl_script) = graph.friends();
+
+        // special procedure to calculate module bundles, a.k.a., bi-directional module declaration
+        let mut bundle_graph: UnGraph<VizModuleBundleNode, VizEdge> = UnGraph::new_undirected();
+        let mut bundle_nodes: BTreeMap<ModuleId, NodeIndex> = BTreeMap::new();
+
+        for (module_id, friends_m2m) in fl_m2m.clone() {
+            bundle_nodes
+                .entry(module_id.clone())
+                .or_insert_with(|| bundle_graph.add_node(VizModuleBundleNode { module_id }));
+            for friend_module_id in friends_m2m {
+                bundle_nodes
+                    .entry(friend_module_id.clone())
+                    .or_insert_with(|| {
+                        bundle_graph.add_node(VizModuleBundleNode {
+                            module_id: friend_module_id,
+                        })
+                    });
+            }
+        }
+
+        for (module_id, friends_m2m) in fl_m2m.clone() {
+            for friend_module_id in friends_m2m {
+                bundle_graph.add_edge(
+                    *bundle_nodes.get(&module_id).unwrap(),
+                    *bundle_nodes.get(&friend_module_id).unwrap(),
+                    VizEdge {},
+                );
+            }
+        }
+
+        let bundle_dot = format!("{}", Dot::new(&bundle_graph));
+        let mut bundle_file = File::create(workdir.join("bundle.dot"))?;
+        bundle_file.write_all(bundle_dot.as_bytes())?;
+
+        // the rest of the mapping schemes
+        let mut file_m2m = File::create(workdir.join("viz_m2m.txt"))?;
+        for (module_id, friends_m2m) in fl_m2m {
+            writeln!(file_m2m, "{}:", module_id.name())?;
+            for friend_module_id in friends_m2m {
+                writeln!(file_m2m, "\t{}", friend_module_id.name())?;
+            }
+        }
+
+        let mut file_m2f = File::create(workdir.join("viz_m2f.txt"))?;
+        for (module_id, friends_m2f) in fl_m2f {
+            writeln!(file_m2f, "{}:", module_id.name())?;
+            for (friend_module_id, friend_function_name) in friends_m2f {
+                writeln!(
+                    file_m2f,
+                    "\t{}::{}",
+                    friend_module_id.name(),
+                    friend_function_name
+                )?;
+            }
+        }
+
+        let mut file_f2m = File::create(workdir.join("viz_f2m.txt"))?;
+        for ((module_id, function_name), friends_f2m) in fl_f2m {
+            let script_calls = fl_script
+                .get(&(module_id.clone(), function_name.clone()))
+                .unwrap();
+            // if this function is used by any script, it should be a "truly" public function
+            if !script_calls.is_empty() {
+                continue;
+            }
+            // otherwise, we can, in theory, make this function a "protected" function by making
+            // friends with all direct callers
+            writeln!(file_f2m, "{}::{}:", module_id.name(), function_name)?;
+            for friend_module_id in friends_f2m {
+                writeln!(file_f2m, "\t{}", friend_module_id.name())?;
+            }
+        }
+
+        let mut file_f2f = File::create(workdir.join("viz_f2f.txt"))?;
+        for ((module_id, function_name), friends_f2f) in fl_f2f {
+            let script_calls = fl_script
+                .get(&(module_id.clone(), function_name.clone()))
+                .unwrap();
+            // if this function is used by any script, it should be a "truly" public function
+            if !script_calls.is_empty() {
+                continue;
+            }
+            // otherwise, we can, in theory, make this function a "protected" function by making
+            // friends with all direct callers
+            writeln!(file_f2f, "{}::{}:", module_id.name(), function_name)?;
+            for (friend_module_id, friend_function_name) in friends_f2f {
+                writeln!(
+                    file_f2f,
+                    "\t{}::{}",
+                    friend_module_id.name(),
+                    friend_function_name
+                )?;
+            }
+        }
+
+        Ok(())
     }
 }

@@ -1,14 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
-use std::{collections::BTreeSet, fs::File, path::Path};
+use std::{collections::BTreeSet, path::Path};
 
 use stdlib::{build_stdlib, compile_script, script_files};
 use vm::file_format::{CompiledModule, CompiledScript};
 
 use crate::pkg::Package;
-use std::io::Write;
 use vm::access::ModuleAccess;
 
 // Exclude these files for call-dependency analysis
@@ -65,79 +63,6 @@ impl PackageStdlib {
             .collect();
 
         Self { modules, scripts }
-    }
-
-    pub fn run(&self, workdir: &Path) -> Result<()> {
-        let graph = self.build_viz_graph();
-
-        // dump the graph
-        let mut file_graph = File::create(workdir.join("graph.dot"))?;
-        file_graph.write_all(graph.to_dot().as_bytes())?;
-
-        // dump friendship candidates
-        let (fl_m2m, fl_m2f, fl_f2m, fl_f2f, fl_script) = graph.friends();
-
-        let mut file_m2m = File::create(workdir.join("viz_m2m.txt"))?;
-        for (module_id, friends_m2m) in fl_m2m {
-            writeln!(file_m2m, "{}:", module_id.name())?;
-            for friend_module_id in friends_m2m {
-                writeln!(file_m2m, "\t{}", friend_module_id.name())?;
-            }
-        }
-
-        let mut file_m2f = File::create(workdir.join("viz_m2f.txt"))?;
-        for (module_id, friends_m2f) in fl_m2f {
-            writeln!(file_m2f, "{}:", module_id.name())?;
-            for (friend_module_id, friend_function_name) in friends_m2f {
-                writeln!(
-                    file_m2f,
-                    "\t{}::{}",
-                    friend_module_id.name(),
-                    friend_function_name
-                )?;
-            }
-        }
-
-        let mut file_f2m = File::create(workdir.join("viz_f2m.txt"))?;
-        for ((module_id, function_name), friends_f2m) in fl_f2m {
-            let script_calls = fl_script
-                .get(&(module_id.clone(), function_name.clone()))
-                .unwrap();
-            // if this function is used by any script, it should be a "truly" public function
-            if !script_calls.is_empty() {
-                continue;
-            }
-            // otherwise, we can, in theory, make this function a "protected" function by making
-            // friends with all direct callers
-            writeln!(file_f2m, "{}::{}:", module_id.name(), function_name)?;
-            for friend_module_id in friends_f2m {
-                writeln!(file_f2m, "\t{}", friend_module_id.name())?;
-            }
-        }
-
-        let mut file_f2f = File::create(workdir.join("viz_f2f.txt"))?;
-        for ((module_id, function_name), friends_f2f) in fl_f2f {
-            let script_calls = fl_script
-                .get(&(module_id.clone(), function_name.clone()))
-                .unwrap();
-            // if this function is used by any script, it should be a "truly" public function
-            if !script_calls.is_empty() {
-                continue;
-            }
-            // otherwise, we can, in theory, make this function a "protected" function by making
-            // friends with all direct callers
-            writeln!(file_f2f, "{}::{}:", module_id.name(), function_name)?;
-            for (friend_module_id, friend_function_name) in friends_f2f {
-                writeln!(
-                    file_f2f,
-                    "\t{}::{}",
-                    friend_module_id.name(),
-                    friend_function_name
-                )?;
-            }
-        }
-
-        Ok(())
     }
 }
 
