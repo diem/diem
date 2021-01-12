@@ -1190,6 +1190,22 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 }
             }
         }
+        PE::Quant(k, prs, pe) => {
+            if !context.require_spec_context(loc, "expression only allowed in specifications") {
+                assert!(context.has_errors());
+                EE::UnresolvedError
+            } else {
+                let rs_opt = bind_with_range_list(context, prs);
+                let e = exp_(context, *pe);
+                match rs_opt {
+                    Some(rs) => EE::Quant(k, rs, Box::new(e)),
+                    None => {
+                        assert!(context.has_errors());
+                        EE::UnresolvedError
+                    }
+                }
+            }
+        }
         PE::ExpList(pes) => {
             assert!(pes.len() > 1);
             EE::ExpList(exps(context, pes))
@@ -1338,6 +1354,21 @@ fn fields<T>(
 fn bind_list(context: &mut Context, sp!(loc, pbs_): P::BindList) -> Option<E::LValueList> {
     let bs_: Option<Vec<E::LValue>> = pbs_.into_iter().map(|pb| bind(context, pb)).collect();
     Some(sp(loc, bs_?))
+}
+
+fn bind_with_range_list(
+    context: &mut Context,
+    sp!(loc, prs_): P::BindWithRangeList,
+) -> Option<E::LValueWithRangeList> {
+    let rs_: Option<Vec<E::LValueWithRange>> = prs_
+        .into_iter()
+        .map(|sp!(loc, (pb, pr))| -> Option<E::LValueWithRange> {
+            let b = bind(context, pb)?;
+            let r = exp_(context, pr);
+            Some(sp(loc, (b, r)))
+        })
+        .collect();
+    Some(sp(loc, rs_?))
 }
 
 fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::LValue> {
@@ -1516,6 +1547,11 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
             // remove anything in `ls`
             unbound_names_binds(unbound, ls);
         }
+        EE::Quant(_, rs, er) => {
+            unbound_names_exp(unbound, er);
+            // remove anything in `rs`
+            unbound_names_binds_with_range(unbound, rs);
+        }
         EE::Assign(ls, er) => {
             unbound_names_exp(unbound, er);
             // remove anything in `ls`
@@ -1574,6 +1610,16 @@ fn unbound_names_binds(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList
     ls_.iter()
         .rev()
         .for_each(|l| unbound_names_bind(unbound, l))
+}
+
+fn unbound_names_binds_with_range(
+    unbound: &mut BTreeSet<Name>,
+    sp!(_, rs_): &E::LValueWithRangeList,
+) {
+    rs_.iter().rev().for_each(|sp!(_, (b, r))| {
+        unbound_names_exp(unbound, r);
+        unbound_names_bind(unbound, b)
+    })
 }
 
 fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {

@@ -380,6 +380,9 @@ pub type Bind = Spanned<Bind_>;
 // b1, ..., bn
 pub type BindList = Spanned<Vec<Bind>>;
 
+pub type BindWithRange = Spanned<(Bind, Exp)>;
+pub type BindWithRangeList = Spanned<Vec<BindWithRange>>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
@@ -457,6 +460,13 @@ pub enum BinOp_ {
 }
 pub type BinOp = Spanned<BinOp_>;
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum QuantKind_ {
+    Forall,
+    Exists,
+}
+pub type QuantKind = Spanned<QuantKind_>;
+
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
@@ -487,6 +497,8 @@ pub enum Exp_ {
     Block(Sequence),
     // fun (x1, ..., xn) e
     Lambda(BindList, Box<Exp>), // spec only
+    // forall/exists x1 : e1, ..., xn : en.
+    Quant(QuantKind, BindWithRangeList, Box<Exp>), // spec only
     // (e1, ..., en)
     ExpList(Vec<Exp>),
     // ()
@@ -1336,6 +1348,13 @@ impl AstDebug for Exp_ {
                 w.write(" ");
                 e.ast_debug(w);
             }
+            E::Quant(kind, sp!(_, rs), e) => {
+                kind.ast_debug(w);
+                w.write(" ");
+                rs.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -1425,6 +1444,36 @@ impl AstDebug for BinOp_ {
 impl AstDebug for UnaryOp_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.write(&format!("{}", self));
+    }
+}
+
+impl AstDebug for QuantKind_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            QuantKind_::Forall => w.write("forall"),
+            QuantKind_::Exists => w.write("exists"),
+        }
+    }
+}
+
+impl AstDebug for Vec<BindWithRange> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, b| b.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for (Bind, Exp) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        self.0.ast_debug(w);
+        w.write(" in ");
+        self.1.ast_debug(w);
     }
 }
 

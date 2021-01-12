@@ -3,7 +3,7 @@
 
 use crate::{
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, QuantKind,
         ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
         Var,
     },
@@ -215,6 +215,11 @@ pub type LValue = Spanned<LValue_>;
 pub type LValueList_ = Vec<LValue>;
 pub type LValueList = Spanned<LValueList_>;
 
+pub type LValueWithRange_ = (LValue, Exp);
+pub type LValueWithRange = Spanned<LValueWithRange_>;
+pub type LValueWithRangeList_ = Vec<LValueWithRange>;
+pub type LValueWithRangeList = Spanned<LValueWithRangeList_>;
+
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum ExpDotted_ {
@@ -256,7 +261,8 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
-    Lambda(LValueList, Box<Exp>), // spec only
+    Lambda(LValueList, Box<Exp>),                    // spec only
+    Quant(QuantKind, LValueWithRangeList, Box<Exp>), // spec only
 
     Assign(LValueList, Box<Exp>),
     FieldMutate(Box<ExpDotted>, Box<Exp>),
@@ -806,6 +812,13 @@ impl AstDebug for Exp_ {
                 w.write(" ");
                 e.ast_debug(w);
             }
+            E::Quant(kind, sp!(_, rs), e) => {
+                kind.ast_debug(w);
+                w.write(" ");
+                rs.ast_debug(w);
+                w.write(": ");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -950,5 +963,26 @@ impl AstDebug for LValue_ {
                 w.write("}");
             }
         }
+    }
+}
+
+impl AstDebug for Vec<LValueWithRange> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, b| b.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for (LValue, Exp) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        self.0.ast_debug(w);
+        w.write(" in ");
+        self.1.ast_debug(w);
     }
 }
