@@ -19,7 +19,7 @@ use diem_config::{
     },
     network_id::NetworkContext,
 };
-use diem_crypto::x25519;
+use diem_crypto::{x25519, x25519::PublicKey};
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
@@ -164,6 +164,7 @@ impl NetworkBuilder {
     pub fn create(chain_id: ChainId, role: RoleType, config: &NetworkConfig) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
+        let pubkey = identity_key.public_key();
 
         let authentication_mode = if config.mutual_authentication {
             AuthenticationMode::Mutual(identity_key)
@@ -235,7 +236,7 @@ impl NetworkBuilder {
 
         match &config.discovery_method {
             DiscoveryMethod::Onchain => {
-                network_builder.add_configuration_change_listener(config.encryptor());
+                network_builder.add_configuration_change_listener(pubkey, config.encryptor());
             }
             DiscoveryMethod::None => {}
         }
@@ -368,7 +369,11 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_configuration_change_listener(&mut self, encryptor: Encryptor) -> &mut Self {
+    fn add_configuration_change_listener(
+        &mut self,
+        pubkey: PublicKey,
+        encryptor: Encryptor,
+    ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");
@@ -380,6 +385,7 @@ impl NetworkBuilder {
         self.configuration_change_listener_builder =
             Some(ConfigurationChangeListenerBuilder::create(
                 self.network_context.clone(),
+                pubkey,
                 encryptor,
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,

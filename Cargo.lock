@@ -4490,8 +4490,10 @@ dependencies = [
  "diem-workspace-hack",
  "futures 0.3.12",
  "move-core-types",
+ "netcore",
  "network",
  "once_cell",
+ "rand 0.7.3",
  "subscription-service",
  "tokio",
 ]
