@@ -34,7 +34,7 @@ itertools = "0.10.0"
 log = "0.4.13"
 num = "0.3.0"
 pretty = "0.10.0"
-rand = "0.7.3"
+rand = "0.8.1"
 regex = "1.4.2"
 serde = { version = "1.0.119", features = ["derive"] }
 serde_json = "1.0.61"

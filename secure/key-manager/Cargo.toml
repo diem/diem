@@ -31,7 +31,7 @@ transaction-builder-generated = { path = "../../client/transaction-builder", ver
 [dev-dependencies]
 anyhow = "1.0.38"
 futures = "0.3.9"
-rand = "0.7.3"
+rand = "0.8.1"
 tokio = { version = "0.2.22", features = ["full"] }
 
 executor = { path = "../../execution/executor", version = "0.1.0" }

@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.9"
-rand = "0.7.3"
+rand = "0.8.1"
 serde = { version = "1.0.119", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 tokio-retry = "0.2.0"
