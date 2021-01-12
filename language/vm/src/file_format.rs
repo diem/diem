@@ -363,6 +363,7 @@ impl StructDefinition {
         }
     }
 }
+
 /// A `FieldDefinition` is the definition of a field: its name and the field type.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -374,9 +375,28 @@ pub struct FieldDefinition {
     pub signature: TypeSignature,
 }
 
+/// `VisibilityScope` restricts who may call a given function.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+pub enum VisibilityScope {
+    /// The function can only be called within the module that defines it.
+    Private,
+    /// The function can be called by any module and script.
+    Public,
+    /// Similar to "private", but in addition, the function can also be called
+    /// by any module specified in the list of module handles.
+    Protected(Vec<ModuleHandleIndex>),
+}
+
+impl Default for VisibilityScope {
+    fn default() -> Self {
+        VisibilityScope::Private
+    }
+}
+
 /// A `FunctionDefinition` is the implementation of a function. It defines
 /// the *prototype* of the function and the function body.
-
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
@@ -384,7 +404,7 @@ pub struct FunctionDefinition {
     /// The prototype of the function (module, name, signature).
     pub function: FunctionHandleIndex,
     /// Flag to indicate if this function is public.
-    pub is_public: bool,
+    pub visibility: VisibilityScope,
     /// List of nominal resources (declared in this module) that the procedure might access
     /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
     /// This list of acquires grants the borrow checker the ability to statically verify the safety
@@ -404,19 +424,27 @@ pub struct FunctionDefinition {
 }
 
 impl FunctionDefinition {
-    /// Returns whether the FunctionDefinition is public.
+    /// Returns whether the FunctionDefinition can be called from a module other than the module
+    /// that defines it.
+    ///
+    /// TODO: following the definition above (which is inherited from the old public-private binary
+    /// model), the `protected` scope should also be considered as `is_public`. We need to refactor
+    /// the function name as well as its call stack.
     pub fn is_public(&self) -> bool {
-        self.is_public
+        matches!(&self.visibility, VisibilityScope::Public | VisibilityScope::Protected(_))
     }
     /// Returns whether the FunctionDefinition is native.
     pub fn is_native(&self) -> bool {
         self.code.is_none()
     }
 
-    /// Function can be invoked outside of its declaring module.
+    /// Function can be invoked by any module or script outside of its declaring module.
     pub const PUBLIC: u8 = 0x1;
     /// A native function implemented in Rust.
     pub const NATIVE: u8 = 0x2;
+    /// Function can only be invoked its declaring module plus a pre-defined list of modules outside
+    /// of its declaring module.
+    pub const PROTECTED: u8 = 0x4;
 }
 
 // Signature
@@ -1532,7 +1560,7 @@ impl CompiledScriptMut {
         // Create a function definition for the main function.
         let main_def = FunctionDefinition {
             function: main_handle_idx,
-            is_public: true,
+            visibility: VisibilityScope::Public,
             acquires_global_resources: vec![],
             code: Some(self.code),
         };
@@ -1888,7 +1916,7 @@ pub fn basic_test_module() -> CompiledModuleMut {
 
     m.function_defs.push(FunctionDefinition {
         function: FunctionHandleIndex(0),
-        is_public: false,
+        visibility: VisibilityScope::Private,
         acquires_global_resources: vec![],
         code: Some(CodeUnit {
             locals: SignatureIndex(0),

@@ -123,6 +123,10 @@ fn serialize_field_offset(binary: &mut BinaryData, offset: u16) -> Result<()> {
     write_as_uleb128(binary, offset, FIELD_OFFSET_MAX)
 }
 
+fn serialize_visibility_friendlist_count(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, VISIBILITY_FRIENDLIST_COUNT_MAX)
+}
+
 fn serialize_acquires_count(binary: &mut BinaryData, len: usize) -> Result<()> {
     write_as_uleb128(binary, len as u64, ACQUIRES_COUNT_MAX)
 }
@@ -521,7 +525,13 @@ fn serialize_field_definition(
 ///
 /// A `FunctionDefinition` gets serialized as follows:
 /// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
-/// - `FunctionDefinition.flags` 1 byte for the flags of the function
+/// - `FunctionDefinition.flags` 1 byte for the flags of the function.
+///    The flags is essentially a composition of two items:
+///   1) visibility indicator, whether the function is private, public, or protected.
+///     - if the function is protected, the friend list is serialized right after as a variable
+///       size stream for the `ModuleHandle`.
+///   2) native indicator, whether the function is a native function.
+/// - `FunctionDefinition.acquires` a variable size stream for the `StructDefinitionIndex`
 /// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
 fn serialize_function_definition(
     binary: &mut BinaryData,
@@ -529,17 +539,21 @@ fn serialize_function_definition(
 ) -> Result<()> {
     serialize_function_handle_index(binary, &function_definition.function)?;
 
-    let is_public = if function_definition.is_public() {
-        FunctionDefinition::PUBLIC
-    } else {
-        0
+    let visibility_flag = match function_definition.visibility {
+        VisibilityScope::Private => 0,
+        VisibilityScope::Public => FunctionDefinition::PUBLIC,
+        VisibilityScope::Protected(_) => FunctionDefinition::PROTECTED,
     };
     let is_native = if function_definition.is_native() {
         FunctionDefinition::NATIVE
     } else {
         0
     };
-    binary.push(is_public | is_native)?;
+    binary.push(visibility_flag | is_native)?;
+
+    if let VisibilityScope::Protected(friends) = &function_definition.visibility {
+        serialize_visibility_friendlist(binary, friends)?;
+    }
 
     serialize_acquires(binary, &function_definition.acquires_global_resources)?;
     if let Some(code) = &function_definition.code {
@@ -560,6 +574,17 @@ fn serialize_field_instantiation(
 ) -> Result<()> {
     serialize_field_handle_index(binary, &field_inst.handle)?;
     serialize_signature_index(binary, &field_inst.type_parameters)?;
+    Ok(())
+}
+
+fn serialize_visibility_friendlist(
+    binary: &mut BinaryData,
+    indices: &[ModuleHandleIndex],
+) -> Result<()> {
+    serialize_visibility_friendlist_count(binary, indices.len())?;
+    for mod_idx in indices {
+        serialize_module_handle_index(binary, mod_idx)?;
+    }
     Ok(())
 }
 

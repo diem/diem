@@ -5,13 +5,13 @@ use crate::{
     access::ModuleAccess,
     file_format::{
         CompiledModule, FieldDefinition, FunctionHandle, Kind, SignatureToken, StructDefinition,
-        StructFieldInformation, TypeParameterIndex,
+        StructFieldInformation, TypeParameterIndex, VisibilityScope,
     },
 };
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 
 /// Defines normalized representations of Move types, fields, kinds, structs, functions, and
@@ -82,6 +82,9 @@ pub struct Module {
     pub name: Identifier,
     pub structs: Vec<Struct>,
     pub public_functions: Vec<FunctionSignature>,
+    // TODO: add compatibility checks for these functions as well
+    pub protected_functions: Vec<(FunctionSignature, Vec<ModuleId>)>,
+    // TODO: maybe it is better to unify protected and public functions?
 }
 
 impl Module {
@@ -94,8 +97,25 @@ impl Module {
             .function_defs()
             .iter()
             .filter_map(|f| {
-                if f.is_public {
+                if matches!(&f.visibility, VisibilityScope::Public) {
                     Some(FunctionSignature::new(m, m.function_handle_at(f.function)))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        let protected_functions = m
+            .function_defs()
+            .iter()
+            .filter_map(|f| {
+                if let VisibilityScope::Protected(friends) = &f.visibility {
+                    Some((
+                        FunctionSignature::new(m, m.function_handle_at(f.function)),
+                        friends
+                            .iter()
+                            .map(|mod_idx| m.module_id_for_handle(m.module_handle_at(*mod_idx)))
+                            .collect(),
+                    ))
                 } else {
                     None
                 }
@@ -106,6 +126,7 @@ impl Module {
             name: m.name().to_owned(),
             structs,
             public_functions,
+            protected_functions,
         }
     }
 }

@@ -64,6 +64,8 @@ pub const CONSTANT_SIZE_MAX: u64 = 65535;
 
 pub const SIGNATURE_SIZE_MAX: u64 = 255;
 
+pub const VISIBILITY_FRIENDLIST_COUNT_MAX: u64 = 255;
+
 pub const ACQUIRES_COUNT_MAX: u64 = 255;
 
 pub const FIELD_COUNT_MAX: u64 = 255;

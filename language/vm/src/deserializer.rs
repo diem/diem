@@ -201,6 +201,10 @@ fn load_bytecode_index(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u16> {
     read_uleb_internal(cursor, BYTECODE_INDEX_MAX)
 }
 
+fn load_visibility_friendlist_count(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u64> {
+    read_uleb_internal(cursor, VISIBILITY_FRIENDLIST_COUNT_MAX)
+}
+
 fn load_acquires_count(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u64> {
     read_uleb_internal(cursor, ACQUIRES_COUNT_MAX)
 }
@@ -1113,7 +1117,19 @@ fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionD
     let flags = read_u8(cursor).map_err(|_| {
         PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
     })?;
-    let is_public = (flags & FunctionDefinition::PUBLIC) != 0;
+
+    let visibility = if (flags & FunctionDefinition::PUBLIC) != 0 {
+        if (flags & FunctionDefinition::PROTECTED) != 0 {
+            return Err(PartialVMError::new(StatusCode::MALFORMED)
+                .with_message("A function cannot be both public and protected".to_string()));
+        }
+        VisibilityScope::Public
+    } else if (flags & FunctionDefinition::PROTECTED) != 0 {
+        VisibilityScope::Protected(load_visibility_friendlist(cursor)?)
+    } else {
+        VisibilityScope::Private
+    };
+
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
     let code_unit = if (flags & FunctionDefinition::NATIVE) != 0 {
         None
@@ -1122,10 +1138,22 @@ fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionD
     };
     Ok(FunctionDefinition {
         function,
-        is_public,
+        visibility,
         acquires_global_resources,
         code: code_unit,
     })
+}
+
+/// Deserializes a `Vec<ModuleHandleIndex>`.
+fn load_visibility_friendlist(
+    cursor: &mut Cursor<&[u8]>,
+) -> BinaryLoaderResult<Vec<ModuleHandleIndex>> {
+    let len = load_visibility_friendlist_count(cursor)?;
+    let mut indices = vec![];
+    for _ in 0..len {
+        indices.push(load_module_handle_index(cursor)?);
+    }
+    Ok(indices)
 }
 
 /// Deserializes a `Vec<StructDefinitionIndex>`.
