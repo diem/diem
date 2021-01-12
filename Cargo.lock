@@ -6853,6 +6853,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-explore"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "compiled-stdlib",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "hex",
+ "move-core-types",
+ "move-vm-runtime",
+ "move-vm-types",
+ "serde",
+ "serde_json",
+ "structopt 0.3.21",
+ "vm",
+]
+
+[[package]]
 name = "test-generation"
 version = "0.1.0"
 dependencies = [

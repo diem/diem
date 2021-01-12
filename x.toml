@@ -146,6 +146,7 @@ members = [
     "serializer-tests",
     "smoke-test",
     "socket-bench-server",
+    "test-explore",
     "test-generation",
     "x",
     "x-core",

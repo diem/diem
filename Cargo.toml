@@ -103,6 +103,7 @@ members = [
     "language/tools/move-coverage",
     "language/tools/move-explain",
     "language/tools/resource-viewer",
+    "language/tools/test-explore",
     "language/tools/vm-genesis",
     "language/transaction-builder",
     "language/transaction-builder/generator",
