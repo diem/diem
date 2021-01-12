@@ -3,6 +3,7 @@
 
 use crate::{compat::Sha3_256, hkdf::*};
 use sha2::{Sha256, Sha512};
+use std::env;
 
 // Testing against sha256 test vectors. Unfortunately the rfc does not provide test vectors for
 // sha3 and sha512.
@@ -152,8 +153,30 @@ fn test_sha512_output_length() {
     );
 }
 
-#[test]
+#[allow(dead_code)]
+fn what_is_going_on() {
+    print_env("CARGO_HOME");
+    print_env("PATH");
+    print_env("CARGO");
+
+    println!("other env vars:");
+    for (key, value) in env::vars() {
+        println!("{}: {}", key, value);
+    }
+}
+
+#[allow(dead_code)]
+fn print_env(key: &str) {
+    match env::var(key) {
+        Ok(val) => println!("{}: {:?}", key, val),
+        Err(e) => println!("{}: couldn't interpret {}", key, e),
+    }
+}
+
+//#[test]
+#[allow(dead_code)]
 fn unsupported_digest() {
+    what_is_going_on();
     let t = trybuild::TestCases::new();
     t.compile_fail("src/unit_tests/compilation/small_kdf.rs");
 }

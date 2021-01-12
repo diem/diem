@@ -16,6 +16,7 @@ use diem_crypto_derive::{
 };
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::env;
 
 // Here we aim to make a point about how we can build an enum generically
 // on top of a few choice signing scheme types. This enum implements the
@@ -120,8 +121,30 @@ proptest! {
     }
 }
 
-#[test]
+#[allow(dead_code)]
+fn what_is_going_on() {
+    print_env("CARGO_HOME");
+    print_env("PATH");
+    print_env("CARGO");
+
+    println!("other env vars:");
+    for (key, value) in env::vars() {
+        println!("{}: {}", key, value);
+    }
+}
+
+#[allow(dead_code)]
+fn print_env(key: &str) {
+    match env::var(key) {
+        Ok(val) => println!("{}: {:?}", key, val),
+        Err(e) => println!("{}: couldn't interpret {}", key, e),
+    }
+}
+
+//#[test]
+#[allow(dead_code)]
 fn unsupported_sigs() {
+    what_is_going_on();
     let t = trybuild::TestCases::new();
     t.compile_fail("src/unit_tests/compilation/cross_test.rs");
     t.compile_fail("src/unit_tests/compilation/cross_test_trait_obj.rs");

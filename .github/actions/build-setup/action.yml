@@ -25,17 +25,8 @@ runs:
         ln -s /root/bin ${HOME}/bin
         ln -s /root/.dotnet ${HOME}/.dotnet
         ln -s /root/.rustup ${HOME}/.rustup
-        ln -s /root/.cargo ${HOME}/.cargo
         ln -s /root/.local ${HOME}/.local
         ln -s /root/.nuget ${HOME}/.nuget
-
-        # sccache setup
-        # Since sccache needs a standard location for cargo home and the build is currently configured in x.toml
-        # to expect /opt/cargo.  The standard source location expected by the build is handle by an extra docker
-        # mount point.
-        mkdir /opt || true
-        ln -s /root/.cargo /root/cargo
-        ln -s /root/cargo /opt/cargo
 
         # prepare move lang prover tooling.
         # By setting these values the dev-setup.sh script can detect already installed executables (and check versions).
@@ -55,7 +46,7 @@ runs:
         echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
         echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV
         echo 'RUST_NIGHTLY='$(cat cargo-toolchain) | tee -a $GITHUB_ENV
-        echo 'CARGO_HOME=/opt/cargo/' | tee -a $GITHUB_ENV
+        echo 'CARGO_HOME=/opt/cargo' | tee -a $GITHUB_ENV
 
         # Turn on the experimental feature resolver in cargo. See:
         # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
