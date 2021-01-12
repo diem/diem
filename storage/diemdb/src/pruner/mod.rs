@@ -171,7 +171,7 @@ impl Worker {
             // in case `Command::Quit` is received (that's when we should quit.)
             match prune_state(
                 Arc::clone(&self.db),
-                self.least_readable_version.load(Ordering::Relaxed),
+                self.least_readable_version.load(Ordering::Acquire),
                 self.target_least_readable_version,
                 Self::MAX_VERSIONS_TO_PRUNE_PER_BATCH,
             ) {
@@ -243,7 +243,7 @@ impl Worker {
     /// Log the progress.
     fn record_progress(&mut self, least_readable_version: Version) {
         self.least_readable_version
-            .store(least_readable_version, Ordering::Relaxed);
+            .store(least_readable_version, Ordering::Release);
         DIEM_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION.set(least_readable_version as i64);
     }
 
