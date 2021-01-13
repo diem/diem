@@ -1410,7 +1410,8 @@ impl ClientProxy {
         Ok(auth_key)
     }
 
-    fn association_transaction_with_local_diem_root_account(
+    /// Send a transaction signed by the local diem_root credential
+    pub fn association_transaction_with_local_diem_root_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
