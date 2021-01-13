@@ -55,7 +55,7 @@ use crate::{
         ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
         SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
-    pragmas::{INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA},
+    pragmas::{FRIEND_PRAGMA, INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -2213,6 +2213,41 @@ impl<'env> FunctionEnv<'env> {
         default()
     }
 
+    /// Returns the value of a pragma representing an identifier for this function.
+    /// If such pragma is not specified for this function, None is returned.
+    pub fn get_ident_pragma(&self, name: &str) -> Option<Rc<String>> {
+        let sym = &self.symbol_pool().make(name);
+        match self.get_spec().properties.get(&sym) {
+            Some(PropertyValue::Symbol(sym)) => Some(self.symbol_pool().string(*sym)),
+            Some(PropertyValue::QualifiedSymbol(qsym)) => {
+                let module_name = qsym.module_name.display(self.symbol_pool());
+                Some(Rc::from(format!(
+                    "{}::{}",
+                    module_name,
+                    self.symbol_pool().string(qsym.symbol)
+                )))
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns the FunctionEnv of the function identified by the pragma, if the pragma
+    /// exists and its value represents a function in the system.
+    pub fn get_func_env_from_pragma(&self, name: &str) -> Option<FunctionEnv<'env>> {
+        let sym = &self.symbol_pool().make(name);
+        match self.get_spec().properties.get(&sym) {
+            Some(PropertyValue::Symbol(sym)) => self.module_env.find_function(*sym),
+            Some(PropertyValue::QualifiedSymbol(qsym)) => {
+                if let Some(module_env) = self.module_env.env.find_module(&qsym.module_name) {
+                    module_env.find_function(qsym.symbol)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
     /// Returns true if this function is native. The function is also marked as native
     /// if it has the pragma intrinsic set to true.
     pub fn is_native(&self) -> bool {
@@ -2238,6 +2273,33 @@ impl<'env> FunctionEnv<'env> {
         self.get_parameters()
             .iter()
             .any(|Parameter(_, ty)| ty.is_mutable_reference())
+    }
+
+    /// Returns the name of the friend(the only allowed caller) of this function, if there is one.
+    pub fn get_friend_name(&self) -> Option<Rc<String>> {
+        self.get_ident_pragma(FRIEND_PRAGMA)
+    }
+
+    /// Returns true if a friend is specified for this function.
+    pub fn has_friend(&self) -> bool {
+        self.get_friend_name().is_some()
+    }
+
+    /// Returns the FunctionEnv of the friend function if the friend is specified
+    /// and the friend was compiled into the environment.
+    pub fn get_friend_env(&self) -> Option<FunctionEnv<'env>> {
+        self.get_func_env_from_pragma(FRIEND_PRAGMA)
+    }
+
+    /// Returns the FunctionEnv of the transitive friend of the function.
+    /// For example, if `f` has a friend `g` and `g` has a friend `h`, then
+    /// `f`'s transitive friend is `h`.
+    /// If a friend is not specified then the function itself is returned.
+    pub fn get_transitive_friend(&self) -> FunctionEnv<'env> {
+        if let Some(friend_env) = self.get_friend_env() {
+            return friend_env.get_transitive_friend();
+        }
+        self.clone()
     }
 
     /// Returns the type parameters associated with this function.
@@ -2435,6 +2497,13 @@ impl<'env> FunctionEnv<'env> {
             // they are marked as should_verify by our analysis.
             return false;
         }
+
+        if self.has_friend() {
+            // Don't generate verify method for a function with a friend since
+            // the function can only be verified in the context of the caller friend.
+            return false;
+        }
+
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value specified by default_scope.
         let default = || match default_scope {

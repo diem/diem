@@ -41,10 +41,12 @@ module DiemTimestamp {
         move_to(dr_account, timer);
     }
     spec fun set_time_has_started {
-        /// Verification of this function is turned off because it cannot be verified without genesis execution
-        /// context. After time has started, all invariants guarded by `DiemTimestamp::is_operating` will become
-        /// activated and need to hold.
-        pragma verify = false;
+        /// The friend of this function is `Genesis::initialize` which means that
+        /// this function can't be verified on its own and has to be verified in
+        /// context of Genesis execution.
+        /// After time has started, all invariants guarded by `DiemTimestamp::is_operating`
+        /// will become activated and need to hold.
+        pragma friend = 0x1::Genesis::initialize;
         include AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
         ensures is_operating();

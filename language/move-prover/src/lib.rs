@@ -69,10 +69,11 @@ pub fn run_move_prover<W: WriteColor>(
 ) -> anyhow::Result<()> {
     let now = Instant::now();
     let target_sources = find_move_filenames(&options.move_sources, true)?;
-    let other_sources = remove_sources(
+    let all_sources = collect_all_sources(
         &target_sources,
-        find_move_filenames(&options.move_deps, true)?,
-    );
+        &find_move_filenames(&options.move_deps, true)?,
+    )?;
+    let other_sources = remove_sources(&target_sources, all_sources);
     let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
     let mut env: GlobalEnv = run_model_builder(target_sources, other_sources, address)?;
@@ -110,7 +111,10 @@ pub fn run_move_prover<W: WriteColor>(
     }
     // Analyze and find out the set of modules/functions to be translated and/or verified.
     verification_analysis(&mut env, &targets);
-
+    if env.has_errors() {
+        env.report_errors(error_writer);
+        return Err(anyhow!("exiting with analysis errors"));
+    }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
     let mut translator = BoogieTranslator::new(&env, &options, &targets, &writer);
@@ -290,8 +294,8 @@ fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
 /// (1) Go through all invariants in the target modules and gather all resources
 ///     mentioned in the invariants.
 /// (2) Go through all functions in all modules. If a function modifies one of
-///     the resources in (1)directly, then
-///     (a) Mark the function as should_verify and
+///     the resources in (1) directly, then
+///     (a) Mark the function or its transitive friend(if there exists one) as should_verify and
 ///     (b) Mark the module owning the function as should_translate.
 /// (3) Propagate should_translate to dependency modules.
 fn verification_analysis(env: &mut GlobalEnv, targets: &FunctionTargetsHolder) {
@@ -313,18 +317,44 @@ fn verification_analysis(env: &mut GlobalEnv, targets: &FunctionTargetsHolder) {
     }
 
     for module_env in env.get_modules() {
-        let module_id = module_env.get_id();
         for func_env in module_env.get_functions() {
+            if func_env.has_friend() {
+                let loc = func_env.get_loc();
+                if func_env.is_opaque() {
+                    env.error(&loc, "function with a friend cannot be declared as opaque");
+                }
+                let calling_functions = func_env.get_calling_functions();
+
+                // Construct a set containing all friends of the function in the system.
+                // Right now there can be at most one friend.
+                let mut friends = BTreeSet::new();
+                if let Some(friend_env) = func_env.get_friend_env() {
+                    friends.insert(friend_env.get_qualified_id());
+                }
+
+                // If the set of callers is not a subset of the friends set,
+                // then some non-friend calls the function so generate an error message.
+                if !calling_functions.is_subset(&friends) {
+                    env.error(&loc, &format!("function `{}` is called by other functions while it can only be called by its friend {}",
+                                             func_env.get_name_string(),
+                                             func_env.get_friend_name().unwrap())
+                    );
+                }
+            }
+
             let fun_target = targets.get_target(&func_env, FunctionVariant::Baseline);
             let directly_modified_structs =
                 usage_analysis::get_directly_modified_memory(&fun_target);
             // Verify the function if it modifies one of the target resources
             if !directly_modified_structs.is_disjoint(&target_resources) {
-                // TODO(emmazzz): After implementing the called_only_by feature, if a function
-                // has `pragma called_only_by = M::f` then verify the caller 'M::f; instead.
-                module_env.add_fun_to_should_verify(func_env.get_id());
-                env.add_module_to_should_translate(module_id);
-                propagate_should_translate(env, module_id);
+                // If the function has a friend, then (1) this functions cannot
+                // be verified on its own, and (2) it has to be verified in the
+                // context of its friend.
+                let friend = func_env.get_transitive_friend();
+                let friend_module = &friend.module_env;
+                friend_module.add_fun_to_should_verify(friend.get_id());
+                env.add_module_to_should_translate(friend_module.get_id());
+                propagate_should_translate(env, friend_module.get_id());
             }
         }
     }
@@ -401,13 +431,46 @@ fn remove_sources(sources: &[String], all_files: Vec<String>) -> Vec<String> {
         .collect_vec()
 }
 
-/// Calculates transitive dependencies of the given Move sources.
-fn _calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<Vec<String>> {
-    let file_map = _calculate_file_map(input_deps)?;
+/// Collect all the relevant Move sources among sources represented by `input deps`
+/// parameter. The resulting vector of sources includes target sources, dependencies
+/// of target sources, (recursive)friends of targets and dependencies, and
+/// dependencies of friends.
+fn collect_all_sources(
+    target_sources: &[String],
+    input_deps: &[String],
+) -> anyhow::Result<Vec<String>> {
+    let mut all_sources = target_sources.to_vec();
+    static DEP_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?m)use\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
+    static FRIEND_REGEX: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"(?m)pragma\s*friend\s*=\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap()
+    });
+
+    let target_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;
+    all_sources.extend(target_deps);
+
+    let friend_sources = calculate_deps(&all_sources, input_deps, &FRIEND_REGEX)?;
+    all_sources.extend(friend_sources);
+
+    let friend_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;
+    all_sources.extend(friend_deps);
+
+    Ok(all_sources)
+}
+
+/// Calculates transitive dependencies of the given Move sources. This function
+/// is also used to calculate transitive friends depending on the regex provided
+/// for extracting matches.
+fn calculate_deps(
+    sources: &[String],
+    input_deps: &[String],
+    regex: &Regex,
+) -> anyhow::Result<Vec<String>> {
+    let file_map = calculate_file_map(input_deps)?;
     let mut deps = vec![];
     let mut visited = BTreeSet::new();
     for src in sources.iter() {
-        _calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps)?;
+        calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps, regex)?;
     }
     // Remove input sources from deps. They can end here because our dep analysis is an
     // over-approximation and for example cannot distinguish between references inside
@@ -435,24 +498,23 @@ fn canonicalize(s: &str) -> String {
 }
 
 /// Recursively calculate dependencies.
-fn _calculate_deps_recursively(
+fn calculate_deps_recursively(
     path: &Path,
     file_map: &BTreeMap<String, PathBuf>,
     visited: &mut BTreeSet<String>,
     deps: &mut Vec<String>,
+    regex: &Regex,
 ) -> anyhow::Result<()> {
-    static REX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(?m)use\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
     if !visited.insert(path.to_string_lossy().to_string()) {
         return Ok(());
     }
     debug!("including `{}`", path.display());
-    for dep in _extract_matches(path, &*REX)? {
+    for dep in extract_matches(path, regex)? {
         if let Some(dep_path) = file_map.get(&dep) {
             let dep_str = dep_path.to_string_lossy().to_string();
             if !deps.contains(&dep_str) {
                 deps.push(dep_str);
-                _calculate_deps_recursively(dep_path.as_path(), file_map, visited, deps)?;
+                calculate_deps_recursively(dep_path.as_path(), file_map, visited, deps, regex)?;
             }
         }
     }
@@ -460,12 +522,12 @@ fn _calculate_deps_recursively(
 }
 
 /// Calculate a map of module names to files which define those modules.
-fn _calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
+fn calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
     static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)module\s+(\w+)\s*\{").unwrap());
     let mut module_to_file = BTreeMap::new();
     for dep in deps {
         let dep_path = PathBuf::from(dep);
-        for module in _extract_matches(dep_path.as_path(), &*REX)? {
+        for module in extract_matches(dep_path.as_path(), &*REX)? {
             module_to_file.insert(module, dep_path.clone());
         }
     }
@@ -474,7 +536,7 @@ fn _calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathB
 
 /// Extracts matches out of some text file. `rex` must be a regular expression with one anonymous
 /// group.
-fn _extract_matches(path: &Path, rex: &Regex) -> anyhow::Result<Vec<String>> {
+fn extract_matches(path: &Path, rex: &Regex) -> anyhow::Result<Vec<String>> {
     let mut content = String::new();
     let mut file = File::open(path)?;
     file.read_to_string(&mut content)?;

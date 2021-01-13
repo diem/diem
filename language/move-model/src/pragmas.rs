@@ -50,6 +50,11 @@ pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 
+/// Pragma indicating that the function can only be called from certain caller.
+/// Unlike other pragmas, this pragma expects a function name like `0x1::M::f` instead
+/// of a boolean or a number.
+pub const FRIEND_PRAGMA: &str = "friend";
+
 /// Checks whether a pragma is valid in a specific spec block.
 pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
     use crate::builder::module_builder::SpecBlockContext::*;
@@ -76,6 +81,7 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | ADDITION_OVERFLOW_UNCHECKED_PRAGMA
                 | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
                 | EXPORT_ENSURES_PRAGMA
+                | FRIEND_PRAGMA
         ),
         _ => false,
     }

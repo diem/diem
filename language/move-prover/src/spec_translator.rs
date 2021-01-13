@@ -1585,9 +1585,6 @@ impl<'env> SpecTranslator<'env> {
                         .global_env()
                         .get_module(inv.declaring_module)
                         .is_dependency()
-                        || inv.mem_usage.iter().any(|used| {
-                            !self.global_env().get_module(used.module_id).is_dependency()
-                        })
                 })
                 .unwrap_or(true)
         };
