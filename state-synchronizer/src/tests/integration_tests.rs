@@ -47,6 +47,7 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     ops::DerefMut,
     sync::{
@@ -76,7 +77,7 @@ struct SynchronizerEnv {
         HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_reqs_rxs:
         HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
-    peers: Vec<SynchronizerPeer>,
+    peers: Vec<RefCell<SynchronizerPeer>>,
     runtime: Runtime,
 }
 
@@ -92,6 +93,7 @@ impl SynchronizerEnv {
             .iter()
             .enumerate()
             .map(|(idx, peer)| {
+                let peer = peer.borrow();
                 ValidatorInfo::new(
                     signers[idx].author(),
                     peer.public_key.consensus_voting_power(),
@@ -101,6 +103,7 @@ impl SynchronizerEnv {
             .collect::<Vec<ValidatorInfo>>();
         let validator_set = ValidatorSet::new(new_keys);
         self.peers[0]
+            .borrow()
             .storage_proxy
             .as_ref()
             .unwrap()
@@ -127,7 +130,7 @@ impl SynchronizerEnv {
                 storage_proxy: None,
                 synchronizer: None,
             };
-            peers.push(peer);
+            peers.push(RefCell::new(peer));
         }
 
         Self {
@@ -181,15 +184,16 @@ impl SynchronizerEnv {
             &upstream_networks,
         );
         let network_handles = self.setup_network_handles(index, &role, mock_network, network_id);
-
         let validators: Vec<ValidatorInfo> = self
             .peers
             .iter()
-            .map(|peer| peer.public_key.clone())
+            .map(|peer| peer.borrow().public_key.clone())
             .collect();
+
+        let mut peer = self.peers[index].borrow_mut();
         let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
             Self::genesis_li(&validators),
-            self.peers[index].signer.clone(),
+            peer.signer.clone(),
         )));
 
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
@@ -204,10 +208,10 @@ impl SynchronizerEnv {
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
 
-        self.peers[index].client = Some(synchronizer.create_client());
-        self.peers[index].mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
-        self.peers[index].synchronizer = Some(synchronizer);
-        self.peers[index].storage_proxy = Some(storage_proxy);
+        peer.client = Some(synchronizer.create_client());
+        peer.mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
+        peer.synchronizer = Some(synchronizer);
+        peer.storage_proxy = Some(storage_proxy);
     }
 
     fn setup_network_handles(
@@ -262,25 +266,31 @@ impl SynchronizerEnv {
                     network_events,
                 ));
             }
-            self.peers[index].multi_peer_ids = Some(network_ids);
+
+            let mut peer = self.peers[index].borrow_mut();
+            peer.multi_peer_ids = Some(network_ids);
         } else {
-            let auth_mode = AuthenticationMode::Mutual(self.peers[index].network_key.clone());
+            let peer = self.peers[index].borrow();
+            let auth_mode = AuthenticationMode::Mutual(peer.network_key.clone());
             let network_context = Arc::new(NetworkContext::new(
                 self.network_id.clone(),
                 RoleType::Validator,
-                self.peers[index].peer_id,
+                peer.peer_id,
             ));
 
             let seed_addrs: HashMap<_, _> = self
                 .peers
                 .iter()
-                .map(|peer| (peer.peer_id, vec![peer.network_addr.clone()]))
+                .map(|peer| {
+                    let peer = peer.borrow();
+                    (peer.peer_id, vec![peer.network_addr.clone()])
+                })
                 .collect();
             let seed_pubkeys = HashMap::new();
             let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
             // Recover the base address we bound previously.
-            let addr_protos = self.peers[index].network_addr.as_slice();
+            let addr_protos = peer.network_addr.as_slice();
             let (port, _suffix) = parse_memory(addr_protos).unwrap();
             let base_addr = NetworkAddress::from(Protocol::Memory(port));
 
@@ -342,18 +352,20 @@ impl SynchronizerEnv {
     }
 
     fn sync_to(&self, peer_id: usize, target: LedgerInfoWithSignatures) {
-        block_on(self.peers[peer_id].client.as_ref().unwrap().sync_to(target)).unwrap()
+        let peer = self.peers[peer_id].borrow();
+        block_on(peer.client.as_ref().unwrap().sync_to(target)).unwrap()
     }
 
     // commit new txns up to the given version
     fn commit(&self, peer_id: usize, version: u64) {
-        let mut storage = self.peers[peer_id].storage_proxy.as_ref().unwrap().write();
+        let peer = self.peers[peer_id].borrow();
+        let mut storage = peer.storage_proxy.as_ref().unwrap().write();
         let num_txns = version - storage.version();
         assert!(num_txns > 0);
 
         let (committed_txns, signed_txns) = storage.commit_new_txns(num_txns);
         drop(storage);
-        assert!(self.peers[peer_id]
+        assert!(peer
             .mempool
             .as_ref()
             .unwrap()
@@ -364,15 +376,9 @@ impl SynchronizerEnv {
         // in commit()
         assert!(Runtime::new()
             .unwrap()
-            .block_on(
-                self.peers[peer_id]
-                    .client
-                    .as_ref()
-                    .unwrap()
-                    .commit(committed_txns, vec![])
-            )
+            .block_on(peer.client.as_ref().unwrap().commit(committed_txns, vec![]))
             .is_ok());
-        let mempool_txns = self.peers[peer_id]
+        let mempool_txns = peer
             .mempool
             .as_ref()
             .unwrap()
@@ -383,12 +389,9 @@ impl SynchronizerEnv {
     }
 
     fn latest_li(&self, peer_id: usize) -> LedgerInfoWithSignatures {
-        self.peers[peer_id]
-            .storage_proxy
-            .as_ref()
-            .unwrap()
-            .read()
-            .highest_local_li()
+        let peer = self.peers[peer_id].borrow();
+        let storage_proxy = peer.storage_proxy.as_ref().unwrap().read();
+        storage_proxy.highest_local_li()
     }
 
     fn wait_for_version(
@@ -398,8 +401,9 @@ impl SynchronizerEnv {
         highest_li_version: Option<u64>,
     ) -> bool {
         let max_retries = 30;
+        let peer = self.peers[peer_id].borrow();
         for _ in 0..max_retries {
-            let state = block_on(self.peers[peer_id].client.as_ref().unwrap().get_state()).unwrap();
+            let state = block_on(peer.client.as_ref().unwrap().get_state()).unwrap();
             if state.synced_version() == target_version {
                 return highest_li_version
                     .map_or(true, |li_version| li_version == state.committed_version());
@@ -440,12 +444,18 @@ impl SynchronizerEnv {
 
     fn get_peer_network_id(&mut self, peer_indices: (usize, usize)) -> PeerId {
         let peer = &self.peers[peer_indices.0];
-        peer.multi_peer_ids.as_ref().unwrap()[peer_indices.1]
+        peer.borrow().multi_peer_ids.as_ref().unwrap()[peer_indices.1]
     }
 
     fn get_env_idx(&self, peer_id: &PeerId) -> usize {
         for (index, peer) in self.peers.iter().enumerate() {
-            if peer.multi_peer_ids.as_ref().unwrap().contains(peer_id) {
+            if peer
+                .borrow()
+                .multi_peer_ids
+                .as_ref()
+                .unwrap()
+                .contains(peer_id)
+            {
                 return index;
             }
         }
@@ -453,14 +463,16 @@ impl SynchronizerEnv {
     }
 
     fn clone_storage(&mut self, from_idx: usize, to_idx: usize) {
-        let storage_0 = self.peers[from_idx].storage_proxy.as_ref().unwrap();
-        let storage_read = storage_0.read();
+        let from_peer = self.peers[from_idx].borrow();
+        let from_storage = from_peer.storage_proxy.as_ref().unwrap();
+        let from_storage = from_storage.read();
 
-        let storage_1 = self.peers[to_idx].storage_proxy.as_ref().unwrap();
-        let mut storage_write = storage_1.write();
-        let storage_write = storage_write.deref_mut();
+        let to_peer = self.peers[to_idx].borrow();
+        let to_storage = to_peer.storage_proxy.as_ref().unwrap();
+        let mut to_storage = to_storage.write();
+        let to_storage = to_storage.deref_mut();
 
-        *storage_write = storage_read.clone();
+        *to_storage = from_storage.clone();
     }
 
     fn send_peer_event(
@@ -784,6 +796,7 @@ fn catch_up_with_waypoints() {
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
     let waypoint_li = env.peers[0]
+        .borrow()
         .storage_proxy
         .as_ref()
         .unwrap()
@@ -802,6 +815,7 @@ fn catch_up_with_waypoints() {
     );
     block_on(
         env.peers[1]
+            .borrow()
             .client
             .as_ref()
             .unwrap()
