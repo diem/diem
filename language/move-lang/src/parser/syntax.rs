@@ -1063,13 +1063,20 @@ fn is_quant<'input>(tokens: &mut Lexer<'input>) -> bool {
 // Parsing happens recursively and quantifiers are immediately reduced as syntactic sugar
 // for lambdas.
 fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
-    let is_forall = matches!(tokens.content(), "forall");
+    let start_loc = tokens.start_loc();
+    let kind = if matches!(tokens.content(), "forall") {
+        QuantKind_::Forall
+    } else {
+        QuantKind_::Exists
+    };
     tokens.advance()?;
-    parse_quant_cont(is_forall, tokens)
+    let end_loc = tokens.previous_end_loc();
+    let kind = spanned(tokens.file_name(), start_loc, end_loc, kind);
+    parse_quant_cont(kind, tokens)
 }
 
 // Parses quantifier bindings recursively until the body is reached.
-fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+fn parse_quant_cont<'input>(kind: QuantKind, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     // Parse the next quantifier variable binding
     let start_loc = tokens.start_loc();
     let ident = parse_identifier(tokens)?;
@@ -1085,13 +1092,14 @@ fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
         consume_identifier(tokens, "in")?;
         parse_exp(tokens)?
     };
+    let range_end_loc = tokens.previous_end_loc();
 
     // Continue parsing more bindings or the body of the quantifier
     let (body_loc, body_) = if tokens.peek() == Tok::Comma {
         tokens.advance()?;
-        (tokens.start_loc(), parse_quant_cont(is_forall, tokens)?)
+        (tokens.start_loc(), parse_quant_cont(kind, tokens)?)
     } else {
-        (tokens.start_loc(), parse_quant_body(is_forall, tokens)?)
+        (tokens.start_loc(), parse_quant_body(kind.value, tokens)?)
     };
     let body = spanned(
         tokens.file_name(),
@@ -1107,24 +1115,22 @@ fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
         ident_end_loc,
         Bind_::Var(Var(ident)),
     );
-    let bind_list = sp(bind.loc, vec![bind]);
-    let lambda = spanned(
+    let binds_with_range_list = spanned(
         tokens.file_name(),
         start_loc,
-        tokens.previous_end_loc(),
-        Exp_::Lambda(bind_list, Box::new(body)),
+        range_end_loc,
+        vec![spanned(
+            tokens.file_name(),
+            start_loc,
+            range_end_loc,
+            (bind, range),
+        )],
     );
-    Ok(make_builtin_call(
-        lambda.loc,
-        if is_forall { "$spec_all" } else { "$spec_any" },
-        None,
-        vec![range, lambda],
-    )
-    .value)
+    Ok(Exp_::Quant(kind, binds_with_range_list, Box::new(body)))
 }
 
 // Parse quantifier body.
-fn parse_quant_body<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+fn parse_quant_body<'input>(kind: QuantKind_, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     let opt_cond = match tokens.peek() {
         Tok::IdentifierValue if tokens.content() == "where" => {
             tokens.advance()?;
@@ -1135,14 +1141,11 @@ fn parse_quant_body<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
     consume_token(tokens, Tok::Colon)?;
     let body = parse_exp(tokens)?;
     if let Some(cond) = opt_cond {
-        let op = sp(
-            cond.loc,
-            if is_forall {
-                BinOp_::Implies
-            } else {
-                BinOp_::And
-            },
-        );
+        let operator = match kind {
+            QuantKind_::Forall => BinOp_::Implies,
+            QuantKind_::Exists => BinOp_::And,
+        };
+        let op = sp(cond.loc, operator);
         Ok(Exp_::BinopExp(Box::new(cond), op, Box::new(body)))
     } else {
         Ok(body.value)
