@@ -48,7 +48,7 @@ use network_builder::builder::NetworkBuilder;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     cell::{RefCell, RefMut},
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ops::DerefMut,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -94,6 +94,10 @@ impl SynchronizerPeer {
         for txn in signed_txns.iter() {
             assert!(!mempool_txns.contains(txn));
         }
+    }
+
+    fn get_peer_id(&self, network_id: usize) -> PeerId {
+        self.multi_peer_ids.as_ref().unwrap()[network_id]
     }
 
     fn latest_li(&self) -> LedgerInfoWithSignatures {
@@ -433,9 +437,8 @@ impl SynchronizerEnv {
 
     /// Delivers next message from peer with index `sender` in this SynchronizerEnv
     /// Returns the recipient of the msg
-    fn deliver_msg(&mut self, sender: (usize, usize)) -> (PeerId, Message) {
-        let sender_id = self.get_peer_network_id(sender);
-        let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_id).unwrap();
+    fn deliver_msg(&mut self, sender_peer_id: PeerId) -> (PeerId, Message) {
+        let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_peer_id).unwrap();
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
         // await next message from node
@@ -443,8 +446,8 @@ impl SynchronizerEnv {
             let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&receiver_id).unwrap();
             receiver_network_notif_tx
                 .push(
-                    (sender_id, ProtocolId::StateSynchronizerDirectSend),
-                    PeerManagerNotification::RecvMessage(sender_id, msg.clone()),
+                    (sender_peer_id, ProtocolId::StateSynchronizerDirectSend),
+                    PeerManagerNotification::RecvMessage(sender_peer_id, msg.clone()),
                 )
                 .unwrap();
             (receiver_id, msg)
@@ -454,30 +457,9 @@ impl SynchronizerEnv {
     }
 
     // checks that the `env_idx`th peer in this env sends no message to its `network_idx`th network
-    fn assert_no_message_sent(&mut self, sender: (usize, usize)) {
-        let peer_id = self.get_peer_network_id(sender);
-        let network_reqs_rx = self.network_reqs_rxs.get_mut(&peer_id).unwrap();
+    fn assert_no_message_sent(&mut self, sender_peer_id: PeerId) {
+        let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_peer_id).unwrap();
         assert!(network_reqs_rx.select_next_some().now_or_never().is_none());
-    }
-
-    fn get_peer_network_id(&mut self, peer_indices: (usize, usize)) -> PeerId {
-        let peer = &self.peers[peer_indices.0];
-        peer.borrow().multi_peer_ids.as_ref().unwrap()[peer_indices.1]
-    }
-
-    fn get_env_idx(&self, peer_id: &PeerId) -> usize {
-        for (index, peer) in self.peers.iter().enumerate() {
-            if peer
-                .borrow()
-                .multi_peer_ids
-                .as_ref()
-                .unwrap()
-                .contains(peer_id)
-            {
-                return index;
-            }
-        }
-        panic!("could not find env index for peer");
     }
 
     fn clone_storage(&mut self, from_idx: usize, to_idx: usize) {
@@ -495,13 +477,12 @@ impl SynchronizerEnv {
 
     fn send_peer_event(
         &mut self,
-        sender: (usize, usize),
-        receiver: (usize, usize),
+        sender_peer_id: PeerId,
+        receiver_peer_id: PeerId,
         new_peer: bool,
         direction: ConnectionOrigin,
     ) {
-        let sender_id = self.get_peer_network_id(sender);
-        let mut metadata = ConnectionMetadata::mock(sender_id);
+        let mut metadata = ConnectionMetadata::mock(sender_peer_id);
         metadata.origin = direction;
 
         let notif = if new_peer {
@@ -514,12 +495,11 @@ impl SynchronizerEnv {
             )
         };
 
-        let receiver_id = self.get_peer_network_id(receiver);
         let conn_notifs_tx = self
             .network_conn_event_notifs_txs
-            .get_mut(&receiver_id)
+            .get_mut(&receiver_peer_id)
             .unwrap();
-        conn_notifs_tx.push(sender_id, notif).unwrap();
+        conn_notifs_tx.push(sender_peer_id, notif).unwrap();
     }
 
     // Returns the initial peers with their signatures
@@ -903,50 +883,50 @@ fn test_lagging_upstream_long_poll() {
     env.start_validator_peer(3, true);
 
     // network handles for each node
-    let validator_handle = (0, 0);
-    let full_node_vfn_network_handle = (1, 0);
-    let full_node_failover_network_handle = (1, 2);
-    let failover_fn_vfn_network_handle = (2, 0);
-    let failover_fn_handle = (2, 2);
+    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(0);
+    let full_node_vfn_network_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
+    let full_node_failover_network_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
+    let failover_fn_vfn_network_peer_id = env.get_synchronizer_peer(2).get_peer_id(0);
+    let failover_fn_peer_id = env.get_synchronizer_peer(2).get_peer_id(2);
 
     env.get_synchronizer_peer(0).commit(400);
 
     // validator discovers FN
     env.send_peer_event(
-        full_node_vfn_network_handle,
-        validator_handle,
+        full_node_vfn_network_peer_id,
+        validator_peer_id,
         true,
         Inbound,
     );
     // fn discovers validator
     env.send_peer_event(
-        validator_handle,
-        full_node_vfn_network_handle,
+        validator_peer_id,
+        full_node_vfn_network_peer_id,
         true,
         Outbound,
     );
 
     // FN discovers failover upstream
     env.send_peer_event(
-        full_node_failover_network_handle,
-        failover_fn_handle,
+        full_node_failover_network_peer_id,
+        failover_fn_peer_id,
         true,
         Inbound,
     );
     env.send_peer_event(
-        failover_fn_handle,
-        full_node_failover_network_handle,
+        failover_fn_peer_id,
+        full_node_failover_network_peer_id,
         true,
         Outbound,
     );
 
-    let (_, msg) = env.deliver_msg(full_node_vfn_network_handle);
+    let (_, msg) = env.deliver_msg(full_node_vfn_network_peer_id);
     // expected: known_version 0, epoch 1, no target LI version
     let req: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(req, 0, None);
 
-    let (_, msg) = env.deliver_msg(validator_handle);
+    let (_, msg) = env.deliver_msg(validator_peer_id);
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 400, 1, 250);
@@ -954,21 +934,21 @@ fn test_lagging_upstream_long_poll() {
 
     // validator loses FN
     env.send_peer_event(
-        full_node_vfn_network_handle,
-        validator_handle,
+        full_node_vfn_network_peer_id,
+        validator_peer_id,
         false,
         Inbound,
     );
     // fn loses validator
     env.send_peer_event(
-        validator_handle,
-        full_node_vfn_network_handle,
+        validator_peer_id,
+        full_node_vfn_network_peer_id,
         false,
         Outbound,
     );
 
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
-    let (_, msg) = env.deliver_msg(full_node_failover_network_handle);
+    let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
     let msg: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 250, Some(400));
@@ -984,15 +964,15 @@ fn test_lagging_upstream_long_poll() {
     // connect the validator and the failover vfn so FN can sync to validator
     // validator discovers FN
     env.send_peer_event(
-        failover_fn_vfn_network_handle,
-        validator_handle,
+        failover_fn_vfn_network_peer_id,
+        validator_peer_id,
         true,
         Inbound,
     );
     // fn discovers validator
     env.send_peer_event(
-        validator_handle,
-        failover_fn_vfn_network_handle,
+        validator_peer_id,
+        failover_fn_vfn_network_peer_id,
         true,
         Outbound,
     );
@@ -1000,23 +980,23 @@ fn test_lagging_upstream_long_poll() {
     // trigger another commit so that the failover fn's commit will trigger subscription delivery
     env.get_synchronizer_peer(0).commit(600);
     // failover fn sends chunk request to validator
-    let (_, msg) = env.deliver_msg(failover_fn_vfn_network_handle);
+    let (_, msg) = env.deliver_msg(failover_fn_vfn_network_peer_id);
     let msg: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 500, None);
-    let (_, msg) = env.deliver_msg(validator_handle);
+    let (_, msg) = env.deliver_msg(validator_peer_id);
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
 
     // failover sends long-poll subscription to fullnode
-    let (_, msg) = env.deliver_msg(failover_fn_handle);
+    let (_, msg) = env.deliver_msg(failover_fn_peer_id);
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 251, 250);
 
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
-    let (_, msg) = env.deliver_msg(full_node_failover_network_handle);
+    let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
     let msg: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     // here we check that the next requested version is not the older target LI 400 - that should be
@@ -1024,7 +1004,7 @@ fn test_lagging_upstream_long_poll() {
     check_chunk_request(msg, 500, None);
 
     // check that fullnode successfully finishes sync to 600
-    let (_, msg) = env.deliver_msg(failover_fn_handle);
+    let (_, msg) = env.deliver_msg(failover_fn_peer_id);
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
@@ -1040,14 +1020,14 @@ fn test_sync_pending_ledger_infos() {
     env.start_validator_peer(0, true);
     env.start_fullnode_peer(1, true);
 
-    let validator_handle = (0, 0);
-    let full_node_handle = (1, 0);
+    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(0);
+    let fullnode_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
 
     // validator discovers fn
-    env.send_peer_event(full_node_handle, validator_handle, true, Inbound);
+    env.send_peer_event(fullnode_peer_id, validator_peer_id, true, Inbound);
 
     // fn discovers validator
-    env.send_peer_event(validator_handle, full_node_handle, true, Outbound);
+    env.send_peer_event(validator_peer_id, fullnode_peer_id, true, Outbound);
 
     let commit_versions = vec![
         900, 1800, 2800, 3100, 3200, 3300, 3325, 3350, 3400, 3450, 3650, 4300,
@@ -1081,8 +1061,8 @@ fn test_sync_pending_ledger_infos() {
         if let Some(version) = commit_versions.get(idx) {
             env.get_synchronizer_peer(0).commit(*version);
         }
-        env.deliver_msg((1, 0));
-        env.deliver_msg((0, 0));
+        env.deliver_msg(fullnode_peer_id);
+        env.deliver_msg(validator_peer_id);
         let (sync_version, li_version) = expected_state;
         assert!(
             env.get_synchronizer_peer(1)
@@ -1117,25 +1097,25 @@ fn test_fn_failover() {
     env.start_fullnode_peer(4, true);
 
     // connect everyone
-    let validator_handle = (0, 1);
-    let fn_0_vfn_handle = (1, 0);
-    let fn_0_public_handle = (1, 2);
-    let fn_1_handle = (2, 2);
-    let fn_2_handle = (3, 2);
-    let fn_3_handle = (4, 2);
+    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(1);
+    let fn_0_vfn_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
+    let fn_0_public_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
+    let fn_1_peer_id = env.get_synchronizer_peer(2).get_peer_id(2);
+    let fn_2_peer_id = env.get_synchronizer_peer(3).get_peer_id(2);
+    let fn_3_peer_id = env.get_synchronizer_peer(4).get_peer_id(2);
 
     // vfn network:
     // validator discovers fn_0
-    env.send_peer_event(fn_0_vfn_handle, validator_handle, true, Inbound);
+    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
     // fn_0 discovers validator
-    env.send_peer_event(validator_handle, fn_0_vfn_handle, true, Outbound);
+    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
 
     // public network:
     // fn_0 sends new peer event to all its upstream public peers
-    let upstream_peers = [fn_1_handle, fn_2_handle, fn_3_handle];
-    for peer in upstream_peers.iter() {
-        env.send_peer_event(fn_0_public_handle, *peer, true, Inbound);
-        env.send_peer_event(*peer, fn_0_public_handle, true, Outbound);
+    let upstream_peer_ids = [fn_1_peer_id, fn_2_peer_id, fn_3_peer_id];
+    for peer in upstream_peer_ids.iter() {
+        env.send_peer_event(fn_0_public_peer_id, *peer, true, Inbound);
+        env.send_peer_event(*peer, fn_0_public_peer_id, true, Outbound);
     }
 
     // commit some txns on v
@@ -1148,27 +1128,23 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(recipient, env.get_peer_network_id(validator_handle));
-        env.assert_no_message_sent(fn_0_public_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(recipient, validator_peer_id);
+        env.assert_no_message_sent(fn_0_public_peer_id);
         // deliver validator's chunk response
         if num_commit < 5 {
-            env.deliver_msg(validator_handle);
+            env.deliver_msg(validator_peer_id);
         }
     }
 
     // bring down v
-    env.send_peer_event(fn_0_vfn_handle, validator_handle, false, Inbound);
-    env.send_peer_event(validator_handle, fn_0_vfn_handle, false, Outbound);
+    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, false, Inbound);
+    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, false, Outbound);
 
     // deliver chunk response to fn_0 after the lost peer event
     // so that the next chunk request is guaranteed to be sent after the lost peer event
-    env.deliver_msg(validator_handle);
+    env.deliver_msg(validator_peer_id);
 
-    let upstream_peer_ids: HashSet<_> = upstream_peers
-        .iter()
-        .map(|peer| env.get_peer_network_id(*peer))
-        .collect();
     // check that vfn sends chunk requests to the failover FNs only
     let mut last_fallback_recipient = None;
     for num_commit in 6..=10 {
@@ -1177,16 +1153,13 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
         assert!(upstream_peer_ids.contains(&recipient));
-        env.assert_no_message_sent(fn_0_vfn_handle);
+        env.assert_no_message_sent(fn_0_vfn_peer_id);
         // deliver validator's chunk response
         if num_commit < 10 {
-            let (chunk_response_recipient, _) = env.deliver_msg((env.get_env_idx(&recipient), 2));
-            assert_eq!(
-                chunk_response_recipient,
-                env.get_peer_network_id(fn_0_public_handle)
-            );
+            let (chunk_response_recipient, _) = env.deliver_msg(recipient);
+            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
         } else {
             last_fallback_recipient = Some(recipient);
         }
@@ -1194,21 +1167,17 @@ fn test_fn_failover() {
 
     // bring down two public fallback
     // disconnect fn_1 and fn_0
-    env.send_peer_event(fn_0_public_handle, fn_1_handle, false, Inbound);
-    env.send_peer_event(fn_1_handle, fn_0_public_handle, false, Outbound);
+    env.send_peer_event(fn_0_public_peer_id, fn_1_peer_id, false, Inbound);
+    env.send_peer_event(fn_1_peer_id, fn_0_public_peer_id, false, Outbound);
 
     // disconnect fn_2 and fn_0
-    env.send_peer_event(fn_0_public_handle, fn_2_handle, false, Inbound);
-    env.send_peer_event(fn_2_handle, fn_0_public_handle, false, Outbound);
+    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, false, Inbound);
+    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, false, Outbound);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let (chunk_response_recipient, _) =
-        env.deliver_msg((env.get_env_idx(&last_fallback_recipient.unwrap()), 2));
-    assert_eq!(
-        chunk_response_recipient,
-        env.get_peer_network_id(fn_0_public_handle)
-    );
+    let (chunk_response_recipient, _) = env.deliver_msg(last_fallback_recipient.unwrap());
+    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
 
     // check we only broadcast to the single live fallback peer (fn_3)
     for num_commit in 11..=15 {
@@ -1217,39 +1186,33 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_handle);
-        assert_eq!(recipient, env.get_peer_network_id(fn_3_handle));
-        env.assert_no_message_sent(fn_0_vfn_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
+        assert_eq!(recipient, fn_3_peer_id);
+        env.assert_no_message_sent(fn_0_vfn_peer_id);
         // deliver validator's chunk response
         if num_commit < 15 {
-            let (chunk_response_recipient, _) = env.deliver_msg(fn_3_handle);
-            assert_eq!(
-                chunk_response_recipient,
-                env.get_peer_network_id(fn_0_public_handle)
-            );
+            let (chunk_response_recipient, _) = env.deliver_msg(fn_3_peer_id);
+            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
         }
     }
 
     // bring down everyone
     // disconnect fn_3 and fn_0
-    env.send_peer_event(fn_3_handle, fn_0_public_handle, false, Outbound);
-    env.send_peer_event(fn_0_public_handle, fn_3_handle, false, Inbound);
+    env.send_peer_event(fn_3_peer_id, fn_0_public_peer_id, false, Outbound);
+    env.send_peer_event(fn_0_public_peer_id, fn_3_peer_id, false, Inbound);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let (chunk_response_recipient, _) = env.deliver_msg(fn_3_handle);
-    assert_eq!(
-        chunk_response_recipient,
-        env.get_peer_network_id(fn_0_public_handle)
-    );
+    let (chunk_response_recipient, _) = env.deliver_msg(fn_3_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
 
     // check no sync requests are sent (all upstream are down)
-    env.assert_no_message_sent(fn_0_vfn_handle);
-    env.assert_no_message_sent(fn_0_public_handle);
+    env.assert_no_message_sent(fn_0_vfn_peer_id);
+    env.assert_no_message_sent(fn_0_public_peer_id);
 
     // bring back one fallback (fn_2)
-    env.send_peer_event(fn_2_handle, fn_0_public_handle, true, Outbound);
-    env.send_peer_event(fn_0_public_handle, fn_2_handle, true, Inbound);
+    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, true, Outbound);
+    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, true, Inbound);
 
     // check we only broadcast to the single live fallback peer (fn_2)
     for num_commit in 16..=20 {
@@ -1258,28 +1221,22 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_handle);
-        assert_eq!(recipient, env.get_peer_network_id(fn_2_handle));
-        env.assert_no_message_sent(fn_0_vfn_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
+        assert_eq!(recipient, fn_2_peer_id);
+        env.assert_no_message_sent(fn_0_vfn_peer_id);
         // deliver validator's chunk response
         if num_commit < 20 {
-            let (chunk_response_recipient, _) = env.deliver_msg(fn_2_handle);
-            assert_eq!(
-                chunk_response_recipient,
-                env.get_peer_network_id(fn_0_public_handle)
-            );
+            let (chunk_response_recipient, _) = env.deliver_msg(fn_2_peer_id);
+            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
         }
     }
 
     // bring back v again
-    env.send_peer_event(fn_0_vfn_handle, validator_handle, true, Inbound);
-    env.send_peer_event(validator_handle, fn_0_vfn_handle, true, Outbound);
+    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
+    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
 
-    let (chunk_response_recipient, _) = env.deliver_msg(fn_2_handle);
-    assert_eq!(
-        chunk_response_recipient,
-        env.get_peer_network_id(fn_0_public_handle)
-    );
+    let (chunk_response_recipient, _) = env.deliver_msg(fn_2_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
 
     // check that vfn sends chunk requests to v only, not fallback upstream
     for num_commit in 21..=25 {
@@ -1288,24 +1245,27 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(recipient, env.get_peer_network_id(validator_handle));
-        env.assert_no_message_sent(fn_0_public_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(recipient, validator_peer_id);
+        env.assert_no_message_sent(fn_0_public_peer_id);
         if num_commit < 25 {
             // deliver validator's chunk response
-            env.deliver_msg(validator_handle);
+            env.deliver_msg(validator_peer_id);
         }
     }
 
     // bring back all fallback
-    let upstream_peers_to_revive = [(2, 1), (4, 1)];
+    let upstream_peers_to_revive = [
+        env.get_synchronizer_peer(2).get_peer_id(1),
+        env.get_synchronizer_peer(4).get_peer_id(1),
+    ];
     for peer in upstream_peers_to_revive.iter() {
-        env.send_peer_event(fn_0_public_handle, *peer, true, Inbound);
-        env.send_peer_event(*peer, fn_0_public_handle, true, Outbound);
+        env.send_peer_event(fn_0_public_peer_id, *peer, true, Inbound);
+        env.send_peer_event(*peer, fn_0_public_peer_id, true, Outbound);
     }
 
     // deliver validator's chunk response after fallback peers are revived
-    env.deliver_msg(validator_handle);
+    env.deliver_msg(validator_peer_id);
 
     // check that we only broadcast to v
     // check that vfn sends chunk requests to v only, not fallback upstream
@@ -1315,11 +1275,11 @@ fn test_fn_failover() {
             env.clone_storage(0, public_upstream);
         }
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(recipient, env.get_peer_network_id(validator_handle));
-        env.assert_no_message_sent(fn_0_public_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(recipient, validator_peer_id);
+        env.assert_no_message_sent(fn_0_public_peer_id);
         // deliver validator's chunk response
-        env.deliver_msg(validator_handle);
+        env.deliver_msg(validator_peer_id);
     }
 }
 
@@ -1354,41 +1314,41 @@ fn test_multicast_failover() {
     env.start_fullnode_peer(4, true);
 
     // connect everyone
-    let validator_handle = (0, 1);
-    let fn_0_vfn_handle = (1, 0);
-    let fn_0_second_handle = (1, 1);
-    let fn_0_public_handle = (1, 2);
-    let fn_1_handle = (2, 1);
-    let fn_2_handle = (3, 2);
+    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(1);
+    let fn_0_vfn_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
+    let fn_0_second_peer_id = env.get_synchronizer_peer(1).get_peer_id(1);
+    let fn_0_public_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
+    let fn_1_peer_id = env.get_synchronizer_peer(2).get_peer_id(1);
+    let fn_2_peer_id = env.get_synchronizer_peer(3).get_peer_id(2);
 
     // vfn network:
     // validator discovers fn_0
-    env.send_peer_event(fn_0_vfn_handle, validator_handle, true, Inbound);
+    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
     // fn_0 discovers validator
-    env.send_peer_event(validator_handle, fn_0_vfn_handle, true, Outbound);
+    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
 
     // second private network: fn_1 is upstream to fn_0
     // fn_1 discovers fn_0
-    env.send_peer_event(fn_0_second_handle, fn_1_handle, true, Inbound);
+    env.send_peer_event(fn_0_second_peer_id, fn_1_peer_id, true, Inbound);
     // fn_0 discovers fn_1
-    env.send_peer_event(fn_1_handle, fn_0_second_handle, true, Outbound);
+    env.send_peer_event(fn_1_peer_id, fn_0_second_peer_id, true, Outbound);
 
     // public network: fn_2 is upstream to fn_1
     // fn_2 discovers fn_0
-    env.send_peer_event(fn_0_public_handle, fn_2_handle, true, Inbound);
+    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, true, Inbound);
     // fn_0 discovers fn_2
-    env.send_peer_event(fn_2_handle, fn_0_public_handle, true, Outbound);
+    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, true, Outbound);
 
     for num_commit in 1..=3 {
         env.get_synchronizer_peer(0).commit(num_commit * 5);
         // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(recipient, env.get_peer_network_id(validator_handle));
-        env.assert_no_message_sent(fn_0_second_handle);
-        env.assert_no_message_sent(fn_0_public_handle);
+        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(recipient, validator_peer_id);
+        env.assert_no_message_sent(fn_0_second_peer_id);
+        env.assert_no_message_sent(fn_0_public_peer_id);
         // deliver validator's chunk response
         if num_commit < 3 {
-            env.deliver_msg(validator_handle);
+            env.deliver_msg(validator_peer_id);
         }
     }
 
@@ -1404,15 +1364,15 @@ fn test_multicast_failover() {
             .wait_for_version(num_commit * 5, None);
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(primary, env.get_peer_network_id(validator_handle));
-        let (secondary, _) = env.deliver_msg(fn_0_second_handle);
-        assert_eq!(secondary, env.get_peer_network_id(fn_1_handle));
-        env.assert_no_message_sent(fn_0_public_handle);
+        let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(primary, validator_peer_id);
+        let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
+        assert_eq!(secondary, fn_1_peer_id);
+        env.assert_no_message_sent(fn_0_public_peer_id);
 
         // deliver validator's chunk response
         if num_commit < 7 {
-            env.deliver_msg(fn_1_handle);
+            env.deliver_msg(fn_1_peer_id);
         }
     }
 
@@ -1430,21 +1390,21 @@ fn test_multicast_failover() {
             .wait_for_version(num_commit * 5, None);
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-        assert_eq!(primary, env.get_peer_network_id(validator_handle));
-        let (secondary, _) = env.deliver_msg(fn_0_second_handle);
-        assert_eq!(secondary, env.get_peer_network_id(fn_1_handle));
-        let (public, _) = env.deliver_msg(fn_0_public_handle);
-        assert_eq!(public, env.get_peer_network_id(fn_2_handle));
+        let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+        assert_eq!(primary, validator_peer_id);
+        let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
+        assert_eq!(secondary, fn_1_peer_id);
+        let (public, _) = env.deliver_msg(fn_0_public_peer_id);
+        assert_eq!(public, fn_2_peer_id);
 
         // deliver third fallback's chunk response
-        env.deliver_msg(fn_2_handle);
+        env.deliver_msg(fn_2_peer_id);
     }
 
     // Test case: deliver chunks from all upstream with third fallback as first responder
     // Expected: next chunk request should still be sent to all upstream because validator did not deliver response first
-    env.deliver_msg(validator_handle);
-    env.deliver_msg(fn_1_handle);
+    env.deliver_msg(validator_peer_id);
+    env.deliver_msg(fn_1_peer_id);
 
     let mut num_commit = 12;
     env.get_synchronizer_peer(0).commit(num_commit * 5);
@@ -1455,19 +1415,19 @@ fn test_multicast_failover() {
     env.get_synchronizer_peer(3)
         .wait_for_version(num_commit * 5, None);
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-    assert_eq!(primary, env.get_peer_network_id(validator_handle));
-    env.assert_no_message_sent(fn_0_vfn_handle);
-    let (secondary, _) = env.deliver_msg(fn_0_second_handle);
-    assert_eq!(secondary, env.get_peer_network_id(fn_1_handle));
-    let (public, _) = env.deliver_msg(fn_0_public_handle);
-    assert_eq!(public, env.get_peer_network_id(fn_2_handle));
+    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+    assert_eq!(primary, validator_peer_id);
+    env.assert_no_message_sent(fn_0_vfn_peer_id);
+    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
+    assert_eq!(secondary, fn_1_peer_id);
+    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
+    assert_eq!(public, fn_2_peer_id);
 
     // Test case: deliver chunks from all upstream with secondary fallback as first responder
     // Expected: next chunk request should still be multicasted to all upstream because primary did not deliver response first
-    env.deliver_msg(fn_1_handle);
-    env.deliver_msg(validator_handle);
-    env.deliver_msg(fn_2_handle);
+    env.deliver_msg(fn_1_peer_id);
+    env.deliver_msg(validator_peer_id);
+    env.deliver_msg(fn_2_peer_id);
 
     num_commit += 1;
     env.get_synchronizer_peer(0).commit(num_commit * 5);
@@ -1478,18 +1438,18 @@ fn test_multicast_failover() {
     env.get_synchronizer_peer(3)
         .wait_for_version(num_commit * 5, None);
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-    assert_eq!(primary, env.get_peer_network_id(validator_handle));
-    let (secondary, _) = env.deliver_msg(fn_0_second_handle);
-    assert_eq!(secondary, env.get_peer_network_id(fn_1_handle));
-    let (public, _) = env.deliver_msg(fn_0_public_handle);
-    assert_eq!(public, env.get_peer_network_id(fn_2_handle));
+    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+    assert_eq!(primary, validator_peer_id);
+    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
+    assert_eq!(secondary, fn_1_peer_id);
+    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
+    assert_eq!(public, fn_2_peer_id);
 
     // Test case: deliver chunks from all upstream with primary as first responder
     // Expected: next chunk request should only be sent to primary network
-    env.deliver_msg(validator_handle);
-    env.deliver_msg(fn_1_handle);
-    env.deliver_msg(fn_2_handle);
+    env.deliver_msg(validator_peer_id);
+    env.deliver_msg(fn_1_peer_id);
+    env.deliver_msg(fn_2_peer_id);
 
     num_commit += 1;
     env.get_synchronizer_peer(0).commit(num_commit * 5);
@@ -1501,21 +1461,21 @@ fn test_multicast_failover() {
         .wait_for_version(num_commit * 5, None);
 
     // because of optimistic chunk requesting, request will still be multicasted to all failover
-    let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-    assert_eq!(primary, env.get_peer_network_id(validator_handle));
-    let (secondary, _) = env.deliver_msg(fn_0_second_handle);
-    assert_eq!(secondary, env.get_peer_network_id(fn_1_handle));
-    let (public, _) = env.deliver_msg(fn_0_public_handle);
-    assert_eq!(public, env.get_peer_network_id(fn_2_handle));
+    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+    assert_eq!(primary, validator_peer_id);
+    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
+    assert_eq!(secondary, fn_1_peer_id);
+    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
+    assert_eq!(public, fn_2_peer_id);
 
     // check that next chunk request is only be sent to primary network, i.e.
     // multicasting is over
-    env.deliver_msg(validator_handle);
-    env.deliver_msg(fn_1_handle);
-    env.deliver_msg(fn_2_handle);
+    env.deliver_msg(validator_peer_id);
+    env.deliver_msg(fn_1_peer_id);
+    env.deliver_msg(fn_2_peer_id);
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_handle);
-    assert_eq!(primary, env.get_peer_network_id(validator_handle));
-    env.assert_no_message_sent(fn_0_second_handle);
-    env.assert_no_message_sent(fn_0_public_handle);
+    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
+    assert_eq!(primary, validator_peer_id);
+    env.assert_no_message_sent(fn_0_second_peer_id);
+    env.assert_no_message_sent(fn_0_public_peer_id);
 }
