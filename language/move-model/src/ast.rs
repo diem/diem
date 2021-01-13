@@ -515,8 +515,6 @@ pub enum Operation {
 
     // Builtin functions
     Len,
-    All,
-    Any,
     TypeValue,
     TypeDomain,
     Global(Option<MemoryLabel>),

@@ -1973,24 +1973,6 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(None) => self.translate_resource_exists(node_id, args),
             Operation::Exists(_) => unimplemented!(),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
-            Operation::All => {
-                let range = &args[0];
-                match &args[1] {
-                    Exp::Lambda(_, vars, exp) if vars.len() == 1 => {
-                        self.translate_all_or_exists(&loc, QuantKind::Forall, &vars[0], range, exp)
-                    }
-                    _ => self.error(&loc, "2nd argument must be a 1-adic lambda"),
-                }
-            }
-            Operation::Any => {
-                let range = &args[0];
-                match &args[1] {
-                    Exp::Lambda(_, vars, exp) if vars.len() == 1 => {
-                        self.translate_all_or_exists(&loc, QuantKind::Exists, &vars[0], range, exp)
-                    }
-                    _ => self.error(&loc, "2nd argument must be a 1-adic lambda"),
-                }
-            }
             Operation::TypeValue => self.translate_type_value(node_id),
             Operation::TypeDomain => self.error(
                 &loc,
