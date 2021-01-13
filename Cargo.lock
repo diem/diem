@@ -6398,8 +6398,10 @@ dependencies = [
  "diem-trace",
  "diem-transaction-replay",
  "diem-types",
+ "diem-validator-interface",
  "diem-vault-client",
  "diem-workspace-hack",
+ "diem-writeset-generator",
  "generate-key",
  "hex",
  "num 0.3.1",
@@ -6410,6 +6412,7 @@ dependencies = [
  "rust_decimal",
  "rusty-fork",
  "statistical",
+ "stdlib",
  "tokio 0.2.24",
  "transaction-builder",
 ]

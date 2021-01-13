@@ -1,87 +1,54 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+use crate::release_flow::{create::create_release_from_artifact, hash_for_modules, load_artifact};
 use anyhow::{bail, Result};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use diem_transaction_replay::DiemDebugger;
 use diem_types::{
-    access_path::{AccessPath, Path},
-    transaction::{ChangeSet, TransactionStatus, Version, WriteSetPayload},
-    write_set::{WriteOp, WriteSetMut},
+    access_path::Path,
+    chain_id::ChainId,
+    transaction::{TransactionStatus, Version, WriteSetPayload},
+    write_set::WriteOp,
 };
-use diem_validator_interface::DiemValidatorInterface;
+use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
 use move_core_types::vm_status::KeptVMStatus;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use vm::CompiledModule;
 
-pub fn create_release_writeset(
-    remote_frameworks: Vec<CompiledModule>,
-    local_frameworks: Vec<CompiledModule>,
-) -> Result<WriteSetPayload> {
-    let remote_framework_map = remote_frameworks
-        .into_iter()
-        .map(|m| (m.self_id(), m))
-        .collect::<BTreeMap<_, _>>();
-    let remote_ids = remote_framework_map.keys().collect::<BTreeSet<_>>();
-    let local_framework_map = local_frameworks
-        .into_iter()
-        .map(|m| (m.self_id(), m))
-        .collect::<BTreeMap<_, _>>();
-    let local_ids = local_framework_map.keys().collect::<BTreeSet<_>>();
-
-    let mut framework_changes = BTreeMap::new();
-
-    // 1. Insert new modules to be published.
-    for module_id in local_ids.difference(&remote_ids) {
-        let module = local_framework_map
-            .get(*module_id)
-            .expect("ModuleID not found in local stdlib");
-        framework_changes.insert(*module_id, Some(module));
+pub fn verify_release(
+    // ChainID to distinguish the diem network. e.g: PREMAINNET
+    chain_id: ChainId,
+    // Public JSON-rpc endpoint URL
+    url: String,
+    // Path to the serialized bytes of WriteSet
+    writeset_payload: &WriteSetPayload,
+    remote_modules: &[CompiledModule],
+) -> Result<()> {
+    let artifact = load_artifact(&chain_id)?;
+    if artifact.chain_id != chain_id {
+        bail!("Unexpected ChainId");
     }
-
-    // 2. Remove modules that are already deleted locally.
-    for module_id in remote_ids.difference(&local_ids) {
-        framework_changes.insert(*module_id, None);
+    if artifact.stdlib_hash != hash_for_modules(remote_modules)? {
+        bail!("Build artifact doesn't match local stdlib hash");
     }
-
-    // 3. Check the diff between on chain modules and local modules, update when local bytes is different.
-    for module_id in local_ids.intersection(&remote_ids) {
-        let local_module = local_framework_map
-            .get(*module_id)
-            .expect("ModuleID not found in local stdlib");
-        let remote_module = remote_framework_map
-            .get(*module_id)
-            .expect("ModuleID not found in local stdlib");
-        if local_module != remote_module {
-            framework_changes.insert(*module_id, Some(local_module));
-        }
+    let generated_payload = create_release_from_artifact(&artifact, url.as_str(), remote_modules)?;
+    if &generated_payload != writeset_payload {
+        bail!("Payload generated from the artifact doesn't match with input file");
     }
-
-    let mut write_patch = WriteSetMut::new(vec![]);
-    for (id, module) in framework_changes.into_iter() {
-        let path = AccessPath::code_access_path(id.clone());
-        match module {
-            Some(m) => {
-                let mut bytes = vec![];
-                m.serialize(&mut bytes)?;
-                write_patch.push((path, WriteOp::Value(bytes)));
-            }
-            None => write_patch.push((path, WriteOp::Deletion)),
-        }
-    }
-
-    Ok(WriteSetPayload::Direct(ChangeSet::new(
-        write_patch.freeze()?,
-        vec![],
-    )))
+    let remote = Box::new(JsonRpcDebuggerInterface::new(url.as_str())?);
+    verify_payload_change(
+        remote,
+        Some(artifact.version),
+        &writeset_payload,
+        remote_modules,
+    )
 }
-
 /// Make sure that given a remote state, applying the `payload` will make sure the new on-chain
 /// states contains the exact same Diem Framework modules as the locally compiled stdlib.
-pub fn verify_payload_change(
+pub(crate) fn verify_payload_change(
     validator: Box<dyn DiemValidatorInterface>,
     block_height_opt: Option<Version>,
     payload: &WriteSetPayload,
+    remote_modules: &[CompiledModule],
 ) -> Result<()> {
     let block_height = match block_height_opt {
         Some(h) => h,
@@ -145,7 +112,7 @@ pub fn verify_payload_change(
         }
     }
 
-    let local_modules = stdlib_modules(StdLibOptions::Compiled)
+    let local_modules = remote_modules
         .iter()
         .map(|m| (m.self_id(), m.clone()))
         .collect::<BTreeMap<_, _>>();

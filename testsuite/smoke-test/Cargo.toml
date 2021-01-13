@@ -49,5 +49,8 @@ diem-time-service = { path = "../../common/time-service", version = "0.1.0", fea
 diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
+diem-validator-interface = { path = "../../language/diem-tools/diem-validator-interface", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator", version = "0.1.0" }
+stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::release::create_release_writeset;
+use crate::release_flow::create::create_release_writeset;
 use diem_types::{
     access_path::AccessPath,
     transaction::{ChangeSet, WriteSetPayload},
@@ -12,7 +12,7 @@ use vm::file_format::{basic_test_module, empty_module};
 
 #[test]
 fn release_test() {
-    let result = create_release_writeset(vec![], vec![]).unwrap();
+    let result = create_release_writeset(&[], &[]).unwrap();
 
     assert_eq!(
         result,
@@ -43,7 +43,7 @@ fn release_test() {
     replace_module.serialize(&mut replace_module_bytes).unwrap();
 
     // 1. Old and new framework are exactly the same.
-    let result = create_release_writeset(modules.clone(), modules.clone()).unwrap();
+    let result = create_release_writeset(&modules, &modules).unwrap();
 
     assert_eq!(
         result,
@@ -52,8 +52,7 @@ fn release_test() {
 
     // 2. Remove one existing module
     {
-        let result =
-            create_release_writeset(modules.clone(), modules.clone().split_off(1)).unwrap();
+        let result = create_release_writeset(&modules, &modules.clone().split_off(1)).unwrap();
         assert_eq!(
             result,
             WriteSetPayload::Direct(ChangeSet::new(
@@ -70,8 +69,7 @@ fn release_test() {
 
     // 3. Add one module
     {
-        let result =
-            create_release_writeset(modules.clone().split_off(1), modules.clone()).unwrap();
+        let result = create_release_writeset(&modules.clone().split_off(1), &modules).unwrap();
         assert_eq!(
             result,
             WriteSetPayload::Direct(ChangeSet::new(
@@ -92,7 +90,7 @@ fn release_test() {
         replace_modules.pop();
         replace_modules.push(replace_module.clone());
 
-        let result = create_release_writeset(modules.clone(), replace_modules).unwrap();
+        let result = create_release_writeset(&modules, &replace_modules).unwrap();
         assert_eq!(
             result,
             WriteSetPayload::Direct(ChangeSet::new(
@@ -116,7 +114,7 @@ fn release_test() {
         let mut old_modules = modules.clone();
         old_modules.swap_remove(0);
 
-        let result = create_release_writeset(old_modules, new_modules).unwrap();
+        let result = create_release_writeset(&old_modules, &new_modules).unwrap();
         // Result should be in sorted order
         assert_eq!(
             result,
@@ -146,7 +144,7 @@ fn release_test() {
         new_modules.push(replace_module.clone());
         new_modules.swap_remove(0);
 
-        let result = create_release_writeset(modules.clone(), new_modules).unwrap();
+        let result = create_release_writeset(&modules, &new_modules).unwrap();
         // Result should be in sorted order
         assert_eq!(
             result,
@@ -179,7 +177,7 @@ fn release_test() {
         let mut old_modules = modules.clone();
         old_modules.swap_remove(0);
 
-        let result = create_release_writeset(old_modules, new_modules).unwrap();
+        let result = create_release_writeset(&old_modules, &new_modules).unwrap();
         // Result should be in sorted order
         assert_eq!(
             result,
@@ -213,7 +211,7 @@ fn release_test() {
         let mut old_modules = modules.clone();
         old_modules.swap_remove(0);
 
-        let result = create_release_writeset(old_modules, new_modules).unwrap();
+        let result = create_release_writeset(&old_modules, &new_modules).unwrap();
         // Result should be in sorted order
         assert_eq!(
             result,
@@ -253,7 +251,7 @@ fn release_test() {
         old_modules.swap_remove(0);
         new_modules.swap(4, 5);
 
-        let result = create_release_writeset(old_modules, new_modules).unwrap();
+        let result = create_release_writeset(&old_modules, &new_modules).unwrap();
         // Result should be in sorted order
         assert_eq!(
             result,
