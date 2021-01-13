@@ -174,7 +174,7 @@ impl SynchronizerEnv {
     fn new(num_peers: usize) -> Self {
         ::diem_logger::Logger::init_for_testing();
 
-        let (signers, public_keys, network_keys, network_addrs) = Self::initial_setup(num_peers);
+        let (signers, public_keys, network_keys, network_addrs) = initial_setup(num_peers);
 
         let mut peers = vec![];
         for peer_index in 0..num_peers {
@@ -207,7 +207,7 @@ impl SynchronizerEnv {
     fn start_validator_peer(&mut self, peer_index: usize, mock_network: bool) {
         self.start_synchronizer_peer(
             peer_index,
-            SynchronizerEnv::default_handler(),
+            default_handler(),
             RoleType::Validator,
             Waypoint::default(),
             mock_network,
@@ -219,7 +219,7 @@ impl SynchronizerEnv {
     fn start_fullnode_peer(&mut self, peer_index: usize, mock_network: bool) {
         self.start_synchronizer_peer(
             peer_index,
-            SynchronizerEnv::default_handler(),
+            default_handler(),
             RoleType::FullNode,
             Waypoint::default(),
             mock_network,
@@ -260,7 +260,7 @@ impl SynchronizerEnv {
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
     ) {
-        let (config, network_id) = SynchronizerEnv::setup_state_sync_config(
+        let (config, network_id) = setup_state_sync_config(
             index,
             role,
             timeout_ms,
@@ -276,7 +276,10 @@ impl SynchronizerEnv {
 
         let mut peer = self.peers[index].borrow_mut();
         let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
-            Self::genesis_li(&validators),
+            LedgerInfoWithSignatures::genesis(
+                *ACCUMULATOR_PLACEHOLDER_HASH,
+                ValidatorSet::new(validators.to_vec()),
+            ),
             peer.signer.clone(),
         )));
 
@@ -396,45 +399,6 @@ impl SynchronizerEnv {
         network_handles
     }
 
-    fn setup_state_sync_config(
-        index: usize,
-        role: RoleType,
-        timeout_ms: u64,
-        multicast_timeout_ms: u64,
-        upstream_networks: &Option<Vec<NetworkId>>,
-    ) -> (NodeConfig, NetworkId) {
-        let mut config = diem_config::config::NodeConfig::default_for_validator();
-        config.base.role = role;
-        config.state_sync.sync_request_timeout_ms = timeout_ms;
-        config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
-
-        // Too many tests expect this, so we overwrite the value
-        config.state_sync.chunk_limit = 250;
-
-        let network_id = if role.is_validator() {
-            NetworkId::Validator
-        } else {
-            NetworkId::vfn_network()
-        };
-
-        if !role.is_validator() {
-            config.full_node_networks = vec![config.validator_network.unwrap()];
-            config.validator_network = None;
-            // setup upstream network for FN
-            if let Some(upstream_networks) = upstream_networks {
-                config.upstream.networks = upstream_networks.clone();
-            } else if index > 0 {
-                config.upstream.networks.push(network_id.clone());
-            }
-        }
-
-        (config, network_id)
-    }
-
-    fn default_handler() -> MockRpcHandler {
-        Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
-    }
-
     /// Delivers next message from peer with index `sender` in this SynchronizerEnv
     /// Returns the recipient of the msg
     fn deliver_msg(&mut self, sender_peer_id: PeerId) -> (PeerId, Message) {
@@ -501,65 +465,6 @@ impl SynchronizerEnv {
             .unwrap();
         conn_notifs_tx.push(sender_peer_id, notif).unwrap();
     }
-
-    // Returns the initial peers with their signatures
-    fn initial_setup(
-        count: usize,
-    ) -> (
-        Vec<ValidatorSigner>,
-        Vec<ValidatorInfo>,
-        Vec<x25519::PrivateKey>,
-        Vec<NetworkAddress>,
-    ) {
-        let (signers, _verifier) = random_validator_verifier(count, None, true);
-
-        // Setup identity public keys.
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let network_keys: Vec<_> = (0..count)
-            .map(|_| x25519::PrivateKey::generate(&mut rng))
-            .collect();
-
-        let mut validator_infos = vec![];
-        let mut network_addrs = vec![];
-
-        for (idx, signer) in signers.iter().enumerate() {
-            let peer_id = signer.author();
-
-            // Reserve an unused `/memory/<port>` address by binding port 0; we
-            // can immediately discard the listener here and safely rebind to this
-            // address later.
-            let port = MemoryListener::bind(0).unwrap().local_addr();
-            let addr = NetworkAddress::from(Protocol::Memory(port));
-            let addr = addr.append_prod_protos(network_keys[idx].public_key(), HANDSHAKE_VERSION);
-
-            let enc_addr = addr.clone().encrypt(
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                &peer_id,
-                0, /* seq_num */
-                0, /* addr_idx */
-            );
-
-            // The voting power of peer 0 is enough to generate an LI that passes validation.
-            let voting_power = if idx == 0 { 1000 } else { 1 };
-            let validator_config = ValidatorConfig::new(
-                signer.public_key(),
-                bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
-                bcs::to_bytes(&vec![addr.clone()]).unwrap(),
-            );
-            let validator_info = ValidatorInfo::new(peer_id, voting_power, validator_config);
-            validator_infos.push(validator_info);
-            network_addrs.push(addr);
-        }
-        (signers, validator_infos, network_keys, network_addrs)
-    }
-
-    fn genesis_li(validators: &[ValidatorInfo]) -> LedgerInfoWithSignatures {
-        LedgerInfoWithSignatures::genesis(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            ValidatorSet::new(validators.to_vec()),
-        )
-    }
 }
 
 fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_version: Option<u64>) {
@@ -593,6 +498,97 @@ fn check_chunk_response(
             assert_eq!(resp.txn_list_with_proof.transactions.len(), chunk_length)
         }
     }
+}
+
+fn default_handler() -> MockRpcHandler {
+    Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
+}
+
+// Returns the initial peers with their signatures
+fn initial_setup(
+    count: usize,
+) -> (
+    Vec<ValidatorSigner>,
+    Vec<ValidatorInfo>,
+    Vec<x25519::PrivateKey>,
+    Vec<NetworkAddress>,
+) {
+    let (signers, _verifier) = random_validator_verifier(count, None, true);
+
+    // Setup identity public keys.
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let network_keys: Vec<_> = (0..count)
+        .map(|_| x25519::PrivateKey::generate(&mut rng))
+        .collect();
+
+    let mut validator_infos = vec![];
+    let mut network_addrs = vec![];
+
+    for (idx, signer) in signers.iter().enumerate() {
+        let peer_id = signer.author();
+
+        // Reserve an unused `/memory/<port>` address by binding port 0; we
+        // can immediately discard the listener here and safely rebind to this
+        // address later.
+        let port = MemoryListener::bind(0).unwrap().local_addr();
+        let addr = NetworkAddress::from(Protocol::Memory(port));
+        let addr = addr.append_prod_protos(network_keys[idx].public_key(), HANDSHAKE_VERSION);
+
+        let enc_addr = addr.clone().encrypt(
+            &TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            &peer_id,
+            0, /* seq_num */
+            0, /* addr_idx */
+        );
+
+        // The voting power of peer 0 is enough to generate an LI that passes validation.
+        let voting_power = if idx == 0 { 1000 } else { 1 };
+        let validator_config = ValidatorConfig::new(
+            signer.public_key(),
+            bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+            bcs::to_bytes(&vec![addr.clone()]).unwrap(),
+        );
+        let validator_info = ValidatorInfo::new(peer_id, voting_power, validator_config);
+        validator_infos.push(validator_info);
+        network_addrs.push(addr);
+    }
+    (signers, validator_infos, network_keys, network_addrs)
+}
+
+fn setup_state_sync_config(
+    index: usize,
+    role: RoleType,
+    timeout_ms: u64,
+    multicast_timeout_ms: u64,
+    upstream_networks: &Option<Vec<NetworkId>>,
+) -> (NodeConfig, NetworkId) {
+    let mut config = diem_config::config::NodeConfig::default_for_validator();
+    config.base.role = role;
+    config.state_sync.sync_request_timeout_ms = timeout_ms;
+    config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
+
+    // Too many tests expect this, so we overwrite the value
+    config.state_sync.chunk_limit = 250;
+
+    let network_id = if role.is_validator() {
+        NetworkId::Validator
+    } else {
+        NetworkId::vfn_network()
+    };
+
+    if !role.is_validator() {
+        config.full_node_networks = vec![config.validator_network.unwrap()];
+        config.validator_network = None;
+        // setup upstream network for FN
+        if let Some(upstream_networks) = upstream_networks {
+            config.upstream.networks = upstream_networks.clone();
+        } else if index > 0 {
+            config.upstream.networks.push(network_id.clone());
+        }
+    }
+
+    (config, network_id)
 }
 
 #[test]
@@ -672,7 +668,7 @@ fn test_request_timeout() {
     );
     env.setup_synchronizer_peer(
         1,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::Validator,
         Waypoint::default(),
         100,
@@ -832,7 +828,7 @@ fn catch_up_with_waypoints() {
 
     env.start_synchronizer_peer(
         1,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::FullNode,
         waypoint,
         false,
@@ -862,7 +858,7 @@ fn test_lagging_upstream_long_poll() {
     env.start_validator_peer(0, true);
     env.setup_synchronizer_peer(
         1,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
         10_000,
@@ -872,7 +868,7 @@ fn test_lagging_upstream_long_poll() {
     );
     env.start_synchronizer_peer(
         2,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
         true,
@@ -1082,7 +1078,7 @@ fn test_fn_failover() {
     env.start_validator_peer(0, true);
     env.setup_synchronizer_peer(
         1,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
         1_000,
@@ -1295,7 +1291,7 @@ fn test_multicast_failover() {
     let multicast_timeout_ms = 5_000;
     env.setup_synchronizer_peer(
         1,
-        SynchronizerEnv::default_handler(),
+        default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
         1_000,
