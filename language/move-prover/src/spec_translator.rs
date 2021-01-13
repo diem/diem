@@ -2152,18 +2152,6 @@ impl<'env> SpecTranslator<'env> {
         range: &Exp,
         exp: &Exp,
     ) {
-        // all(v, |x| x > 0) -->
-        //      (var $r := v; forall $i: int :: $InVectorRange($v, $i) ==> (var x:=$r[$i]; x > 0))
-        // all(r, |x| x > 0) -->
-        //      (var $r := r; forall $i: int :: $InRange($r, $i) ==> (var x:=$i; x > 0))
-        // any(v, |x| x > 0) -->
-        //      (var $r := v; exists $i: int :: $InVectorRange($v, $i) && (var x:=$r[$i]; x > 0))
-        // any(r, |x| x > 0) -->
-        //      (var $r := r; exists $i: int :: $InRange($r, $i) && (var x:=$i; x > 0))
-        // all(domain<T>(), |a| P(a)) -->
-        //      (forall $a: Value :: is#T($a) ==> P($a))
-        // any(domain<T>(), |a| P(a)) -->
-        //      (exists $a: Value :: is#T($a) && P($a))
         let quant_ty = self.module_env().env.get_node_type(range.node_id());
         let connective = match kind {
             QuantKind::Forall => "==>",
@@ -2171,59 +2159,45 @@ impl<'env> SpecTranslator<'env> {
         };
         let var_name = self.module_env().symbol_pool().string(var.name);
         let quant_var = self.fresh_var_name("i");
-        let mut is_vector = false;
-        let mut is_domain: Option<Type> = None;
-        match quant_ty {
-            Type::Vector(..) => is_vector = true,
-            Type::TypeDomain(t) => is_domain = Some(t.as_ref().clone()),
-            Type::Primitive(PrimitiveType::Range) => (),
-            Type::Reference(_, b) => {
-                if let Type::Vector(..) = *b {
-                    is_vector = true
+        match quant_ty.skip_reference() {
+            Type::TypeDomain(domain_ty) => {
+                let type_check = boogie_well_formed_expr(
+                    self.global_env(),
+                    &var_name,
+                    &domain_ty,
+                    WellFormedMode::WithInvariant,
+                );
+                if type_check.is_empty() {
+                    let tctx = TypeDisplayContext::WithEnv {
+                        env: self.global_env(),
+                        type_param_names: None,
+                    };
+                    self.error(
+                        loc,
+                        &format!(
+                            "cannot quantify over `{}` because the type is not concrete",
+                            Type::TypeDomain(domain_ty.clone()).display(&tctx)
+                        ),
+                    );
                 } else {
-                    panic!("unexpected type")
+                    emit!(
+                        self.writer,
+                        "$Boolean(({} {}: $Value :: {} {} ",
+                        kind,
+                        var_name,
+                        type_check,
+                        connective
+                    );
+                    emit!(self.writer, "b#$Boolean(");
+                    self.translate_exp(exp);
+                    emit!(self.writer, ")))");
                 }
             }
-            _ => panic!("unexpected type"),
-        };
-        if let Some(domain_ty) = is_domain {
-            let type_check = boogie_well_formed_expr(
-                self.global_env(),
-                &var_name,
-                &domain_ty,
-                WellFormedMode::WithInvariant,
-            );
-            if type_check.is_empty() {
-                let tctx = TypeDisplayContext::WithEnv {
-                    env: self.global_env(),
-                    type_param_names: None,
-                };
-                self.error(
-                    loc,
-                    &format!(
-                        "cannot quantify over `{}` because the type is not concrete",
-                        Type::TypeDomain(Box::new(domain_ty)).display(&tctx)
-                    ),
-                );
-            } else {
-                emit!(
-                    self.writer,
-                    "$Boolean(({} {}: $Value :: {} {} ",
-                    kind,
-                    var_name,
-                    type_check,
-                    connective
-                );
-                emit!(self.writer, "b#$Boolean(");
-                self.translate_exp(exp);
-                emit!(self.writer, ")))");
-            }
-        } else {
-            let range_tmp = self.fresh_var_name("range");
-            emit!(self.writer, "$Boolean((var {} := ", range_tmp);
-            self.translate_exp(&range);
-            emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
-            if is_vector {
+            Type::Vector(..) => {
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "$Boolean((var {} := ", range_tmp);
+                self.translate_exp(&range);
+                emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
                 emit!(
                     self.writer,
                     "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
@@ -2234,7 +2208,15 @@ impl<'env> SpecTranslator<'env> {
                     range_tmp,
                     quant_var,
                 );
-            } else {
+                emit!(self.writer, "b#$Boolean(");
+                self.translate_exp(exp);
+                emit!(self.writer, ")))))");
+            }
+            Type::Primitive(PrimitiveType::Range) => {
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "$Boolean((var {} := ", range_tmp);
+                self.translate_exp(&range);
+                emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
                 emit!(
                     self.writer,
                     "$InRange({}, {}) {} (var {} := $Integer({}); ",
@@ -2244,10 +2226,11 @@ impl<'env> SpecTranslator<'env> {
                     var_name,
                     quant_var,
                 );
+                emit!(self.writer, "b#$Boolean(");
+                self.translate_exp(exp);
+                emit!(self.writer, ")))))");
             }
-            emit!(self.writer, "b#$Boolean(");
-            self.translate_exp(exp);
-            emit!(self.writer, ")))))");
+            _ => panic!("unexpected type"),
         }
     }
 
