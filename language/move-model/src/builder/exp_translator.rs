@@ -16,7 +16,7 @@ use move_lang::{
 };
 
 use crate::{
-    ast::{Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, Value},
+    ast::{Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, QuantKind, Value},
     builder::{
         model_builder::{ConstEntry, LocalVarEntry, SpecFunEntry},
         module_builder::ModuleBuilder,
@@ -738,6 +738,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             EA::Exp_::Block(seq) => self.translate_seq(&loc, seq, expected_type),
             EA::Exp_::Lambda(bindings, exp) => {
                 self.translate_lambda(&loc, bindings, exp, expected_type)
+            }
+            EA::Exp_::Quant(kind, ranges, exp) => {
+                self.translate_quant(&loc, *kind, ranges, exp, expected_type)
             }
             EA::Exp_::BinopExp(l, op, r) => {
                 let args = vec![l.as_ref(), r.as_ref()];
@@ -1783,6 +1786,94 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         self.exit_scope();
         let id = self.new_node_id_with_type_loc(&rty, loc);
         Exp::Lambda(id, decls, Box::new(rbody))
+    }
+
+    fn translate_quant(
+        &mut self,
+        loc: &Loc,
+        kind: PA::QuantKind,
+        ranges: &EA::LValueWithRangeList,
+        body: &EA::Exp,
+        expected_type: &Type,
+    ) -> Exp {
+        // Enter the quantifier variables into a new local scope and collect their declarations.
+        self.enter_scope();
+        let mut rranges = vec![];
+        for range in &ranges.value {
+            // The quantified variable and its domain expression.
+            let (bind, exp) = &range.value;
+            let loc = self.to_loc(&bind.loc);
+            let (exp_ty, rexp) = self.translate_exp_free(exp);
+            let ty = self.fresh_type_var();
+            let exp_ty = self.subs.specialize(&exp_ty);
+            match &exp_ty {
+                Type::Vector(..) => {
+                    self.check_type(
+                        &loc,
+                        &exp_ty,
+                        &Type::Vector(Box::new(ty.clone())),
+                        "in quantification over vector",
+                    );
+                }
+                Type::TypeDomain(..) => {
+                    self.check_type(
+                        &loc,
+                        &exp_ty,
+                        &Type::TypeDomain(Box::new(ty.clone())),
+                        "in quantification over domain",
+                    );
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    self.check_type(
+                        &loc,
+                        &ty,
+                        &Type::Primitive(PrimitiveType::Num),
+                        "in quantification over range",
+                    );
+                }
+                _ => {
+                    self.error(&loc, "quantified variables must range over a vector, a type domain, or a number range");
+                    return self.new_error_exp();
+                }
+            }
+            match &bind.value {
+                EA::LValue_::Var(
+                    Spanned {
+                        value: EA::ModuleAccess_::Name(n),
+                        ..
+                    },
+                    _,
+                ) => {
+                    let name = self.symbol_pool().make(&n.value);
+                    let id = self.new_node_id_with_type_loc(&ty, &loc);
+                    self.define_local(&loc, name, ty.clone(), None);
+                    let rbind = LocalVarDecl {
+                        id,
+                        name,
+                        binding: None,
+                    };
+                    rranges.push((rbind, rexp));
+                }
+                EA::LValue_::Unpack(..) | EA::LValue_::Var(..) => self.error(
+                    &loc,
+                    "[current restriction] tuples not supported in quantifiers",
+                ),
+            }
+        }
+        let rty = self.check_type(
+            loc,
+            &Type::new_prim(PrimitiveType::Bool),
+            expected_type,
+            "in quantified expression",
+        );
+        let rbody = self.translate_exp(body, &rty);
+        self.exit_scope();
+        let id = self.new_node_id_with_type_loc(&rty, loc);
+        let rkind = match kind.value {
+            PA::QuantKind_::Forall => QuantKind::Forall,
+            PA::QuantKind_::Exists => QuantKind::Exists,
+        };
+        Exp::Quant(id, rkind, rranges, Box::new(rbody))
     }
 
     pub fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type, context_msg: &str) -> Type {
