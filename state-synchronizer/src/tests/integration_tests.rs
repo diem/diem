@@ -45,6 +45,7 @@ use network::{
     DisconnectReason, ProtocolId,
 };
 use network_builder::builder::NetworkBuilder;
+use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     cell::{RefCell, RefMut},
@@ -57,10 +58,16 @@ use std::{
 };
 use tokio::runtime::Runtime;
 
+// Networks for validators and fullnodes.
+static VALIDATOR_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Validator);
+static VFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("VFN".into()));
+static VFN_NETWORK_2: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("Second VFN".into()));
+static PFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Public);
+
 struct SynchronizerPeer {
     client: Option<StateSyncClient>,
     mempool: Option<MockSharedMempool>,
-    multi_peer_ids: Option<Vec<PeerId>>, // Holds the peer's PeerIds, to support nodes with multiple network IDs.
+    multi_peer_ids: HashMap<NetworkId, PeerId>, // Holds the peer's PeerIds (to support nodes with multiple network IDs).
     network_addr: NetworkAddress,
     network_key: x25519::PrivateKey,
     peer_id: PeerId,
@@ -96,8 +103,8 @@ impl SynchronizerPeer {
         }
     }
 
-    fn get_peer_id(&self, network_id: usize) -> PeerId {
-        self.multi_peer_ids.as_ref().unwrap()[network_id]
+    fn get_peer_id(&self, network_id: NetworkId) -> PeerId {
+        *self.multi_peer_ids.get(&network_id).unwrap()
     }
 
     fn latest_li(&self) -> LedgerInfoWithSignatures {
@@ -128,7 +135,6 @@ impl SynchronizerPeer {
 
 struct SynchronizerEnv {
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
-    network_id: NetworkId,
     network_notifs_txs:
         HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_reqs_rxs:
@@ -181,7 +187,7 @@ impl SynchronizerEnv {
             let peer = SynchronizerPeer {
                 client: None,
                 mempool: None,
-                multi_peer_ids: None,
+                multi_peer_ids: HashMap::new(),
                 network_addr: network_addrs[peer_index].clone(),
                 network_key: network_keys[peer_index].clone(),
                 peer_id: signers[peer_index].author(),
@@ -195,7 +201,6 @@ impl SynchronizerEnv {
 
         Self {
             network_conn_event_notifs_txs: HashMap::new(),
-            network_id: NetworkId::Validator,
             network_notifs_txs: HashMap::new(),
             network_reqs_rxs: HashMap::new(),
             peers,
@@ -315,18 +320,19 @@ impl SynchronizerEnv {
         let mut network_handles = vec![];
         if mock_network {
             let networks = if role.is_validator() {
-                vec![NetworkId::Validator, NetworkId::vfn_network()]
+                vec![VALIDATOR_NETWORK.clone(), VFN_NETWORK.clone()]
             } else {
                 vec![
-                    NetworkId::vfn_network(),
-                    NetworkId::Private("second".to_string()),
-                    NetworkId::Public,
+                    VFN_NETWORK.clone(),
+                    VFN_NETWORK_2.clone(),
+                    PFN_NETWORK.clone(),
                 ]
             };
-            let mut network_ids = vec![];
+
+            let mut peer = self.peers[index].borrow_mut();
             for (idx, network) in networks.into_iter().enumerate() {
                 let peer_id = PeerId::random();
-                network_ids.push(peer_id);
+                peer.multi_peer_ids.insert(network.clone(), peer_id);
 
                 // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
                 // msg delivery in test
@@ -353,14 +359,11 @@ impl SynchronizerEnv {
                     network_events,
                 ));
             }
-
-            let mut peer = self.peers[index].borrow_mut();
-            peer.multi_peer_ids = Some(network_ids);
         } else {
             let peer = self.peers[index].borrow();
             let auth_mode = AuthenticationMode::Mutual(peer.network_key.clone());
             let network_context = Arc::new(NetworkContext::new(
-                self.network_id.clone(),
+                VALIDATOR_NETWORK.clone(),
                 RoleType::Validator,
                 peer.peer_id,
             ));
@@ -572,9 +575,9 @@ fn setup_state_sync_config(
     config.state_sync.chunk_limit = 250;
 
     let network_id = if role.is_validator() {
-        NetworkId::Validator
+        VALIDATOR_NETWORK.clone()
     } else {
-        NetworkId::vfn_network()
+        VFN_NETWORK.clone()
     };
 
     if !role.is_validator() {
@@ -864,7 +867,7 @@ fn test_lagging_upstream_long_poll() {
         10_000,
         1_000_000,
         true,
-        Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
+        Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
     env.start_synchronizer_peer(
         2,
@@ -872,18 +875,28 @@ fn test_lagging_upstream_long_poll() {
         RoleType::FullNode,
         Waypoint::default(),
         true,
-        Some(vec![NetworkId::vfn_network()]),
+        Some(vec![VFN_NETWORK.clone()]),
     );
     // we treat this a standalone node whose local state we use as the baseline
     // to clone state to the other nodes
     env.start_validator_peer(3, true);
 
     // network handles for each node
-    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(0);
-    let full_node_vfn_network_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
-    let full_node_failover_network_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
-    let failover_fn_vfn_network_peer_id = env.get_synchronizer_peer(2).get_peer_id(0);
-    let failover_fn_peer_id = env.get_synchronizer_peer(2).get_peer_id(2);
+    let validator_peer_id = env
+        .get_synchronizer_peer(0)
+        .get_peer_id(VALIDATOR_NETWORK.clone());
+    let full_node_vfn_network_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(VFN_NETWORK.clone());
+    let full_node_failover_network_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(PFN_NETWORK.clone());
+    let failover_fn_vfn_network_peer_id = env
+        .get_synchronizer_peer(2)
+        .get_peer_id(VFN_NETWORK.clone());
+    let failover_fn_peer_id = env
+        .get_synchronizer_peer(2)
+        .get_peer_id(PFN_NETWORK.clone());
 
     env.get_synchronizer_peer(0).commit(400);
 
@@ -1016,8 +1029,12 @@ fn test_sync_pending_ledger_infos() {
     env.start_validator_peer(0, true);
     env.start_fullnode_peer(1, true);
 
-    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(0);
-    let fullnode_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
+    let validator_peer_id = env
+        .get_synchronizer_peer(0)
+        .get_peer_id(VALIDATOR_NETWORK.clone());
+    let fullnode_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(VFN_NETWORK.clone());
 
     // validator discovers fn
     env.send_peer_event(fullnode_peer_id, validator_peer_id, true, Inbound);
@@ -1084,7 +1101,7 @@ fn test_fn_failover() {
         1_000,
         60_000,
         true,
-        Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
+        Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
 
     // start up 3 publicly available VFN
@@ -1093,12 +1110,24 @@ fn test_fn_failover() {
     env.start_fullnode_peer(4, true);
 
     // connect everyone
-    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(1);
-    let fn_0_vfn_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
-    let fn_0_public_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
-    let fn_1_peer_id = env.get_synchronizer_peer(2).get_peer_id(2);
-    let fn_2_peer_id = env.get_synchronizer_peer(3).get_peer_id(2);
-    let fn_3_peer_id = env.get_synchronizer_peer(4).get_peer_id(2);
+    let validator_peer_id = env
+        .get_synchronizer_peer(0)
+        .get_peer_id(VFN_NETWORK.clone());
+    let fn_0_vfn_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(VFN_NETWORK.clone());
+    let fn_0_public_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(PFN_NETWORK.clone());
+    let fn_1_peer_id = env
+        .get_synchronizer_peer(2)
+        .get_peer_id(PFN_NETWORK.clone());
+    let fn_2_peer_id = env
+        .get_synchronizer_peer(3)
+        .get_peer_id(PFN_NETWORK.clone());
+    let fn_3_peer_id = env
+        .get_synchronizer_peer(4)
+        .get_peer_id(PFN_NETWORK.clone());
 
     // vfn network:
     // validator discovers fn_0
@@ -1252,8 +1281,10 @@ fn test_fn_failover() {
 
     // bring back all fallback
     let upstream_peers_to_revive = [
-        env.get_synchronizer_peer(2).get_peer_id(1),
-        env.get_synchronizer_peer(4).get_peer_id(1),
+        env.get_synchronizer_peer(2)
+            .get_peer_id(VFN_NETWORK_2.clone()),
+        env.get_synchronizer_peer(4)
+            .get_peer_id(VFN_NETWORK_2.clone()),
     ];
     for peer in upstream_peers_to_revive.iter() {
         env.send_peer_event(fn_0_public_peer_id, *peer, true, Inbound);
@@ -1298,9 +1329,9 @@ fn test_multicast_failover() {
         multicast_timeout_ms,
         true,
         Some(vec![
-            NetworkId::vfn_network(),
-            NetworkId::Private("second".to_string()),
-            NetworkId::Public,
+            VFN_NETWORK.clone(),
+            VFN_NETWORK_2.clone(),
+            PFN_NETWORK.clone(),
         ]),
     );
 
@@ -1310,12 +1341,24 @@ fn test_multicast_failover() {
     env.start_fullnode_peer(4, true);
 
     // connect everyone
-    let validator_peer_id = env.get_synchronizer_peer(0).get_peer_id(1);
-    let fn_0_vfn_peer_id = env.get_synchronizer_peer(1).get_peer_id(0);
-    let fn_0_second_peer_id = env.get_synchronizer_peer(1).get_peer_id(1);
-    let fn_0_public_peer_id = env.get_synchronizer_peer(1).get_peer_id(2);
-    let fn_1_peer_id = env.get_synchronizer_peer(2).get_peer_id(1);
-    let fn_2_peer_id = env.get_synchronizer_peer(3).get_peer_id(2);
+    let validator_peer_id = env
+        .get_synchronizer_peer(0)
+        .get_peer_id(VFN_NETWORK.clone());
+    let fn_0_vfn_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(VFN_NETWORK.clone());
+    let fn_0_second_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(VFN_NETWORK_2.clone());
+    let fn_0_public_peer_id = env
+        .get_synchronizer_peer(1)
+        .get_peer_id(PFN_NETWORK.clone());
+    let fn_1_peer_id = env
+        .get_synchronizer_peer(2)
+        .get_peer_id(VFN_NETWORK_2.clone());
+    let fn_2_peer_id = env
+        .get_synchronizer_peer(3)
+        .get_peer_id(PFN_NETWORK.clone());
 
     // vfn network:
     // validator discovers fn_0
