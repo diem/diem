@@ -34,5 +34,5 @@ pub fn native_emit_event(
         return Ok(NativeResult::err(cost, 0));
     }
 
-    Ok(NativeResult::ok(cost, vec![]))
+    Ok(NativeResult::ok_none(cost))
 }

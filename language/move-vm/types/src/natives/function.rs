@@ -50,6 +50,17 @@ pub trait NativeContext {
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
 }
 
+/// The return value(s) of a native function
+///
+/// None - The native function does not return any thing
+/// One  - The native function returns exactly one value
+/// Many - The native function returns a vector of values
+pub enum NativeReturnValues {
+    None,
+    One(Value),
+    Many(Vec<Value>),
+}
+
 /// Result of a native function execution requires charges for execution cost.
 ///
 /// An execution that causes an invariant violation would not return a `NativeResult` but
@@ -63,15 +74,31 @@ pub struct NativeResult {
     /// The cost for running that function, whether successfully or not.
     pub cost: GasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
-    pub result: Result<Vec<Value>, u64>,
+    pub result: Result<NativeReturnValues, u64>,
 }
 
 impl NativeResult {
-    /// Return values of a successful execution.
-    pub fn ok(cost: GasUnits<GasCarrier>, values: Vec<Value>) -> Self {
+    /// Return values of a successful execution (no return values).
+    pub fn ok_none(cost: GasUnits<GasCarrier>) -> Self {
         NativeResult {
             cost,
-            result: Ok(values),
+            result: Ok(NativeReturnValues::None),
+        }
+    }
+
+    /// Return values of a successful execution (exactly one return value).
+    pub fn ok_one(cost: GasUnits<GasCarrier>, value: Value) -> Self {
+        NativeResult {
+            cost,
+            result: Ok(NativeReturnValues::One(value)),
+        }
+    }
+
+    /// Return values of a successful execution (many return values).
+    pub fn ok_many(cost: GasUnits<GasCarrier>, values: Vec<Value>) -> Self {
+        NativeResult {
+            cost,
+            result: Ok(NativeReturnValues::Many(values)),
         }
     }
 

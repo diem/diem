@@ -36,7 +36,7 @@ pub fn native_length(
     let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
 
     let len = r.len(&ty_args[0], context)?;
-    Ok(NativeResult::ok(cost, vec![len]))
+    Ok(NativeResult::ok_one(cost, len))
 }
 
 pub fn native_push_back(
@@ -57,7 +57,7 @@ pub fn native_push_back(
     );
 
     r.push_back(e, &ty_args[0], context)?;
-    Ok(NativeResult::ok(cost, vec![]))
+    Ok(NativeResult::ok_none(cost))
 }
 
 pub fn native_borrow(

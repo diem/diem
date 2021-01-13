@@ -43,8 +43,8 @@ pub fn native_to_bytes(
         serialized_value.len(),
     );
 
-    Ok(NativeResult::ok(
+    Ok(NativeResult::ok_one(
         cost,
-        vec![Value::vector_u8(serialized_value)],
+        Value::vector_u8(serialized_value),
     ))
 }

@@ -18,6 +18,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::runtime_types::Type,
+    natives::function::NativeReturnValues,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
@@ -284,11 +285,17 @@ impl<L: LogContext> Interpreter<L> {
         let native_function = function.get_native()?;
         let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
         cost_strategy.deduct_gas(result.cost)?;
-        let values = result
+        let return_values = result
             .result
             .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
-        for value in values {
-            self.operand_stack.push(value)?;
+        match return_values {
+            NativeReturnValues::None => {}
+            NativeReturnValues::One(value) => self.operand_stack.push(value)?,
+            NativeReturnValues::Many(values) => {
+                for value in values {
+                    self.operand_stack.push(value)?;
+                }
+            }
         }
         Ok(())
     }

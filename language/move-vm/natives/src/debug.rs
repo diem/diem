@@ -33,7 +33,7 @@ pub fn native_print(
         println!("[debug] {}", buf);
     }
 
-    Ok(NativeResult::ok(ONE_GAS_UNIT, vec![]))
+    Ok(NativeResult::ok_none(ONE_GAS_UNIT))
 }
 
 #[allow(unused_variables)]
@@ -52,5 +52,5 @@ pub fn native_print_stack_trace(
         println!("{}", s);
     }
 
-    Ok(NativeResult::ok(ONE_GAS_UNIT, vec![]))
+    Ok(NativeResult::ok_none(ONE_GAS_UNIT))
 }

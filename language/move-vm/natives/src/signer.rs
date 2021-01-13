@@ -21,8 +21,8 @@ pub fn native_borrow_address(
     let signer_reference = pop_arg!(arguments, SignerRef);
     let cost = native_gas(context.cost_table(), NativeCostIndex::SIGNER_BORROW, 1);
 
-    Ok(NativeResult::ok(
+    Ok(NativeResult::ok_one(
         cost,
-        vec![signer_reference.borrow_signer()?],
+        signer_reference.borrow_signer()?,
     ))
 }

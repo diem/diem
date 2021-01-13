@@ -21,7 +21,7 @@ pub fn native_create_signer(
 
     let address = pop_arg!(arguments, AccountAddress);
     let cost = native_gas(context.cost_table(), NativeCostIndex::CREATE_SIGNER, 0);
-    Ok(NativeResult::ok(cost, vec![Value::signer(address)]))
+    Ok(NativeResult::ok_one(cost, Value::signer(address)))
 }
 
 pub fn native_destroy_signer(
@@ -33,5 +33,5 @@ pub fn native_destroy_signer(
     debug_assert!(arguments.len() == 1);
 
     let cost = native_gas(context.cost_table(), NativeCostIndex::DESTROY_SIGNER, 0);
-    Ok(NativeResult::ok(cost, vec![]))
+    Ok(NativeResult::ok_none(cost))
 }
