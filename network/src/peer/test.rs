@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants::{INBOUND_RPC_TIMEOUT_MS, MAX_CONCURRENT_INBOUND_RPCS, MAX_FRAME_SIZE},
+    constants::{
+        INBOUND_RPC_TIMEOUT_MS, MAX_CONCURRENT_INBOUND_RPCS, MAX_CONCURRENT_OUTBOUND_RPCS,
+        MAX_FRAME_SIZE,
+    },
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::{
         direct_send::Message,
@@ -44,12 +47,10 @@ fn build_test_peer(
     PeerHandle,
     MemorySocket,
     channel::Receiver<PeerNotification>,
-    channel::Receiver<PeerNotification>,
 ) {
     let (a, b) = MemorySocket::new_pair();
     let peer_id = PeerId::random();
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(1);
-    let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new_test(1);
     let (peer_req_tx, peer_req_rx) = channel::new_test(0);
     let connection = Connection {
         metadata: ConnectionMetadata::new(
@@ -71,16 +72,16 @@ fn build_test_peer(
         connection,
         peer_req_rx,
         peer_notifs_tx,
-        peer_rpc_notifs_tx,
         Duration::from_millis(INBOUND_RPC_TIMEOUT_MS),
         MAX_CONCURRENT_INBOUND_RPCS,
+        MAX_CONCURRENT_OUTBOUND_RPCS,
         MAX_FRAME_SIZE,
         None,
         None,
     );
     let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 
-    (peer, peer_handle, b, peer_notifs_rx, peer_rpc_notifs_rx)
+    (peer, peer_handle, b, peer_notifs_rx)
 }
 
 fn build_test_connected_peers(
@@ -90,34 +91,22 @@ fn build_test_connected_peers(
         Peer<MemorySocket>,
         PeerHandle,
         channel::Receiver<PeerNotification>,
-        channel::Receiver<PeerNotification>,
     ),
     (
         Peer<MemorySocket>,
         PeerHandle,
         channel::Receiver<PeerNotification>,
-        channel::Receiver<PeerNotification>,
     ),
 ) {
-    let (peer_a, peer_handle_a, connection_a, peer_notifs_rx_a, peer_rpc_notifs_rx_a) =
+    let (peer_a, peer_handle_a, connection_a, peer_notifs_rx_a) =
         build_test_peer(executor.clone(), ConnectionOrigin::Inbound);
-    let (mut peer_b, peer_handle_b, _connection_b, peer_notifs_rx_b, peer_rpc_notifs_rx_b) =
+    let (mut peer_b, peer_handle_b, _connection_b, peer_notifs_rx_b) =
         build_test_peer(executor, ConnectionOrigin::Outbound);
     // Make sure both peers are connected
     peer_b.connection = Some(connection_a);
     (
-        (
-            peer_a,
-            peer_handle_a,
-            peer_notifs_rx_a,
-            peer_rpc_notifs_rx_a,
-        ),
-        (
-            peer_b,
-            peer_handle_b,
-            peer_notifs_rx_b,
-            peer_rpc_notifs_rx_b,
-        ),
+        (peer_a, peer_handle_a, peer_notifs_rx_a),
+        (peer_b, peer_handle_b, peer_notifs_rx_b),
     )
 }
 
@@ -152,7 +141,7 @@ async fn assert_peer_disconnected_event(
 fn peer_send_message() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, mut peer_handle, mut connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, mut peer_handle, mut connection, _peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
@@ -194,7 +183,7 @@ fn peer_send_message() {
 fn peer_recv_message() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, _peer_handle, connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, _peer_handle, connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
@@ -234,8 +223,8 @@ fn peers_send_message_concurrent() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
-        (peer_a, mut peer_handle_a, mut peer_notifs_rx_a, _peer_rpc_notifs_rx_a),
-        (peer_b, mut peer_handle_b, mut peer_notifs_rx_b, _peer_rpc_notifs_rx_b),
+        (peer_a, mut peer_handle_a, mut peer_notifs_rx_a),
+        (peer_b, mut peer_handle_b, mut peer_notifs_rx_b),
     ) = build_test_connected_peers(rt.handle().clone());
 
     let test = async move {
@@ -284,7 +273,7 @@ fn peers_send_message_concurrent() {
 fn peer_recv_rpc() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
@@ -339,7 +328,7 @@ fn peer_recv_rpc() {
 fn peer_recv_rpc_concurrent() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
@@ -403,7 +392,7 @@ fn peer_recv_rpc_concurrent() {
 fn peer_recv_rpc_timeout() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
     let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
 
@@ -456,7 +445,7 @@ fn peer_recv_rpc_timeout() {
 fn peer_recv_rpc_cancel() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, _peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, _peer_handle, mut connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
     let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
 
@@ -507,7 +496,7 @@ fn peer_recv_rpc_cancel() {
 fn peer_disconnect_request() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, mut peer_handle, _connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, mut peer_handle, _connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let test = async move {
@@ -528,7 +517,7 @@ fn peer_disconnect_request() {
 fn peer_disconnect_connection_lost() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, peer_handle, mut connection, mut peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, peer_handle, mut connection, mut peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let test = async move {
@@ -547,7 +536,7 @@ fn peer_disconnect_connection_lost() {
 fn peer_terminates_when_request_tx_has_dropped() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (peer, peer_handle, _connection, _peer_notifs_rx, _peer_rpc_notifs_rx) =
+    let (peer, peer_handle, _connection, _peer_notifs_rx) =
         build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
 
     let drop = async move {

@@ -73,9 +73,6 @@ use std::{cmp::PartialEq, collections::HashMap, fmt::Debug, sync::Arc, time::Dur
 
 pub mod error;
 
-#[cfg(test)]
-mod test;
-
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct InboundRpcRequest {
@@ -497,6 +494,8 @@ impl OutboundRpcs {
     }
 
     /// Handle a newly completed task from the `self.outbound_rpc_tasks` queue.
+    /// At this point, the application layer's request has already been fulfilled;
+    /// we just need to clean up this request and update some counters.
     pub fn handle_completed_request(
         &mut self,
         request_id: RequestId,
@@ -880,7 +879,7 @@ impl Rpc {
 
 async fn handle_outbound_rpc_inner(
     network_context: &NetworkContext,
-    mut peer_handle: PeerHandle,
+    peer_handle: PeerHandle,
     request_id: RequestId,
     protocol_id: ProtocolId,
     req_data: Bytes,
@@ -890,7 +889,7 @@ async fn handle_outbound_rpc_inner(
     let peer_id = peer_handle.peer_id();
 
     // Create NetworkMessage to be sent over the wire.
-    let request = NetworkMessage::RpcRequest(RpcRequest {
+    let _request = NetworkMessage::RpcRequest(RpcRequest {
         request_id,
         // TODO: Use default priority for now. To be exposed via network API.
         priority: Priority::default(),
@@ -910,7 +909,7 @@ async fn handle_outbound_rpc_inner(
     );
     // Start timer to collect RPC latency.
     let timer = counters::outbound_rpc_request_latency(network_context, protocol_id).start_timer();
-    peer_handle.send_message(request, protocol_id).await?;
+    // peer_handle.send_message(request, protocol_id).await?;
 
     // Collect counters for requests sent.
     counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
