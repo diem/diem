@@ -76,6 +76,8 @@ impl Cargo {
 
         // Set the `CARGO` envvar with the path to the cargo binary being used
         inner.env(CARGO, cargo_binary.trim());
+        info!("current env CARGO={:?}", std::env::var(CARGO));
+        info!("setting CARGO={}", cargo_binary.trim());
 
         //sccache apply
         let envs: IndexMap<OsString, Option<OsString>> = if attempt_sccache {
