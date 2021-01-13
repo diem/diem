@@ -6,10 +6,10 @@ use crate::{
         INBOUND_RPC_TIMEOUT_MS, MAX_CONCURRENT_INBOUND_RPCS, MAX_CONCURRENT_OUTBOUND_RPCS,
         MAX_FRAME_SIZE,
     },
-    peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
+    peer::{DisconnectReason, Peer, PeerHandle, PeerNotification, PeerRequest},
     protocols::{
         direct_send::Message,
-        rpc::InboundRpcRequest,
+        rpc::{InboundRpcRequest, OutboundRpcRequest},
         wire::{
             handshake::v1::MessagingProtocolVersion,
             messaging::v1::{
@@ -27,14 +27,14 @@ use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
-    future,
+    future::{self, FutureExt},
     io::{AsyncRead, AsyncWrite, AsyncWriteExt},
     stream::{StreamExt, TryStreamExt},
     SinkExt,
 };
 use memsocket::MemorySocket;
 use netcore::{compat::IoCompat, transport::ConnectionOrigin};
-use std::{str::FromStr, time::Duration};
+use std::{collections::HashSet, str::FromStr, time::Duration};
 use tokio::runtime::{Handle, Runtime};
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
@@ -490,6 +490,184 @@ fn peer_recv_rpc_cancel() {
     };
     rt.block_on(future::join(peer.start(), test));
 }
+
+#[test]
+fn peer_send_rpc() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, mut peer_handle, mut connection, _peer_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
+    let timeout = Duration::from_millis(10_000);
+
+    let mut request_ids = HashSet::new();
+
+    let client = async move {
+        for _ in 0..30 {
+            // Send RpcRequest to server and await response data.
+            let response = peer_handle
+                .send_rpc_request(PROTOCOL, Bytes::from(&b"hello world"[..]), timeout)
+                .await
+                .unwrap();
+            assert_eq!(response, Bytes::from(&b"goodbye world"[..]));
+        }
+        // Client then closes connection.
+    };
+    let server = async move {
+        for _ in 0..30 {
+            // Server should then receive the expected rpc request.
+            let received = server_stream.next().await.unwrap().unwrap();
+            let received = match received {
+                NetworkMessage::RpcRequest(request) => request,
+                _ => panic!("Expected RpcRequest; unexpected: {:?}", received),
+            };
+
+            assert_eq!(received.protocol_id, PROTOCOL);
+            assert_eq!(received.priority, 0);
+            assert_eq!(received.raw_request, b"hello world");
+
+            assert!(
+                request_ids.insert(received.request_id),
+                "should not receive requests with duplicate request ids: {}",
+                received.request_id,
+            );
+
+            let response = NetworkMessage::RpcResponse(RpcResponse {
+                request_id: received.request_id,
+                priority: 0,
+                raw_response: Vec::from(&b"goodbye world"[..]),
+            });
+
+            // Server should send the rpc request.
+            server_sink.send(&response).await.unwrap();
+        }
+        assert!(matches!(server_stream.next().await, None));
+    };
+    rt.block_on(future::join3(peer.start(), server, client));
+}
+
+#[test]
+fn peer_send_rpc_concurrent() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, peer_handle, mut connection, _peer_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
+    let timeout = Duration::from_millis(10_000);
+
+    let mut request_ids = HashSet::new();
+
+    let client = async move {
+        // Send a batch of RpcRequest to server and await response data.
+        let mut send_recv_futures = Vec::new();
+        for _ in 0..30 {
+            let mut peer_handle = peer_handle.clone();
+            let send_recv = async move {
+                let response = peer_handle
+                    .send_rpc_request(PROTOCOL, Bytes::from(&b"hello world"[..]), timeout)
+                    .await
+                    .unwrap();
+                assert_eq!(response, Bytes::from(&b"goodbye world"[..]));
+            };
+            send_recv_futures.push(send_recv.boxed());
+        }
+
+        // Wait for all the responses.
+        future::join_all(send_recv_futures).await;
+
+        // Client then closes connection.
+    };
+    let server = async move {
+        for _ in 0..30 {
+            // Server should then receive the expected rpc request.
+            let received = server_stream.next().await.unwrap().unwrap();
+
+            let received = match received {
+                NetworkMessage::RpcRequest(request) => request,
+                _ => panic!("Expected RpcRequest; unexpected: {:?}", received),
+            };
+
+            assert_eq!(received.protocol_id, PROTOCOL);
+            assert_eq!(received.priority, 0);
+            assert_eq!(received.raw_request, b"hello world");
+
+            assert!(
+                request_ids.insert(received.request_id),
+                "should not receive requests with duplicate request ids: {}",
+                received.request_id,
+            );
+
+            let response = NetworkMessage::RpcResponse(RpcResponse {
+                request_id: received.request_id,
+                priority: 0,
+                raw_response: Vec::from(&b"goodbye world"[..]),
+            });
+
+            // Server should send the rpc request.
+            server_sink.send(&response).await.unwrap();
+        }
+        assert!(matches!(server_stream.next().await, None));
+    };
+    rt.block_on(future::join3(peer.start(), server, client));
+}
+
+#[test]
+fn peer_send_rpc_cancel() {
+    ::diem_logger::Logger::init_for_testing();
+    let mut rt = Runtime::new().unwrap();
+    let (peer, mut peer_handle, mut connection, _peer_notifs_rx) =
+        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
+    let timeout = Duration::from_millis(10_000);
+
+    let test = async move {
+        // Client sends rpc request.
+        let (response_tx, mut response_rx) = oneshot::channel();
+        let request = PeerRequest::SendRpc(OutboundRpcRequest {
+            protocol_id: PROTOCOL,
+            data: Bytes::from(&b"hello world"[..]),
+            res_tx: response_tx,
+            timeout,
+        });
+        peer_handle.sender.send(request).await.unwrap();
+
+        // Server receives the rpc request from client.
+        let received = server_stream.next().await.unwrap().unwrap();
+        let received = match received {
+            NetworkMessage::RpcRequest(request) => request,
+            _ => panic!("Expected RpcRequest; unexpected: {:?}", received),
+        };
+
+        assert_eq!(received.protocol_id, PROTOCOL);
+        assert_eq!(received.priority, 0);
+        assert_eq!(received.raw_request, b"hello world");
+
+        // Request should still be live. Ok(_) means the sender is not dropped.
+        // Ok(None) means there is no response yet.
+        assert!(matches!(response_rx.try_recv(), Ok(None)));
+
+        // Client cancels the request.
+        drop(response_rx);
+
+        // Server sending an expired response is fine.
+        let response = NetworkMessage::RpcResponse(RpcResponse {
+            request_id: received.request_id,
+            priority: 0,
+            raw_response: Vec::from(&b"goodbye world"[..]),
+        });
+        server_sink.send(&response).await.unwrap();
+
+        // Make sure the peer actor actually saw the message.
+        tokio::task::yield_now().await;
+
+        // Keep the peer_handle alive until the end to avoid prematurely closing
+        // the connection.
+        drop(peer_handle);
+    };
+    rt.block_on(future::join(peer.start(), test));
+}
+
+// TODO(philiphayes): timeout test after integrating time service.
 
 // PeerManager can request a Peer to shutdown.
 #[test]
