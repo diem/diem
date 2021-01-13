@@ -103,7 +103,7 @@ pub struct Peer<TSocket> {
     requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
     peer_notifs_tx: channel::Sender<PeerNotification>,
-    /// Inbound rpc request queue for handling requests from remote peer and sending responses.
+    /// Inbound rpc request queue for handling requests from remote peer.
     inbound_rpcs: InboundRpcs,
     /// Outbound rpc request queue for sending requests to remote peer and handling responses.
     outbound_rpcs: OutboundRpcs,
