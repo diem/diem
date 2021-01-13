@@ -58,19 +58,21 @@ impl<'a> SummaryCache<'a> {
 
 /// Trait that lifts an intraprocedural analysis into a bottom-up, compositional interprocedural
 /// analysis. The derived `summarize` function computes a postcondition for the procedure under
-/// analysis, then stores it in the summary cache for other procedures to use.
-// TODO: allow client analyses to customize this by providing a function that converts a
-// postcondition into a summary
+/// analysis, then stores it in the summary cache for other procedures to use. The function
+/// 'summarize_map' is the same as 'summarize' but with the additional argument 'map' that is
+/// applied to the postcondition; the result of this function application is stored in the summary
+/// cache in place of the computed postcondition.
 pub trait CompositionalAnalysis: DataflowAnalysis
 where
     Self::State: 'static,
 {
-    fn summarize(
+    fn summarize_map<T:std::any::Any>(
         &self,
         func_env: &FunctionEnv<'_>,
         initial_state: Self::State,
         mut data: FunctionData,
-    ) -> FunctionData {
+        map : fn(Self::State) -> T
+        ) -> FunctionData {
         if !func_env.is_native() {
             let cfg = if Self::BACKWARD {
                 unimplemented!("backward compositional analysis")
@@ -89,12 +91,21 @@ where
             for exit_state in exit_states.iter().skip(1) {
                 acc.join(&exit_state);
             }
-            data.annotations.set(acc)
+            data.annotations.set(map(acc))
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives
-            data.annotations.set(initial_state)
+            data.annotations.set(map(initial_state))
         }
         data
+    }
+
+    fn summarize(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        initial_state: Self::State,
+        data: FunctionData
+        ) -> FunctionData {
+        Self::summarize_map(self, func_env, initial_state, data, std::convert::identity)
     }
 }
