@@ -1363,8 +1363,8 @@ fn bind_with_range_list(
     let rs_: Option<Vec<E::LValueWithRange>> = prs_
         .into_iter()
         .map(|sp!(loc, (pb, pr))| -> Option<E::LValueWithRange> {
-            let b = bind(context, pb)?;
             let r = exp_(context, pr);
+            let b = bind(context, pb)?;
             Some(sp(loc, (b, r)))
         })
         .collect();
@@ -1617,8 +1617,8 @@ fn unbound_names_binds_with_range(
     sp!(_, rs_): &E::LValueWithRangeList,
 ) {
     rs_.iter().rev().for_each(|sp!(_, (b, r))| {
-        unbound_names_exp(unbound, r);
-        unbound_names_bind(unbound, b)
+        unbound_names_bind(unbound, b);
+        unbound_names_exp(unbound, r)
     })
 }
 
