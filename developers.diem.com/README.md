@@ -1,5 +1,5 @@
 <a href="https://developers.diem.com">
-		<img width="200" src="./libra.png" alt="Diem Logo" />
+		<img width="200" src="./static/img/diem-logo.png" alt="Diem Logo" />
 </a>
 
 <hr/>
