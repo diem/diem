@@ -58,8 +58,8 @@ const getReference = (theme = 'secondary') => {
     id,
     type: defaultType,
   });
-  const referenceLink = ({id, icon, iconDark, isCategory = false}) => ({
-    type: isCategory ? 'ref' : defaultType,
+  const referenceLink = ({id, icon, iconDark, withinCategory = false}) => ({
+    type: withinCategory ? 'ref' : defaultType,
     id,
     customProps: {
       classNames: ['iconIndented'],
@@ -103,21 +103,24 @@ const getReference = (theme = 'secondary') => {
         referenceLink({
           id: 'tutorials/overview',
           icon: 'img/cog.png',
+          withinCategory: true,
         }),
         referenceLink({
           id: 'wallet-app/public-demo-wallet',
           icon: 'img/overlapping-circle-and-square-2.svg',
           iconDark: 'img/overlapping-circle-and-square-dark.svg',
+          withinCategory: true,
         }),
         referenceLink({
           id: 'merchant/try-demo-merchant',
           icon: 'img/bobby-pin-2.svg',
           iconDark: 'img/bobby-pin-dark.svg',
+          withinCategory: true,
         }),
         referenceLink({
           id: 'technical-papers/overview',
           icon: 'img/document.svg',
-          isCategory: true,
+          withinCategory: true,
         }),
       ],
     },
