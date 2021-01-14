@@ -558,6 +558,8 @@ pub enum StatusCode {
     DUPLICATE_MODULE_NAME = 1095,
     // The sender is trying to publish a module that breaks the compatibility checks
     BACKWARD_INCOMPATIBLE_MODULE_UPDATE = 1096,
+    // The updated module introduces a cyclic dependency (i.e., A uses B and B also uses A)
+    CYCLIC_MODULE_DEPENDENCY = 1097,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

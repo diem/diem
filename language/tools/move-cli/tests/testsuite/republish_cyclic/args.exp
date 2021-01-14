@@ -1,0 +1,43 @@
+Command `publish src1 -v`:
+Compiling Move modules...
+Found and compiled 2 modules
+Publishing a new module 00000000000000000000000000000042::M
+Publishing a new module 00000000000000000000000000000043::N
+Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
+module 42.M {
+
+
+public foo() {
+	0: Call[0](bar())
+	1: Ret
+}
+}
+Command `view storage/0x00000000000000000000000000000043/modules/N.mv`:
+module 43.N {
+
+
+public bar() {
+	0: Ret
+}
+}
+Command `publish src2 -v`:
+Compiling Move modules...
+Found and compiled 1 modules
+Publishing failed with unexpected error CYCLIC_MODULE_DEPENDENCY
+Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
+module 42.M {
+
+
+public foo() {
+	0: Call[0](bar())
+	1: Ret
+}
+}
+Command `view storage/0x00000000000000000000000000000043/modules/N.mv`:
+module 43.N {
+
+
+public bar() {
+	0: Ret
+}
+}

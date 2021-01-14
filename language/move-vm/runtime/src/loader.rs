@@ -590,7 +590,41 @@ impl Loader {
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
-        self.verify_module(module, data_store, true, log_context)
+        // A standard DFS algorithm that follows the dependency chain from the `source_module_id`
+        // to see whether the `dst_module_id` is in its dependencies. This function can only be
+        // called when the module is fully verified and the `module_cache` is properly prepared.
+        fn is_reachable_via_dependencies(
+            dst_module_id: &ModuleId,
+            src_module_id: &ModuleId,
+            loader: &Loader,
+        ) -> bool {
+            if dst_module_id == src_module_id {
+                return true;
+            }
+            let src_module = loader.get_module(src_module_id);
+            module_dependencies(src_module.module())
+                .iter()
+                .any(|dep| is_reachable_via_dependencies(dst_module_id, dep, loader))
+        }
+
+        // Performs all verification steps to load the module without loading it, i.e., the new
+        // module will NOT show up in `module_cache`. In the module republishing case, it means
+        // that the old module is still in the `module_cache`, unless a Loader is created (which
+        // means a new MoveVm instance needs to be created).
+        self.verify_module(module, data_store, true, log_context)?;
+
+        // Check whether publishing/updating this new module introduces cyclic dependencies, i.e.,
+        // module A depends on module B while at the same time, B (transitively) depends on A.
+        // This can be checked by a DFS walk from module A with detection for back edges.
+        let dst_module_id = module.self_id();
+        if module_dependencies(module)
+            .iter()
+            .any(|dep| is_reachable_via_dependencies(&dst_module_id, dep, &self))
+        {
+            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
+                .finish(Location::Module(module.self_id())));
+        }
+        Ok(())
     }
 
     fn verify_module_expect_no_missing_dependencies(

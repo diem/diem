@@ -92,8 +92,9 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
     ///
     /// The Move VM MUST return a user error (in other words, an error that's not an invariant violation) if
     ///   - The module fails to deserialize or verify.
-    ///   - A module with the same ModuleId already exists in the environment.
     ///   - The sender address does not match that of the module.
+    ///   - (Republishing-only) the module to be updated is not backward compatible with the old module.
+    ///   - (Republishing-only) the module to be updated introduces cyclic dependencies.
     ///
     /// The Move VM should not be able to produce other user errors.
     /// Besides, no user input should cause the Move VM to return an invariant violation.

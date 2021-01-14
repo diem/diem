@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{normalized::Module, CompiledModule};
+use crate::normalized::Module;
 
 /// The result of a linking and layoutcompatibility check. Here is what the different combinations
 /// mean:
@@ -97,23 +97,5 @@ impl Compatibility {
             struct_and_function_linking,
             struct_layout,
         }
-    }
-
-    /// Return true if `new_module` can safely update `old_module`
-    pub fn can_update(
-        old_module: &Module,
-        new_module: &CompiledModule,
-        _new_module_dependencies: &[CompiledModule],
-    ) -> bool {
-        // (1) Verify new_module (TODO)
-        // (2) Link new_module against new_module dependencies. (TODO)
-        //     Note: this will *NOT* prevent cylic deps. We need to think about a different scheme
-        //     if we care about this (which we almost certainly do). One (probably too restrictive)
-        //     solution would be: insist that deps(new_module) are a subset of deps(old_module).
-        //     That would not only prevent cyclic deps, but also preclude the need for linking
-        //     entirely.
-        // (3) Extract the  for new_module and check compatibility with old_module
-        Self::is_fully_compatible(&Self::check(old_module, &Module::new(new_module)))
-            && panic!("TODO: implement verification, linking, cyclic deps checks")
     }
 }
