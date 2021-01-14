@@ -924,10 +924,7 @@ enum TransportRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub enum TransportNotification<TSocket>
-where
-    TSocket: AsyncRead + AsyncWrite,
-{
+pub enum TransportNotification<TSocket> {
     NewConnection(#[serde(skip)] Connection<TSocket>),
     Disconnected(ConnectionMetadata, DisconnectReason),
 }

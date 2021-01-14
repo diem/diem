@@ -9,21 +9,22 @@
 
 use crate::{
     counters::{self, RECEIVED_LABEL, SENT_LABEL},
+    interface::{NetworkNotification, NetworkRequest},
     logging::NetworkSchema,
-    peer_manager::PeerManagerError,
+    peer_manager::{PeerManagerError, TransportNotification},
     protocols::{
         direct_send::Message,
-        rpc::{error::RpcError, InboundRpcRequest, InboundRpcs, OutboundRpcRequest, OutboundRpcs},
+        rpc::{InboundRpcs, OutboundRpcs},
         wire::messaging::v1::{
             DirectSendMsg, ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
             Priority, ReadError, WriteError,
         },
     },
-    transport,
-    transport::{Connection, ConnectionMetadata},
+    transport::{self, Connection, ConnectionMetadata},
     ProtocolId,
 };
 use bytes::Bytes;
+use channel::diem_channel;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_rate_limiter::rate_limit::SharedBucket;
@@ -48,16 +49,6 @@ mod test;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
-#[derive(Debug)]
-pub enum PeerRequest {
-    // Temporary message types until we can remove NetworkProvider and use the
-    // diem_channel::Receiver<ProtocolId, NetworkRequest> directly.
-    SendDirectSend(Message),
-    SendRpc(OutboundRpcRequest),
-
-    CloseConnection,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisconnectReason {
     Requested,
@@ -74,16 +65,6 @@ impl fmt::Display for DisconnectReason {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum PeerNotification {
-    // Temporary message type until we can remove NetworkProvider and use the
-    // diem_channel::Sender<ProtocolId, NetworkNotification> directly.
-    RecvDirectSend(Message),
-    RecvRpc(InboundRpcRequest),
-    NewMessage(NetworkMessage),
-    PeerDisconnected(ConnectionMetadata, DisconnectReason),
-}
-
 enum State {
     Connected,
     ShuttingDown(DisconnectReason),
@@ -98,10 +79,12 @@ pub struct Peer<TSocket> {
     connection_metadata: ConnectionMetadata,
     /// Underlying connection.
     connection: Option<TSocket>,
-    /// Channel to receive requests for opening new outbound substreams.
-    requests_rx: channel::Receiver<PeerRequest>,
-    /// Channel to send peer notifications to PeerManager.
-    peer_notifs_tx: channel::Sender<PeerNotification>,
+    /// Channel to notify PeerManager that we've disconnected.
+    connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
+    /// Channel to receive requests from PeerManager to send messages and rpcs.
+    network_reqs_rx: diem_channel::Receiver<ProtocolId, NetworkRequest>,
+    /// Channel to notifty PeerManager of new inbound messages and rpcs.
+    network_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
     /// Inbound rpc request queue for handling requests from remote peer.
     inbound_rpcs: InboundRpcs,
     /// Outbound rpc request queue for sending requests to remote peer and handling responses.
@@ -125,8 +108,9 @@ where
         network_context: Arc<NetworkContext>,
         executor: Handle,
         connection: Connection<TSocket>,
-        requests_rx: channel::Receiver<PeerRequest>,
-        peer_notifs_tx: channel::Sender<PeerNotification>,
+        connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
+        network_reqs_rx: diem_channel::Receiver<ProtocolId, NetworkRequest>,
+        network_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
         max_concurrent_outbound_rpcs: u32,
@@ -144,8 +128,9 @@ where
             executor,
             connection_metadata,
             connection: Some(socket),
-            requests_rx,
-            peer_notifs_tx,
+            connection_notifs_tx,
+            network_reqs_rx,
+            network_notifs_tx,
             inbound_rpcs: InboundRpcs::new(
                 network_context.clone(),
                 remote_peer_id,
@@ -213,7 +198,7 @@ where
 
             futures::select! {
                 // Handle a new outbound request from the PeerManager.
-                maybe_request = self.requests_rx.next() => {
+                maybe_request = self.network_reqs_rx.next() => {
                     match maybe_request {
                         Some(request) => self.handle_outbound_request(request, &mut write_reqs_tx).await,
                         // The PeerManager is requesting this connection to close
@@ -409,9 +394,7 @@ where
         };
 
         match message {
-            NetworkMessage::DirectSendMsg(message) => {
-                self.handle_inbound_direct_send(message).await
-            }
+            NetworkMessage::DirectSendMsg(message) => self.handle_inbound_direct_send(message),
             NetworkMessage::Error(error_msg) => {
                 warn!(
                     NetworkSchema::new(&self.network_context)
@@ -426,8 +409,7 @@ where
             NetworkMessage::RpcRequest(request) => {
                 if let Err(err) = self
                     .inbound_rpcs
-                    .handle_inbound_request(&mut self.peer_notifs_tx, request)
-                    .await
+                    .handle_inbound_request(&mut self.network_notifs_tx, request)
                 {
                     warn!(
                         NetworkSchema::new(&self.network_context)
@@ -449,7 +431,7 @@ where
     /// Handle an inbound DirectSendMsg from the remote peer. There's not much to
     /// do here other than bump some counters and forward the message up to the
     /// PeerManager.
-    async fn handle_inbound_direct_send(&mut self, message: DirectSendMsg) {
+    fn handle_inbound_direct_send(&mut self, message: DirectSendMsg) {
         let peer_id = self.remote_peer_id();
         let protocol_id = message.protocol_id;
         let data = message.raw_msg;
@@ -467,12 +449,12 @@ where
         counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
             .inc_by(data.len() as u64);
 
-        let notif = PeerNotification::RecvDirectSend(Message {
+        let notif = NetworkNotification::RecvMessage(Message {
             protocol_id,
             mdata: Bytes::from(data),
         });
 
-        if let Err(err) = self.peer_notifs_tx.send(notif).await {
+        if let Err(err) = self.network_notifs_tx.push(protocol_id, notif) {
             warn!(
                 NetworkSchema::new(&self.network_context),
                 error = ?err,
@@ -485,21 +467,21 @@ where
 
     async fn handle_outbound_request<'a>(
         &'a mut self,
-        request: PeerRequest,
+        request: NetworkRequest,
         write_reqs_tx: &mut channel::Sender<(
             NetworkMessage,
             oneshot::Sender<Result<(), PeerManagerError>>,
         )>,
     ) {
         trace!(
-            "Peer {} PeerRequest::{:?}",
+            "Peer {} NetworkRequest::{:?}",
             self.remote_peer_id().short_str(),
             request
         );
         match request {
             // To send an outbound DirectSendMsg, we just bump some counters and
             // push it onto our outbound writer queue.
-            PeerRequest::SendDirectSend(message) => {
+            NetworkRequest::SendMessage(message) => {
                 let message_len = message.mdata.len();
                 let protocol_id = message.protocol_id;
                 let message = NetworkMessage::DirectSendMsg(DirectSendMsg {
@@ -528,7 +510,7 @@ where
                     }
                 }
             }
-            PeerRequest::SendRpc(request) => {
+            NetworkRequest::SendRpc(request) => {
                 let protocol_id = request.protocol_id;
                 if let Err(e) = self
                     .outbound_rpcs
@@ -546,7 +528,6 @@ where
                     );
                 }
             }
-            PeerRequest::CloseConnection => self.shutdown(DisconnectReason::Requested),
         }
     }
 
@@ -561,8 +542,8 @@ where
 
         // Send a PeerDisconnected event to PeerManager.
         if let Err(e) = self
-            .peer_notifs_tx
-            .send(PeerNotification::PeerDisconnected(
+            .connection_notifs_tx
+            .send(TransportNotification::Disconnected(
                 self.connection_metadata.clone(),
                 reason,
             ))
@@ -600,69 +581,5 @@ where
             self.network_context,
             remote_peer_id.short_str()
         );
-    }
-}
-
-#[derive(Clone)]
-pub struct PeerHandle {
-    connection_metadata: ConnectionMetadata,
-    network_context: Arc<NetworkContext>,
-    sender: channel::Sender<PeerRequest>,
-}
-
-impl PeerHandle {
-    pub fn new(
-        network_context: Arc<NetworkContext>,
-        connection_metadata: ConnectionMetadata,
-        sender: channel::Sender<PeerRequest>,
-    ) -> Self {
-        Self {
-            network_context,
-            connection_metadata,
-            sender,
-        }
-    }
-
-    pub fn peer_id(&self) -> PeerId {
-        self.connection_metadata.remote_peer_id
-    }
-
-    pub async fn send_direct_send(&mut self, message: Message) -> Result<(), PeerManagerError> {
-        self.sender
-            .send(PeerRequest::SendDirectSend(message))
-            .await?;
-        Ok(())
-    }
-
-    pub async fn send_rpc_request(
-        &mut self,
-        protocol_id: ProtocolId,
-        data: Bytes,
-        timeout: Duration,
-    ) -> Result<Bytes, RpcError> {
-        let (res_tx, res_rx) = oneshot::channel();
-        let request = OutboundRpcRequest {
-            protocol_id,
-            data,
-            res_tx,
-            timeout,
-        };
-        self.sender.send(PeerRequest::SendRpc(request)).await?;
-        let response_data = res_rx.await??;
-        Ok(response_data)
-    }
-
-    pub async fn disconnect(&mut self) {
-        // If we fail to send the request to the Peer, then it must have already been shutdown.
-        if let Err(e) = self.sender.send(PeerRequest::CloseConnection).await {
-            info!(
-                NetworkSchema::new(&self.network_context)
-                    .connection_metadata(&self.connection_metadata),
-                error = ?e,
-                "Sending CloseConnection request to Peer {} \
-                 failed because it has already been shutdown.",
-                self.peer_id().short_str()
-            );
-        }
     }
 }

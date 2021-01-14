@@ -13,8 +13,7 @@
 //! handler, determined using the protocol negotiated on the RPC substream.
 use crate::{
     constants, counters,
-    logging::NetworkSchema,
-    peer::{Peer, PeerHandle, PeerNotification, PeerRequest},
+    peer::Peer,
     peer_manager::TransportNotification,
     protocols::{
         direct_send::Message,
@@ -25,15 +24,9 @@ use crate::{
 };
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
-use diem_logger::prelude::*;
 use diem_rate_limiter::rate_limit::SharedBucket;
-use diem_types::PeerId;
-use futures::{
-    io::{AsyncRead, AsyncWrite},
-    stream::StreamExt,
-    FutureExt, SinkExt,
-};
-use std::{fmt::Debug, marker::PhantomData, sync::Arc, time::Duration};
+use futures::io::{AsyncRead, AsyncWrite};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -48,7 +41,7 @@ pub enum NetworkRequest {
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
 /// [`NetworkProvider`] in turn receives these notifications from the PeerManager and other
 /// [`protocols`](crate::protocols).
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NetworkNotification {
     /// A new RPC request has been received from peer.
     RecvRpc(InboundRpcRequest),
@@ -56,22 +49,16 @@ pub enum NetworkNotification {
     RecvMessage(Message),
 }
 
-pub struct NetworkProvider<TSocket> {
-    /// Pin the muxer type corresponding to this NetworkProvider instance
-    phantom_socket: PhantomData<TSocket>,
-}
+pub struct NetworkProvider;
 
-impl<TSocket> NetworkProvider<TSocket>
-where
-    TSocket: AsyncRead + AsyncWrite + Send + 'static,
-{
-    pub fn start(
+impl NetworkProvider {
+    pub fn start<TSocket>(
         network_context: Arc<NetworkContext>,
         executor: Handle,
         connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
-        max_concurrent_reqs: usize,
-        max_concurrent_notifs: usize,
+        _max_concurrent_reqs: usize,
+        _max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
         inbound_rate_limiter: Option<SharedBucket>,
@@ -79,25 +66,30 @@ where
     ) -> (
         diem_channel::Sender<ProtocolId, NetworkRequest>,
         diem_channel::Receiver<ProtocolId, NetworkNotification>,
-    ) {
-        let peer_id = connection.metadata.remote_peer_id;
-
-        // Setup and start Peer actor.
-        let (peer_reqs_tx, peer_reqs_rx) =
-            channel::new(channel_size, &counters::PENDING_PEER_REQUESTS);
-        let (peer_notifs_tx, peer_notifs_rx) =
-            channel::new(channel_size, &counters::PENDING_PEER_NETWORK_NOTIFICATIONS);
-        let peer_handle = PeerHandle::new(
-            network_context.clone(),
-            connection.metadata.clone(),
-            peer_reqs_tx.clone(),
+    )
+    where
+        TSocket: AsyncRead + AsyncWrite + Send + 'static,
+    {
+        // TODO: Add label for peer.
+        let (network_reqs_tx, network_reqs_rx) = diem_channel::new(
+            QueueStyle::FIFO,
+            channel_size,
+            Some(&counters::PENDING_NETWORK_REQUESTS),
         );
+        // TODO: Add label for peer.
+        let (network_notifs_tx, network_notifs_rx) = diem_channel::new(
+            QueueStyle::FIFO,
+            channel_size,
+            Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
+        );
+
         let peer = Peer::new(
             Arc::clone(&network_context),
             executor.clone(),
             connection,
-            peer_reqs_rx,
-            peer_notifs_tx,
+            connection_notifs_tx,
+            network_reqs_rx,
+            network_notifs_tx,
             Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
             constants::MAX_CONCURRENT_INBOUND_RPCS,
             constants::MAX_CONCURRENT_OUTBOUND_RPCS,
@@ -107,133 +99,6 @@ where
         );
         executor.spawn(peer.start());
 
-        // TODO: Add label for peer.
-        let (requests_tx, requests_rx) = diem_channel::new(
-            QueueStyle::FIFO,
-            channel_size,
-            Some(&counters::PENDING_NETWORK_REQUESTS),
-        );
-        // TODO: Add label for peer.
-        let (notifs_tx, notifs_rx) = diem_channel::new(
-            QueueStyle::FIFO,
-            channel_size,
-            Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
-        );
-
-        // Handle notifications from Peer actor.
-        let inbound_notifs_tx = notifs_tx;
-        let connection_notifs_tx = connection_notifs_tx;
-        executor.spawn(
-            peer_notifs_rx.for_each_concurrent(max_concurrent_notifs, move |notif| {
-                Self::handle_peer_notification(
-                    notif,
-                    inbound_notifs_tx.clone(),
-                    connection_notifs_tx.clone(),
-                )
-            }),
-        );
-
-        // Handle network requests.
-        let f = async move {
-            requests_rx
-                .for_each_concurrent(max_concurrent_reqs, move |req| {
-                    Self::handle_network_request(peer_id, req, peer_reqs_tx.clone())
-                })
-                .then(|_| async move {
-                    info!(
-                        NetworkSchema::new(&network_context).remote_peer(&peer_id),
-                        "{} Network peer actor terminating for peer: {}",
-                        network_context,
-                        peer_id.short_str()
-                    );
-                    // Cleanly close connection with peer.
-                    let mut peer_handle = peer_handle;
-                    peer_handle.disconnect().await;
-                })
-                .await;
-        };
-        executor.spawn(f);
-
-        (requests_tx, notifs_rx)
-    }
-
-    async fn handle_network_request(
-        peer_id: PeerId,
-        req: NetworkRequest,
-        mut peer_reqs_tx: channel::Sender<PeerRequest>,
-    ) {
-        match req {
-            NetworkRequest::SendRpc(req) => {
-                if let Err(e) = peer_reqs_tx.send(PeerRequest::SendRpc(req)).await {
-                    error!(
-                        remote_peer = peer_id,
-                        error = %e,
-                        "Failed to send RPC to peer: {}. Error: {}",
-                        peer_id.short_str(),
-                        e
-                    );
-                }
-            }
-            NetworkRequest::SendMessage(msg) => {
-                if let Err(e) = peer_reqs_tx.send(PeerRequest::SendDirectSend(msg)).await {
-                    error!(
-                        remote_peer = peer_id,
-                        error = %e,
-                        "Failed to send DirectSend to peer: {}. Error: {}",
-                        peer_id.short_str(),
-                        e
-                    );
-                }
-            }
-        }
-    }
-
-    async fn handle_peer_notification(
-        notif: PeerNotification,
-        mut inbound_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
-        mut connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
-    ) {
-        match notif {
-            PeerNotification::PeerDisconnected(conn_info, reason) => {
-                // Send notification to PeerManager. PeerManager is responsible for initiating
-                // cleanup.
-                if let Err(err) = connection_notifs_tx
-                    .send(TransportNotification::Disconnected(conn_info, reason))
-                    .await
-                {
-                    warn!(
-                        error = err.to_string(),
-                        "Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}",
-                        err
-                    );
-                }
-            }
-            PeerNotification::RecvDirectSend(message) => {
-                let protocol_id = message.protocol_id;
-                let notif = NetworkNotification::RecvMessage(message);
-                if let Err(e) = inbound_notifs_tx.push(protocol_id, notif) {
-                    warn!(
-                        error = e.to_string(),
-                        "Failed to push RecvDirectSend to PeerManager. Error: {:?}", e
-                    );
-                }
-            }
-            PeerNotification::RecvRpc(request) => {
-                let protocol_id = request.protocol_id;
-                let notif = NetworkNotification::RecvRpc(request);
-                if let Err(e) = inbound_notifs_tx.push(protocol_id, notif) {
-                    warn!(
-                        error = e.to_string(),
-                        "Failed to push RecvRpc to PeerManager. Error: {:?}", e
-                    );
-                }
-            }
-            _ => {
-                warn!(
-                    "Unexpected notification received from Peer actor: {:?}",
-                    notif
-                );
-            }
-        }
+        (network_reqs_tx, network_notifs_rx)
     }
 }
