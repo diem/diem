@@ -9,14 +9,8 @@ use diem_logger::prelude::FileWriter;
 pub struct Node {
     pub config: NodeConfig,
     pub root_key: diem_crypto::ed25519::Ed25519PrivateKey,
-    node: diem_node::DiemHandle,
+    _node: diem_node::DiemHandle,
     _temp_dir: diem_temppath::TempPath,
-}
-
-impl Drop for Node {
-    fn drop(&mut self) {
-        self.node.shutdown();
-    }
 }
 
 impl Node {
@@ -53,7 +47,7 @@ impl Node {
         Ok(Self {
             root_key,
             config,
-            node,
+            _node: node,
             _temp_dir: temp_dir,
         })
     }
