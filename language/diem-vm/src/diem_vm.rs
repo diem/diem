@@ -161,7 +161,8 @@ impl DiemVMImpl {
         // The submitted transactions max gas units needs to be at least enough to cover the
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
-        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
+        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants)
+            .map(|gas| gas / gas_constants.gas_unit_scaling_factor);
         if txn_data.max_gas_amount().get() < min_txn_fee.get() {
             warn!(
                 *log_context,
