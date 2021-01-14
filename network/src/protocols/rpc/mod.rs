@@ -47,8 +47,8 @@ use crate::{
         self, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
         RESPONSE_LABEL, SENT_LABEL,
     },
-    interface::NetworkNotification,
     logging::NetworkSchema,
+    peer::PeerNotification,
     peer_manager::PeerManagerError,
     protocols::wire::messaging::v1::{
         NetworkMessage, Priority, RequestId, RpcRequest, RpcResponse,
@@ -194,7 +194,7 @@ impl InboundRpcs {
     /// Handle a new inbound `RpcRequest` message off the wire.
     pub fn handle_inbound_request(
         &mut self,
-        network_notifs_tx: &mut diem_channel::Sender<ProtocolId, NetworkNotification>,
+        peer_notifs_tx: &mut diem_channel::Sender<ProtocolId, PeerNotification>,
         request: RpcRequest,
     ) -> Result<(), RpcError> {
         let network_context = &self.network_context;
@@ -228,12 +228,12 @@ impl InboundRpcs {
 
         // Foward request to PeerManager for handling.
         let (response_tx, response_rx) = oneshot::channel();
-        let notif = NetworkNotification::RecvRpc(InboundRpcRequest {
+        let notif = PeerNotification::RecvRpc(InboundRpcRequest {
             protocol_id,
             data: Bytes::from(request.raw_request),
             res_tx: response_tx,
         });
-        if let Err(err) = network_notifs_tx.push(protocol_id, notif) {
+        if let Err(err) = peer_notifs_tx.push(protocol_id, notif) {
             counters::rpc_messages(network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
             return Err(err.into());
         }

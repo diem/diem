@@ -11,10 +11,10 @@
 //!  notification about new/lost Peers to the rest of the network stack.
 //!  * An actor responsible for dialing and listening for new connections.
 use crate::{
+    constants,
     counters::{self, FAILED_LABEL, SUCCEEDED_LABEL},
-    interface::{NetworkNotification, NetworkProvider, NetworkRequest},
     logging::*,
-    peer::DisconnectReason,
+    peer::{DisconnectReason, Peer, PeerNotification, PeerRequest},
     protocols::{
         direct_send::Message,
         rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
@@ -25,7 +25,7 @@ use crate::{
 };
 use anyhow::format_err;
 use bytes::Bytes;
-use channel::{self, diem_channel};
+use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_network_address::NetworkAddress;
@@ -253,7 +253,7 @@ where
         PeerId,
         (
             ConnectionMetadata,
-            diem_channel::Sender<ProtocolId, NetworkRequest>,
+            diem_channel::Sender<ProtocolId, PeerRequest>,
         ),
     >,
     /// Channel to receive requests from other actors.
@@ -587,10 +587,10 @@ where
                 };
             }
             ConnectionRequest::DisconnectPeer(peer_id, resp_tx) => {
-                // Send a CloseConnection request to NetworkProvider and drop the send end of the
-                // NetworkRequest channel.
+                // Send a CloseConnection request to Peer and drop the send end of the
+                // PeerRequest channel.
                 if let Some((conn_metadata, sender)) = self.active_peers.remove(&peer_id) {
-                    // This should trigger a disconnect.
+                    // This triggers a disconnect.
                     drop(sender);
                     // Add to outstanding disconnect requests.
                     self.outstanding_disconnect_requests
@@ -630,8 +630,7 @@ where
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 let protocol_id = msg.protocol_id;
                 if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) = sender.push(msg.protocol_id, NetworkRequest::SendMessage(msg))
-                    {
+                    if let Err(err) = sender.push(msg.protocol_id, PeerRequest::SendMessage(msg)) {
                         info!(
                             NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata),
                             protocol_id = %protocol_id,
@@ -653,7 +652,7 @@ where
             PeerManagerRequest::SendRpc(peer_id, req) => {
                 let protocol_id = req.protocol_id;
                 if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) = sender.push(req.protocol_id, NetworkRequest::SendRpc(req)) {
+                    if let Err(err) = sender.push(req.protocol_id, PeerRequest::SendRpc(req)) {
                         info!(
                             NetworkSchema::new(&self.network_context)
                                 .connection_metadata(conn_metadata),
@@ -780,23 +779,42 @@ where
         let inbound_rate_limiter = self.inbound_rate_limiters.bucket(ip_addr);
         let outbound_rate_limiter = self.outbound_rate_limiters.bucket(ip_addr);
 
-        // Initialize a new network stack for this connection.
-        let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
-            Arc::clone(&self.network_context),
+        // TODO: Add label for peer.
+        let (peer_reqs_tx, peer_reqs_rx) = diem_channel::new(
+            QueueStyle::FIFO,
+            self.channel_size,
+            Some(&counters::PENDING_NETWORK_REQUESTS),
+        );
+        // TODO: Add label for peer.
+        let (peer_notifs_tx, peer_notifs_rx) = diem_channel::new(
+            QueueStyle::FIFO,
+            self.channel_size,
+            Some(&counters::PENDING_NETWORK_NOTIFICATIONS),
+        );
+
+        // Initialize a new Peer actor for this connection.
+        let peer = Peer::new(
+            self.network_context.clone(),
             self.executor.clone(),
             connection,
             self.transport_notifs_tx.clone(),
-            self.channel_size,
+            peer_reqs_rx,
+            peer_notifs_tx,
+            Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
+            constants::MAX_CONCURRENT_INBOUND_RPCS,
+            constants::MAX_CONCURRENT_OUTBOUND_RPCS,
             self.max_frame_size,
             Some(inbound_rate_limiter),
             Some(outbound_rate_limiter),
         );
+        self.executor.spawn(peer.start());
+
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.
-        self.spawn_peer_network_events_handler(peer_id, network_notifs_rx);
-        // Save NetworkRequest sender to `active_peers`.
+        self.spawn_peer_network_events_handler(peer_id, peer_notifs_rx);
+        // Save PeerRequest sender to `active_peers`.
         self.active_peers
-            .insert(peer_id, (conn_meta.clone(), network_reqs_tx));
+            .insert(peer_id, (conn_meta.clone(), peer_reqs_tx));
         // Send NewPeer notification to connection event handlers.
         if send_new_peer_notification {
             let notif = ConnectionNotification::NewPeer(conn_meta, self.network_context.clone());
@@ -826,7 +844,7 @@ where
     fn spawn_peer_network_events_handler(
         &self,
         peer_id: PeerId,
-        network_events: diem_channel::Receiver<ProtocolId, NetworkNotification>,
+        network_events: diem_channel::Receiver<ProtocolId, PeerNotification>,
     ) {
         let mut upstream_handlers = self.upstream_handlers.clone();
         let network_context = self.network_context.clone();
@@ -846,7 +864,7 @@ where
 
     fn handle_inbound_event(
         network_context: Arc<NetworkContext>,
-        inbound_event: NetworkNotification,
+        inbound_event: PeerNotification,
         peer_id: PeerId,
         upstream_handlers: &mut HashMap<
             ProtocolId,
@@ -854,7 +872,7 @@ where
         >,
     ) {
         match inbound_event {
-            NetworkNotification::RecvMessage(msg) => {
+            PeerNotification::RecvMessage(msg) => {
                 let protocol_id = msg.protocol_id;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol_id) {
                     // Send over diem channel for fairness.
@@ -880,7 +898,7 @@ where
                     );
                 }
             }
-            NetworkNotification::RecvRpc(rpc_req) => {
+            PeerNotification::RecvRpc(rpc_req) => {
                 let protocol_id = rpc_req.protocol_id;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol_id) {
                     // Send over diem channel for fairness.

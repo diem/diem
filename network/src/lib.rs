@@ -6,13 +6,10 @@
 #![recursion_limit = "1024"]
 // </Black magic>
 
-pub use interface::NetworkProvider;
-
 pub mod connectivity_manager;
 pub mod constants;
 pub mod counters;
 pub mod error;
-pub mod interface;
 pub mod logging;
 pub mod noise;
 pub mod peer;

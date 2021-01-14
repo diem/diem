@@ -9,12 +9,11 @@
 
 use crate::{
     counters::{self, RECEIVED_LABEL, SENT_LABEL},
-    interface::{NetworkNotification, NetworkRequest},
     logging::NetworkSchema,
     peer_manager::{PeerManagerError, TransportNotification},
     protocols::{
         direct_send::Message,
-        rpc::{InboundRpcs, OutboundRpcs},
+        rpc::{InboundRpcRequest, InboundRpcs, OutboundRpcRequest, OutboundRpcs},
         wire::messaging::v1::{
             DirectSendMsg, ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
             Priority, ReadError, WriteError,
@@ -49,6 +48,24 @@ mod test;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
+/// Requests [`Peer`] receives from the `PeerManager`.
+#[derive(Debug)]
+pub enum PeerRequest {
+    /// Send an RPC request to peer.
+    SendRpc(OutboundRpcRequest),
+    /// Fire-and-forget style message send to peer.
+    SendMessage(Message),
+}
+
+/// Notifications that [`Peer`] sends to the `PeerManager`.
+#[derive(Debug, PartialEq)]
+pub enum PeerNotification {
+    /// A new RPC request has been received from peer.
+    RecvRpc(InboundRpcRequest),
+    /// A new message has been received from peer.
+    RecvMessage(Message),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisconnectReason {
     Requested,
@@ -82,9 +99,9 @@ pub struct Peer<TSocket> {
     /// Channel to notify PeerManager that we've disconnected.
     connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
     /// Channel to receive requests from PeerManager to send messages and rpcs.
-    network_reqs_rx: diem_channel::Receiver<ProtocolId, NetworkRequest>,
+    peer_reqs_rx: diem_channel::Receiver<ProtocolId, PeerRequest>,
     /// Channel to notifty PeerManager of new inbound messages and rpcs.
-    network_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
+    peer_notifs_tx: diem_channel::Sender<ProtocolId, PeerNotification>,
     /// Inbound rpc request queue for handling requests from remote peer.
     inbound_rpcs: InboundRpcs,
     /// Outbound rpc request queue for sending requests to remote peer and handling responses.
@@ -109,8 +126,8 @@ where
         executor: Handle,
         connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
-        network_reqs_rx: diem_channel::Receiver<ProtocolId, NetworkRequest>,
-        network_notifs_tx: diem_channel::Sender<ProtocolId, NetworkNotification>,
+        peer_reqs_rx: diem_channel::Receiver<ProtocolId, PeerRequest>,
+        peer_notifs_tx: diem_channel::Sender<ProtocolId, PeerNotification>,
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
         max_concurrent_outbound_rpcs: u32,
@@ -129,8 +146,8 @@ where
             connection_metadata,
             connection: Some(socket),
             connection_notifs_tx,
-            network_reqs_rx,
-            network_notifs_tx,
+            peer_reqs_rx,
+            peer_notifs_tx,
             inbound_rpcs: InboundRpcs::new(
                 network_context.clone(),
                 remote_peer_id,
@@ -198,11 +215,11 @@ where
 
             futures::select! {
                 // Handle a new outbound request from the PeerManager.
-                maybe_request = self.network_reqs_rx.next() => {
+                maybe_request = self.peer_reqs_rx.next() => {
                     match maybe_request {
                         Some(request) => self.handle_outbound_request(request, &mut write_reqs_tx).await,
                         // The PeerManager is requesting this connection to close
-                        // by dropping the corresponding network_reqs_tx handle.
+                        // by dropping the corresponding peer_reqs_tx handle.
                         None => self.shutdown(DisconnectReason::Requested),
                     }
                 },
@@ -409,7 +426,7 @@ where
             NetworkMessage::RpcRequest(request) => {
                 if let Err(err) = self
                     .inbound_rpcs
-                    .handle_inbound_request(&mut self.network_notifs_tx, request)
+                    .handle_inbound_request(&mut self.peer_notifs_tx, request)
                 {
                     warn!(
                         NetworkSchema::new(&self.network_context)
@@ -449,12 +466,12 @@ where
         counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
             .inc_by(data.len() as u64);
 
-        let notif = NetworkNotification::RecvMessage(Message {
+        let notif = PeerNotification::RecvMessage(Message {
             protocol_id,
             mdata: Bytes::from(data),
         });
 
-        if let Err(err) = self.network_notifs_tx.push(protocol_id, notif) {
+        if let Err(err) = self.peer_notifs_tx.push(protocol_id, notif) {
             warn!(
                 NetworkSchema::new(&self.network_context),
                 error = ?err,
@@ -467,21 +484,21 @@ where
 
     async fn handle_outbound_request<'a>(
         &'a mut self,
-        request: NetworkRequest,
+        request: PeerRequest,
         write_reqs_tx: &mut channel::Sender<(
             NetworkMessage,
             oneshot::Sender<Result<(), PeerManagerError>>,
         )>,
     ) {
         trace!(
-            "Peer {} NetworkRequest::{:?}",
+            "Peer {} PeerRequest::{:?}",
             self.remote_peer_id().short_str(),
             request
         );
         match request {
             // To send an outbound DirectSendMsg, we just bump some counters and
             // push it onto our outbound writer queue.
-            NetworkRequest::SendMessage(message) => {
+            PeerRequest::SendMessage(message) => {
                 let message_len = message.mdata.len();
                 let protocol_id = message.protocol_id;
                 let message = NetworkMessage::DirectSendMsg(DirectSendMsg {
@@ -510,7 +527,7 @@ where
                     }
                 }
             }
-            NetworkRequest::SendRpc(request) => {
+            PeerRequest::SendRpc(request) => {
                 let protocol_id = request.protocol_id;
                 if let Err(e) = self
                     .outbound_rpcs
