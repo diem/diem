@@ -21,7 +21,6 @@ use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
-    time::Instant,
 };
 use subscription_service::ReconfigSubscription;
 
@@ -137,7 +136,7 @@ fn extract_updates(
 }
 
 impl ConfigurationChangeListener {
-    /// Creates a new ConfigurationListener
+    /// Creates a new ConfigurationChangeListener
     pub fn new(
         network_context: Arc<NetworkContext>,
         encryptor: Encryptor,
@@ -152,9 +151,16 @@ impl ConfigurationChangeListener {
         }
     }
 
-    /// Processes a received OnChainConfigPayload.  Depending on role (Validator or FullNode), parses
+    async fn next_reconfig_event(&mut self) -> Option<OnChainConfigPayload> {
+        let _idle_timer = EVENT_PROCESSING_LOOP_IDLE_DURATION_S.start_timer();
+        self.reconfig_events.next().await
+    }
+
+    /// Processes a received OnChainConfigPayload. Depending on role (Validator or FullNode), parses
     /// the appropriate configuration changes and passes it to the ConnectionManager channel.
     async fn process_payload(&mut self, payload: OnChainConfigPayload) {
+        let _process_timer = EVENT_PROCESSING_LOOP_BUSY_DURATION_S.start_timer();
+
         let node_set: ValidatorSet = payload
             .get()
             .expect("failed to get ValidatorSet from payload");
@@ -192,22 +198,20 @@ impl ConfigurationChangeListener {
         }
     }
 
-    /// Starts the listener to wait on reconfiguration events.  Creates an infinite loop.
+    /// Starts the listener to wait on reconfiguration events.
     pub async fn start(mut self) {
         info!(
             NetworkSchema::new(&self.network_context),
             "{} Starting OnChain Discovery actor", self.network_context
         );
-        loop {
-            let start_idle_time = Instant::now();
-            let payload = self.reconfig_events.select_next_some().await;
-            let idle_duration = start_idle_time.elapsed();
-            let start_process_time = Instant::now();
-            self.process_payload(payload).await;
-            let process_duration = start_process_time.elapsed();
 
-            EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
-            EVENT_PROCESSING_LOOP_BUSY_DURATION_S.observe_duration(process_duration);
+        while let Some(payload) = self.next_reconfig_event().await {
+            self.process_payload(payload).await;
         }
+
+        warn!(
+            NetworkSchema::new(&self.network_context),
+            "{} OnChain Discovery actor terminated", self.network_context,
+        );
     }
 }
