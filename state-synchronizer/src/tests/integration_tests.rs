@@ -48,7 +48,7 @@ use network_builder::builder::NetworkBuilder;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    cell::{RefCell, RefMut},
+    cell::{Ref, RefCell},
     collections::HashMap,
     ops::DerefMut,
     sync::{
@@ -89,14 +89,14 @@ impl SynchronizerPeer {
             .write()
             .commit_new_txns(num_txns);
         let mempool = self.mempool.as_ref().unwrap();
-        assert!(mempool.add_txns(signed_txns.clone()).is_ok());
+        mempool.add_txns(signed_txns.clone()).unwrap();
 
         // Run StateSyncClient::commit on a tokio runtime to support tokio::timeout
         // in commit().
-        assert!(Runtime::new()
+        Runtime::new()
             .unwrap()
             .block_on(self.client.as_ref().unwrap().commit(committed_txns, vec![]))
-            .is_ok());
+            .unwrap();
         let mempool_txns = mempool.read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {
             assert!(!mempool_txns.contains(txn));
@@ -113,6 +113,18 @@ impl SynchronizerPeer {
             .unwrap()
             .read()
             .highest_local_li()
+    }
+
+    // Moves to the next epoch. Note that other peers are not going to be able to discover
+    // their new signers: they're going to learn about the new epoch public key through state
+    // synchronization. Private keys are discovered separately.
+    fn move_to_next_epoch(&self, validator_infos: Vec<ValidatorInfo>, validator_index: usize) {
+        let (validator_set, validator_signers) = create_new_validator_set(validator_infos);
+        self.storage_proxy
+            .as_ref()
+            .unwrap()
+            .write()
+            .move_to_next_epoch(validator_signers[validator_index].clone(), validator_set);
     }
 
     fn sync_to(&self, target: LedgerInfoWithSignatures) {
@@ -144,37 +156,8 @@ struct SynchronizerEnv {
 }
 
 impl SynchronizerEnv {
-    // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
-    // their new signers: they're going to learn about the new epoch public key through state
-    // synchronization, but private keys are discovered separately.
-    pub fn move_to_next_epoch(&self) {
-        let num_peers = self.peers.len();
-        let (signers, _verifier) = random_validator_verifier(num_peers, None, true);
-        let new_keys = self
-            .peers
-            .iter()
-            .enumerate()
-            .map(|(idx, peer)| {
-                let peer = peer.borrow();
-                ValidatorInfo::new(
-                    signers[idx].author(),
-                    peer.public_key.consensus_voting_power(),
-                    peer.public_key.config().clone(),
-                )
-            })
-            .collect::<Vec<ValidatorInfo>>();
-        let validator_set = ValidatorSet::new(new_keys);
-        self.peers[0]
-            .borrow()
-            .storage_proxy
-            .as_ref()
-            .unwrap()
-            .write()
-            .move_to_next_epoch(signers[0].clone(), validator_set);
-    }
-
-    fn get_synchronizer_peer(&self, index: usize) -> RefMut<SynchronizerPeer> {
-        self.peers[index].borrow_mut()
+    fn get_synchronizer_peer(&self, index: usize) -> Ref<SynchronizerPeer> {
+        self.peers[index].borrow()
     }
 
     fn new(num_peers: usize) -> Self {
@@ -559,6 +542,25 @@ fn initial_setup(
     (signers, validator_infos, network_keys, network_addrs)
 }
 
+pub fn create_new_validator_set(
+    validator_infos: Vec<ValidatorInfo>,
+) -> (ValidatorSet, Vec<ValidatorSigner>) {
+    let num_validators = validator_infos.len();
+    let (signers, _) = random_validator_verifier(num_validators, None, true);
+    let new_validator_infos = validator_infos
+        .iter()
+        .enumerate()
+        .map(|(index, validator_info)| {
+            ValidatorInfo::new(
+                signers[index].author(),
+                validator_info.consensus_voting_power(),
+                validator_info.config().clone(),
+            )
+        })
+        .collect::<Vec<ValidatorInfo>>();
+    (ValidatorSet::new(new_validator_infos), signers)
+}
+
 fn setup_state_sync_config(
     index: usize,
     role: RoleType,
@@ -681,7 +683,7 @@ fn test_request_timeout() {
     );
 
     let validator_0 = env.get_synchronizer_peer(0);
-    let validator_1 = env.get_synchronizer_peer(0);
+    let validator_1 = env.get_synchronizer_peer(1);
 
     validator_0.commit(1);
     validator_1.sync_to(validator_0.latest_li());
@@ -714,54 +716,39 @@ fn catch_up_through_epochs_validators() {
     env.start_validator_peer(0, false);
     env.start_validator_peer(1, false);
 
+    let validator_0 = env.get_synchronizer_peer(0);
+    let validator_1 = env.get_synchronizer_peer(1);
+
     // catch up to the next epoch starting from the middle of the current one
-    env.get_synchronizer_peer(0).commit(20);
-    env.get_synchronizer_peer(1)
-        .sync_to(env.get_synchronizer_peer(0).latest_li());
-    env.get_synchronizer_peer(0).commit(40);
+    validator_0.commit(20);
+    validator_1.sync_to(validator_0.latest_li());
+    validator_0.commit(40);
 
-    env.move_to_next_epoch();
+    let validator_infos = vec![
+        validator_0.public_key.clone(),
+        validator_1.public_key.clone(),
+    ];
+    validator_0.move_to_next_epoch(validator_infos, 0);
 
-    env.get_synchronizer_peer(0).commit(100);
-    env.get_synchronizer_peer(1)
-        .sync_to(env.get_synchronizer_peer(0).latest_li());
-    assert_eq!(
-        env.get_synchronizer_peer(1)
-            .latest_li()
-            .ledger_info()
-            .version(),
-        100
-    );
-    assert_eq!(
-        env.get_synchronizer_peer(1)
-            .latest_li()
-            .ledger_info()
-            .epoch(),
-        2
-    );
+    validator_0.commit(100);
+    validator_1.sync_to(validator_0.latest_li());
+    assert_eq!(validator_1.latest_li().ledger_info().version(), 100);
+    assert_eq!(validator_1.latest_li().ledger_info().epoch(), 2);
 
     // catch up through multiple epochs
     for epoch in 2..10 {
-        env.get_synchronizer_peer(0).commit(epoch * 100);
-        env.move_to_next_epoch();
+        validator_0.commit(epoch * 100);
+
+        let validator_infos = vec![
+            validator_0.public_key.clone(),
+            validator_1.public_key.clone(),
+        ];
+        validator_0.move_to_next_epoch(validator_infos, 0);
     }
-    env.get_synchronizer_peer(0).commit(950); // At this point peer 0 is at epoch 10 and version 950
-    env.get_synchronizer_peer(1)
-        .sync_to(env.get_synchronizer_peer(0).latest_li());
-    assert_eq!(
-        env.get_synchronizer_peer(1)
-            .latest_li()
-            .ledger_info()
-            .version(),
-        950
-    );
-    assert_eq!(
-        env.get_synchronizer_peer(1)
-            .latest_li()
-            .ledger_info()
-            .epoch(),
-        10
-    );
+    validator_0.commit(950); // At this point peer 0 is at epoch 10 and version 950
+    validator_1.sync_to(validator_0.latest_li());
+    assert_eq!(validator_1.latest_li().ledger_info().version(), 950);
+    assert_eq!(validator_1.latest_li().ledger_info().epoch(), 10);
 }
 
 #[test]
@@ -769,34 +756,29 @@ fn catch_up_through_epochs_full_node() {
     let mut env = SynchronizerEnv::new(3);
 
     env.start_validator_peer(0, false);
+    let validator_0 = env.get_synchronizer_peer(0);
 
     // catch up through multiple epochs
     for epoch in 1..10 {
-        env.get_synchronizer_peer(0).commit(epoch * 100);
-        env.move_to_next_epoch();
+        validator_0.commit(epoch * 100);
+        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
     }
-    env.get_synchronizer_peer(0).commit(950); // At this point validator_0 is at epoch 10 and version 950
+    validator_0.commit(950); // At this point validator_0 is at epoch 10 and version 950
+    drop(validator_0);
 
     env.start_fullnode_peer(1, false);
-    assert!(env.get_synchronizer_peer(1).wait_for_version(950, None));
-    assert_eq!(
-        env.get_synchronizer_peer(1)
-            .latest_li()
-            .ledger_info()
-            .epoch(),
-        10
-    );
+    let fullnode = env.get_synchronizer_peer(1);
+
+    assert!(fullnode.wait_for_version(950, None));
+    assert_eq!(fullnode.latest_li().ledger_info().epoch(), 10);
+    drop(fullnode);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
     env.start_fullnode_peer(2, false);
-    assert!(env.get_synchronizer_peer(2).wait_for_version(950, None));
-    assert_eq!(
-        env.get_synchronizer_peer(2)
-            .latest_li()
-            .ledger_info()
-            .epoch(),
-        10
-    );
+    let fullnode = env.get_synchronizer_peer(2);
+
+    assert!(fullnode.wait_for_version(950, None));
+    assert_eq!(fullnode.latest_li().ledger_info().epoch(), 10);
 }
 
 #[test]
@@ -804,23 +786,25 @@ fn catch_up_with_waypoints() {
     let mut env = SynchronizerEnv::new(3);
 
     env.start_validator_peer(0, false);
+    let validator_0 = env.get_synchronizer_peer(0);
 
     let mut curr_version = 0;
     for _ in 1..10 {
         curr_version += 100;
-        env.get_synchronizer_peer(0).commit(curr_version);
-        env.move_to_next_epoch();
+        validator_0.commit(curr_version);
+
+        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
 
         curr_version += 400;
         // this creates an epoch that spans >1 chunk (chunk_size = 250)
-        env.get_synchronizer_peer(0).commit(curr_version);
-        env.move_to_next_epoch();
+        validator_0.commit(curr_version);
+
+        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
     }
-    env.get_synchronizer_peer(0).commit(5250); // At this point validator is at epoch 19 and version 5250
+    validator_0.commit(5250); // At this point validator is at epoch 19 and version 5250
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
-    let waypoint_li = env
-        .get_synchronizer_peer(0)
+    let waypoint_li = validator_0
         .storage_proxy
         .as_ref()
         .unwrap()
@@ -828,6 +812,7 @@ fn catch_up_with_waypoints() {
         .get_epoch_ending_ledger_info(3500)
         .unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
+    drop(validator_0);
 
     env.start_synchronizer_peer(
         1,
@@ -881,24 +866,22 @@ fn test_lagging_upstream_long_poll() {
     // to clone state to the other nodes
     env.start_validator_peer(3, true);
 
-    // network handles for each node
-    let validator_peer_id = env
-        .get_synchronizer_peer(0)
-        .get_peer_id(VALIDATOR_NETWORK.clone());
-    let full_node_vfn_network_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(VFN_NETWORK.clone());
-    let full_node_failover_network_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(PFN_NETWORK.clone());
-    let failover_fn_vfn_network_peer_id = env
-        .get_synchronizer_peer(2)
-        .get_peer_id(VFN_NETWORK.clone());
-    let failover_fn_peer_id = env
-        .get_synchronizer_peer(2)
-        .get_peer_id(PFN_NETWORK.clone());
+    let validator_0 = env.get_synchronizer_peer(0);
+    let fullnode_0 = env.get_synchronizer_peer(1);
+    let fullnode_1 = env.get_synchronizer_peer(2);
 
-    env.get_synchronizer_peer(0).commit(400);
+    // network handles for each node
+    let validator_peer_id = validator_0.get_peer_id(VALIDATOR_NETWORK.clone());
+    let full_node_vfn_network_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
+    let full_node_failover_network_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let failover_fn_vfn_network_peer_id = fullnode_1.get_peer_id(VFN_NETWORK.clone());
+    let failover_fn_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+
+    validator_0.commit(400);
+
+    drop(validator_0);
+    drop(fullnode_0);
+    drop(fullnode_1);
 
     // validator discovers FN
     env.send_peer_event(
@@ -1109,25 +1092,25 @@ fn test_fn_failover() {
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
 
+    let validator = env.get_synchronizer_peer(0);
+    let fullnode_0 = env.get_synchronizer_peer(1);
+    let fullnode_1 = env.get_synchronizer_peer(2);
+    let fullnode_2 = env.get_synchronizer_peer(3);
+    let fullnode_3 = env.get_synchronizer_peer(4);
+
     // connect everyone
-    let validator_peer_id = env
-        .get_synchronizer_peer(0)
-        .get_peer_id(VFN_NETWORK.clone());
-    let fn_0_vfn_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(VFN_NETWORK.clone());
-    let fn_0_public_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(PFN_NETWORK.clone());
-    let fn_1_peer_id = env
-        .get_synchronizer_peer(2)
-        .get_peer_id(PFN_NETWORK.clone());
-    let fn_2_peer_id = env
-        .get_synchronizer_peer(3)
-        .get_peer_id(PFN_NETWORK.clone());
-    let fn_3_peer_id = env
-        .get_synchronizer_peer(4)
-        .get_peer_id(PFN_NETWORK.clone());
+    let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
+    let fn_0_vfn_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
+    let fn_0_public_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let fn_1_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+    let fn_2_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+    let fn_3_peer_id = fullnode_3.get_peer_id(PFN_NETWORK.clone());
+
+    drop(validator);
+    drop(fullnode_0);
+    drop(fullnode_1);
+    drop(fullnode_2);
+    drop(fullnode_3);
 
     // vfn network:
     // validator discovers fn_0
@@ -1340,25 +1323,23 @@ fn test_multicast_failover() {
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
 
+    let validator = env.get_synchronizer_peer(0);
+    let fullnode_0 = env.get_synchronizer_peer(1);
+    let fullnode_1 = env.get_synchronizer_peer(2);
+    let fullnode_2 = env.get_synchronizer_peer(3);
+
     // connect everyone
-    let validator_peer_id = env
-        .get_synchronizer_peer(0)
-        .get_peer_id(VFN_NETWORK.clone());
-    let fn_0_vfn_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(VFN_NETWORK.clone());
-    let fn_0_second_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(VFN_NETWORK_2.clone());
-    let fn_0_public_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(PFN_NETWORK.clone());
-    let fn_1_peer_id = env
-        .get_synchronizer_peer(2)
-        .get_peer_id(VFN_NETWORK_2.clone());
-    let fn_2_peer_id = env
-        .get_synchronizer_peer(3)
-        .get_peer_id(PFN_NETWORK.clone());
+    let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
+    let fn_0_vfn_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
+    let fn_0_second_peer_id = fullnode_0.get_peer_id(VFN_NETWORK_2.clone());
+    let fn_0_public_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let fn_1_peer_id = fullnode_1.get_peer_id(VFN_NETWORK_2.clone());
+    let fn_2_peer_id = fullnode_2.get_peer_id(PFN_NETWORK.clone());
+
+    drop(validator);
+    drop(fullnode_0);
+    drop(fullnode_1);
+    drop(fullnode_2);
 
     // vfn network:
     // validator discovers fn_0
