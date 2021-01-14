@@ -28,4 +28,11 @@ Our technical papers take a closer look at some of Diem’s core components. Cho
     title="The Diem Blockchain"
     to="/docs/technical-papers/the-diem-blockchain-paper"
   />
+  <SimpleTextCard
+    icon="img/placeholder.svg"
+    iconDark="img/placeholder-dark.svg"
+    overlay="Learn more about how the Jellyfish Merkle Tree optimizes computation costs and storage footprints for the Diem Blockchain"
+    title="Jellyfish Merkle Tree"
+    to="/docs/technical-papers/jellyfish-merkle-tree-paper"
+  />
 </CardsWrapper>
