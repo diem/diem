@@ -1,0 +1,11 @@
+Command `publish src1 -v`:
+Compiling Move modules...
+Found and compiled 4 modules
+Publishing a new module 00000000000000000000000000000042::A
+Publishing a new module 00000000000000000000000000000042::B
+Publishing a new module 00000000000000000000000000000042::C
+Publishing a new module 00000000000000000000000000000042::D
+Command `publish src2 -v`:
+Compiling Move modules...
+Found and compiled 1 modules
+Publishing failed with unexpected error CYCLIC_MODULE_DEPENDENCY
