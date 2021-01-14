@@ -158,7 +158,6 @@ impl MockStorage {
 
     // Generate new dummy txns and updates the LI
     // with the version corresponding to the new transactions, signed by this storage signer.
-    #[cfg(test)]
     pub fn commit_new_txns(&mut self, num_txns: u64) -> (Vec<Transaction>, Vec<SignedTransaction>) {
         let mut committed_txns = vec![];
         let mut signed_txns = vec![];
@@ -174,7 +173,6 @@ impl MockStorage {
         (committed_txns, signed_txns)
     }
 
-    #[cfg(test)]
     fn gen_mock_user_txn() -> Transaction {
         let sender = AccountAddress::random();
         let receiver = AuthenticationKey::random();
@@ -195,7 +193,6 @@ impl MockStorage {
     }
 
     // add the LI to the current highest version and sign it
-    #[cfg(test)]
     fn add_li(&mut self, validator_set: Option<ValidatorSet>) {
         let epoch_state = validator_set.map(|set| EpochState {
             epoch: self.epoch_num() + 1,
@@ -227,7 +224,6 @@ impl MockStorage {
     // just adding a new LedgerInfo).
     // The validator set is different only in the consensus public / private keys, network data
     // remains the same.
-    #[cfg(test)]
     pub fn move_to_next_epoch(&mut self, signer: ValidatorSigner, validator_set: ValidatorSet) {
         self.add_li(Some(validator_set));
         self.epoch_num += 1;
