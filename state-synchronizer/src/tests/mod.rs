@@ -7,8 +7,6 @@ mod integration_tests;
 mod mock_executor_proxy;
 #[cfg(test)]
 mod mock_storage;
-#[cfg(test)]
-mod on_chain_config;
 
 #[cfg(any(feature = "fuzzing", test))]
 pub mod fuzzing;
