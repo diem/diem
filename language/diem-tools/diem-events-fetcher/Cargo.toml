@@ -16,7 +16,7 @@ anyhow = "1.0.38"
 hex = "0.4.2"
 reqwest = { version = "0.10.10", features = ["blocking", "json"] }
 structopt = "0.3.21"
-futures = "0.3.9"
+futures = "0.3.10"
 tokio = { version = "0.2.22", features = ["full"] }
 
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
