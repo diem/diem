@@ -1,0 +1,5 @@
+error: ERROR
+ --> $DIR/compile-fail-2.rs:1:1
+  |
+1 | compile_error!("ERROR");
+  | ^^^^^^^^^^^^^^^^^^^^^^^^

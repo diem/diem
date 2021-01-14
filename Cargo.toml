@@ -197,3 +197,6 @@ debug = true
 # Build guppy in opt mode so that x commands are faster.
 [profile.dev.package.guppy]
 opt-level = 3
+
+[patch.crates-io]
+trybuild = { path = "trybuild" }
