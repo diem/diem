@@ -97,8 +97,6 @@ pub fn fuzz(data: &[u8]) {
     let connection = Connection { socket, metadata };
 
     let (connection_notifs_tx, connection_notifs_rx) = channel::new_test(8);
-    let max_concurrent_reqs = 8;
-    let max_concurrent_notifs = 8;
     let channel_size = 8;
 
     // Spin up a new `Peer` actor through the `NetworkProvider` interface.
@@ -107,8 +105,6 @@ pub fn fuzz(data: &[u8]) {
         executor,
         connection,
         connection_notifs_tx,
-        max_concurrent_reqs,
-        max_concurrent_notifs,
         channel_size,
         MAX_FRAME_SIZE,
         None,

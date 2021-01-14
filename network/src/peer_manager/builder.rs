@@ -111,7 +111,6 @@ struct PeerManagerContext {
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
     max_concurrent_network_reqs: usize,
-    max_concurrent_network_notifs: usize,
     channel_size: usize,
     inbound_connection_limit: usize,
 }
@@ -130,7 +129,6 @@ impl PeerManagerContext {
         connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         channel_size: usize,
         inbound_connection_limit: usize,
     ) -> Self {
@@ -144,7 +142,6 @@ impl PeerManagerContext {
             connection_event_handlers,
 
             max_concurrent_network_reqs,
-            max_concurrent_network_notifs,
             channel_size,
             inbound_connection_limit,
         }
@@ -206,7 +203,6 @@ impl PeerManagerBuilder {
         authentication_mode: AuthenticationMode,
         channel_size: usize,
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
@@ -240,7 +236,6 @@ impl PeerManagerBuilder {
                 HashMap::new(),
                 Vec::new(),
                 max_concurrent_network_reqs,
-                max_concurrent_network_notifs,
                 channel_size,
                 inbound_connection_limit,
             )),
@@ -374,7 +369,6 @@ impl PeerManagerBuilder {
             pm_context.upstream_handlers,
             pm_context.connection_event_handlers,
             pm_context.max_concurrent_network_reqs,
-            pm_context.max_concurrent_network_notifs,
             pm_context.channel_size,
             self.max_frame_size,
             pm_context.inbound_connection_limit,

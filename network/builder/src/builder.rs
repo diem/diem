@@ -13,9 +13,9 @@ use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
         DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType, CONNECTION_BACKOFF_BASE,
-        CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_NOTIFS, MAX_CONCURRENT_NETWORK_REQS,
-        MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
-        MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
+        CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS,
+        MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS,
+        NETWORK_CHANNEL_SIZE,
     },
     network_id::NetworkContext,
 };
@@ -89,7 +89,6 @@ impl NetworkBuilder {
         enable_proxy_protocol: bool,
         network_channel_size: usize,
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         inbound_connection_limit: usize,
         inbound_rate_limit_config: Option<RateLimitConfig>,
         outbound_rate_limit_config: Option<RateLimitConfig>,
@@ -104,7 +103,6 @@ impl NetworkBuilder {
             authentication_mode,
             network_channel_size,
             max_concurrent_network_reqs,
-            max_concurrent_network_notifs,
             max_frame_size,
             enable_proxy_protocol,
             inbound_connection_limit,
@@ -143,7 +141,6 @@ impl NetworkBuilder {
             false, /* Disable proxy protocol */
             NETWORK_CHANNEL_SIZE,
             MAX_CONCURRENT_NETWORK_REQS,
-            MAX_CONCURRENT_NETWORK_NOTIFS,
             MAX_INBOUND_CONNECTIONS,
             None,
             None,
@@ -192,7 +189,6 @@ impl NetworkBuilder {
             config.enable_proxy_protocol,
             config.network_channel_size,
             config.max_concurrent_network_reqs,
-            config.max_concurrent_network_notifs,
             config.max_inbound_connections,
             config.inbound_rate_limit_config,
             config.outbound_rate_limit_config,

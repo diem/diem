@@ -279,8 +279,6 @@ where
     phantom_transport: PhantomData<TTransport>,
     /// Maximum concurrent network requests to any peer.
     max_concurrent_network_reqs: usize,
-    /// Maximum concurrent network notifications processed for a peer.
-    max_concurrent_network_notifs: usize,
     /// Size of channels between different actors.
     channel_size: usize,
     /// Max network frame size
@@ -314,7 +312,6 @@ where
         connection_event_handlers: Vec<conn_notifs_channel::Sender>,
         channel_size: usize,
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         inbound_connection_limit: usize,
         inbound_rate_limiters: IpAddrTokenBucketLimiter,
@@ -354,7 +351,6 @@ where
             upstream_handlers,
             connection_event_handlers,
             max_concurrent_network_reqs,
-            max_concurrent_network_notifs,
             channel_size,
             max_frame_size,
             inbound_connection_limit,
@@ -790,8 +786,6 @@ where
             self.executor.clone(),
             connection,
             self.transport_notifs_tx.clone(),
-            self.max_concurrent_network_reqs,
-            self.max_concurrent_network_notifs,
             self.channel_size,
             self.max_frame_size,
             Some(inbound_rate_limiter),

@@ -57,8 +57,6 @@ impl NetworkProvider {
         executor: Handle,
         connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
-        _max_concurrent_reqs: usize,
-        _max_concurrent_notifs: usize,
         channel_size: usize,
         max_frame_size: usize,
         inbound_rate_limiter: Option<SharedBucket>,
