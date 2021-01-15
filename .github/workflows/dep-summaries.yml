@@ -98,18 +98,18 @@ jobs:
           output=$(cat ./.github/dep-auditors.json | jq -r 'join(",")')
           echo "::set-output name=list::${output}"
 
-  requires-dep-audit-review:
-    runs-on: ubuntu-latest
-    name: Require review for TCB dep summary changes.
-    if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
-    needs: calc-summaries
-    steps:
-      - name: require dep-audit review if TCB deps changed
-        if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.lec-summary-diff }}
-        uses: diem/actions/require-review@a9c5709
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
+  # requires-dep-audit-review:
+  #   runs-on: ubuntu-latest
+  #   name: Require review for TCB dep summary changes.
+  #   if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
+  #   needs: calc-summaries
+  #   steps:
+  #     - name: require dep-audit review if TCB deps changed
+  #       if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.lec-summary-diff }}
+  #       uses: diem/actions/require-review@a9c5709
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
 
   annotate-pr:
     runs-on: ubuntu-latest
