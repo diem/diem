@@ -120,8 +120,6 @@ jobs:
         run: $pre_command && cargo x lint
       - name: cargo clippy
         run: $pre_command && cargo xclippy --workspace --all-targets
-      - name: cargo clippy tcb
-        run: $pre_command && cargo xclippy --members lec --members lsr --members key-manager
       - name: cargo fmt
         run: $pre_command && cargo xfmt --check
       - uses: ./.github/actions/build-teardown
@@ -290,6 +288,8 @@ jobs:
       image: libra/build_environment:github-1
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
+    env:
+      RUST_BACKTRACE: 1
     steps:
       - uses: actions/checkout@v2
         with:
@@ -300,10 +300,15 @@ jobs:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
-      - run: cd /opt/git/diem/ && cargo xcheck -j ${max_threads} --members production
-      - run: cd /opt/git/diem/ && cargo xcheck -j ${max_threads} --workspace --all-targets
+      - run: cd /opt/git/diem/ && cargo xbuild
+      - run: cd /opt/git/diem/ && cargo xbuild -p cli
+      - run: cd /opt/git/diem/ && cargo xbuild -p cluster-test
+      - run: cd /opt/git/diem/ && cargo xbuild -p language-benchmarks
+      - run: cd /opt/git/diem/ && cargo xbuild -p diem-fuzzer
+      - run: cd /opt/git/diem/ && cargo xbuild -p diem-swarm
+      - run: cd /opt/git/diem/ && cargo xbuild -p test-generation
       - run: |
           cd /opt/git/diem
           rustup target add powerpc-unknown-linux-gnu
-          cargo xcheck -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+          cargo xbuild -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - uses: ./.github/actions/build-teardown
