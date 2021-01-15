@@ -17,8 +17,8 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * `DesignatedDealer`
 * `DualAttestation`
 
-* `XUS` (Note: name will be updated once final name has been determined)
-* `XDX` (Note: will be updated once the XDX makeup has been determined)
+* `XUS`
+* `XDX`
 * `Diem`
 * `RegisteredCurrencies`
 
@@ -45,16 +45,15 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * `DiemSystem`
 * `ValidatorConfig`
 * `ValidatorOperatorConfig`
-* `Genesis` (Note: not published)
+* `Genesis` (Note: not published on-chain)
 
-### Module Utility Diemries
+### Module Utility Libraries
 * `Errors`
 * `CoreAddresses`
 * `Event`
 * `FixedPoint32`
 * `Hash`
 * `BCS`
-* `Offer`
 * `Option`
 * `SlidingNonce`
 * `Vector`

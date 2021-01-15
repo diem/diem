@@ -25,8 +25,8 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * <code><a href="DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a></code>
 * <code><a href="DualAttestation.md#0x1_DualAttestation">DualAttestation</a></code>
 
-* <code><a href="XUS.md#0x1_XUS">XUS</a></code> (Note: name will be updated once final name has been determined)
-* <code><a href="XDX.md#0x1_XDX">XDX</a></code> (Note: will be updated once the XDX makeup has been determined)
+* <code><a href="XUS.md#0x1_XUS">XUS</a></code>
+* <code><a href="XDX.md#0x1_XDX">XDX</a></code>
 * <code><a href="Diem.md#0x1_Diem">Diem</a></code>
 * <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code>
 
@@ -65,12 +65,12 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * <code><a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a></code>
 * <code><a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code>
 * <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></code>
-* <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> (Note: not published)
+* <code><a href="Genesis.md#0x1_Genesis">Genesis</a></code> (Note: not published on-chain)
 
 
-<a name="@Module_Utility_Diemries_5"></a>
+<a name="@Module_Utility_Libraries_5"></a>
 
-### Module Utility Diemries
+### Module Utility Libraries
 
 * <code><a href="Errors.md#0x1_Errors">Errors</a></code>
 * <code><a href="CoreAddresses.md#0x1_CoreAddresses">CoreAddresses</a></code>
@@ -78,7 +78,6 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 * <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>
 * <code><a href="Hash.md#0x1_Hash">Hash</a></code>
 * <code><a href="BCS.md#0x1_BCS">BCS</a></code>
-* <code>Offer</code>
 * <code><a href="Option.md#0x1_Option">Option</a></code>
 * <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>
 * <code><a href="Vector.md#0x1_Vector">Vector</a></code>
