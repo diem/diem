@@ -1,12 +1,10 @@
-
-# Distribution / packaging
-
 # OSX
 *.DS_Store
 venv
 
-# Installer logs
+# Installation
 yarn-error.log
+package-lock.json
 
 # Unit test / coverage reports
 

@@ -2465,10 +2465,10 @@
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
 
-"@libra-opensource/diem-docusaurus-components@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.1.tgz#a7f5c2d3212bb8d59af8056f8b550740caef7a05"
-  integrity sha512-c+dQdmdqZb6vUgqzfy8BMdTzDYQmDayow+9Pj0enkkiltF6Mw87NdSiAfLaFFikwu2HJkkOWcvdkYDlLCQKksg==
+"@libra-opensource/diem-docusaurus-components@^0.1.11":
+  version "0.1.11"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.11.tgz#1909858c39daea67309bf7a3b6e331e5279e7215"
+  integrity sha512-igGtkn8AFB0f2irhf0gYtde8y6A3Z48/KC2HuIa433fBFAV2cGu1BONOxPZDQRGcrImbT+QTS+hLgPqyL+pIWg==
   dependencies:
     docsearch.js "^2.6.3"
     prism-react-renderer "^1.1.1"
@@ -13320,7 +13320,7 @@ source-map-resolve@^0.5.0, source-map-resolve@^0.5.2:
     source-map-url "^0.4.0"
     urix "^0.1.0"
 
-source-map-support@^0.5.6, source-map-support@~0.5.12, source-map-support@~0.5.19:
+source-map-support@^0.5.6, source-map-support@~0.5.12:
   version "0.5.19"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.19.tgz#a98b62f86dcaf4f67399648c085291ab9e8fed61"
   integrity sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw==
@@ -13343,7 +13343,7 @@ source-map@^0.5.0, source-map@^0.5.6:
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.7.tgz#8a039d2d1021d22d1ea14c80d8ea468ba2ef3fcc"
   integrity sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w=
 
-source-map@^0.7.3, source-map@~0.7.2:
+source-map@^0.7.3:
   version "0.7.3"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.7.3.tgz#5302f8169031735226544092e64981f751750383"
   integrity sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ==
@@ -13838,7 +13838,7 @@ terser-webpack-plugin@^4.1.0:
     terser "^5.3.4"
     webpack-sources "^1.4.3"
 
-terser@^4.1.2, terser@^4.6.3:
+terser@4.8.0, terser@^4.1.2, terser@^4.6.12, terser@^4.6.3, terser@^5.3.4:
   version "4.8.0"
   resolved "https://registry.yarnpkg.com/terser/-/terser-4.8.0.tgz#63056343d7c70bb29f3af665865a46fe03a0df17"
   integrity sha512-EAPipTNeWsb/3wLPeup1tVPaXfIaU68xMnVdPafIL1TV05OhASArYyIfFvnvJCNrR2NIOvDVNNTFRa+Re2MWyw==
@@ -13846,24 +13846,6 @@ terser@^4.1.2, terser@^4.6.3:
     commander "^2.20.0"
     source-map "~0.6.1"
     source-map-support "~0.5.12"
-
-terser@^4.6.12:
-  version "4.6.12"
-  resolved "https://registry.yarnpkg.com/terser/-/terser-4.6.12.tgz#44b98aef8703fdb09a3491bf79b43faffc5b4fee"
-  integrity sha512-fnIwuaKjFPANG6MAixC/k1TDtnl1YlPLUlLVIxxGZUn1gfUx2+l3/zGNB72wya+lgsb50QBi2tUV75RiODwnww==
-  dependencies:
-    commander "^2.20.0"
-    source-map "~0.6.1"
-    source-map-support "~0.5.12"
-
-terser@^5.3.4:
-  version "5.5.1"
-  resolved "https://registry.yarnpkg.com/terser/-/terser-5.5.1.tgz#540caa25139d6f496fdea056e414284886fb2289"
-  integrity sha512-6VGWZNVP2KTUcltUQJ25TtNjx/XgdDsBDKGt8nN0MpydU36LmbPPcMBd2kmtZNNGVVDLg44k7GKeHHj+4zPIBQ==
-  dependencies:
-    commander "^2.20.0"
-    source-map "~0.7.2"
-    source-map-support "~0.5.19"
 
 test-exclude@^5.2.3:
   version "5.2.3"

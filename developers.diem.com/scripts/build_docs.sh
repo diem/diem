@@ -136,16 +136,16 @@ fi
 echo "-----------------------------------"
 echo "Building Docusaurus 🦖"
 echo "-----------------------------------"
-npm install
+yarn install
 
 if [[ $BUILD_STATIC == true ]]; then
   echo "-----------------------------------"
   echo "Building static site"
   echo "-----------------------------------"
-  npm run build
+  yarn build
 else
   echo "-----------------------------------"
   echo "Starting local server"
   echo "-----------------------------------"
-  npm run start
+  yarn start
 fi
