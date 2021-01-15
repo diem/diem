@@ -27,7 +27,7 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 
 ### Learn About Diem
 * [Welcome](https://developers.diem.com/docs/welcome-to-diem)
-* [Diem Protocol: Key Concepts](https://developers.diem.com/docs/diem-protocol)
+* [Diem Protocol: Key Concepts](https://developers.diem.com/docs/core/diem-protocol/)
 * [Life of a Transaction](https://developers.diem.com/docs/life-of-a-transaction)
 * [JSON-RPC SPEC](json-rpc/json-rpc-spec.md)
 
