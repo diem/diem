@@ -5,10 +5,10 @@
 //! This module also implements additional anti-DoS mitigation,
 //! by including a timestamp in each handshake initialization message.
 //! Refer to the module's documentation for more information.
-//! A successful handshake returns a `NoiseStream` which is defined in the
+//! A successful handshake returns a [`NoiseStream`] which is defined in the
 //! [stream] module.
 //!
-//! [stream]: network::noise::stream
+//! [stream]: crate::noise::stream
 
 use crate::{
     noise::{error::NoiseHandshakeError, stream::NoiseStream},
@@ -693,8 +693,8 @@ mod test {
         client.network_context = NetworkContext::mock_with_peer_id(PeerId::random());
         let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
 
-        trace!("client_res: {}", client_res.unwrap_err());
-        trace!("server_res: {}", server_res.unwrap_err());
+        client_res.unwrap_err();
+        server_res.unwrap_err();
     }
 
     #[test]
