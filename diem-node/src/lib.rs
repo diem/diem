@@ -23,7 +23,7 @@ use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use network_builder::builder::NetworkBuilder;
-use state_synchronizer::StateSyncBootstrapper;
+use state_synchronizer::state_synchronizer::StateSyncBootstrapper;
 use std::{
     boxed::Box,
     convert::TryFrom,

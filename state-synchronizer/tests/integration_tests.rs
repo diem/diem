@@ -1,600 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
-    state_synchronizer::{StateSyncBootstrapper, StateSyncClient},
-    tests::{
-        mock_executor_proxy::{MockExecutorProxy, MockRpcHandler},
-        mock_storage::MockStorage,
-    },
+use crate::synchronizer_environment::{
+    default_handler, PFN_NETWORK, VALIDATOR_NETWORK, VFN_NETWORK, VFN_NETWORK_2,
 };
 use anyhow::{bail, Result};
-use channel::{diem_channel, message_queues::QueueStyle};
-use diem_config::{
-    config::{NodeConfig, RoleType, HANDSHAKE_VERSION},
-    network_id::{NetworkContext, NetworkId, NodeNetworkId},
-};
-use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
-use diem_infallible::RwLock;
-use diem_mempool::mocks::MockSharedMempool;
-use diem_network_address::{
-    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
-    parse_memory, NetworkAddress, Protocol,
-};
-use diem_types::{
-    chain_id::ChainId, ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
-    transaction::TransactionListWithProof, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
-};
-use futures::{executor::block_on, future::FutureExt, StreamExt};
-use memsocket::MemoryListener;
-use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
-use network::{
-    peer_manager::{
-        builder::AuthenticationMode, conn_notifs_channel, ConnectionNotification,
-        ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
-        PeerManagerRequestSender,
-    },
-    protocols::{
-        direct_send::Message,
-        network::{NewNetworkEvents, NewNetworkSender},
-    },
-    transport::ConnectionMetadata,
-    DisconnectReason, ProtocolId,
-};
-use network_builder::builder::NetworkBuilder;
-use once_cell::sync::Lazy;
-use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    cell::{Ref, RefCell},
-    collections::HashMap,
-    ops::DerefMut,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-};
-use tokio::runtime::Runtime;
+use diem_config::config::RoleType;
+use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
+use netcore::transport::ConnectionOrigin::*;
+use state_synchronizer::network::StateSynchronizerMsg;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use synchronizer_environment::SynchronizerEnv;
 
-// Networks for validators and fullnodes.
-static VALIDATOR_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Validator);
-static VFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("VFN".into()));
-static VFN_NETWORK_2: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("Second VFN".into()));
-static PFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Public);
-
-struct SynchronizerPeer {
-    client: Option<StateSyncClient>,
-    mempool: Option<MockSharedMempool>,
-    multi_peer_ids: HashMap<NetworkId, PeerId>, // Holds the peer's PeerIds (to support nodes with multiple network IDs).
-    network_addr: NetworkAddress,
-    network_key: x25519::PrivateKey,
-    peer_id: PeerId,
-    public_key: ValidatorInfo,
-    signer: ValidatorSigner,
-    storage_proxy: Option<Arc<RwLock<MockStorage>>>,
-    synchronizer: Option<StateSyncBootstrapper>,
-}
-
-impl SynchronizerPeer {
-    fn commit(&self, version: u64) {
-        let num_txns = version - self.storage_proxy.as_ref().unwrap().write().version();
-        assert!(num_txns > 0);
-
-        let (committed_txns, signed_txns) = self
-            .storage_proxy
-            .as_ref()
-            .unwrap()
-            .write()
-            .commit_new_txns(num_txns);
-        let mempool = self.mempool.as_ref().unwrap();
-        mempool.add_txns(signed_txns.clone()).unwrap();
-
-        // Run StateSyncClient::commit on a tokio runtime to support tokio::timeout
-        // in commit().
-        Runtime::new()
-            .unwrap()
-            .block_on(self.client.as_ref().unwrap().commit(committed_txns, vec![]))
-            .unwrap();
-        let mempool_txns = mempool.read_timeline(0, signed_txns.len());
-        for txn in signed_txns.iter() {
-            assert!(!mempool_txns.contains(txn));
-        }
-    }
-
-    fn get_peer_id(&self, network_id: NetworkId) -> PeerId {
-        *self.multi_peer_ids.get(&network_id).unwrap()
-    }
-
-    fn latest_li(&self) -> LedgerInfoWithSignatures {
-        self.storage_proxy
-            .as_ref()
-            .unwrap()
-            .read()
-            .highest_local_li()
-    }
-
-    // Moves to the next epoch. Note that other peers are not going to be able to discover
-    // their new signers: they're going to learn about the new epoch public key through state
-    // synchronization. Private keys are discovered separately.
-    fn move_to_next_epoch(&self, validator_infos: Vec<ValidatorInfo>, validator_index: usize) {
-        let (validator_set, validator_signers) = create_new_validator_set(validator_infos);
-        self.storage_proxy
-            .as_ref()
-            .unwrap()
-            .write()
-            .move_to_next_epoch(validator_signers[validator_index].clone(), validator_set);
-    }
-
-    fn sync_to(&self, target: LedgerInfoWithSignatures) {
-        block_on(self.client.as_ref().unwrap().sync_to(target)).unwrap()
-    }
-
-    fn wait_for_version(&self, target_version: u64, highest_li_version: Option<u64>) -> bool {
-        let max_retries = 30;
-        for _ in 0..max_retries {
-            let state = block_on(self.client.as_ref().unwrap().get_state()).unwrap();
-            if state.synced_version() == target_version {
-                return highest_li_version
-                    .map_or(true, |li_version| li_version == state.committed_version());
-            }
-            std::thread::sleep(std::time::Duration::from_millis(1000));
-        }
-        false
-    }
-}
-
-struct SynchronizerEnv {
-    network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
-    network_notifs_txs:
-        HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    network_reqs_rxs:
-        HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
-    peers: Vec<RefCell<SynchronizerPeer>>,
-    runtime: Runtime,
-}
-
-impl SynchronizerEnv {
-    fn get_synchronizer_peer(&self, index: usize) -> Ref<SynchronizerPeer> {
-        self.peers[index].borrow()
-    }
-
-    fn new(num_peers: usize) -> Self {
-        ::diem_logger::Logger::init_for_testing();
-
-        let (signers, public_keys, network_keys, network_addrs) = initial_setup(num_peers);
-
-        let mut peers = vec![];
-        for peer_index in 0..num_peers {
-            let peer = SynchronizerPeer {
-                client: None,
-                mempool: None,
-                multi_peer_ids: HashMap::new(),
-                network_addr: network_addrs[peer_index].clone(),
-                network_key: network_keys[peer_index].clone(),
-                peer_id: signers[peer_index].author(),
-                public_key: public_keys[peer_index].clone(),
-                signer: signers[peer_index].clone(),
-                storage_proxy: None,
-                synchronizer: None,
-            };
-            peers.push(RefCell::new(peer));
-        }
-
-        Self {
-            network_conn_event_notifs_txs: HashMap::new(),
-            network_notifs_txs: HashMap::new(),
-            network_reqs_rxs: HashMap::new(),
-            peers,
-            runtime: Runtime::new().unwrap(),
-        }
-    }
-
-    // Starts a new state sync peer with the validator role.
-    fn start_validator_peer(&mut self, peer_index: usize, mock_network: bool) {
-        self.start_synchronizer_peer(
-            peer_index,
-            default_handler(),
-            RoleType::Validator,
-            Waypoint::default(),
-            mock_network,
-            None,
-        );
-    }
-
-    // Starts a new state sync peer with the fullnode role.
-    fn start_fullnode_peer(&mut self, peer_index: usize, mock_network: bool) {
-        self.start_synchronizer_peer(
-            peer_index,
-            default_handler(),
-            RoleType::FullNode,
-            Waypoint::default(),
-            mock_network,
-            None,
-        );
-    }
-
-    // Sets up and starts the synchronizer at the given node index.
-    fn start_synchronizer_peer(
-        &mut self,
-        index: usize,
-        handler: MockRpcHandler,
-        role: RoleType,
-        waypoint: Waypoint,
-        mock_network: bool,
-        upstream_networks: Option<Vec<NetworkId>>,
-    ) {
-        self.setup_synchronizer_peer(
-            index,
-            handler,
-            role,
-            waypoint,
-            60_000,
-            120_000,
-            mock_network,
-            upstream_networks,
-        );
-    }
-
-    fn setup_synchronizer_peer(
-        &mut self,
-        index: usize,
-        handler: MockRpcHandler,
-        role: RoleType,
-        waypoint: Waypoint,
-        timeout_ms: u64,
-        multicast_timeout_ms: u64,
-        mock_network: bool,
-        upstream_networks: Option<Vec<NetworkId>>,
-    ) {
-        let (config, network_id) = setup_state_sync_config(
-            index,
-            role,
-            timeout_ms,
-            multicast_timeout_ms,
-            &upstream_networks,
-        );
-        let network_handles = self.setup_network_handles(index, &role, mock_network, network_id);
-        let validators: Vec<ValidatorInfo> = self
-            .peers
-            .iter()
-            .map(|peer| peer.borrow().public_key.clone())
-            .collect();
-
-        let mut peer = self.peers[index].borrow_mut();
-        let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
-            LedgerInfoWithSignatures::genesis(
-                *ACCUMULATOR_PLACEHOLDER_HASH,
-                ValidatorSet::new(validators.to_vec()),
-            ),
-            peer.signer.clone(),
-        )));
-
-        let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
-        let synchronizer = StateSyncBootstrapper::bootstrap_with_executor_proxy(
-            Runtime::new().unwrap(),
-            network_handles,
-            mempool_channel,
-            role,
-            waypoint,
-            &config.state_sync,
-            config.upstream,
-            MockExecutorProxy::new(handler, storage_proxy.clone()),
-        );
-
-        peer.client = Some(synchronizer.create_client());
-        peer.mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
-        peer.synchronizer = Some(synchronizer);
-        peer.storage_proxy = Some(storage_proxy);
-    }
-
-    fn setup_network_handles(
-        &mut self,
-        index: usize,
-        role: &RoleType,
-        mock_network: bool,
-        network_id: NetworkId,
-    ) -> Vec<(
-        NodeNetworkId,
-        StateSynchronizerSender,
-        StateSynchronizerEvents,
-    )> {
-        let mut network_handles = vec![];
-        if mock_network {
-            let networks = if role.is_validator() {
-                vec![VALIDATOR_NETWORK.clone(), VFN_NETWORK.clone()]
-            } else {
-                vec![
-                    VFN_NETWORK.clone(),
-                    VFN_NETWORK_2.clone(),
-                    PFN_NETWORK.clone(),
-                ]
-            };
-
-            let mut peer = self.peers[index].borrow_mut();
-            for (idx, network) in networks.into_iter().enumerate() {
-                let peer_id = PeerId::random();
-                peer.multi_peer_ids.insert(network.clone(), peer_id);
-
-                // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
-                // msg delivery in test
-                let (network_reqs_tx, network_reqs_rx) =
-                    diem_channel::new(QueueStyle::LIFO, 1, None);
-                let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::LIFO, 1, None);
-                let (network_notifs_tx, network_notifs_rx) =
-                    diem_channel::new(QueueStyle::LIFO, 1, None);
-                let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
-                let network_sender = StateSynchronizerSender::new(
-                    PeerManagerRequestSender::new(network_reqs_tx),
-                    ConnectionRequestSender::new(connection_reqs_tx),
-                );
-                let network_events =
-                    StateSynchronizerEvents::new(network_notifs_rx, conn_status_rx);
-                self.network_reqs_rxs.insert(peer_id, network_reqs_rx);
-                self.network_notifs_txs.insert(peer_id, network_notifs_tx);
-                self.network_conn_event_notifs_txs
-                    .insert(peer_id, conn_status_tx);
-
-                network_handles.push((
-                    NodeNetworkId::new(network, idx),
-                    network_sender,
-                    network_events,
-                ));
-            }
-        } else {
-            let peer = self.peers[index].borrow();
-            let auth_mode = AuthenticationMode::Mutual(peer.network_key.clone());
-            let network_context = Arc::new(NetworkContext::new(
-                VALIDATOR_NETWORK.clone(),
-                RoleType::Validator,
-                peer.peer_id,
-            ));
-
-            let seed_addrs: HashMap<_, _> = self
-                .peers
-                .iter()
-                .map(|peer| {
-                    let peer = peer.borrow();
-                    (peer.peer_id, vec![peer.network_addr.clone()])
-                })
-                .collect();
-            let seed_pubkeys = HashMap::new();
-            let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
-
-            // Recover the base address we bound previously.
-            let addr_protos = peer.network_addr.as_slice();
-            let (port, _suffix) = parse_memory(addr_protos).unwrap();
-            let base_addr = NetworkAddress::from(Protocol::Memory(port));
-
-            let mut network_builder = NetworkBuilder::new_for_test(
-                ChainId::default(),
-                seed_addrs,
-                seed_pubkeys,
-                trusted_peers,
-                network_context,
-                base_addr,
-                auth_mode,
-            );
-
-            let (sender, events) =
-                network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-            network_builder.build(self.runtime.handle().clone()).start();
-            network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
-        };
-        network_handles
-    }
-
-    /// Delivers next message from peer with index `sender` in this SynchronizerEnv
-    /// Returns the recipient of the msg
-    fn deliver_msg(&mut self, sender_peer_id: PeerId) -> (PeerId, Message) {
-        let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_peer_id).unwrap();
-        let network_req = block_on(network_reqs_rx.next()).unwrap();
-
-        // await next message from node
-        if let PeerManagerRequest::SendDirectSend(receiver_id, msg) = network_req {
-            let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&receiver_id).unwrap();
-            receiver_network_notif_tx
-                .push(
-                    (sender_peer_id, ProtocolId::StateSynchronizerDirectSend),
-                    PeerManagerNotification::RecvMessage(sender_peer_id, msg.clone()),
-                )
-                .unwrap();
-            (receiver_id, msg)
-        } else {
-            panic!("received network request other than PeerManagerRequest");
-        }
-    }
-
-    // checks that the `env_idx`th peer in this env sends no message to its `network_idx`th network
-    fn assert_no_message_sent(&mut self, sender_peer_id: PeerId) {
-        let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_peer_id).unwrap();
-        assert!(network_reqs_rx.select_next_some().now_or_never().is_none());
-    }
-
-    fn clone_storage(&mut self, from_idx: usize, to_idx: usize) {
-        let from_peer = self.peers[from_idx].borrow();
-        let from_storage = from_peer.storage_proxy.as_ref().unwrap();
-        let from_storage = from_storage.read();
-
-        let to_peer = self.peers[to_idx].borrow();
-        let to_storage = to_peer.storage_proxy.as_ref().unwrap();
-        let mut to_storage = to_storage.write();
-        let to_storage = to_storage.deref_mut();
-
-        *to_storage = from_storage.clone();
-    }
-
-    fn send_peer_event(
-        &mut self,
-        sender_peer_id: PeerId,
-        receiver_peer_id: PeerId,
-        new_peer: bool,
-        direction: ConnectionOrigin,
-    ) {
-        let mut metadata = ConnectionMetadata::mock(sender_peer_id);
-        metadata.origin = direction;
-
-        let notif = if new_peer {
-            ConnectionNotification::NewPeer(metadata, NetworkContext::mock())
-        } else {
-            ConnectionNotification::LostPeer(
-                metadata,
-                NetworkContext::mock(),
-                DisconnectReason::ConnectionLost,
-            )
-        };
-
-        let conn_notifs_tx = self
-            .network_conn_event_notifs_txs
-            .get_mut(&receiver_peer_id)
-            .unwrap();
-        conn_notifs_tx.push(sender_peer_id, notif).unwrap();
-    }
-}
-
-fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_version: Option<u64>) {
-    match msg {
-        StateSynchronizerMsg::GetChunkRequest(req) => {
-            assert_eq!(req.known_version, known_version);
-            assert_eq!(req.target.version(), target_version);
-        }
-        StateSynchronizerMsg::GetChunkResponse(_) => {
-            panic!("received chunk response when expecting chunk request");
-        }
-    }
-}
-
-fn check_chunk_response(
-    msg: StateSynchronizerMsg,
-    response_li_version: u64,
-    chunk_start_version: u64,
-    chunk_length: usize,
-) {
-    match msg {
-        StateSynchronizerMsg::GetChunkRequest(_) => {
-            panic!("received chunk response when expecting chunk request");
-        }
-        StateSynchronizerMsg::GetChunkResponse(resp) => {
-            assert_eq!(resp.response_li.version(), response_li_version);
-            assert_eq!(
-                resp.txn_list_with_proof.first_transaction_version.unwrap(),
-                chunk_start_version
-            );
-            assert_eq!(resp.txn_list_with_proof.transactions.len(), chunk_length)
-        }
-    }
-}
-
-fn default_handler() -> MockRpcHandler {
-    Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
-}
-
-// Returns the initial peers with their signatures
-fn initial_setup(
-    count: usize,
-) -> (
-    Vec<ValidatorSigner>,
-    Vec<ValidatorInfo>,
-    Vec<x25519::PrivateKey>,
-    Vec<NetworkAddress>,
-) {
-    let (signers, _verifier) = random_validator_verifier(count, None, true);
-
-    // Setup identity public keys.
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let network_keys: Vec<_> = (0..count)
-        .map(|_| x25519::PrivateKey::generate(&mut rng))
-        .collect();
-
-    let mut validator_infos = vec![];
-    let mut network_addrs = vec![];
-
-    for (idx, signer) in signers.iter().enumerate() {
-        let peer_id = signer.author();
-
-        // Reserve an unused `/memory/<port>` address by binding port 0; we
-        // can immediately discard the listener here and safely rebind to this
-        // address later.
-        let port = MemoryListener::bind(0).unwrap().local_addr();
-        let addr = NetworkAddress::from(Protocol::Memory(port));
-        let addr = addr.append_prod_protos(network_keys[idx].public_key(), HANDSHAKE_VERSION);
-
-        let enc_addr = addr.clone().encrypt(
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            &peer_id,
-            0, /* seq_num */
-            0, /* addr_idx */
-        );
-
-        // The voting power of peer 0 is enough to generate an LI that passes validation.
-        let voting_power = if idx == 0 { 1000 } else { 1 };
-        let validator_config = ValidatorConfig::new(
-            signer.public_key(),
-            bcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
-            bcs::to_bytes(&vec![addr.clone()]).unwrap(),
-        );
-        let validator_info = ValidatorInfo::new(peer_id, voting_power, validator_config);
-        validator_infos.push(validator_info);
-        network_addrs.push(addr);
-    }
-    (signers, validator_infos, network_keys, network_addrs)
-}
-
-pub fn create_new_validator_set(
-    validator_infos: Vec<ValidatorInfo>,
-) -> (ValidatorSet, Vec<ValidatorSigner>) {
-    let num_validators = validator_infos.len();
-    let (signers, _) = random_validator_verifier(num_validators, None, true);
-    let new_validator_infos = validator_infos
-        .iter()
-        .enumerate()
-        .map(|(index, validator_info)| {
-            ValidatorInfo::new(
-                signers[index].author(),
-                validator_info.consensus_voting_power(),
-                validator_info.config().clone(),
-            )
-        })
-        .collect::<Vec<ValidatorInfo>>();
-    (ValidatorSet::new(new_validator_infos), signers)
-}
-
-fn setup_state_sync_config(
-    index: usize,
-    role: RoleType,
-    timeout_ms: u64,
-    multicast_timeout_ms: u64,
-    upstream_networks: &Option<Vec<NetworkId>>,
-) -> (NodeConfig, NetworkId) {
-    let mut config = diem_config::config::NodeConfig::default_for_validator();
-    config.base.role = role;
-    config.state_sync.sync_request_timeout_ms = timeout_ms;
-    config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
-
-    // Too many tests expect this, so we overwrite the value
-    config.state_sync.chunk_limit = 250;
-
-    let network_id = if role.is_validator() {
-        VALIDATOR_NETWORK.clone()
-    } else {
-        VFN_NETWORK.clone()
-    };
-
-    if !role.is_validator() {
-        config.full_node_networks = vec![config.validator_network.unwrap()];
-        config.validator_network = None;
-        // setup upstream network for FN
-        if let Some(upstream_networks) = upstream_networks {
-            config.upstream.networks = upstream_networks.clone();
-        } else if index > 0 {
-            config.upstream.networks.push(network_id.clone());
-        }
-    }
-
-    (config, network_id)
-}
+mod synchronizer_environment;
 
 #[test]
 fn test_basic_catch_up() {
@@ -725,8 +143,8 @@ fn catch_up_through_epochs_validators() {
     validator_0.commit(40);
 
     let validator_infos = vec![
-        validator_0.public_key.clone(),
-        validator_1.public_key.clone(),
+        validator_0.get_validator_info(),
+        validator_1.get_validator_info(),
     ];
     validator_0.move_to_next_epoch(validator_infos, 0);
 
@@ -740,8 +158,8 @@ fn catch_up_through_epochs_validators() {
         validator_0.commit(epoch * 100);
 
         let validator_infos = vec![
-            validator_0.public_key.clone(),
-            validator_1.public_key.clone(),
+            validator_0.get_validator_info(),
+            validator_1.get_validator_info(),
         ];
         validator_0.move_to_next_epoch(validator_infos, 0);
     }
@@ -761,7 +179,7 @@ fn catch_up_through_epochs_full_node() {
     // catch up through multiple epochs
     for epoch in 1..10 {
         validator_0.commit(epoch * 100);
-        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
+        validator_0.move_to_next_epoch(vec![validator_0.get_validator_info().clone()], 0);
     }
     validator_0.commit(950); // At this point validator_0 is at epoch 10 and version 950
     drop(validator_0);
@@ -793,24 +211,18 @@ fn catch_up_with_waypoints() {
         curr_version += 100;
         validator_0.commit(curr_version);
 
-        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
+        validator_0.move_to_next_epoch(vec![validator_0.get_validator_info().clone()], 0);
 
         curr_version += 400;
         // this creates an epoch that spans >1 chunk (chunk_size = 250)
         validator_0.commit(curr_version);
 
-        validator_0.move_to_next_epoch(vec![validator_0.public_key.clone()], 0);
+        validator_0.move_to_next_epoch(vec![validator_0.get_validator_info().clone()], 0);
     }
     validator_0.commit(5250); // At this point validator is at epoch 19 and version 5250
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 3500 (epoch 14)
-    let waypoint_li = validator_0
-        .storage_proxy
-        .as_ref()
-        .unwrap()
-        .read()
-        .get_epoch_ending_ledger_info(3500)
-        .unwrap();
+    let waypoint_li = validator_0.get_epoch_ending_ledger_info(3500);
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
     drop(validator_0);
 
@@ -823,7 +235,7 @@ fn catch_up_with_waypoints() {
         None,
     );
     let fullnode = env.get_synchronizer_peer(1);
-    block_on(fullnode.client.as_ref().unwrap().wait_until_initialized()).unwrap();
+    fullnode.wait_until_initialized();
     assert!(fullnode.latest_li().ledger_info().version() >= 3500);
     assert!(fullnode.latest_li().ledger_info().epoch() >= 14);
 
@@ -1498,4 +910,37 @@ fn test_multicast_failover() {
     assert_eq!(primary, validator_peer_id);
     env.assert_no_message_sent(fn_0_second_peer_id);
     env.assert_no_message_sent(fn_0_public_peer_id);
+}
+
+fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_version: Option<u64>) {
+    match msg {
+        StateSynchronizerMsg::GetChunkRequest(req) => {
+            assert_eq!(req.known_version, known_version);
+            assert_eq!(req.target.version(), target_version);
+        }
+        StateSynchronizerMsg::GetChunkResponse(_) => {
+            panic!("received chunk response when expecting chunk request");
+        }
+    }
+}
+
+fn check_chunk_response(
+    msg: StateSynchronizerMsg,
+    response_li_version: u64,
+    chunk_start_version: u64,
+    chunk_length: usize,
+) {
+    match msg {
+        StateSynchronizerMsg::GetChunkRequest(_) => {
+            panic!("received chunk response when expecting chunk request");
+        }
+        StateSynchronizerMsg::GetChunkResponse(resp) => {
+            assert_eq!(resp.response_li.version(), response_li_version);
+            assert_eq!(
+                resp.txn_list_with_proof.first_transaction_version.unwrap(),
+                chunk_start_version
+            );
+            assert_eq!(resp.txn_list_with_proof.transactions.len(), chunk_length)
+        }
+    }
 }
