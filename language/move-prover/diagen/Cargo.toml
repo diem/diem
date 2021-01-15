@@ -15,4 +15,4 @@ diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.
 
 # external dependencies
 anyhow = "1.0.38"
-regex = "1.4.2"
+regex = "1.4.3"

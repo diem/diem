@@ -21,7 +21,7 @@ env_logger = "0.8.2"
 log = "0.4.13"
 chrono = "0.4.19"
 globset = "0.4.6"
-regex = "1.4.2"
+regex = "1.4.3"
 rayon = "1.5.0"
 indexmap = "1.6.1"
 x-core = { version = "0.1.0", path = "../x-core" }
