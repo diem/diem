@@ -6,7 +6,7 @@
 
 ---
 
-[![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://developers.diem.com/docs/rustdocs/)
+[![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://diem.github.io/diem/)
 [![CircleCI](https://circleci.com/gh/diem/diem.svg?style=shield)](https://circleci.com/gh/diem/diem)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
