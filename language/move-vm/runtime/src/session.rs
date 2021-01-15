@@ -50,6 +50,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             function_name,
             ty_args,
             args,
+            true,
             &mut self.data_cache,
             cost_strategy,
             log_context,

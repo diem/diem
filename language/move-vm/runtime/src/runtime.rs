@@ -8,6 +8,7 @@ use crate::{
     logging::LogContext,
     session::Session,
 };
+use diem_infallible::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use diem_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
@@ -24,15 +25,37 @@ use vm::{
     normalized, CompiledModule, IndexKind,
 };
 
+use std::ops::Deref;
+
+// TODO: this is a utility enum and should not be here...
+// Maybe a better place is common/infallible/rwlock.rs
+enum RwLockGuard<'a, T: ?Sized + 'a> {
+    Reader(RwLockReadGuard<'a, T>),
+    Writer(RwLockWriteGuard<'a, T>),
+}
+
+impl<T: ?Sized> Deref for RwLockGuard<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        match self {
+            RwLockGuard::Reader(r) => r.deref(),
+            RwLockGuard::Writer(w) => w.deref(),
+        }
+    }
+}
+
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
     loader: Loader,
+    loader_expiry_lock: RwLock<bool>,
 }
 
 impl VMRuntime {
     pub(crate) fn new() -> Self {
         VMRuntime {
             loader: Loader::new(),
+            loader_expiry_lock: RwLock::new(false),
         }
     }
 
@@ -81,7 +104,7 @@ impl VMRuntime {
         //
         // TODO: in the future, we may want to add restrictions on module republishing, possibly by
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
-        if data_store.exists_module(&module_id)? {
+        let loader_expiry_guard = if data_store.exists_module(&module_id)? {
             let old_module_bytes = data_store.load_module(&module_id)?;
             let old_module = match CompiledModule::deserialize(&old_module_bytes) {
                 Ok(module) => module,
@@ -99,6 +122,16 @@ impl VMRuntime {
                         .finish(Location::Undefined),
                 );
             }
+            RwLockGuard::Writer(self.loader_expiry_lock.write())
+        } else {
+            RwLockGuard::Reader(self.loader_expiry_lock.read())
+        };
+
+        // check whether the code cache is stale (before first using the loader)
+        if *loader_expiry_guard {
+            return Err(
+                PartialVMError::new(StatusCode::CODE_CACHE_EXPIRED).finish(Location::Undefined)
+            );
         }
 
         // perform bytecode and loading verification
@@ -107,6 +140,12 @@ impl VMRuntime {
             data_store,
             log_context,
         )?;
+
+        // mark that the loader cache is stale from this point onwards
+        match loader_expiry_guard {
+            RwLockGuard::Reader(_) => {}
+            RwLockGuard::Writer(mut writer) => *writer = true,
+        };
 
         data_store.publish_module(&module_id, module)
     }
@@ -129,6 +168,14 @@ impl VMRuntime {
                 S::Reference(inner) => matches!(&**inner, S::Signer),
                 _ => false,
             }
+        }
+
+        // check whether the code cache is stale (before first using the loader)
+        let loader_expired = self.loader_expiry_lock.read();
+        if *loader_expired {
+            return Err(
+                PartialVMError::new(StatusCode::CODE_CACHE_EXPIRED).finish(Location::Undefined)
+            );
         }
 
         // load the script, perform verification
@@ -168,7 +215,11 @@ impl VMRuntime {
             cost_strategy,
             &self.loader,
             log_context,
-        )
+        )?;
+
+        // release the reader lock (after the last use of loader)
+        std::mem::drop(loader_expired);
+        Ok(())
     }
 
     // See Session::execute_function for what contracts to follow.
@@ -178,10 +229,29 @@ impl VMRuntime {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
+        ignore_code_cache_expiration: bool,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
+        // NOTE: in theory, we should also check whether the loader cache has expired due to module
+        // updating and block the function call thereafter (similar to how we check and block in
+        // `execute_script`). However, this also means that the user txn epilogue function, which
+        // is scheduled by the DiemVM to be executed after every successful transaction, including
+        // module publishing, will be blocked too and the transaction can never succeed. Hence, we
+        // add a flag `ignore_code_cache_expiration` to allow the invocation of a potentially stale
+        // version of the function. Given this coupling of the MoveVM and DiemVM, updating system
+        // Move modules / functions (e.g., those directly invoked by the DiemVM), should be done
+        // with a WriteSet transaction, instead of using the module republishing flow.
+
+        // check whether the code cache is stale (before first using the loader)
+        let loader_expired = self.loader_expiry_lock.read();
+        if *loader_expired && !ignore_code_cache_expiration {
+            return Err(
+                PartialVMError::new(StatusCode::CODE_CACHE_EXPIRED).finish(Location::Undefined)
+            );
+        }
+
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
         let (func, type_params) =
@@ -200,7 +270,11 @@ impl VMRuntime {
             cost_strategy,
             &self.loader,
             log_context,
-        )
+        )?;
+
+        // release the reader lock (after the last use of loader)
+        std::mem::drop(loader_expired);
+        Ok(())
     }
 }
 

@@ -18,8 +18,7 @@ module 43.N {
 Command `publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
-Updating an existing module 00000000000000000000000000000042::M
-Updating an existing module 00000000000000000000000000000043::N
+Publishing failed with unexpected error CODE_CACHE_EXPIRED
 Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 

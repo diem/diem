@@ -581,6 +581,8 @@ pub enum StatusCode {
     FAILED_TO_DESERIALIZE_RESOURCE = 2020,
     // Failed to resolve type due to linking being broken after verification
     TYPE_RESOLUTION_FAILURE = 2021,
+    // Code cache expired due to module republishing
+    CODE_CACHE_EXPIRED = 2022,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
