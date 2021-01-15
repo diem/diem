@@ -1,46 +1,47 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Implementation of the RPC protocol as per Diem wire protocol v1.
+//! Implementation of the unary RPC protocol as per [DiemNet wire protocol v1].
 //!
-//! Design:
-//! -------
+//! ## Design:
 //!
-//! RPC receives OutboundRpcRequest messages from upstream actors. The OutboundRpcRequest contains
-//! the RPC protocol, raw request bytes, RPC timeout duration, and a channel over which the
-//! response bytes can be sent back to the upstream.
-//! For inbound RPC requests, RPC sends InboundRpcRequest notifications to upstream actors. The
-//! InboundRpcRequest contains the RPC protocol, raw request bytes, and a channel over which the
-//! upstream can send a response for the RPC.
-//! Internally, the RPC actor consists of a single event loop. The event loop processes 4 kinds of
-//! messages:
-//! (1) outbound RPC requests received from upstream,
-//! (2) notifications for inbound RpcRequest/RpcResponse from the Peer actor,
-//! (3) completion notification for tasks processing inbound RPC, and
-//! (4) completion notification for tasks processing outbound RPCs.
-//! The tasks for inbound and outbound RPCs are spawned onto the same runtime as the one driving
-//! the RPC event loop.
+//! The unary RPC protocol is implemented here as two independent async completion
+//! queues: [`InboundRpcs`] and [`OutboundRpcs`].
 //!
-//! Timeouts:
-//! ---------
-//! The tasks for inbound and outbound RPCs are also "wrapped" within timeouts to ensure that they
-//! are not running forever. The outbound RPC timeout is specified by the upstream client, where as
-//! the inbound RPC timeout is a configuration parameter for the RPC actor.
+//! The `InboundRpcs` queue is responsible for handling inbound rpc requests
+//! off-the-wire, forwarding the request to the application layer, waiting for
+//! the application layer's response, and then enqueuing the rpc response to-be
+//! written over-the-wire.
 //!
-//! Limits:
-//! -------
-//! We limit the number of pending inbound RPC tasks to ensure that resource usage is bounded for
-//! inbound RPCs. For outbound RPCs, we log a warning when the limit is exceeded, but allow the RPC
-//! to proceed.
+//! Likewise, the `OutboundRpcs` queue is responsible for handling outbound rpc
+//! requests from the application layer, enqueuing the request for writing onto
+//! the wire, waiting for a corresponding rpc response, and then notifying the
+//! requestor of the arrived response message.
 //!
-//! State
-//! -------------
-//! * For outbound RPCs, the RPC actors maintains a HashMap from the RequestId to a channel over
-//! which inbound responses can be delivered to the task driving the request. Entries are removed
-//! on completion of the task, which happens either on receipt of the response, or on
-//! failure/timeout.
-//! * The RPC actor also maintains a RequestIdGenerator for generating request ids for outbound
-//! RPCs. The RequestIdGenerator increments the request id by 1 for each subsequent outbound RPC.
+//! Both `InboundRpcs` and `OutboundRpcs` are owned and driven by the [`Peer`]
+//! actor. This has a few implications. First, it means that each connection has
+//! its own pair of local rpc completion queues; the queues are _not_ shared
+//! across connections. Second, the queues don't do any IO work. They're purely
+//! driven by the owning `Peer` actor, who calls `handle_` methods on new
+//! [`NetworkMessage`] arrivals and polls for completed rpc requests. The queues
+//! also do not write to the wire directly; instead, they're given a reference to
+//! the [`Peer`] actor's write queue, which they can enqueue a new outbound
+//! [`NetworkMessage`] onto.
+//!
+//! ## Timeouts:
+//!
+//! Both inbound and outbound requests have mandatory timeouts. The tasks in the
+//! async completion queues are each wrapped in a `timeout` future, which causes
+//! the task to complete with an error if the task isn't fulfilled before the
+//! deadline.
+//!
+//! ## Limits:
+//!
+//! We limit the number of pending inbound and outbound RPC tasks to ensure that
+//! resource usage is bounded.
+//!
+//! [DiemNet wire protocol v1]: https://github.com/diem/diem/blob/master/specifications/network/messaging-v1.md
+//! [`Peer`]: crate::peer::Peer
 
 use crate::{
     counters::{
@@ -157,7 +158,7 @@ impl PartialEq for InboundRpcRequest {
 /// If the response eventually completes, `InboundRpc` records some metrics and
 /// enqueues the response message onto the outbound write queue.
 ///
-/// There is one `InboundRpcs` handler per connection.
+/// There is one `InboundRpcs` handler per [`Peer`](crate::peer::Peer).
 pub struct InboundRpcs {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
@@ -318,6 +319,8 @@ impl InboundRpcs {
 }
 
 /// `OutboundRpcs` handles new outbound rpc requests made from the application layer.
+///
+/// There is one `OutboundRpcs` handler per [`Peer`](crate::peer::Peer).
 pub struct OutboundRpcs {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
@@ -359,6 +362,7 @@ impl OutboundRpcs {
         }
     }
 
+    /// Handle a new outbound rpc request from the application layer.
     pub async fn handle_outbound_request(
         &mut self,
         request: OutboundRpcRequest,

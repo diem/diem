@@ -1,11 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Peer manages a single connection to a remote peer after the initial connection
-//! establishment and handshake, including sending and receiving `NetworkMessage`s
-//! over-the-wire, maintaining a completion queue of pending RPC requests, and
-//! eventually shutting down when the PeerManager requests it or the connection
-//! is lost.
+//! [`Peer`] manages a single connection to a remote peer after the initial connection
+//! establishment and handshake.
+//!
+//! Its responsibilities include sending and receiving [`NetworkMessage`]s
+//! over-the-wire, maintaining a completion queue of pending RPC requests (through
+//! the [`InboundRpcs`] and [`OutboundRpcs`] completion queues), and eventually
+//! shutting down when the [`PeerManager`] requests it or the connection is lost.
+//!
+//! [`Peer`] owns the actual underlying connection socket and is reponsible for
+//! the socket's shutdown, graceful or otherwise.
+//!
+//! [`PeerManager`]: crate::peer_manager::PeerManager
 
 use crate::{
     counters::{self, RECEIVED_LABEL, SENT_LABEL},
@@ -48,7 +55,7 @@ mod test;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
-/// Requests [`Peer`] receives from the `PeerManager`.
+/// Requests [`Peer`] receives from the [`PeerManager`](crate::peer_manager::PeerManager).
 #[derive(Debug)]
 pub enum PeerRequest {
     /// Send an RPC request to peer.
@@ -57,7 +64,7 @@ pub enum PeerRequest {
     SendDirectSend(Message),
 }
 
-/// Notifications that [`Peer`] sends to the `PeerManager`.
+/// Notifications that [`Peer`] sends to the [`PeerManager`](crate::peer_manager::PeerManager).
 #[derive(Debug, PartialEq)]
 pub enum PeerNotification {
     /// A new RPC request has been received from peer.
@@ -66,6 +73,12 @@ pub enum PeerNotification {
     RecvMessage(Message),
 }
 
+/// The reason for closing a connection.
+///
+/// For example, if the remote peer closed the connection or the connection was
+/// lost, the disconnect reason will be `ConnectionLost`. In contrast, if the
+/// [`PeerManager`](crate::peer_manager::PeerManager) requested us to close this
+/// connection, then the disconnect reason will be `Requested`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisconnectReason {
     Requested,
@@ -87,6 +100,8 @@ enum State {
     ShuttingDown(DisconnectReason),
 }
 
+/// The `Peer` actor manages a single connection to another remote peer after
+/// the initial connection establishment and handshake.
 pub struct Peer<TSocket> {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
