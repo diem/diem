@@ -3,7 +3,7 @@
 
 use crate::{
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
-    state_synchronizer::{StateSynchronizer, StateSynchronizerClient},
+    state_synchronizer::{StateSyncClient, StateSynchronizer},
     tests::{
         mock_executor_proxy::{MockExecutorProxy, MockRpcHandler},
         mock_storage::MockStorage,
@@ -57,7 +57,7 @@ use std::{
 use tokio::runtime::Runtime;
 
 struct SynchronizerPeer {
-    client: Option<StateSynchronizerClient>,
+    client: Option<StateSyncClient>,
     mempool: Option<MockSharedMempool>,
     multi_peer_ids: Option<Vec<PeerId>>, // Holds the peer's PeerIds, to support nodes with multiple network IDs.
     network_addr: NetworkAddress,

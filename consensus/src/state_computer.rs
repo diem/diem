@@ -12,20 +12,20 @@ use diem_types::ledger_info::LedgerInfoWithSignatures;
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
-use state_synchronizer::StateSynchronizerClient;
+use state_synchronizer::StateSyncClient;
 use std::boxed::Box;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
     execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
-    synchronizer: StateSynchronizerClient,
+    synchronizer: StateSyncClient,
 }
 
 impl ExecutionProxy {
     pub fn new(
         execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
-        synchronizer: StateSynchronizerClient,
+        synchronizer: StateSyncClient,
     ) -> Self {
         Self {
             execution_correctness_client: Mutex::new(execution_correctness_client),

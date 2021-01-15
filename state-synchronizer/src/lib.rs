@@ -7,7 +7,7 @@
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
 
-pub use self::state_synchronizer::{StateSynchronizer, StateSynchronizerClient};
+pub use self::state_synchronizer::{StateSyncClient, StateSynchronizer};
 
 pub mod chunk_request;
 pub mod chunk_response;
