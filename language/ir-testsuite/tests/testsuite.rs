@@ -12,19 +12,22 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::parse_script_or_module,
 };
+use move_core_types::language_storage::ModuleId;
 use move_ir_types::ast;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 use vm::CompiledModule;
 
 struct IRCompiler {
-    deps: Vec<CompiledModule>,
+    deps: HashMap<ModuleId, CompiledModule>,
 }
 
 impl IRCompiler {
     fn new(stdlib_modules: Vec<CompiledModule>) -> Self {
-        IRCompiler {
-            deps: stdlib_modules,
-        }
+        let deps = stdlib_modules
+            .into_iter()
+            .map(|m| (m.self_id(), m))
+            .collect();
+        IRCompiler { deps }
     }
 }
 
@@ -39,12 +42,14 @@ impl Compiler for IRCompiler {
         Ok(match parse_script_or_module("unused_file_name", input)? {
             ast::ScriptOrModule::Script(parsed_script) => {
                 log(format!("{}", &parsed_script));
-                ScriptOrModule::Script(compile_script(Some(address), parsed_script, &self.deps)?.0)
+                ScriptOrModule::Script(
+                    compile_script(Some(address), parsed_script, self.deps.values())?.0,
+                )
             }
             ast::ScriptOrModule::Module(parsed_module) => {
                 log(format!("{}", &parsed_module));
-                let module = compile_module(address, parsed_module, &self.deps)?.0;
-                self.deps.push(module.clone());
+                let module = compile_module(address, parsed_module, self.deps.values())?.0;
+                self.deps.insert(module.self_id(), module.clone());
                 ScriptOrModule::Module(module)
             }
         })

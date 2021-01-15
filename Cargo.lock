@@ -3528,6 +3528,7 @@ dependencies = [
  "diem-workspace-hack",
  "functional-tests",
  "ir-to-bytecode",
+ "move-core-types",
  "move-ir-types",
  "vm",
 ]
