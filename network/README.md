@@ -4,45 +4,43 @@ title: Network
 custom_edit_url: https://github.com/diem/diem/edit/master/network/README.md
 ---
 
-
-The network component provides peer-to-peer communication primitives to other
-components of a validator.
-
 ## Overview
 
-For more detailed info, see the [Network Specification](../specifications/network/README.md).
+For more detailed info, see the [DiemNet Specification](../specifications/network/README.md).
 
-The network component is specifically designed to facilitate the consensus and
-shared mempool protocols. Currently, it provides these consumers with two
-primary interfaces:
-* RPC, for Remote Procedure Calls; and
-* DirectSend, for fire-and-forget style message delivery to a single receiver.
+DiemNet is the primary protocol for communication between any two nodes in the
+Diem ecosystem. It is specifically designed to facilitate the consensus, shared
+mempool, and state sync protocols. DiemNet tries to maintain at-most one connection
+with each remote peer; the application protocols to that remote peer are then
+multiplexed over the single peer connection.
+
+Currently, it provides application protocols with two primary interfaces:
+
+* DirectSend: for fire-and-forget style message delivery.
+* RPC: for unary Remote Procedure Calls.
 
 The network component uses:
+
 * TCP for reliable transport.
-* [Noise](https://noiseprotocol.org/noise.html) for authentication and full
- end-to-end encryption.
-* On-chain addresses for discovery, with a seed peers file for initial discovery.
+* [NoiseIK] for authentication and full end-to-end encryption.
+* On-chain [`NetworkAddress`](./network-address/src/lib.rs) set for discovery, with
+  optional seed peers in the [`NetworkConfig`](../config/src/config/network_config.rs)
+  as a fallback.
 
-Each new substream is assigned a *protocol* supported by both the sender and
-the receiver. Each RPC and DirectSend type corresponds to one such protocol.
+Validators will only allow connections from other validators. Their identity and
+public key information is provided by the [`simple-onchain-discovery`] protocol,
+which updates the eligible member information on each consensus reconfiguration.
+Each member of the validator network maintains a full membership view and connects
+directly to all other validators in order to maintain a full-mesh network.
 
-Only eligible members are allowed to join the inter-validator network. Their
-identity and public key information is provided by the consensus
-component at initialization and on validator set reconfiguration. A new
-validator also needs the network addresses of a few *seed* peers to help it
-bootstrap connectivity to the network. The seed peers first authenticate the
-joining validator as an eligible member and then share their network state
-with it.
-
-Each member of the network maintains a full membership view and connects
-directly to any validator it needs to communicate with. A validator that cannot
-be connected to directly is assumed to fall in the quota of Byzantine faults
-tolerated by the system.
+In contrast, Validator Full Node (VFNs) servers will only prioritize connections
+from more trusted peers in the on-chain discovery set; they will still service
+any public clients. Public Full Nodes (PFNs) connecting to VFNs will always
+authenticate the VFN server using the available discovery information.
 
 Validator health information, determined using periodic liveness probes, is not
 shared between validators; instead, each validator directly monitors its peers
-for liveness.
+for liveness using the [`HealthChecker`] protocol.
 
 This approach should scale up to a few hundred validators before requiring
 partial membership views, sophisticated failure detectors, or network overlays.
@@ -51,80 +49,95 @@ partial membership views, sophisticated failure detectors, or network overlays.
 
 ### System Architecture
 
-    +--------------------+----------------------+
-    |      Consensus     |        Mempool       |
-    +--------------------+----------------------+
-    |               Peer Manager                |
-    +-------------------------------------------+
-    |              NetworkProvider(s)           |
-    +--------------------+----------------------+
-    |        RPC(s)      |      DirectSend(s)   |
-    +--------------------+----------------------+
-    |                  Peer(s)                  |
-    +-------------------------------------------+
+```
+                      +-----------+---------+------------+--------+
+ Application Modules  | Consensus | Mempool | State Sync | Health |
+                      +-----------+---------+------------+--------+
+                            ^          ^          ^           ^
+   Network Interface        |          |          |           |
+                            v          v          v           v
+                      +----------------+--------------------------+   +---------------------+
+      Network Module  |                 PeerManager               |<->| ConnectivityManager |
+                      +----------------------+--------------------+   +---------------------+
+                      |        Peer(s)       |                    |
+                      +----------------------+                    |
+                      |                DiemTransport              |
+                      +-------------------------------------------+
+```
 
 The network component is implemented in the
-[Actor](https://en.wikipedia.org/wiki/Actor_model) programming model &mdash;
-i.e., it uses message-passing to communicate between different subcomponents
-running as independent "tasks." The [tokio](https://tokio.rs/) framework is
-used as the task runtime. The different subcomponents in the network component
-are:
+[Actor](https://en.wikipedia.org/wiki/Actor_model) model &mdash; it uses
+message-passing to communicate between different subcomponents running as
+independent "tasks." The [tokio](https://tokio.rs/) framework is used as the task
+runtime. The primary subcomponents in the network module are:
 
-* **NetworkProvider** &mdash; An application level client interface to the network API.
-It forwards requests from upstream clients to appropriate downstream components and sends
-incoming RPC and DirectSend requests to appropriate upstream handlers.
+* [`Network Interface`] &mdash; The interface provided to application modules
+using DiemNet.
 
-* **Peer Manager** &mdash; Listens for incoming connections, and dials outbound
-connections to other peers.  Demultiplexes and forwards messages to appropriate
-protocol handlers.  Additionally, notifies upstream components of new or closed
-connections.  Optionally can be connected to ConnectivityManager for a network with
-Discovery.
+* [`PeerManager`] &mdash; Listens for incoming connections, and dials outbound
+connections to other peers. Demultiplexes and forwards inbound messages from
+[`Peer`]s to appropriate application handlers. Additionally, notifies upstream
+components of new or closed connections. Optionally can be connected to
+[`ConnectivityManager`] for a network with Discovery.
 
-* **Connectivity Manager** &mdash; Establishes connections to known peers found via
-Discovery.  Notifies Peer Manager to make outbound dials, or disconnects based
-on updates to known peers via Discovery updates.  This is only needed on a network
-that uses Discovery e.g. the Validator network.
+* [`Peer`] &mdash; Manages a single connection to another peer. It reads and
+writes [`NetworkMessage`]es from/to the wire. Currently, it implements the two
+protocols: DirectSend and Rpc.
 
-* **OnChain Discovery** &mdash; Discovers via OnChain configuration the set of peers
-to connect to.  In the case of the Validator network, this is the ValidatorSet.
-Notifies ConnectivityManager of updates to the known peer set.
++ [`DiemTransport`] &mdash; A secure, reliable transport. It uses [NoiseIK] over
+TCP to negotiate an encrypted and authenticated connection between peers.
+The DiemNet version and any Diem-specific application protocols are negotiated
+afterward using the [DiemNet Handshake Protocol].
 
-* **Health Checker** &mdash; Performs periodic liveness probes to ensure the
+* [`ConnectivityManager`] &mdash; Establishes connections to known peers found
+via Discovery. Notifies [`PeerManager`] to make outbound dials, or disconnects based
+on updates to known peers via Discovery updates.
+
+* [`simple-onchain-discovery`] &mdash; Discovers the set of peers to connect to
+via on-chain configuration. These are the `validator_network_addresses` and
+`fullnode_network_addresses` of each [`ValidatorConfig`] in the
+[`DiemSystem::validators`] set. Notifies the [`ConnectivityManager`] of updates
+to the known peer set.
+
+* [`HealthChecker`] &mdash; Performs periodic liveness probes to ensure the
 health of a peer/connection. It resets the connection with the peer if a
 configurable number of probes fail in succession. Probes currently fail on a
 configurable static timeout.
 
-* **Direct Send** &mdash; Allows sending/receiving messages to/from remote
-peers. It notifies upstream handlers of inbound messages.
-
-* **RPC** &mdash; Allows sending/receiving RPCs to/from other peers. It notifies
-upstream handlers about inbound RPCs. The upstream handler is passed a channel
-through which can send a serialized response to the caller.
-
-In addition to the subcomponents described above, the network component
-consists of utilities to perform encryption, transport multiplexing, protocol
-negotiation, etc.
-
 ## How is this module organized?
 
     network
-    ├── benches                        # network benchmarks
-    ├── builder                        # Builds a network from a NetworkConfig
-    ├── memsocket                      # In-memory transport for tests
+    ├── benches                    # Network benchmarks
+    ├── builder                    # Builds a network from a NetworkConfig
+    ├── memsocket                  # In-memory socket interface for tests
     ├── netcore
     │   └── src
-    │       └── transport              # composable transport API
-    ├── network-address                # network addresses and encryption
-    |── simple-onchain-discovery       # protocol for peer discovery
+    │       ├── transport          # Composable transport API
+    │       └── framing            # Read/write length prefixes to sockets
+    ├── network-address            # Network addresses and encryption
+    ├── simple-onchain-discovery   # Protocol for on-chain peer discovery
     └── src
-        ├── connectivity_manager       # component to ensure connectivity to peers
-        ├── interface                  # generic network API
-        ├── noise                      # noise integration
-        ├── peer_manager               # component to dial/listen for connections
-        ├── protocols                  # message protocols
-        │   ├── direct_send            # protocol for fire-and-forget style message delivery
-        │   ├── health_checker         # protocol for health probing
-        │   ├── network                # components for interaction with applications
-        │   ├── rpc                    # protocol for remote procedure calls
-        │   └── wire                   # protocol for DiemNet handshakes and messaging
-        └── testutils                  # utilities for testing
+        ├── peer_manager           # Manage peer connections and messages to/from peers
+        ├── peer                   # Handles a single peer connection's state
+        ├── connectivity_manager   # Monitor connections and ensure connectivity
+        ├── protocols
+        │   ├── network            # Application layer interface to network module
+        │   ├── direct_send        # Protocol for fire-and-forget style message delivery
+        │   ├── health_checker     # Protocol for health probing
+        │   ├── rpc                # Protocol for remote procedure calls
+        │   └── wire               # Protocol for DiemNet handshakes and messaging
+        ├── transport              # The base transport layer for dialing/listening
+        └── noise                  # Noise handshaking and wire integration
+
+[`ConnectivityManager`]: ./src/connectivity_manager/mod.rs
+[DiemNet Handshake Protocol]: ../specifications/network/handshake-v1.md
+[`DiemSystem::validators`]: ../language/stdlib/modules/doc/DiemSystem.md#struct-diemsystem
+[`DiemTransport`]: ./src/transport/mod.rs
+[`HealthChecker`]: ./src/protocols/health_checker/mod.rs
+[`Network Interface`]: ./src/protocols/network/mod.rs
+[`NetworkMessage`]: ./src/protocols/wire/messaging/v1/mod.rs
+[NoiseIK]: ../specifications/network/noise.md
+[`PeerManager`]: ./src/peer_manager/mod.rs
+[`Peer`]: ./src/peer/mod.rs
+[`ValidatorConfig`]: ../language/stdlib/modules/doc/ValidatorConfig.md#struct-config
+[`simple-onchain-discovery`]: ./simple-onchain-discovery/src/lib.rs
