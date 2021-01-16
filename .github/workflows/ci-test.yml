@@ -43,7 +43,7 @@ jobs:
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
         with:
-          pattern: '^documentation\|^docker\|^scripts'
+          pattern: '^documentation\|^docker\|^scripts\|^.circleci'
           invert: "true"
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes

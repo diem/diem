@@ -45,7 +45,7 @@ runs:
         if [[ -f "${TARGET_FILE}" ]]; then
           echo found: 1>&2
           cat "${TARGET_FILE}" | grep "${INV}" "${PATTERN}" || echo No matching files. 1>&2
-          count="$( cat "${TARGET_FILE}" | grep -c "${INV}" "${PATTERN}" )" || true
+          count="$( cat "${TARGET_FILE}" | grep -c "${INV}" "${PATTERN}" || echo 0)"
           if [[ "$count" == 0 ]]; then
             result=false
           fi
