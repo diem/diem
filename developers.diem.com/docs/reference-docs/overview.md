@@ -12,8 +12,9 @@ Reference documentation generated from project source can be found below.
   <SimpleTextCard
     icon="/img/docs/rust-alt.png"
     iconDark="/img/docs/rust-alt-dark.png"
-    overlay="Coming Soon"
+    overlay="Diem Rust Crate list and documentation"
     title="Rust Docs"
+    to="https://diem.github.io/diem"
   />
 </CardsWrapper>
 
