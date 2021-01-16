@@ -270,7 +270,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         CoordinatorMessage::GetSyncState(callback) => {
                             self.get_state(callback);
                         }
-                        CoordinatorMessage::WaitUntilInitialized(cb_sender) => {
+                        CoordinatorMessage::WaitForInitialization(cb_sender) => {
                             self.set_initialization_listener(cb_sender);
                         }
                     };

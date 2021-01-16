@@ -209,7 +209,7 @@ pub enum CoordinatorMessage {
     SyncRequest(Box<SyncRequest>), // Initiate a new sync request for a given target.
     CommitNotification(Box<CommitNotification>), // Notify state sync about committed transactions.
     GetSyncState(oneshot::Sender<SynchronizationState>), // Return the local synchronization state.
-    WaitUntilInitialized(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
+    WaitForInitialization(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
 }
 
 /// A client used for communicating with a SyncCoordinator.
@@ -279,6 +279,8 @@ impl StateSyncClient {
                         "[State Sync Client] Timeout: failed to receive commit() ack in time!"
                     ))
                 }
+                // TODO(joshlind): clean up the use of CommitResponse.. having a string.is_empty()
+                // to check the presence of an error isn't great :(
                 Ok(response) => {
                     let CommitResponse { msg } = response??;
                     if msg != "" {
@@ -305,7 +307,7 @@ impl StateSyncClient {
             sender
                 .send(CoordinatorMessage::GetSyncState(cb_sender))
                 .await?;
-            Ok(cb_receiver.await?)
+            cb_receiver.await.map_err(|error| error.into())
         }
     }
 
@@ -316,7 +318,7 @@ impl StateSyncClient {
 
         async move {
             sender
-                .send(CoordinatorMessage::WaitUntilInitialized(cb_sender))
+                .send(CoordinatorMessage::WaitForInitialization(cb_sender))
                 .await?;
             cb_receiver.await?
         }
