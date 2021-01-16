@@ -28,7 +28,7 @@ use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
-/// Mock of a running instance of shared mempool
+/// Mock of a running instance of shared mempool.
 pub struct MockSharedMempool {
     _runtime: Runtime,
     pub ac_client: mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
@@ -38,9 +38,9 @@ pub struct MockSharedMempool {
 }
 
 impl MockSharedMempool {
-    /// Creates a mock of a running instance of shared mempool
+    /// Creates a mock of a running instance of shared mempool.
     /// Returns the runtime on which the shared mempool is running
-    /// and the channel through which shared mempool receives client events
+    /// and the channel through which shared mempool receives client events.
     pub fn new(state_sync: Option<mpsc::Receiver<CommitNotification>>) -> Self {
         let runtime = Builder::new()
             .thread_name("mock-shared-mem")
@@ -102,7 +102,6 @@ impl MockSharedMempool {
         }
     }
 
-    /// add txns to mempool
     pub fn add_txns(&self, txns: Vec<SignedTransaction>) -> Result<()> {
         {
             let mut pool = self.mempool.lock();
@@ -126,7 +125,7 @@ impl MockSharedMempool {
         Ok(())
     }
 
-    /// true if all given txns are in mempool, else false
+    /// True if all the given txns are in mempool, else false.
     pub fn read_timeline(&self, timeline_id: u64, count: usize) -> Vec<SignedTransaction> {
         let mut pool = self.mempool.lock();
         pool.read_timeline(timeline_id, count)

@@ -159,9 +159,7 @@ impl fmt::Display for ConsensusRequest {
 /// Response sent from mempool to consensus.
 pub enum ConsensusResponse {
     /// Block to submit to consensus
-    GetBlockResponse(
-        Vec<SignedTransaction>,
-    ),
+    GetBlockResponse(Vec<SignedTransaction>),
     CommitResponse(),
 }
 

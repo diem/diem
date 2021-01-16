@@ -98,7 +98,6 @@ impl TestTransaction {
     }
 }
 
-// adds transactions to mempool
 pub(crate) fn add_txns_to_mempool(
     pool: &mut CoreMempool,
     txns: Vec<TestTransaction>,
@@ -152,7 +151,7 @@ pub(crate) fn batch_add_signed_txn(
     Ok(())
 }
 
-// helper struct that keeps state between `.get_block` calls. Imitates work of Consensus
+// Helper struct that keeps state between `.get_block` calls. Imitates work of Consensus.
 pub struct ConsensusMock(HashSet<TxnPointer>);
 
 impl ConsensusMock {

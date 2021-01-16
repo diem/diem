@@ -19,7 +19,7 @@ use std::{
 fn test_transaction_ordering() {
     let (mut mempool, mut consensus) = setup_mempool();
 
-    // default ordering: gas price
+    // Default ordering: gas price
     let mut transactions = add_txns_to_mempool(
         &mut mempool,
         vec![TestTransaction::new(0, 0, 3), TestTransaction::new(1, 0, 5)],
@@ -33,7 +33,7 @@ fn test_transaction_ordering() {
         vec!(transactions[0].clone())
     );
 
-    // second level ordering: expiration time
+    // Second level ordering: expiration time
     let (mut mempool, mut consensus) = setup_mempool();
     transactions = add_txns_to_mempool(
         &mut mempool,
@@ -46,7 +46,7 @@ fn test_transaction_ordering() {
         );
     }
 
-    // last level: for same account it should be by sequence number
+    // Last level: for same account it should be by sequence number
     let (mut mempool, mut consensus) = setup_mempool();
     transactions = add_txns_to_mempool(
         &mut mempool,
@@ -141,7 +141,7 @@ fn test_update_transaction_in_mempool() {
     );
     let fixed_txns = add_txns_to_mempool(&mut mempool, vec![TestTransaction::new(0, 0, 5)]);
 
-    // check that first transactions pops up first
+    // Check that first transactions pops up first
     assert_eq!(
         consensus.get_block(&mut mempool, 1),
         vec![fixed_txns[0].clone()]
@@ -180,8 +180,8 @@ fn test_update_invalid_transaction_in_mempool() {
     );
     let _added_tnx = add_signed_txn(&mut mempool, updated_txn);
 
-    // since both gas price and mas gas amount were updated, the ordering should not have changed.
-    // the second transaction with gas price 2 should come first
+    // Since both gas price and mas gas amount were updated, the ordering should not have changed.
+    // The second transaction with gas price 2 should come first.
     assert_eq!(consensus.get_block(&mut mempool, 1), vec![txns[1].clone()]);
     let next_tnx = consensus.get_block(&mut mempool, 1);
     assert_eq!(next_tnx, vec![txns[0].clone()]);
@@ -192,7 +192,7 @@ fn test_update_invalid_transaction_in_mempool() {
 fn test_remove_transaction() {
     let (mut pool, mut consensus) = setup_mempool();
 
-    // test normal flow
+    // Test normal flow.
     let txns = add_txns_to_mempool(
         &mut pool,
         vec![TestTransaction::new(0, 0, 1), TestTransaction::new(0, 1, 2)],
@@ -204,28 +204,28 @@ fn test_remove_transaction() {
         &mut pool,
         vec![TestTransaction::new(1, 0, 3), TestTransaction::new(1, 1, 4)],
     );
-    // should return only txns from new_txns
+    // Should return only txns from new_txns.
     assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[0].clone()));
     assert_eq!(consensus.get_block(&mut pool, 1), vec!(new_txns[1].clone()));
 }
 
 #[test]
 fn test_system_ttl() {
-    // created mempool with system_transaction_timeout = 0
-    // All transactions are supposed to be evicted on next gc run
+    // Created mempool with system_transaction_timeout = 0.
+    // All transactions are supposed to be evicted on next gc run.
     let mut config = NodeConfig::random();
     config.mempool.system_transaction_timeout_secs = 0;
     let mut mempool = CoreMempool::new(&config);
 
     add_txn(&mut mempool, TestTransaction::new(0, 0, 10)).unwrap();
 
-    // reset system ttl timeout
+    // Reset system ttl timeout.
     mempool.system_transaction_timeout = Duration::from_secs(10);
-    // add new transaction. Should be valid for 10 seconds
+    // Add new transaction. Should be valid for 10 seconds.
     let transaction = TestTransaction::new(1, 0, 1);
     add_txn(&mut mempool, transaction.clone()).unwrap();
 
-    // gc routine should clear transaction from first insert but keep last one
+    // GC routine should clear transaction from first insert but keep last one.
     mempool.gc();
     let batch = mempool.get_block(1, HashSet::new());
     assert_eq!(vec![transaction.make_signed_transaction()], batch);
@@ -233,47 +233,47 @@ fn test_system_ttl() {
 
 #[test]
 fn test_commit_callback() {
-    // consensus commit callback should unlock txns in parking lot
+    // Consensus commit callback should unlock txns in parking lot.
     let mut pool = setup_mempool().0;
-    // insert transaction with sequence number 6 to pool(while last known executed transaction is 0)
+    // Insert transaction with sequence number 6 to pool (while last known executed transaction is 0).
     let txns = add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 6, 1)]);
 
-    // check that pool is empty
+    // Check that pool is empty.
     assert!(pool.get_block(1, HashSet::new()).is_empty());
-    // transaction 5 got back from consensus
+    // Transaction 5 got back from consensus.
     pool.remove_transaction(&TestTransaction::get_address(1), 5, false);
-    // verify that we can execute transaction 6
+    // Verify that we can execute transaction 6.
     assert_eq!(pool.get_block(1, HashSet::new())[0], txns[0]);
 }
 
 #[test]
 fn test_sequence_number_cache() {
-    // checks potential race where StateDB is lagging
+    // Checks potential race where StateDB is lagging.
     let mut pool = setup_mempool().0;
-    // callback from consensus should set current sequence number for account
+    // Callback from consensus should set current sequence number for account.
     pool.remove_transaction(&TestTransaction::get_address(1), 5, false);
 
-    // try to add transaction with sequence number 6 to pool(while last known executed transaction
-    // for AC is 0)
+    // Try to add transaction with sequence number 6 to pool (while last known executed transaction
+    // for AC is 0).
     add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 6, 1)]);
-    // verify that we can execute transaction 6
+    // Verify that we can execute transaction 6.
     assert_eq!(pool.get_block(1, HashSet::new()).len(), 1);
 }
 
 #[test]
 fn test_reset_sequence_number_on_failure() {
     let mut pool = setup_mempool().0;
-    // add two transactions for account
+    // Add two transactions for account.
     add_txns_to_mempool(
         &mut pool,
         vec![TestTransaction::new(1, 0, 1), TestTransaction::new(1, 1, 1)],
     );
 
-    // notify mempool about failure in arbitrary order
+    // Notify mempool about failure in arbitrary order
     pool.remove_transaction(&TestTransaction::get_address(1), 0, true);
     pool.remove_transaction(&TestTransaction::get_address(1), 1, true);
 
-    // verify that new transaction for this account can be added
+    // Verify that new transaction for this account can be added.
     assert!(add_txn(&mut pool, TestTransaction::new(1, 0, 1)).is_ok());
 }
 
@@ -296,21 +296,21 @@ fn test_timeline() {
     };
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(view(timeline), vec![0, 1]);
-    // txns 3 and 5 should be in parking lot
+    // Txns 3 and 5 should be in parking lot.
     assert_eq!(2, pool.get_parking_lot_size());
 
-    // add txn 2 to unblock txn3
+    // Add txn 2 to unblock txn3.
     add_txns_to_mempool(&mut pool, vec![TestTransaction::new(1, 2, 1)]);
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(view(timeline), vec![0, 1, 2, 3]);
-    // txn 5 should be in parking lot
+    // Txn 5 should be in parking lot.
     assert_eq!(1, pool.get_parking_lot_size());
 
-    // try different start read position
+    // Try different start read position.
     let (timeline, _) = pool.read_timeline(2, 10);
     assert_eq!(view(timeline), vec![2, 3]);
 
-    // simulate callback from consensus to unblock txn 5
+    // Simulate callback from consensus to unblock txn 5.
     pool.remove_transaction(&TestTransaction::get_address(1), 4, false);
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(view(timeline), vec![5]);
@@ -325,15 +325,15 @@ fn test_capacity() {
     config.mempool.system_transaction_timeout_secs = 0;
     let mut pool = CoreMempool::new(&config);
 
-    // error on exceeding limit
+    // Error on exceeding limit.
     add_txn(&mut pool, TestTransaction::new(1, 0, 1)).unwrap();
     assert!(add_txn(&mut pool, TestTransaction::new(1, 1, 1)).is_err());
 
-    // commit transaction and free space
+    // Commit transaction and free space.
     pool.remove_transaction(&TestTransaction::get_address(1), 0, false);
     assert!(add_txn(&mut pool, TestTransaction::new(1, 1, 1)).is_ok());
 
-    // fill it up and check that GC routine will clear space
+    // Fill it up and check that GC routine will clear space.
     assert!(add_txn(&mut pool, TestTransaction::new(1, 2, 1)).is_err());
     pool.gc();
     assert!(add_txn(&mut pool, TestTransaction::new(1, 2, 1)).is_ok());
@@ -344,15 +344,15 @@ fn test_parking_lot_eviction() {
     let mut config = NodeConfig::random();
     config.mempool.capacity = 5;
     let mut pool = CoreMempool::new(&config);
-    // add transactions with following sequence numbers to Mempool
+    // Add transactions with the following sequence numbers to Mempool.
     for seq in &[0, 1, 2, 9, 10] {
         add_txn(&mut pool, TestTransaction::new(1, *seq, 1)).unwrap();
     }
-    // Mempool is full. Insert few txns for other account
+    // Mempool is full. Insert few txns for other account.
     for seq in &[0, 1] {
         add_txn(&mut pool, TestTransaction::new(0, *seq, 1)).unwrap();
     }
-    // Make sure that we have correct txns in Mempool
+    // Make sure that we have correct txns in Mempool.
     let mut txns: Vec<_> = pool
         .get_block(5, HashSet::new())
         .iter()
@@ -361,7 +361,7 @@ fn test_parking_lot_eviction() {
     txns.sort_unstable();
     assert_eq!(txns, vec![0, 0, 1, 1, 2]);
 
-    // Make sure we can't insert any new transactions, cause parking lot supposed to be empty by now
+    // Make sure we can't insert any new transactions, cause parking lot supposed to be empty by now.
     assert!(add_txn(&mut pool, TestTransaction::new(0, 2, 1)).is_err());
 }
 
@@ -370,18 +370,18 @@ fn test_parking_lot_evict_only_for_ready_txn_insertion() {
     let mut config = NodeConfig::random();
     config.mempool.capacity = 6;
     let mut pool = CoreMempool::new(&config);
-    // add transactions with following sequence numbers to Mempool
+    // Add transactions with the following sequence numbers to Mempool.
     for seq in &[0, 1, 2, 9, 10, 11] {
         add_txn(&mut pool, TestTransaction::new(1, *seq, 1)).unwrap();
     }
 
-    // try inserting for ready txs
+    // Try inserting for ready txs.
     let ready_seq_nums = vec![3, 4];
     for seq in ready_seq_nums {
         add_txn(&mut pool, TestTransaction::new(1, seq, 1)).unwrap();
     }
 
-    // Make sure that we have correct txns in Mempool
+    // Make sure that we have correct txns in Mempool.
     let mut txns: Vec<_> = pool
         .get_block(5, HashSet::new())
         .iter()
@@ -390,7 +390,7 @@ fn test_parking_lot_evict_only_for_ready_txn_insertion() {
     txns.sort_unstable();
     assert_eq!(txns, vec![0, 1, 2, 3, 4]);
 
-    // trying to insert a tx that would not be ready after inserting should fail
+    // Trying to insert a tx that would not be ready after inserting should fail.
     let not_ready_seq_nums = vec![6, 8, 12, 14];
     for seq in not_ready_seq_nums {
         assert!(add_txn(&mut pool, TestTransaction::new(1, seq, 1)).is_err());
@@ -402,7 +402,7 @@ fn test_gc_ready_transaction() {
     let mut pool = setup_mempool().0;
     add_txn(&mut pool, TestTransaction::new(1, 0, 1)).unwrap();
 
-    // insert in the middle transaction that's going to be expired
+    // Insert in the middle transaction that's going to be expired.
     let txn = TestTransaction::new(1, 1, 1).make_signed_transaction_with_expiration_time(0);
     pool.add_txn(
         txn,
@@ -413,19 +413,19 @@ fn test_gc_ready_transaction() {
         GovernanceRole::NonGovernanceRole,
     );
 
-    // insert few transactions after it
-    // They supposed to be ready because there's sequential path from 0 to them
+    // Insert few transactions after it.
+    // They are supposed to be ready because there's a sequential path from 0 to them.
     add_txn(&mut pool, TestTransaction::new(1, 2, 1)).unwrap();
     add_txn(&mut pool, TestTransaction::new(1, 3, 1)).unwrap();
 
-    // check that all txns are ready
+    // Check that all txns are ready.
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 4);
 
-    // gc expired transaction
+    // GC expired transaction.
     pool.gc_by_expiration_time(Duration::from_secs(1));
 
-    // make sure txns 2 and 3 became not ready and we can't read them from any API
+    // Make sure txns 2 and 3 became not ready and we can't read them from any API.
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 0);
@@ -459,7 +459,7 @@ fn test_clean_stuck_transactions() {
 #[test]
 fn test_ttl_cache() {
     let mut cache = TtlCache::new(2, Duration::from_secs(1));
-    // test basic insertion
+    // Test basic insertion.
     cache.insert(1, 1);
     cache.insert(1, 2);
     cache.insert(2, 2);
@@ -467,13 +467,13 @@ fn test_ttl_cache() {
     assert_eq!(cache.get(&1), Some(&3));
     assert_eq!(cache.get(&2), Some(&2));
     assert_eq!(cache.size(), 2);
-    // test reaching max capacity
+    // Test reaching max capacity.
     cache.insert(3, 3);
     assert_eq!(cache.size(), 2);
     assert_eq!(cache.get(&1), Some(&3));
     assert_eq!(cache.get(&3), Some(&3));
     assert_eq!(cache.get(&2), None);
-    // test ttl functionality
+    // Test ttl functionality.
     cache.gc(SystemTime::now()
         .checked_add(Duration::from_secs(10))
         .unwrap());
