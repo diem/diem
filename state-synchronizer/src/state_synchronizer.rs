@@ -101,12 +101,12 @@ impl SynchronizationState {
     }
 }
 
-pub struct StateSynchronizer {
+pub struct StateSyncBootstrapper {
     _runtime: Runtime,
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }
 
-impl StateSynchronizer {
+impl StateSyncBootstrapper {
     pub fn bootstrap(
         network: Vec<(
             NodeNetworkId,

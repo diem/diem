@@ -23,7 +23,7 @@ use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use network_builder::builder::NetworkBuilder;
-use state_synchronizer::StateSynchronizer;
+use state_synchronizer::StateSyncBootstrapper;
 use std::{
     boxed::Box,
     convert::TryFrom,
@@ -47,7 +47,7 @@ const MEMPOOL_NETWORK_CHANNEL_BUFFER_SIZE: usize = 1_024;
 pub struct DiemHandle {
     _rpc: Runtime,
     _mempool: Runtime,
-    _state_synchronizer: StateSynchronizer,
+    _state_sync_bootstrapper: StateSyncBootstrapper,
     _network_runtimes: Vec<Runtime>,
     _consensus_runtime: Option<Runtime>,
     _debug: NodeDebugService,
@@ -404,7 +404,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // for state sync to send requests to mempool
     let (state_sync_to_mempool_sender, state_sync_requests) =
         channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
-    let state_synchronizer = StateSynchronizer::bootstrap(
+    let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
         state_sync_network_handles,
         state_sync_to_mempool_sender,
         Arc::clone(&db_rw.reader),
@@ -436,7 +436,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // network provider -> consensus -> state synchronizer -> network provider.  This has resulted
     // in a deadlock as observed in GitHub issue #749.
     if let Some((consensus_network_sender, consensus_network_events)) = consensus_network_handles {
-        let state_sync_client = state_synchronizer.create_client();
+        let state_sync_client = state_sync_bootstrapper.create_client();
 
         // Make sure that state synchronizer is caught up at least to its waypoint
         // (in case it's present). There is no sense to start consensus prior to that.
@@ -471,7 +471,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         _network_runtimes: network_runtimes,
         _rpc: rpc_runtime,
         _mempool: mempool,
-        _state_synchronizer: state_synchronizer,
+        _state_sync_bootstrapper: state_sync_bootstrapper,
         _consensus_runtime: consensus_runtime,
         _debug: debug_if,
         _backup: backup_service,

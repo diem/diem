@@ -3,7 +3,7 @@
 
 use crate::{
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
-    state_synchronizer::{StateSyncClient, StateSynchronizer},
+    state_synchronizer::{StateSyncClient, StateSyncBootstrapper},
     tests::{
         mock_executor_proxy::{MockExecutorProxy, MockRpcHandler},
         mock_storage::MockStorage,
@@ -66,7 +66,7 @@ struct SynchronizerPeer {
     public_key: ValidatorInfo,
     signer: ValidatorSigner,
     storage_proxy: Option<Arc<RwLock<MockStorage>>>,
-    synchronizer: Option<StateSynchronizer>,
+    synchronizer: Option<StateSyncBootstrapper>,
 }
 
 struct SynchronizerEnv {
@@ -193,7 +193,7 @@ impl SynchronizerEnv {
         )));
 
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
-        let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
+        let synchronizer = StateSyncBootstrapper::bootstrap_with_executor_proxy(
             Runtime::new().unwrap(),
             network_handles,
             mempool_channel,
