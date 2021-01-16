@@ -188,17 +188,6 @@ impl StateSynchronizer {
     pub fn create_client(&self) -> StateSyncClient {
         StateSyncClient::new(self.coordinator_sender.clone())
     }
-
-    /// The function returns a future that is fulfilled when the state synchronizer is
-    /// caught up with the waypoint specified in the local config.
-    pub async fn wait_until_initialized(&self) -> Result<()> {
-        let mut sender = self.coordinator_sender.clone();
-        let (cb_sender, cb_receiver) = oneshot::channel();
-        sender
-            .send(CoordinatorMessage::WaitInitialize(cb_sender))
-            .await?;
-        cb_receiver.await?
-    }
 }
 
 pub struct StateSyncClient {
@@ -289,6 +278,19 @@ impl StateSyncClient {
         async move {
             sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
             Ok(cb_receiver.await?)
+        }
+    }
+
+    /// Waits until state sync is caught up with the waypoint specified in the local config.
+    pub fn wait_until_initialized(&self) -> impl Future<Output = Result<()>> {
+        let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+
+        async move {
+            sender
+                .send(CoordinatorMessage::WaitInitialize(cb_sender))
+                .await?;
+            cb_receiver.await?
         }
     }
 }

@@ -802,7 +802,7 @@ fn catch_up_with_waypoints() {
     );
     block_on(
         env.peers[1]
-            .synchronizer
+            .client
             .as_ref()
             .unwrap()
             .wait_until_initialized(),

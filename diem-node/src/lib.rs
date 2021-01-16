@@ -436,12 +436,14 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // network provider -> consensus -> state synchronizer -> network provider.  This has resulted
     // in a deadlock as observed in GitHub issue #749.
     if let Some((consensus_network_sender, consensus_network_events)) = consensus_network_handles {
+        let state_sync_client = state_synchronizer.create_client();
+
         // Make sure that state synchronizer is caught up at least to its waypoint
         // (in case it's present). There is no sense to start consensus prior to that.
         // TODO: Note that we need the networking layer to be able to discover & connect to the
         // peers with potentially outdated network identity public keys.
         debug!("Wait until state synchronizer is initialized");
-        block_on(state_synchronizer.wait_until_initialized())
+        block_on(state_sync_client.wait_until_initialized())
             .expect("State synchronizer initialization failure");
         debug!("State synchronizer initialization complete.");
 
@@ -451,7 +453,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
             node_config,
             consensus_network_sender,
             consensus_network_events,
-            state_synchronizer.create_client(),
+            state_sync_client,
             consensus_to_mempool_sender,
             diem_db,
             consensus_reconfig_events,
