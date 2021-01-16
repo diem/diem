@@ -41,7 +41,7 @@ use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidat
 //  broadcast_coordinator tasks  //
 // ============================== //
 
-/// attempts broadcast to `peer` and schedules the next broadcast
+/// Attempts broadcast to `peer` and schedules the next broadcast.
 pub(crate) fn execute_broadcast<V>(
     peer: PeerNetworkId,
     backoff: bool,
@@ -70,10 +70,10 @@ pub(crate) fn execute_broadcast<V>(
 }
 
 // =============================== //
-// tasks processing txn submission //
+// Tasks processing txn submission //
 // =============================== //
 
-/// processes transactions directly submitted by client
+/// Processes transactions directly submitted by client.
 pub(crate) async fn process_client_transaction_submission<V>(
     smp: SharedMempool<V>,
     transaction: SignedTransaction,
@@ -101,7 +101,7 @@ pub(crate) async fn process_client_transaction_submission<V>(
     }
 }
 
-/// processes transactions from other nodes
+/// Processes transactions from other nodes.
 pub(crate) async fn process_transaction_broadcast<V>(
     mut smp: SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
@@ -119,11 +119,9 @@ pub(crate) async fn process_transaction_broadcast<V>(
             &peer.peer_id().to_string(),
         ])
         .start_timer();
-    // process transactions and log the result
     let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
     log_txn_process_results(&results, Some(peer.clone()));
 
-    // send back ACK
     let ack_response = gen_ack_response(request_id, results, &peer);
     let network_sender = smp
         .network_senders
@@ -206,8 +204,8 @@ fn is_txn_retryable(result: SubmissionStatus) -> bool {
     result.0.code == MempoolStatusCode::MempoolIsFull
 }
 
-/// submits a list of SignedTransaction to the local mempool
-/// and returns a vector containing AdmissionControlStatus
+/// Submits a list of SignedTransaction to the local mempool
+/// and returns a vector containing AdmissionControlStatus.
 pub(crate) async fn process_incoming_transactions<V>(
     smp: &SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
@@ -219,7 +217,7 @@ where
     let mut statuses = vec![];
 
     let start_storage_read = Instant::now();
-    // track latency: fetching seq number
+    // Track latency: fetching seq number
     let seq_numbers = transactions
         .par_iter()
         .map(|t| {
@@ -230,7 +228,7 @@ where
             })
         })
         .collect::<Vec<_>>();
-    // track latency for storage read fetching sequence number
+    // Track latency for storage read fetching sequence number
     let storage_read_latency = start_storage_read.elapsed();
     counters::PROCESS_TXN_BREAKDOWN_LATENCY
         .with_label_values(&[counters::FETCH_SEQ_NUM_LABEL])
@@ -253,7 +251,7 @@ where
                     ));
                 }
             } else {
-                // failed to get transaction
+                // Failed to get transaction
                 statuses.push((
                     t,
                     (
@@ -266,7 +264,7 @@ where
         })
         .collect();
 
-    // track latency: VM validation
+    // Track latency: VM validation
     let vm_validation_timer = counters::PROCESS_TXN_BREAKDOWN_LATENCY
         .with_label_values(&[counters::VM_VALIDATION_LABEL])
         .start_timer();
@@ -325,7 +323,6 @@ fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<Pe
     };
     for (txn, (mempool_status, maybe_vm_status)) in results.iter() {
         if let Some(vm_status) = maybe_vm_status {
-            // log vm validation failure
             trace!(
                 SecurityEvent::InvalidTransactionMempool,
                 failed_transaction = txn,
@@ -355,6 +352,7 @@ fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<Pe
 // ================================= //
 // intra-node communication handlers //
 // ================================= //
+
 pub(crate) async fn process_state_sync_request(
     mempool: Arc<Mutex<CoreMempool>>,
     req: CommitNotification,
@@ -367,7 +365,6 @@ pub(crate) async fn process_state_sync_request(
         .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
         .observe(req.transactions.len() as f64);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
-    // send back to callback
     let result = if req
         .callback
         .send(Ok(CommitResponse {
@@ -390,7 +387,7 @@ pub(crate) async fn process_state_sync_request(
 }
 
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
-    //start latency timer
+    // Start latency timer
     let start_time = Instant::now();
     debug!(LogSchema::event_log(LogEntry::Consensus, LogEvent::Received).consensus_msg(&req));
 
@@ -423,7 +420,6 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
             )
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
-            // handle rejected txns
             counters::MEMPOOL_SERVICE_TXNS
                 .with_label_values(&[counters::COMMIT_CONSENSUS_LABEL])
                 .observe(transactions.len() as f64);
@@ -435,7 +431,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
             )
         }
     };
-    // send back to callback
+    // Send back to callback
     let result = if callback.send(Ok(resp)).is_err() {
         error!(LogSchema::event_log(
             LogEntry::Consensus,
@@ -472,7 +468,7 @@ async fn commit_txns(
     }
 }
 
-/// processes on-chain reconfiguration notification
+/// Processes on-chain reconfiguration notification.
 pub(crate) async fn process_config_update<V>(
     config_update: OnChainConfigPayload,
     validator: Arc<RwLock<V>>,
@@ -484,7 +480,6 @@ pub(crate) async fn process_config_update<V>(
             .reconfig_update(config_update.clone())
     );
 
-    // restart VM validator
     if let Err(e) = validator.write().restart(config_update) {
         counters::VM_RECONFIG_UPDATE_FAIL_COUNT.inc();
         error!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::VMUpdateFail).error(&e));

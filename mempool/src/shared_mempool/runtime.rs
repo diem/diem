@@ -25,17 +25,17 @@ use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
 
-/// bootstrap of SharedMempool
-/// creates separate Tokio Runtime that runs following routines:
-///   - outbound_sync_task (task that periodically broadcasts transactions to peers)
-///   - inbound_network_task (task that handles inbound mempool messages and network events)
-///   - gc_task (task that performs GC of all expired transactions by SystemTTL)
+/// Bootstrap of SharedMempool.
+/// Creates a separate Tokio Runtime that runs the following routines:
+///   - outbound_sync_task (task that periodically broadcasts transactions to peers).
+///   - inbound_network_task (task that handles inbound mempool messages and network events).
+///   - gc_task (task that performs GC of all expired transactions by SystemTTL).
 pub(crate) fn start_shared_mempool<V>(
     executor: &Handle,
     config: &NodeConfig,
     mempool: Arc<Mutex<CoreMempool>>,
-    // First element in tuple is the network ID
-    // See `NodeConfig::is_upstream_peer` for the definition of network ID
+    // First element in tuple is the network ID.
+    // See `NodeConfig::is_upstream_peer` for the definition of network ID.
     mempool_network_handles: Vec<(NodeNetworkId, MempoolNetworkSender, MempoolNetworkEvents)>,
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
@@ -88,12 +88,11 @@ pub(crate) fn start_shared_mempool<V>(
     ));
 }
 
-/// method used to bootstrap shared mempool for a node
 pub fn bootstrap(
     config: &NodeConfig,
     db: Arc<dyn DbReader>,
-    // The first element in the tuple is the ID of the network that this network is a handle to
-    // See `NodeConfig::is_upstream_peer` for the definition of network ID
+    // The first element in the tuple is the ID of the network that this network is a handle to.
+    // See `NodeConfig::is_upstream_peer` for the definition of network ID.
     mempool_network_handles: Vec<(NodeNetworkId, MempoolNetworkSender, MempoolNetworkEvents)>,
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,

@@ -75,12 +75,12 @@ pub(crate) async fn coordinator<V>(
         ::futures::select! {
             (msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
-                // this timer measures how long it took for the bounded executor to *schedule* the
-                // task
+                // This timer measures how long it took for the bounded executor to *schedule* the
+                // task.
                 let _timer = counters::TASK_SPAWN_LATENCY
                     .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
                     .start_timer();
-                // this timer measures how long it took for the task to go from scheduled to started
+                // This timer measures how long it took for the task to go from scheduled to started.
                 let task_start_timer = counters::TASK_SPAWN_LATENCY
                     .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
                     .start_timer();
@@ -155,13 +155,13 @@ pub(crate) async fn coordinator<V>(
                                     true => TimelineState::NonQualified,
                                     false => TimelineState::NotReady,
                                 };
-                                // this timer measures how long it took for the bounded executor to
-                                // *schedule* the task
+                                // This timer measures how long it took for the bounded executor to
+                                // *schedule* the task.
                                 let _timer = counters::TASK_SPAWN_LATENCY
                                     .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::SPAWN_LABEL])
                                     .start_timer();
-                                // this timer measures how long it took for the task to go from scheduled
-                                // to started
+                                // This timer measures how long it took for the task to go from scheduled
+                                // to started.
                                 let task_start_timer = counters::TASK_SPAWN_LATENCY
                                     .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::START_LABEL])
                                     .start_timer();
@@ -205,7 +205,7 @@ pub(crate) async fn coordinator<V>(
     ));
 }
 
-/// GC all expired transactions by SystemTTL
+/// Garbage collect all expired transactions by SystemTTL.
 pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
     info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Start));
     let mut interval = interval(Duration::from_millis(gc_interval_ms));
@@ -223,9 +223,9 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
     ));
 }
 
-/// Periodically logs a snapshot of transactions in core mempool
-/// In the future we may want a interactive way to directly query mempool's internal state
-/// For now, we will rely on this periodic snapshot to observe the internal state
+/// Periodically logs a snapshot of transactions in core mempool.
+/// In the future we may want an interactive way to directly query mempool's internal state.
+/// For now, we will rely on this periodic snapshot to observe the internal state.
 pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_interval_secs: u64) {
     let mut interval = interval(Duration::from_secs(snapshot_interval_secs));
     while let Some(_interval) = interval.next().await {
