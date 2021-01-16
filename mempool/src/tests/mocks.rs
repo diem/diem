@@ -31,13 +31,9 @@ use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 /// Mock of a running instance of shared mempool
 pub struct MockSharedMempool {
     _runtime: Runtime,
-    /// sender from admission control to shared mempool
     pub ac_client: mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
-    /// mempool
     pub mempool: Arc<Mutex<CoreMempool>>,
-    /// sender from consensus to shared mempool
     pub consensus_sender: mpsc::Sender<ConsensusRequest>,
-    /// sender from state sync to shared mempool
     pub state_sync_sender: Option<mpsc::Sender<CommitNotification>>,
 }
 

@@ -26,7 +26,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-/// TransactionStore is in-memory storage for all transactions in mempool
+/// TransactionStore is in-memory storage for all transactions in mempool.
 pub struct TransactionStore {
     // main DS
     transactions: HashMap<AccountAddress, AccountTransactions>,
@@ -69,7 +69,7 @@ impl TransactionStore {
         }
     }
 
-    /// fetch transaction by account address + sequence_number
+    /// Fetch transaction by account address + sequence_number.
     pub(crate) fn get(
         &self,
         address: &AccountAddress,
@@ -85,8 +85,7 @@ impl TransactionStore {
         None
     }
 
-    /// insert transaction into TransactionStore
-    /// performs validation checks and updates indexes
+    /// Insert transaction into TransactionStore. Performs validation checks and updates indexes.
     pub(crate) fn insert(
         &mut self,
         txn: MempoolTransaction,
@@ -175,9 +174,9 @@ impl TransactionStore {
             .set(self.timeline_index.size() as i64);
     }
 
-    /// checks if Mempool is full
-    /// If it's full, tries to free some space by evicting transactions from ParkingLot
-    /// We only evict on attempt to insert a transaction that would be ready for broadcast upon insertion
+    /// Checks if Mempool is full.
+    /// If it's full, tries to free some space by evicting transactions from the ParkingLot.
+    /// We only evict on attempt to insert a transaction that would be ready for broadcast upon insertion.
     fn check_is_full_after_eviction(
         &mut self,
         txn: &MempoolTransaction,
@@ -206,12 +205,12 @@ impl TransactionStore {
         self.system_ttl_index.size() >= self.capacity
     }
 
-    /// check if a transaction would be ready for broadcast in mempool upon insertion (without inserting it)
+    /// Check if a transaction would be ready for broadcast in mempool upon insertion (without inserting it).
     /// Two ways this can happen:
     /// 1. txn sequence number == curr_sequence_number
-    /// (this handles both cases where (1) txn is first possible txn for an account
-    /// and (2) previous txn is committed)
-    /// 2. the txn before this is ready for broadcast but not yet committed
+    /// (this handles both cases where, (1) txn is first possible txn for an account and (2) the
+    /// previous txn is committed).
+    /// 2. The txn before this is ready for broadcast but not yet committed.
     fn check_txn_ready(&mut self, txn: &MempoolTransaction, curr_sequence_number: u64) -> bool {
         let tx_sequence_number = txn.get_sequence_number();
         if tx_sequence_number == curr_sequence_number {
@@ -232,11 +231,11 @@ impl TransactionStore {
         false
     }
 
-    /// fixes following invariants:
-    /// all transactions of given account that are sequential to current sequence number
-    /// supposed to be included in both PriorityIndex (ordering for Consensus) and
-    /// TimelineIndex (txns for SharedMempool)
-    /// Other txns are considered to be "non-ready" and should be added to ParkingLotIndex
+    /// Maintains the following invariants:
+    /// - All transactions of a given account that are sequential to the current sequence number
+    ///   should be included in both the PriorityIndex (ordering for Consensus) and
+    ///   TimelineIndex (txns for SharedMempool).
+    /// - Other txns are considered to be "non-ready" and should be added to ParkingLotIndex.
     fn process_ready_transactions(
         &mut self,
         address: &AccountAddress,
@@ -251,8 +250,8 @@ impl TransactionStore {
                     self.timeline_index.insert(txn);
                 }
 
-                // remove txn from parking lot after it has been promoted to priority_index / timeline_index,
-                // i.e. txn status is ready
+                // Temove txn from parking lot after it has been promoted to
+                // priority_index / timeline_index, i.e., txn status is ready.
                 self.parking_lot_index.remove(txn);
                 sequence_number += 1;
             }
@@ -278,10 +277,10 @@ impl TransactionStore {
     }
 
     fn clean_committed_transactions(&mut self, address: &AccountAddress, sequence_number: u64) {
-        // remove all previous seq number transactions for this account
-        // This can happen if transactions are sent to multiple nodes and one of
+        // Remove all previous seq number transactions for this account.
+        // This can happen if transactions are sent to multiple nodes and one of the
         // nodes has sent the transaction to consensus but this node still has the
-        // transaction sitting in mempool
+        // transaction sitting in mempool.
         if let Some(txns) = self.transactions.get_mut(&address) {
             let mut active = txns.split_off(&sequence_number);
             let txns_for_removal = txns.clone();
@@ -302,9 +301,9 @@ impl TransactionStore {
         }
     }
 
-    /// handles transaction commit
-    /// it includes deletion of all transactions with sequence number <= `account_sequence_number`
-    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex
+    /// Handles transaction commit.
+    /// It includes deletion of all transactions with sequence number <= `account_sequence_number`
+    /// and potential promotion of sequential txns to PriorityIndex/TimelineIndex.
     pub(crate) fn commit_transaction(
         &mut self,
         account: &AccountAddress,
@@ -325,7 +324,7 @@ impl TransactionStore {
         }
     }
 
-    /// removes transaction from all indexes
+    /// Removes transaction from all indexes.
     fn index_remove(&mut self, txn: &MempoolTransaction) {
         counters::CORE_MEMPOOL_REMOVED_TXNS.inc();
         self.system_ttl_index.remove(&txn);
@@ -336,8 +335,8 @@ impl TransactionStore {
         self.track_indices();
     }
 
-    /// Read `count` transactions from timeline since `timeline_id`
-    /// Returns block of transactions and new last_timeline_id
+    /// Read `count` transactions from timeline since `timeline_id`.
+    /// Returns block of transactions and new last_timeline_id.
     pub(crate) fn read_timeline(
         &mut self,
         timeline_id: u64,
@@ -373,7 +372,7 @@ impl TransactionStore {
             .collect()
     }
 
-    /// GC old transactions
+    /// Garbage collect old transactions.
     pub(crate) fn gc_by_system_ttl(
         &mut self,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
@@ -383,7 +382,7 @@ impl TransactionStore {
         self.gc(now, true, metrics_cache);
     }
 
-    /// GC old transactions based on client-specified expiration time
+    /// Garbage collect old transactions based on client-specified expiration time.
     pub(crate) fn gc_by_expiration_time(
         &mut self,
         block_time: Duration,
