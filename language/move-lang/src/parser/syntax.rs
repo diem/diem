@@ -1070,17 +1070,54 @@ fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
         QuantKind_::Exists
     };
     tokens.advance()?;
-    let end_loc = tokens.previous_end_loc();
-    let kind = spanned(tokens.file_name(), start_loc, end_loc, kind);
-    parse_quant_cont(kind, tokens)
+    let kind = spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        kind,
+    );
+
+    let bindings_start_loc = tokens.start_loc();
+    let binds_with_range_list = parse_list(
+        tokens,
+        |tokens| {
+            if tokens.peek() == Tok::Comma {
+                tokens.advance()?;
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        },
+        parse_quant_binding,
+    )?;
+    let binds_with_range_list = spanned(
+        tokens.file_name(),
+        bindings_start_loc,
+        tokens.previous_end_loc(),
+        binds_with_range_list,
+    );
+
+    let body_start_loc = tokens.start_loc();
+    let body = parse_quant_body(kind.value, tokens)?;
+    let body = spanned(
+        tokens.file_name(),
+        body_start_loc,
+        tokens.previous_end_loc(),
+        body,
+    );
+    Ok(Exp_::Quant(kind, binds_with_range_list, Box::new(body)))
 }
 
-// Parses quantifier bindings recursively until the body is reached.
-fn parse_quant_cont<'input>(kind: QuantKind, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
-    // Parse the next quantifier variable binding
+// Parses one quantifier binding.
+fn parse_quant_binding<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<(Bind, Exp)>, Error> {
     let start_loc = tokens.start_loc();
     let ident = parse_identifier(tokens)?;
-    let ident_end_loc = tokens.previous_end_loc();
+    let bind = spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        Bind_::Var(Var(ident)),
+    );
     let range = if tokens.peek() == Tok::Colon {
         // This is a quantifier over the full domain of a type.
         // Built `domain<ty>()` expression.
@@ -1092,41 +1129,13 @@ fn parse_quant_cont<'input>(kind: QuantKind, tokens: &mut Lexer<'input>) -> Resu
         consume_identifier(tokens, "in")?;
         parse_exp(tokens)?
     };
-    let range_end_loc = tokens.previous_end_loc();
-
-    // Continue parsing more bindings or the body of the quantifier
-    let (body_loc, body_) = if tokens.peek() == Tok::Comma {
-        tokens.advance()?;
-        (tokens.start_loc(), parse_quant_cont(kind, tokens)?)
-    } else {
-        (tokens.start_loc(), parse_quant_body(kind.value, tokens)?)
-    };
-    let body = spanned(
-        tokens.file_name(),
-        body_loc,
-        tokens.previous_end_loc(),
-        body_,
-    );
-
-    // Construct ::<all|any>(range, |ident| body) as the result
-    let bind = spanned(
+    let end_loc = tokens.previous_end_loc();
+    Ok(spanned(
         tokens.file_name(),
         start_loc,
-        ident_end_loc,
-        Bind_::Var(Var(ident)),
-    );
-    let binds_with_range_list = spanned(
-        tokens.file_name(),
-        start_loc,
-        range_end_loc,
-        vec![spanned(
-            tokens.file_name(),
-            start_loc,
-            range_end_loc,
-            (bind, range),
-        )],
-    );
-    Ok(Exp_::Quant(kind, binds_with_range_list, Box::new(body)))
+        end_loc,
+        (bind, range),
+    ))
 }
 
 // Parse quantifier body.
