@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the structs transported during the network handshake protocol v1.
-//! These should serialize as per [link](TODO: Add ref).
+//! These should serialize as per the [DiemNet Handshake v1 Specification].
 //!
 //! During the v1 Handshake protocol, both end-points of a connection send a serialized and
-//! length-prefixed `HandshakeMsg` to each other. The handshake message contains a map from
+//! length-prefixed [`HandshakeMsg`] to each other. The handshake message contains a map from
 //! supported messaging protocol versions to a bit vector representing application protocols
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
+//!
+//! [DiemNet Handshake v1 Specification]: https://github.com/diem/diem/blob/master/specifications/network/handshake-v1.md
 
 use diem_config::network_id::NetworkId;
 use diem_types::chain_id::ChainId;
@@ -69,6 +71,7 @@ impl fmt::Display for ProtocolId {
 // SupportedProtocols
 //
 
+/// A bit vector of supported [`ProtocolId`]s.
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SupportedProtocols(bitvec::BitVec);
@@ -109,13 +112,21 @@ impl SupportedProtocols {
 // MessageProtocolVersion
 //
 
-/// Enum representing different versions of the Diem network protocol. These should be listed from
-/// old to new, old having the smallest value.
-/// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
+/// Enum representing different versions of the Diem network protocol. These
+/// should be listed from old to new, old having the smallest value.  We derive
+/// [`PartialOrd`] since nodes need to find highest intersecting protocol version.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum MessagingProtocolVersion {
     V1 = 0,
+}
+
+impl MessagingProtocolVersion {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::V1 => "V1",
+        }
+    }
 }
 
 impl fmt::Debug for MessagingProtocolVersion {
@@ -126,13 +137,7 @@ impl fmt::Debug for MessagingProtocolVersion {
 
 impl fmt::Display for MessagingProtocolVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                MessagingProtocolVersion::V1 => "V1",
-            }
-        )
+        write!(f, "{}", self.as_str(),)
     }
 }
 
@@ -153,8 +158,9 @@ pub enum HandshakeError {
     NoCommonProtocols,
 }
 
-/// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
-/// bit-vector specifying application-level protocols supported over that version.
+/// The HandshakeMsg contains a mapping from [`MessagingProtocolVersion`]
+/// suppported by the node to a bit-vector specifying application-level protocols
+/// supported over that version.
 #[derive(Clone, Deserialize, Serialize, Default)]
 pub struct HandshakeMsg {
     pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,

@@ -27,10 +27,11 @@ pub mod encrypted;
 
 const MAX_DNS_NAME_SIZE: usize = 255;
 
+/// ## Overview
+///
 /// Diem `NetworkAddress` is a compact, efficient, self-describing and
 /// future-proof network address represented as a stack of protocols. Essentially
-/// libp2p's [multiaddr](https://multiformats.io/multiaddr/) but using [`bcs`] to
-/// describe the binary format.
+/// libp2p's [multiaddr] but using [`bcs`] to describe the binary format.
 ///
 /// Most validators will advertise a network address like:
 ///
@@ -45,6 +46,8 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 ///    connection with the peer.
 /// 4. Perform a DiemNet version negotiation handshake (version 1).
 ///
+/// ## Self-describing, Upgradable
+///
 /// One key concept behind `NetworkAddress` is that it is fully self-describing,
 /// which allows us to easily "pre-negotiate" protocols while also allowing for
 /// future upgrades. For example, it is generally unsafe to negotiate a secure
@@ -55,16 +58,21 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 /// transport protocol to use; in this sense, the secure transport protocol is
 /// "pre-negotiated" by the dialier selecting which advertised protocol to use.
 ///
+/// Each network address is encoded with the length of the encoded `NetworkAddress`
+/// and then the serialized protocol slices to allow for transparent upgradeability.
+/// For example, if the current software cannot decode a `NetworkAddress` within
+/// a `Vec<NetworkAddress>` it can still decode the underlying `Vec<u8>` and
+/// retrieve the remaining `Vec<NetworkAddress>`.
+///
+/// ## Transport
+///
 /// In addition, `NetworkAddress` is integrated with the DiemNet concept of a
 /// [`Transport`], which takes a `NetworkAddress` when dialing and peels off
-/// [`Protocols`] to establish a connection and perform initial handshakes.
-/// Similarly, the `Transport` takes `NetworkAddress` to listen on, which tells
+/// [`Protocol`]s to establish a connection and perform initial handshakes.
+/// Similarly, the [`Transport`] takes `NetworkAddress` to listen on, which tells
 /// it what protocols to expect on the socket.
 ///
-/// The network address is encoded with the length of the encoded NetworkAddresses and then the
-/// the protocol slices to allow for transparent upgradeability. For example, if the current
-/// software cannot decode a NetworkAddress within a Vec<NetworkAddress> it can still decode the
-/// underlying Vec<u8> and retrieve the remaining Vec<NetworkAddress>.
+/// ## Example
 ///
 /// An example of a serialized `NetworkAddress`:
 ///
@@ -95,6 +103,9 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 ///
 /// assert_eq!(expected_ser_addr, actual_ser_addr);
 /// ```
+///
+/// [multiaddr]: https://multiformats.io/multiaddr/
+/// [`Transport`]: ../netcore/transport/trait.Transport.html
 #[derive(Clone, Eq, PartialEq)]
 pub struct NetworkAddress(Vec<Protocol>);
 
@@ -133,7 +144,7 @@ pub enum Protocol {
 ///
 /// So the restrictions we're adding are (1) no '/' characters and (2) the name
 /// is a valid unicode string. We do this because '/' characters are already our
-/// protocol delimiter and Rust's [`::std::net::ToSocketAddr`] API requires a
+/// protocol delimiter and Rust's [`std::net::ToSocketAddrs`] API requires a
 /// `&str`.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct DnsName(String);
@@ -205,6 +216,7 @@ impl NetworkAddress {
         self
     }
 
+    /// See [`EncNetworkAddress::encrypt`].
     pub fn encrypt(
         self,
         shared_val_netaddr_key: &Key,
@@ -758,7 +770,7 @@ pub fn parse_handshake(protos: &[Protocol]) -> Option<(u8, &[Protocol])> {
 
 /// parse canonical diemnet protocols
 ///
-/// See: `NetworkAddress::is_diemnet_addr(&self)`
+/// See: [`NetworkAddress::is_diemnet_addr`]
 fn parse_diemnet_protos(protos: &[Protocol]) -> Option<&[Protocol]> {
     // parse base transport layer
     // ---
