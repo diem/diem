@@ -125,7 +125,7 @@ impl StateSyncBootstrapper {
             .threaded_scheduler()
             .enable_all()
             .build()
-            .expect("[state synchronizer] failed to create runtime");
+            .expect("[State Sync] Failed to create runtime!");
 
         let executor_proxy = ExecutorProxy::new(storage, executor, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
@@ -155,11 +155,9 @@ impl StateSyncBootstrapper {
         executor_proxy: E,
     ) -> Self {
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
-
         let initial_state = executor_proxy
             .get_local_storage_state()
-            .expect("[state sync] Start failure: cannot sync with storage.");
-
+            .expect("[State Sync] Starting failure: cannot sync with storage!");
         let network_senders: HashMap<_, _> = network
             .iter()
             .map(|(network_id, sender, _events)| (network_id.clone(), sender.clone()))
@@ -176,7 +174,7 @@ impl StateSyncBootstrapper {
             executor_proxy,
             initial_state,
         )
-        .expect("Unable to create sync coordinator");
+        .expect("[State Sync] Unable to create state sync coordinator!");
         runtime.spawn(coordinator.start(network));
 
         Self {
