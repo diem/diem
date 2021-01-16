@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
+    coordinator::SyncCoordinator,
     counters,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
@@ -101,6 +101,8 @@ impl SynchronizationState {
     }
 }
 
+/// Creates and bootstraps new state sync runtimes and creates clients for
+/// communicating with those state sync runtimes.
 pub struct StateSyncBootstrapper {
     _runtime: Runtime,
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
@@ -188,6 +190,34 @@ impl StateSyncBootstrapper {
     }
 }
 
+/// A synchronization request to sync to a specified target ledger info.
+pub struct SyncRequest {
+    // The Result value returned to the caller is Error in case the StateSynchronizer failed to
+    // reach the target.
+    pub callback: oneshot::Sender<Result<()>>,
+    pub target: LedgerInfoWithSignatures,
+    pub last_progress_tst: SystemTime,
+}
+
+/// Messages used by the StateSyncClient for communication with the SyncCoordinator.
+pub enum CoordinatorMessage {
+    // used to initiate new sync
+    Request(Box<SyncRequest>),
+    // used to notify about new txn commit
+    Commit(
+        // committed transactions
+        Vec<Transaction>,
+        // reconfiguration events
+        Vec<ContractEvent>,
+        // callback for recipient to send response back to this sender
+        oneshot::Sender<Result<CommitResponse>>,
+    ),
+    GetState(oneshot::Sender<SynchronizationState>),
+    // Receive a notification via a given channel when coordinator is initialized.
+    WaitInitialize(oneshot::Sender<Result<()>>),
+}
+
+/// A client used for communicating with a SyncCoordinator.
 pub struct StateSyncClient {
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }

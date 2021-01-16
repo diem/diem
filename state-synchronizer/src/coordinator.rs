@@ -9,7 +9,7 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     request_manager::RequestManager,
-    state_synchronizer::SynchronizationState,
+    state_synchronizer::{CoordinatorMessage, SyncRequest, SynchronizationState},
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{
@@ -19,7 +19,6 @@ use diem_config::{
 use diem_logger::prelude::*;
 use diem_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use diem_types::{
-    contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
@@ -37,32 +36,6 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::time::{interval, timeout};
-
-pub struct SyncRequest {
-    // The Result value returned to the caller is Error in case the StateSynchronizer failed to
-    // reach the target (the LI in the storage remains unchanged as if nothing happened).
-    pub callback: oneshot::Sender<Result<()>>,
-    pub target: LedgerInfoWithSignatures,
-    pub last_progress_tst: SystemTime,
-}
-
-/// message used by StateSyncClient for communication with Coordinator
-pub enum CoordinatorMessage {
-    // used to initiate new sync
-    Request(Box<SyncRequest>),
-    // used to notify about new txn commit
-    Commit(
-        // committed transactions
-        Vec<Transaction>,
-        // reconfiguration events
-        Vec<ContractEvent>,
-        // callback for recipient to send response back to this sender
-        oneshot::Sender<Result<CommitResponse>>,
-    ),
-    GetState(oneshot::Sender<SynchronizationState>),
-    // Receive a notification via a given channel when coordinator is initialized.
-    WaitInitialize(oneshot::Sender<Result<()>>),
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {
