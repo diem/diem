@@ -11,7 +11,7 @@ use diem_config::{
     config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
     network_id::NodeNetworkId,
 };
-use diem_mempool::{CommitNotification, CommitResponse};
+use diem_mempool::CommitResponse;
 use diem_types::{
     contract_event::ContractEvent, epoch_change::Verifier, epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
@@ -115,7 +115,7 @@ impl StateSyncBootstrapper {
             StateSynchronizerSender,
             StateSynchronizerEvents,
         )>,
-        state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
         config: &NodeConfig,
@@ -149,7 +149,7 @@ impl StateSyncBootstrapper {
             StateSynchronizerSender,
             StateSynchronizerEvents,
         )>,
-        state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         role: RoleType,
         waypoint: Waypoint,
         state_sync_config: &StateSyncConfig,
@@ -192,29 +192,24 @@ impl StateSyncBootstrapper {
 
 /// A synchronization request to sync to a specified target ledger info.
 pub struct SyncRequest {
-    // The Result value returned to the caller is Error in case the StateSynchronizer failed to
-    // reach the target.
     pub callback: oneshot::Sender<Result<()>>,
     pub target: LedgerInfoWithSignatures,
     pub last_progress_tst: SystemTime,
 }
 
+/// A commit notification to notify state sync of new commits.
+pub struct CommitNotification {
+    pub callback: oneshot::Sender<Result<CommitResponse>>,
+    pub committed_transactions: Vec<Transaction>,
+    pub reconfiguration_events: Vec<ContractEvent>,
+}
+
 /// Messages used by the StateSyncClient for communication with the SyncCoordinator.
 pub enum CoordinatorMessage {
-    // used to initiate new sync
-    Request(Box<SyncRequest>),
-    // used to notify about new txn commit
-    Commit(
-        // committed transactions
-        Vec<Transaction>,
-        // reconfiguration events
-        Vec<ContractEvent>,
-        // callback for recipient to send response back to this sender
-        oneshot::Sender<Result<CommitResponse>>,
-    ),
-    GetState(oneshot::Sender<SynchronizationState>),
-    // Receive a notification via a given channel when coordinator is initialized.
-    WaitInitialize(oneshot::Sender<Result<()>>),
+    SyncRequest(Box<SyncRequest>), // Initiate a new sync request for a given target.
+    CommitNotification(Box<CommitNotification>), // Notify state sync about committed transactions.
+    GetSyncState(oneshot::Sender<SynchronizationState>), // Return the local synchronization state.
+    WaitUntilInitialized(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
 }
 
 /// A client used for communicating with a SyncCoordinator.
@@ -243,7 +238,7 @@ impl StateSyncClient {
 
         async move {
             sender
-                .send(CoordinatorMessage::Request(Box::new(request)))
+                .send(CoordinatorMessage::SyncRequest(Box::new(request)))
                 .await?;
             cb_receiver.await?
         }
@@ -257,14 +252,17 @@ impl StateSyncClient {
     ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
+        let notification = CommitNotification {
+            callback: cb_sender,
+            committed_transactions: committed_txns,
+            reconfiguration_events: reconfig_events,
+        };
 
         async move {
             sender
-                .send(CoordinatorMessage::Commit(
-                    committed_txns,
-                    reconfig_events,
-                    cb_sender,
-                ))
+                .send(CoordinatorMessage::CommitNotification(Box::new(
+                    notification,
+                )))
                 .await?;
 
             match timeout(
@@ -304,7 +302,9 @@ impl StateSyncClient {
         let (cb_sender, cb_receiver) = oneshot::channel();
 
         async move {
-            sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
+            sender
+                .send(CoordinatorMessage::GetSyncState(cb_sender))
+                .await?;
             Ok(cb_receiver.await?)
         }
     }
@@ -316,7 +316,7 @@ impl StateSyncClient {
 
         async move {
             sender
-                .send(CoordinatorMessage::WaitInitialize(cb_sender))
+                .send(CoordinatorMessage::WaitUntilInitialized(cb_sender))
                 .await?;
             cb_receiver.await?
         }

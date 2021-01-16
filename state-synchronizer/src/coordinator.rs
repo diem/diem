@@ -17,7 +17,7 @@ use diem_config::{
     network_id::NodeNetworkId,
 };
 use diem_logger::prelude::*;
-use diem_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
+use diem_mempool::{CommitResponse, CommittedTransaction};
 use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
@@ -141,7 +141,7 @@ pub(crate) struct SyncCoordinator<T> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
-    state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+    state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
@@ -174,7 +174,7 @@ pub(crate) struct SyncCoordinator<T> {
 impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
-        state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+        state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
         role: RoleType,
         waypoint: Waypoint,
@@ -241,7 +241,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             ::futures::select! {
                 msg = self.client_events.select_next_some() => {
                     match msg {
-                        CoordinatorMessage::Request(request) => {
+                        CoordinatorMessage::SyncRequest(request) => {
                             let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
                                 .with_label_values(&[counters::SYNC_MSG_LABEL])
                                 .start_timer();
@@ -250,27 +250,27 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                 counters::SYNC_REQUEST_RESULT.with_label_values(&[counters::FAIL_LABEL]).inc();
                             }
                         }
-                        CoordinatorMessage::Commit(txns, events, callback) => {
+                        CoordinatorMessage::CommitNotification(notification) => {
                             {
                                 let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
                                     .with_label_values(&[counters::COMMIT_MSG_LABEL])
                                     .start_timer();
-                                if let Err(e) = self.process_commit(txns, Some(callback), None).await {
+                                if let Err(e) = self.process_commit(notification.committed_transactions, Some(notification.callback), None).await {
                                     counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
                                     error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e));
                                 }
                             }
-                            if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(events) {
+                            if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(notification.reconfiguration_events) {
                                 counters::RECONFIG_PUBLISH_COUNT
                                     .with_label_values(&[counters::FAIL_LABEL])
                                     .inc();
                                 error!(LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&e));
                             }
                         }
-                        CoordinatorMessage::GetState(callback) => {
+                        CoordinatorMessage::GetSyncState(callback) => {
                             self.get_state(callback);
                         }
-                        CoordinatorMessage::WaitInitialize(cb_sender) => {
+                        CoordinatorMessage::WaitUntilInitialized(cb_sender) => {
                             self.set_initialization_listener(cb_sender);
                         }
                     };
@@ -479,7 +479,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
         }
         let (callback, callback_rcv) = oneshot::channel();
-        let req = CommitNotification {
+        let req = diem_mempool::CommitNotification {
             transactions: committed_user_txns,
             block_timestamp_usecs,
             callback,
