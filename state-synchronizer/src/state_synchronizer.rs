@@ -206,24 +206,24 @@ pub struct StateSyncClient {
 }
 
 impl StateSyncClient {
+    /// Timeout for the StateSyncClient to receive an ack when executing commit().
+    const COMMIT_TIMEOUT_SECS: u64 = 5;
+
     pub fn new(coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>) -> Self {
         Self { coordinator_sender }
     }
 
-    /// Sync validator's state to target.
+    /// Sync node's state to target ledger info (LI).
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
-    /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
-    /// can assume there were no modifications to the storage made.
-    /// It is up to state synchronizer to decide about the specific criteria for the failure
-    /// (e.g., lack of progress with all of the peer validators).
     pub fn sync_to(&self, target: LedgerInfoWithSignatures) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
-        let (callback, cb_receiver) = oneshot::channel();
+        let (cb_sender, cb_receiver) = oneshot::channel();
         let request = SyncRequest {
-            callback,
+            callback: cb_sender,
             target,
             last_progress_tst: SystemTime::now(),
         };
+
         async move {
             sender
                 .send(CoordinatorMessage::Request(Box::new(request)))
@@ -232,34 +232,45 @@ impl StateSyncClient {
         }
     }
 
-    /// Notifies state synchronizer about newly committed transactions.
+    /// Notifies state sync about newly committed transactions.
     pub fn commit(
         &self,
         committed_txns: Vec<Transaction>,
         reconfig_events: Vec<ContractEvent>,
     ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
+        let (cb_sender, cb_receiver) = oneshot::channel();
+
         async move {
-            let (callback, callback_rcv) = oneshot::channel();
             sender
                 .send(CoordinatorMessage::Commit(
                     committed_txns,
                     reconfig_events,
-                    callback,
+                    cb_sender,
                 ))
                 .await?;
 
-            match timeout(Duration::from_secs(5), callback_rcv).await {
+            match timeout(
+                Duration::from_secs(StateSyncClient::COMMIT_TIMEOUT_SECS),
+                cb_receiver,
+            )
+            .await
+            {
                 Err(_) => {
                     counters::COMMIT_FLOW_FAIL
                         .with_label_values(&[counters::STATE_SYNC_LABEL])
                         .inc();
-                    Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
+                    Err(format_err!(
+                        "[State Sync Client] Timeout: failed to receive commit() ack in time!"
+                    ))
                 }
-                Ok(resp) => {
-                    let CommitResponse { msg } = resp??;
+                Ok(response) => {
+                    let CommitResponse { msg } = response??;
                     if msg != "" {
-                        Err(format_err!("[state sync client] commit failed: {:?}", msg))
+                        Err(format_err!(
+                            "[State Sync Client] Failed: commit() returned an error: {:?}",
+                            msg
+                        ))
                     } else {
                         Ok(())
                     }
@@ -268,16 +279,16 @@ impl StateSyncClient {
         }
     }
 
-    /// Returns information about StateSynchronizer internal state. This should only
+    /// Returns information about the state sync internal state. This should only
     /// be used by tests.
     #[cfg(test)]
     pub fn get_state(&self) -> impl Future<Output = Result<SynchronizationState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
+
         async move {
             sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
-            let info = cb_receiver.await?;
-            Ok(info)
+            Ok(cb_receiver.await?)
         }
     }
 }
