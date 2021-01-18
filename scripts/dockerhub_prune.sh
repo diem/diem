@@ -59,6 +59,7 @@ function get_token {
   echo "$TOKEN"
 }
 
+
 #Deletes an individual tag from a repo slug, requires a token from get_token()
 function del_tag {
   REPO="$1"
