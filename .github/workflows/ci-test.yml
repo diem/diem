@@ -21,9 +21,9 @@ jobs:
       changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
       changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
-      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
-      test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
-      test-website-build: ${{ steps.website-changes.outputs.changes-found }}
+      test-rust: "false" #${{ steps.rust-changes.outputs.changes-found }}
+      test-dev-setup: "false" #${{ steps.dev-setup-sh-changes.outputs.changes-found }}
+      test-website-build: "false" #${{ steps.website-changes.outputs.changes-found }}
       test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
     steps:
       - uses: actions/checkout@v2

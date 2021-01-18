@@ -56,7 +56,7 @@ function get_token {
   PASSWORD="$2"
   LOGIN_DATA=$(login_data "$USERNAME" "$PASSWORD")
   TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$LOGIN_DATA" "https://hub.docker.com/v2/users/login/" | jq -r .token)
-  echo "$TOKEN"
+  echo $TOKEN
 }
 
 #Deletes an individual tag from a repo slug, requires a token from get_token()
