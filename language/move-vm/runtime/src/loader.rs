@@ -590,41 +590,11 @@ impl Loader {
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
-        // A standard DFS algorithm that follows the dependency chain from the `source_module_id`
-        // to see whether the `dst_module_id` is in its dependencies. This function can only be
-        // called when the module is fully verified and the `module_cache` is properly prepared.
-        fn is_reachable_via_dependencies(
-            dst_module_id: &ModuleId,
-            src_module_id: &ModuleId,
-            loader: &Loader,
-        ) -> bool {
-            if dst_module_id == src_module_id {
-                return true;
-            }
-            let src_module = loader.get_module(src_module_id);
-            module_dependencies(src_module.module())
-                .iter()
-                .any(|dep| is_reachable_via_dependencies(dst_module_id, dep, loader))
-        }
-
         // Performs all verification steps to load the module without loading it, i.e., the new
         // module will NOT show up in `module_cache`. In the module republishing case, it means
-        // that the old module is still in the `module_cache`, unless a Loader is created (which
-        // means a new MoveVm instance needs to be created).
-        self.verify_module(module, data_store, true, log_context)?;
-
-        // Check whether publishing/updating this new module introduces cyclic dependencies, i.e.,
-        // module A depends on module B while at the same time, B (transitively) depends on A.
-        // This can be checked by a DFS walk from module A with detection for back edges.
-        let dst_module_id = module.self_id();
-        if module_dependencies(module)
-            .iter()
-            .any(|dep| is_reachable_via_dependencies(&dst_module_id, dep, &self))
-        {
-            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
-                .finish(Location::Module(module.self_id())));
-        }
-        Ok(())
+        // that the old module is still in the `module_cache`, unless a new Loader is created,
+        // which means that a new MoveVM instance needs to be created.
+        self.verify_module(module, data_store, true, log_context)
     }
 
     fn verify_module_expect_no_missing_dependencies(
@@ -660,7 +630,8 @@ impl Loader {
             self.load_dependencies_expect_no_missing_dependencies(deps, data_store, log_context)?
         };
 
-        self.verify_module_dependencies(module, loaded_deps)
+        self.verify_module_dependencies(module, loaded_deps)?;
+        self.verify_no_cyclic_module_dependencies(&module)
     }
 
     fn verify_module_dependencies(
@@ -713,6 +684,37 @@ impl Loader {
             Ok(())
         }
         check_natives_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    // We do not allow cyclic dependencies between modules, i.e., module A depends on module B
+    // while at the same time, B (transitively) depends on A.
+    fn verify_no_cyclic_module_dependencies(&self, module: &CompiledModule) -> VMResult<()> {
+        // A standard DFS algorithm that follows the dependency chain from the `source_module_id`
+        // to see whether the `dst_module_id` is in its dependencies. This function can only be
+        // called when the module is fully verified and the `module_cache` is properly prepared.
+        fn is_reachable_via_dependencies(
+            target_module_id: &ModuleId,
+            cursor_module_id: &ModuleId,
+            loader: &Loader,
+        ) -> bool {
+            if target_module_id == cursor_module_id {
+                return true;
+            }
+            let cursor_module = loader.get_module(cursor_module_id);
+            module_dependencies(cursor_module.module())
+                .iter()
+                .any(|next| is_reachable_via_dependencies(target_module_id, next, loader))
+        }
+
+        let target_module_id = module.self_id();
+        if module_dependencies(module)
+            .iter()
+            .any(|dep| is_reachable_via_dependencies(&target_module_id, dep, self))
+        {
+            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
+                .finish(Location::Module(module.self_id())));
+        }
+        Ok(())
     }
 
     //
