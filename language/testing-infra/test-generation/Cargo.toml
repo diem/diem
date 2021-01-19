@@ -16,7 +16,7 @@ mirai-annotations = "1.10.1"
 structopt = "0.3.21"
 itertools = "0.10.0"
 hex = "0.4.2"
-getrandom = "0.2.1"
+getrandom = "0.2.2"
 crossbeam-channel = "0.5.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
