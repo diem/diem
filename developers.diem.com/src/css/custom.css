@@ -8,7 +8,11 @@ iframe {
   border: 0;
 }
 
-/* Doc Classes */
+.main-content {
+  width: calc(100vw - var(--right-sidebar-width) - var(--left-sidebar-width));
+}
+
+/* Documentation Classes */
 .gapless-image {
   margin-top: -9px;
 }

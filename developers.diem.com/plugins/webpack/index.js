@@ -8,6 +8,7 @@ module.exports = function(context, options) {
       return {
         resolve: {
           alias: {
+            'cli-commands': path.resolve(__dirname, '../../src/components/docs/CLI/cli-commands'),
             CSS: path.resolve(__dirname, '../../src/css'),
             components: path.resolve(__dirname, '../../src/components'),
             'diem-cli': path.resolve(__dirname, '../../diem-cli/src'),

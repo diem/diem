@@ -1,0 +1,61 @@
+@value medium-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+
+.root.with-tutorial {
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.root :global(.tutorial) {
+  flex-basis: 250px;
+  flex-grow: 1;
+  flex-shrink: 0;
+  margin-right: 15px;
+}
+
+.root :global(.tutorial) :global(.list-group-item:not(:first-child)) {
+  margin-top: 15px;
+}
+
+.root :global(.tutorial) :global(.step-headline) {
+  font-weight: bold;
+}
+
+.root :global(.step-description) {
+  color: var(--gray-6);
+  font-size: 14px;
+}
+
+.root.with-tutorial :global(.multiple-commands-container-container) {
+  flex-basis: 180px;
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-right: var(--default-horizontal-section-spacing);
+}
+
+html[data-theme="dark"] .root :global(.step-description) {
+  color: var(--doc-secondary-color);
+}
+
+@media large-tablet-breakpoint-query and desktop-breakpoint-max-query,
+medium-tablet-breakpoint-max-query {
+  .root.with-tutorial :global(.tutorial) {
+    flex-basis: 30%;
+    margin: 0;
+  }
+
+  .root.with-tutorial :global(.terminal-container) {
+    flex-basis: 65%;
+  }
+
+  .root.with-tutorial :global(.commands-container) {
+    flex-basis: 100%;
+    padding-top: 15px;
+    margin: 0;
+  }
+
+  .root.with-tutorial :global(.multiple-commands-container) {
+    margin: 0;
+  }
+}

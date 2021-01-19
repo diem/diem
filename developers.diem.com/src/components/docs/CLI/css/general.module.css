@@ -1,0 +1,82 @@
+@value mobile-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value medium-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+
+.root {
+  --commands-item-horizontal-padding: 5px;
+  --default-horizontal-section-spacing: 15px;
+}
+
+.root li {
+  list-style: none;
+}
+
+.root ul {
+  padding-left: 0;
+}
+
+.root h2,
+.root p,
+.root ul {
+  margin: 0;
+}
+
+.root :global(.cursor-pointer) {
+  cursor: pointer;
+}
+
+.root.embedded :global(.terminal-container) {
+  max-height: 320px;
+}
+
+.root :global(.terminal-container) {
+  border: none;
+  background-color: var(--default-background-color);
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.root :global(.xterm-viewport) {
+  overflow: hidden !important;
+}
+
+.root canvas {
+  padding-right: 10px;
+}
+
+.root :global(.form-typed-input) {
+  display: block;
+  max-width: 300px;
+  margin: 3px 0;
+  padding-left: 5px;
+  width: 100%;
+}
+
+html[data-theme="dark"] .root button {
+  border: 1px solid white;
+  color: white;
+}
+
+html[data-theme="dark"] .root button:hover {
+  color: var(--brand-color);
+}
+
+@media mobile-breakpoint-max-query {
+  .root > div {
+    flex-basis: 100% !important;
+    margin-bottom: 15px;
+  }
+}
+
+@media large-tablet-breakpoint-query and desktop-breakpoint-max-query,
+medium-tablet-breakpoint-max-query {
+  .root {
+    flex-wrap: wrap;
+  }
+
+  .root :global(.terminal-container) {
+    flex-basis: 65%;
+  }
+}

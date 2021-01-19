@@ -1,0 +1,176 @@
+@value mobile-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value medium-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+
+:global(.single-command-container) {
+  margin-bottom: 10px;
+  margin-top: 20px;
+}
+
+.root button {
+  background-color: var(--default-background-color);
+  border: 1px solid black;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-top: 10px;
+  padding: 5px 18px;
+}
+
+.root button:hover,
+:global(.single-command-container.commands-container) button[type="submit"]:hover {
+  background-color: var(--accent-highlight);
+  color: white;
+}
+
+:global(.command-title) {
+  margin: 0;
+}
+
+:global(.single-command-container) :global(.command-description) {
+  font-size: 16px;
+  font-weight: var(--ifm-font-weight-light);
+  line-height: 25px;
+  margin-bottom: 22px;
+  margin-top: 9px;
+}
+
+:global(.single-command-container) :global(.form-inputs) {
+  display: grid;
+  grid-template-columns: 33% 33% 33%;
+  grid-gap: 10px;
+}
+
+:global(.form-inputs) > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+:global(.single-command-container) :global(.form-inputs) label {
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+:global(.single-command-container) :global(.form-typed-input) {
+  height: 35px;
+}
+
+:global(.single-command-container) :global(.submit-container) {
+  display: flex;
+  margin-top: 15px;
+  margin-bottom: 45px;
+}
+
+:global(.single-command-container.commands-container) button[type="submit"] {
+  background-color: transparent;
+  border-color: var(--brand-color);
+  border-width: 1px;
+  padding: 9px 60px;
+  margin: 0 30px 0 0;
+}
+
+:global(.commands-container) :global(.checkbox-container) {
+  align-items: center;
+  display: inline-flex;
+  font-size: 14px;
+  margin: 0 20px 0 0;
+  max-width: 300px;
+}
+
+.root input:checked:global(~.state) :global(.form-check-label) {
+  color: var(--brand-color);
+}
+
+.root svg {
+  background-color: var(--brand-color);
+  color: white;
+}
+
+.root :global(.checkbox) label:before {
+  border-color: #979797;
+  border-radius: 1px;
+}
+
+:global(.single-command-container) :global(.form-check-label) {
+  color: #949494;
+}
+
+
+/*
+ * Styles for when cli is not embedded. For example on the cli page
+ */
+.root :global(.multiple-commands-container) {
+  font-size: 14px;
+  margin-left: 15px;
+  padding: 0;
+  width: 180px;
+}
+
+.root :global(.multiple-commands-container) :global(.form-inputs) {
+  margin-top: 10px;
+}
+
+.root :global(.multiple-commands-container) :global(.command) {
+  padding: 5px var(--commands-item-horizontal-padding);
+}
+
+.root :global(.multiple-commands-container) :global(.command:hover) {
+  background-color: var(--brand-color);
+  color: white;
+}
+
+.root :global(.multiple-commands-container) :global(.current-command) {
+  padding: 0 var(--commands-item-horizontal-padding);
+  margin: 6px 0 15px 5px;
+}
+
+:global(.multiple-commands-container) :global(.checkbox-container) {
+  margin-top: 8px;
+}
+
+:global(.multiple-commands-container) :global(.submit-container) {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+@media mobile-breakpoint-max-query {
+  .root :global(.commands-container) {
+    margin-top: 0px !important;
+  }
+
+  :global(.multiple-commands-container) {
+    grid-template-columns: 100% !important;
+  }
+}
+
+@media large-tablet-breakpoint-query and desktop-breakpoint-max-query,
+medium-tablet-breakpoint-max-query {
+  :global(.single-command-container) :global(.form-inputs) {
+    grid-template-columns: 50% 50%;
+  }
+
+  :global(.single-command-container) :global(.submit-container) {
+    display: flex;
+    flex-direction: column-reverse;
+    margin-bottom: 20px;
+  }
+
+  :global(.single-command-container) :global(.checkbox-container) {
+    margin-bottom: 10px;
+  }
+
+  :global(.multiple-commands-container) {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    margin-bottom: 15px;
+    width: 100% !important;
+  }
+}
+
+@media large-tablet-breakpoint-query and desktop-breakpoint-max-query,
+medium-tablet-breakpoint-max-query {
+  .root:not(.embedded) :global(.commands-container) {
+    order: 3;
+  }
+}

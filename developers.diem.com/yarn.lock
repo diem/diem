@@ -1893,6 +1893,11 @@
   resolved "https://registry.yarnpkg.com/@csstools/normalize.css/-/normalize.css-10.1.0.tgz#f0950bba18819512d42f7197e56c518aa491cf18"
   integrity sha512-ij4wRiunFfaJxjB0BdrYHIH8FxBJpOwNPhhAcunlmPdXudL1WQV1qoP9un6JsEBAgQH+7UXyyjh0g7jTxXK6tg==
 
+"@djthoms/pretty-checkbox@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@djthoms/pretty-checkbox/-/pretty-checkbox-3.1.0.tgz#bc1d70533ec662b1f9bb372be17a970373c7f074"
+  integrity sha512-SToPkvm98m5GtHtwAQe5aJD0P5gSRj3HCuQaQKuYmLIAsXIb3/6WH08p9PPp1svDoJwvnGw4EZo3cQD6Hu4TFQ==
+
 "@docsearch/css@3.0.0-alpha.32":
   version "3.0.0-alpha.32"
   resolved "https://registry.yarnpkg.com/@docsearch/css/-/css-3.0.0-alpha.32.tgz#3d89c8db4035531d201f74ef2115f72094a24036"
@@ -2450,27 +2455,31 @@
     ts-proto "^1.37.0"
     util "^0.12.3"
 
-"@libra-opensource/diem-cli@^0.8.1":
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-cli/-/diem-cli-0.8.1.tgz#dda3f332282718e275ecd4bdd4893ec605dc737f"
-  integrity sha512-bsvTqRX3OctUy9r86Equv9mS7u677F0aGEsMmzhFsuV6kMi5NGMMTFRxhYnunbbNowyhrwVCkKb040N/rfYP6w==
+"@libra-opensource/diem-cli@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-cli/-/diem-cli-1.0.0.tgz#b01ac742b2d9dd9f230bdacd8df3e23f3c9835ba"
+  integrity sha512-5QukElCs9rXvXBT7LxFd0B19vn7sIu1e7vWbIe1c5mL2Es+48rWEso3fEgO3e1Jaazc73NLakBVjVnftML7rBw==
   dependencies:
+    "@djthoms/pretty-checkbox" "^3.1.0"
     "@libra-opensource/client-sdk-typescript" "^1.0.7"
     json-bigint "^1.0.0"
     local-echo "github:wavesoft/local-echo"
+    pretty-checkbox-react "^3.1.0"
     react "^16.13.1"
     react-dom "^16.13.1"
+    react-feather "^2.0.9"
     react-scripts "3.4.3"
     xterm-addon-fit "^0.4.0"
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
 
-"@libra-opensource/diem-docusaurus-components@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.11.tgz#1909858c39daea67309bf7a3b6e331e5279e7215"
-  integrity sha512-igGtkn8AFB0f2irhf0gYtde8y6A3Z48/KC2HuIa433fBFAV2cGu1BONOxPZDQRGcrImbT+QTS+hLgPqyL+pIWg==
+"@libra-opensource/diem-docusaurus-components@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.12.tgz#d4e37f187f6e7fb9860835f37bed684bd1e597a0"
+  integrity sha512-uvcQU9dqqFOVn30Xje/huuchUQKcr2b+BLYV3g37B1tErenumpj42NKDTyp2XoaK7wZBKvUqHyynCEKmb16e7w==
   dependencies:
     docsearch.js "^2.6.3"
+    lodash "^4.17.20"
     prism-react-renderer "^1.1.1"
     prop-types "^15.7.2"
     react "^16.13.1"
@@ -4852,7 +4861,7 @@ class-utils@^0.3.5:
     isobject "^3.0.0"
     static-extend "^0.1.1"
 
-classnames@^2.2.5, classnames@^2.2.6:
+classnames@^2.0.0, classnames@^2.2.5, classnames@^2.2.6:
   version "2.2.6"
   resolved "https://registry.yarnpkg.com/classnames/-/classnames-2.2.6.tgz#43935bffdd291f326dad0a205309b38d00f650ce"
   integrity sha512-JR/iSQOSt+LQIWwrwEzJ9uk0xfN3mTVYMwt1Ir5mUcSN6pU+V4zQFFaJsclJbPuAUQH+yfWef6tm7l1quW3C8Q==
@@ -10075,6 +10084,11 @@ nan@^2.12.1:
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.2.tgz#f5376400695168f4cc694ac9393d0c9585eeea19"
   integrity sha512-M2ufzIiINKCuDfBSAUr1vWQ+vuVcA9kqx8JJUsbQi6yf1uGRyb7HfpdfUr5qLXf3B/t8dPvcjhKMmlfnP47EzQ==
 
+nanoid@^3.0.0:
+  version "3.1.20"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.1.20.tgz#badc263c6b1dcf14b71efaa85f6ab4c1d6cfc788"
+  integrity sha512-a1cQNyczgKbLX9jwbS/+d7W8fX/RfgYR7lVWwWOGIPNgK2m0MWvrGF6/m4kk6U3QcFMnZf3RIhL0v2Jgh/0Uxw==
+
 nanomatch@^1.2.9:
   version "1.2.13"
   resolved "https://registry.yarnpkg.com/nanomatch/-/nanomatch-1.2.13.tgz#b87a8aa4fc0de8fe6be88895b38983ff265bd119"
@@ -11704,6 +11718,15 @@ pretty-bytes@^5.1.0:
   resolved "https://registry.yarnpkg.com/pretty-bytes/-/pretty-bytes-5.4.1.tgz#cd89f79bbcef21e3d21eb0da68ffe93f803e884b"
   integrity sha512-s1Iam6Gwz3JI5Hweaz4GoCD1WUNUIyzePFy5+Js2hjwGVt2Z79wNN+ZKOZ2vB6C+Xs6njyB84Z1IthQg8d9LxA==
 
+pretty-checkbox-react@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/pretty-checkbox-react/-/pretty-checkbox-react-3.1.0.tgz#c1a8131245cdce1333f041cd904834647ccb0bba"
+  integrity sha512-TlE+an9INfluhauz0hZ3vgQNmpJXU8xLp1fvrZHFPRiM0uCh4twa/vK1oPLFFFvhIrjHEnh5UwltqHUpjdfsWQ==
+  dependencies:
+    classnames "^2.0.0"
+    nanoid "^3.0.0"
+    react-merge-refs "^1.1.0"
+
 pretty-error@^2.1.1:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/pretty-error/-/pretty-error-2.1.2.tgz#be89f82d81b1c86ec8fdfbc385045882727f93b6"
@@ -12075,6 +12098,13 @@ react-fast-compare@^3.1.1:
   resolved "https://registry.yarnpkg.com/react-fast-compare/-/react-fast-compare-3.2.0.tgz#641a9da81b6a6320f270e89724fb45a0b39e43bb"
   integrity sha512-rtGImPZ0YyLrscKI9xTpV8psd6I8VAtjKCzQDlzyDvqJA8XOW78TXYQwNRNd8g8JZnDu8q9Fu/1v4HPAVwVdHA==
 
+react-feather@^2.0.9:
+  version "2.0.9"
+  resolved "https://registry.yarnpkg.com/react-feather/-/react-feather-2.0.9.tgz#6e42072130d2fa9a09d4476b0e61b0ed17814480"
+  integrity sha512-yMfCGRkZdXwIs23Zw/zIWCJO3m3tlaUvtHiXlW+3FH7cIT6fiK1iJ7RJWugXq7Fso8ZaQyUm92/GOOHXvkiVUw==
+  dependencies:
+    prop-types "^15.7.2"
+
 react-helmet@^6.1.0:
   version "6.1.0"
   resolved "https://registry.yarnpkg.com/react-helmet/-/react-helmet-6.1.0.tgz#a750d5165cb13cf213e44747502652e794468726"
@@ -12118,6 +12148,11 @@ react-loadable@^5.5.0:
   integrity sha512-C8Aui0ZpMd4KokxRdVAm2bQtI03k2RMRNzOB+IipV3yxFTSVICv7WoUr5L9ALB5BmKO1iHgZtWM8EvYG83otdg==
   dependencies:
     prop-types "^15.5.0"
+
+react-merge-refs@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/react-merge-refs/-/react-merge-refs-1.1.0.tgz#73d88b892c6c68cbb7a66e0800faa374f4c38b06"
+  integrity sha512-alTKsjEL0dKH/ru1Iyn7vliS2QRcBp9zZPGoWxUOvRGWPUYgjo+V01is7p04It6KhgrzhJGnIj9GgX8W4bZoCQ==
 
 react-router-config@^5.1.1:
   version "5.1.1"

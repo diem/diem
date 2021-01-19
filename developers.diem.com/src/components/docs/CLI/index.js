@@ -1,12 +1,24 @@
 import React from 'react';
+import classnames from 'classnames';
 import PropTypes from 'prop-types';
 import Terminal, {
   CommandForms as DefaultCommands,
 } from '@libra-opensource/diem-cli';
 
-import './styles.css';
-import classnames from 'classnames';
-import styles from './styles.module.css';
+import utils from 'diem-docusaurus-components/src/utils';
+
+import commandsStyles from './css/commands.module.css';
+import generalStyles from './css/general.module.css';
+import tutorialStyles from './css/tutorial.module.css';
+
+const {mergeCSSModules} = utils;
+
+const styles = mergeCSSModules(
+  {},
+  commandsStyles,
+  generalStyles,
+  tutorialStyles
+);
 
 const getAvailableCommands = (command, commands) => {
   if (command && commands) {
@@ -26,8 +38,9 @@ const CLI = ({ command, commands, isEmbedded, withTutorial }) => {
   return (
     <Terminal
       availableCommands={availableCommands}
-      className={classnames("cli", styles.root, {
-        "embedded-cli": isEmbedded,
+      className={classnames(styles.root, {
+        [styles['embedded']]: isEmbedded,
+        [styles['with-tutorial']]: withTutorial,
       })}
       withTutorial={withTutorial}
     />

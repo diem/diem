@@ -24,6 +24,7 @@
 }
 
 .fullWidthContent {
+  --right-sidebar-width: 0;
   max-width: 100% !important;
 }
 
