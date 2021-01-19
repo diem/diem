@@ -208,7 +208,7 @@ fn test_json_rpc_protocol_invalid_requests() {
     let calls = vec![
         (
             "invalid protocol version",
-            json!({"jsonrpc": "1.0", "method": "get_metadata", "params": [], "id": 1}),
+            json!({"jsonrpc": "1.0", "method": "get_metadata", "id": 1}),
             json!({
                 "error": {
                     "code": -32600, "data": null, "message": "Invalid Request",
@@ -222,7 +222,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "invalid request format: invalid id type",
-            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": true}),
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "id": true}),
             json!({
                 "error": {
                     "code": -32604, "data": null, "message": "Invalid request format",
@@ -250,7 +250,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "method not found",
-            json!({"jsonrpc": "2.0", "method": "add", "params": [], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "add", "id": 1}),
             json!({
                 "error": {
                     "code": -32601, "data": null, "message": "Method not found",
@@ -264,7 +264,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "method not given",
-            json!({"jsonrpc": "2.0", "params": [], "id": 1}),
+            json!({"jsonrpc": "2.0", "id": 1}),
             json!({
                 "error": {
                     "code": -32601, "data": null, "message": "Method not found",
@@ -277,22 +277,8 @@ fn test_json_rpc_protocol_invalid_requests() {
             }),
         ),
         (
-            "params not given",
-            json!({"jsonrpc": "2.0", "method": "get_metadata", "id": 1}),
-            json!({
-                "error": {
-                    "code": -32602, "data": null, "message": "Invalid params",
-                },
-                "id": 1,
-                "jsonrpc": "2.0",
-                "diem_chain_id": ChainId::test().id(),
-                "diem_ledger_timestampusec": timestamp,
-                "diem_ledger_version": version
-            }),
-        ),
-        (
             "jsonrpc not given",
-            json!({"method": "get_metadata", "params": [], "id": 1}),
+            json!({"method": "get_metadata", "id": 1}),
             json!({
                 "error": {
                     "code": -32600, "data": null, "message": "Invalid Request",
@@ -322,7 +308,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "invalid arguments: not enough arguments",
-            json!({"jsonrpc": "2.0", "method": "get_account", "params": [], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_account", "id": 1}),
             json!({
                 "error": {
                     "code": -32602,
@@ -974,7 +960,7 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "id not given",
-            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": []}),
+            json!({"jsonrpc": "2.0", "method": "get_metadata"}),
             json!({
                 "id": null,
                 "jsonrpc": "2.0",
@@ -1025,18 +1011,30 @@ fn test_json_rpc_protocol_invalid_requests() {
 }
 
 #[test]
+fn test_no_params_request_is_valid() {
+    let (_mock_db, _runtime, url, _) = create_db_and_runtime();
+    let client = reqwest::blocking::Client::new();
+    let request = json!({"jsonrpc": "2.0", "method": "get_currencies", "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    assert_eq!(resp.status(), 200);
+    let resp_json: serde_json::Value = resp.json().unwrap();
+    assert!(resp_json.get("result").is_some(), "{}", resp_json);
+    assert!(resp_json.get("error").is_none(), "{}", resp_json);
+}
+
+#[test]
 fn test_metrics() {
     let (_mock_db, _runtime, url, _) = create_db_and_runtime();
     let calls = vec![
         (
             "success single call",
-            json!({"jsonrpc": "2.0", "method": "get_currencies", "params": [], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_currencies", "id": 1}),
         ),
         (
             "success batch call",
             json!([
-                {"jsonrpc": "2.0", "method": "get_currencies", "params": [], "id": 1},
-                {"jsonrpc": "2.0", "method": "get_currencies", "params": [], "id": 2}
+                {"jsonrpc": "2.0", "method": "get_currencies", "id": 1},
+                {"jsonrpc": "2.0", "method": "get_currencies", "id": 2}
             ]),
         ),
         (

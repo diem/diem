@@ -340,21 +340,12 @@ async fn rpc_request_handler(
     }
 
     // parse parameters
-    let params;
-    match request.get("params") {
-        Some(Value::Array(parameters)) => {
-            params = parameters.to_vec();
-        }
+    let params = match request.get("params") {
+        Some(Value::Array(parameters)) => parameters.to_vec(),
         _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_params(None),
-                request_type_label,
-                "unknown",
-            );
-            return response;
+            vec![]
         }
-    }
+    };
 
     let request_params = JsonRpcRequest {
         trace_id,
