@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = "0.5.6"
+bytes = "1.0.0"
 futures = "0.3.12"
 pin-project = "1.0.4"
 serde = { version = "1.0.120", default-features = false }

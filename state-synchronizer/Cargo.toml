@@ -46,7 +46,7 @@ bcs = "0.1.2"
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-bytes = "0.5.6"
+bytes = "1.0.0"
 proptest = "0.10.1"
 
 channel = { path = "../common/channel", version = "0.1.0" }

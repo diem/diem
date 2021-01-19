@@ -270,7 +270,7 @@ dependencies = [
  "backup-service",
  "bcs",
  "byteorder",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "diem-config",
  "diem-crypto",
  "diem-infallible",
@@ -311,7 +311,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "diem-config",
  "diem-crypto",
  "diem-logger",
@@ -604,15 +604,15 @@ name = "bytes"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bytes"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad1f8e949d755f9d79112b5bb46938e0ef9d3804a0b16dfab13aafcaa5f0fa72"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "c_linked_list"
@@ -939,7 +939,7 @@ dependencies = [
  "async-trait",
  "bcs",
  "byteorder",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "channel",
  "consensus-types",
  "diem-config",
@@ -1305,7 +1305,7 @@ name = "debug-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "diem-logger",
  "diem-metrics",
  "diem-workspace-hack",
@@ -1385,7 +1385,7 @@ dependencies = [
  "bcs",
  "bitvec",
  "byteorder",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "criterion",
  "curve25519-dalek 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "curve25519-dalek 3.0.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3)",
@@ -2214,7 +2214,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "chrono",
  "diem-crypto",
  "diem-crypto-derive",
@@ -2328,7 +2328,7 @@ name = "diem-workspace-hack"
 version = "0.1.0"
 dependencies = [
  "byteorder",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "cc",
  "chrono",
  "itertools 0.10.0",
@@ -3982,7 +3982,7 @@ dependencies = [
 name = "memsocket"
 version = "0.1.0"
 dependencies = [
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "diem-infallible",
  "diem-workspace-hack",
  "futures 0.3.12",
@@ -4481,7 +4481,7 @@ dependencies = [
 name = "netcore"
 version = "0.1.0"
 dependencies = [
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "diem-logger",
  "diem-network-address",
  "diem-types",
@@ -4501,7 +4501,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "channel",
  "criterion",
  "diem-bitvec",
@@ -6518,7 +6518,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytes 0.5.6",
+ "bytes 1.0.0",
  "channel",
  "compiled-stdlib",
  "diem-config",
