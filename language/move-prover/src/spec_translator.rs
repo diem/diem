@@ -2183,8 +2183,8 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, " :: ");
         // Translate range constraints.
         let connective = match kind {
-            QuantKind::Forall => "==>",
-            QuantKind::Exists => "&&",
+            QuantKind::Forall => " ==> ",
+            QuantKind::Exists => " && ",
         };
         let mut separator = "";
         for (var, range) in ranges {
@@ -2240,7 +2240,7 @@ impl<'env> SpecTranslator<'env> {
             }
             separator = connective;
         }
-        emit!(self.writer, " {} ", connective);
+        emit!(self.writer, "{}", connective);
         // Translate range selectors.
         for (var, range) in ranges {
             let var_name = self.module_env().symbol_pool().string(var.name);
