@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = {path = "../../move-core/types", version = "0.1.0" }

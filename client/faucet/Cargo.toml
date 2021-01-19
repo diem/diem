@@ -32,6 +32,6 @@ transaction-builder-generated = { path = "../transaction-builder", version = "0.
 
 [dev-dependencies]
 serde_json = "1.0.61"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 diem-config = { path = "../../config", version = "0.1.0" }

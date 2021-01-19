@@ -25,5 +25,5 @@ features = ["lz4"]
 [dev-dependencies]
 byteorder = "1.4.2"
 proptest = "0.10.1"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 diem-temppath = { path = "../../common/temppath", version = "0.1.0" }

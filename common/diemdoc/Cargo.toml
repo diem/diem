@@ -21,7 +21,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 
 [dev-dependencies]
 serde = { version = "1.0.119", features = ["derive"] }
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
 [features]
 default = []
