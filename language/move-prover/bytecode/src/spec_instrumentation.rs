@@ -48,7 +48,7 @@ impl FunctionTargetProcessor for SpecInstrumenter {
         fun_env: &FunctionEnv<'_>,
         data: FunctionData,
     ) -> FunctionData {
-        if fun_env.is_native() {
+        if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do
             return data;
         }

@@ -513,10 +513,11 @@ impl<'env> ModuleTranslator<'env> {
         let mut num_fun_specified = 0;
         let mut num_fun = 0;
         for func_env in self.module_env.get_functions() {
-            if !func_env.is_native() {
+            let should_count = !(func_env.is_native() || func_env.is_intrinsic());
+            if should_count {
                 num_fun += 1;
             }
-            if func_env.get_spec().has_conditions() && !func_env.is_native() {
+            if func_env.get_spec().has_conditions() && should_count {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
@@ -544,7 +545,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates the given function.
     fn translate_function(&self, func_target: &FunctionTarget<'_>) {
         use FunctionEntryPoint::*;
-        if func_target.is_native() {
+        if func_target.is_native() || func_target.is_intrinsic() {
             if self.options.prover.native_stubs {
                 self.generate_function_sig(func_target, Indirect);
                 emit!(self.writer, ";");
@@ -1002,7 +1003,10 @@ impl<'env> ModuleTranslator<'env> {
             format!("if ($abort_flag) {{\n  {}\n  goto Abort;\n}}", track)
         };
         let propagate_abort_from_call = |callee_target: &FunctionTarget<'_>| {
-            if callee_target.is_native() || callee_target.is_opaque() {
+            if callee_target.is_native()
+                || callee_target.is_intrinsic()
+                || callee_target.is_opaque()
+            {
                 propagate_abort()
             } else {
                 // In case of a call to an inlined function, we do not track the abortion point,
@@ -1268,18 +1272,19 @@ impl<'env> ModuleTranslator<'env> {
                             .targets
                             .get_target(&callee_env, FunctionVariant::Baseline)
                             .clone();
-                        let entry_point =
-                            if self.in_top_level_verify() && !callee_target.is_native() {
-                                let inter_module = callee_target.module_env().get_id()
-                                    != func_target.module_env().get_id();
-                                if inter_module {
-                                    FunctionEntryPoint::DirectInterModule
-                                } else {
-                                    FunctionEntryPoint::DirectIntraModule
-                                }
+                        let entry_point = if self.in_top_level_verify()
+                            && !(callee_target.is_native() || callee_target.is_intrinsic())
+                        {
+                            let inter_module = callee_target.module_env().get_id()
+                                != func_target.module_env().get_id();
+                            if inter_module {
+                                FunctionEntryPoint::DirectInterModule
                             } else {
-                                FunctionEntryPoint::Indirect
-                            };
+                                FunctionEntryPoint::DirectIntraModule
+                            }
+                        } else {
+                            FunctionEntryPoint::Indirect
+                        };
                         let mut dest_str = String::new();
                         let mut args_str = String::new();
                         let mut dest_type_assumptions = vec![];

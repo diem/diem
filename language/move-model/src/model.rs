@@ -2248,11 +2248,15 @@ impl<'env> FunctionEnv<'env> {
         }
     }
 
-    /// Returns true if this function is native. The function is also marked as native
-    /// if it has the pragma intrinsic set to true.
+    /// Returns true if this function is native.
     pub fn is_native(&self) -> bool {
         let view = self.definition_view();
-        view.is_native() || self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        view.is_native()
+    }
+
+    /// Returns true if this function has the pragma intrinsic set to true.
+    pub fn is_intrinsic(&self) -> bool {
+        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 
     /// Returns true if this function is opaque.
