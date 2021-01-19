@@ -19,18 +19,6 @@ pub static DIEM_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static DIEM_STORAGE_CF_SIZE_BYTES: Lazy<IntGaugeVec> = Lazy::new(|| {
-    register_int_gauge_vec!(
-        // metric name
-        "diem_storage_cf_size_bytes",
-        // metric description
-        "Diem storage Column Family size in bytes",
-        // metric labels (dimensions)
-        &["cf_name"]
-    )
-    .unwrap()
-});
-
 pub static DIEM_STORAGE_COMMITTED_TXNS: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
         "diem_storage_committed_txns",
@@ -95,6 +83,19 @@ pub static DIEM_STORAGE_OTHER_TIMERS_SECONDS: Lazy<HistogramVec> = Lazy::new(|| 
         "Various timers below public API level.",
         // metric labels (dimensions)
         &["name"]
+    )
+    .unwrap()
+});
+
+/// Rocksdb metrics
+pub(crate) static DIEM_STORAGE_ROCKSDB_PROPERTIES: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        // metric name
+        "diem_rocksdb_properties",
+        // metric description
+        "rocksdb integer properties",
+        // metric labels (dimensions)
+        &["cf_name", "property_name",]
     )
     .unwrap()
 });

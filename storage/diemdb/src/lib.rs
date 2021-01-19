@@ -44,9 +44,10 @@ use crate::{
     ledger_counters::LedgerCounters,
     ledger_store::LedgerStore,
     metrics::{
-        DIEM_STORAGE_API_LATENCY_SECONDS, DIEM_STORAGE_CF_SIZE_BYTES, DIEM_STORAGE_COMMITTED_TXNS,
+        DIEM_STORAGE_API_LATENCY_SECONDS, DIEM_STORAGE_COMMITTED_TXNS,
         DIEM_STORAGE_LATEST_TXN_VERSION, DIEM_STORAGE_LEDGER_VERSION,
         DIEM_STORAGE_NEXT_BLOCK_EPOCH, DIEM_STORAGE_OTHER_TIMERS_SECONDS,
+        DIEM_STORAGE_ROCKSDB_PROPERTIES,
     },
     pruner::Pruner,
     schema::*,
@@ -75,8 +76,16 @@ use diem_types::{
     },
 };
 use itertools::{izip, zip_eq};
+use once_cell::sync::Lazy;
 use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
-use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    iter::Iterator,
+    path::Path,
+    sync::{mpsc, Arc, Mutex},
+    thread::{self, JoinHandle},
+    time::{Duration, Instant},
+};
 use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 
 const MAX_LIMIT: u64 = 1000;
@@ -84,6 +93,35 @@ const MAX_LIMIT: u64 = 1000;
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.
 const MAX_NUM_EPOCH_ENDING_LEDGER_INFO: usize = 100;
+
+static ROCKSDB_PROPERTY_MAP: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
+    [
+        ("diem_rocksdb_properties", "rocksdb.live-sst-files-size"),
+        (
+            "diem_rocksdb_live_sst_files_size_bytes",
+            "rocksdb.size-all-mem-tables",
+        ),
+        (
+            "diem_rocksdb_num_running_compactions",
+            "rocksdb.num_running_compactions",
+        ),
+        (
+            "diem_rocksdb_num_running_flushes",
+            "rocksdb.num_running_flushes",
+        ),
+        (
+            "diem_rocksdb_block_cache_usage_bytes",
+            "rocksdb.block_cache_usage",
+        ),
+        (
+            "diem_rocksdb_cf_size_bytes",
+            "rocksdb.estimate-live-data-size",
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
 
 fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
     if num_requested > max_allowed {
@@ -100,6 +138,62 @@ fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
     db_opts
 }
 
+#[derive(Debug)]
+struct RocksdbPropertyReporter {
+    sender: Mutex<mpsc::Sender<()>>,
+    join_handle: Option<JoinHandle<()>>,
+}
+
+impl RocksdbPropertyReporter {
+    fn new(db: Arc<DB>) -> Self {
+        let (send, recv) = mpsc::channel();
+        let join_handle = Some(thread::spawn(move || loop {
+            if let Err(e) = Self::update_rocksdb_properties(&db) {
+                warn!(
+                    error = ?e,
+                    "Updating rocksdb property failed."
+                );
+            }
+            // report rocksdb properties each 10 seconds
+            match recv.recv_timeout(Duration::from_secs(10)) {
+                Err(mpsc::RecvTimeoutError::Timeout) => (),
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                Ok(_) => break,
+            }
+        }));
+        Self {
+            sender: Mutex::new(send),
+            join_handle,
+        }
+    }
+
+    fn update_rocksdb_properties(db: &DB) -> Result<()> {
+        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["update_rocksdb_properties"])
+            .start_timer();
+        for cf_name in DiemDB::column_families() {
+            for (property_name, rocksdb_property_argument) in &*ROCKSDB_PROPERTY_MAP {
+                DIEM_STORAGE_ROCKSDB_PROPERTIES
+                    .with_label_values(&[cf_name, property_name])
+                    .set(db.get_property(cf_name, rocksdb_property_argument)? as i64);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Drop for RocksdbPropertyReporter {
+    fn drop(&mut self) {
+        // Notify the property reporting thread to exit
+        self.sender.lock().unwrap().send(()).unwrap();
+        self.join_handle
+            .take()
+            .expect("Rocksdb property reporting thread must exist.")
+            .join()
+            .expect("Rocksdb property reporting thread should join peacefully.");
+    }
+}
+
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Diem data structures.
 #[derive(Debug)]
@@ -110,6 +204,7 @@ pub struct DiemDB {
     state_store: Arc<StateStore>,
     event_store: Arc<EventStore>,
     system_store: SystemStore,
+    rocksdb_property_reporter: RocksdbPropertyReporter,
     pruner: Option<Pruner>,
 }
 
@@ -142,6 +237,7 @@ impl DiemDB {
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
+            rocksdb_property_reporter: RocksdbPropertyReporter::new(Arc::clone(&db)),
             pruner: prune_window.map(|n| Pruner::new(Arc::clone(&db), n)),
         }
     }
@@ -480,23 +576,6 @@ impl DiemDB {
     /// LedgerCounters.
     fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
         self.db.write_schemas(sealed_cs.batch)?;
-
-        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-            .with_label_values(&["get_approximate_cf_sizes"])
-            .start_timer();
-        match self.db.get_approximate_sizes_cf() {
-            Ok(cf_sizes) => {
-                for (cf_name, size) in cf_sizes {
-                    DIEM_STORAGE_CF_SIZE_BYTES
-                        .with_label_values(&[&cf_name])
-                        .set(size as i64);
-                }
-            }
-            Err(err) => warn!(
-                error = ?err,
-                "Failed to get approximate size of column families.",
-            ),
-        }
 
         Ok(())
     }

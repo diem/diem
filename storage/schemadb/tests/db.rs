@@ -368,8 +368,19 @@ fn test_report_size() {
 
     db.flush_all().unwrap();
 
-    let cf_sizes = db.get_approximate_sizes_cf().unwrap();
-    assert!(*cf_sizes.get("TestCF1").unwrap() > 0);
-    assert!(*cf_sizes.get("TestCF2").unwrap() > 0);
-    assert_eq!(*cf_sizes.get("default").unwrap(), 0);
+    assert!(
+        db.get_property("TestCF1", "rocksdb.estimate-live-data-size")
+            .unwrap()
+            > 0
+    );
+    assert!(
+        db.get_property("TestCF2", "rocksdb.estimate-live-data-size")
+            .unwrap()
+            > 0
+    );
+    assert_eq!(
+        db.get_property("default", "rocksdb.estimate-live-data-size")
+            .unwrap(),
+        0
+    );
 }
