@@ -165,7 +165,7 @@ struct PeerHandle(diem_channel::Sender<ProtocolId, PeerRequest>);
 impl PeerHandle {
     fn send_direct_send(&mut self, message: Message) {
         self.0
-            .push(message.protocol_id, PeerRequest::SendMessage(message))
+            .push(message.protocol_id, PeerRequest::SendDirectSend(message))
             .unwrap()
     }
 

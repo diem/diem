@@ -54,7 +54,7 @@ pub enum PeerRequest {
     /// Send an RPC request to peer.
     SendRpc(OutboundRpcRequest),
     /// Fire-and-forget style message send to peer.
-    SendMessage(Message),
+    SendDirectSend(Message),
 }
 
 /// Notifications that [`Peer`] sends to the `PeerManager`.
@@ -498,7 +498,7 @@ where
         match request {
             // To send an outbound DirectSendMsg, we just bump some counters and
             // push it onto our outbound writer queue.
-            PeerRequest::SendMessage(message) => {
+            PeerRequest::SendDirectSend(message) => {
                 let message_len = message.mdata.len();
                 let protocol_id = message.protocol_id;
                 let message = NetworkMessage::DirectSendMsg(DirectSendMsg {

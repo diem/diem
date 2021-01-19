@@ -392,7 +392,7 @@ impl SynchronizerEnv {
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
         // await next message from node
-        if let PeerManagerRequest::SendMessage(receiver_id, msg) = network_req {
+        if let PeerManagerRequest::SendDirectSend(receiver_id, msg) = network_req {
             let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&receiver_id).unwrap();
             receiver_network_notif_tx
                 .push(

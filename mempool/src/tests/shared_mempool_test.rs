@@ -350,7 +350,7 @@ impl SharedMempoolNetwork {
         let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
-        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+        if let PeerManagerRequest::SendDirectSend(peer_id, msg) = network_req {
             let sync_msg = bcs::from_bytes(&msg.mdata).unwrap();
             if let MempoolSyncMsg::BroadcastTransactionsRequest { transactions, .. } = sync_msg {
                 if !execute_send {
@@ -395,7 +395,7 @@ impl SharedMempoolNetwork {
         let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
         let network_req = block_on(network_reqs_rx.next()).unwrap();
 
-        if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
+        if let PeerManagerRequest::SendDirectSend(peer_id, msg) = network_req {
             let sync_msg = bcs::from_bytes(&msg.mdata).unwrap();
             if let MempoolSyncMsg::BroadcastTransactionsResponse { .. } = sync_msg {
                 // send it to peer

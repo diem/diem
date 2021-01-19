@@ -64,7 +64,7 @@ pub enum PeerManagerRequest {
     /// Send an RPC request to a remote peer.
     SendRpc(PeerId, #[serde(skip)] OutboundRpcRequest),
     /// Fire-and-forget style message send to a remote peer.
-    SendMessage(PeerId, #[serde(skip)] Message),
+    SendDirectSend(PeerId, #[serde(skip)] Message),
 }
 
 /// Notifications sent by PeerManager to upstream actors.
@@ -149,7 +149,7 @@ impl PeerManagerRequestSender {
     ) -> Result<(), PeerManagerError> {
         self.inner.push(
             (peer_id, protocol_id),
-            PeerManagerRequest::SendMessage(peer_id, Message { protocol_id, mdata }),
+            PeerManagerRequest::SendDirectSend(peer_id, Message { protocol_id, mdata }),
         )?;
         Ok(())
     }
@@ -179,7 +179,7 @@ impl PeerManagerRequestSender {
             // this send fails.
             self.inner.push(
                 (recipient, protocol_id),
-                PeerManagerRequest::SendMessage(recipient, msg.clone()),
+                PeerManagerRequest::SendDirectSend(recipient, msg.clone()),
             )?;
         }
         Ok(())
@@ -627,10 +627,11 @@ where
         );
         self.sample_connected_peers();
         match request {
-            PeerManagerRequest::SendMessage(peer_id, msg) => {
+            PeerManagerRequest::SendDirectSend(peer_id, msg) => {
                 let protocol_id = msg.protocol_id;
                 if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) = sender.push(msg.protocol_id, PeerRequest::SendMessage(msg)) {
+                    if let Err(err) = sender.push(msg.protocol_id, PeerRequest::SendDirectSend(msg))
+                    {
                         info!(
                             NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata),
                             protocol_id = %protocol_id,

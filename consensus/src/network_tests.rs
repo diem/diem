@@ -251,7 +251,7 @@ impl NetworkPlayground {
             // Convert PeerManagerRequest to corresponding PeerManagerNotification,
             // and extract destination peer
             let (dst, msg) = match &net_req {
-                PeerManagerRequest::SendMessage(dst_inner, msg_inner) => {
+                PeerManagerRequest::SendDirectSend(dst_inner, msg_inner) => {
                     (*dst_inner, msg_inner.clone())
                 }
                 msg_inner => panic!(
@@ -364,7 +364,7 @@ impl NetworkPlayground {
             // Convert PeerManagerRequest to corresponding PeerManagerNotification,
             // and extract destination peer
             let (dst, msg) = match &net_req {
-                PeerManagerRequest::SendMessage(dst_inner, msg_inner) => {
+                PeerManagerRequest::SendDirectSend(dst_inner, msg_inner) => {
                     (*dst_inner, msg_inner.clone())
                 }
                 msg_inner => panic!(
