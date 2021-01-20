@@ -132,7 +132,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_run(
-            sleeps_ms in vec(0u64..10, 0..100),
+            sleeps_ms in vec(0u64..10, 10..100),
             max_in_progress in 1usize..100,
         ) {
             let rt = Runtime::new().unwrap();
