@@ -78,7 +78,7 @@ pub static VFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("VFN".
 pub static VFN_NETWORK_2: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("Second VFN".into()));
 pub static PFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Public);
 
-pub struct SynchronizerPeer {
+pub struct StateSyncPeer {
     bootstrapper: Option<StateSyncBootstrapper>,
     client: Option<StateSyncClient>,
     mempool: Option<MockSharedMempool>,
@@ -91,7 +91,7 @@ pub struct SynchronizerPeer {
     storage_proxy: Option<Arc<RwLock<MockStorage>>>,
 }
 
-impl SynchronizerPeer {
+impl StateSyncPeer {
     pub fn commit(&self, version: u64) {
         let num_txns = version - self.storage_proxy.as_ref().unwrap().write().version();
         assert!(num_txns > 0);
@@ -182,12 +182,12 @@ pub struct SynchronizerEnv {
         HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_reqs_rxs:
         HashMap<PeerId, diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
-    peers: Vec<RefCell<SynchronizerPeer>>,
+    peers: Vec<RefCell<StateSyncPeer>>,
     runtime: Runtime,
 }
 
 impl SynchronizerEnv {
-    pub fn get_synchronizer_peer(&self, index: usize) -> Ref<SynchronizerPeer> {
+    pub fn get_synchronizer_peer(&self, index: usize) -> Ref<StateSyncPeer> {
         self.peers[index].borrow()
     }
 
@@ -198,7 +198,7 @@ impl SynchronizerEnv {
 
         let mut peers = vec![];
         for peer_index in 0..num_peers {
-            let peer = SynchronizerPeer {
+            let peer = StateSyncPeer {
                 client: None,
                 mempool: None,
                 multi_peer_ids: HashMap::new(),
