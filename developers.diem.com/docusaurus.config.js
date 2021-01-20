@@ -30,6 +30,18 @@ module.exports = objectAssignDeep(universalConfig, {
     require.resolve('./plugins/webpack'),
     require.resolve('./plugins/react-axe-ada-monitoring'),
     require.resolve('./plugins/seo-tags'),
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        createRedirects: function (existingPath) {
+          if (existingPath && existingPath.includes('/overview')) {
+            return [
+              existingPath.replace('/overview', '')
+            ];
+          }
+        },
+      },
+    ],
     require.resolve(
       '@libra-opensource/diem-docusaurus-components/src/plugin-segment',
     ),
