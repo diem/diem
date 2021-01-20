@@ -25,6 +25,7 @@ fn verify_end_to_end() {
         .printer(Box::new(writer))
         .build();
 
+
     assert_eq!(logs.read().len(), 0);
     info!("Hello");
     assert_eq!(logs.read().len(), 1);
