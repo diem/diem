@@ -7,6 +7,7 @@
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
 
+pub mod bootstrapper;
 pub mod chunk_request;
 pub mod chunk_response;
 pub mod client;
@@ -16,7 +17,6 @@ pub mod executor_proxy;
 mod logging;
 pub mod network;
 mod request_manager;
-pub mod state_synchronizer;
 
 #[cfg(any(feature = "fuzzing", test))]
 pub mod fuzzing;

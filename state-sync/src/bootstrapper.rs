@@ -18,8 +18,8 @@ use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Runtime};
 
-/// Creates and bootstraps new state sync runtimes and creates clients for
-/// communicating with those state sync runtimes.
+/// Creates and bootstraps new state syncs and creates clients for
+/// communicating with those state syncs.
 pub struct StateSyncBootstrapper {
     _runtime: Runtime,
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
