@@ -2025,6 +2025,22 @@
     url-loader "^4.1.1"
     webpack "^4.44.1"
 
+"@docusaurus/plugin-client-redirects@^2.0.0-alpha.70":
+  version "2.0.0-alpha.70"
+  resolved "https://registry.yarnpkg.com/@docusaurus/plugin-client-redirects/-/plugin-client-redirects-2.0.0-alpha.70.tgz#a2f681f4466dfca3861ed68a392bb9d021608a7f"
+  integrity sha512-SAKHEXomBx4bRbP36RQ4PIkJOLAU3y9v4RV8B5sDuEq70g+7Y9yXb4+5P9VC1/L2laMThluqSY+73uRAQs84Sg==
+  dependencies:
+    "@docusaurus/core" "2.0.0-alpha.70"
+    "@docusaurus/types" "2.0.0-alpha.70"
+    "@docusaurus/utils" "2.0.0-alpha.70"
+    "@docusaurus/utils-validation" "2.0.0-alpha.70"
+    chalk "^3.0.0"
+    eta "^1.11.0"
+    fs-extra "^9.0.1"
+    globby "^10.0.1"
+    joi "^17.2.1"
+    lodash "^4.17.20"
+
 "@docusaurus/plugin-content-blog@2.0.0-alpha.70":
   version "2.0.0-alpha.70"
   resolved "https://registry.yarnpkg.com/@docusaurus/plugin-content-blog/-/plugin-content-blog-2.0.0-alpha.70.tgz#795a5ddf181dfb314873a5dc33010d1a5bd94d28"
@@ -2465,12 +2481,13 @@
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
 
-"@libra-opensource/diem-docusaurus-components@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.11.tgz#1909858c39daea67309bf7a3b6e331e5279e7215"
-  integrity sha512-igGtkn8AFB0f2irhf0gYtde8y6A3Z48/KC2HuIa433fBFAV2cGu1BONOxPZDQRGcrImbT+QTS+hLgPqyL+pIWg==
+"@libra-opensource/diem-docusaurus-components@0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.12.tgz#d4e37f187f6e7fb9860835f37bed684bd1e597a0"
+  integrity sha512-uvcQU9dqqFOVn30Xje/huuchUQKcr2b+BLYV3g37B1tErenumpj42NKDTyp2XoaK7wZBKvUqHyynCEKmb16e7w==
   dependencies:
     docsearch.js "^2.6.3"
+    lodash "^4.17.20"
     prism-react-renderer "^1.1.1"
     prop-types "^15.7.2"
     react "^16.13.1"
@@ -2478,20 +2495,6 @@
     react-dom "^16.8.4"
     react-socks "^2.1.0"
     webpack "^4.43.0"
-
-"@libra-opensource/libra-client-sdk-typescript@1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/libra-client-sdk-typescript/-/libra-client-sdk-typescript-1.0.2.tgz#775b2082060d6020061a015eddd9ad9c4778f1ab"
-  integrity sha512-bqBZzSftR3LmpCl2RMo8+Z8ad/PpC8NsErwtgE+kLMD7l0e9v+vurT1FzLXoGbjEHFGRkms4IVFPEz7av8cSag==
-  dependencies:
-    axios "^0.19.2"
-    bech32 "^1.1.4"
-    bip39 "^3.0.2"
-    elliptic "^6.5.3"
-    json-bigint "^1.0.0"
-    sha3 "^2.1.3"
-    ts-proto "^1.37.0"
-    util "^0.12.3"
 
 "@mdx-js/mdx@^1.6.21":
   version "1.6.22"
@@ -3910,13 +3913,6 @@ axe-core@^3.5.0:
   version "3.5.5"
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-3.5.5.tgz#84315073b53fa3c0c51676c588d59da09a192227"
   integrity sha512-5P0QZ6J5xGikH780pghEdbEKijCTrruK9KxtPZCFWUpef0f6GipO+xEZ5GKCb020mmqgbiNO6TcA55CriL784Q==
-
-axios@^0.19.2:
-  version "0.19.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.19.2.tgz#3ea36c5d8818d0d5f8a8a97a6d36b86cdc00cb27"
-  integrity sha512-fjgm5MvRHLhx+osE2xoekY70AhARk3a6hkN+3Io1jc00jtquGvxYlKlsFUhmUET0V5te6CcZI7lcv2Ym61mjHA==
-  dependencies:
-    follow-redirects "1.5.10"
 
 axios@^0.21.1:
   version "0.21.1"
@@ -5665,13 +5661,6 @@ debug@2.6.9, debug@^2.2.0, debug@^2.3.3, debug@^2.6.0, debug@^2.6.9:
   dependencies:
     ms "2.0.0"
 
-debug@=3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-3.1.0.tgz#5bb5a0672628b64149566ba16819e61518c67261"
-  integrity sha512-OX8XqP7/1a9cqkxYw2yXss15f26NKWBpDXQd0/uK/KPqdQhxbPa994hnzjcE2VqQpDslf55723cKPUOGSmMY3g==
-  dependencies:
-    ms "2.0.0"
-
 debug@^3.1.1, debug@^3.2.6:
   version "3.2.7"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.7.tgz#72580b7e9145fb39b6676f9c5e5fb100b934179a"
@@ -7018,13 +7007,6 @@ flux@^3.1.3:
   dependencies:
     fbemitter "^2.0.0"
     fbjs "^0.8.0"
-
-follow-redirects@1.5.10:
-  version "1.5.10"
-  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.5.10.tgz#7b7a9f9aea2fdff36786a94ff643ed07f4ff5e2a"
-  integrity sha512-0V5l4Cizzvqt5D44aTXbFZz+FtyXV1vrDN6qrelxtfYQKW0KO0W2T/hkE8xvGa/540LkZlkaUjO4ailYTFtHVQ==
-  dependencies:
-    debug "=3.1.0"
 
 follow-redirects@^1.0.0, follow-redirects@^1.10.0:
   version "1.13.1"

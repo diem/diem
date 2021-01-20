@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@docusaurus/core": "^2.0.0-alpha.70",
+    "@docusaurus/plugin-client-redirects": "^2.0.0-alpha.70",
     "@docusaurus/preset-classic": "^2.0.0-alpha.70",
-    "@libra-opensource/libra-client-sdk-typescript": "1.0.2",
     "@libra-opensource/diem-cli": "^0.8.1",
     "@libra-opensource/diem-docusaurus-components": "0.1.12",
     "@svgr/webpack": "^5.4.0",
@@ -26,7 +26,7 @@
     "valid-url": "^1.0.9"
   },
   "resolutions": {
-    "terser" : "4.8.0"
+    "terser": "4.8.0"
   },
   "browserslist": {
     "production": [
