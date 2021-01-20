@@ -9,7 +9,7 @@ use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
 use diem_logger::*;
-use futures::{future::try_join_all, lock::Mutex, Future, TryFuture};
+use futures::{future::try_join_all, join, lock::Mutex, Future, FutureExt, TryFuture};
 use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
     api::{Api, DeleteParams, PostParams},
@@ -622,70 +622,44 @@ impl ClusterSwarmKube {
             .map_err(|e| format_err!("remove_all_network_effects: {}", e))
     }
 
+    pub async fn delete<T>(&self) -> Result<()>
+    where
+        T: k8s_openapi::Resource
+            + Clone
+            + serde::de::DeserializeOwned
+            + kube::api::Meta
+            + Send
+            + Sync,
+    {
+        let api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let resource_names: Vec<String> = api
+            .list(&ListParams {
+                label_selector: Some("diem-node=true".to_string()),
+                ..Default::default()
+            })
+            .await?
+            .iter()
+            .map(|res| -> Result<String, anyhow::Error> {
+                Ok(res
+                    .meta()
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found"))?
+                    .clone())
+            })
+            .collect::<Result<_, _>>()?;
+        let delete_futures = resource_names
+            .iter()
+            .map(|resource_names| self.delete_resource::<T>(resource_names));
+        try_join_all_limit(delete_futures.collect()).await?;
+        Ok(())
+    }
+
     pub async fn delete_all(&self) -> Result<()> {
-        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        let pod_names: Vec<String> = pod_api
-            .list(&ListParams {
-                label_selector: Some("diem-node=true".to_string()),
-                ..Default::default()
-            })
-            .await?
-            .iter()
-            .map(|pod| -> Result<String, anyhow::Error> {
-                Ok(pod
-                    .metadata
-                    .name
-                    .as_ref()
-                    .ok_or_else(|| format_err!("name not found for pod"))?
-                    .clone())
-            })
-            .collect::<Result<_, _>>()?;
-        let delete_futures = pod_names
-            .iter()
-            .map(|pod_name| self.delete_resource::<Pod>(pod_name));
-        try_join_all_limit(delete_futures.collect()).await?;
-        let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        let service_names: Vec<String> = service_api
-            .list(&ListParams {
-                label_selector: Some("diem-node=true".to_string()),
-                ..Default::default()
-            })
-            .await?
-            .iter()
-            .map(|service| -> Result<String, anyhow::Error> {
-                Ok(service
-                    .metadata
-                    .name
-                    .as_ref()
-                    .ok_or_else(|| format_err!("name not found for service"))?
-                    .clone())
-            })
-            .collect::<Result<_, _>>()?;
-        let delete_futures = service_names
-            .iter()
-            .map(|service_name| self.delete_resource::<Service>(service_name));
-        try_join_all_limit(delete_futures.collect()).await?;
-        let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        let job_names: Vec<String> = job_api
-            .list(&ListParams {
-                label_selector: Some("diem-node=true".to_string()),
-                ..Default::default()
-            })
-            .await?
-            .iter()
-            .map(|job| -> Result<String, anyhow::Error> {
-                Ok(job
-                    .metadata
-                    .name
-                    .as_ref()
-                    .ok_or_else(|| format_err!("name not found for job"))?
-                    .clone())
-            })
-            .collect::<Result<_, _>>()?;
-        let delete_futures = job_names
-            .iter()
-            .map(|job_name| self.delete_resource::<Job>(job_name));
-        try_join_all_limit(delete_futures.collect()).await?;
+        let del_pod = self.delete::<Pod>().boxed();
+        let del_service = self.delete::<Service>().boxed();
+        let del_job = self.delete::<Job>().boxed();
+        let _ = join!(del_pod, del_service, del_job);
         Ok(())
     }
 
