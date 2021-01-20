@@ -130,3 +130,4 @@ Changed resource(s) under 2 address(es):
   Changed 2 resource(s) under address 0000000000000000000000000000000B:
     Changed type 0x1::DiemAccount::DiemAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11], [[[Address(b)]]], [[[Address(b)]]], [U64(1), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11]], U64(0)]
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [[U64(500)]]
+Command `doctor`:

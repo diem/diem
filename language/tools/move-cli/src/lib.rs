@@ -12,7 +12,7 @@ use move_core_types::{
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
-use move_lang::MOVE_COMPILED_EXTENSION;
+use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
 use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
@@ -24,7 +24,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -60,34 +60,37 @@ const EVENTS_DIR: &str = "events";
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
-    modules: HashMap<ModuleId, Vec<u8>>,
-    resources: HashMap<(AccountAddress, StructTag), Vec<u8>>,
+    build_dir: PathBuf,
     storage_dir: PathBuf,
 }
 
 impl OnDiskStateView {
-    /// Create an `OnDiskStateView` that reads/writes resource data in `storage_dir` and can
-    /// execute code in `compiled_modules`.
-    pub fn create(storage_dir: PathBuf, compiled_modules: &[CompiledModule]) -> Result<Self> {
-        if !storage_dir.exists() || !storage_dir.is_dir() {
-            bail!(
-                "Attempting to create OnDiskStateView from bad data directory {:?}",
-                storage_dir
-            )
+    /// Create an `OnDiskStateView` that reads/writes resource data and modules in `storage_dir`.
+    pub fn create<P: Into<PathBuf>>(build_dir: P, storage_dir: P) -> Result<Self> {
+        let build_dir = build_dir.into();
+        if !build_dir.exists() {
+            fs::create_dir_all(&build_dir)?;
         }
 
-        let mut modules = HashMap::with_capacity(compiled_modules.len());
-        for module in compiled_modules {
-            let mut module_bytes = vec![];
-            module.serialize(&mut module_bytes)?;
-            modules.insert(module.self_id(), module_bytes);
+        let storage_dir = storage_dir.into();
+        if !storage_dir.exists() {
+            fs::create_dir_all(&storage_dir)?;
         }
-        let resources = HashMap::new();
+
         Ok(Self {
-            modules,
-            resources,
-            storage_dir,
+            build_dir,
+            // it is important to canonicalize the path here because `is_data_path()` relies on the
+            // fact that storage_dir is canonicalized.
+            storage_dir: storage_dir.canonicalize()?,
         })
+    }
+
+    pub fn interface_files_dir(&self) -> Result<String> {
+        let path = self.build_dir.join(MOVE_COMPILED_INTERFACES_DIR);
+        if !path.exists() {
+            fs::create_dir_all(&path)?;
+        }
+        Ok(path.into_os_string().into_string().unwrap())
     }
 
     fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
@@ -128,7 +131,7 @@ impl OnDiskStateView {
     }
 
     // Events are stored under address/handle creation number
-    pub fn get_event_path(&self, key: &EventKey) -> PathBuf {
+    fn get_event_path(&self, key: &EventKey) -> PathBuf {
         let mut path = self.get_addr_path(&key.get_creator_address());
         path.push(EVENTS_DIR);
         path.push(key.get_creation_number().to_string());
@@ -153,10 +156,12 @@ impl OnDiskStateView {
 
     /// Read the resource bytes stored on-disk at `addr`/`tag`
     fn get_module_bytes(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
-        match self.modules.get(module_id) {
-            None => Self::get_bytes(&self.get_module_path(module_id)),
-            m => Ok(m.cloned()),
-        }
+        Self::get_bytes(&self.get_module_path(module_id))
+    }
+
+    /// Check if a module at `addr`/`module_id` exists
+    pub fn has_module(&self, module_id: &ModuleId) -> bool {
+        self.get_module_path(module_id).exists()
     }
 
     /// Deserialize and return the module stored on-disk at `addr`/`module_id`
@@ -187,6 +192,8 @@ impl OnDiskStateView {
         })
     }
 
+    /// Returns a deserialized representation of the resource value stored at `resource_path`.
+    /// Returns Err if the path does not hold a resource value or the resource cannot be deserialized
     pub fn view_resource(&self, resource_path: &Path) -> Result<Option<AnnotatedMoveStruct>> {
         if resource_path.is_dir() {
             bail!("Bad resource path {:?}. Needed file, found directory")
@@ -272,14 +279,23 @@ impl OnDiskStateView {
         layout: MoveTypeLayout,
         resource: Value,
     ) -> Result<()> {
+        let bcs = resource
+            .simple_serialize(&layout)
+            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
+        self.save_resource_bytes(addr, tag, &bcs)
+    }
+
+    pub fn save_resource_bytes(
+        &self,
+        addr: AccountAddress,
+        tag: StructTag,
+        bcs_bytes: &[u8],
+    ) -> Result<()> {
         let path = self.get_resource_path(addr, tag);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
-        let bcs = resource
-            .simple_serialize(&layout)
-            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
-        Ok(fs::write(path, &bcs)?)
+        Ok(fs::write(path, bcs_bytes)?)
     }
 
     pub fn save_event(
@@ -294,10 +310,17 @@ impl OnDiskStateView {
         let event_data = event_value
             .simple_serialize(event_layout)
             .ok_or_else(|| anyhow!("Failed to serialize event"))?;
-        let event = ContractEvent::new(key, event_sequence_number, event_type, event_data);
+        self.save_contract_event(ContractEvent::new(
+            key,
+            event_sequence_number,
+            event_type,
+            event_data,
+        ))
+    }
 
+    pub fn save_contract_event(&self, event: ContractEvent) -> Result<()> {
         // save event data in handle_address/EVENTS_DIR/handle_number
-        let path = self.get_event_path(&key);
+        let path = self.get_event_path(event.key());
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
@@ -308,22 +331,97 @@ impl OnDiskStateView {
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
-    fn save_module(&self, module_id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
-        let path = self.get_module_path(module_id);
+    pub fn save_module(&self, module: &CompiledModule) -> Result<()> {
+        let mut module_bytes = vec![];
+        module.serialize(&mut module_bytes)?;
+        self.save_module_bytes(&module.self_id(), &module_bytes)
+    }
+
+    pub fn save_module_bytes(&self, id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
+        let path = self.get_module_path(id);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
-
         Ok(fs::write(path, &module_bytes)?)
     }
 
-    /// Save all the modules in the local cache
-    /// Returns true if any modules were saved
-    pub fn save_modules(&self) -> Result<bool> {
-        for (id, bytes) in &self.modules {
-            self.save_module(id, &bytes)?
+    /// Save all the modules in the local cache, re-generate mv_interfaces if required.
+    pub fn save_modules(&self, modules: &[CompiledModule]) -> Result<()> {
+        for module in modules {
+            self.save_module(module)?;
         }
-        Ok(!self.modules.is_empty())
+
+        // sync with build_dir for updates of mv_interfaces if new modules are added
+        if !modules.is_empty() {
+            move_lang::generate_interface_files(
+                &[self
+                    .storage_dir
+                    .clone()
+                    .into_os_string()
+                    .into_string()
+                    .unwrap()],
+                Some(
+                    self.build_dir
+                        .clone()
+                        .into_os_string()
+                        .into_string()
+                        .unwrap(),
+                ),
+                false,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_module(&self, id: &ModuleId) -> Result<()> {
+        let path = self.get_module_path(id);
+        fs::remove_file(path)?;
+
+        // delete addr directory if this address is now empty
+        let addr_path = self.get_addr_path(id.address());
+        if addr_path.read_dir()?.next().is_none() {
+            fs::remove_dir(addr_path)?
+        }
+        Ok(())
+    }
+
+    fn iter_paths<F>(&self, f: F) -> impl Iterator<Item = PathBuf>
+    where
+        F: FnOnce(&Path) -> bool + Copy,
+    {
+        walkdir::WalkDir::new(&self.storage_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path().to_path_buf())
+            .filter(move |path| f(path))
+    }
+
+    pub fn resource_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_resource_path(p))
+    }
+
+    pub fn module_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_module_path(p))
+    }
+
+    pub fn event_paths(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.iter_paths(move |p| self.is_event_path(p))
+    }
+
+    /// Return a map of module ID -> module for all modules in the self.storage_dir.
+    /// Returns an Err if a module does not deserialize
+    pub fn get_all_modules(&self) -> Result<BTreeMap<ModuleId, CompiledModule>> {
+        let mut modules = BTreeMap::new();
+        for path in self.module_paths() {
+            let module = CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
+                .map_err(|e| anyhow!("Failed to deserialized module: {:?}", e))?;
+            let id = module.self_id();
+            if modules.insert(id.clone(), module).is_some() {
+                bail!("Duplicate module {:?}", id)
+            }
+        }
+        Ok(modules)
     }
 }
 
@@ -338,12 +436,8 @@ impl RemoteCache for OnDiskStateView {
         address: &AccountAddress,
         struct_tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        match self.resources.get(&(*address, struct_tag.clone())) {
-            None => self
-                .get_resource_bytes(*address, struct_tag.clone())
-                .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR)),
-            res => Ok(res.cloned()),
-        }
+        self.get_resource_bytes(*address, struct_tag.clone())
+            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 

@@ -18,19 +18,21 @@ use move_core_types::{
 };
 use move_lang::{
     self, compiled_unit::CompiledUnit, Pass as MovePass, PassResult as MovePassResult,
-    MOVE_COMPILED_INTERFACES_DIR,
 };
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
     access::ScriptAccess,
+    compatibility::Compatibility,
     errors::VMError,
     file_format::{CompiledModule, CompiledScript, SignatureToken},
+    normalized::Module,
 };
 
 use anyhow::{bail, Result};
 use std::{
     collections::BTreeSet,
+    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -44,11 +46,12 @@ use structopt::StructOpt;
     rename_all = "kebab-case"
 )]
 struct Move {
-    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
+    /// Directory storing Move resources, events, and module bytecodes produced by module publishing
+    /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
     storage_dir: String,
-    /// Directory storing Move resources, events, and module bytecodes produced by script execution.
-    #[structopt(long, default_value = DEFAULT_BUILD_DIR, global = true)]
+    /// Directory storing build artifacts produced by compilation
+    #[structopt(long, short = "d", default_value = DEFAULT_BUILD_DIR, global = true)]
     build_dir: String,
     /// Dependency inclusion mode
     #[structopt(
@@ -76,10 +79,11 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// If set, modules will not override existing ones in storage
+        /// If set, fail when attempting to typecheck a module that already exists in global storage
         #[structopt(long = "no-republish")]
         no_republish: bool,
     },
+    /// Compile the specified modules and publish the resulting bytecodes in global storage
     #[structopt(name = "publish")]
     Publish {
         /// The source files containing modules to publish
@@ -88,17 +92,18 @@ enum Command {
             default_value = DEFAULT_SOURCE_DIR,
         )]
         source_files: Vec<String>,
-        /// If set, modules will not override existing ones in storage
+        /// If set, fail during compilation when attempting to publish a module that already
+        /// exists in global storage
         #[structopt(long = "no-republish")]
         no_republish: bool,
-        /// If set, the effects of executing `script_file` (i.e., published, updated, and
-        /// deleted resources) will NOT be committed to disk.
-        #[structopt(long = "dry-run", short = "n")]
-        dry_run: bool,
+        /// By default, code that might cause breaking changes for bytecode
+        /// linking or data layout compatibility checks will not be published.
+        /// Set this flag to ignore breaking changes checks and publish anyway
+        #[structopt(long = "ignore-breaking-changes")]
+        ignore_breaking_changes: bool,
     },
     /// Compile/run a Move script that reads/writes resources stored on disk in `storage`.
-    /// This command compiles each each module stored in `src` and loads it into the VM
-    /// before running the script.
+    /// This command compiles the script first before running it.
     #[structopt(name = "run")]
     Run {
         /// Path to script to compile and run.
@@ -137,6 +142,9 @@ enum Command {
         /// By default, coverage will not be tracked nor shown.
         #[structopt(long = "track-cov")]
         track_cov: bool,
+        /// Create a new test directory scaffold with the specified <path>
+        #[structopt(long = "create")]
+        create: bool,
     },
     /// View Move resources, events files, and modules stored on disk
     #[structopt(name = "view")]
@@ -148,31 +156,14 @@ enum Command {
     /// Delete all resources, events, and modules stored on disk under `storage`.
     /// Does *not* delete anything in `src`.
     Clean {},
+    /// Run well-formedness checks on the `storage` and `build` directories.
+    #[structopt(name = "doctor")]
+    Doctor {},
 }
 
 impl Move {
     fn get_package_dir(&self) -> PathBuf {
         Path::new(&self.build_dir).join(DEFAULT_PACKAGE_DIR)
-    }
-
-    /// Prepare the library dependencies, need to run it before every related command,
-    /// i.e., check, publish, and run.
-    ///
-    /// If `source_only` is true, only the source files will be populated. The modules will
-    /// not be compiled nor loaded.
-    ///
-    /// Currently, `source_only` is set to true for "check" and "publish" and false for "run"
-    fn prepare_mode(&self, source_only: bool) -> Result<()> {
-        self.mode.prepare(&self.get_package_dir(), source_only)
-    }
-
-    /// This collect the dependencies for compiling a script or module. The dependencies
-    /// include not only the loaded libraries, but also the interface files generated from
-    /// prior "publish" commands.
-    fn get_compilation_deps(&self) -> Result<Vec<String>> {
-        let mut src_dirs = self.mode.source_files(&self.get_package_dir())?;
-        src_dirs.push(interface_files_dir(&self.build_dir)?);
-        Ok(src_dirs)
     }
 
     /// This collects only the compiled modules from dependent libraries. The modules
@@ -181,37 +172,34 @@ impl Move {
     fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
         self.mode.compiled_modules(&self.get_package_dir())
     }
-}
 
-/// Create a directory at ./`dir_name` if one does not already exist
-fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
-    let dir = Path::new(dir_name);
-    if !dir.exists() {
-        fs::create_dir_all(dir)?
+    /// Prepare an OnDiskStateView that is ready to use. Library modules will be preloaded into the
+    /// storage if `load_libraries` is true.
+    ///
+    /// NOTE: this is the only way to get a state view in Move CLI, and thus, this function needs
+    /// to be run before every command that needs a state view, i.e., `check`, `publish`, `run`,
+    /// `view`, and `doctor`.
+    pub fn prepare_state(&self, load_libraries: bool) -> Result<OnDiskStateView> {
+        let state = OnDiskStateView::create(&self.build_dir, &self.storage_dir)?;
+
+        if load_libraries {
+            self.mode.prepare(&self.get_package_dir(), false)?;
+
+            // preload the storage with library modules (if such modules do not exist yet)
+            let lib_modules = self.get_library_modules()?;
+            let new_modules: Vec<_> = lib_modules
+                .into_iter()
+                .filter(|m| !state.has_module(&m.self_id()))
+                .collect();
+            state.save_modules(&new_modules)?;
+        }
+
+        Ok(state)
     }
-    Ok(dir)
-}
-
-/// Generate interface files for published files
-fn generate_interface_files(args: &Move) -> Result<()> {
-    move_lang::generate_interface_files(
-        &[args.storage_dir.clone()],
-        Some(args.build_dir.clone()),
-        false,
-    )?;
-    Ok(())
-}
-
-fn interface_files_dir(build_dir: &str) -> Result<String> {
-    let mut path = PathBuf::from(build_dir);
-    path.push(MOVE_COMPILED_INTERFACES_DIR);
-    let dir = path.into_os_string().into_string().unwrap();
-    maybe_create_dir(&dir)?;
-    Ok(dir)
 }
 
 fn shadow_storage(
-    args: &Move,
+    interface_dir: String,
     pprog: move_lang::parser::ast::Program,
 ) -> Result<move_lang::parser::ast::Program> {
     fn convert_module_id(
@@ -241,7 +229,6 @@ fn shadow_storage(
         }
     }
 
-    let interface_dir = interface_files_dir(&args.build_dir)?;
     let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
         let module_str = path.file_stem().unwrap().to_str().unwrap();
         let module = Identifier::new(module_str.to_string()).unwrap();
@@ -267,8 +254,8 @@ fn shadow_storage(
 }
 
 fn move_compile_to_and_shadow(
-    args: &Move,
     files: &[String],
+    interface_dir: String,
     republish: bool,
     until: MovePass,
 ) -> Result<(
@@ -276,14 +263,14 @@ fn move_compile_to_and_shadow(
     std::result::Result<MovePassResult, move_lang::errors::Errors>,
 )> {
     let (files, pprog_and_comments_res) =
-        move_lang::move_parse(files, &args.get_compilation_deps()?, None, None)?;
+        move_lang::move_parse(files, &[interface_dir.clone()], None, None)?;
     let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
     assert!(sender_opt.is_none());
     if republish {
-        pprog = shadow_storage(args, pprog)?;
+        pprog = shadow_storage(interface_dir, pprog)?;
     }
     Ok((
         files,
@@ -292,32 +279,47 @@ fn move_compile_to_and_shadow(
 }
 
 /// Compile the user modules in `src` and the script in `script_file`
-fn check(args: &Move, republish: bool, files: &[String]) -> Result<()> {
-    if args.verbose {
+fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: bool) -> Result<()> {
+    if verbose {
         println!("Checking Move files...");
     }
-    let (files, result) = move_compile_to_and_shadow(args, files, republish, MovePass::CFGIR)?;
+    let (files, result) = move_compile_to_and_shadow(
+        files,
+        state.interface_files_dir()?,
+        republish,
+        MovePass::CFGIR,
+    )?;
     move_lang::unwrap_or_report_errors!(files, result);
     Ok(())
 }
 
-fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskStateView> {
-    let storage_dir = maybe_create_dir(&args.storage_dir)?;
-
-    if args.verbose {
+fn publish(
+    state: OnDiskStateView,
+    files: &[String],
+    republish: bool,
+    ignore_breaking_changes: bool,
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
         println!("Compiling Move modules...")
     }
-    let (files, result) =
-        move_compile_to_and_shadow(args, files, republish, MovePass::Compilation)?;
+
+    let (files, result) = move_compile_to_and_shadow(
+        files,
+        state.interface_files_dir()?,
+        republish,
+        MovePass::Compilation,
+    )?;
     let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
         MovePassResult::Compilation(units) => units,
         _ => unreachable!(),
     };
+
     let num_modules = compiled_units
         .iter()
         .filter(|u| matches!(u,  CompiledUnit::Module {..}))
         .count();
-    if args.verbose {
+    if verbose {
         println!("Found and compiled {} modules", num_modules)
     }
 
@@ -325,7 +327,7 @@ fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskState
     for c in compiled_units {
         match c {
             CompiledUnit::Script { loc, .. } => {
-                if args.verbose {
+                if verbose {
                     println!(
                         "Warning: Found script in specified files for publishing. But scripts \
                          cannot be published. Script found in: {}",
@@ -336,33 +338,55 @@ fn publish(args: &Move, republish: bool, files: &[String]) -> Result<OnDiskState
             CompiledUnit::Module { module, .. } => modules.push(module),
         }
     }
-    Ok(OnDiskStateView::create(
-        storage_dir.to_path_buf(),
-        &modules,
-    )?)
+
+    if !ignore_breaking_changes {
+        for m in &modules {
+            let id = m.self_id();
+            if let Ok(old_m) = state.get_compiled_module(&id) {
+                let old_api = Module::new(&old_m);
+                let new_api = Module::new(m);
+                let compat = Compatibility::check(&old_api, &new_api);
+                if !compat.is_fully_compatible() {
+                    eprintln!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
+                }
+                if !compat.struct_layout {
+                    // TODO: we could choose to make this more precise by walking the global state and looking for published
+                    // structs of this type. but probably a bad idea
+                    bail!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", id)
+                }
+                if !compat.struct_and_function_linking {
+                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
+                    // but this is not easy to check without walking the global state and looking for everything
+                    bail!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", id)
+                }
+            }
+        }
+    }
+
+    state.save_modules(&modules)
 }
 
 fn run(
-    args: &Move,
+    state: OnDiskStateView,
     script_file: &str,
     signers: &[String],
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
     gas_budget: Option<u64>,
     dry_run: bool,
+    verbose: bool,
 ) -> Result<()> {
     fn compile_script(
-        args: &Move,
+        state: &OnDiskStateView,
         script_file: &str,
-    ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
-        let storage_dir = maybe_create_dir(&args.storage_dir)?;
-
-        if args.verbose {
+        verbose: bool,
+    ) -> Result<Option<CompiledScript>> {
+        if verbose {
             println!("Compiling transaction script...")
         }
         let (_files, compiled_units) = move_lang::move_compile_and_report(
             &[script_file.to_string()],
-            &args.get_compilation_deps()?,
+            &[state.interface_files_dir()?],
             None,
             None,
         )?;
@@ -377,7 +401,7 @@ fn run(
                     script_opt = Some(script)
                 }
                 CompiledUnit::Module { ident, .. } => {
-                    if args.verbose {
+                    if verbose {
                         println!(
                             "Warning: Found module '{}' in file specified for the script. This \
                              module will not be published.",
@@ -388,17 +412,10 @@ fn run(
             }
         }
 
-        // preload the modules to the storage
-        let state =
-            OnDiskStateView::create(storage_dir.to_path_buf(), &args.get_library_modules()?)?;
-        state.save_modules()?;
-        Ok((
-            OnDiskStateView::create(storage_dir.to_path_buf(), &[])?,
-            script_opt,
-        ))
+        Ok(script_opt)
     }
 
-    let (state, script_opt) = compile_script(args, script_file)?;
+    let script_opt = compile_script(&state, script_file, verbose)?;
     let script = match script_opt {
         Some(s) => s,
         None => bail!("Unable to find script in file {:?}", script_file),
@@ -437,6 +454,7 @@ fn run(
         .collect();
 
     let log_context = NoContextLog::new();
+
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -459,10 +477,10 @@ fn run(
         )
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        if args.verbose {
+        if verbose {
             explain_effects(&effects, &state)?
         }
-        maybe_commit_effects(&args, !dry_run, Some(effects), &state)
+        maybe_commit_effects(!dry_run, Some(effects), &state)
     }
 }
 
@@ -516,13 +534,14 @@ fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Res
     Ok(())
 }
 
-/// Commit the resources and modules modified by a transaction to disk
+/// Commit the resources and events modified by a transaction to disk
 fn maybe_commit_effects(
-    args: &Move,
     commit: bool,
     effects_opt: Option<TransactionEffects>,
     state: &OnDiskStateView,
 ) -> Result<()> {
+    // similar to explain effects, all module publishing happens via save_modules(), so effects
+    // shouldn't contain modules
     if commit {
         if let Some(effects) = effects_opt {
             for (addr, writes) in effects.resources {
@@ -548,12 +567,6 @@ fn maybe_commit_effects(
                 )?
             }
         }
-
-        let modules_saved = state.save_modules()?;
-        if modules_saved {
-            generate_interface_files(args)?;
-        }
-        state.save_modules()?;
     } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
         println!("Discarding changes; re-run without --dry-run if you would like to keep them.")
     }
@@ -705,11 +718,7 @@ fn explain_error(
 }
 
 /// Print a module or resource stored in `file`
-fn view(args: &Move, file: &str) -> Result<()> {
-    let storage_dir = maybe_create_dir(&args.storage_dir)?.canonicalize()?;
-    let stdlib_modules = vec![]; // ok to use empty dir here since we're not compiling
-    let state = OnDiskStateView::create(storage_dir, &stdlib_modules)?;
-
+fn view(state: OnDiskStateView, file: &str) -> Result<()> {
     let path = Path::new(&file);
     if state.is_resource_path(path) {
         match state.view_resource(path)? {
@@ -736,6 +745,58 @@ fn view(args: &Move, file: &str) -> Result<()> {
     Ok(())
 }
 
+/// Run sanity checks on storage and build dirs. This is primarily intended for testing the CLI;
+/// doctor should never fail unless `publish --ignore-breaking changes` is used or files under
+/// `storage` or `build` are modified manually. This runs the following checks:
+/// (1) all modules pass the bytecode verifier
+/// (2) all modules pass the linker
+/// (3) all resources can be deserialized
+/// (4) all events can be deserialized
+/// (5) build/mv_interfaces is consistent with the global storage (TODO?)
+fn doctor(state: OnDiskStateView) -> Result<()> {
+    fn parent_addr(p: &PathBuf) -> &OsStr {
+        p.parent().unwrap().parent().unwrap().file_name().unwrap()
+    }
+
+    let modules = state.get_all_modules()?;
+    // verify and link each module
+    for module in modules.values() {
+        if bytecode_verifier::verify_module(module).is_err() {
+            bail!("Failed to verify module {:?}", module.self_id())
+        }
+        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
+            bail!(
+                "Failed to link module {:?} against its dependencies",
+                module.self_id()
+            )
+        }
+    }
+    // deserialize each resource
+    for resource_path in state.resource_paths() {
+        let resource = state.view_resource(&resource_path);
+        if resource.is_err() {
+            bail!(
+                "Failed to deserialize resource {:?} stored under address {:?}",
+                resource_path.file_name().unwrap(),
+                parent_addr(&resource_path)
+            )
+        }
+    }
+    // deserialize each event
+    for event_path in state.event_paths() {
+        let event = state.view_events(&event_path);
+        if event.is_err() {
+            bail!(
+                "Failed to deserialize event {:?} stored under address {:?}",
+                event_path.file_name().unwrap(),
+                parent_addr(&event_path)
+            )
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let move_args = Move::from_args();
 
@@ -744,17 +805,22 @@ fn main() -> Result<()> {
             source_files,
             no_republish,
         } => {
-            move_args.prepare_mode(true)?;
-            check(&move_args, !*no_republish, &source_files)
+            let state = move_args.prepare_state(true)?;
+            check(state, !*no_republish, &source_files, move_args.verbose)
         }
         Command::Publish {
             source_files,
             no_republish,
-            dry_run,
+            ignore_breaking_changes,
         } => {
-            move_args.prepare_mode(true)?;
-            let state = publish(&move_args, !*no_republish, source_files)?;
-            maybe_commit_effects(&move_args, !*dry_run, None, &state)
+            let state = move_args.prepare_state(true)?;
+            publish(
+                state,
+                source_files,
+                !*no_republish,
+                *ignore_breaking_changes,
+                move_args.verbose,
+            )
         }
         Command::Run {
             script_file,
@@ -764,23 +830,36 @@ fn main() -> Result<()> {
             gas_budget,
             dry_run,
         } => {
-            move_args.prepare_mode(false)?;
+            let state = move_args.prepare_state(true)?;
             run(
-                &move_args,
+                state,
                 script_file,
                 signers,
                 args,
                 type_args.to_vec(),
                 *gas_budget,
                 *dry_run,
+                move_args.verbose,
             )
         }
-        Command::Test { path, track_cov } => test::run_all(
+        Command::Test {
+            path,
+            track_cov: _,
+            create: true,
+        } => test::create_test_scaffold(path),
+        Command::Test {
+            path,
+            track_cov,
+            create: false,
+        } => test::run_all(
             path,
             &std::env::current_exe()?.to_string_lossy(),
             *track_cov,
         ),
-        Command::View { file } => view(&move_args, file),
+        Command::View { file } => {
+            let state = move_args.prepare_state(false)?;
+            view(state, file)
+        }
         Command::Clean {} => {
             // delete storage
             let storage_dir = Path::new(&move_args.storage_dir);
@@ -794,6 +873,10 @@ fn main() -> Result<()> {
                 fs::remove_dir_all(&build_dir)?;
             }
             Ok(())
+        }
+        Command::Doctor {} => {
+            let state = move_args.prepare_state(false)?;
+            doctor(state)
         }
     }
 }
