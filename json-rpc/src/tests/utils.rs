@@ -45,6 +45,8 @@ pub fn test_bootstrap(
         DEFAULT_BATCH_SIZE_LIMIT,
         DEFAULT_PAGE_SIZE_LIMIT,
         DEFAULT_CONTENT_LENGTH_LIMIT,
+        &None,
+        &None,
         diem_db,
         mp_sender,
         RoleType::Validator,

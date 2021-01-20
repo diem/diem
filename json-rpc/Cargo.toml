@@ -20,7 +20,7 @@ rand = "0.7.3"
 serde_json = "1.0.61"
 serde = { version = "1.0.120", default-features = false }
 tokio = { version = "1.0.2", features = ["full"] }
-warp = "0.3.0"
+warp = { version = "0.3.0", features = ["tls"] }
 reqwest = { version = "0.11.0", features = ["blocking", "json"], default_features = false, optional = true }
 proptest = { version = "0.10.1", optional = true }
 

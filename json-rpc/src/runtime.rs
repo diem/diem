@@ -11,7 +11,7 @@ use diem_config::config::{NodeConfig, RoleType};
 use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
-use futures::future::join_all;
+use futures::future::{join_all, Either};
 use rand::{rngs::OsRng, RngCore};
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
@@ -82,6 +82,8 @@ pub fn bootstrap(
     batch_size_limit: u16,
     page_size_limit: u16,
     content_len_limit: usize,
+    tls_cert_path: &Option<String>,
+    tls_key_path: &Option<String>,
     diem_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
@@ -158,7 +160,16 @@ pub fn bootstrap(
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
     let _guard = runtime.enter();
-    let server = warp::serve(full_route).bind(address);
+    let server = match tls_cert_path {
+        None => Either::Left(warp::serve(full_route).bind(address)),
+        Some(cert_path) => Either::Right(
+            warp::serve(full_route)
+                .tls()
+                .cert_path(cert_path)
+                .key_path(tls_key_path.as_ref().unwrap())
+                .bind(address),
+        ),
+    };
     runtime.handle().spawn(server);
     runtime
 }
@@ -175,6 +186,8 @@ pub fn bootstrap_from_config(
         config.json_rpc.batch_size_limit,
         config.json_rpc.page_size_limit,
         config.json_rpc.content_length_limit,
+        &config.json_rpc.tls_cert_path,
+        &config.json_rpc.tls_key_path,
         diem_db,
         mp_sender,
         config.base.role,
