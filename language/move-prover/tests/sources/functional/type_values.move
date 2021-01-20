@@ -1,5 +1,5 @@
+// flag: --v2
 module TestTypeValues {
-
     spec module {
         pragma verify = true;
     }

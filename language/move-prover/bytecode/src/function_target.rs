@@ -129,7 +129,7 @@ impl<'env> FunctionTarget<'env> {
         if let Some(loc) = self.data.locations.get(&attr_id) {
             loc.clone()
         } else {
-            self.get_loc()
+            self.func_env.module_env.env.internal_loc()
         }
     }
 
@@ -547,8 +547,8 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
             }
             if let Some(loc) = self.data.locations.get(&code.get_attr_id()) {
                 if matches!(code, Bytecode::Prop(..)) && loc_vc_shown.insert(loc.clone()) {
-                    for (tag, info) in self.func_env.module_env.env.get_condition_infos(loc) {
-                        writeln!(f, "     // VC: {} for {}", info, tag)?;
+                    for (_, info) in self.func_env.module_env.env.get_condition_infos(loc) {
+                        writeln!(f, "     // VC: {} {}", info, loc.display(self.global_env()))?;
                     }
                 }
             }

@@ -1,6 +1,6 @@
 // no-boogie-test
+// flag: --v2
 module M {
-
     struct S {
         f: u64
     }

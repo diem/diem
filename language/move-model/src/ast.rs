@@ -789,19 +789,88 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
                 }
                 Ok(())
             }
-            Call(node_id, oper, args) => write!(
-                f,
-                "{}({})",
-                oper.display(self.env, *node_id),
-                args.iter()
-                    .map(|e| e.display(self.env).to_string())
-                    .join(", ")
-            ),
-            _ => {
-                // TODO(wrwg): implement remaining expression forms.
-                f.write_str("<can't display>")
+            Call(node_id, oper, args) => {
+                write!(
+                    f,
+                    "{}({})",
+                    oper.display(self.env, *node_id),
+                    self.fmt_exps(args)
+                )
+            }
+            Lambda(_, decls, body) => {
+                write!(f, "|{}| {}", self.fmt_decls(decls), body.display(self.env))
+            }
+            Block(_, decls, body) => {
+                write!(
+                    f,
+                    "{{let {}; {}}}",
+                    self.fmt_decls(decls),
+                    body.display(self.env)
+                )
+            }
+            Quant(_, kind, decls, opt_where, body) => {
+                let where_str = if let Some(exp) = opt_where {
+                    format!(" where {}", exp.display(self.env))
+                } else {
+                    "".to_string()
+                };
+                write!(
+                    f,
+                    "{} {}{}: {}",
+                    kind,
+                    self.fmt_quant_decls(decls),
+                    where_str,
+                    body.display(self.env)
+                )
+            }
+            Invoke(_, fun, args) => {
+                write!(f, "({})({})", fun.display(self.env), self.fmt_exps(args))
+            }
+            IfElse(_, cond, if_exp, else_exp) => {
+                write!(
+                    f,
+                    "(if {} {{{}}} else {{{}}})",
+                    cond.display(self.env),
+                    if_exp.display(self.env),
+                    else_exp.display(self.env)
+                )
             }
         }
+    }
+}
+
+impl<'a> ExpDisplay<'a> {
+    fn fmt_decls(&self, decls: &[LocalVarDecl]) -> String {
+        decls
+            .iter()
+            .map(|decl| {
+                let binding = if let Some(exp) = &decl.binding {
+                    format!(" = {}", exp.display(self.env))
+                } else {
+                    "".to_string()
+                };
+                format!("{}{}", decl.name.display(self.env.symbol_pool()), binding)
+            })
+            .join(", ")
+    }
+
+    fn fmt_quant_decls(&self, decls: &[(LocalVarDecl, Exp)]) -> String {
+        decls
+            .iter()
+            .map(|(decl, domain)| {
+                format!(
+                    "{}: {}",
+                    decl.name.display(self.env.symbol_pool()),
+                    domain.display(self.env)
+                )
+            })
+            .join(", ")
+    }
+
+    fn fmt_exps(&self, exps: &[Exp]) -> String {
+        exps.iter()
+            .map(|e| e.display(self.env).to_string())
+            .join(", ")
     }
 }
 
@@ -862,7 +931,22 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
             Local(s) => write!(f, "{}", s.display(self.env.symbol_pool())),
             Result(t) => write!(f, "result{}", t),
             _ => write!(f, "{:?}", self.oper),
+        }?;
+
+        // If operation as a type instantiation, add it.
+        let type_inst = self.env.get_node_instantiation(self.node_id);
+        if !type_inst.is_empty() {
+            let tctx = TypeDisplayContext::WithEnv {
+                env: self.env,
+                type_param_names: None,
+            };
+            write!(
+                f,
+                "<{}>",
+                type_inst.iter().map(|ty| ty.display(&tctx)).join(", ")
+            )?;
         }
+        Ok(())
     }
 }
 
@@ -899,17 +983,8 @@ impl<'a> OperationDisplay<'a> {
 
     fn resource_access_str(&self, node_id: NodeId) -> String {
         let ty = &self.env.get_node_instantiation(node_id)[0];
-        let (mid, sid, targs) = ty.require_struct();
-        let tctx = TypeDisplayContext::WithEnv {
-            env: self.env,
-            type_param_names: None,
-        };
-        let targs_str = if targs.is_empty() {
-            "".to_string()
-        } else {
-            format!("<{}>", targs.iter().map(|t| t.display(&tctx)).join(", "))
-        };
-        format!("{}{}", self.struct_str(&mid, &sid), targs_str)
+        let (mid, sid, _) = ty.require_struct();
+        self.struct_str(&mid, &sid)
     }
 }
 

@@ -360,58 +360,89 @@ impl Bytecode {
     }
 
     /// Remaps variables in the instruction.
-    pub fn remap_vars<F>(self, func_target: &FunctionTarget<'_>, f: &mut F) -> Self
+    pub fn remap_all_vars<F>(self, func_target: &FunctionTarget<'_>, f: &mut F) -> Self
     where
         F: FnMut(TempIndex) -> TempIndex,
+    {
+        self.remap_vars_internal(func_target, &mut |_, idx| f(idx))
+    }
+
+    /// Remaps variables in source position in the instruction.
+    pub fn remap_src_vars<F>(self, func_target: &FunctionTarget<'_>, f: &mut F) -> Self
+    where
+        F: FnMut(TempIndex) -> TempIndex,
+    {
+        self.remap_vars_internal(func_target, &mut |is_src, idx| {
+            if is_src {
+                f(idx)
+            } else {
+                idx
+            }
+        })
+    }
+
+    fn remap_vars_internal<F>(self, func_target: &FunctionTarget<'_>, f: &mut F) -> Self
+    where
+        F: FnMut(bool, TempIndex) -> TempIndex,
     {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
-        let map = |f: &mut F, v: Vec<TempIndex>| -> Vec<TempIndex> {
-            v.into_iter().map(|i| f(i)).collect()
+        let map = |is_src: bool, f: &mut F, v: Vec<TempIndex>| -> Vec<TempIndex> {
+            v.into_iter().map(|i| f(is_src, i)).collect()
         };
         match self {
-            Load(attr, dst, cons) => Load(attr, f(dst), cons),
-            Assign(attr, dest, src, kind) => Assign(attr, f(dest), f(src), kind),
-            Call(attr, _, WriteBack(LocalRoot(dest)), srcs) => {
-                Call(attr, vec![], WriteBack(LocalRoot(f(dest))), map(f, srcs))
-            }
-            Call(attr, _, WriteBack(Reference(dest)), srcs) => {
-                Call(attr, vec![], WriteBack(Reference(f(dest))), map(f, srcs))
-            }
+            Load(attr, dst, cons) => Load(attr, f(false, dst), cons),
+            Assign(attr, dest, src, kind) => Assign(attr, f(false, dest), f(true, src), kind),
+            Call(attr, _, WriteBack(LocalRoot(dest)), srcs) => Call(
+                attr,
+                vec![],
+                WriteBack(LocalRoot(f(false, dest))),
+                map(true, f, srcs),
+            ),
             Call(attr, dests, Splice(m), srcs) => {
-                let m = m.into_iter().map(|(p, t)| (p, f(t))).collect();
-                Call(attr, map(f, dests), Splice(m), map(f, srcs))
+                let m = m.into_iter().map(|(p, t)| (p, f(true, t))).collect();
+                Call(attr, map(false, f, dests), Splice(m), map(true, f, srcs))
             }
-            Call(attr, dests, op, srcs) => Call(attr, map(f, dests), op, map(f, srcs)),
-            Ret(attr, rets) => Ret(attr, map(f, rets)),
-            Branch(attr, if_label, else_label, cond) => Branch(attr, if_label, else_label, f(cond)),
-            OnAbort(attr, label, code) => OnAbort(attr, label, f(code)),
-            Abort(attr, cond) => Abort(attr, f(cond)),
+            Call(attr, dests, op, srcs) => Call(attr, map(false, f, dests), op, map(true, f, srcs)),
+            Ret(attr, rets) => Ret(attr, map(true, f, rets)),
+            Branch(attr, if_label, else_label, cond) => {
+                Branch(attr, if_label, else_label, f(true, cond))
+            }
+            OnAbort(attr, label, code) => OnAbort(attr, label, f(false, code)),
+            Abort(attr, cond) => Abort(attr, f(true, cond)),
             Prop(attr, kind, exp) => {
-                // TODO(wrwg): we need to get rid of symbols for locals in expressions, and
-                // instead represent them by a unique temp index similar as in the bytecode.
-                // The major blocker for this right now are spec blocks inside code, which
-                // require symbolic resolution the way they are wired with move-lang.
-                let mut replacer = |node_id: NodeId, sym: Symbol| {
-                    if let Some(idx) = func_target.get_local_index(sym) {
-                        let new_idx = f(idx);
-                        let new_sym = func_target.get_local_name(new_idx);
-                        Some(Exp::LocalVar(node_id, new_sym))
-                    } else {
-                        None
-                    }
-                };
-                let new_exp =
-                    ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp);
+                let new_exp = Bytecode::remap_exp(func_target, &mut |idx| f(true, idx), exp);
                 Prop(attr, kind, new_exp)
             }
             _ => self,
         }
     }
 
-    /// Return the temporaries this instruction modifies.
-    pub fn modifies(&self) -> Vec<TempIndex> {
+    fn remap_exp<F>(func_target: &FunctionTarget<'_>, f: &mut F, exp: Exp) -> Exp
+    where
+        F: FnMut(TempIndex) -> TempIndex,
+    {
+        // TODO(refactoring): we need to get rid of symbols for locals in expressions, and
+        // instead represent them by a unique temp index similar as in the bytecode.
+        // The major blocker for this right now are spec blocks inside code, which
+        // require symbolic resolution the way they are wired with move-lang. Those
+        // should go away once refactoring is done.
+        let mut replacer = |node_id: NodeId, sym: Symbol| {
+            if let Some(idx) = func_target.get_local_index(sym) {
+                let new_idx = f(idx);
+                let new_sym = func_target.get_local_name(new_idx);
+                Some(Exp::LocalVar(node_id, new_sym))
+            } else {
+                None
+            }
+        };
+        ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp)
+    }
+
+    /// Return the temporaries this instruction modifies. This includes references where the
+    /// instruction can have effect on.
+    pub fn modifies(&self, fun_target: &FunctionTarget<'_>) -> Vec<TempIndex> {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
@@ -421,6 +452,15 @@ impl Bytecode {
             | Call(_, _, WriteBack(LocalRoot(dest)), ..)
             | Call(_, _, WriteBack(Reference(dest)), ..) => vec![*dest],
             Call(_, _, WriteRef, srcs) => vec![srcs[0]],
+            Call(_, dests, Function(..), srcs) => {
+                let mut res = dests.clone();
+                for src in srcs {
+                    if fun_target.get_local_type(*src).is_mutable_reference() {
+                        res.push(*src);
+                    }
+                }
+                res
+            }
             Call(_, dests, ..) => dests.clone(),
             OnAbort(_, _, code) => vec![*code],
             _ => vec![],

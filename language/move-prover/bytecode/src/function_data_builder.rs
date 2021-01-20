@@ -5,7 +5,7 @@
 //! bytecode.
 
 use crate::{
-    function_target::FunctionData,
+    function_target::{FunctionData, FunctionTarget},
     stackless_bytecode::{AttrId, Bytecode, Label, PropKind, TempIndex},
 };
 use itertools::Itertools;
@@ -46,6 +46,12 @@ impl<'env> FunctionDataBuilder<'env> {
     /// Gets the global env associated with this builder.
     pub fn global_env(&self) -> &'env GlobalEnv {
         self.fun_env.module_env.env
+    }
+
+    /// Gets a function target viewpoint on this builder. This locks the data for mutation
+    /// until the returned value dies.
+    pub fn get_target(&self) -> FunctionTarget<'_> {
+        FunctionTarget::new(self.fun_env, &self.data)
     }
 
     /// Allocates a new temporary.

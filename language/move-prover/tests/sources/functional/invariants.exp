@@ -36,7 +36,7 @@ error: data invariant does not hold
      =         a_ref = <redacted>,
      =         b = <redacted>,
      =         b_ref = <redacted>,
-     =         tmp#$5 = <redacted>,
+     =         <redacted> = <redacted>,
      =         x_ref = <redacted>,
      =         x_ref = <redacted>
      =     at tests/sources/functional/invariants.move:154:15: lifetime_invalid_S_branching

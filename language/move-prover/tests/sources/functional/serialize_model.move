@@ -1,5 +1,5 @@
+// flag: --v2
 module TestBCS {
-
     use 0x1::BCS;
 
     spec module {

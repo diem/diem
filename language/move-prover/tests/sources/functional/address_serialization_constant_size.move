@@ -1,7 +1,7 @@
+// flag: --v2
 // Tests the additional axiom that constrains address serialization to have the same size.
 module AddressSerialization {
     use 0x1::BCS;
-
     /// Serialized representation of address typed Move values have the same vector length.
     public fun serialized_addresses_same_len(addr1: &address, addr2: &address): (vector<u8>, vector<u8>) {
         (BCS::to_bytes(addr1), BCS::to_bytes(addr2))

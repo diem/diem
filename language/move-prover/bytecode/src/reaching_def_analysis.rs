@@ -10,7 +10,7 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, TempIndex},
+    stackless_bytecode::{BorrowNode, Bytecode, Operation, TempIndex},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
@@ -87,22 +87,29 @@ impl ReachingDefProcessor {
         code: Vec<Bytecode>,
         defs: &ReachingDefAnnotation,
     ) -> Vec<Bytecode> {
-        use Bytecode::*;
         let mut res = vec![];
         for (pc, bytecode) in code.into_iter().enumerate() {
             let no_defs = BTreeMap::new();
             let reaching_defs = defs.0.get(&(pc as CodeOffset)).unwrap_or(&no_defs);
             let mut propagate = |local| Self::get_propagated_local(local, reaching_defs);
-            match bytecode {
-                Assign(attr, dest, src, kind) => {
-                    // For assign, override the generic treatment, as we do not want to
-                    // propagate to the destination.
-                    res.push(Assign(attr, dest, propagate(src), kind));
-                }
-                _ => res.push(bytecode.remap_vars(target, &mut propagate)),
-            }
+            res.push(bytecode.remap_src_vars(target, &mut propagate));
         }
         res
+    }
+
+    /// Compute the set of locals which are borrowed from. We can't alias such locals
+    /// to other locals because of reference semantics.
+    fn borrowed_locals(&self, code: &[Bytecode]) -> BTreeSet<TempIndex> {
+        use Bytecode::*;
+        code.iter()
+            .filter_map(|bc| {
+                if let Call(_, _, Operation::BorrowLoc, srcs) = bc {
+                    Some(srcs[0])
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Determines whether code is suitable for copy propagation. Currently we cannot
@@ -131,6 +138,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             let analyzer = ReachingDefAnalysis {
                 target: FunctionTarget::new(func_env, &data),
                 preserve_user_locals: self.preserve_user_locals,
+                borrowed_locals: self.borrowed_locals(&data.code),
             };
             let block_state_map = analyzer.analyze_function(
                 ReachingDefState {
@@ -166,6 +174,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 struct ReachingDefAnalysis<'a> {
     target: FunctionTarget<'a>,
     preserve_user_locals: bool,
+    borrowed_locals: BTreeSet<TempIndex>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -180,9 +189,12 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut ReachingDefState, instr: &Bytecode, _offset: CodeOffset) {
+        use BorrowNode::*;
         use Bytecode::*;
+        use Operation::*;
         match instr {
-            Assign(_, dst, src, _) => {
+            Assign(_, dest, src, _) => {
+                state.kill(*dest);
                 // On `self.preserve_user_locals`, only define aliases for temporaries.
                 // Also don't alias proxied parameters. The later is currently needed because the
                 // Boogie backend does not allow to write to such values, which happens via
@@ -190,17 +202,27 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
                 // TODO(refactoring): this can be removed once the old boogie backend is retired,
                 //   as in the new world, we emit `trace_local` instructions before this phase,
                 //   and this way remember user local names.
-                if !self.preserve_user_locals
-                    || self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none()
+                if !self.borrowed_locals.contains(dest)
+                    && (!self.preserve_user_locals
+                        || self.target.is_temporary(*dest)
+                            && self.target.get_proxy_index(*src).is_none())
                 {
-                    state.def_alias(*dst, *src);
+                    state.def_alias(*dest, *src);
                 }
             }
-            _ => {
-                for dst in instr.modifies() {
-                    state.kill(dst);
+            Load(_, dest, ..) => {
+                state.kill(*dest);
+            }
+            Call(_, dests, oper, ..) => {
+                if let WriteBack(LocalRoot(dest)) = oper {
+                    state.kill(*dest);
+                }
+                for dest in dests {
+                    state.kill(*dest);
                 }
             }
+            OnAbort(_, _, code_dest) => state.kill(*code_dest),
+            _ => {}
         }
     }
 }

@@ -12,5 +12,5 @@ error: abort not covered by any of the `aborts_if` clauses
     │              --- abort happened here with code `0x1`
     │
     =     at tests/sources/functional/pragma.move:10:5: always_aborts_with_verify_incorrect
-    =         _c = <redacted>
     =     at tests/sources/functional/pragma.move:11:14: always_aborts_with_verify_incorrect (ABORTED)
+    =         _c = <redacted>

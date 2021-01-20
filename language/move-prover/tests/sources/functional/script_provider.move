@@ -1,6 +1,6 @@
+// flag: --v2
 // A module providing functionality to the script*.move tests
 address 0x1 {
-
 
 module ScriptProvider {
     use 0x1::Signer;

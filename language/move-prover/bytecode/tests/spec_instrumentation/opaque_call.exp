@@ -81,8 +81,8 @@ fun Test::get_and_incr(addr: address): u64 {
      var $t9: u64
      var $t10: u64
      var $t11: &mut u64
-     // VC: `precondition does not hold at this call` for requires
-  0: assume Neq(addr, 0)
+     // VC: `precondition does not hold at this call` at tests/spec_instrumentation/opaque_call.move:15:6+21
+  0: assume Neq<address>(addr, 0)
   1: $t3 := exists<Test::R>(addr)
   2: $t4 := !($t3)
   3: if ($t4) goto L0 else goto L1
@@ -128,8 +128,8 @@ fun Test::get_and_incr(addr: address): u64 {
      var $t9: u64
      var $t10: u64
      var $t11: &mut u64
-     // VC: `precondition does not hold at this call` for requires
-  0: assume Neq(addr, 0)
+     // VC: `precondition does not hold at this call` at tests/spec_instrumentation/opaque_call.move:15:6+21
+  0: assume Neq<address>(addr, 0)
   1: @0 := save_mem(Test::R)
   2: $t3 := exists<Test::R>(addr)
   3: $t4 := !($t3)
@@ -157,20 +157,20 @@ fun Test::get_and_incr(addr: address): u64 {
  25: pack_ref(r)
  26: write_back[Test::R](r)
  27: L3:
-     // VC: `function does not abort under this condition` for ensures
- 28: assert Not(Not(exists<Test::R>[@0](addr)))
-     // VC: `function does not abort under this condition` for ensures
- 29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
-     // VC: `post-condition does not hold` for ensures
- 30: assert Eq(select Test::R.v(global<Test::R>(addr)), Add(select Test::R.v(global<Test::R>[@0](addr)), 1))
-     // VC: `post-condition does not hold` for ensures
- 31: assert Eq($t7, select Test::R.v(global<Test::R>(addr)))
+     // VC: `function does not abort under this condition` at tests/spec_instrumentation/opaque_call.move:16:6+35
+ 28: assert Not(Not(exists<Test::R>[@0]<Test::R>(addr)))
+     // VC: `function does not abort under this condition` at tests/spec_instrumentation/opaque_call.move:17:6+56
+ 29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0]<Test::R>(addr)), 1), 18446744073709551615))
+     // VC: `post-condition does not hold` at tests/spec_instrumentation/opaque_call.move:19:6+56
+ 30: assert Eq<u64>(select Test::R.v(global<Test::R><Test::R>(addr)), Add(select Test::R.v(global<Test::R>[@0]<Test::R>(addr)), 1))
+     // VC: `post-condition does not hold` at tests/spec_instrumentation/opaque_call.move:20:6+36
+ 31: assert Eq<u64>($t7, select Test::R.v(global<Test::R><Test::R>(addr)))
  32: return $t7
  33: L4:
-     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
- 34: assert Or(Not(exists<Test::R>[@0](addr)), Ge(Add(select Test::R.v(global<Test::R>[@0](addr)), 1), 18446744073709551615))
-     // VC: `function aborts under this condition but with the wrong code` for ensures
- 35: assert Implies(Not(exists<Test::R>[@0](addr)), Eq($t6, 33))
+     // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/opaque_call.move:6:2+175
+ 34: assert Or(Not(exists<Test::R>[@0]<Test::R>(addr)), Ge(Add(select Test::R.v(global<Test::R>[@0]<Test::R>(addr)), 1), 18446744073709551615))
+     // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/opaque_call.move:16:38+2
+ 35: assert Implies(Not(exists<Test::R>[@0]<Test::R>(addr)), Eq($t6, 33))
  36: abort($t6)
 }
 
@@ -185,25 +185,25 @@ fun Test::incr_twice() {
      var $t5: bool
      var $t6: u64
   0: $t0 := 0x1
-     // VC: `precondition does not hold at this call` for requires
-  1: assert Neq(addr, 0)
+     // VC: `precondition does not hold at this call` at tests/spec_instrumentation/opaque_call.move:15:6+21
+  1: assert Neq<address>(addr, 0)
   2: @6 := save_mem(Test::R)
-  3: modifies global<Test::R>($t0)
-  4: assume Eq($t1, And(Or(Not(exists<Test::R>[@6]($t0)), Ge(Add(select Test::R.v(global<Test::R>[@6]($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@6]($t0)), Eq($t2, 33))))
+  3: modifies global<Test::R><Test::R>($t0)
+  4: assume Eq($t1, And(Or(Not(exists<Test::R>[@6]<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>[@6]<Test::R>($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@6]<Test::R>($t0)), Eq($t2, 33))))
   5: if ($t1) goto L2 else goto L3
   6: L3:
-  7: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@6]($t0)), 1))
-  8: assume Eq($t3, select Test::R.v(global<Test::R>($t0)))
+  7: assume Eq<u64>(select Test::R.v(global<Test::R><Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@6]<Test::R>($t0)), 1))
+  8: assume Eq<u64>($t3, select Test::R.v(global<Test::R><Test::R>($t0)))
   9: destroy($t3)
  10: $t4 := 0x1
- 11: assert Neq(addr, 0)
+ 11: assert Neq<address>(addr, 0)
  12: @7 := save_mem(Test::R)
- 13: modifies global<Test::R>($t4)
- 14: assume Eq($t5, And(Or(Not(exists<Test::R>[@7]($t4)), Ge(Add(select Test::R.v(global<Test::R>[@7]($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@7]($t4)), Eq($t2, 33))))
+ 13: modifies global<Test::R><Test::R>($t4)
+ 14: assume Eq($t5, And(Or(Not(exists<Test::R>[@7]<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>[@7]<Test::R>($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@7]<Test::R>($t4)), Eq($t2, 33))))
  15: if ($t5) goto L2 else goto L4
  16: L4:
- 17: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@7]($t4)), 1))
- 18: assume Eq($t6, select Test::R.v(global<Test::R>($t4)))
+ 17: assume Eq<u64>(select Test::R.v(global<Test::R><Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@7]<Test::R>($t4)), 1))
+ 18: assume Eq<u64>($t6, select Test::R.v(global<Test::R><Test::R>($t4)))
  19: destroy($t6)
  20: L1:
  21: return ()
@@ -223,36 +223,36 @@ fun Test::incr_twice() {
      var $t6: u64
   0: @2 := save_mem(Test::R)
   1: $t0 := 0x1
-     // VC: `precondition does not hold at this call` for requires
-  2: assert Neq(addr, 0)
+     // VC: `precondition does not hold at this call` at tests/spec_instrumentation/opaque_call.move:15:6+21
+  2: assert Neq<address>(addr, 0)
   3: @3 := save_mem(Test::R)
-  4: modifies global<Test::R>($t0)
-  5: assume Eq($t1, And(Or(Not(exists<Test::R>[@3]($t0)), Ge(Add(select Test::R.v(global<Test::R>[@3]($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@3]($t0)), Eq($t2, 33))))
+  4: modifies global<Test::R><Test::R>($t0)
+  5: assume Eq($t1, And(Or(Not(exists<Test::R>[@3]<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>[@3]<Test::R>($t0)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@3]<Test::R>($t0)), Eq($t2, 33))))
   6: if ($t1) goto L2 else goto L3
   7: L3:
-  8: assume Eq(select Test::R.v(global<Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@3]($t0)), 1))
-  9: assume Eq($t3, select Test::R.v(global<Test::R>($t0)))
+  8: assume Eq<u64>(select Test::R.v(global<Test::R><Test::R>($t0)), Add(select Test::R.v(global<Test::R>[@3]<Test::R>($t0)), 1))
+  9: assume Eq<u64>($t3, select Test::R.v(global<Test::R><Test::R>($t0)))
  10: destroy($t3)
  11: $t4 := 0x1
- 12: assert Neq(addr, 0)
+ 12: assert Neq<address>(addr, 0)
  13: @4 := save_mem(Test::R)
- 14: modifies global<Test::R>($t4)
- 15: assume Eq($t5, And(Or(Not(exists<Test::R>[@4]($t4)), Ge(Add(select Test::R.v(global<Test::R>[@4]($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@4]($t4)), Eq($t2, 33))))
+ 14: modifies global<Test::R><Test::R>($t4)
+ 15: assume Eq($t5, And(Or(Not(exists<Test::R>[@4]<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>[@4]<Test::R>($t4)), 1), 18446744073709551615)), Implies(Not(exists<Test::R>[@4]<Test::R>($t4)), Eq($t2, 33))))
  16: if ($t5) goto L2 else goto L4
  17: L4:
- 18: assume Eq(select Test::R.v(global<Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@4]($t4)), 1))
- 19: assume Eq($t6, select Test::R.v(global<Test::R>($t4)))
+ 18: assume Eq<u64>(select Test::R.v(global<Test::R><Test::R>($t4)), Add(select Test::R.v(global<Test::R>[@4]<Test::R>($t4)), 1))
+ 19: assume Eq<u64>($t6, select Test::R.v(global<Test::R><Test::R>($t4)))
  20: destroy($t6)
  21: L1:
-     // VC: `function does not abort under this condition` for ensures
- 22: assert Not(Not(exists<Test::R>[@2](1)))
-     // VC: `post-condition does not hold` for ensures
- 23: assert Eq(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global<Test::R>[@2](1)), 2))
+     // VC: `function does not abort under this condition` at tests/spec_instrumentation/opaque_call.move:28:6+34
+ 22: assert Not(Not(exists<Test::R>[@2]<Test::R>(1)))
+     // VC: `post-condition does not hold` at tests/spec_instrumentation/opaque_call.move:29:6+54
+ 23: assert Eq<u64>(select Test::R.v(global<Test::R><Test::R>(1)), Add(select Test::R.v(global<Test::R>[@2]<Test::R>(1)), 2))
  24: return ()
  25: L2:
-     // VC: `abort not covered by any of the `aborts_if` clauses` for ensures
- 26: assert Not(exists<Test::R>[@2](1))
-     // VC: `function aborts under this condition but with the wrong code` for ensures
- 27: assert Implies(Not(exists<Test::R>[@2](1)), Eq($t2, 33))
+     // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/opaque_call.move:23:2+80
+ 26: assert Not(exists<Test::R>[@2]<Test::R>(1))
+     // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/opaque_call.move:28:37+2
+ 27: assert Implies(Not(exists<Test::R>[@2]<Test::R>(1)), Eq($t2, 33))
  28: abort($t2)
 }

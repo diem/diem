@@ -199,7 +199,7 @@ impl<'env> ModuleTranslator<'env> {
                 .display(self.module_env.symbol_pool())
         );
         for func_env in self.module_env.get_functions() {
-            if func_env.is_native() {
+            if func_env.is_native() || func_env.is_intrinsic() {
                 continue;
             }
             for variant in self.targets.get_target_variants(&func_env) {
@@ -265,11 +265,8 @@ impl<'env> ModuleTranslator<'env> {
             .chain((0..func_target.get_parameter_count()).map(|i| {
                 let s = func_target.get_local_name(i);
                 let ty = func_target.get_local_type(i);
-                let orig_ty = func_target.func_env.get_local_type(i);
-                // We must escape names which where originally representing mutable references,
-                // since in Boogie we can't write to them. So we generate name `_n` and then
-                // in the function body `var n: ...; n := _n`.
-                let prefix = if orig_ty.is_mutable_reference() {
+                // Boogie does not allow to assign to parameters, so we need to proxy them.
+                let prefix = if self.parameter_needs_to_be_mutable(func_target, i) {
                     "$_"
                 } else {
                     ""
@@ -301,7 +298,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Generates boogie implementation body.
     fn generate_function_body(&self, variant: FunctionVariant, func_target: &FunctionTarget<'_>) {
         // Be sure to set back location to the whole function definition as a default.
-        self.writer.set_location(&func_target.get_loc());
+        self.writer.set_location(&func_target.get_loc().at_start());
 
         emitln!(self.writer, "{");
         self.writer.indent();
@@ -321,7 +318,7 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
         // Generate declarations for renamed parameters.
-        let renamed_params = self.get_renamed_parameters(func_target);
+        let renamed_params = self.get_mutable_parameters(func_target);
         for (name, ty) in &renamed_params {
             emitln!(
                 self.writer,
@@ -342,6 +339,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Declare temporaries for debug tracing.
         emitln!(self.writer, "var $trace_abort_temp: int;");
+        emitln!(self.writer, "var $trace_local_temp: $Value;");
 
         // Generate memory snapshot variable declarations.
         let code = func_target.get_bytecode();
@@ -382,14 +380,10 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "}");
     }
 
-    fn get_renamed_parameters(&self, func_target: &FunctionTarget<'_>) -> Vec<(Symbol, Type)> {
+    fn get_mutable_parameters(&self, func_target: &FunctionTarget<'_>) -> Vec<(Symbol, Type)> {
         (0..func_target.get_parameter_count())
             .filter_map(|i| {
-                if func_target
-                    .func_env
-                    .get_local_type(i)
-                    .is_mutable_reference()
-                {
+                if self.parameter_needs_to_be_mutable(func_target, i) {
                     Some((
                         func_target.get_local_name(i),
                         func_target.get_local_type(i).clone(),
@@ -399,6 +393,21 @@ impl<'env> ModuleTranslator<'env> {
                 }
             })
             .collect_vec()
+    }
+
+    /// Determines whether the parameter of a function needs to be mutable.
+    /// Boogie does not allow to assign to procedure parameters. In some cases
+    /// (e.g. for memory instrumentation, but also as a result of copy propagation),
+    /// we may need to assign to parameters.
+    fn parameter_needs_to_be_mutable(
+        &self,
+        _func_target: &FunctionTarget<'_>,
+        _idx: TempIndex,
+    ) -> bool {
+        // For now, we just always say true. This could be optimized because the actual (known
+        // so far) sources for mutability are parameters which are used in WriteBack(LocalRoot(p))
+        // position.
+        true
     }
 
     fn translate_verify_entry_assumptions(&self, func_target: &FunctionTarget<'_>) {
@@ -474,7 +483,12 @@ impl<'env> ModuleTranslator<'env> {
         // Set location of this code in the CodeWriter.
         let loc = func_target.get_bytecode_loc(bytecode.get_attr_id());
         self.writer.set_location(&loc);
-        emitln!(self.writer, "// {}", bytecode.display(func_target));
+        emitln!(
+            self.writer,
+            "// {} {}",
+            bytecode.display(func_target),
+            loc.display(self.module_env.env)
+        );
 
         // Helper function to get an Rc<String> for a local.
         let str_local = |idx: usize| {
@@ -648,14 +662,6 @@ impl<'env> ModuleTranslator<'env> {
                             "call {} := $ReadRef({});",
                             str_local(dest),
                             str_local(src)
-                        );
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                str_local(dest).as_str(),
-                                &func_target.get_local_type(dest),
-                            )
                         );
                     }
                     WriteRef => {
@@ -1131,15 +1137,10 @@ impl<'env> ModuleTranslator<'env> {
                     }
                     Destroy => {}
                     TraceLocal(idx) => {
-                        self.track_local(func_target, &loc, *idx, &str_local(srcs[0]));
+                        self.track_local(func_target, &loc, *idx, srcs[0]);
                     }
                     TraceReturn(i) => {
-                        self.track_local(
-                            func_target,
-                            &loc,
-                            func_target.get_local_count() + i,
-                            &str_local(srcs[0]),
-                        );
+                        self.track_return(func_target, &loc, *i, srcs[0]);
                     }
                     TraceAbort => self.track_abort(&loc, &str_local(srcs[0])),
                 }
@@ -1179,18 +1180,20 @@ impl<'env> ModuleTranslator<'env> {
         }
     }
 
-    /// Generates an update of the model debug variable at given location.
-    fn track_local(&self, func_target: &FunctionTarget<'_>, loc: &Loc, idx: usize, value: &str) {
-        // Check whether this is a temporary, which we do not want to track. Indices >=
-        // local_count are return values which we do track.
-        if idx >= func_target.get_user_local_count() && idx < func_target.get_local_count() {
-            return;
-        }
-        let ty = if idx < func_target.get_local_count() {
-            func_target.get_local_type(idx)
-        } else {
-            func_target.get_return_type(idx - func_target.get_local_count())
-        };
+    /// Generates an update of the debug information about temporary.
+    fn track_local(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        loc: &Loc,
+        origin_idx: TempIndex,
+        idx: TempIndex,
+    ) {
+        // In order to determine whether we need to dereference, use the type of the temporary
+        // which actually holds the value, not the original temp we are tracing.
+        let ty = func_target.get_local_type(idx);
+        let value = func_target
+            .symbol_pool()
+            .string(func_target.get_local_name(idx));
         let value = if ty.is_reference() {
             format!("$Dereference({})", value)
         } else {
@@ -1203,11 +1206,42 @@ impl<'env> ModuleTranslator<'env> {
             .file_id_to_idx(loc.file_id())
             .to_string();
         let pos = loc.span().start().to_string();
-        let local_idx = idx.to_string();
+        let local_idx = origin_idx.to_string();
         let track = boogie_debug_track_local_via_attrib(&file_idx, &pos, &local_idx, &value);
-        if !track.is_empty() {
-            emitln!(self.writer, &track);
-        }
+        emitln!(self.writer, &track);
+    }
+
+    /// Generates an update of the debug information about the return value at given location.
+    fn track_return(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        loc: &Loc,
+        return_idx: usize,
+        idx: TempIndex,
+    ) {
+        let ty = func_target.get_local_type(idx);
+        let value = func_target
+            .symbol_pool()
+            .string(func_target.get_local_name(idx));
+        let value = if ty.is_reference() {
+            format!("$Dereference({})", value)
+        } else {
+            value.to_string()
+        };
+        let file_idx = func_target
+            .func_env
+            .module_env
+            .env
+            .file_id_to_idx(loc.file_id())
+            .to_string();
+        let pos = loc.span().start().to_string();
+        // TODO(wrwg): we currently represent a return value as a local at virtual index
+        //   `local_count + return_idx` in the Boogie encoding. We should have a separate encoding
+        //   for return values to avoid this hack.
+        let return_idx =
+            usize::saturating_add(func_target.get_local_count(), return_idx).to_string();
+        let track = boogie_debug_track_local_via_attrib(&file_idx, &pos, &return_idx, &value);
+        emitln!(self.writer, &track);
     }
 
     fn assume_wellformedness(

@@ -367,8 +367,9 @@ pub fn boogie_debug_track_local_via_attrib(
     value: &str,
 ) -> String {
     ensure_trace_info(format!(
-        "assume {{:print \"$track_local({},{},{}):\", {}}} {} == {};",
-        file_idx, pos, var_idx, value, value, value,
+        "$trace_local_temp := {};\n\
+        assume {{:print \"$track_local({},{},{}):\", $trace_local_temp}} {} == {};",
+        value, file_idx, pos, var_idx, value, value,
     ))
 }
 

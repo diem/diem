@@ -1,20 +1,20 @@
 Move prover returns: exiting with boogie verification errors
 error: function does not abort under this condition
 
-    ┌── tests/sources/functional/references.move:66:9 ───
+    ┌── tests/sources/functional/references.move:69:9 ───
     │
- 66 │         aborts_if true;
+ 69 │         aborts_if true;
     │         ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect
-    =         b = <redacted>,
-    =         b = <redacted>
-    =     at tests/sources/functional/references.move:59:13: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:43:5: mut_b
-    =         b = <redacted>,
-    =         $t1 = <redacted>,
-    =         result = <redacted>
-    =     at tests/sources/functional/references.move:44:16: mut_b
-    =     at tests/sources/functional/references.move:43:9: mut_b
+    =     at tests/sources/functional/references.move:61:5: mut_ref_incorrect
     =     at tests/sources/functional/references.move:62:13: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:63:9: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:63:13: mut_ref_incorrect
+    =         b = <redacted>,
+    =         b_ref = <redacted>
+    =     at tests/sources/functional/references.move:43:5: mut_b
+    =     at tests/sources/functional/references.move:44:14: mut_b
+    =         b = <redacted>
+    =     at tests/sources/functional/references.move:43:9: mut_b
+    =     at tests/sources/functional/references.move:65:9: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:66:18: mut_ref_incorrect
+    =         b = <redacted>

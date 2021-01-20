@@ -1,5 +1,5 @@
+// flag: --v2
 module TestHash {
-
     use 0x1::Hash;
 
     spec module {

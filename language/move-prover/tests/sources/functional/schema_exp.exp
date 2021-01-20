@@ -12,8 +12,8 @@ error: abort not covered by any of the `aborts_if` clauses
     │         ---------------- abort happened here with code `0x1`
     │
     =     at tests/sources/functional/schema_exp.move:25:5: bar_incorrect
-    =         c = <redacted>
     =     at tests/sources/functional/schema_exp.move:26:9: bar_incorrect (ABORTED)
+    =         c = <redacted>
 
 error: post-condition does not hold
 
@@ -23,6 +23,7 @@ error: post-condition does not hold
     │         ^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/schema_exp.move:53:5: baz_incorrect
+    =     at tests/sources/functional/schema_exp.move:54:13: baz_incorrect
     =         i = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/schema_exp.move:54:11: baz_incorrect
+    =     at tests/sources/functional/schema_exp.move:55:5: baz_incorrect

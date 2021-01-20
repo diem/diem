@@ -1,5 +1,5 @@
+// flag: --v2
 // This file is created to verify the native function in the standard BCS module.
-
 module VerifyBCS {
     use 0x1::BCS;
 

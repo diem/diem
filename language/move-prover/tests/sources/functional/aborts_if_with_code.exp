@@ -10,8 +10,8 @@ error: function aborts under this condition but with the wrong code
     │             -------- abort happened here with code `0x2`
     │
     =     at tests/sources/functional/aborts_if_with_code.move:69:5: aborts_if_with_code_mixed_invalid
-    =         x = <redacted>
     =     at tests/sources/functional/aborts_if_with_code.move:70:18: aborts_if_with_code_mixed_invalid
+    =         x = <redacted>
     =     at tests/sources/functional/aborts_if_with_code.move:73:9: aborts_if_with_code_mixed_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:74:13: aborts_if_with_code_mixed_invalid (ABORTED)
 
@@ -26,8 +26,8 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
      │             -------- abort happened here with code `0x2`
      │
      =     at tests/sources/functional/aborts_if_with_code.move:97:5: aborts_with_invalid
-     =         x = <redacted>
      =     at tests/sources/functional/aborts_if_with_code.move:98:18: aborts_with_invalid
+     =         x = <redacted>
      =     at tests/sources/functional/aborts_if_with_code.move:101:9: aborts_with_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:102:13: aborts_with_invalid (ABORTED)
 
@@ -42,8 +42,8 @@ error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
      │             -------- abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if_with_code.move:123:5: aborts_with_mixed_invalid
-     =         x = <redacted>
      =     at tests/sources/functional/aborts_if_with_code.move:124:18: aborts_with_mixed_invalid
+     =         x = <redacted>
      =     at tests/sources/functional/aborts_if_with_code.move:127:9: aborts_with_mixed_invalid
      =     at tests/sources/functional/aborts_if_with_code.move:128:13: aborts_with_mixed_invalid (ABORTED)
 
@@ -58,9 +58,9 @@ error: function aborts under this condition but with the wrong code
     │             ------- abort happened here with code `0x3`
     │
     =     at tests/sources/functional/aborts_if_with_code.move:11:5: conditional_abort
+    =     at tests/sources/functional/aborts_if_with_code.move:12:18: conditional_abort
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts_if_with_code.move:12:18: conditional_abort
     =     at tests/sources/functional/aborts_if_with_code.move:15:9: conditional_abort
     =     at tests/sources/functional/aborts_if_with_code.move:16:13: conditional_abort (ABORTED)
 
@@ -75,9 +75,9 @@ error: function aborts under this condition but with the wrong code
     │             ------- abort happened here with code `0x2`
     │
     =     at tests/sources/functional/aborts_if_with_code.move:29:5: conditional_abort_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:30:18: conditional_abort_invalid
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/functional/aborts_if_with_code.move:30:18: conditional_abort_invalid
     =     at tests/sources/functional/aborts_if_with_code.move:31:13: conditional_abort_invalid (ABORTED)
 
 error: function aborts under this condition but with the wrong code
@@ -91,5 +91,5 @@ error: function aborts under this condition but with the wrong code
     │         -- abort happened here with execution failure
     │
     =     at tests/sources/functional/aborts_if_with_code.move:45:5: exec_failure_invalid
-    =         x = <redacted>
     =     at tests/sources/functional/aborts_if_with_code.move:46:9: exec_failure_invalid (ABORTED)
+    =         x = <redacted>

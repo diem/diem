@@ -223,7 +223,7 @@ impl<'a> EliminateMutRefs<'a> {
                 self.transform_indices(srcs),
             )
         } else {
-            bytecode.remap_vars(self.func_target, &mut |idx| self.transform_index(idx))
+            bytecode.remap_all_vars(self.func_target, &mut |idx| self.transform_index(idx))
         }
     }
 

@@ -22,7 +22,10 @@ use std::{
     rc::Rc,
 };
 
-use codespan::{ByteIndex, ByteOffset, FileId, Files, Location, Span, SpanOutOfBoundsError};
+use codespan::{
+    ByteIndex, ByteOffset, ColumnOffset, FileId, Files, LineOffset, Location, Span,
+    SpanOutOfBoundsError,
+};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, Severity},
     term::{emit, termcolor::WriteColor, Config},
@@ -2702,5 +2705,34 @@ impl fmt::Display for ConditionTag {
 impl fmt::Display for ConditionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`{}`", self.message)
+    }
+}
+
+pub struct LocDisplay<'env> {
+    loc: &'env Loc,
+    env: &'env GlobalEnv,
+}
+
+impl Loc {
+    pub fn display<'env>(&'env self, env: &'env GlobalEnv) -> LocDisplay<'env> {
+        LocDisplay { loc: self, env }
+    }
+}
+
+impl<'env> fmt::Display for LocDisplay<'env> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some((fname, pos)) = self.env.get_position(self.loc.clone()) {
+            let offset = self.loc.span.end() - self.loc.span.start();
+            write!(
+                f,
+                "at {}:{}:{}+{}",
+                fname,
+                pos.line + LineOffset(1),
+                pos.column + ColumnOffset(1),
+                offset,
+            )
+        } else {
+            write!(f, "{:?}", self.loc)
+        }
     }
 }

@@ -26,7 +26,7 @@ use std::collections::{BTreeMap, BTreeSet};
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
 const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
-const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
+const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
 const WRONG_ABORTS_CODE: &str = "function aborts under this condition but with the wrong code";
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
@@ -164,7 +164,8 @@ impl<'a> Instrumenter<'a> {
         let old_code = std::mem::take(&mut self.builder.data.code);
 
         // Inject preconditions as assumes. This is done for all self.variant values.
-        self.builder.set_loc(self.builder.fun_env.get_loc()); // reset to function level
+        self.builder
+            .set_loc(self.builder.fun_env.get_loc().at_start()); // reset to function level
         for (loc, exp) in &self.spec.pre {
             self.builder.set_loc(loc.clone());
             self.builder
@@ -301,7 +302,7 @@ impl<'a> Instrumenter<'a> {
     fn generate_abort_block(&mut self) {
         use Bytecode::*;
         // Set the location to the function and emit label.
-        let fun_loc = self.builder.fun_env.get_loc();
+        let fun_loc = self.builder.fun_env.get_loc().at_end();
         self.builder.set_loc(fun_loc);
         let abort_label = self.abort_label;
         self.builder.emit_with(|id| Label(id, abort_label));
@@ -373,7 +374,7 @@ impl<'a> Instrumenter<'a> {
                 //   function location.
                 let loc = self.builder.fun_env.get_loc();
                 self.builder
-                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, ABORTS_NOT_COVERED);
+                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, ABORT_NOT_COVERED);
                 self.builder.emit_with(move |id| Prop(id, Assert, p));
             }
         }
@@ -470,7 +471,8 @@ impl<'a> Instrumenter<'a> {
         use PropKind::*;
 
         // Set the location to the function and emit label.
-        self.builder.set_loc(self.builder.fun_env.get_loc());
+        self.builder
+            .set_loc(self.builder.fun_env.get_loc().at_end());
         let ret_label = self.ret_label;
         self.builder.emit_with(|id| Label(id, ret_label));
 
@@ -648,7 +650,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 .is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
         {
             self.result.aborts.push((
-                self.fun_env.get_loc(),
+                self.fun_env.get_loc().at_end(),
                 self.builder.mk_bool_const(false),
                 None,
             ));
@@ -702,7 +704,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 Some(self.save_spec_var(mid.qualified(*vid))),
             ),
             Call(node_id, Global(None), args) if in_old => {
-                let args = self.eliminate_old_vec(args, in_old);
+                let args = self.translate_exp_vec(args, in_old);
                 Call(
                     *node_id,
                     Global(Some(
@@ -712,7 +714,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 )
             }
             Call(node_id, Exists(None), args) if in_old => {
-                let args = self.eliminate_old_vec(args, in_old);
+                let args = self.translate_exp_vec(args, in_old);
                 Call(
                     *node_id,
                     Exists(Some(
@@ -739,7 +741,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 Call(
                     *node_id,
                     Function(*mid, *fid, Some(labels)),
-                    self.eliminate_old_vec(args, in_old),
+                    self.translate_exp_vec(args, in_old),
                 )
             }
             Call(_, Old, args) => self.translate_exp(&args[0], true),
@@ -748,27 +750,39 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 self.builder.mk_local(self.ret_locals[*n])
             }
             Call(node_id, oper, args) => {
-                Call(*node_id, oper.clone(), self.eliminate_old_vec(args, in_old))
+                Call(*node_id, oper.clone(), self.translate_exp_vec(args, in_old))
             }
             Invoke(node_id, target, args) => {
                 let target = self.translate_exp(target, in_old);
                 Invoke(
                     *node_id,
                     Box::new(target),
-                    self.eliminate_old_vec(args, in_old),
+                    self.translate_exp_vec(args, in_old),
                 )
             }
             Lambda(node_id, decls, body) => {
-                let decls = self.eliminate_old_decls(decls, in_old);
+                let decls = self.translate_exp_decls(decls, in_old);
                 self.shadowed.push(decls.iter().map(|d| d.name).collect());
                 let res = Lambda(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
                 self.shadowed.pop();
                 res
             }
             Block(node_id, decls, body) => {
-                let decls = self.eliminate_old_decls(decls, in_old);
+                let decls = self.translate_exp_decls(decls, in_old);
                 self.shadowed.push(decls.iter().map(|d| d.name).collect());
                 let res = Block(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
+                self.shadowed.pop();
+                res
+            }
+            Quant(node_id, kind, decls, where_opt, body) => {
+                let decls = self.translate_exp_quant_decls(decls, in_old);
+                self.shadowed
+                    .push(decls.iter().map(|(d, _)| d.name).collect());
+                let where_opt = where_opt
+                    .as_ref()
+                    .map(|e| Box::new(self.translate_exp(e, in_old)));
+                let body = Box::new(self.translate_exp(body, in_old));
+                let res = Quant(*node_id, *kind, decls, where_opt, body);
                 self.shadowed.pop();
                 res
             }
@@ -820,19 +834,39 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         )
     }
 
-    fn eliminate_old_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {
+    fn translate_exp_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {
         exps.iter()
             .map(|e| self.translate_exp(e, in_old))
             .collect_vec()
     }
 
-    fn eliminate_old_decls(&mut self, decls: &[LocalVarDecl], in_old: bool) -> Vec<LocalVarDecl> {
+    fn translate_exp_decls(&mut self, decls: &[LocalVarDecl], in_old: bool) -> Vec<LocalVarDecl> {
         decls
             .iter()
             .map(|LocalVarDecl { id, name, binding }| LocalVarDecl {
                 id: *id,
                 name: *name,
                 binding: binding.as_ref().map(|e| self.translate_exp(e, in_old)),
+            })
+            .collect_vec()
+    }
+
+    fn translate_exp_quant_decls(
+        &mut self,
+        decls: &[(LocalVarDecl, Exp)],
+        in_old: bool,
+    ) -> Vec<(LocalVarDecl, Exp)> {
+        decls
+            .iter()
+            .map(|(LocalVarDecl { id, name, .. }, exp)| {
+                (
+                    LocalVarDecl {
+                        id: *id,
+                        name: *name,
+                        binding: None,
+                    },
+                    self.translate_exp(exp, in_old),
+                )
             })
             .collect_vec()
     }

@@ -7,6 +7,6 @@ error: post-condition does not hold
     │         ^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/consts.move:23:5: init_incorrect
-    =         result = <redacted>
     =     at tests/sources/functional/consts.move:24:9: init_incorrect
-    =     at tests/sources/functional/consts.move:23:5: init_incorrect
+    =         result = <redacted>
+    =     at tests/sources/functional/consts.move:25:5: init_incorrect

@@ -1,4 +1,5 @@
 // flag: --dependency=tests/sources/functional/script_provider.move
+// flag: --v2
 script {
 use 0x1::ScriptProvider;
 
@@ -7,8 +8,7 @@ fun main<Token>(account: &signer) {
 }
 
 spec fun main {
-    // TODO: This file gets errors that are produced non-deterministically, therefore turned off.
-    pragma verify = false;
+    pragma verify = true;
     aborts_if false;
 }
 }

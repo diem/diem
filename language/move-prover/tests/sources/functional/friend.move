@@ -1,5 +1,5 @@
+// flag: --v2
 module TestFriend {
-
     resource struct R{
         x: u64,
     }

@@ -359,32 +359,28 @@ fun TestPackref::test6(): TestPackref::R {
      var r_ref: &mut TestPackref::R
      var x_ref: &mut u64
      var $t3: u64
-     var $t4: &mut TestPackref::R
-     var $t5: TestPackref::R
-     var $t6: &mut u64
+     var $t4: TestPackref::R
+     var $t5: &mut u64
+     var $t6: u64
      var $t7: u64
-     var $t8: u64
   0: $t3 := 3
   1: r := pack TestPackref::R($t3)
   2: r_ref := borrow_local(r)
-  3: unpack_ref(r_ref)
-  4: $t4 := move(r_ref)
-  5: pack_ref(r_ref)
-  6: write_back[LocalRoot(r)](r_ref)
-  7: $t5 := read_ref(r_ref)
-  8: ($t6, $t5) := TestPackref::test5($t5)
-  9: write_ref(r_ref, $t5)
- 10: splice[0 -> $t4]($t6)
- 11: x_ref := $t6
- 12: write_back[Reference($t4)]($t6)
- 13: $t7 := 0
- 14: $t8 := read_ref(x_ref)
- 15: $t8 := TestPackref::test2($t8, $t7)
- 16: write_ref(x_ref, $t8)
- 17: write_back[Reference($t4)](x_ref)
- 18: pack_ref_deep($t4)
- 19: write_back[LocalRoot(r)]($t4)
- 20: return r
+  3: unpack_ref_deep(r_ref)
+  4: $t4 := read_ref(r_ref)
+  5: ($t5, $t4) := TestPackref::test5($t4)
+  6: write_ref(r_ref, $t4)
+  7: splice[0 -> r_ref]($t5)
+  8: x_ref := $t5
+  9: write_back[Reference(r_ref)]($t5)
+ 10: $t6 := 0
+ 11: $t7 := read_ref(x_ref)
+ 12: $t7 := TestPackref::test2($t7, $t6)
+ 13: write_ref(x_ref, $t7)
+ 14: write_back[Reference(r_ref)](x_ref)
+ 15: pack_ref_deep(r_ref)
+ 16: write_back[LocalRoot(r)](r_ref)
+ 17: return r
 }
 
 

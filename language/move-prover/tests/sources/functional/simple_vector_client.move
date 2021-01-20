@@ -1,6 +1,6 @@
+// flag: --v2
 // This file consists of a series of test cases which are client functions
 // using the standard vector module.
-
 module TestVector {
     use 0x1::Vector;
 

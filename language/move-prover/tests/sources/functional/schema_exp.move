@@ -1,5 +1,5 @@
+// flag: --v2
 module TestSchemaExp {
-
     spec module {
         pragma verify = true;
     }

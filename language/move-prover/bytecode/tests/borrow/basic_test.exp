@@ -424,87 +424,73 @@ fun TestBorrow::test6(): TestBorrow::R {
      var r_ref: &mut TestBorrow::R
      var x_ref: &mut u64
      var $t3: u64
-     var $t4: &mut TestBorrow::R
-     var $t5: TestBorrow::R
-     var $t6: &mut u64
+     var $t4: TestBorrow::R
+     var $t5: &mut u64
+     var $t6: u64
      var $t7: u64
-     var $t8: u64
-     // spliced_nodes: Reference($t4)
   0: $t3 := 3
-     // spliced_nodes: Reference($t4)
   1: r := pack TestBorrow::R($t3)
-     // spliced_nodes: Reference($t4)
   2: r_ref := borrow_local(r)
      // live_nodes: Reference(r_ref)
-     // spliced_nodes: Reference($t4)
+     // spliced_nodes: Reference(r_ref)
      // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
      // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
-  3: $t4 := move(r_ref)
-     // live_nodes: Reference($t4)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
-  4: $t5 := read_ref(r_ref)
-     // live_nodes: Reference($t4)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
-  5: ($t6, $t5) := TestBorrow::test5($t5)
-     // live_nodes: Reference($t4)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
-  6: write_ref(r_ref, $t5)
-     // live_nodes: Reference($t4)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
-  7: splice[0 -> $t4]($t6)
-     // live_nodes: Reference($t6)
-     // unchecked_nodes: Reference($t6)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}, Reference($t6) -> {Reference($t4)}
-  8: x_ref := $t6
+  3: $t4 := read_ref(r_ref)
+     // live_nodes: Reference(r_ref)
+     // spliced_nodes: Reference(r_ref)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+  4: ($t5, $t4) := TestBorrow::test5($t4)
+     // live_nodes: Reference(r_ref)
+     // spliced_nodes: Reference(r_ref)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+  5: write_ref(r_ref, $t4)
+     // live_nodes: Reference(r_ref)
+     // spliced_nodes: Reference(r_ref)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+  6: splice[0 -> r_ref]($t5)
+     // live_nodes: Reference($t5)
+     // unchecked_nodes: Reference($t5)
+     // spliced_nodes: Reference(r_ref)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference($t5)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference($t5) -> {Reference(r_ref)}
+  7: x_ref := $t5
      // live_nodes: Reference(x_ref)
      // unchecked_nodes: Reference(x_ref)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref), Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(x_ref)}
-     // borrows_from: Reference(x_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
-  9: $t7 := 0
+     // spliced_nodes: Reference(r_ref)
+     // moved_nodes: Reference($t5)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference(x_ref) -> {Reference(r_ref)}
+  8: $t6 := 0
      // live_nodes: Reference(x_ref)
      // unchecked_nodes: Reference(x_ref)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref), Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(x_ref)}
-     // borrows_from: Reference(x_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 10: $t8 := read_ref(x_ref)
+     // spliced_nodes: Reference(r_ref)
+     // moved_nodes: Reference($t5)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference(x_ref) -> {Reference(r_ref)}
+  9: $t7 := read_ref(x_ref)
      // live_nodes: Reference(x_ref)
      // unchecked_nodes: Reference(x_ref)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref), Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(x_ref)}
-     // borrows_from: Reference(x_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 11: $t8 := TestBorrow::test2($t8, $t7)
+     // spliced_nodes: Reference(r_ref)
+     // moved_nodes: Reference($t5)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference(x_ref) -> {Reference(r_ref)}
+ 10: $t7 := TestBorrow::test2($t7, $t6)
      // live_nodes: Reference(x_ref)
      // unchecked_nodes: Reference(x_ref)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref), Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(x_ref)}
-     // borrows_from: Reference(x_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 12: write_ref(x_ref, $t8)
+     // spliced_nodes: Reference(r_ref)
+     // moved_nodes: Reference($t5)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference(x_ref) -> {Reference(r_ref)}
+ 11: write_ref(x_ref, $t7)
      // unchecked_nodes: Reference(x_ref)
-     // spliced_nodes: Reference($t4)
-     // moved_nodes: Reference(r_ref), Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(x_ref)}
-     // borrows_from: Reference(x_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 13: return r
+     // spliced_nodes: Reference(r_ref)
+     // moved_nodes: Reference($t5)
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}, Reference(x_ref) -> {Reference(r_ref)}
+ 12: return r
 }
 
 

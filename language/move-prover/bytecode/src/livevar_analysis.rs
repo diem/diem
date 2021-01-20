@@ -159,7 +159,7 @@ impl LiveVarAnalysisProcessor {
             }
         };
         for bytecode in code {
-            new_code.push(bytecode.remap_vars(func_target, &mut transform_local));
+            new_code.push(bytecode.remap_all_vars(func_target, &mut transform_local));
         }
         (new_code, new_vars, remap)
     }
@@ -339,6 +339,7 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
 
     fn execute(&self, state: &mut LiveVarState, instr: &Bytecode, _idx: CodeOffset) {
         use Bytecode::*;
+        use Operation::*;
         match instr {
             Assign(_, dst, src, _) => {
                 if state.remove(&[*dst]) {
@@ -347,6 +348,11 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
             }
             Load(_, dst, _) => {
                 state.remove(&[*dst]);
+            }
+            Call(_, _, TraceAbort, _)
+            | Call(_, _, TraceLocal(..), _)
+            | Call(_, _, TraceReturn(..), _) => {
+                // Skip trace instructions for liveness
             }
             Call(_, dsts, oper, srcs) => {
                 state.remove(dsts);

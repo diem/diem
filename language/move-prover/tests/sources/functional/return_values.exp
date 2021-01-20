@@ -1,34 +1,34 @@
 Move prover returns: exiting with boogie verification errors
 error: post-condition does not hold
 
-    ┌── tests/sources/functional/return_values.move:16:9 ───
+    ┌── tests/sources/functional/return_values.move:17:9 ───
     │
- 16 │         ensures result_1 == 2;
+ 17 │         ensures result_1 == 2;
     │         ^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/return_values.move:29:5: one_two_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:30:5: one_two_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:4:10: one_two
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:2:5: one_two
+    =     at tests/sources/functional/return_values.move:3:16: one_two
+    =     at tests/sources/functional/return_values.move:31:9: one_two_wrapper_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:3:9: one_two
-    =     at tests/sources/functional/return_values.move:2:16: one_two
-    =     at tests/sources/functional/return_values.move:30:9: one_two_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:32:5: one_two_wrapper_incorrect
 
 error: post-condition does not hold
 
-    ┌── tests/sources/functional/return_values.move:59:9 ───
+    ┌── tests/sources/functional/return_values.move:60:9 ───
     │
- 59 │         ensures false;
+ 60 │         ensures false;
     │         ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/return_values.move:55:5: true_one_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:56:5: true_one_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:40:10: true_one
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:38:5: true_one
+    =     at tests/sources/functional/return_values.move:39:16: true_one
+    =     at tests/sources/functional/return_values.move:57:9: true_one_wrapper_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:39:9: true_one
-    =     at tests/sources/functional/return_values.move:38:16: true_one
-    =     at tests/sources/functional/return_values.move:56:9: true_one_wrapper_incorrect
+    =     at tests/sources/functional/return_values.move:58:5: true_one_wrapper_incorrect
