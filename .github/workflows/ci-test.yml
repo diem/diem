@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 30
     needs: prepare
-    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
       image: libra/build_environment:github-1
       volumes:
