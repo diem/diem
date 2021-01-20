@@ -4,12 +4,13 @@
 use crate::{
     chunk_request::{GetChunkRequest, TargetType},
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
+    client::{CoordinatorMessage, SyncRequest},
     counters,
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     request_manager::RequestManager,
-    state_synchronizer::{CoordinatorMessage, SyncRequest, SynchronizationState},
+    state_synchronizer::SynchronizationState,
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{

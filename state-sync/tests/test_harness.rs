@@ -58,9 +58,10 @@ use network_builder::builder::NetworkBuilder;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 use state_sync::{
+    client::StateSyncClient,
     executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerSender},
-    state_synchronizer::{StateSyncBootstrapper, StateSyncClient, SynchronizationState},
+    state_synchronizer::{StateSyncBootstrapper, SynchronizationState},
 };
 use std::{
     cell::{Ref, RefCell},

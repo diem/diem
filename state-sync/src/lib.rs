@@ -9,6 +9,7 @@
 
 pub mod chunk_request;
 pub mod chunk_response;
+pub mod client;
 pub mod coordinator;
 mod counters;
 pub mod executor_proxy;
