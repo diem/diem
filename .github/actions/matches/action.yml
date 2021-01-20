@@ -34,24 +34,26 @@ runs:
         if [[ -n "${CHANGES_FILE}" ]] && [[ -f "${CHANGES_FILE}" ]]; then
           TARGET_FILE="${CHANGES_FILE}"
         fi
-        set -x
-        INV=""
-        if [[ "${INVERT}" == "true" ]]; then
-          INV="-v"
-        fi
         result=true
         echo Target File: "${TARGET_FILE}" 1>&2
         echo PATTERN="${PATTERN}" 1>&2
         if [[ -f "${TARGET_FILE}" ]]; then
           echo found: 1>&2
-          cat "${TARGET_FILE}" | grep "${INV}" "${PATTERN}" || echo No matching files. 1>&2
-          count="$( cat "${TARGET_FILE}" | grep -c "${INV}" "${PATTERN}" || echo 0)"
+          if [[ "${INVERT}" == "true" ]]; then
+            cat "${TARGET_FILE}" | grep -v "${PATTERN}" || echo No matching files. 1>&2
+            count="$( cat "${TARGET_FILE}" | grep -c -v "${PATTERN}" || true)"
+          else
+            cat "${TARGET_FILE}" | grep "${PATTERN}" || echo No matching files. 1>&2
+            count="$( cat "${TARGET_FILE}" | grep -c "${PATTERN}" || true)"
+          fi
+          echo Found file count: "$count"
           if [[ "$count" == 0 ]]; then
             result=false
           fi
         else
           echo "::error::Target File was not set or was not found, will assume a change exists.   This is an error that should be corrected."
         fi
+        echo Perform build: ${result} 1>&2
         echo "::set-output name=changes::$(echo $result)"
       shell: bash
       env:
