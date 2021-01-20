@@ -20,7 +20,7 @@ use move_core_types::{
 };
 use move_vm_runtime::data_cache::MoveStorage;
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
 /// Dummy genesis ChangeSet for testing
@@ -116,7 +116,9 @@ impl MoveStorage for FakeDataStore {
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        RemoteStorage::new(self).get_resource(address, tag)
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
+        Ok(RemoteStorage::new(self)
+            .get_resource(address, tag)?
+            .map(|bytes| Cow::from(bytes.into_owned())))
     }
 }
