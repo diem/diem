@@ -58,19 +58,21 @@ impl<'a> SummaryCache<'a> {
 
 /// Trait that lifts an intraprocedural analysis into a bottom-up, compositional interprocedural
 /// analysis.
-pub trait CompositionalAnalysis: DataflowAnalysis
+pub trait CompositionalAnalysis<Domain: AbstractDomain + 'static>: DataflowAnalysis
 where
     Self::State: AbstractDomain + 'static,
 {
-    /// `analysis.summarize_abstract env init data abstrct` computes a postcondition for the
-    /// procedure `data` and then maps the postcondition to an element of abstract domain `T` by
-    /// applying the `abstrct` function. The result is stored in the summary cache of `data`.
-    fn summarize_abstract<T : AbstractDomain + 'static>(
+    /// Specifies mapping from elements of dataflow analysis domain to elements of `Domain`.
+    fn to_summary (&self,state: Self::State) -> Domain;
+
+    /// Computes a postcondition for the procedure `data` and then maps the postcondition to an
+    /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
+    /// in the summary cache of `data`.
+    fn summarize(
         &self,
         func_env: &FunctionEnv<'_>,
         initial_state: Self::State,
-        mut data: FunctionData,
-        abstrct : fn(Self::State) -> T
+        mut data: FunctionData
         ) -> FunctionData {
         if !func_env.is_native() {
             let cfg = if Self::BACKWARD {
@@ -90,24 +92,12 @@ where
             for exit_state in exit_states.iter().skip(1) {
                 acc.join(&exit_state);
             }
-            data.annotations.set(abstrct(acc))
+            data.annotations.set(self.to_summary(acc))
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives
-            data.annotations.set(abstrct(initial_state))
+            data.annotations.set(self.to_summary(initial_state))
         }
         data
-    }
-
-    /// This function is identical to `summarize_abstract` except without a final abstraction step.
-    /// The information stored in the summary cache is exactly the summary computed by the
-    /// analysis.
-    fn summarize(
-        &self,
-        func_env: &FunctionEnv<'_>,
-        initial_state: Self::State,
-        data: FunctionData
-        ) -> FunctionData {
-        Self::summarize_abstract(self, func_env, initial_state, data, std::convert::identity)
     }
 }
