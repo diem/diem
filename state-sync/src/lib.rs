@@ -19,4 +19,4 @@ mod request_manager;
 pub mod state_synchronizer;
 
 #[cfg(any(feature = "fuzzing", test))]
-pub use coordinator::fuzzing;
+pub mod fuzzing;
