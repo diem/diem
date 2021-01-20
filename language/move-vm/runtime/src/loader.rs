@@ -4,8 +4,8 @@
 use crate::{logging::LogContext, native_functions::NativeFunction};
 use bytecode_verifier::{
     constants, instantiation_loops::InstantiationLoopChecker, verify_main_signature,
-    CodeUnitVerifier, DependencyChecker, DuplicationChecker, InstructionConsistency,
-    RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
+    CodeUnitVerifier, CyclicModuleDependencyChecker, DependencyChecker, DuplicationChecker,
+    InstructionConsistency, RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
@@ -500,7 +500,7 @@ impl Loader {
         match self.verify_script(&script) {
             Ok(_) => {
                 // verify dependencies
-                let deps = script_dependencies(&script);
+                let deps = script.immediate_module_dependencies();
                 let loaded_deps = self.load_dependencies_verify_no_missing_dependencies(
                     deps,
                     data_store,
@@ -623,15 +623,14 @@ impl Loader {
         CodeUnitVerifier::verify_module(&module)?;
         Self::check_natives(&module)?;
 
-        let deps = module_dependencies(&module);
+        let deps = module.immediate_module_dependencies();
         let loaded_deps = if verify_no_missing_modules {
             self.load_dependencies_verify_no_missing_dependencies(deps, data_store, log_context)?
         } else {
             self.load_dependencies_expect_no_missing_dependencies(deps, data_store, log_context)?
         };
 
-        self.verify_module_dependencies(module, loaded_deps)?;
-        self.verify_no_cyclic_module_dependencies(&module)
+        self.verify_module_dependencies(module, loaded_deps)
     }
 
     fn verify_module_dependencies(
@@ -643,7 +642,12 @@ impl Loader {
         for dep in &dependencies {
             deps.push(dep.module());
         }
-        DependencyChecker::verify_module(module, deps)
+        DependencyChecker::verify_module(module, deps)?;
+        CyclicModuleDependencyChecker::verify_module(module, |module_id| {
+            self.get_module(module_id)
+                .module()
+                .immediate_module_dependencies()
+        })
     }
 
     // All native functions must be known to the loader
@@ -684,37 +688,6 @@ impl Loader {
             Ok(())
         }
         check_natives_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
-    }
-
-    // We do not allow cyclic dependencies between modules, i.e., module A depends on module B
-    // while at the same time, B (transitively) depends on A.
-    fn verify_no_cyclic_module_dependencies(&self, module: &CompiledModule) -> VMResult<()> {
-        // A standard DFS algorithm that follows the dependency chain from the `source_module_id`
-        // to see whether the `dst_module_id` is in its dependencies. This function can only be
-        // called when the module is fully verified and the `module_cache` is properly prepared.
-        fn is_reachable_via_dependencies(
-            target_module_id: &ModuleId,
-            cursor_module_id: &ModuleId,
-            loader: &Loader,
-        ) -> bool {
-            if target_module_id == cursor_module_id {
-                return true;
-            }
-            let cursor_module = loader.get_module(cursor_module_id);
-            module_dependencies(cursor_module.module())
-                .iter()
-                .any(|next| is_reachable_via_dependencies(target_module_id, next, loader))
-        }
-
-        let target_module_id = module.self_id();
-        if module_dependencies(module)
-            .iter()
-            .any(|dep| is_reachable_via_dependencies(&target_module_id, dep, self))
-        {
-            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
-                .finish(Location::Module(module.self_id())));
-        }
-        Ok(())
     }
 
     //
@@ -1698,32 +1671,6 @@ struct FieldInstantiation {
 //
 // Utility functions
 //
-
-fn script_dependencies(script: &CompiledScript) -> Vec<ModuleId> {
-    let mut deps = vec![];
-    for module in script.module_handles() {
-        deps.push(ModuleId::new(
-            *script.address_identifier_at(module.address),
-            script.identifier_at(module.name).to_owned(),
-        ));
-    }
-    deps
-}
-
-fn module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
-    let self_module = module.self_handle();
-    let mut deps = vec![];
-    for module_handle in module.module_handles() {
-        if module_handle == self_module {
-            continue;
-        }
-        deps.push(ModuleId::new(
-            *module.address_identifier_at(module_handle.address),
-            module.identifier_at(module_handle.name).to_owned(),
-        ));
-    }
-    deps
-}
 
 fn expect_no_verification_errors(err: VMError, log_context: &impl LogContext) -> VMError {
     match err.status_type() {

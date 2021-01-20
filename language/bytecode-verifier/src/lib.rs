@@ -21,7 +21,7 @@ pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
 pub use code_unit_verifier::CodeUnitVerifier;
-pub use dependencies::DependencyChecker;
+pub use dependencies::{CyclicModuleDependencyChecker, DependencyChecker};
 pub use instruction_consistency::InstructionConsistency;
 pub use resources::ResourceTransitiveChecker;
 pub use signature::SignatureChecker;

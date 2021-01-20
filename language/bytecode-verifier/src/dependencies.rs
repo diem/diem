@@ -18,7 +18,7 @@ use vm::{
 
 pub struct DependencyChecker<'a> {
     resolver: BinaryIndexedView<'a>,
-    // (Module -> CompiledModule) for all dependencies
+    // (Module -> CompiledModule) for (at least) all immediate dependencies
     dependency_map: BTreeMap<ModuleId, &'a CompiledModule>,
     // (Module::StructName -> handle) for all types of all dependencies
     struct_id_to_handle_map: HashMap<(ModuleId, Identifier), StructHandleIndex>,
@@ -35,7 +35,7 @@ impl<'a> DependencyChecker<'a> {
             .map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
-    pub fn verify_module_impl(
+    fn verify_module_impl(
         module: &'a CompiledModule,
         dependencies: impl IntoIterator<Item = &'a CompiledModule>,
     ) -> PartialVMResult<()> {
@@ -336,5 +336,50 @@ impl<'a> DependencyChecker<'a> {
         } else {
             Ok(())
         }
+    }
+}
+
+pub struct CyclicModuleDependencyChecker {}
+
+impl CyclicModuleDependencyChecker {
+    pub fn verify_module<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+        module: &CompiledModule,
+        immediate_module_dependencies: F,
+    ) -> VMResult<()> {
+        Self::verify_module_impl(module, immediate_module_dependencies)
+            .map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+        module: &CompiledModule,
+        immediate_module_dependencies: F,
+    ) -> PartialVMResult<()> {
+        // A standard DFS algorithm that follows the dependency chain from the `cursor_module_id`
+        // to see whether the `target_module_id` is in its dependencies.
+        fn is_reachable_via_dependencies<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+            target_module_id: &ModuleId,
+            cursor_module_id: &ModuleId,
+            immediate_module_dependencies: &F,
+        ) -> bool {
+            target_module_id == cursor_module_id
+                || immediate_module_dependencies(cursor_module_id)
+                    .iter()
+                    .any(|next| {
+                        is_reachable_via_dependencies(
+                            target_module_id,
+                            next,
+                            immediate_module_dependencies,
+                        )
+                    })
+        }
+
+        let target_module_id = module.self_id();
+        let has_cyclic_deps = module.immediate_module_dependencies().iter().any(|dep| {
+            is_reachable_via_dependencies(&target_module_id, dep, &immediate_module_dependencies)
+        });
+        if has_cyclic_deps {
+            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
+        }
+        Ok(())
     }
 }
