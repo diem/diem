@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::synchronizer_environment::{
+use crate::test_harness::{
     default_handler, PFN_NETWORK, VALIDATOR_NETWORK, VFN_NETWORK, VFN_NETWORK_2,
 };
 use anyhow::{bail, Result};
@@ -10,9 +10,9 @@ use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
 use netcore::transport::ConnectionOrigin::*;
 use state_sync::network::StateSynchronizerMsg;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use synchronizer_environment::SynchronizerEnv;
+use test_harness::SynchronizerEnv;
 
-mod synchronizer_environment;
+mod test_harness;
 
 #[test]
 fn test_basic_catch_up() {
