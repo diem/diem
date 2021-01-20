@@ -4,3 +4,5 @@ view storage/0x00000000000000000000000000000043/modules/N.mv
 publish src2 -v
 view storage/0x00000000000000000000000000000042/modules/M.mv
 view storage/0x00000000000000000000000000000043/modules/N.mv
+publish src2 -v --ignore-breaking-changes
+doctor

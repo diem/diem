@@ -9,3 +9,8 @@ Command `publish src2 -v`:
 Compiling Move modules...
 Found and compiled 1 modules
 Publishing failed with unexpected error CYCLIC_MODULE_DEPENDENCY
+Command `publish src2 -v --ignore-breaking-changes`:
+Compiling Move modules...
+Found and compiled 1 modules
+Command `doctor`:
+Error: Cyclic module dependencies are detected with module 00000000000000000000000000000042::A in the loop

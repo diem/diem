@@ -19,7 +19,7 @@ use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule::CostStrategy, values::Value};
 use vm::{
-    access::ScriptAccess,
+    access::{ModuleAccess, ScriptAccess},
     compatibility::Compatibility,
     errors::VMError,
     file_format::{CompiledModule, CompiledScript, SignatureToken},
@@ -770,6 +770,19 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
         if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
+                module.self_id()
+            )
+        }
+        let cyclic_check_result =
+            bytecode_verifier::CyclicModuleDependencyChecker::verify_module(module, |module_id| {
+                modules
+                    .get(module_id)
+                    .expect("Missing dependencies in cyclic checker is unexpected")
+                    .immediate_module_dependencies()
+            });
+        if cyclic_check_result.is_err() {
+            bail!(
+                "Cyclic module dependencies are detected with module {} in the loop",
                 module.self_id()
             )
         }

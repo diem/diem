@@ -1,2 +1,4 @@
 publish src1 -v
 publish src2 -v
+publish src2 -v --ignore-breaking-changes
+doctor
