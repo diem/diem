@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, state_synchronizer::SynchronizationState};
+use crate::{coordinator::SynchronizationState, counters};
 use anyhow::{format_err, Result};
 use diem_mempool::CommitResponse;
 use diem_types::{
@@ -15,7 +15,7 @@ use futures::{
 use std::time::{Duration, SystemTime};
 use tokio::time::timeout;
 
-/// A synchronization request to sync to a specified target ledger info.
+/// A sync request for a specified target ledger info.
 pub struct SyncRequest {
     pub callback: oneshot::Sender<Result<()>>,
     pub target: LedgerInfoWithSignatures,

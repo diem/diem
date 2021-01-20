@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    coordinator::SynchronizationState,
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
-    state_synchronizer::SynchronizationState,
 };
 use anyhow::{format_err, Result};
 use diem_logger::prelude::*;

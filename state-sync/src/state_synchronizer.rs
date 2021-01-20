@@ -6,87 +6,17 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
 };
-use anyhow::Result;
 use diem_config::{
     config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
     network_id::NodeNetworkId,
 };
-use diem_types::{
-    epoch_change::Verifier, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
-    waypoint::Waypoint,
-};
-use executor_types::{ChunkExecutor, ExecutedTrees};
+use diem_types::waypoint::Waypoint;
+use executor_types::ChunkExecutor;
 use futures::channel::mpsc;
 use std::{boxed::Box, collections::HashMap, sync::Arc};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Runtime};
-
-/// SynchronizationState contains the following fields:
-/// * `committed_ledger_info` holds the latest certified ledger info (committed to storage),
-///    i.e., the ledger info for the highest version for which storage has all ledger state.
-/// * `synced_trees` holds the latest transaction accumulator and state tree (which may
-///    or may not be committed to storage), i.e., some ledger state for the next highest
-///    ledger info version is missing.
-/// * `trusted_epoch_state` corresponds to the current epoch if the highest committed
-///    ledger info (`committed_ledger_info`) is in the middle of the epoch, otherwise, it
-///    corresponds to the next epoch if the highest committed ledger info ends the epoch.
-///
-/// Note: `committed_ledger_info` is used for helping other Diem nodes synchronize (i.e.,
-/// it corresponds to the highest version we have a proof for in storage). `synced_trees`
-/// is used locally for retrieving missing chunks for the local storage.
-#[derive(Clone)]
-pub struct SynchronizationState {
-    committed_ledger_info: LedgerInfoWithSignatures,
-    synced_trees: ExecutedTrees,
-    trusted_epoch_state: EpochState,
-}
-
-impl SynchronizationState {
-    pub fn new(
-        committed_ledger_info: LedgerInfoWithSignatures,
-        synced_trees: ExecutedTrees,
-        current_epoch_state: EpochState,
-    ) -> Self {
-        let trusted_epoch_state = committed_ledger_info
-            .ledger_info()
-            .next_epoch_state()
-            .cloned()
-            .unwrap_or(current_epoch_state);
-
-        SynchronizationState {
-            committed_ledger_info,
-            synced_trees,
-            trusted_epoch_state,
-        }
-    }
-
-    pub fn committed_epoch(&self) -> u64 {
-        self.committed_ledger_info.ledger_info().epoch()
-    }
-
-    pub fn committed_ledger_info(&self) -> LedgerInfoWithSignatures {
-        self.committed_ledger_info.clone()
-    }
-
-    pub fn committed_version(&self) -> u64 {
-        self.committed_ledger_info.ledger_info().version()
-    }
-
-    /// Returns the highest available version in the local storage, even if it's not
-    /// committed (i.e., covered by a ledger info).
-    pub fn synced_version(&self) -> u64 {
-        self.synced_trees.version().unwrap_or(0)
-    }
-
-    pub fn trusted_epoch(&self) -> u64 {
-        self.trusted_epoch_state.epoch
-    }
-
-    pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
-        self.trusted_epoch_state.verify(ledger_info)
-    }
-}
 
 /// Creates and bootstraps new state sync runtimes and creates clients for
 /// communicating with those state sync runtimes.
