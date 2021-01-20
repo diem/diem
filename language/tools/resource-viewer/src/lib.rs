@@ -22,6 +22,7 @@ use move_core_types::{
 };
 use move_vm_runtime::data_cache::RemoteCache;
 use std::{
+    borrow::Cow,
     collections::btree_map::BTreeMap,
     convert::TryInto,
     fmt::{Display, Formatter},
@@ -300,7 +301,7 @@ impl RemoteCache for NullStateView {
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         Ok(None)
     }
 }

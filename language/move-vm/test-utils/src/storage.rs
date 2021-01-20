@@ -11,7 +11,10 @@ use move_core_types::{
 use move_vm_runtime::data_cache::RemoteCache;
 // use move_vm_txn_effect_converter::convert_txn_effects_to_move_changeset_and_events;
 use move_binary_format::errors::{PartialVMResult, VMResult};
-use std::collections::{btree_map, BTreeMap};
+use std::{
+    borrow::Cow,
+    collections::{btree_map, BTreeMap},
+};
 
 /// A dummy storage containing no modules or resources.
 #[derive(Debug, Clone)]
@@ -32,7 +35,7 @@ impl RemoteCache for BlankStorage {
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         Ok(None)
     }
 }
@@ -60,10 +63,10 @@ impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         if let Some(account_storage) = self.delta.accounts.get(address) {
             if let Some(blob_opt) = account_storage.resources.get(tag) {
-                return Ok(blob_opt.clone());
+                return Ok(blob_opt.as_ref().map(Cow::from));
             }
         }
 
@@ -204,9 +207,9 @@ impl RemoteCache for InMemoryStorage {
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         if let Some(account_storage) = self.accounts.get(address) {
-            return Ok(account_storage.resources.get(tag).cloned());
+            return Ok(account_storage.resources.get(tag).map(Cow::from));
         }
         Ok(None)
     }

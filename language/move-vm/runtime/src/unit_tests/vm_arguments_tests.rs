@@ -23,6 +23,7 @@ use move_core_types::{
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::gas_schedule::GasStatus;
+use std::borrow::Cow;
 
 // make a script with a given signature for main.
 fn make_script(parameters: Signature) -> Vec<u8> {
@@ -246,7 +247,7 @@ impl RemoteCache for RemoteStore {
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         Ok(None)
     }
 }
