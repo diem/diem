@@ -6627,6 +6627,7 @@ dependencies = [
  "diem-workspace-hack",
  "itertools 0.10.0",
  "move-core-types",
+ "parking_lot",
  "scratchpad",
  "serde",
  "thiserror",

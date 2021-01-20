@@ -14,6 +14,7 @@ anyhow = "1.0.38"
 itertools = "0.10.0"
 serde = { version = "1.0.120", default-features = false }
 thiserror = "1.0.23"
+parking_lot = "0.11.1"
 
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

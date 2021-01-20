@@ -19,7 +19,7 @@ use diem_types::{
 };
 use vm::file_format::CompiledModule;
 
-pub trait DiemValidatorInterface {
+pub trait DiemValidatorInterface: Sync {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,
