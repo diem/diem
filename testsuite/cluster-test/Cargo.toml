@@ -58,7 +58,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 network = { path = "../../network", version = "0.1.0" }
 network-builder = { path = "../../network/builder", version = "0.1.0" }
 seed-peer-generator = { path = "../../config/seed-peer-generator", version = "0.1.0" }
-state-synchronizer = { path = "../../state-synchronizer", version = "0.1.0" }
+state-sync = { path = "../../state-sync", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.12"

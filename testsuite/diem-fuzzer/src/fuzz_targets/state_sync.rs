@@ -3,7 +3,7 @@
 
 use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use diem_proptest_helpers::ValueGenerator;
-use state_synchronizer::fuzzing::{arb_state_sync_msg, test_state_sync_msg_fuzzer_impl};
+use state_sync::fuzzing::{arb_state_sync_msg, test_state_sync_msg_fuzzer_impl};
 
 #[derive(Debug, Default)]
 pub struct StateSyncMsg;

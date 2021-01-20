@@ -12,7 +12,7 @@ use diem_types::ledger_info::LedgerInfoWithSignatures;
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
-use state_synchronizer::state_synchronizer::StateSyncClient;
+use state_sync::state_synchronizer::StateSyncClient;
 use std::boxed::Box;
 
 /// Basic communication with the Execution module;

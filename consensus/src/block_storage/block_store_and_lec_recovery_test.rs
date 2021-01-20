@@ -16,7 +16,7 @@ use execution_correctness::{ExecutionCorrectness, ExecutionCorrectnessManager};
 use executor_test_helpers::start_storage_service;
 use executor_types::ExecutedTrees;
 use futures::channel::mpsc;
-use state_synchronizer::state_synchronizer::StateSyncClient;
+use state_sync::state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 

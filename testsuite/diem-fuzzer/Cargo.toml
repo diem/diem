@@ -46,7 +46,7 @@ move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", feat
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0", features = ["fuzzing"] }
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 safety-rules = { path = "../../consensus/safety-rules", version = "0.1.0", features = ["fuzzing", "testing"]  }
-state-synchronizer = { path = "../../state-synchronizer", version = "0.1.0", features = ["fuzzing", "diemdb"]  }
+state-sync = { path = "../../state-sync", version = "0.1.0", features = ["fuzzing", "diemdb"]  }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
 

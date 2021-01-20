@@ -21,7 +21,7 @@ use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
 use network_builder::builder::NetworkBuilder;
-use state_synchronizer::network::{StateSynchronizerEvents, StateSynchronizerSender};
+use state_sync::network::{StateSynchronizerEvents, StateSynchronizerSender};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -269,8 +269,7 @@ impl StubbedNode {
             NetworkBuilder::create(ChainId::test(), pfn_config.base.role, network_config);
 
         let state_sync_handle = Some(
-            network_builder
-                .add_protocol_handler(state_synchronizer::network::network_endpoint_config()),
+            network_builder.add_protocol_handler(state_sync::network::network_endpoint_config()),
         );
 
         let mempool_handle = Some(network_builder.add_protocol_handler(
@@ -425,11 +424,11 @@ async fn state_sync_load_test(
         ));
     };
 
-    let chunk_request = state_synchronizer::chunk_request::GetChunkRequest::new(
+    let chunk_request = state_sync::chunk_request::GetChunkRequest::new(
         1,
         1,
         1000,
-        state_synchronizer::chunk_request::TargetType::HighestAvailable {
+        state_sync::chunk_request::TargetType::HighestAvailable {
             target_li: None,
             timeout_ms: 10_000,
         },
@@ -440,7 +439,7 @@ async fn state_sync_load_test(
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
     while Instant::now().duration_since(task_start) < duration {
-        let msg = state_synchronizer::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
+        let msg = state_sync::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
             chunk_request.clone(),
         ));
         bytes += bcs::to_bytes(&msg)?.len() as u64;
@@ -450,9 +449,8 @@ async fn state_sync_load_test(
         // await response from remote peer
         let response = events.select_next_some().await;
         if let Event::Message(_remote_peer, payload) = response {
-            if let state_synchronizer::network::StateSynchronizerMsg::GetChunkResponse(
-                chunk_response,
-            ) = payload
+            if let state_sync::network::StateSynchronizerMsg::GetChunkResponse(chunk_response) =
+                payload
             {
                 // TODO analyze response and update StateSyncResult with stats accordingly
                 served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;

@@ -872,7 +872,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "state-synchronizer",
+ "state-sync",
  "structopt 0.3.21",
  "termion",
  "tokio",
@@ -999,7 +999,7 @@ dependencies = [
  "schemadb",
  "serde",
  "serde_json",
- "state-synchronizer",
+ "state-sync",
  "storage-interface",
  "subscription-service",
  "tempfile",
@@ -1568,7 +1568,7 @@ dependencies = [
  "safety-rules",
  "serde_json",
  "sha-1 0.9.2",
- "state-synchronizer",
+ "state-sync",
  "stats_alloc",
  "storage-interface",
  "structopt 0.3.21",
@@ -1966,7 +1966,7 @@ dependencies = [
  "futures 0.3.12",
  "jemallocator",
  "network-builder",
- "state-synchronizer",
+ "state-sync",
  "storage-client",
  "storage-interface",
  "storage-service",
@@ -6461,7 +6461,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "state-synchronizer"
+name = "state-sync"
 version = "0.1.0"
 dependencies = [
  "anyhow",

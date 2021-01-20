@@ -57,7 +57,7 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
-use state_synchronizer::{
+use state_sync::{
     executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerSender},
     state_synchronizer::{StateSyncBootstrapper, StateSyncClient, SynchronizationState},
@@ -409,7 +409,7 @@ impl SynchronizerEnv {
             );
 
             let (sender, events) = network_builder
-                .add_protocol_handler(state_synchronizer::network::network_endpoint_config());
+                .add_protocol_handler(state_sync::network::network_endpoint_config());
             network_builder.build(self.runtime.handle().clone()).start();
             network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
         };

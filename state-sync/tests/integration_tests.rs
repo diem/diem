@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 use diem_config::config::RoleType;
 use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
 use netcore::transport::ConnectionOrigin::*;
-use state_synchronizer::network::StateSynchronizerMsg;
+use state_sync::network::StateSynchronizerMsg;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use synchronizer_environment::SynchronizerEnv;
 
