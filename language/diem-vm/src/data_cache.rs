@@ -19,7 +19,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::RemoteCache;
-use std::collections::btree_map::BTreeMap;
+use std::{borrow::Cow, collections::btree_map::BTreeMap};
 use vm::errors::*;
 
 /// A local cache for a given a `StateView`. The cache is private to the Diem layer
@@ -66,19 +66,16 @@ impl<'a> StateViewCache<'a> {
             }
         }
     }
-}
 
-impl<'block> StateView for StateViewCache<'block> {
-    // Get some data either through the cache or the `StateView` on a cache miss.
-    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+    pub fn get_bytes(&self, access_path: &AccessPath) -> anyhow::Result<Option<Cow<[u8]>>> {
         fail_point!("move_adapter::data_cache::get", |_| Err(format_err!(
             "Injected failure in data_cache::get"
         )));
 
         match self.data_map.get(access_path) {
-            Some(opt_data) => Ok(opt_data.clone()),
+            Some(opt_data) => Ok(opt_data.as_ref().map(Cow::from)),
             None => match self.data_view.get(&access_path) {
-                Ok(remote_data) => Ok(remote_data),
+                Ok(remote_data) => Ok(remote_data.map(Cow::from)),
                 // TODO: should we forward some error info?
                 Err(e) => {
                     // create an AdapterLogSchema from the `data_view` in scope. This log_context
@@ -96,6 +93,13 @@ impl<'block> StateView for StateViewCache<'block> {
                 }
             },
         }
+    }
+}
+
+impl<'block> StateView for StateViewCache<'block> {
+    // Get some data either through the cache or the `StateView` on a cache miss.
+    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(self.get_bytes(access_path)?.map(Cow::into_owned))
     }
 
     fn multi_get(&self, _access_paths: &[AccessPath]) -> anyhow::Result<Vec<Option<Vec<u8>>>> {
@@ -120,8 +124,10 @@ impl<'block> RemoteCache for StateViewCache<'block> {
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        RemoteStorage::new(self).get_resource(address, tag)
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
+        let ap = create_access_path(*address, tag.clone());
+        self.get_bytes(&ap)
+            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 
@@ -157,9 +163,9 @@ impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         let ap = create_access_path(*address, struct_tag.clone());
-        self.get(&ap)
+        Ok(self.get(&ap)?.map(Cow::from))
     }
 }
 

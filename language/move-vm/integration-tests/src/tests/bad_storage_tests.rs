@@ -14,6 +14,7 @@ use move_core_types::{
 use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use std::borrow::Cow;
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
@@ -547,7 +548,7 @@ impl RemoteCache for BogusStorage {
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         Err(PartialVMError::new(self.bad_status_code))
     }
 }

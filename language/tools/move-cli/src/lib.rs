@@ -22,6 +22,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
+    borrow::Cow,
     collections::{btree_map, BTreeMap},
     convert::TryFrom,
     fs,
@@ -421,8 +422,9 @@ impl RemoteCache for OnDiskStateView {
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         self.get_resource_bytes(*address, struct_tag.clone())
+            .map(|o| o.map(Cow::from))
             .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }

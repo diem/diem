@@ -13,6 +13,7 @@ use move_core_types::{
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use std::borrow::Cow;
 use vm::{
     errors::{PartialVMResult, VMResult},
     file_format::{
@@ -245,7 +246,7 @@ impl RemoteCache for RemoteStore {
         &self,
         _address: &AccountAddress,
         _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
+    ) -> PartialVMResult<Option<Cow<[u8]>>> {
         Ok(None)
     }
 }

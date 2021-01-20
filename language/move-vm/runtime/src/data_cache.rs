@@ -16,7 +16,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, GlobalValueEffect, Value},
 };
-use std::collections::btree_map::BTreeMap;
+use std::{borrow::Cow, collections::btree_map::BTreeMap};
 use vm::errors::*;
 
 /// Trait for the Move VM to abstract storage operations.
@@ -44,7 +44,7 @@ pub trait RemoteCache {
         &self,
         address: &AccountAddress,
         tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>>;
+    ) -> PartialVMResult<Option<Cow<[u8]>>>;
 }
 
 pub struct AccountDataCache {
