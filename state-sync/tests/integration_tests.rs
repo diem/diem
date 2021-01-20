@@ -10,19 +10,19 @@ use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
 use netcore::transport::ConnectionOrigin::*;
 use state_sync::network::StateSynchronizerMsg;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use test_harness::SynchronizerEnv;
+use test_harness::StateSyncEnvironment;
 
 mod test_harness;
 
 #[test]
 fn test_basic_catch_up() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     env.start_validator_peer(0, false);
     env.start_validator_peer(1, false);
 
-    let validator_0 = env.get_synchronizer_peer(0);
-    let validator_1 = env.get_synchronizer_peer(1);
+    let validator_0 = env.get_state_sync_peer(0);
+    let validator_1 = env.get_state_sync_peer(1);
 
     // Test small sequential syncs, batch sync for multiple transactions and
     // batch sync for multiple chunks.
@@ -38,7 +38,7 @@ fn test_basic_catch_up() {
 
 #[test]
 fn test_flaky_peer_sync() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     env.start_validator_peer(0, false);
 
@@ -53,7 +53,7 @@ fn test_flaky_peer_sync() {
             Ok(resp)
         }
     });
-    env.start_synchronizer_peer(
+    env.start_state_sync_peer(
         1,
         handler,
         RoleType::Validator,
@@ -62,8 +62,8 @@ fn test_flaky_peer_sync() {
         None,
     );
 
-    let validator_0 = env.get_synchronizer_peer(0);
-    let validator_1 = env.get_synchronizer_peer(1);
+    let validator_0 = env.get_state_sync_peer(0);
+    let validator_1 = env.get_state_sync_peer(1);
 
     let synced_version = 20;
     validator_0.commit(synced_version);
@@ -77,11 +77,11 @@ fn test_flaky_peer_sync() {
 #[test]
 #[should_panic]
 fn test_request_timeout() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     let handler =
         Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
-    env.start_synchronizer_peer(
+    env.start_state_sync_peer(
         0,
         handler,
         RoleType::Validator,
@@ -89,7 +89,7 @@ fn test_request_timeout() {
         false,
         None,
     );
-    env.setup_synchronizer_peer(
+    env.setup_state_sync_peer(
         1,
         default_handler(),
         RoleType::Validator,
@@ -100,8 +100,8 @@ fn test_request_timeout() {
         None,
     );
 
-    let validator_0 = env.get_synchronizer_peer(0);
-    let validator_1 = env.get_synchronizer_peer(1);
+    let validator_0 = env.get_state_sync_peer(0);
+    let validator_1 = env.get_state_sync_peer(1);
 
     validator_0.commit(1);
     validator_1.sync_to(validator_0.latest_li());
@@ -109,13 +109,13 @@ fn test_request_timeout() {
 
 #[test]
 fn test_full_node() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     env.start_validator_peer(0, false);
     env.start_fullnode_peer(1, false);
 
-    let validator = env.get_synchronizer_peer(0);
-    let fullnode = env.get_synchronizer_peer(1);
+    let validator = env.get_state_sync_peer(0);
+    let fullnode = env.get_state_sync_peer(1);
 
     validator.commit(10);
     // first sync should be fulfilled immediately after peer discovery
@@ -129,13 +129,13 @@ fn test_full_node() {
 
 #[test]
 fn catch_up_through_epochs_validators() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     env.start_validator_peer(0, false);
     env.start_validator_peer(1, false);
 
-    let validator_0 = env.get_synchronizer_peer(0);
-    let validator_1 = env.get_synchronizer_peer(1);
+    let validator_0 = env.get_state_sync_peer(0);
+    let validator_1 = env.get_state_sync_peer(1);
 
     // catch up to the next epoch starting from the middle of the current one
     validator_0.commit(20);
@@ -171,10 +171,10 @@ fn catch_up_through_epochs_validators() {
 
 #[test]
 fn catch_up_through_epochs_full_node() {
-    let mut env = SynchronizerEnv::new(3);
+    let mut env = StateSyncEnvironment::new(3);
 
     env.start_validator_peer(0, false);
-    let validator_0 = env.get_synchronizer_peer(0);
+    let validator_0 = env.get_state_sync_peer(0);
 
     // catch up through multiple epochs
     for epoch in 1..10 {
@@ -185,7 +185,7 @@ fn catch_up_through_epochs_full_node() {
     drop(validator_0);
 
     env.start_fullnode_peer(1, false);
-    let fullnode = env.get_synchronizer_peer(1);
+    let fullnode = env.get_state_sync_peer(1);
 
     assert!(fullnode.wait_for_version(950, None));
     assert_eq!(fullnode.latest_li().ledger_info().epoch(), 10);
@@ -193,7 +193,7 @@ fn catch_up_through_epochs_full_node() {
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
     env.start_fullnode_peer(2, false);
-    let fullnode = env.get_synchronizer_peer(2);
+    let fullnode = env.get_state_sync_peer(2);
 
     assert!(fullnode.wait_for_version(950, None));
     assert_eq!(fullnode.latest_li().ledger_info().epoch(), 10);
@@ -201,10 +201,10 @@ fn catch_up_through_epochs_full_node() {
 
 #[test]
 fn catch_up_with_waypoints() {
-    let mut env = SynchronizerEnv::new(3);
+    let mut env = StateSyncEnvironment::new(3);
 
     env.start_validator_peer(0, false);
-    let validator_0 = env.get_synchronizer_peer(0);
+    let validator_0 = env.get_state_sync_peer(0);
 
     let mut curr_version = 0;
     for _ in 1..10 {
@@ -226,7 +226,7 @@ fn catch_up_with_waypoints() {
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
     drop(validator_0);
 
-    env.start_synchronizer_peer(
+    env.start_state_sync_peer(
         1,
         default_handler(),
         RoleType::FullNode,
@@ -234,7 +234,7 @@ fn catch_up_with_waypoints() {
         false,
         None,
     );
-    let fullnode = env.get_synchronizer_peer(1);
+    let fullnode = env.get_state_sync_peer(1);
     fullnode.wait_until_initialized();
     assert!(fullnode.latest_li().ledger_info().version() >= 3500);
     assert!(fullnode.latest_li().ledger_info().epoch() >= 14);
@@ -246,17 +246,17 @@ fn catch_up_with_waypoints() {
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
     env.start_fullnode_peer(2, false);
-    let fullnode = env.get_synchronizer_peer(2);
+    let fullnode = env.get_state_sync_peer(2);
     assert!(fullnode.wait_for_version(5250, None));
     assert_eq!(fullnode.latest_li().ledger_info().epoch(), 19);
 }
 
 #[test]
 fn test_lagging_upstream_long_poll() {
-    let mut env = SynchronizerEnv::new(4);
+    let mut env = StateSyncEnvironment::new(4);
 
     env.start_validator_peer(0, true);
-    env.setup_synchronizer_peer(
+    env.setup_state_sync_peer(
         1,
         default_handler(),
         RoleType::FullNode,
@@ -266,7 +266,7 @@ fn test_lagging_upstream_long_poll() {
         true,
         Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
-    env.start_synchronizer_peer(
+    env.start_state_sync_peer(
         2,
         default_handler(),
         RoleType::FullNode,
@@ -278,9 +278,9 @@ fn test_lagging_upstream_long_poll() {
     // to clone state to the other nodes
     env.start_validator_peer(3, true);
 
-    let validator_0 = env.get_synchronizer_peer(0);
-    let fullnode_0 = env.get_synchronizer_peer(1);
-    let fullnode_1 = env.get_synchronizer_peer(2);
+    let validator_0 = env.get_state_sync_peer(0);
+    let fullnode_0 = env.get_state_sync_peer(1);
+    let fullnode_1 = env.get_state_sync_peer(2);
 
     // network handles for each node
     let validator_peer_id = validator_0.get_peer_id(VALIDATOR_NETWORK.clone());
@@ -334,7 +334,7 @@ fn test_lagging_upstream_long_poll() {
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 400, 1, 250);
-    env.get_synchronizer_peer(1).wait_for_version(250, None);
+    env.get_state_sync_peer(1).wait_for_version(250, None);
 
     // validator loses FN
     env.send_peer_event(
@@ -359,11 +359,10 @@ fn test_lagging_upstream_long_poll() {
 
     // update failover VFN from lagging state to updated state
     // so it can deliver full_node's long-poll subscription
-    env.get_synchronizer_peer(0).commit(500);
+    env.get_state_sync_peer(0).commit(500);
     // we directly sync up the storage of the failover upstream with this validator's for ease of testing
     env.clone_storage(0, 2);
-    env.get_synchronizer_peer(2)
-        .wait_for_version(500, Some(500));
+    env.get_state_sync_peer(2).wait_for_version(500, Some(500));
 
     // connect the validator and the failover vfn so FN can sync to validator
     // validator discovers FN
@@ -382,7 +381,7 @@ fn test_lagging_upstream_long_poll() {
     );
 
     // trigger another commit so that the failover fn's commit will trigger subscription delivery
-    env.get_synchronizer_peer(0).commit(600);
+    env.get_state_sync_peer(0).commit(600);
     // failover fn sends chunk request to validator
     let (_, msg) = env.deliver_msg(failover_fn_vfn_network_peer_id);
     let msg: StateSynchronizerMsg =
@@ -412,24 +411,21 @@ fn test_lagging_upstream_long_poll() {
     let resp: StateSynchronizerMsg =
         bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
-    env.get_synchronizer_peer(1)
-        .wait_for_version(600, Some(600));
+    env.get_state_sync_peer(1).wait_for_version(600, Some(600));
 }
 
 // test full node catching up to validator that is also making progress
 #[test]
 fn test_sync_pending_ledger_infos() {
-    let mut env = SynchronizerEnv::new(2);
+    let mut env = StateSyncEnvironment::new(2);
 
     env.start_validator_peer(0, true);
     env.start_fullnode_peer(1, true);
 
     let validator_peer_id = env
-        .get_synchronizer_peer(0)
+        .get_state_sync_peer(0)
         .get_peer_id(VALIDATOR_NETWORK.clone());
-    let fullnode_peer_id = env
-        .get_synchronizer_peer(1)
-        .get_peer_id(VFN_NETWORK.clone());
+    let fullnode_peer_id = env.get_state_sync_peer(1).get_peer_id(VFN_NETWORK.clone());
 
     // validator discovers fn
     env.send_peer_event(fullnode_peer_id, validator_peer_id, true, Inbound);
@@ -467,13 +463,13 @@ fn test_sync_pending_ledger_infos() {
     for (idx, expected_state) in expected_states.iter().enumerate() {
         // commit if applicable
         if let Some(version) = commit_versions.get(idx) {
-            env.get_synchronizer_peer(0).commit(*version);
+            env.get_state_sync_peer(0).commit(*version);
         }
         env.deliver_msg(fullnode_peer_id);
         env.deliver_msg(validator_peer_id);
         let (sync_version, li_version) = expected_state;
         assert!(
-            env.get_synchronizer_peer(1)
+            env.get_state_sync_peer(1)
                 .wait_for_version(*sync_version, Some(*li_version)),
             "didn't reach synced version {} and highest LI version {}",
             sync_version,
@@ -485,10 +481,10 @@ fn test_sync_pending_ledger_infos() {
 #[test]
 #[ignore] // TODO: https://github.com/diem/diem/issues/5771
 fn test_fn_failover() {
-    let mut env = SynchronizerEnv::new(5);
+    let mut env = StateSyncEnvironment::new(5);
 
     env.start_validator_peer(0, true);
-    env.setup_synchronizer_peer(
+    env.setup_state_sync_peer(
         1,
         default_handler(),
         RoleType::FullNode,
@@ -504,11 +500,11 @@ fn test_fn_failover() {
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
 
-    let validator = env.get_synchronizer_peer(0);
-    let fullnode_0 = env.get_synchronizer_peer(1);
-    let fullnode_1 = env.get_synchronizer_peer(2);
-    let fullnode_2 = env.get_synchronizer_peer(3);
-    let fullnode_3 = env.get_synchronizer_peer(4);
+    let validator = env.get_state_sync_peer(0);
+    let fullnode_0 = env.get_state_sync_peer(1);
+    let fullnode_1 = env.get_state_sync_peer(2);
+    let fullnode_2 = env.get_state_sync_peer(3);
+    let fullnode_3 = env.get_state_sync_peer(4);
 
     // connect everyone
     let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
@@ -541,7 +537,7 @@ fn test_fn_failover() {
     // commit some txns on v
     // check that fn_0 sends chunk requests to v only
     for num_commit in 1..=5 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             // we just directly sync up the storage of all the upstream peers of fn_0
             // for ease of testing
@@ -568,7 +564,7 @@ fn test_fn_failover() {
     // check that vfn sends chunk requests to the failover FNs only
     let mut last_fallback_recipient = None;
     for num_commit in 6..=10 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             env.clone_storage(0, public_upstream);
         }
@@ -601,7 +597,7 @@ fn test_fn_failover() {
 
     // check we only broadcast to the single live fallback peer (fn_3)
     for num_commit in 11..=15 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             env.clone_storage(0, public_upstream);
         }
@@ -636,7 +632,7 @@ fn test_fn_failover() {
 
     // check we only broadcast to the single live fallback peer (fn_2)
     for num_commit in 16..=20 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             env.clone_storage(0, public_upstream);
         }
@@ -660,7 +656,7 @@ fn test_fn_failover() {
 
     // check that vfn sends chunk requests to v only, not fallback upstream
     for num_commit in 21..=25 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             env.clone_storage(0, public_upstream);
         }
@@ -676,9 +672,9 @@ fn test_fn_failover() {
 
     // bring back all fallback
     let upstream_peers_to_revive = [
-        env.get_synchronizer_peer(2)
+        env.get_state_sync_peer(2)
             .get_peer_id(VFN_NETWORK_2.clone()),
-        env.get_synchronizer_peer(4)
+        env.get_state_sync_peer(4)
             .get_peer_id(VFN_NETWORK_2.clone()),
     ];
     for peer in upstream_peers_to_revive.iter() {
@@ -692,7 +688,7 @@ fn test_fn_failover() {
     // check that we only broadcast to v
     // check that vfn sends chunk requests to v only, not fallback upstream
     for num_commit in 26..=30 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         for public_upstream in 2..=4 {
             env.clone_storage(0, public_upstream);
         }
@@ -708,14 +704,14 @@ fn test_fn_failover() {
 #[test]
 #[ignore]
 fn test_multicast_failover() {
-    let mut env = SynchronizerEnv::new(5);
+    let mut env = StateSyncEnvironment::new(5);
 
     env.start_validator_peer(0, true);
 
     // set up node with more than 2 upstream networks, which is more than in standard prod setting
     // just to be safe
     let multicast_timeout_ms = 5_000;
-    env.setup_synchronizer_peer(
+    env.setup_state_sync_peer(
         1,
         default_handler(),
         RoleType::FullNode,
@@ -735,10 +731,10 @@ fn test_multicast_failover() {
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
 
-    let validator = env.get_synchronizer_peer(0);
-    let fullnode_0 = env.get_synchronizer_peer(1);
-    let fullnode_1 = env.get_synchronizer_peer(2);
-    let fullnode_2 = env.get_synchronizer_peer(3);
+    let validator = env.get_state_sync_peer(0);
+    let fullnode_0 = env.get_state_sync_peer(1);
+    let fullnode_1 = env.get_state_sync_peer(2);
+    let fullnode_2 = env.get_state_sync_peer(3);
 
     // connect everyone
     let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
@@ -772,7 +768,7 @@ fn test_multicast_failover() {
     env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, true, Outbound);
 
     for num_commit in 1..=3 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         // deliver fn_0's chunk request
         let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
         assert_eq!(recipient, validator_peer_id);
@@ -790,9 +786,9 @@ fn test_multicast_failover() {
 
     // commit some with
     for num_commit in 4..=7 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         env.clone_storage(0, 2);
-        env.get_synchronizer_peer(2)
+        env.get_state_sync_peer(2)
             .wait_for_version(num_commit * 5, None);
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
@@ -813,12 +809,12 @@ fn test_multicast_failover() {
     std::thread::sleep(std::time::Duration::from_millis(multicast_timeout_ms));
 
     for num_commit in 8..=11 {
-        env.get_synchronizer_peer(0).commit(num_commit * 5);
+        env.get_state_sync_peer(0).commit(num_commit * 5);
         env.clone_storage(0, 2);
-        env.get_synchronizer_peer(2)
+        env.get_state_sync_peer(2)
             .wait_for_version(num_commit * 5, None);
         env.clone_storage(0, 3);
-        env.get_synchronizer_peer(3)
+        env.get_state_sync_peer(3)
             .wait_for_version(num_commit * 5, None);
 
         // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
@@ -839,12 +835,12 @@ fn test_multicast_failover() {
     env.deliver_msg(fn_1_peer_id);
 
     let mut num_commit = 12;
-    env.get_synchronizer_peer(0).commit(num_commit * 5);
+    env.get_state_sync_peer(0).commit(num_commit * 5);
     env.clone_storage(0, 2);
-    env.get_synchronizer_peer(2)
+    env.get_state_sync_peer(2)
         .wait_for_version(num_commit * 5, None);
     env.clone_storage(0, 3);
-    env.get_synchronizer_peer(3)
+    env.get_state_sync_peer(3)
         .wait_for_version(num_commit * 5, None);
 
     let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
@@ -862,12 +858,12 @@ fn test_multicast_failover() {
     env.deliver_msg(fn_2_peer_id);
 
     num_commit += 1;
-    env.get_synchronizer_peer(0).commit(num_commit * 5);
+    env.get_state_sync_peer(0).commit(num_commit * 5);
     env.clone_storage(0, 2);
-    env.get_synchronizer_peer(2)
+    env.get_state_sync_peer(2)
         .wait_for_version(num_commit * 5, None);
     env.clone_storage(0, 3);
-    env.get_synchronizer_peer(3)
+    env.get_state_sync_peer(3)
         .wait_for_version(num_commit * 5, None);
 
     let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
@@ -884,12 +880,12 @@ fn test_multicast_failover() {
     env.deliver_msg(fn_2_peer_id);
 
     num_commit += 1;
-    env.get_synchronizer_peer(0).commit(num_commit * 5);
+    env.get_state_sync_peer(0).commit(num_commit * 5);
     env.clone_storage(0, 2);
-    env.get_synchronizer_peer(2)
+    env.get_state_sync_peer(2)
         .wait_for_version(num_commit * 5, None);
     env.clone_storage(0, 3);
-    env.get_synchronizer_peer(3)
+    env.get_state_sync_peer(3)
         .wait_for_version(num_commit * 5, None);
 
     // because of optimistic chunk requesting, request will still be multicasted to all failover

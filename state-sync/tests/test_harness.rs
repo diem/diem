@@ -176,7 +176,7 @@ impl StateSyncPeer {
     }
 }
 
-pub struct SynchronizerEnv {
+pub struct StateSyncEnvironment {
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     network_notifs_txs:
         HashMap<PeerId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
@@ -186,8 +186,8 @@ pub struct SynchronizerEnv {
     runtime: Runtime,
 }
 
-impl SynchronizerEnv {
-    pub fn get_synchronizer_peer(&self, index: usize) -> Ref<StateSyncPeer> {
+impl StateSyncEnvironment {
+    pub fn get_state_sync_peer(&self, index: usize) -> Ref<StateSyncPeer> {
         self.peers[index].borrow()
     }
 
@@ -224,7 +224,7 @@ impl SynchronizerEnv {
 
     // Starts a new state sync peer with the validator role.
     pub fn start_validator_peer(&mut self, peer_index: usize, mock_network: bool) {
-        self.start_synchronizer_peer(
+        self.start_state_sync_peer(
             peer_index,
             default_handler(),
             RoleType::Validator,
@@ -236,7 +236,7 @@ impl SynchronizerEnv {
 
     // Starts a new state sync peer with the fullnode role.
     pub fn start_fullnode_peer(&mut self, peer_index: usize, mock_network: bool) {
-        self.start_synchronizer_peer(
+        self.start_state_sync_peer(
             peer_index,
             default_handler(),
             RoleType::FullNode,
@@ -246,8 +246,8 @@ impl SynchronizerEnv {
         );
     }
 
-    // Sets up and starts the synchronizer at the given node index.
-    pub fn start_synchronizer_peer(
+    // Sets up and starts the state sync peer at the given node index.
+    pub fn start_state_sync_peer(
         &mut self,
         index: usize,
         handler: MockRpcHandler,
@@ -256,7 +256,7 @@ impl SynchronizerEnv {
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
     ) {
-        self.setup_synchronizer_peer(
+        self.setup_state_sync_peer(
             index,
             handler,
             role,
@@ -268,7 +268,7 @@ impl SynchronizerEnv {
         );
     }
 
-    pub fn setup_synchronizer_peer(
+    pub fn setup_state_sync_peer(
         &mut self,
         index: usize,
         handler: MockRpcHandler,
@@ -416,7 +416,7 @@ impl SynchronizerEnv {
         network_handles
     }
 
-    /// Delivers next message from peer with index `sender` in this SynchronizerEnv
+    /// Delivers next message from peer with index `sender` in this StateSyncEnvironment
     /// Returns the recipient of the msg
     pub fn deliver_msg(&mut self, sender_peer_id: PeerId) -> (PeerId, Message) {
         let network_reqs_rx = self.network_reqs_rxs.get_mut(&sender_peer_id).unwrap();
