@@ -50,38 +50,6 @@ executors:
     resource_class: medium
 
 commands:
-  install_deps_on_vm_executor:
-    description: Install build dependencies on vm executor
-    steps:
-      - run:
-          name: Update Debian package source
-          command: |
-            sudo apt-get update
-      - run:
-          name: Install Dependencies
-          command: |
-            sudo apt-get install -y cmake curl clang llvm
-      - run:
-          name: Install rustup and cargo if not found in container
-          command: |
-            if ! [ -x "$(command -v cargo)" ] || ! [ -x "$(command -v rustup)" ]; then \
-              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-              | sh -s -- -y --default-toolchain $(cat rust-toolchain); \
-              echo 'export PATH=$PATH:~/.cargo/bin' >> $BASH_ENV; \
-            fi
-      - run:
-          name: Install nightly version of rust toolchain for cargo with v2 feature resolver
-          command: rustup install $(cat cargo-toolchain)
-      - run:
-          name: Install specific version of rust toolchain
-          command: rustup install $(cat rust-toolchain)
-      - run:
-          name: Version Information
-          command: rustc --version; cargo --version; rustup --version
-      - run:
-          name: Install Rust linters
-          command: |
-            rustup component add clippy rustfmt --toolchain $(cat rust-toolchain)
   print_versions:
     description: Version Info
     steps:
@@ -305,27 +273,7 @@ commands:
           command: scripts/dev_setup.sh -t -o -b -p -y
       - shell_setup
       - move_shell_setup
-  vm_build_setup:
-    steps:
-      - run:
-          command: |
-            sudo mkdir -p /opt/cargo/
-            sudo chown circleci /opt/cargo/
-            sudo mkdir -p /opt/git/
-            sudo chown circleci /opt/git/
-          working_directory: ~/project
-      - checkout:
-          path: *working_directory
-      - install_deps_on_vm_executor
-      - run:
-          name: install move tools, modify shell
-          command: |
-            scripts/dev_setup.sh -b -p -y
-            source "${HOME}"/.profile
-          working_directory: *working_directory
-      - shell_setup
-      - move_shell_setup
-      - print_versions
+
   build_teardown:
     steps:
       - run:
@@ -535,95 +483,7 @@ jobs:
             docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
             docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
 
-  ######################################################################################################################
-  #  Code Coverage for unit tests (targets S3 html upload, codecov.io output, and slack with failed tests/compilations)
-  ######################################################################################################################
-
-  code_coverage:
-    working_directory: *working_directory
-    executor: vm-xlarge-executor
-    description: Run code coverage
-    environment:
-      MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
-    steps:
-      - vm_build_setup
-      - run:
-          name: install lcov (let x install grcov)
-          command: |
-            if which lcov &>/dev/null; then
-               echo "lcov is already installed"
-            else
-              sudo apt-get install lcov --no-install-recommends -y
-            fi
-      - restore_cache:
-          name: restore daily latch cache file.
-          key: code-coverage-daily
-      - run:
-          name: Halt job if already built code coverage today.
-          command: |
-            NOW=`date +%Y-%m-%d`
-            LAST=`cat /home/circleci/lastbuild` || true
-            if [[ "$LAST" == "$NOW" ]]; then
-              echo Last build occured today, halting.
-              circleci step halt
-            else
-              echo Last build occured $LAST, building.
-              date +%Y-%m-%d > /home/circleci/lastbuild
-            fi
-      - save_cache:
-          name: store updated daily latch file.
-          key: code-coverage-daily-{{ epoch }}
-          paths:
-            - /home/circleci/lastbuild
-      - aws-cli/configure:
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
-      - run:
-          name: Setup code coverage output
-          command: |
-            echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
-      - run:
-          name: Run code coverage
-          command: |
-            cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 8 || true
-          no_output_timeout: 20m
-      - run:
-          name: Upload result to codecov.io
-          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
-      - run:
-          name: Push Coverage Reports to S3
-          command: |
-            set -x
-            SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
-            PREFIX="ci-artifacts.diem.com/coverage";
-            #Push grcov
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
-            echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-            #Push lcov
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
-            echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-      - send_message:
-          payload_file: "${MESSAGE_PAYLOAD_FILE}"
-          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
-          webhook: "${WEBHOOK_COVERAGE_INFO}"
-
 workflows:
-  ######################################################################################################################
-  # Once a day when a change lands on master coverage
-  ######################################################################################################################
-  latched-publish-workflow:
-    jobs:
-      - code_coverage:
-          context: libra_ci
-          filters:
-            branches:
-              only:
-                - /^test-[\d|.]+$/
-                - master
-
   ######################################################################################################################
   # Will publish release images to dockerhub and aws when commits land on a release/testing branch.                    #
   # Will also push base images to novi aws ecr to prevent dockerhub api limit violations.                              #

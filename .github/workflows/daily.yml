@@ -3,8 +3,9 @@ name: daily
 on:
   schedule:
     - cron: "14 14 * * *"
-  push:
-    branches: [gha-test-*]
+  #Uncomment below to test.
+  #push:
+  #  branches: [gha-test-*]
 
 jobs:
   audit:
@@ -33,7 +34,7 @@ jobs:
       image: libra/build_environment:github-1
     env:
       CODECOV_OUTPUT: codecov
-      MESSAGE_PAYLOAD_FILE: /tmp/payload
+      MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/build-setup
@@ -58,6 +59,12 @@ jobs:
           aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
           aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
           echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-      - name: publish to codecov.io
-        run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
-      - uses: ./.github/actions/build-teardown
+      # Disabling for now as this is not critical for job success.   TODO: fix it up.
+      #- name: publish to codecov.io
+      #  run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
+      #- uses: ./.github/actions/slack-file
+      #  with:
+      #    webhook: ${{ secrets.COVERAGE_SLACK_WEBHOOK }}
+      #    steps: ${{ env.MESSAGE_PAYLOAD_FILE }}
+      #  if: always()
+      #- uses: ./.github/actions/build-teardown
