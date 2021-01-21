@@ -63,7 +63,7 @@ where
     Self::State: AbstractDomain + 'static,
 {
     /// Specifies mapping from elements of dataflow analysis domain to elements of `Domain`.
-    fn to_summary (&self,state: Self::State) -> Domain;
+    fn to_summary(&self, state: Self::State) -> Domain;
 
     /// Computes a postcondition for the procedure `data` and then maps the postcondition to an
     /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
@@ -72,8 +72,8 @@ where
         &self,
         func_env: &FunctionEnv<'_>,
         initial_state: Self::State,
-        mut data: FunctionData
-        ) -> FunctionData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if !func_env.is_native() {
             let cfg = if Self::BACKWARD {
                 unimplemented!("backward compositional analysis")

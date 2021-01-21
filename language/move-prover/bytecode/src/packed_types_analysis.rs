@@ -151,7 +151,9 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
 
 impl<'a> DataflowAnalysis for PackedTypesAnalysis<'a> {}
 impl<'a> CompositionalAnalysis<PackedTypesState> for PackedTypesAnalysis<'a> {
-    fn to_summary(&self, state: PackedTypesState) -> PackedTypesState {state}
+    fn to_summary(&self, state: PackedTypesState) -> PackedTypesState {
+        state
+    }
 }
 
 pub struct PackedTypesProcessor();
