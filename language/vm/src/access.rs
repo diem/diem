@@ -188,13 +188,8 @@ pub trait ModuleAccess: Sync {
         let self_handle = self.self_handle();
         self.module_handles()
             .iter()
-            .filter_map(|handle| {
-                if handle == self_handle {
-                    None
-                } else {
-                    Some(self.module_id_for_handle(handle))
-                }
-            })
+            .filter(|&handle| handle != self_handle)
+            .map(|handle| self.module_id_for_handle(handle))
             .collect()
     }
 }
