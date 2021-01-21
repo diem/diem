@@ -5277,6 +5277,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mvhashmap"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+ "num_cpus",
+ "once_cell",
+ "proptest",
+ "proptest-derive",
+ "rayon",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -223,6 +223,7 @@ members = [
     "move-transactional-test-runner",
     "move-vm-integration-tests",
     "move-vm-transactional-tests",
+    "mvhashmap", # Will be removed once mvhashmap is used in production.
     "offchain",
     "diem-scratchpad-benchmark",
     "sdk-compatibility",
