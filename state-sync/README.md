@@ -1,49 +1,38 @@
 ---
 id: state_sync
-title: State Synchronizer
+title: State Sync
 custom_edit_url: https://github.com/diem/diem/edit/master/state-synchronizer/README.md
 ---
-# State Synchronizer
+# State synchronizer (State sync)
 
-The State Synchronizer is the component that helps nodes advance its local
-ledger state by requesting chunks of transactions from peers that have more
-up-to-date state. A node sends a chunk request to its peer, and the peers
-responds with data that helps the node advance its local state.
+State sync is a component that helps Diem nodes advance local blockchain ledger
+state by requesting and sharing transactions between peers. This helps nodes
+to synchronize with the most up-to-date state of the blockchain (e.g., if they
+fall behind or are freshly deployed).
 
 ## Overview
 
-Refer to the [state synchronizer specifications](../specifications/state_sync)
-for a high-level overview.
+Refer to the [State Sync Specification](../specifications/state_sync) for a
+high-level overview and description of State Sync.
 
-## Implementation Details
+## Implementation details
 
-This crate contains an implemented instance of the specifications for
-a DiemNet state synchronizer.
-
-- `chunk_request` & `chunk_response`: definitions/implementation of state sync
-DiemNet messages
-- `coordinator`: the main runtime that processes messages from consensus
-or DiemNet State Synchronizer network protocol
-- `executor_proxy`: interface b/w state sync and storage/execution
-- `request_manager`: actor that handles managing per-peer information
-and sending chunk requests to advance local state based on per-peer info or network
-health
-- `synchronizer`: interface that manages state sync's interactions with consensus
-
+This crate contains a state sync implementation as described in the
+specification mentioned above. The files of note in this crate are:
+- `bootstrapper.rs`: the wrapper struct for creating state sync instances and
+local clients (`client.rs`) to those instances.
+- `chunk_request.rs` & `chunk_response.rs`: the definitions of the messages sent
+between Diem nodes when making state sync requests and responses.
+- `coordinator.rs`: the primary state sync runtime that processes messages (e.g.,
+from other Diem nodes) and reacts appropriately.
+- `executor_proxy.rs`: the interface between the state sync coordinator and
+both storage and execution.
+- `request_manager.rs`: the actor that manages the network requests and responses
+ between peers.
 
 ## How is this module organized?
 ```
-state-synchronizer
-|- src
-   |-- tests/                  # Unit/integration tests
-   |-- chunk_request           # `GetChunkRequest` implementation
-   |-- chunk_response          # `GetChunkResponse` implementation
-   |-- coordinator             # coordinator-related code - see above for description
-   |-- counters                # metrics
-   |-- executor_proxy          # interface b/w state sync and storage/execution
-   |-- logging                 # logging, for observability
-   |-- network                 # interface with networking
-   |-- request_manager         # request_manager code - see above
-   |-- synchronizer            # synchronizer code - see above
-
+state-sync
+|- src                         # Source code and unit tests
+|- tests/                      # Integration tests
 ```
