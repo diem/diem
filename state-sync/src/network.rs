@@ -80,6 +80,6 @@ pub fn network_endpoint_config() -> (
         vec![ProtocolId::StateSynchronizerDirectSend],
         QueueStyle::LIFO,
         STATE_SYNC_MAX_BUFFER_SIZE,
-        Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
+        Some(&counters::PENDING_STATE_SYNC_NETWORK_EVENTS),
     )
 }
