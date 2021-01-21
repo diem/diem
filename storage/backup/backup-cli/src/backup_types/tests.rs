@@ -15,7 +15,7 @@ use crate::{
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
         backup_service_client::BackupServiceClient, test_utils::start_local_backup_service,
-        GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions, RocksdbOpt,
+        GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions, RocksdbOpt, TrustedWaypointOpt,
     },
 };
 use diem_config::config::RocksdbConfig;
@@ -110,6 +110,7 @@ fn test_end_to_end_impl(d: TestData) {
         dry_run: false,
         db_dir: Some(tgt_db_dir.path().to_path_buf()),
         target_version: Some(d.target_ver),
+        trusted_waypoints: TrustedWaypointOpt::default(),
         rocksdb_opt: RocksdbOpt::default(),
     }
     .try_into()
