@@ -15,7 +15,7 @@ regex = "1.4.3"
 structopt = "0.3.21"
 textwrap = "0.13.2"
 serde-reflection = "0.3.2"
-serde-generate = "0.17.0"
+serde-generate = "0.18.0"
 serde_yaml = "0.8.15"
 
 diem-types = { path = "../../../types", version = "0.1.0" }
