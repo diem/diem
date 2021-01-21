@@ -18,7 +18,6 @@ pub struct RocksdbConfig {
     pub max_total_wal_size: u64,
 }
 
-#[allow(clippy::integer_arithmetic)]
 impl Default for RocksdbConfig {
     fn default() -> Self {
         Self {
@@ -27,6 +26,7 @@ impl Default for RocksdbConfig {
             max_open_files: 10_000,
             // For now we set the max total WAL size to be 1G. This config can be useful when column
             // families are updated at non-uniform frequencies.
+            #[allow(clippy::integer_arithmetic)] // TODO: remove once clippy lint fixed
             max_total_wal_size: 1u64 << 30,
         }
     }

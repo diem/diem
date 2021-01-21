@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Author, sync_info::SyncInfo};
-use anyhow::{ensure, format_err, Context, Result};
+use anyhow::{anyhow, ensure, format_err, Context, Result};
 use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -54,7 +54,12 @@ impl ProposalMsg {
             self.sync_info.highest_quorum_cert().certified_block().id(),
             self.proposal.parent_id(),
         );
-        let previous_round = self.proposal.round().saturating_sub(1);
+        let previous_round = self
+            .proposal
+            .round()
+            .checked_sub(1)
+            .ok_or_else(|| anyhow!("proposal round overflowed!"))?;
+
         let highest_certified_round = std::cmp::max(
             self.proposal.quorum_cert().certified_block().round(),
             self.sync_info
