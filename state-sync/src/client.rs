@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{coordinator::SynchronizationState, counters};
+use crate::{coordinator::SyncState, counters};
 use anyhow::{format_err, Result};
 use diem_mempool::CommitResponse;
 use diem_types::{
@@ -33,7 +33,7 @@ pub struct CommitNotification {
 pub enum CoordinatorMessage {
     SyncRequest(Box<SyncRequest>), // Initiate a new sync request for a given target.
     CommitNotification(Box<CommitNotification>), // Notify state sync about committed transactions.
-    GetSyncState(oneshot::Sender<SynchronizationState>), // Return the local synchronization state.
+    GetSyncState(oneshot::Sender<SyncState>), // Return the local synchronization state.
     WaitForInitialization(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
 }
 
@@ -124,7 +124,7 @@ impl StateSyncClient {
     /// Returns information about the state sync internal state. This should only
     /// be used by tests.
     // TODO(joshlind): remove this once unit tests are added!
-    pub fn get_state(&self) -> impl Future<Output = Result<SynchronizationState>> {
+    pub fn get_state(&self) -> impl Future<Output = Result<SyncState>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
 

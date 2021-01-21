@@ -60,7 +60,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use state_sync::{
     bootstrapper::StateSyncBootstrapper,
     client::StateSyncClient,
-    coordinator::SynchronizationState,
+    coordinator::SyncState,
     executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerSender},
 };
@@ -662,8 +662,8 @@ impl MockStorage {
         self.ledger_infos.get(&epoch_with_li).unwrap().clone()
     }
 
-    pub fn get_local_storage_state(&self) -> SynchronizationState {
-        SynchronizationState::new(
+    pub fn get_local_storage_state(&self) -> SyncState {
+        SyncState::new(
             self.highest_local_li(),
             self.synced_trees().clone(),
             self.epoch_state.clone(),
@@ -832,7 +832,7 @@ impl MockExecutorProxy {
 }
 
 impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_local_storage_state(&self) -> Result<SynchronizationState> {
+    fn get_local_storage_state(&self) -> Result<SyncState> {
         Ok(self.storage.read().get_local_storage_state())
     }
 

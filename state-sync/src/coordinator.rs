@@ -94,7 +94,7 @@ impl PendingLedgerInfos {
         }
     }
 
-    fn update(&mut self, sync_state: &SynchronizationState, chunk_limit: u64) -> Result<()> {
+    fn update(&mut self, sync_state: &SyncState, chunk_limit: u64) -> Result<()> {
         let highest_committed_li = sync_state.committed_version();
         let highest_synced = sync_state.synced_version();
 
@@ -149,7 +149,7 @@ pub(crate) struct StateSyncCoordinator<T> {
     // Current state of the storage, which includes both the latest committed transaction and the
     // latest transaction covered by the LedgerInfo (see `SynchronizerState` documentation).
     // The state is updated via syncing with the local storage.
-    local_state: SynchronizationState,
+    local_state: SyncState,
     // config
     config: StateSyncConfig,
     // role of node
@@ -185,7 +185,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         config: StateSyncConfig,
         upstream_config: UpstreamConfig,
         executor_proxy: T,
-        initial_state: SynchronizationState,
+        initial_state: SyncState,
     ) -> Result<Self> {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
         let retry_timeout_val = match role {
@@ -587,7 +587,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(())
     }
 
-    fn get_state(&mut self, callback: oneshot::Sender<SynchronizationState>) {
+    fn get_state(&mut self, callback: oneshot::Sender<SyncState>) {
         if let Err(e) = self.sync_state_with_local_storage() {
             error!(
                 "[state sync] failed to sync with local storage for get_state request: {:?}",
@@ -1345,7 +1345,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 }
 
-/// SynchronizationState contains the following fields:
+/// SyncState contains the following fields:
 /// * `committed_ledger_info` holds the latest certified ledger info (committed to storage),
 ///    i.e., the ledger info for the highest version for which storage has all ledger state.
 /// * `synced_trees` holds the latest transaction accumulator and state tree (which may
@@ -1359,13 +1359,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 /// it corresponds to the highest version we have a proof for in storage). `synced_trees`
 /// is used locally for retrieving missing chunks for the local storage.
 #[derive(Clone)]
-pub struct SynchronizationState {
+pub struct SyncState {
     committed_ledger_info: LedgerInfoWithSignatures,
     synced_trees: ExecutedTrees,
     trusted_epoch_state: EpochState,
 }
 
-impl SynchronizationState {
+impl SyncState {
     pub fn new(
         committed_ledger_info: LedgerInfoWithSignatures,
         synced_trees: ExecutedTrees,
@@ -1377,7 +1377,7 @@ impl SynchronizationState {
             .cloned()
             .unwrap_or(current_epoch_state);
 
-        SynchronizationState {
+        SyncState {
             committed_ledger_info,
             synced_trees,
             trusted_epoch_state,
