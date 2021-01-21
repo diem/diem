@@ -739,8 +739,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             EA::Exp_::Lambda(bindings, exp) => {
                 self.translate_lambda(&loc, bindings, exp, expected_type)
             }
-            EA::Exp_::Quant(kind, ranges, exp) => {
-                self.translate_quant(&loc, *kind, ranges, exp, expected_type)
+            EA::Exp_::Quant(kind, ranges, condition, body) => {
+                self.translate_quant(&loc, *kind, ranges, condition, body, expected_type)
             }
             EA::Exp_::BinopExp(l, op, r) => {
                 let args = vec![l.as_ref(), r.as_ref()];
@@ -1793,6 +1793,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         loc: &Loc,
         kind: PA::QuantKind,
         ranges: &EA::LValueWithRangeList,
+        condition: &Option<Box<EA::Exp>>,
         body: &EA::Exp,
         expected_type: &Type,
     ) -> Exp {
@@ -1867,13 +1868,16 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             "in quantified expression",
         );
         let rbody = self.translate_exp(body, &rty);
+        let rcondition = condition
+            .as_ref()
+            .map(|cond| Box::new(self.translate_exp(cond, &rty)));
         self.exit_scope();
         let id = self.new_node_id_with_type_loc(&rty, loc);
         let rkind = match kind.value {
             PA::QuantKind_::Forall => QuantKind::Forall,
             PA::QuantKind_::Exists => QuantKind::Exists,
         };
-        Exp::Quant(id, rkind, rranges, Box::new(rbody))
+        Exp::Quant(id, rkind, rranges, rcondition, Box::new(rbody))
     }
 
     pub fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type, context_msg: &str) -> Type {

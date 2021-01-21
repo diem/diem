@@ -261,8 +261,8 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
-    Lambda(LValueList, Box<Exp>),                    // spec only
-    Quant(QuantKind, LValueWithRangeList, Box<Exp>), // spec only
+    Lambda(LValueList, Box<Exp>), // spec only
+    Quant(QuantKind, LValueWithRangeList, Option<Box<Exp>>, Box<Exp>), // spec only
 
     Assign(LValueList, Box<Exp>),
     FieldMutate(Box<ExpDotted>, Box<Exp>),
@@ -812,11 +812,15 @@ impl AstDebug for Exp_ {
                 w.write(" ");
                 e.ast_debug(w);
             }
-            E::Quant(kind, sp!(_, rs), e) => {
+            E::Quant(kind, sp!(_, rs), c_opt, e) => {
                 kind.ast_debug(w);
                 w.write(" ");
                 rs.ast_debug(w);
-                w.write(": ");
+                if let Some(c) = c_opt {
+                    w.write(" where ");
+                    c.ast_debug(w);
+                }
+                w.write(" : ");
                 e.ast_debug(w);
             }
             E::ExpList(es) => {

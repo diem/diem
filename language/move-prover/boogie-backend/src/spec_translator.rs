@@ -352,9 +352,9 @@ impl<'env> SpecTranslator<'env> {
                 &self.env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
-            Exp::Quant(node_id, kind, ranges, exp) => {
+            Exp::Quant(node_id, kind, ranges, condition, exp) => {
                 self.set_writer_location(*node_id);
-                self.translate_quant(*node_id, *kind, ranges, exp)
+                self.translate_quant(*node_id, *kind, ranges, condition, exp)
             }
             Exp::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
@@ -691,7 +691,8 @@ impl<'env> SpecTranslator<'env> {
         node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
-        exp: &Exp,
+        condition: &Option<Box<Exp>>,
+        body: &Exp,
     ) {
         let loc = self.env.get_node_loc(node_id);
         // Translate range expressions.
@@ -813,9 +814,14 @@ impl<'env> SpecTranslator<'env> {
                 _ => (),
             }
         }
-        // Translate body.
+        // Translate body and "where" condition.
+        if let Some(cond) = condition {
+            emit!(self.writer, "b#$Boolean(");
+            self.translate_exp(cond);
+            emit!(self.writer, ") {}", connective);
+        }
         emit!(self.writer, "b#$Boolean(");
-        self.translate_exp(exp);
+        self.translate_exp(body);
         emit!(
             self.writer,
             &std::iter::repeat(")")

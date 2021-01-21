@@ -497,8 +497,8 @@ pub enum Exp_ {
     Block(Sequence),
     // fun (x1, ..., xn) e
     Lambda(BindList, Box<Exp>), // spec only
-    // forall/exists x1 : e1, ..., xn : en.
-    Quant(QuantKind, BindWithRangeList, Box<Exp>), // spec only
+    // forall/exists x1 : e1, ..., xn [where cond]: en.
+    Quant(QuantKind, BindWithRangeList, Option<Box<Exp>>, Box<Exp>), // spec only
     // (e1, ..., en)
     ExpList(Vec<Exp>),
     // ()
@@ -1348,11 +1348,15 @@ impl AstDebug for Exp_ {
                 w.write(" ");
                 e.ast_debug(w);
             }
-            E::Quant(kind, sp!(_, rs), e) => {
+            E::Quant(kind, sp!(_, rs), c_opt, e) => {
                 kind.ast_debug(w);
                 w.write(" ");
                 rs.ast_debug(w);
-                w.write(" ");
+                if let Some(c) = c_opt {
+                    w.write(" where ");
+                    c.ast_debug(w);
+                }
+                w.write(" : ");
                 e.ast_debug(w);
             }
             E::ExpList(es) => {

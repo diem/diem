@@ -326,7 +326,13 @@ pub enum Exp {
     /// Represents a lambda.
     Lambda(NodeId, Vec<LocalVarDecl>, Box<Exp>),
     /// Represents a quantified formula over multiple variables and ranges.
-    Quant(NodeId, QuantKind, Vec<(LocalVarDecl, Exp)>, Box<Exp>),
+    Quant(
+        NodeId,
+        QuantKind,
+        Vec<(LocalVarDecl, Exp)>,
+        Option<Box<Exp>>,
+        Box<Exp>,
+    ),
     /// Represents a block which contains a set of variable bindings and an expression
     /// for which those are defined.
     Block(NodeId, Vec<LocalVarDecl>, Box<Exp>),
@@ -432,9 +438,12 @@ impl Exp {
                 }
             }
             Lambda(_, _, body) => body.visit_pre_post(visitor),
-            Quant(_, _, ranges, body) => {
+            Quant(_, _, ranges, condition, body) => {
                 for (_, range) in ranges {
                     range.visit_pre_post(visitor);
+                }
+                if let Some(exp) = &condition {
+                    exp.visit_pre_post(visitor);
                 }
                 body.visit_pre_post(visitor);
             }

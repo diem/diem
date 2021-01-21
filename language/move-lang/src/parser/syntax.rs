@@ -1097,15 +1097,22 @@ fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
         binds_with_range_list,
     );
 
-    let body_start_loc = tokens.start_loc();
-    let body = parse_quant_body(kind.value, tokens)?;
-    let body = spanned(
-        tokens.file_name(),
-        body_start_loc,
-        tokens.previous_end_loc(),
-        body,
-    );
-    Ok(Exp_::Quant(kind, binds_with_range_list, Box::new(body)))
+    let condition = match tokens.peek() {
+        Tok::IdentifierValue if tokens.content() == "where" => {
+            tokens.advance()?;
+            Some(Box::new(parse_exp(tokens)?))
+        }
+        _ => None,
+    };
+    consume_token(tokens, Tok::Colon)?;
+    let body = parse_exp(tokens)?;
+
+    Ok(Exp_::Quant(
+        kind,
+        binds_with_range_list,
+        condition,
+        Box::new(body),
+    ))
 }
 
 // Parses one quantifier binding.
@@ -1136,29 +1143,6 @@ fn parse_quant_binding<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<(Bi
         end_loc,
         (bind, range),
     ))
-}
-
-// Parse quantifier body.
-fn parse_quant_body<'input>(kind: QuantKind_, tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
-    let opt_cond = match tokens.peek() {
-        Tok::IdentifierValue if tokens.content() == "where" => {
-            tokens.advance()?;
-            Some(parse_exp(tokens)?)
-        }
-        _ => None,
-    };
-    consume_token(tokens, Tok::Colon)?;
-    let body = parse_exp(tokens)?;
-    if let Some(cond) = opt_cond {
-        let operator = match kind {
-            QuantKind_::Forall => BinOp_::Implies,
-            QuantKind_::Exists => BinOp_::And,
-        };
-        let op = sp(cond.loc, operator);
-        Ok(Exp_::BinopExp(Box::new(cond), op, Box::new(body)))
-    } else {
-        Ok(body.value)
-    }
 }
 
 fn make_builtin_call(loc: Loc, name: &str, type_args: Option<Vec<Type>>, args: Vec<Exp>) -> Exp {
