@@ -31,6 +31,10 @@ fn call(c: &mut Criterion) {
     bench(c, "call");
 }
 
-criterion_group!(vm_benches, arith, call);
+fn natives(c: &mut Criterion) {
+    bench(c, "natives");
+}
+
+criterion_group!(vm_benches, arith, call, natives);
 
 criterion_main!(vm_benches);

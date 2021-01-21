@@ -3,6 +3,7 @@
 // `benches/transaction.rs` contains the calling code.
 // The idea is that you build your scenario with a public entry point and a bunch of private functions as needed.
 module Bench {
+    use 0x1::Vector;
 
     //
     // Global helpers
@@ -69,5 +70,43 @@ module Bench {
 
     fun call_2_2(): u64 {
         100 + 300
+    }
+
+    //
+    // `natives` benchmark
+    //
+    fun test_vector_ops<T>(x1: T, x2: T): (T, T) {
+        let v: vector<T> = Vector::empty();
+        check(Vector::length(&v) == 0, 100);
+        Vector::push_back(&mut v, x1);
+        check(Vector::length(&v) == 1, 101);
+        Vector::push_back(&mut v, x2);
+        check(Vector::length(&v) == 2, 102);
+        Vector::swap(&mut v, 0, 1);
+        x1 = Vector::pop_back(&mut v);
+        check(Vector::length(&v) == 1, 103);
+        x2 = Vector::pop_back(&mut v);
+        check(Vector::length(&v) == 0, 104);
+        Vector::destroy_empty(v);
+        (x1, x2)
+    }
+
+    fun test_vector() {
+        test_vector_ops<u8>(1u8, 2u8);
+        test_vector_ops<u64>(1u64, 2u64);
+        test_vector_ops<u128>(1u128, 2u128);
+        test_vector_ops<bool>(true, false);
+        test_vector_ops<address>(0x1, 0x2);
+        test_vector_ops<vector<u8>>(Vector::empty(), Vector::empty());
+    }
+
+    public fun natives() {
+        let i = 0;
+        // 300 is the number of loops to make the benchmark run for a couple of minutes, which is an eternity.
+        // Adjust according to your needs, it's just a reference
+        while (i < 300) {
+            test_vector();
+            i = i + 1;
+        }
     }
 }

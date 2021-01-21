@@ -3755,6 +3755,7 @@ dependencies = [
  "move-lang",
  "move-vm-runtime",
  "move-vm-types",
+ "once_cell",
  "proptest",
  "vm",
 ]
