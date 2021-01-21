@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-backtrace = "0.3.55"
+backtrace = "0.3.56"
 toml = "0.5.8"
 
 diem-logger = { path = "../logger", version = "0.1.0" }
