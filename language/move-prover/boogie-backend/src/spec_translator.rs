@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -354,15 +354,7 @@ impl<'env> SpecTranslator<'env> {
             ),
             Exp::Quant(node_id, kind, ranges, exp) => {
                 self.set_writer_location(*node_id);
-                let loc = self.env.get_node_loc(*node_id);
-                if ranges.len() == 1 {
-                    self.translate_all_or_exists(&loc, *kind, &ranges[0].0, &ranges[0].1, exp);
-                } else {
-                    self.error(
-                        &loc,
-                        "only one variable per quantifier is currently supported",
-                    );
-                }
+                self.translate_quant(*node_id, *kind, ranges, exp)
             }
             Exp::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
@@ -694,89 +686,142 @@ impl<'env> SpecTranslator<'env> {
         });
     }
 
-    fn translate_all_or_exists(
+    fn translate_quant(
         &self,
-        loc: &Loc,
+        node_id: NodeId,
         kind: QuantKind,
-        var: &LocalVarDecl,
-        range: &Exp,
+        ranges: &[(LocalVarDecl, Exp)],
         exp: &Exp,
     ) {
-        let quant_ty = self.env.get_node_type(range.node_id());
-        let connective = match kind {
-            QuantKind::Forall => "==>",
-            QuantKind::Exists => "&&",
-        };
-        let var_name = self.env.symbol_pool().string(var.name);
-        let quant_var = self.fresh_var_name("i");
-        match quant_ty.skip_reference() {
-            Type::TypeDomain(domain_ty) => {
-                let type_check = boogie_well_formed_expr(self.env, &var_name, &domain_ty);
-                if type_check.is_empty() {
-                    let tctx = TypeDisplayContext::WithEnv {
-                        env: self.env,
-                        type_param_names: None,
-                    };
-                    self.error(
-                        loc,
-                        &format!(
-                            "cannot quantify over `{}` because the type is not concrete",
-                            Type::TypeDomain(domain_ty.clone()).display(&tctx)
-                        ),
-                    );
-                } else {
-                    emit!(
-                        self.writer,
-                        "$Boolean(({} {}: $Value :: {} {} ",
-                        kind,
-                        var_name,
-                        type_check,
-                        connective
-                    );
-                    emit!(self.writer, "b#$Boolean(");
-                    self.translate_exp(exp);
-                    emit!(self.writer, ")))");
+        let loc = self.env.get_node_loc(node_id);
+        // Translate range expressions.
+        let mut range_tmps = HashMap::new();
+        for (var, range) in ranges {
+            let quant_ty = self.env.get_node_type(range.node_id());
+            if matches!(
+                quant_ty.skip_reference(),
+                Type::Vector(..) | Type::Primitive(PrimitiveType::Range)
+            ) {
+                let var_name = self.env.symbol_pool().string(var.name);
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "(var {} := ", range_tmp);
+                self.translate_exp(&range);
+                emit!(self.writer, "; ");
+                range_tmps.insert(var_name, range_tmp);
+            }
+        }
+        // Translate quantified variables.
+        emit!(self.writer, "$Boolean(({} ", kind);
+        let mut quant_vars = HashMap::new();
+        let mut comma = "";
+        for (var, range) in ranges {
+            let var_name = self.env.symbol_pool().string(var.name);
+            let quant_ty = self.env.get_node_type(range.node_id());
+            match quant_ty.skip_reference() {
+                Type::TypeDomain(_) => {
+                    emit!(self.writer, "{}{}: $Value", comma, var_name);
+                }
+                _ => {
+                    let quant_var = self.fresh_var_name("i");
+                    emit!(self.writer, "{}{}: int", comma, quant_var);
+                    quant_vars.insert(var_name, quant_var);
                 }
             }
-            Type::Vector(..) => {
-                let range_tmp = self.fresh_var_name("range");
-                emit!(self.writer, "$Boolean((var {} := ", range_tmp);
-                self.translate_exp(&range);
-                emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
-                emit!(
-                    self.writer,
-                    "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
-                    range_tmp,
-                    quant_var,
-                    connective,
-                    var_name,
-                    range_tmp,
-                    quant_var,
-                );
-                emit!(self.writer, "b#$Boolean(");
-                self.translate_exp(exp);
-                emit!(self.writer, ")))))");
-            }
-            Type::Primitive(PrimitiveType::Range) => {
-                let range_tmp = self.fresh_var_name("range");
-                emit!(self.writer, "$Boolean((var {} := ", range_tmp);
-                self.translate_exp(&range);
-                emit!(self.writer, "; ({} {}: int :: ", kind, quant_var);
-                emit!(
-                    self.writer,
-                    "$InRange({}, {}) {} (var {} := $Integer({}); ",
-                    range_tmp,
-                    quant_var,
-                    connective,
-                    var_name,
-                    quant_var,
-                );
-                emit!(self.writer, "b#$Boolean(");
-                self.translate_exp(exp);
-                emit!(self.writer, ")))))");
-            }
-            _ => panic!("unexpected type"),
+            comma = ", ";
         }
+        emit!(self.writer, " :: ");
+        // Translate range constraints.
+        let connective = match kind {
+            QuantKind::Forall => " ==> ",
+            QuantKind::Exists => " && ",
+        };
+        let mut separator = "";
+        for (var, range) in ranges {
+            let var_name = self.env.symbol_pool().string(var.name);
+            let quant_ty = self.env.get_node_type(range.node_id());
+            match quant_ty.skip_reference() {
+                Type::TypeDomain(domain_ty) => {
+                    let type_check = boogie_well_formed_expr(self.env, &var_name, &domain_ty);
+                    if type_check.is_empty() {
+                        let tctx = TypeDisplayContext::WithEnv {
+                            env: self.env,
+                            type_param_names: None,
+                        };
+                        self.error(
+                            &loc,
+                            &format!(
+                                "cannot quantify over `{}` because the type is not concrete",
+                                Type::TypeDomain(domain_ty.clone()).display(&tctx)
+                            ),
+                        );
+                    } else {
+                        emit!(self.writer, "{}{}", separator, type_check);
+                    }
+                }
+                Type::Vector(..) => {
+                    let range_tmp = range_tmps.get(&var_name).unwrap();
+                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    emit!(
+                        self.writer,
+                        "{}$InVectorRange({}, {})",
+                        separator,
+                        range_tmp,
+                        quant_var,
+                    );
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    let range_tmp = range_tmps.get(&var_name).unwrap();
+                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    emit!(
+                        self.writer,
+                        "{}$InRange({}, {})",
+                        separator,
+                        range_tmp,
+                        quant_var,
+                    );
+                }
+                _ => panic!("unexpected type"),
+            }
+            separator = connective;
+        }
+        emit!(self.writer, "{}", connective);
+        // Translate range selectors.
+        for (var, range) in ranges {
+            let var_name = self.env.symbol_pool().string(var.name);
+            let quant_ty = self.env.get_node_type(range.node_id());
+            match quant_ty.skip_reference() {
+                Type::Vector(..) => {
+                    let range_tmp = range_tmps.get(&var_name).unwrap();
+                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    emit!(
+                        self.writer,
+                        "(var {} := $select_vector({}, {}); ",
+                        var_name,
+                        range_tmp,
+                        quant_var,
+                    );
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    emit!(
+                        self.writer,
+                        "(var {} := $Integer({}); ",
+                        var_name,
+                        quant_var
+                    );
+                }
+                _ => (),
+            }
+        }
+        // Translate body.
+        emit!(self.writer, "b#$Boolean(");
+        self.translate_exp(exp);
+        emit!(
+            self.writer,
+            &std::iter::repeat(")")
+                .take(3 + 2 * range_tmps.len())
+                .collect::<String>()
+        );
     }
 
     fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
