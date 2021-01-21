@@ -67,6 +67,7 @@ impl VerifyCoordinator {
 
         let global_opt = GlobalRestoreOptions {
             target_version: ver_max,
+            trusted_waypoints: Default::default(),
             run_mode: Arc::new(RestoreRunMode::Verify),
         };
 
