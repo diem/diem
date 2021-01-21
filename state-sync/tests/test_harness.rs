@@ -424,7 +424,7 @@ impl StateSyncEnvironment {
             let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&receiver_id).unwrap();
             receiver_network_notif_tx
                 .push(
-                    (sender_peer_id, ProtocolId::StateSynchronizerDirectSend),
+                    (sender_peer_id, ProtocolId::StateSyncDirectSend),
                     PeerManagerNotification::RecvMessage(sender_peer_id, msg.clone()),
                 )
                 .unwrap();

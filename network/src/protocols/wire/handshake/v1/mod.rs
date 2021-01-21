@@ -36,7 +36,7 @@ pub enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,
     MempoolDirectSend = 2,
-    StateSynchronizerDirectSend = 3,
+    StateSyncDirectSend = 3,
     DiscoveryDirectSend = 4,
     HealthCheckerRpc = 5,
 }
@@ -48,7 +48,7 @@ impl ProtocolId {
             ConsensusRpc => "ConsensusRpc",
             ConsensusDirectSend => "ConsensusDirectSend",
             MempoolDirectSend => "MempoolDirectSend",
-            StateSynchronizerDirectSend => "StateSynchronizerDirectSend",
+            StateSyncDirectSend => "StateSyncDirectSend",
             DiscoveryDirectSend => "DiscoveryDirectSend",
             HealthCheckerRpc => "HealthCheckerRpc",
         }
@@ -175,7 +175,7 @@ impl HandshakeMsg {
         let mut supported_protocols = BTreeMap::new();
         supported_protocols.insert(
             MessagingProtocolVersion::V1,
-            [ProtocolId::StateSynchronizerDirectSend].iter().into(),
+            [ProtocolId::StateSyncDirectSend].iter().into(),
         );
         Self {
             chain_id: ChainId::test(),

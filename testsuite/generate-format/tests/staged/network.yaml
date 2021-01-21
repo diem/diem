@@ -131,7 +131,7 @@ ProtocolId:
     2:
       MempoolDirectSend: UNIT
     3:
-      StateSynchronizerDirectSend: UNIT
+      StateSyncDirectSend: UNIT
     4:
       DiscoveryDirectSend: UNIT
     5:

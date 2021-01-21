@@ -88,7 +88,7 @@ pub fn fuzz(data: &[u8]) {
                 ProtocolId::ConsensusRpc,
                 ProtocolId::ConsensusDirectSend,
                 ProtocolId::MempoolDirectSend,
-                ProtocolId::StateSynchronizerDirectSend,
+                ProtocolId::StateSyncDirectSend,
                 ProtocolId::DiscoveryDirectSend,
                 ProtocolId::HealthCheckerRpc,
             ]

@@ -62,7 +62,7 @@ impl StateSyncSender {
         recipient: PeerId,
         message: StateSynchronizerMsg,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::StateSynchronizerDirectSend;
+        let protocol = ProtocolId::StateSyncDirectSend;
         self.inner.send_to(recipient, protocol, message)
     }
 }
@@ -77,7 +77,7 @@ pub fn network_endpoint_config() -> (
 ) {
     (
         vec![],
-        vec![ProtocolId::StateSynchronizerDirectSend],
+        vec![ProtocolId::StateSyncDirectSend],
         QueueStyle::LIFO,
         STATE_SYNC_MAX_BUFFER_SIZE,
         Some(&counters::PENDING_STATE_SYNC_NETWORK_EVENTS),
