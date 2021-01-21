@@ -8,7 +8,7 @@ use crate::{
     counters,
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
-    network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
+    network::{StateSyncEvents, StateSynchronizerMsg, StateSynchronizerSender},
     request_manager::RequestManager,
 };
 use anyhow::{bail, ensure, format_err, Result};
@@ -225,11 +225,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(
         mut self,
-        network_handles: Vec<(
-            NodeNetworkId,
-            StateSynchronizerSender,
-            StateSynchronizerEvents,
-        )>,
+        network_handles: Vec<(NodeNetworkId, StateSynchronizerSender, StateSyncEvents)>,
     ) {
         info!(LogSchema::new(LogEntry::RuntimeStart));
         let mut interval = IntervalStream::new(interval(Duration::from_millis(

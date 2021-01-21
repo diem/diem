@@ -24,15 +24,15 @@ pub enum StateSynchronizerMsg {
     GetChunkResponse(Box<GetChunkResponse>),
 }
 
-/// The interface from Network to StateSynchronizer layer.
+/// The interface from Network to StateSync layer.
 ///
-/// `StateSynchronizerEvents` is a `Stream` of `PeerManagerNotification` where the
+/// `StateSyncEvents` is a `Stream` of `PeerManagerNotification` where the
 /// raw `Bytes` direct-send messages are deserialized into `StateSynchronizerMsg`
-/// types. `StateSynchronizerEvents` is a thin wrapper around an
+/// types. `StateSyncEvents` is a thin wrapper around a
 /// `channel::Receiver<PeerManagerNotification>`.
-pub type StateSynchronizerEvents = NetworkEvents<StateSynchronizerMsg>;
+pub type StateSyncEvents = NetworkEvents<StateSynchronizerMsg>;
 
-/// The interface from StateSynchronizer to Networking layer.
+/// The interface from StateSync to Networking layer.
 ///
 /// This is a thin wrapper around a `NetworkSender<StateSynchronizerMsg>`, so it
 /// is easy to clone and send off to a separate task. For example, the rpc

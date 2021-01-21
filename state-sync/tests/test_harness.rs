@@ -62,7 +62,7 @@ use state_sync::{
     client::StateSyncClient,
     coordinator::SyncState,
     executor_proxy::ExecutorProxyTrait,
-    network::{StateSynchronizerEvents, StateSynchronizerSender},
+    network::{StateSyncEvents, StateSynchronizerSender},
 };
 use std::{
     cell::{Ref, RefCell},
@@ -328,11 +328,7 @@ impl StateSyncEnvironment {
         role: &RoleType,
         mock_network: bool,
         network_id: NetworkId,
-    ) -> Vec<(
-        NodeNetworkId,
-        StateSynchronizerSender,
-        StateSynchronizerEvents,
-    )> {
+    ) -> Vec<(NodeNetworkId, StateSynchronizerSender, StateSyncEvents)> {
         let mut network_handles = vec![];
         if mock_network {
             let networks = if role.is_validator() {
@@ -362,8 +358,7 @@ impl StateSyncEnvironment {
                     PeerManagerRequestSender::new(network_reqs_tx),
                     ConnectionRequestSender::new(connection_reqs_tx),
                 );
-                let network_events =
-                    StateSynchronizerEvents::new(network_notifs_rx, conn_status_rx);
+                let network_events = StateSyncEvents::new(network_notifs_rx, conn_status_rx);
                 self.network_reqs_rxs.insert(peer_id, network_reqs_rx);
                 self.network_notifs_txs.insert(peer_id, network_notifs_tx);
                 self.network_conn_event_notifs_txs
