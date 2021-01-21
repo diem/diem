@@ -291,11 +291,7 @@ impl<L: LogContext> Interpreter<L> {
         match return_values {
             NativeReturnValues::None => {}
             NativeReturnValues::One(value) => self.operand_stack.push(value)?,
-            NativeReturnValues::Many(values) => {
-                for value in values {
-                    self.operand_stack.push(value)?;
-                }
-            }
+            NativeReturnValues::Many(values) => self.operand_stack.pushn(values)?,
         }
         Ok(())
     }
@@ -594,6 +590,20 @@ impl Stack {
         if self.0.len() < OPERAND_STACK_SIZE_LIMIT {
             self.0.push(value);
             Ok(())
+        } else {
+            Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
+        }
+    }
+
+    /// Push n values on the stack
+    fn pushn(&mut self, mut values: Vec<Value>) -> PartialVMResult<()> {
+        if let Some(new_len) = self.0.len().checked_add(values.len()) {
+            if new_len <= OPERAND_STACK_SIZE_LIMIT {
+                self.0.append(&mut values);
+                Ok(())
+            } else {
+                Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
+            }
         } else {
             Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
         }
