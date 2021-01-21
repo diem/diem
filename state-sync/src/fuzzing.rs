@@ -4,7 +4,7 @@
 use crate::{
     chunk_request::{GetChunkRequest, TargetType},
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
-    coordinator::SyncCoordinator,
+    coordinator::StateSyncCoordinator,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerMsg, StateSynchronizerSender},
 };
@@ -39,7 +39,7 @@ use proptest::{
 use std::collections::HashMap;
 use storage_interface::DbReaderWriter;
 
-static SYNC_COORDINATOR: Lazy<Mutex<SyncCoordinator<ExecutorProxy>>> = Lazy::new(|| {
+static STATE_SYNC_COORDINATOR: Lazy<Mutex<StateSyncCoordinator<ExecutorProxy>>> = Lazy::new(|| {
     // Generate a genesis change set
     let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -76,7 +76,7 @@ static SYNC_COORDINATOR: Lazy<Mutex<SyncCoordinator<ExecutorProxy>>> = Lazy::new
     let (mempool_sender, _mempool_receiver) = mpsc::channel(1);
 
     // Start up coordinator
-    let coordinator = SyncCoordinator::new(
+    let coordinator = StateSyncCoordinator::new(
         coordinator_receiver,
         mempool_sender,
         network_senders,
@@ -103,7 +103,7 @@ proptest! {
 
 pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     block_on(async move {
-        SYNC_COORDINATOR
+        STATE_SYNC_COORDINATOR
             .lock()
             .process_one_message(
                 PeerNetworkId(

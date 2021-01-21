@@ -133,15 +133,15 @@ impl PendingLedgerInfos {
     }
 }
 
-/// Coordination of synchronization process is driven by SyncCoordinator, which `start()` function
-/// runs an infinite event loop and triggers actions based on external / internal requests.
-/// The coordinator can work in two modes:
+/// Coordination of the state sync process is driven by StateSyncCoordinator. The `start()`
+/// function runs an infinite event loop and triggers actions based on external and internal
+/// (local) requests. The coordinator works in two modes (depending on the role):
 /// * FullNode: infinite stream of ChunkRequests is sent to the predefined static peers
 /// (the parent is going to reply with a ChunkResponse if its committed version becomes
 /// higher within the timeout interval).
 /// * Validator: the ChunkRequests are generated on demand for a specific target LedgerInfo to
 /// synchronize to.
-pub(crate) struct SyncCoordinator<T> {
+pub(crate) struct StateSyncCoordinator<T> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
@@ -175,7 +175,7 @@ pub(crate) struct SyncCoordinator<T> {
     executor_proxy: T,
 }
 
-impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
+impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,

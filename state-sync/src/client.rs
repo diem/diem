@@ -29,7 +29,7 @@ pub struct CommitNotification {
     pub reconfiguration_events: Vec<ContractEvent>,
 }
 
-/// Messages used by the StateSyncClient for communication with the SyncCoordinator.
+/// Messages used by the StateSyncClient for communication with the StateSyncCoordinator.
 pub enum CoordinatorMessage {
     SyncRequest(Box<SyncRequest>), // Initiate a new sync request for a given target.
     CommitNotification(Box<CommitNotification>), // Notify state sync about committed transactions.
@@ -37,7 +37,7 @@ pub enum CoordinatorMessage {
     WaitForInitialization(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
 }
 
-/// A client used for communicating with a SyncCoordinator.
+/// A client used for communicating with a StateSyncCoordinator.
 pub struct StateSyncClient {
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
 }

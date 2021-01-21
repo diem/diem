@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     client::{CoordinatorMessage, StateSyncClient},
-    coordinator::SyncCoordinator,
+    coordinator::StateSyncCoordinator,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
 };
@@ -81,7 +81,7 @@ impl StateSyncBootstrapper {
             .map(|(network_id, sender, _events)| (network_id.clone(), sender.clone()))
             .collect();
 
-        let coordinator = SyncCoordinator::new(
+        let coordinator = StateSyncCoordinator::new(
             coordinator_receiver,
             state_sync_to_mempool_sender,
             network_senders,
