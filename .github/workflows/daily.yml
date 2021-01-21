@@ -1,0 +1,63 @@
+name: daily
+
+on:
+  schedule:
+    - cron: "14 14 * * *"
+  push:
+    branches: [gha-test-*]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    container:
+      image: libra/build_environment:github-1
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/build-setup
+      - name: install cargo-audit
+        run: cargo install --force cargo-audit
+      # NOTE ignored advisory rules
+      # RUSTSEC-2018-0015 - term
+      # RUSTSEC-2019-0031 - spin
+      - name: audit crates
+        run: |
+          $CARGO $CARGOFLAGS audit --deny-warnings \
+            --ignore RUSTSEC-2018-0015 \
+            --ignore RUSTSEC-2019-0031 \
+            --ignore RUSTSEC-2020-0016
+      - uses: ./.github/actions/build-teardown
+
+  coverage:
+    runs-on: ubuntu-latest-xl
+    container:
+      image: libra/build_environment:github-1
+    env:
+      CODECOV_OUTPUT: codecov
+      MESSAGE_PAYLOAD_FILE: /tmp/payload
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/build-setup
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.DIEM_S3_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.DIEM_S3_AWS_REGION }}
+      - name: produce coverage
+        run: cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 16 || true
+      - name: Push Coverage Reports to S3
+        run: |
+          set -x
+          SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
+          PREFIX="ci-artifacts.diem.com/coverage";
+          #Push grcov
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
+          echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+          #Push lcov
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
+          echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+      - name: publish to codecov.io
+        run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
+      - uses: ./.github/actions/build-teardown
