@@ -8,7 +8,7 @@ use crate::{
     counters,
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
-    network::{StateSyncEvents, StateSynchronizerMsg, StateSynchronizerSender},
+    network::{StateSyncEvents, StateSyncSender, StateSynchronizerMsg},
     request_manager::RequestManager,
 };
 use anyhow::{bail, ensure, format_err, Result};
@@ -158,7 +158,7 @@ pub(crate) struct StateSyncCoordinator<T> {
     // waypoint a node is not going to be abl
     waypoint: Waypoint,
     // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
+    network_senders: HashMap<NodeNetworkId, StateSyncSender>,
     // Actor for sending chunk requests
     // Manages to whom and how to send chunk requests
     request_manager: RequestManager,
@@ -179,7 +179,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
-        network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
+        network_senders: HashMap<NodeNetworkId, StateSyncSender>,
         role: RoleType,
         waypoint: Waypoint,
         config: StateSyncConfig,
@@ -225,7 +225,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(
         mut self,
-        network_handles: Vec<(NodeNetworkId, StateSynchronizerSender, StateSyncEvents)>,
+        network_handles: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
     ) {
         info!(LogSchema::new(LogEntry::RuntimeStart));
         let mut interval = IntervalStream::new(interval(Duration::from_millis(

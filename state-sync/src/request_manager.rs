@@ -5,7 +5,7 @@ use crate::{
     chunk_request::GetChunkRequest,
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
-    network::{StateSynchronizerMsg, StateSynchronizerSender},
+    network::{StateSyncSender, StateSynchronizerMsg},
 };
 use anyhow::{bail, format_err, Result};
 use diem_config::{
@@ -90,7 +90,7 @@ pub struct RequestManager {
     // the maximum preference level of all the networks to try to multicast the same chunk request to,
     // where network preference is specified by the upstream config
     multicast_level: usize,
-    network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
+    network_senders: HashMap<NodeNetworkId, StateSyncSender>,
 }
 
 impl RequestManager {
@@ -98,7 +98,7 @@ impl RequestManager {
         upstream_config: UpstreamConfig,
         request_timeout: Duration,
         multicast_timeout: Duration,
-        network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
+        network_senders: HashMap<NodeNetworkId, StateSyncSender>,
     ) -> Self {
         counters::MULTICAST_LEVEL.set(PRIMARY_NETWORK_PREFERENCE as i64);
         Self {

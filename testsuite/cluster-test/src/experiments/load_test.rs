@@ -21,7 +21,7 @@ use network::{
     connectivity_manager::DiscoverySource, protocols::network::Event, ConnectivityRequest,
 };
 use network_builder::builder::NetworkBuilder;
-use state_sync::network::{StateSyncEvents, StateSynchronizerSender};
+use state_sync::network::{StateSyncEvents, StateSyncSender};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -240,7 +240,7 @@ async fn get_stubbed_nodes(
 // that interact with the remote VFN via DiemNet mempool and state sync protocol
 struct StubbedNode {
     pub mempool_handle: Option<(MempoolNetworkSender, MempoolNetworkEvents)>,
-    pub state_sync_handle: Option<(StateSynchronizerSender, StateSyncEvents)>,
+    pub state_sync_handle: Option<(StateSyncSender, StateSyncEvents)>,
 }
 
 impl StubbedNode {
@@ -412,7 +412,7 @@ impl fmt::Display for MempoolStatsRate {
 
 async fn state_sync_load_test(
     duration: Duration,
-    mut sender: StateSynchronizerSender,
+    mut sender: StateSyncSender,
     mut events: StateSyncEvents,
 ) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;

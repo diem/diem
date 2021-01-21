@@ -6,7 +6,7 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     coordinator::StateSyncCoordinator,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
-    network::{StateSynchronizerMsg, StateSynchronizerSender},
+    network::{StateSyncSender, StateSynchronizerMsg},
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
@@ -62,7 +62,7 @@ static STATE_SYNC_COORDINATOR: Lazy<Mutex<StateSyncCoordinator<ExecutorProxy>>> 
     // Setup network senders
     let (network_reqs_tx, _network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
     let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
-    let network_sender = StateSynchronizerSender::new(
+    let network_sender = StateSyncSender::new(
         PeerManagerRequestSender::new(network_reqs_tx),
         ConnectionRequestSender::new(connection_reqs_tx),
     );

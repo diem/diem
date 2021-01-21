@@ -41,11 +41,11 @@ pub type StateSyncEvents = NetworkEvents<StateSynchronizerMsg>;
 /// therefore makes the most sense to make the rpc call on a separate async task,
 /// which requires the `StateSynchronizerSender` to be `Clone` and `Send`.
 #[derive(Clone)]
-pub struct StateSynchronizerSender {
+pub struct StateSyncSender {
     inner: NetworkSender<StateSynchronizerMsg>,
 }
 
-impl NewNetworkSender for StateSynchronizerSender {
+impl NewNetworkSender for StateSyncSender {
     fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
@@ -56,7 +56,7 @@ impl NewNetworkSender for StateSynchronizerSender {
     }
 }
 
-impl StateSynchronizerSender {
+impl StateSyncSender {
     pub fn send_to(
         &mut self,
         recipient: PeerId,
