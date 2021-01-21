@@ -57,14 +57,17 @@ impl<'a> SummaryCache<'a> {
 }
 
 /// Trait that lifts an intraprocedural analysis into a bottom-up, compositional interprocedural
-/// analysis. The derived `summarize` function computes a postcondition for the procedure under
-/// analysis, then stores it in the summary cache for other procedures to use.
-// TODO: allow client analyses to customize this by providing a function that converts a
-// postcondition into a summary
-pub trait CompositionalAnalysis: DataflowAnalysis
+/// analysis.
+pub trait CompositionalAnalysis<Domain: AbstractDomain + 'static>: DataflowAnalysis
 where
-    Self::State: 'static,
+    Self::State: AbstractDomain + 'static,
 {
+    /// Specifies mapping from elements of dataflow analysis domain to elements of `Domain`.
+    fn to_summary(&self, state: Self::State) -> Domain;
+
+    /// Computes a postcondition for the procedure `data` and then maps the postcondition to an
+    /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
+    /// in the summary cache of `data`.
     fn summarize(
         &self,
         func_env: &FunctionEnv<'_>,
@@ -89,11 +92,11 @@ where
             for exit_state in exit_states.iter().skip(1) {
                 acc.join(&exit_state);
             }
-            data.annotations.set(acc)
+            data.annotations.set(self.to_summary(acc))
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives
-            data.annotations.set(initial_state)
+            data.annotations.set(self.to_summary(initial_state))
         }
         data
     }
