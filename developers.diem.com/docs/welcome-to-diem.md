@@ -26,14 +26,14 @@ Explore the technical and economic concepts behind the Diem Payment Network, exp
 
 <CardsWrapper>
   <OverlayCard
-    description="Protocol Overview, Transaction Types,  Nodes, Accounts"
+    description="Protocol Overview, Transaction Types, Nodes, Accounts"
     icon="img/core-contributors.svg"
     iconDark="img/core-contributors-dark.svg"
     title="Core Concepts"
     to="/docs/core/overview"
   />
   <OverlayCard
-    description="Requirements, Configuration, Running  a Local Network"
+    description="Requirements, Configuration, Running a Local Network"
     icon="img/node-operators.svg"
     iconDark="img/node-operators-dark.svg"
     title="Nodes"
@@ -54,7 +54,7 @@ Explore the technical and economic concepts behind the Diem Payment Network, exp
     to="/docs/merchant/overview"
   />
   <OverlayCard
-    description="Key Components,  Writing Modules,  Testing & Debugging"
+    description="Key Components, Writing Modules, Testing & Debugging"
     icon="img/move.svg"
     iconDark="img/move-dark.svg"
     title="Move"
