@@ -1,4 +1,4 @@
-bo---
+---
 id: v2-docs-guide
 title: V2 Docs Guide
 sidebar_label: V2 Docs Guide
@@ -117,6 +117,19 @@ class HelloWorld {
 </MultiStepTabItem>
 </MultiStepSnippet>
 
+## Video Embeds
+
+<VideoEmbed src="https://www.youtube.com/embed/dQw4w9WgXcQ" />
+
+```<VideoEmbed src="https://www.youtube.com/embed/dQw4w9WgXcQ" />```
+
+The above is an example of how to embed a video. If you get the link from youtube, **make sure to get the embed link, which is different than the regular url.
+
+To get it click share, then embed, and you'll see something like this:
+
+```<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>```
+
+You can get the link from there
 
 ## Cards
 

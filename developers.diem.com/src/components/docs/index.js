@@ -9,6 +9,7 @@ import MultiStepTabItem from './MultiStepTabItem';
 import NotificationBar from './NotificationBar';
 import OverviewReferences from './OverviewReferences';
 import Spacer from './Spacer';
+import VideoEmbed from './VideoEmbed';
 import WaveBackground from './WaveBackground';
 
 export default {
@@ -23,5 +24,6 @@ export default {
   NotificationBar,
   ...OverviewReferences,
   Spacer,
+  VideoEmbed,
   WaveBackground,
 };
