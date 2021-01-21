@@ -103,15 +103,15 @@ static ROCKSDB_PROPERTY_MAP: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
         ),
         (
             "diem_rocksdb_num_running_compactions",
-            "rocksdb.num_running_compactions",
+            "rocksdb.num-running-compactions",
         ),
         (
             "diem_rocksdb_num_running_flushes",
-            "rocksdb.num_running_flushes",
+            "rocksdb.num-running-flushes",
         ),
         (
             "diem_rocksdb_block_cache_usage_bytes",
-            "rocksdb.block_cache_usage",
+            "rocksdb.block-cache-usage",
         ),
         (
             "diem_rocksdb_cf_size_bytes",
