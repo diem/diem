@@ -10,6 +10,7 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt::Debug,
     ops::{Deref, DerefMut},
 };
 use vm::file_format::CodeOffset;
@@ -30,7 +31,7 @@ impl JoinResult {
     }
 }
 
-pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq {
+pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq + Debug {
     fn join(&mut self, other: &Self) -> JoinResult;
 }
 
@@ -57,7 +58,7 @@ impl<E: Clone + Ord + Sized> DerefMut for SetDomain<E> {
     }
 }
 
-impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
+impl<E: Clone + Ord + Sized + Debug> AbstractDomain for SetDomain<E> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             JoinResult::Unchanged
@@ -70,8 +71,28 @@ impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
     }
 }
 
+impl<E: Clone + Ord + Sized> SetDomain<E> {
+    pub fn singleton(e: E) -> Self {
+        let mut s = SetDomain::default();
+        s.insert(e);
+        s
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct MapDomain<K: Ord, V: AbstractDomain>(pub BTreeMap<K, V>);
+
+impl<K: Ord, V: AbstractDomain> MapDomain<K, V> {
+    /// join `v` with self[k] if `k` is bound, insert `v` otherwise
+    pub fn insert_join(&mut self, k: K, v: V) {
+        self.0
+            .entry(k)
+            .and_modify(|old_v| {
+                old_v.join(&v);
+            })
+            .or_insert(v);
+    }
+}
 
 impl<K: Ord, V: AbstractDomain> Default for MapDomain<K, V> {
     fn default() -> Self {
@@ -79,7 +100,7 @@ impl<K: Ord, V: AbstractDomain> Default for MapDomain<K, V> {
     }
 }
 
-impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
+impl<K: Clone + Sized + Eq + Ord + Debug, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             JoinResult::Unchanged

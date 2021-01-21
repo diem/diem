@@ -13,10 +13,12 @@ use move_model::{
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
 };
+
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     fmt,
+    ops::Range,
 };
 use vm::file_format::CodeOffset;
 
@@ -176,8 +178,14 @@ impl<'env> FunctionTarget<'env> {
         self.data.return_types.len()
     }
 
+    /// Return the number of parameters of this function
     pub fn get_parameter_count(&self) -> usize {
         self.func_env.get_parameter_count()
+    }
+
+    /// Return an iterator over this function's parameters
+    pub fn get_parameters(&self) -> Range<usize> {
+        0..self.func_env.get_parameter_count()
     }
 
     /// Get the name to be used for a local. If the local is an argument, use that for naming,

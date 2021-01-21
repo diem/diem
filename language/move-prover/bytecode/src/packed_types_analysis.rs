@@ -72,7 +72,7 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
     packed_types
 }
 
-#[derive(Clone, Default, Eq, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialOrd, PartialEq)]
 struct PackedTypesState {
     // Closed types (i.e., with no free type variables) that may be directly or transitively packed by this function.
     closed_types: SetDomain<StructTag>,

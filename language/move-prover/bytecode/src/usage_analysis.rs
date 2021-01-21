@@ -45,7 +45,7 @@ pub fn get_directly_modified_memory<'env>(
 }
 
 /// The annotation for usage of functions. This is computed by the function target processor.
-#[derive(Clone, Default, Eq, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialOrd, PartialEq)]
 struct UsageState {
     // The memory which is directly and transitively accessed by this function.
     used_memory: SetDomain<QualifiedId<StructId>>,

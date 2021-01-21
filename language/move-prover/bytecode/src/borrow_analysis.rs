@@ -477,7 +477,7 @@ struct PropagateSplicedAnalysis {
     borrow: BTreeMap<CodeOffset, BorrowInfoAtCodeOffset>,
 }
 
-#[derive(Default, Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd)]
 struct SplicedState {
     spliced: BTreeSet<BorrowNode>,
 }
