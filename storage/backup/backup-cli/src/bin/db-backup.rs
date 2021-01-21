@@ -1,7 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::sync::Arc;
+
 use anyhow::Result;
+use structopt::StructOpt;
+
 use backup_cli::{
     backup_types::{
         epoch_ending::backup::{EpochEndingBackupController, EpochEndingBackupOpt},
@@ -18,8 +22,6 @@ use backup_cli::{
 };
 use diem_logger::{prelude::*, Level, Logger};
 use diem_secure_push_metrics::MetricsPusher;
-use std::sync::Arc;
-use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(about = "Diem backup tool.")]

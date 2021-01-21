@@ -22,7 +22,7 @@ use diem_types::{
     waypoint::Waypoint,
 };
 use futures::StreamExt;
-use std::{sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -36,6 +36,7 @@ pub struct EpochEndingRestoreController {
     run_mode: Arc<RestoreRunMode>,
     manifest_handle: FileHandle,
     target_version: Version,
+    trusted_waypoints: Arc<HashMap<Version, Waypoint>>,
 }
 
 impl EpochEndingRestoreController {
@@ -49,6 +50,7 @@ impl EpochEndingRestoreController {
             run_mode: global_opt.run_mode,
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version,
+            trusted_waypoints: global_opt.trusted_waypoints,
         }
     }
 
@@ -124,7 +126,14 @@ impl EpochEndingRestoreController {
                     wp_manifest,
                     wp_li,
                 );
-                if let Some(pre_li) = previous_li {
+                if let Some(wp_trusted) = self.trusted_waypoints.get(&wp_li.version()) {
+                    ensure!(
+                        *wp_trusted == wp_li,
+                        "Waypoints don't match. In backup: {}, trusted: {}",
+                        wp_li,
+                        wp_trusted,
+                    );
+                } else if let Some(pre_li) = previous_li {
                     pre_li
                         .ledger_info()
                         .next_epoch_state()
@@ -201,6 +210,11 @@ impl PreheatedEpochEndingRestore {
             .preheat_result
             .map_err(|e| anyhow!("Preheat failed: {}", e))?;
 
+        let first_li = preheat_data
+            .ledger_infos
+            .first()
+            .expect("Epoch ending backup can't be empty.");
+
         if let Some(li) = previous_epoch_ending_ledger_info {
             ensure!(
                 li.next_block_epoch() == preheat_data.manifest.first_epoch,
@@ -209,14 +223,20 @@ impl PreheatedEpochEndingRestore {
                 preheat_data.manifest.first_epoch,
                 li.next_block_epoch(),
             );
-            li.next_epoch_state()
-                .ok_or_else(|| anyhow!("Previous epoch ending LedgerInfo doesn't end an epoch"))?
-                .verify(
-                    preheat_data
-                        .ledger_infos
-                        .first()
-                        .expect("Epoch ending backup can't be empty."),
-                )?;
+            // Waypoint has been verified in preheat if it's trusted, otherwise try to check
+            // the signatures.
+            if self
+                .controller
+                .trusted_waypoints
+                .get(&first_li.ledger_info().version())
+                .is_none()
+            {
+                li.next_epoch_state()
+                    .ok_or_else(|| {
+                        anyhow!("Previous epoch ending LedgerInfo doesn't end an epoch")
+                    })?
+                    .verify(first_li)?;
+            }
         }
 
         let last_li = preheat_data
@@ -248,7 +268,7 @@ impl PreheatedEpochEndingRestore {
 /// Represents a history of epoch changes since epoch 0.
 #[derive(Clone)]
 pub struct EpochHistory {
-    epoch_endings: Vec<LedgerInfo>,
+    pub epoch_endings: Vec<LedgerInfo>,
 }
 
 impl EpochHistory {
