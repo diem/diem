@@ -8,13 +8,16 @@ use diem_types::{
     transaction::{Transaction, WriteSetPayload},
 };
 
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::{stdlib_modules as stdlib, StdLibOptions};
 use diem_writeset_generator::{
     create_release, encode_custom_script, encode_halt_network_payload,
     encode_remove_validators_payload, verify_release,
 };
 use std::path::PathBuf;
 use structopt::StructOpt;
+use vm::CompiledModule;
+
+const GENESIS_MODULE_NAME: &str = "Genesis";
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -75,6 +78,16 @@ fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
         .map_err(|_| format_err!("Unable to write to path"))
 }
 
+fn stdlib_modules() -> Vec<CompiledModule> {
+    // Need to filter out Genesis module similiar to what is done in vmgenesis to make sure Genesis
+    // module isn't published on-chain.
+    stdlib(StdLibOptions::Compiled)
+        .iter()
+        .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
+        .cloned()
+        .collect()
+}
+
 fn main() -> Result<()> {
     let opt = Opt::from_args();
     let payload = match opt.cmd {
@@ -95,8 +108,8 @@ fn main() -> Result<()> {
             version,
             first_release,
         } => {
-            let release_modules = stdlib_modules(StdLibOptions::Compiled);
-            create_release(chain_id, url, version, first_release, release_modules)?
+            let release_modules = stdlib_modules();
+            create_release(chain_id, url, version, first_release, &release_modules)?
         }
         Command::VerifyDiemFrameworkRelease {
             url,
@@ -113,8 +126,8 @@ fn main() -> Result<()> {
                     }
                 })?
             };
-            let release_modules = stdlib_modules(StdLibOptions::Compiled);
-            verify_release(chain_id, url, &writeset_payload, release_modules)?;
+            let release_modules = stdlib_modules();
+            verify_release(chain_id, url, &writeset_payload, &release_modules)?;
             return Ok(());
         }
     };
