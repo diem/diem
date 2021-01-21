@@ -20,6 +20,8 @@ pub enum Command {
     AddValidator(crate::governance::AddValidator),
     #[structopt(about = "Check an endpoint for a listening socket")]
     CheckEndpoint(crate::network_checker::CheckEndpoint),
+    #[structopt(about = "Check all on-chain endpoints for a listening socket")]
+    CheckValidatorSetEndpoints(crate::network_checker::CheckValidatorSetEndpoints),
     #[structopt(about = "Create a new validator account")]
     CreateValidator(crate::governance::CreateValidator),
     #[structopt(about = "Create a new validator operator account")]
@@ -63,6 +65,7 @@ pub enum CommandName {
     AccountResource,
     AddValidator,
     CheckEndpoint,
+    CheckValidatorSetEndpoints,
     CreateValidator,
     CreateValidatorOperator,
     ExtractPrivateKey,
@@ -89,6 +92,7 @@ impl From<&Command> for CommandName {
             Command::AccountResource(_) => CommandName::AccountResource,
             Command::AddValidator(_) => CommandName::AddValidator,
             Command::CheckEndpoint(_) => CommandName::CheckEndpoint,
+            Command::CheckValidatorSetEndpoints(_) => CommandName::CheckValidatorSetEndpoints,
             Command::CreateValidator(_) => CommandName::CreateValidator,
             Command::CreateValidatorOperator(_) => CommandName::CreateValidatorOperator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
@@ -117,6 +121,7 @@ impl std::fmt::Display for CommandName {
             CommandName::AccountResource => "account-resource",
             CommandName::AddValidator => "add-validator",
             CommandName::CheckEndpoint => "check-endpoint",
+            CommandName::CheckValidatorSetEndpoints => "check-validator-set-endpoints",
             CommandName::CreateValidator => "create-validator",
             CommandName::CreateValidatorOperator => "create-validator-operator",
             CommandName::ExtractPrivateKey => "extract-private-key",
@@ -146,6 +151,7 @@ impl Command {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::print_transaction_context(cmd.execute()),
             Command::CheckEndpoint(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CheckValidatorSetEndpoints(cmd) => Self::pretty_print(cmd.execute()),
             Command::CreateValidator(cmd) => {
                 Self::print_transaction_context(cmd.execute().map(|(txn_ctx, _)| txn_ctx))
             }
@@ -223,6 +229,14 @@ impl Command {
 
     pub fn check_endpoint(self) -> Result<String, Error> {
         execute_command!(self, Command::CheckEndpoint, CommandName::CheckEndpoint)
+    }
+
+    pub fn check_validator_set_endpoints(self) -> Result<String, Error> {
+        execute_command!(
+            self,
+            Command::CheckValidatorSetEndpoints,
+            CommandName::CheckValidatorSetEndpoints
+        )
     }
 
     pub fn create_validator(self) -> Result<(TransactionContext, AccountAddress), Error> {
