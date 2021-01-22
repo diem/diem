@@ -6,10 +6,9 @@ use crate::{
     counters,
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
-use diem_config::network_id::NetworkContext;
+use diem_config::{config::TrustedPeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
-use diem_network_address::NetworkAddress;
 use diem_types::PeerId;
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
@@ -28,8 +27,7 @@ pub type ConnectivityManagerService = ConnectivityManager<Fuse<IntervalStream>, 
 struct ConnectivityManagerBuilderConfig {
     network_context: Arc<NetworkContext>,
     eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-    seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    seeds: TrustedPeerSet,
     connectivity_check_interval_ms: u64,
     backoff_base: u64,
     max_connection_delay_ms: u64,
@@ -57,8 +55,7 @@ impl ConnectivityManagerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
         eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-        seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        seeds: TrustedPeerSet,
         connectivity_check_interval_ms: u64,
         backoff_base: u64,
         max_connection_delay_ms: u64,
@@ -75,8 +72,7 @@ impl ConnectivityManagerBuilder {
             config: Some(ConnectivityManagerBuilderConfig {
                 network_context,
                 eligible,
-                seed_addrs,
-                seed_pubkeys,
+                seeds,
                 connectivity_check_interval_ms,
                 backoff_base,
                 max_connection_delay_ms,
@@ -108,8 +104,7 @@ impl ConnectivityManagerBuilder {
             ConnectivityManager::new(
                 config.network_context,
                 config.eligible,
-                config.seed_addrs,
-                config.seed_pubkeys,
+                &config.seeds,
                 IntervalStream::new(interval(Duration::from_millis(
                     config.connectivity_check_interval_ms,
                 )))

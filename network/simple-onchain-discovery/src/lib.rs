@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use channel::diem_channel::{self, Receiver};
-use diem_config::{config::RoleType, network_id::NetworkContext};
-use diem_crypto::{x25519, x25519::PublicKey};
+use diem_config::{
+    config::{RoleType, TrustedPeer},
+    network_id::NetworkContext,
+};
+use diem_crypto::x25519::PublicKey;
 use diem_logger::prelude::*;
 use diem_metrics::{
     register_histogram, register_int_counter_vec, register_int_gauge_vec, DurationHistogram,
     IntCounterVec, IntGaugeVec,
 };
-use diem_network_address::NetworkAddress;
 use diem_network_address_encryption::{Encryptor, Error as EncryptorError};
 use diem_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
 use futures::{sink::SinkExt, StreamExt};
@@ -19,10 +21,7 @@ use network::{
     logging::NetworkSchema,
 };
 use once_cell::sync::Lazy;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 use subscription_service::ReconfigSubscription;
 
 pub mod builder;
@@ -91,7 +90,7 @@ fn extract_updates(
     let role = network_context.role();
 
     // Decode addresses while ignoring bad addresses
-    let new_peer_addrs: HashMap<_, _> = node_set
+    let discovered_peers = node_set
         .into_iter()
         .map(|info| {
             let peer_id = *info.account_address();
@@ -124,26 +123,14 @@ fn extract_updates(
             })
             .unwrap_or_default();
 
-            (peer_id, addrs)
+            (peer_id, TrustedPeer::from(addrs))
         })
         .collect();
 
-    // Retrieve public keys from addresses
-    let new_peer_pubkeys: HashMap<_, _> = new_peer_addrs
-        .iter()
-        .map(|(peer_id, addrs)| {
-            let pubkeys: HashSet<x25519::PublicKey> = addrs
-                .iter()
-                .filter_map(NetworkAddress::find_noise_proto)
-                .collect();
-            (*peer_id, pubkeys)
-        })
-        .collect();
-
-    vec![
-        ConnectivityRequest::UpdateAddresses(DiscoverySource::OnChain, new_peer_addrs),
-        ConnectivityRequest::UpdateEligibleNodes(DiscoverySource::OnChain, new_peer_pubkeys),
-    ]
+    vec![ConnectivityRequest::UpdateDiscoveredPeers(
+        DiscoverySource::OnChain,
+        discovered_peers,
+    )]
 }
 
 impl ConfigurationChangeListener {
@@ -169,6 +156,30 @@ impl ConfigurationChangeListener {
         self.reconfig_events.next().await
     }
 
+    fn find_key_mismatches(&self, onchain_keys: Option<&HashSet<PublicKey>>) {
+        let mismatch = onchain_keys.map_or(0, |pubkeys| {
+            if !pubkeys.contains(&self.expected_pubkey) {
+                error!(
+                    NetworkSchema::new(&self.network_context),
+                    "Onchain pubkey {:?} differs from local pubkey {}",
+                    pubkeys,
+                    self.expected_pubkey
+                );
+                1
+            } else {
+                0
+            }
+        });
+
+        NETWORK_KEY_MISMATCH
+            .with_label_values(&[
+                self.network_context.role().as_str(),
+                self.network_context.network_id().as_str(),
+                self.network_context.peer_id().short_str().as_str(),
+            ])
+            .set(mismatch);
+    }
+
     /// Processes a received OnChainConfigPayload. Depending on role (Validator or FullNode), parses
     /// the appropriate configuration changes and passes it to the ConnectionManager channel.
     async fn process_payload(&mut self, payload: OnChainConfigPayload) {
@@ -181,34 +192,20 @@ impl ConfigurationChangeListener {
         let updates = extract_updates(self.network_context.clone(), &self.encryptor, node_set);
 
         // Ensure that the public key matches what's onchain for this peer
-        if let Some(ConnectivityRequest::UpdateEligibleNodes(_, peer_updates)) = updates
-            .iter()
-            .find(|requests| matches!(requests, ConnectivityRequest::UpdateEligibleNodes(_, _)))
-        {
-            let mismatch = peer_updates
-                .get(&self.network_context.peer_id())
-                .map_or(0, |pubkeys| {
-                    if !pubkeys.contains(&self.expected_pubkey) {
-                        error!(
-                            NetworkSchema::new(&self.network_context),
-                            "Onchain pubkey {:?} differs from local pubkey {}",
-                            pubkeys,
-                            self.expected_pubkey
-                        );
-                        1
-                    } else {
-                        0
-                    }
-                });
-
-            NETWORK_KEY_MISMATCH
-                .with_label_values(&[
-                    self.network_context.role().as_str(),
-                    self.network_context.network_id().as_str(),
-                    self.network_context.peer_id().short_str().as_str(),
-                ])
-                .set(mismatch);
-        };
+        for request in &updates {
+            match request {
+                ConnectivityRequest::UpdateEligibleNodes(_, peer_updates) => {
+                    self.find_key_mismatches(peer_updates.get(&self.network_context.peer_id()))
+                }
+                ConnectivityRequest::UpdateDiscoveredPeers(_, peer_updates) => self
+                    .find_key_mismatches(
+                        peer_updates
+                            .get(&self.network_context.peer_id())
+                            .map(|peer| &peer.keys),
+                    ),
+                _ => {}
+            }
+        }
 
         inc_by_with_context(
             &DISCOVERY_COUNTS,
@@ -268,13 +265,14 @@ mod tests {
         x25519::PrivateKey,
         PrivateKey as PK, Uniform,
     };
+    use diem_network_address::NetworkAddress;
     use diem_types::{
         on_chain_config::OnChainConfig, validator_config::ValidatorConfig,
         validator_info::ValidatorInfo, PeerId,
     };
     use futures::executor::block_on;
     use rand::{rngs::StdRng, SeedableRng};
-    use std::time::Instant;
+    use std::{collections::HashMap, time::Instant};
     use tokio::{
         runtime::Runtime,
         time::{timeout_at, Duration},

@@ -12,10 +12,10 @@
 use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
-        seeds_to_addrs, seeds_to_keys, DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType,
-        TrustedPeer, TrustedPeerSet, CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS,
-        MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE,
-        MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
+        DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType, TrustedPeer, TrustedPeerSet,
+        CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_REQS,
+        MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
+        MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
     },
     network_id::NetworkContext,
 };
@@ -332,26 +332,25 @@ impl NetworkBuilder {
             None
         };
 
-        let seed_addrs = seeds_to_addrs(seeds);
-        let mut seed_pubkeys = seeds_to_keys(seeds);
-
-        // union pubkeys from addrs with pubkeys directly in config
-        let addr_pubkeys_iter = seed_addrs.iter().map(|(peer_id, addrs)| {
-            let pubkey_set: HashSet<_> = addrs
-                .iter()
-                .filter_map(NetworkAddress::find_noise_proto)
-                .collect();
-            (*peer_id, pubkey_set)
-        });
-        for (peer_id, pubkey_set) in addr_pubkeys_iter {
-            seed_pubkeys.entry(peer_id).or_default().extend(pubkey_set);
-        }
+        // Merge pubkeys that may be in the seed addresses
+        let mut seeds = seeds.clone();
+        seeds.values_mut().for_each(
+            |TrustedPeer {
+                 addresses, keys, ..
+             }| {
+                addresses
+                    .iter()
+                    .filter_map(NetworkAddress::find_noise_proto)
+                    .for_each(|pubkey| {
+                        keys.insert(pubkey);
+                    });
+            },
+        );
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
             trusted_peers,
-            seed_addrs,
-            seed_pubkeys,
+            seeds,
             connectivity_check_interval_ms,
             connection_backoff_base,
             max_connection_delay_ms,

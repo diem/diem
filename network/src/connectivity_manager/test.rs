@@ -9,7 +9,10 @@ use crate::{
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use core::str::FromStr;
-use diem_config::{config::RoleType, network_id::NetworkId};
+use diem_config::{
+    config::{RoleType, TrustedPeer, TrustedPeerSet},
+    network_id::NetworkId,
+};
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_logger::info;
 use diem_network_address::NetworkAddress;
@@ -34,23 +37,26 @@ fn setup_conn_mgr(
     let network_context =
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::random());
 
-    let seed_pubkeys: HashMap<_, _> = eligible_peers
+    // Fills in the gaps for eligible peers.  Eligible peers in tests aren't always the seeds
+    let seeds: TrustedPeerSet = eligible_peers
         .into_iter()
         .map(|peer_id| {
-            let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-            let pubkeys: HashSet<_> = [pubkey].iter().copied().collect();
-            (peer_id, pubkeys)
+            let addrs: Vec<NetworkAddress> = seed_addrs
+                .get(&peer_id)
+                .map_or_else(Vec::new, |addr| addr.clone());
+            let mut pubkeys = HashSet::new();
+            pubkeys.insert(x25519::PrivateKey::generate_for_testing().public_key());
+            (peer_id, TrustedPeer::new(addrs, pubkeys))
         })
         .collect();
 
-    setup_conn_mgr_with_context(network_context, rt, seed_addrs, seed_pubkeys)
+    setup_conn_mgr_with_context(network_context, rt, &seeds)
 }
 
 fn setup_conn_mgr_with_context(
     network_context: NetworkContext,
     rt: &mut Runtime,
-    seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    seeds: &TrustedPeerSet,
 ) -> (
     diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
@@ -66,8 +72,7 @@ fn setup_conn_mgr_with_context(
         ConnectivityManager::new(
             Arc::new(network_context),
             Arc::new(RwLock::new(HashMap::new())),
-            seed_addrs,
-            seed_pubkeys,
+            seeds,
             ticker_rx,
             ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
@@ -1217,22 +1222,21 @@ fn multiple_addrs_shrinking() {
 fn public_connection_limit() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let mut seed_addrs: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
-    let mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();
-    for _ in 0..MAX_TEST_CONNECTIONS + 1 {
-        let (peer_id, _, pubkeys, addr) = gen_peer();
-        seed_pubkeys.insert(peer_id, pubkeys);
-        seed_addrs.insert(peer_id, vec![addr]);
-    }
+    let seeds = (0..MAX_TEST_CONNECTIONS + 1)
+        .map(|_| {
+            let (peer_id, _, pubkeys, addr) = gen_peer();
+            (peer_id, TrustedPeer::new(vec![addr], pubkeys))
+        })
+        .collect();
 
-    info!("Seed peers are {:?}", seed_pubkeys);
+    info!("Seed peers are {:?}", seeds);
     let network_context = NetworkContext::new(
         NetworkId::vfn_network(),
         RoleType::FullNode,
         PeerId::random(),
     );
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr_with_context(network_context, &mut rt, seed_addrs, seed_pubkeys);
+        setup_conn_mgr_with_context(network_context, &mut rt, &seeds);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -1276,15 +1280,13 @@ fn basic_update_eligible_peers() {
     let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (_ticker_tx, ticker_rx) = channel::new_test::<()>(0);
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
-    let seed_addrs = HashMap::new();
-    let seed_pubkeys = HashMap::new();
+    let seeds = TrustedPeerSet::new();
     let mut rng = StdRng::from_seed(TEST_SEED);
 
     let mut conn_mgr = ConnectivityManager::new(
         network_context,
         trusted_peers.clone(),
-        seed_addrs,
-        seed_pubkeys,
+        &seeds,
         ticker_rx,
         ConnectionRequestSender::new(connection_reqs_tx),
         connection_notifs_rx,
