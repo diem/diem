@@ -326,16 +326,16 @@ pub(crate) fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 
-pub fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
-    let mut buf = [0; 4];
-    cursor.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
-}
-
 pub fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
     let mut buf = [0; 1];
     cursor.read_exact(&mut buf)?;
     Ok(buf[0])
+}
+
+pub fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
+    let mut buf = [0; 4];
+    cursor.read_exact(&mut buf)?;
+    Ok(u32::from_le_bytes(buf))
 }
 
 pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
@@ -362,6 +362,139 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     }
     bail!("invalid ULEB128 repr for usize");
 }
+
+pub(crate) mod versioned_data {
+    use crate::{errors::*, file_format_common::*};
+    use move_core_types::vm_status::StatusCode;
+    use std::io::{Cursor, Read};
+    pub struct VersionedBinary<'a> {
+        version: u32,
+        binary: &'a [u8],
+    }
+
+    pub struct VersionedCursor<'a> {
+        version: u32,
+        cursor: Cursor<&'a [u8]>,
+    }
+
+    pub const MAX_VERSION: u32 = 1u32;
+
+    impl<'a> VersionedBinary<'a> {
+        fn new(binary: &'a [u8]) -> BinaryLoaderResult<(Self, Cursor<&'a [u8]>)> {
+            let mut cursor = Cursor::<&'a [u8]>::new(binary);
+            let mut magic = [0u8; BinaryConstants::DIEM_MAGIC_SIZE];
+            if let Ok(count) = cursor.read(&mut magic) {
+                if count != BinaryConstants::DIEM_MAGIC_SIZE || magic != BinaryConstants::DIEM_MAGIC
+                {
+                    return Err(PartialVMError::new(StatusCode::BAD_MAGIC));
+                }
+            } else {
+                return Err(PartialVMError::new(StatusCode::MALFORMED)
+                    .with_message("Bad binary header".to_string()));
+            }
+            let version = match read_u32(&mut cursor) {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err(PartialVMError::new(StatusCode::MALFORMED)
+                        .with_message("Bad binary header".to_string()));
+                }
+            };
+            if version == 0 || version > MAX_VERSION {
+                return Err(PartialVMError::new(StatusCode::UNKNOWN_VERSION));
+            }
+            Ok((Self { version, binary }, cursor))
+        }
+
+        #[allow(dead_code)]
+        pub fn version(&self) -> u32 {
+            self.version
+        }
+
+        pub fn new_cursor(&self, start: usize, end: usize) -> VersionedCursor<'a> {
+            VersionedCursor {
+                version: self.version,
+                cursor: Cursor::new(&self.binary[start..end]),
+            }
+        }
+
+        pub fn slice(&self, start: usize, end: usize) -> &'a [u8] {
+            &self.binary[start..end]
+        }
+    }
+
+    impl<'a> VersionedCursor<'a> {
+        /// Verifies the correctness of the "static" part of the binary's header.
+        /// If valid, returns a cursor to the binary
+        pub fn new(binary: &'a [u8]) -> BinaryLoaderResult<Self> {
+            let (binary, cursor) = VersionedBinary::new(binary)?;
+            Ok(VersionedCursor {
+                version: binary.version,
+                cursor,
+            })
+        }
+
+        #[allow(dead_code)]
+        pub fn version(&self) -> u32 {
+            self.version
+        }
+
+        pub fn position(&self) -> u64 {
+            self.cursor.position()
+        }
+
+        #[allow(dead_code)]
+        pub fn binary(&self) -> VersionedBinary<'a> {
+            VersionedBinary {
+                version: self.version,
+                binary: self.cursor.get_ref(),
+            }
+        }
+
+        pub fn read_u8(&mut self) -> Result<u8> {
+            read_u8(&mut self.cursor)
+        }
+
+        #[allow(dead_code)]
+        pub fn read_u32(&mut self) -> Result<u32> {
+            read_u32(&mut self.cursor)
+        }
+
+        pub fn read_uleb128_as_u64(&mut self) -> Result<u64> {
+            read_uleb128_as_u64(&mut self.cursor)
+        }
+
+        pub fn read_new_binary<'b>(
+            &mut self,
+            buffer: &'b mut Vec<u8>,
+            n: usize,
+        ) -> BinaryLoaderResult<VersionedBinary<'b>> {
+            debug_assert!(buffer.is_empty());
+            let mut tmp_buffer = vec![0; n];
+            match self.cursor.read_exact(&mut tmp_buffer) {
+                Err(_) => Err(PartialVMError::new(StatusCode::MALFORMED)),
+                Ok(()) => {
+                    *buffer = tmp_buffer;
+                    Ok(VersionedBinary {
+                        version: self.version,
+                        binary: buffer,
+                    })
+                }
+            }
+        }
+
+        #[cfg(test)]
+        pub fn new_for_test(version: u32, cursor: Cursor<&'a [u8]>) -> Self {
+            Self { version, cursor }
+        }
+    }
+
+    impl<'a> Read for VersionedCursor<'a> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.cursor.read(buf)
+        }
+    }
+}
+pub(crate) use versioned_data::{VersionedBinary, VersionedCursor};
 
 /// The encoding of the instruction is the serialized form of it, but disregarding the
 /// serialization of the instruction's argument(s).
