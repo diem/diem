@@ -20,7 +20,7 @@ proptest = { version = "0.10.1", optional = true }
 rand = "0.7.3"
 serde = { version = "1.0.120", default-features = false }
 tokio = { version = "1.0.2", features = ["full"] }
-tokio-stream = "0.1.1"
+tokio-stream = "0.1.2"
 
 channel = { path = "../common/channel", version = "0.1.0" }
 diem-config = { path = "../config", version = "0.1.0" }

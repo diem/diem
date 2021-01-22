@@ -15,7 +15,7 @@ futures = "0.3.12"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 structopt = "0.3.21"
 tokio = { version = "1.0.2", features = ["full"] }
-tokio-stream = "0.1.1"
+tokio-stream = "0.1.2"
 
 backup-service = { path = "../storage/backup/backup-service", version = "0.1.0" }
 consensus = { path = "../consensus", version = "0.1.0" }
