@@ -173,11 +173,16 @@ impl<'a> StateView for VerifiedStateView<'a> {
                             err
                         )
                     })?;
-                assert!(self
-                    .account_to_proof_cache
+                self.account_to_proof_cache
                     .write()
-                    .insert(address_hash, proof)
-                    .is_none());
+                    .insert(address_hash, proof);
+                // multiple threads may enter this code, and another thread might add
+                // an address before this one
+                /* assert!(self
+                .account_to_proof_cache
+                .write()
+                .insert(address_hash, proof)
+                .is_none()); */
                 blob
             }
         };
