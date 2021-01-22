@@ -347,13 +347,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     /// Note: if a callback is not specified, the response isn't sent anywhere.
     fn notify_consensus_of_commit_response(
         &self,
-        commit_response_message: String,
+        commit_response: CommitResponse,
         callback: Option<oneshot::Sender<Result<CommitResponse>>>,
     ) -> Result<(), Error> {
-        let commit_response = CommitResponse {
-            msg: commit_response_message,
-        };
-
         if let Some(callback) = callback {
             if let Err(error) = callback.send(Ok(commit_response)) {
                 counters::COMMIT_FLOW_FAIL
@@ -387,20 +383,20 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         self.update_sync_state_metrics_and_logs()?;
 
         // Notify mempool of commit
-        let commit_response_message = match self
+        let commit_response = match self
             .notify_mempool_of_committed_transactions(committed_transactions)
             .await
         {
-            Ok(()) => "".into(), // Empty message means success -- this is fixed in another PR!
+            Ok(()) => CommitResponse::success(),
             Err(error) => {
                 error!(LogSchema::new(LogEntry::CommitFlow).error(&error.clone().into()));
-                format!("{}", error)
+                CommitResponse::error(format!("{}", error))
             }
         };
 
         // Notify consensus of the commit response
         if let Err(error) =
-            self.notify_consensus_of_commit_response(commit_response_message, commit_callback)
+            self.notify_consensus_of_commit_response(commit_response, commit_callback)
         {
             error!(LogSchema::new(LogEntry::CommitFlow).error(&error.into()),);
         }

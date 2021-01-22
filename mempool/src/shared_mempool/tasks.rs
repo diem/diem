@@ -365,13 +365,7 @@ pub(crate) async fn process_state_sync_request(
         .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
         .observe(req.transactions.len() as f64);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
-    let result = if req
-        .callback
-        .send(Ok(CommitResponse {
-            msg: "".to_string(),
-        }))
-        .is_err()
-    {
+    let result = if req.callback.send(Ok(CommitResponse::success())).is_err() {
         error!(LogSchema::event_log(
             LogEntry::StateSyncCommit,
             LogEvent::CallbackFail

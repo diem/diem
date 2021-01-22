@@ -104,17 +104,15 @@ impl StateSyncClient {
                         "[State Sync Client] Timeout: failed to receive commit() ack in time!"
                     ))
                 }
-                // TODO(joshlind): clean up the use of CommitResponse.. having a string.is_empty()
-                // to check the presence of an error isn't great :(
                 Ok(response) => {
-                    let CommitResponse { msg } = response??;
-                    if msg != "" {
+                    let response = response??; // Unwrap the futures result to get the body
+                    if response.success {
+                        Ok(())
+                    } else {
                         Err(format_err!(
                             "[State Sync Client] Failed: commit() returned an error: {:?}",
-                            msg
+                            response.error_message
                         ))
-                    } else {
-                        Ok(())
                     }
                 }
             }

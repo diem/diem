@@ -188,8 +188,27 @@ impl fmt::Display for CommitNotification {
 
 #[derive(Debug)]
 pub struct CommitResponse {
-    /// error msg if applicable - empty string if commit was processed successfully by mempool
-    pub msg: String,
+    pub success: bool,
+    /// The error message if `success` is false.
+    pub error_message: Option<String>,
+}
+
+impl CommitResponse {
+    // Returns a new CommitResponse without an error.
+    pub fn success() -> Self {
+        CommitResponse {
+            success: true,
+            error_message: None,
+        }
+    }
+
+    // Returns a new CommitResponse holding the given error message.
+    pub fn error(error_message: String) -> Self {
+        CommitResponse {
+            success: false,
+            error_message: Some(error_message),
+        }
+    }
 }
 
 /// Successfully executed and committed txn
