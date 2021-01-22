@@ -25,7 +25,7 @@ spec:
       securityContext:
         capabilities:
           add: ["IPC_LOCK"]
-      image: vault:1.4.0
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/vault:1.4.0
       imagePullPolicy: IfNotPresent
       command:
       args:
@@ -96,7 +96,7 @@ spec:
       securityContext:
         capabilities:
           add: ["IPC_LOCK"]
-      image: vault:1.4.0
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/vault:1.4.0
       imagePullPolicy: IfNotPresent
       command:
         - "sh"
