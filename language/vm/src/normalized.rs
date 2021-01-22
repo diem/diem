@@ -116,21 +116,26 @@ impl Type {
         use SignatureToken::*;
         match s {
             Struct(shi) => {
-                let handle = m.struct_handle_at(*shi);
-                assert!(handle.type_parameters.is_empty(), "A struct with N type parameters should be encoded as StructModuleInstantiation with type_arguments = [TypeParameter(1), ..., TypeParameter(N)]");
+                let s_handle = m.struct_handle_at(*shi);
+                assert!(s_handle.type_parameters.is_empty(), "A struct with N type parameters should be encoded as StructModuleInstantiation with type_arguments = [TypeParameter(1), ..., TypeParameter(N)]");
+                let m_handle = m.module_handle_at(s_handle.module);
                 Type::Struct {
-                    address: *m.address(),
-                    module: m.name().to_owned(),
-                    name: m.identifier_at(handle.name).to_owned(),
+                    address: *m.address_identifier_at(m_handle.address),
+                    module: m.identifier_at(m_handle.name).to_owned(),
+                    name: m.identifier_at(s_handle.name).to_owned(),
                     type_arguments: Vec::new(),
                 }
             }
-            StructInstantiation(shi, type_actuals) => Type::Struct {
-                address: *m.address(),
-                module: m.name().to_owned(),
-                name: m.identifier_at(m.struct_handle_at(*shi).name).to_owned(),
-                type_arguments: type_actuals.iter().map(|t| Type::new(m, t)).collect(),
-            },
+            StructInstantiation(shi, type_actuals) => {
+                let s_handle = m.struct_handle_at(*shi);
+                let m_handle = m.module_handle_at(s_handle.module);
+                Type::Struct {
+                    address: *m.address_identifier_at(m_handle.address),
+                    module: m.identifier_at(m_handle.name).to_owned(),
+                    name: m.identifier_at(s_handle.name).to_owned(),
+                    type_arguments: type_actuals.iter().map(|t| Type::new(m, t)).collect(),
+                }
+            }
             Bool => Type::Bool,
             U8 => Type::U8,
             U64 => Type::U64,
