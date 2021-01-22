@@ -19,12 +19,13 @@ use crate::{
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::{
+    access_path::AccessPath,
     account_config,
     block_metadata::BlockMetadata,
     on_chain_config::DIEM_VERSION_3,
     transaction::{
-        ChangeSet, Module, SignatureCheckedTransaction, Transaction, TransactionOutput,
-        TransactionPayload, TransactionStatus, WriteSetPayload,
+        ChangeSet, Module, SignatureCheckedTransaction, Transaction, TransactionArgument,
+        TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
@@ -650,6 +651,34 @@ impl DiemVM {
         ))
     }
 
+    fn preload_cache(
+        signature_verified_block: &[PreprocessedTransaction],
+        data_view: &impl StateView,
+    ) {
+        // generate a collection of addresses
+        let mut addresses_to_preload = HashSet::new();
+        for txn in signature_verified_block {
+            if let PreprocessedTransaction::UserTransaction(txn) = txn {
+                if let TransactionPayload::Script(script) = txn.payload() {
+                    addresses_to_preload.insert(txn.sender());
+
+                    for arg in script.args() {
+                        if let TransactionArgument::Address(address) = arg {
+                            addresses_to_preload.insert(*address);
+                        }
+                    }
+                }
+            }
+        }
+
+        // This will launch a number of threads to preload the account blobs in parallel. We may
+        // want to fine tune the number of threads launched here in the future.
+        addresses_to_preload
+            .into_par_iter()
+            .map(|addr| data_view.get(&AccessPath::new(addr, Vec::new())).ok()?)
+            .collect::<Vec<Option<Vec<u8>>>>();
+    }
+
     pub(crate) fn execute_block_impl(
         &self,
         transactions: Vec<Transaction>,
@@ -675,6 +704,12 @@ impl DiemVM {
                 .map(preprocess_transaction)
                 .collect();
         }
+
+        rayon::scope(|scope| {
+            scope.spawn(|_| {
+                DiemVM::preload_cache(&signature_verified_block, data_cache);
+            });
+        });
 
         for (idx, txn) in signature_verified_block.into_iter().enumerate() {
             let log_context = AdapterLogSchema::new(data_cache.id(), idx);

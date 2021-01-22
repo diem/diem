@@ -168,11 +168,13 @@ impl<'a> StateView for VerifiedStateView<'a> {
                             err
                         )
                     })?;
-                assert!(self
-                    .account_to_proof_cache
+
+                // multiple threads may enter this code, and another thread might add
+                // an address before this one. Thus the insertion might return a None here.
+                self.account_to_proof_cache
                     .write()
-                    .insert(address_hash, proof)
-                    .is_none());
+                    .insert(address_hash, proof);
+
                 blob
             }
         };
