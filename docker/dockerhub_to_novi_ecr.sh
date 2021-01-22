@@ -57,6 +57,7 @@ docker pull --disable-content-trust=false docker.io/libra/validator:"$DOCKERHUB_
 docker pull --disable-content-trust=false docker.io/libra/validator_tcb:"$DOCKERHUB_TAG"
 docker pull --disable-content-trust=false docker.io/libra/cluster_test:"$DOCKERHUB_TAG"
 docker pull --disable-content-trust=false docker.io/libra/client:"$DOCKERHUB_TAG"
+docker pull --disable-content-trust=false docker.io/libra/vault:"1.4.0"
 
 export DOCKER_CONTENT_TRUST=0
 
@@ -76,5 +77,6 @@ docker push --disable-content-trust=true "$TARGET_REPO"/diem/validator:"$OUTPUT_
 docker push --disable-content-trust=true "$TARGET_REPO"/diem/validator_tcb:"$OUTPUT_TAG"
 docker push --disable-content-trust=true "$TARGET_REPO"/diem/cluster_test:"$OUTPUT_TAG"
 docker push --disable-content-trust=true "$TARGET_REPO"/diem/client:"$OUTPUT_TAG"
+docker push --disable-content-trust=true "$TARGET_REPO"/diem/vault:"1.4.0"
 
 set +x
