@@ -146,7 +146,7 @@ impl StateSyncPeer {
 
     // Moves to the next epoch. Note that other peers are not going to be able to discover
     // their new signers: they're going to learn about the new epoch public key through state
-    // synchronization. Private keys are discovered separately.
+    // sync. Private keys are discovered separately.
     pub fn move_to_next_epoch(&self, validator_infos: Vec<ValidatorInfo>, validator_index: usize) {
         let (validator_set, validator_signers) = create_new_validator_set(validator_infos);
         self.storage_proxy
@@ -346,7 +346,7 @@ impl StateSyncEnvironment {
                 let peer_id = PeerId::random();
                 peer.multi_peer_ids.insert(network.clone(), peer_id);
 
-                // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
+                // mock the StateSyncEvents and StateSyncSender to allow manually controlling
                 // msg delivery in test
                 let (network_reqs_tx, network_reqs_rx) =
                     diem_channel::new(QueueStyle::LIFO, 1, None);

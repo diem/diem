@@ -333,7 +333,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         let mut network_builder = NetworkBuilder::create(chain_id, role, network_config);
         let network_id = network_config.network_id.clone();
 
-        // Create the endpoints to connect the Network to StateSynchronizer.
+        // Create the endpoints to connect the Network to State Sync.
         let (state_sync_sender, state_sync_events) =
             network_builder.add_protocol_handler(state_sync::network::network_endpoint_config());
         state_sync_network_handles.push((
@@ -446,10 +446,10 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         // (in case it's present). There is no sense to start consensus prior to that.
         // TODO: Note that we need the networking layer to be able to discover & connect to the
         // peers with potentially outdated network identity public keys.
-        debug!("Wait until state synchronizer is initialized");
+        debug!("Wait until state sync is initialized");
         block_on(state_sync_client.wait_until_initialized())
-            .expect("State synchronizer initialization failure");
-        debug!("State synchronizer initialization complete.");
+            .expect("State sync initialization failure");
+        debug!("State sync initialization complete.");
 
         // Initialize and start consensus.
         instant = Instant::now();

@@ -89,13 +89,14 @@ pub const STATE_SYNC_LABEL: &str = "state_sync";
 pub const COMPLETE_LABEL: &str = "complete";
 pub const TIMEOUT_LABEL: &str = "timeout";
 
-/// Counter of pending network events to State Synchronizer
+/// Counter of pending network events to State Sync
 pub static PENDING_STATE_SYNC_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "diem_state_sync_pending_network_events",
-        "Counters(queued,dequeued,dropped) related to pending network notifications for State Synchronizer",
+        "Counters(queued,dequeued,dropped) related to pending network notifications for State Sync",
         &["state"]
-    ).unwrap()
+    )
+    .unwrap()
 });
 
 /// Number of chunk requests sent from a node

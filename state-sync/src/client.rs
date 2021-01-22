@@ -33,7 +33,7 @@ pub struct CommitNotification {
 pub enum CoordinatorMessage {
     SyncRequest(Box<SyncRequest>), // Initiate a new sync request for a given target.
     CommitNotification(Box<CommitNotification>), // Notify state sync about committed transactions.
-    GetSyncState(oneshot::Sender<SyncState>), // Return the local synchronization state.
+    GetSyncState(oneshot::Sender<SyncState>), // Return the local sync state.
     WaitForInitialization(oneshot::Sender<Result<()>>), // Wait until state sync is initialized to the waypoint.
 }
 
