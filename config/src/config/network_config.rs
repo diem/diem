@@ -42,8 +42,20 @@ pub const CONNECTION_BACKOFF_BASE: u64 = 2;
 pub const IP_BYTE_BUCKET_RATE: usize = 102400 /* 100 KiB */;
 pub const IP_BYTE_BUCKET_SIZE: usize = IP_BYTE_BUCKET_RATE;
 
-pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
-pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
+/// TODO: For migration compatibility remove later
+pub fn seeds_to_addrs(seeds: &TrustedPeerSet) -> HashMap<PeerId, Vec<NetworkAddress>> {
+    seeds
+        .iter()
+        .map(|(peer_id, TrustedPeer { addresses, .. })| (*peer_id, addresses.clone()))
+        .collect()
+}
+
+pub fn seeds_to_keys(seeds: &TrustedPeerSet) -> HashMap<PeerId, HashSet<x25519::PublicKey>> {
+    seeds
+        .iter()
+        .map(|(peer_id, TrustedPeer { keys, .. })| (*peer_id, keys.clone()))
+        .collect()
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -72,14 +84,8 @@ pub struct NetworkConfig {
     // Used to store network address encryption keys for validator nodes
     pub network_address_key_backend: Option<SecureBackend>,
     pub network_id: NetworkId,
-    // Addresses of initial peers to connect to. In a mutual_authentication network,
-    // we will extract the public keys from these addresses to set our initial
-    // trusted peers set.
-    pub seed_addrs: SeedAddresses,
-    // Backup for public keys of peers that we'll accept connections from in a
-    // mutual_authentication network. This config field is intended as a fallback
-    // in case some peers don't have well defined addresses.
-    pub seed_pubkeys: SeedPublicKeys,
+    // The initial peers to connect to prior to onchain discovery
+    pub seeds: TrustedPeerSet,
     // The maximum size of an inbound or outbound request frame
     pub max_frame_size: usize,
     // Enables proxy protocol on incoming connections to get original source addresses
@@ -115,8 +121,6 @@ impl NetworkConfig {
             mutual_authentication: false,
             network_address_key_backend: None,
             network_id,
-            seed_pubkeys: HashMap::default(),
-            seed_addrs: HashMap::default(),
             max_frame_size: MAX_FRAME_SIZE,
             enable_proxy_protocol: false,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
@@ -131,6 +135,7 @@ impl NetworkConfig {
             max_inbound_connections: MAX_INBOUND_CONNECTIONS,
             inbound_rate_limit_config: None,
             outbound_rate_limit_config: None,
+            seeds: TrustedPeerSet::default(),
         };
         config.prepare_identity();
         config
@@ -240,10 +245,9 @@ impl NetworkConfig {
         self.identity = Identity::from_config(identity_key, peer_id);
     }
 
-    /// Check that all seed peer addresses look like canonical DiemNet addresses
-    pub fn verify_seed_addrs(&self) -> Result<(), Error> {
-        for (peer_id, addrs) in self.seed_addrs.iter() {
-            for addr in addrs {
+    pub fn verify_seeds(&self) -> Result<(), Error> {
+        for (peer_id, seed) in self.seeds.iter() {
+            for addr in seed.addresses.iter() {
                 crate::config::invariant(
                     addr.is_diemnet_addr(),
                     format!(
@@ -253,6 +257,12 @@ impl NetworkConfig {
                     ),
                 )?;
             }
+
+            // Require there to be a pubkey somewhere, either in the address (assumed by `is_diemnet_addr`)
+            crate::config::invariant(
+                !seed.keys.is_empty() || !seed.addresses.is_empty(),
+                format!("Seed peer {} has no pubkeys", peer_id.short_str()),
+            )?;
         }
         Ok(())
     }
@@ -325,6 +335,56 @@ impl Default for RateLimitConfig {
             ip_byte_bucket_size: IP_BYTE_BUCKET_SIZE,
             initial_bucket_fill_percentage: 25,
             enabled: true,
+        }
+    }
+}
+
+pub type TrustedPeerSet = HashMap<PeerId, TrustedPeer>;
+
+/// Represents a single seed configuration for a seed peer
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(default)]
+pub struct TrustedPeer {
+    pub keys: HashSet<x25519::PublicKey>,
+    pub addresses: Vec<NetworkAddress>,
+}
+
+impl TrustedPeer {
+    /// Combines `Vec<NetworkAddress>` keys with the `HashSet` given
+    pub fn new(
+        addresses: Vec<NetworkAddress>,
+        mut keys: HashSet<x25519::PublicKey>,
+    ) -> TrustedPeer {
+        let addr_keys = addresses
+            .iter()
+            .filter_map(NetworkAddress::find_noise_proto);
+        keys.extend(addr_keys);
+        TrustedPeer { addresses, keys }
+    }
+}
+
+impl From<Vec<NetworkAddress>> for TrustedPeer {
+    /// Converts a `Vec<NetworkAddress>` to a `TrustedPeer`s by extracting the `x25519::PublicKey`s from the address
+    fn from(addresses: Vec<NetworkAddress>) -> TrustedPeer {
+        let keys: HashSet<x25519::PublicKey> = addresses
+            .iter()
+            .filter_map(NetworkAddress::find_noise_proto)
+            .collect();
+        TrustedPeer { addresses, keys }
+    }
+}
+
+impl From<NetworkAddress> for TrustedPeer {
+    fn from(address: NetworkAddress) -> TrustedPeer {
+        TrustedPeer::from(vec![address])
+    }
+}
+
+impl From<HashSet<x25519::PublicKey>> for TrustedPeer {
+    fn from(keys: HashSet<x25519::PublicKey>) -> TrustedPeer {
+        TrustedPeer {
+            addresses: Vec::new(),
+            keys,
         }
     }
 }

@@ -4,7 +4,7 @@
 use anyhow::{bail, format_err, Result};
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::{NodeConfig, RoleType, HANDSHAKE_VERSION},
+    config::{NodeConfig, RoleType, TrustedPeer, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_crypto::{
@@ -379,15 +379,14 @@ impl StateSyncEnvironment {
                 peer.peer_id,
             ));
 
-            let seed_addrs: HashMap<_, _> = self
+            let seeds: HashMap<_, _> = self
                 .peers
                 .iter()
                 .map(|peer| {
                     let peer = peer.borrow();
-                    (peer.peer_id, vec![peer.network_addr.clone()])
+                    (peer.peer_id, TrustedPeer::from(peer.network_addr.clone()))
                 })
                 .collect();
-            let seed_pubkeys = HashMap::new();
             let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
             // Recover the base address we bound previously.
@@ -397,8 +396,7 @@ impl StateSyncEnvironment {
 
             let mut network_builder = NetworkBuilder::new_for_test(
                 ChainId::default(),
-                seed_addrs,
-                seed_pubkeys,
+                &seeds,
                 trusted_peers,
                 network_context,
                 base_addr,

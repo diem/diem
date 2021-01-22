@@ -12,10 +12,10 @@
 use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
-        DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType, CONNECTION_BACKOFF_BASE,
-        CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS,
-        MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS,
-        NETWORK_CHANNEL_SIZE,
+        seeds_to_addrs, seeds_to_keys, DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType,
+        TrustedPeerSet, CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS,
+        MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE,
+        MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
     },
     network_id::NetworkContext,
 };
@@ -124,8 +124,7 @@ impl NetworkBuilder {
 
     pub fn new_for_test(
         chain_id: ChainId,
-        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-        seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        seeds: &TrustedPeerSet,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
@@ -147,8 +146,7 @@ impl NetworkBuilder {
         );
 
         builder.add_connectivity_manager(
-            seed_addrs,
-            seed_pubkeys,
+            seeds,
             trusted_peers,
             MAX_FULLNODE_OUTBOUND_CONNECTIONS,
             CONNECTION_BACKOFF_BASE,
@@ -202,9 +200,7 @@ impl NetworkBuilder {
         );
 
         // Sanity check seed addresses.
-        config
-            .verify_seed_addrs()
-            .expect("Seed addresses must be well-formed");
+        config.verify_seeds().expect("Seeds must be well formed");
 
         // Don't turn on connectivity manager if we're a public-facing server,
         // for example.
@@ -220,11 +216,10 @@ impl NetworkBuilder {
         // TODO:  Why not add ConnectivityManager always?
         if config.mutual_authentication
             || config.discovery_method != DiscoveryMethod::None
-            || !config.seed_addrs.is_empty()
+            || !config.seeds.is_empty()
         {
             network_builder.add_connectivity_manager(
-                config.seed_addrs.clone(),
-                config.seed_pubkeys.clone(),
+                &config.seeds,
                 trusted_peers,
                 config.max_outbound_connections,
                 config.connection_backoff_base,
@@ -311,8 +306,7 @@ impl NetworkBuilder {
     /// permissioned.
     pub fn add_connectivity_manager(
         &mut self,
-        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-        mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        seeds: &TrustedPeerSet,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         max_outbound_connections: usize,
         connection_backoff_base: u64,
@@ -326,6 +320,9 @@ impl NetworkBuilder {
         } else {
             None
         };
+
+        let seed_addrs = seeds_to_addrs(seeds);
+        let mut seed_pubkeys = seeds_to_keys(seeds);
 
         // union pubkeys from addrs with pubkeys directly in config
         let addr_pubkeys_iter = seed_addrs.iter().map(|(peer_id, addrs)| {

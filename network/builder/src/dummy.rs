@@ -6,7 +6,7 @@
 use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use diem_config::{
-    config::{RoleType, NETWORK_CHANNEL_SIZE},
+    config::{RoleType, TrustedPeer, TrustedPeerSet, NETWORK_CHANNEL_SIZE},
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
@@ -123,20 +123,15 @@ pub fn setup_network() -> DummyNetwork {
 
     // Setup keys for listener.
     let listener_identity_private_key = x25519::PrivateKey::generate(&mut rng);
-    let listener_identity_public_key = listener_identity_private_key.public_key();
-    let listener_pubkeys: HashSet<_> = vec![listener_identity_public_key].into_iter().collect();
 
     // Setup listen addresses
     let dialer_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
     let listener_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
 
-    // Setup trusted peers.
-    let seed_pubkeys: HashMap<_, _> = vec![
-        (dialer_peer_id, dialer_pubkeys),
-        (listener_peer_id, listener_pubkeys),
-    ]
-    .into_iter()
-    .collect();
+    // Setup seed peers
+    let mut seeds = TrustedPeerSet::new();
+    seeds.insert(dialer_peer_id, TrustedPeer::from(dialer_pubkeys));
+
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
@@ -149,8 +144,7 @@ pub fn setup_network() -> DummyNetwork {
     ));
     let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        HashMap::new(),
-        seed_pubkeys.clone(),
+        &seeds,
         trusted_peers,
         network_context,
         listener_addr,
@@ -160,13 +154,12 @@ pub fn setup_network() -> DummyNetwork {
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     network_builder.build(runtime.handle().clone()).start();
+
+    // Add the listener address with port
     let listener_addr = network_builder.listen_address();
+    seeds.insert(listener_peer_id, TrustedPeer::from(listener_addr));
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
-    let seed_addrs: HashMap<_, _> = [(listener_peer_id, vec![listener_addr])]
-        .iter()
-        .cloned()
-        .collect();
 
     // Set up the dialer network
     let network_context = Arc::new(NetworkContext::new(
@@ -179,8 +172,7 @@ pub fn setup_network() -> DummyNetwork {
 
     let mut network_builder = NetworkBuilder::new_for_test(
         chain_id,
-        seed_addrs,
-        seed_pubkeys,
+        &seeds,
         trusted_peers,
         network_context,
         dialer_addr,
