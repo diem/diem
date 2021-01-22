@@ -5,7 +5,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use move_model::run_model_builder;
+use move_model::{run_bytecode_model_builder, run_model_builder};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, DEFAULT_SENDER};
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
@@ -19,6 +19,16 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         env.report_errors(&mut writer);
         String::from_utf8_lossy(&writer.into_inner()).to_string()
     } else {
+        // check that translating from bytecodes also works + yields similar results
+        let modules = env.get_bytecode_modules().cloned().collect();
+        let bytecode_env = run_bytecode_model_builder(modules)?;
+        assert_eq!(bytecode_env.get_module_count(), env.get_module_count());
+        for m in bytecode_env.get_modules() {
+            let other_m = env.get_module(m.get_id());
+            assert_eq!(m.get_function_count(), other_m.get_function_count());
+            assert_eq!(m.get_struct_count(), other_m.get_struct_count());
+        }
+
         "All good, no errors!".to_string()
     };
     let baseline_path = path.with_extension("exp");

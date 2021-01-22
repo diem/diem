@@ -20,11 +20,15 @@ use move_lang::{
     shared::{unique_map::UniqueMap, Address, Name},
     Pass as MovePass, PassResult as MovePassResult,
 };
+use vm::{
+    access::ModuleAccess,
+    file_format::{CompiledModule, FunctionDefinitionIndex, StructDefinitionIndex},
+};
 
 use crate::{
-    ast::ModuleName,
+    ast::{ModuleName, Spec},
     builder::model_builder::ModelBuilder,
-    model::{GlobalEnv, ModuleId},
+    model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleEnv, ModuleId, StructId},
 };
 
 pub mod ast;
@@ -103,6 +107,49 @@ pub fn run_model_builder(
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
     run_spec_checker(&mut env, verified_units, expansion_ast)?;
+    Ok(env)
+}
+
+/// Build a `GlobalEnv` from a collection of `CompiledModule`'s. The `modules` list must be
+/// topologically sorted by the dependency relation (i.e., a child node in the dependency graph
+/// should appear earlier in the vector than its parents).
+pub fn run_bytecode_model_builder(modules: Vec<CompiledModule>) -> anyhow::Result<GlobalEnv> {
+    let mut env = GlobalEnv::new();
+    for (i, m) in modules.into_iter().enumerate() {
+        let id = m.self_id();
+        let addr = ModuleEnv::addr_to_big_uint(id.address());
+        let module_name = ModuleName::new(addr, env.symbol_pool().make(id.name().as_str()));
+        let module_id = ModuleId::new(i);
+        let mut module_data = ModuleData::stub(module_name.clone(), module_id, m.clone());
+
+        // add functions
+        for (def_idx, def) in m.function_defs().iter().enumerate() {
+            let name = m.identifier_at(m.function_handle_at(def.function).name);
+            let symbol = env.symbol_pool().make(name.as_str());
+            let data = FunctionData::stub(
+                symbol,
+                FunctionDefinitionIndex(def_idx as u16),
+                def.function,
+            );
+            module_data.function_data.insert(FunId::new(symbol), data);
+        }
+
+        // add structs
+        for (def_idx, def) in m.struct_defs().iter().enumerate() {
+            let name = m.identifier_at(m.struct_handle_at(def.struct_handle).name);
+            let symbol = env.symbol_pool().make(name.as_str());
+            let data = env.create_struct_data(
+                &m,
+                StructDefinitionIndex(def_idx as u16),
+                symbol,
+                Loc::default(),
+                Spec::default(),
+            );
+            module_data.struct_data.insert(StructId::new(symbol), data);
+        }
+
+        env.module_data.push(module_data);
+    }
     Ok(env)
 }
 

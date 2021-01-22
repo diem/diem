@@ -19,6 +19,10 @@ module M {
     x: u64
   }
 
+  public fun f(r: R): T {
+    T { x: r.s.x }
+  }
+
   spec module {
 
     define struct_access(s: S): u64 {

@@ -131,6 +131,14 @@ impl Loc {
     }
 }
 
+impl Default for Loc {
+    fn default() -> Self {
+        let mut files = Files::new();
+        let dummy_id = files.add(String::new(), String::new());
+        Loc::new(dummy_id, Span::default())
+    }
+}
+
 /// Alias for the Loc variant of MoveIR. This uses a `&static str` instead of `FileId` for the
 /// file name.
 pub type MoveIrLoc = move_ir_types::location::Loc;
@@ -378,7 +386,7 @@ pub struct GlobalEnv {
     /// A map from node id to associated instantiation of type parameters.
     instantiation_map: RefCell<BTreeMap<NodeId, Vec<Type>>>,
     /// List of loaded modules, in order they have been provided using `add`.
-    module_data: Vec<ModuleData>,
+    pub module_data: Vec<ModuleData>,
     /// A counter for issuing global ids.
     global_id_counter: RefCell<usize>,
     /// A map of global invariants.
@@ -1225,6 +1233,28 @@ pub struct ModuleData {
 
     /// A list of spec block infos, for documentation generation.
     pub spec_block_infos: Vec<SpecBlockInfo>,
+}
+
+impl ModuleData {
+    pub fn stub(name: ModuleName, id: ModuleId, module: CompiledModule) -> Self {
+        ModuleData {
+            name,
+            id,
+            module,
+            named_constants: BTreeMap::new(),
+            struct_data: BTreeMap::new(),
+            struct_idx_to_id: BTreeMap::new(),
+            function_data: BTreeMap::new(),
+            function_idx_to_id: BTreeMap::new(),
+            // below this line is source/prover specific
+            spec_vars: BTreeMap::new(),
+            spec_funs: BTreeMap::new(),
+            module_spec: Spec::default(),
+            source_map: SourceMap::new(None),
+            loc: Loc::default(),
+            spec_block_infos: vec![],
+        }
+    }
 }
 
 /// Represents a module environment.
@@ -2127,6 +2157,24 @@ pub struct FunctionData {
     spec: Spec,
 }
 
+impl FunctionData {
+    pub fn stub(
+        name: Symbol,
+        def_idx: FunctionDefinitionIndex,
+        handle_idx: FunctionHandleIndex,
+    ) -> Self {
+        FunctionData {
+            name,
+            loc: Loc::default(),
+            def_idx,
+            handle_idx,
+            arg_names: vec![],
+            type_arg_names: vec![],
+            spec: Spec::default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FunctionEnv<'env> {
     /// Reference to enclosing module.
@@ -2386,6 +2434,11 @@ impl<'env> FunctionEnv<'env> {
         view.arg_tokens().count()
     }
 
+    /// Return `true` if idx is a formal parameter index
+    pub fn is_parameter(&self, idx: usize) -> bool {
+        idx < self.get_parameter_count()
+    }
+
     /// Returns the regular parameters associated with this function.
     pub fn get_parameters(&self) -> Vec<Parameter> {
         let view = self.definition_view();
@@ -2406,6 +2459,11 @@ impl<'env> FunctionEnv<'env> {
                 self.module_env.globalize_signature(tv.signature_token())
             })
             .collect_vec()
+    }
+
+    /// Returns return type at given index.
+    pub fn get_return_type(&self, idx: usize) -> Type {
+        self.get_return_types()[idx].clone()
     }
 
     /// Returns the number of return values of this function.
