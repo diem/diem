@@ -5,7 +5,7 @@
 use crate::binary_views::BinaryIndexedView;
 use diem_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
@@ -354,32 +354,49 @@ impl CyclicModuleDependencyChecker {
         module: &CompiledModule,
         immediate_module_dependencies: F,
     ) -> PartialVMResult<()> {
-        // A standard DFS algorithm that follows the dependency chain from the `cursor_module_id`
-        // to see whether the `target_module_id` is in its dependencies.
-        fn is_reachable_via_dependencies<F: Fn(&ModuleId) -> Vec<ModuleId>>(
-            target_module_id: &ModuleId,
-            cursor_module_id: &ModuleId,
+        // A variant of the three-color DFS, visit each node at max once
+        fn dfs_visit<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+            cursor_module: ModuleId,
+            modules_discovered: &mut BTreeSet<ModuleId>,
+            modules_finished: &mut BTreeSet<ModuleId>,
             immediate_module_dependencies: &F,
         ) -> bool {
-            target_module_id == cursor_module_id
-                || immediate_module_dependencies(cursor_module_id)
-                    .iter()
-                    .any(|next| {
-                        is_reachable_via_dependencies(
-                            target_module_id,
-                            next,
-                            immediate_module_dependencies,
-                        )
-                    })
+            modules_discovered.insert(cursor_module.clone());
+            for next_module in immediate_module_dependencies(&cursor_module) {
+                if modules_discovered.contains(&next_module) {
+                    return true;
+                }
+                if !modules_finished.contains(&next_module)
+                    && dfs_visit(
+                        next_module,
+                        modules_discovered,
+                        modules_finished,
+                        immediate_module_dependencies,
+                    )
+                {
+                    return true;
+                }
+            }
+            modules_discovered.remove(&cursor_module);
+            modules_finished.insert(cursor_module);
+            false
         }
 
-        let target_module_id = module.self_id();
-        let has_cyclic_deps = module.immediate_module_dependencies().iter().any(|dep| {
-            is_reachable_via_dependencies(&target_module_id, dep, &immediate_module_dependencies)
-        });
-        if has_cyclic_deps {
-            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
+        let mut modules_discovered = BTreeSet::new();
+        let mut modules_finished = BTreeSet::new();
+
+        modules_discovered.insert(module.self_id());
+        for dep in module.immediate_module_dependencies() {
+            if dfs_visit(
+                dep,
+                &mut modules_discovered,
+                &mut modules_finished,
+                &immediate_module_dependencies,
+            ) {
+                return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
+            }
         }
+
         Ok(())
     }
 }
