@@ -715,7 +715,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
-            let end_of_epoch_li = self.executor_proxy.get_epoch_proof(request.current_epoch)?;
+            let end_of_epoch_li = self
+                .executor_proxy
+                .get_epoch_change_ledger_info(request.current_epoch)?;
             ensure!(
                 end_of_epoch_li.ledger_info().version() >= request.known_version,
                 "waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
@@ -799,7 +801,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         let mut target_li = target.unwrap_or_else(|| self.local_state.committed_ledger_info());
         let target_epoch = target_li.ledger_info().epoch();
         if target_epoch > request_epoch {
-            let end_of_epoch_li = self.executor_proxy.get_epoch_proof(request_epoch)?;
+            let end_of_epoch_li = self
+                .executor_proxy
+                .get_epoch_change_ledger_info(request_epoch)?;
             debug!(LogSchema::event_log(
                 LogEntry::ProcessChunkRequest,
                 LogEvent::PastEpochRequested

@@ -43,8 +43,8 @@ pub trait ExecutorProxyTrait: Send {
         target_version: u64,
     ) -> Result<TransactionListWithProof>;
 
-    /// Get the epoch change ledger info for epoch so that we can move to next epoch.
-    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
+    /// Get the epoch changing ledger info for the given epoch so that we can move to next epoch.
+    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Get ledger info at an epoch boundary version.
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
@@ -84,8 +84,6 @@ impl ExecutorProxy {
         }
     }
 
-    // TODO make this into more general trait method in `on_chain_config`
-    // once `StorageRead` trait is replaced with `DbReader` and `batch_fetch_config` method is no longer async
     fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload> {
         let access_paths = ON_CHAIN_CONFIG_REGISTRY
             .iter()
@@ -127,7 +125,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .storage
             .get_startup_info()?
             .ok_or_else(|| format_err!("[state sync] Missing storage info"))?;
-
         let current_epoch_state = storage_info.get_epoch_state().clone();
 
         let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
@@ -182,7 +179,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .get_transactions(starting_version, limit, target_version, false)
     }
 
-    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
         let next_epoch = epoch
             .checked_add(1)
             .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
@@ -507,7 +504,7 @@ mod tests {
             .is_ok());
         assert_eq!(
             ledger_info_epoch_1,
-            executor_proxy.get_epoch_proof(1).unwrap()
+            executor_proxy.get_epoch_change_ledger_info(1).unwrap()
         );
         assert_eq!(
             ledger_info_epoch_1,
@@ -527,7 +524,7 @@ mod tests {
             .is_ok());
         assert_eq!(
             ledger_info_epoch_2,
-            executor_proxy.get_epoch_proof(2).unwrap()
+            executor_proxy.get_epoch_change_ledger_info(2).unwrap()
         );
         assert_eq!(
             ledger_info_epoch_2,

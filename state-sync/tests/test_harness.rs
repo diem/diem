@@ -864,7 +864,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         (self.handler)(txns_with_proof)
     }
 
-    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage.read().get_epoch_changes(epoch)
     }
 
