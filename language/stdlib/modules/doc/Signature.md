@@ -51,7 +51,7 @@ Returns <code><b>false</b></code> if:
 - <code>signature</code> is not 64 bytes
 - <code>public_key</code> is not 32 bytes
 - <code>public_key</code> does not pass points-on-curve or small subgroup checks,
-- <code>signature and </code>public_key<code> are valid, but the signature on </code>message` does not verify.
+- <code>signature</code> and <code>public_key</code> are valid, but the signature on <code>message</code> does not verify.
 Does not abort.
 
 

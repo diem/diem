@@ -357,8 +357,8 @@ Aborts if <code>recovery_address</code> does not have the <code>KeyRotationCapab
 ## Function `add_rotation_capability`
 
 Add <code>to_recover</code> to the <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under <code>recovery_address</code>.
-Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>to</b> different VASPs, or <b>if</b>
-</code>recovery_address<code> does not have a </code>RecoveryAddress` resource.
+Aborts if <code>to_recover.address</code> and <code>recovery_address</code> belong to different VASPs, or if
+<code>recovery_address</code> does not have a <code><a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: <a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a>, recovery_address: address)

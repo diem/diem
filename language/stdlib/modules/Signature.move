@@ -16,7 +16,7 @@ module Signature {
     /// - `signature` is not 64 bytes
     /// - `public_key` is not 32 bytes
     /// - `public_key` does not pass points-on-curve or small subgroup checks,
-    /// - `signature and `public_key` are valid, but the signature on `message` does not verify.
+    /// - `signature` and `public_key` are valid, but the signature on `message` does not verify.
     /// Does not abort.
     native public fun ed25519_verify(
         signature: vector<u8>,

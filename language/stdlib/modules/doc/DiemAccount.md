@@ -4587,8 +4587,8 @@ If an account has a balance, the role of the account is compatible with having a
 </code></pre>
 
 
-If there is a `DesignatedDealer::Dealer resource published at addr, the addr has a
-DesignatedDealer role.
+If there is a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a></code> resource published at <code>addr</code>, the <code>addr</code> has a
+<code>Roles::DesignatedDealer</code> role.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;(addr):

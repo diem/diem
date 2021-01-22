@@ -143,12 +143,14 @@ account.
 <summary>Specification</summary>
 
 
-Verification of this function is turned off because it cannot be verified without genesis execution
-context. After time has started, all invariants guarded by <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a></code> will become
-activated and need to hold.
+The friend of this function is <code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code> which means that
+this function can't be verified on its own and has to be verified in
+context of Genesis execution.
+After time has started, all invariants guarded by <code><a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">DiemTimestamp::is_operating</a></code>
+will become activated and need to hold.
 
 
-<pre><code><b>pragma</b> verify = <b>false</b>;
+<pre><code><b>pragma</b> friend = <a href="Genesis.md#0x1_Genesis_initialize">0x1::Genesis::initialize</a>;
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>ensures</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_is_operating">is_operating</a>();

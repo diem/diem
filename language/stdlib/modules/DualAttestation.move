@@ -248,7 +248,7 @@ module DualAttestation {
         global<Credential>(addr).compliance_public_key
     }
 
-    /// Return the expiration date `addr
+    /// Return the expiration date `addr`
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun expiration_date(addr: address): u64  acquires Credential {
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));

@@ -2022,8 +2022,8 @@ module DiemAccount {
         invariant [global] forall token: type: forall addr: address where exists<Balance<token>>(addr):
             Roles::spec_can_hold_balance_addr(addr);
 
-        /// If there is a `DesignatedDealer::Dealer resource published at addr, the addr has a
-        /// DesignatedDealer role.
+        /// If there is a `DesignatedDealer::Dealer` resource published at `addr`, the `addr` has a
+        /// `Roles::DesignatedDealer` role.
         // Verified with additional target DesignatedDealer.move
         invariant [global] forall addr: address where exists<DesignatedDealer::Dealer>(addr):
             Roles::spec_has_designated_dealer_role_addr(addr);

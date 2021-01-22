@@ -764,8 +764,8 @@ Spec version of <code><a href="DualAttestation.md#0x1_DualAttestation_compliance
 
 ## Function `expiration_date`
 
-Return the expiration date <code>addr
-Aborts <b>if</b> </code>addr<code> does not have a </code>Credential` resource.
+Return the expiration date <code>addr</code>
+Aborts if <code>addr</code> does not have a <code><a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a></code> resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_expiration_date">expiration_date</a>(addr: address): u64

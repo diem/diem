@@ -1452,28 +1452,35 @@ impl<'env> Docgen<'env> {
     }
 
     /// Decorates documentation text, identifying code fragments and decorating them
-    /// as code.
+    /// as code. Code blocks in comments are untouched.
     fn decorate_text(&self, text: &str) -> String {
-        static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)`[^`]+`").unwrap());
-        let mut r = String::new();
-        let mut at = 0;
-        while let Some(m) = REX.find(&text[at..]) {
-            // If this is ``` skip it.
-            let end = at + m.end();
-            if text[end..].starts_with('`') {
-                r += &text[at..end];
-                at = end;
-                continue;
+        let mut decorated_text = String::new();
+        let mut chars = text.chars();
+        let non_code_filter = |chr: &char| *chr != '`';
+
+        while let Some(chr) = chars.next() {
+            if chr == '`' {
+                // See if this is the start of a code block.
+                let is_start_of_code_block = chars.take_while_ref(|chr| *chr == '`').count() > 0;
+                if is_start_of_code_block {
+                    // Code block -- don't create a <code>text</code> for this.
+                    decorated_text += "```";
+                } else {
+                    // inside inline code section. Eagerly consume/match this '`'
+                    let code = chars.take_while_ref(non_code_filter).collect::<String>();
+                    // consume the remaining '`'. Report an error if we find an unmatched '`'.
+                    assert!(chars.next() == Some('`'),
+                    format!("Missing backtick found in {} while generating documentation for the following text: \"{}\"",
+                        self.current_module.as_ref().unwrap().get_name().display_full(self.env.symbol_pool()), text,
+                    ));
+                    decorated_text += &format!("<code>{}</code>", self.decorate_code(&code));
+                }
+            } else {
+                decorated_text.push(chr);
+                decorated_text.extend(chars.take_while_ref(non_code_filter))
             }
-            r += &text[at..at + m.start()];
-            r += &format!(
-                "<code>{}</code>",
-                &self.decorate_code(&m.as_str()[1..&m.as_str().len() - 1])
-            );
-            at += m.end();
         }
-        r += &text[at..];
-        r
+        decorated_text
     }
 
     /// Begins a code block. This uses html, not markdown code blocks, so we are able to
