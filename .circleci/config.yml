@@ -488,16 +488,16 @@ workflows:
   # Will publish release images to dockerhub and aws when commits land on a release/testing branch.                    #
   # Will also push base images to novi aws ecr to prevent dockerhub api limit violations.                              #
   ######################################################################################################################
-  release-dockerhub-publish:
-    jobs:
-      - docker-publish:
-          context: docker
-          filters:
-            branches:
-              only:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-                - master
+  #release-dockerhub-publish:
+  #  jobs:
+  #    - docker-publish:
+  #        context: docker
+  #        filters:
+  #          branches:
+  #            only:
+  #              - /^test-[\d|.]+$/
+  #              - /^release-[\d|.]+$/
+  #              - master
 
   ######################################################################################################################
   # Updates documentation when code is committed to master, and checks for breaking changes.
@@ -511,7 +511,6 @@ workflows:
       - check-breaking-change:
           requires:
             - prefetch-crates
-
   ######################################################################################################################
   # Used by bors to test prs on master's head before committing to master.                                             #
   # The "commit-workflow" must support auto and canary branchs...                                                      #
@@ -519,8 +518,13 @@ workflows:
   ######################################################################################################################
   commit-workflow:
     jobs:
-      - docker-pre-publish:
-          context: docker
+      #using as a no-op until bors can be updated (this change is merged in release-1.1)
+      - prefetch-crates:
           filters:
             branches:
               only: auto
+  #    - docker-pre-publish:
+  #        context: docker
+  #        filters:
+  #          branches:
+  #            only: auto

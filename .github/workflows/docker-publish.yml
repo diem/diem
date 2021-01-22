@@ -1,0 +1,91 @@
+name: docker-publish.yml
+
+on:
+  push:
+    branches: [main, master, gha-test-*]
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest-xl
+    continue-on-error: false
+    env:
+      TAG: github-1
+      DOCKERHUB_ORG: libra
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 #get all the history!!!
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: docker-publish.yml
+      - name: setup_aws_erc_login
+        run: |
+          echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.AWS_ECR_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Sign in to dockerhub, install image signing cert.
+        uses: ./.github/actions/dockerhub_login
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: should pre build docker images (targeting a release branch)?
+        if: ${{ github.ref == 'refs/heads/auto' }}
+        run: |
+          if  [[ ! "$CHANGES_TARGET_BRANCH" =~ "^release-[0-9|.]+$" ]] && [[ ! "$CHANGES_TARGET_BRANCH" =~ "^gha-test-[0-9|.]+$" ]] ; then
+            echo Targeting branch $CHANGES_TARGET_BRANCH will not pre-publish docker images.
+          fi
+      - name: pre-release docker images
+        if: ${{ github.ref == 'refs/heads/auto' }}
+        run: |
+          BRANCH="$CHANGES_TARGET_BRANCH"
+          success=0
+          docker/build_push.sh -u -p -b ${BRANCH} -n client || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n init || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n faucet || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=-1
+          docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test || success=-1
+          exit $success
+        env:
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: pull pre images (or build if not pullable) and push release docker images if not on auto branch.
+        if: ${{ github.ref != 'refs/heads/auto' }}
+        run: |
+          set -x
+          BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
+          success=0
+          docker/build_push.sh -u -b ${BRANCH} -n client || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n init || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n faucet || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n tools || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n validator || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n validator-tcb || success=-1
+          docker/build_push.sh -u -b ${BRANCH} -n cluster-test || success=-1
+          exit $success
+        env:
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: docker image pruning.
+        run: |
+          scripts/dockerhub_prune.sh -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_PASSWORD }}" -x
+      - name: push to novi ecr
+        if: ${{ always() }}
+        run: |
+          #push to novi ecr with standard names
+          BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
+          GIT_REV=$(git rev-parse --short=8 HEAD)
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
+          docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
