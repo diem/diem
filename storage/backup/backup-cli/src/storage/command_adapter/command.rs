@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::storage::command_adapter::config::EnvVar;
+use crate::{storage::command_adapter::config::EnvVar, utils::error_notes::ErrorNotes};
 use anyhow::{bail, ensure, Result};
 use diem_logger::prelude::*;
 use futures::{
@@ -77,9 +77,17 @@ impl SpawnedCommand {
         {
             cmd.env(&v.key, &v.value);
         }
-        let child = cmd.spawn()?;
-        ensure!(child.stdin.is_some(), "child.stdin is None.");
-        ensure!(child.stdout.is_some(), "child.stdout is None.");
+        let child = cmd.spawn().err_notes(&cmd)?;
+        ensure!(
+            child.stdin.is_some(),
+            "child.stdin is None. cmd: {:?}",
+            &command,
+        );
+        ensure!(
+            child.stdout.is_some(),
+            "child.stdout is None. cmd: {:?}",
+            &command,
+        );
 
         Ok(Self { command, child })
     }

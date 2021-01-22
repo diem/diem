@@ -44,7 +44,8 @@ pub type FileHandleRef = str;
 /// `create_backup()` and `create_for_write()` don't contain funny characters tricky to deal with
 /// in shell commands.
 /// Specifically, names follow the pattern "\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,126}\z"
-#[cfg_attr(test, derive(Debug, Hash, Eq, PartialEq))]
+#[cfg_attr(test, derive(Hash, Eq, PartialEq))]
+#[derive(Debug)]
 pub struct ShellSafeName(String);
 
 impl ShellSafeName {

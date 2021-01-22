@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod backup_service_client;
+pub(crate) mod error_notes;
 pub mod read_record_bytes;
 pub mod storage_ext;
 pub(crate) mod stream;

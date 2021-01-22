@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::utils::error_notes::ErrorNotes;
 use anyhow::Result;
 use diem_crypto::HashValue;
 use diem_types::transaction::Version;
@@ -41,12 +42,15 @@ impl BackupServiceClient {
     }
 
     async fn get(&self, path: &str) -> Result<impl AsyncRead> {
+        let url = format!("{}/{}", self.address, path);
         Ok(self
             .client
-            .get(&format!("{}/{}", self.address, path))
+            .get(&url)
             .send()
-            .await?
-            .error_for_status()?
+            .await
+            .err_notes(&url)?
+            .error_for_status()
+            .err_notes(&url)?
             .bytes_stream()
             .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
             .into_async_read()

@@ -8,7 +8,7 @@ use super::{BackupHandle, BackupHandleRef, FileHandle, FileHandleRef};
 
 use crate::{
     storage::{BackupStorage, ShellSafeName, TextLine},
-    utils::{path_exists, PathToString},
+    utils::{error_notes::ErrorNotes, path_exists, PathToString},
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -54,7 +54,9 @@ impl LocalFs {
 #[async_trait]
 impl BackupStorage for LocalFs {
     async fn create_backup(&self, name: &ShellSafeName) -> Result<BackupHandle> {
-        create_dir(self.dir.join(name.as_ref())).await?;
+        create_dir(self.dir.join(name.as_ref()))
+            .await
+            .err_notes(name)?;
         Ok(name.to_string())
     }
 
@@ -71,7 +73,8 @@ impl BackupStorage for LocalFs {
             .write(true)
             .create_new(true)
             .open(&abs_path)
-            .await?;
+            .await
+            .err_notes(&abs_path)?;
         Ok((file_handle, Box::new(file)))
     }
 
@@ -80,21 +83,28 @@ impl BackupStorage for LocalFs {
         file_handle: &FileHandleRef,
     ) -> Result<Box<dyn AsyncRead + Send + Unpin>> {
         let path = self.dir.join(file_handle);
-        let file = OpenOptions::new().read(true).open(path).await?;
+        let file = OpenOptions::new()
+            .read(true)
+            .open(&path)
+            .await
+            .err_notes(&path)?;
         Ok(Box::new(file))
     }
 
     async fn save_metadata_line(&self, name: &ShellSafeName, content: &TextLine) -> Result<()> {
         let dir = self.metadata_dir();
-        create_dir_all(&dir).await?; // in case not yet created
+        create_dir_all(&dir).await.err_notes(name)?; // in case not yet created
 
         let path = dir.join(name.as_ref());
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&path)
-            .await?;
-        file.write_all(content.as_ref().as_bytes()).await?;
+            .await
+            .err_notes(&path)?;
+        file.write_all(content.as_ref().as_bytes())
+            .await
+            .err_notes(&path)?;
 
         Ok(())
     }
@@ -105,8 +115,8 @@ impl BackupStorage for LocalFs {
 
         let mut res = Vec::new();
         if path_exists(&dir).await {
-            let mut entries = read_dir(&dir).await?;
-            while let Some(entry) = entries.next_entry().await? {
+            let mut entries = read_dir(&dir).await.err_notes(&dir)?;
+            while let Some(entry) = entries.next_entry().await.err_notes(&dir)? {
                 res.push(rel_path.join(entry.file_name()).path_to_string()?)
             }
         }
