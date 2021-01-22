@@ -715,21 +715,22 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
-            Some(self.executor_proxy.get_epoch_proof(request.current_epoch)?)
+            let end_of_epoch_li = self.executor_proxy.get_epoch_proof(request.current_epoch)?;
+            ensure!(
+                end_of_epoch_li.ledger_info().version() >= request.known_version,
+                "waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
+                end_of_epoch_li.ledger_info().epoch(),
+                end_of_epoch_li.ledger_info().version(),
+                request.known_version,
+            );
+            let num_txns_until_end_of_epoch =
+                end_of_epoch_li.ledger_info().version() - request.known_version;
+            limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
+            Some(end_of_epoch_li)
         } else {
             None
         };
-        if let Some(li) = end_of_epoch_li.as_ref() {
-            ensure!(
-                li.ledger_info().version() >= request.known_version,
-                "waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
-                li.ledger_info().epoch(),
-                li.ledger_info().version(),
-                request.known_version,
-            );
-            let num_txns_until_end_of_epoch = li.ledger_info().version() - request.known_version;
-            limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
-        }
+
         self.deliver_chunk(
             peer,
             request.known_version,
