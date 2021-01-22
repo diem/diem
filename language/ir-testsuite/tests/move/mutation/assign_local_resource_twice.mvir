@@ -9,4 +9,4 @@ main() {
     return;
 }
 
-// check: WRITEREF_RESOURCE_ERROR
+// check: WRITEREF_WITHOUT_DROP_ABILITY

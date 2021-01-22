@@ -16,12 +16,13 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
-        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
-        FunctionSignature, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
+        Ability, AbilitySet, AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex,
+        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
+        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
+        FunctionInstantiationIndex, FunctionSignature, IdentifierIndex, ModuleHandle,
+        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex,
     },
     CompiledModule,
 };
@@ -590,7 +591,21 @@ impl<'a> Context<'a> {
         &mut self,
         sname: QualifiedStructIdent,
         is_nominal_resource: bool,
-        type_parameters: Vec<Kind>,
+        type_parameters: Vec<AbilitySet>,
+    ) -> Result<StructHandleIndex> {
+        let abilities = if is_nominal_resource {
+            AbilitySet::EMPTY | Ability::Key | Ability::Store
+        } else {
+            AbilitySet::EMPTY | Ability::Copy | Ability::Drop | Ability::Store
+        };
+        self.declare_struct_handle_index_with_abilities(sname, abilities, type_parameters)
+    }
+
+    fn declare_struct_handle_index_with_abilities(
+        &mut self,
+        sname: QualifiedStructIdent,
+        abilities: AbilitySet,
+        type_parameters: Vec<AbilitySet>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
         let name = self.identifier_index(sname.name.as_inner())?;
@@ -599,7 +614,7 @@ impl<'a> Context<'a> {
             StructHandle {
                 module,
                 name,
-                is_nominal_resource,
+                abilities,
                 type_parameters,
             },
         );
@@ -709,7 +724,10 @@ impl<'a> Context<'a> {
         })
     }
 
-    fn dep_struct_handle(&mut self, s: &QualifiedStructIdent) -> Result<(bool, Vec<Kind>)> {
+    fn dep_struct_handle(
+        &mut self,
+        s: &QualifiedStructIdent,
+    ) -> Result<(AbilitySet, Vec<AbilitySet>)> {
         if s.module.as_inner() == ModuleName::self_name() {
             bail!("Unbound struct {}", s)
         }
@@ -717,7 +735,7 @@ impl<'a> Context<'a> {
         let dep = self.dependency(&mident)?;
         match dep.struct_handle(&mident.name, &s.name) {
             None => bail!("Unbound struct {}", s),
-            Some(shandle) => Ok((shandle.is_nominal_resource, shandle.type_parameters.clone())),
+            Some(shandle) => Ok((shandle.abilities, shandle.type_parameters.clone())),
         }
     }
 
@@ -728,8 +746,8 @@ impl<'a> Context<'a> {
         match self.structs.get(&s) {
             Some(sh) => Ok(StructHandleIndex(*self.struct_handles.get(sh).unwrap())),
             None => {
-                let (is_nominal_resource, type_parameters) = self.dep_struct_handle(&s)?;
-                self.declare_struct_handle_index(s, is_nominal_resource, type_parameters)
+                let (abilities, type_parameters) = self.dep_struct_handle(&s)?;
+                self.declare_struct_handle_index_with_abilities(s, abilities, type_parameters)
             }
         }
     }

@@ -4,8 +4,8 @@
 use crate::{
     access::ModuleAccess,
     file_format::{
-        CompiledModule, FieldDefinition, FunctionHandle, Kind, SignatureToken, StructDefinition,
-        StructFieldInformation, TypeParameterIndex, Visibility,
+        AbilitySet, CompiledModule, FieldDefinition, FunctionHandle, SignatureToken,
+        StructDefinition, StructFieldInformation, TypeParameterIndex, Visibility,
     },
 };
 use move_core_types::{
@@ -59,8 +59,8 @@ pub struct Field {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Struct {
     pub name: Identifier,
-    pub kind: Kind,
-    pub type_parameters: Vec<Kind>,
+    pub abilities: AbilitySet,
+    pub type_parameters: Vec<AbilitySet>,
     pub fields: Vec<Field>,
 }
 
@@ -69,7 +69,7 @@ pub struct Struct {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FunctionSignature {
     pub name: Identifier,
-    pub type_parameters: Vec<Kind>,
+    pub type_parameters: Vec<AbilitySet>,
     pub formals: Vec<Type>,
     pub ret: Vec<Type>,
 }
@@ -229,11 +229,7 @@ impl Struct {
         };
         Struct {
             name: m.identifier_at(handle.name).to_owned(),
-            kind: if handle.is_nominal_resource {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            },
+            abilities: handle.abilities,
             type_parameters: handle.type_parameters.clone(),
             fields,
         }

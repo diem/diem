@@ -24,10 +24,11 @@ use std::{
 use vm::{
     errors::Location as VMErrorLocation,
     file_format::{
-        Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
-        CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition, FunctionSignature, Kind,
-        Signature, SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature, Visibility,
+        Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut,
+        CompiledScript, CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition,
+        FunctionSignature, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature,
+        Visibility,
     },
 };
 
@@ -511,7 +512,7 @@ pub fn compile_module<'a>(
             module: self_name.clone(),
             name: s.value.name.clone(),
         };
-        let kinds = type_parameter_kinds(&s.value.type_formals);
+        let kinds = type_parameter_kinds(&s.value.type_formals, true);
         context.declare_struct_handle_index(ident, s.value.is_nominal_resource, kinds)?;
     }
 
@@ -602,7 +603,7 @@ fn compile_explicit_dependency_declarations(
                 type_formals: tys,
             } = struct_dep;
             let sname = QualifiedStructIdent::new(mname.clone(), name);
-            let kinds = type_parameter_kinds(&tys);
+            let kinds = type_parameter_kinds(&tys, true);
             context.declare_struct_handle_index(sname, is_nominal_resource, kinds)?;
         }
         for function_dep in functions {
@@ -710,15 +711,26 @@ fn make_type_argument_subst(
     Ok(subst)
 }
 
-fn type_parameter_kinds(ast_tys: &[(TypeVar, ast::Kind)]) -> Vec<Kind> {
-    ast_tys.iter().map(|(_, k)| kind(k)).collect()
+fn type_parameter_kinds(
+    ast_tys: &[(TypeVar, ast::Kind)],
+    struct_type_parameters: bool,
+) -> Vec<AbilitySet> {
+    ast_tys
+        .iter()
+        .map(|(_, k)| kind(k, struct_type_parameters))
+        .collect()
 }
 
-fn kind(ast_k: &ast::Kind) -> Kind {
-    match ast_k {
-        ast::Kind::All => Kind::All,
-        ast::Kind::Resource => Kind::Resource,
-        ast::Kind::Copyable => Kind::Copyable,
+fn kind(ast_k: &ast::Kind, struct_type_parameters: bool) -> AbilitySet {
+    let set = match ast_k {
+        ast::Kind::All => AbilitySet::EMPTY,
+        ast::Kind::Resource => AbilitySet::EMPTY | Ability::Key,
+        ast::Kind::Copyable => AbilitySet::EMPTY | Ability::Copy | Ability::Drop,
+    };
+    if !struct_type_parameters {
+        set | Ability::Store
+    } else {
+        set
     }
 }
 
@@ -788,7 +800,7 @@ fn function_signature(
         .iter()
         .map(|(_, ty)| compile_type(context, &m, ty))
         .collect::<Result<_>>()?;
-    let type_parameters = f.type_formals.iter().map(|(_, k)| kind(k)).collect();
+    let type_parameters = f.type_formals.iter().map(|(_, k)| kind(k, false)).collect();
     Ok(vm::file_format::FunctionSignature {
         return_,
         parameters,

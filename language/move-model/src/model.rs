@@ -43,8 +43,8 @@ use move_core_types::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
-        FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
+        AbilitySet, AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, SignatureIndex, SignatureToken,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
     views::{
@@ -1801,6 +1801,7 @@ impl<'env> StructEnv<'env> {
         name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
     }
 
+    // TODO(tmn) migrate to abilities
     /// Determines whether this struct is a resource type.
     pub fn is_resource(&self) -> bool {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
@@ -1809,7 +1810,7 @@ impl<'env> StructEnv<'env> {
             .data
             .module
             .struct_handle_at(def.struct_handle);
-        handle.is_nominal_resource
+        handle.abilities.has_key()
     }
 
     /// Get an iterator for the fields, ordered by offset.
@@ -2068,11 +2069,13 @@ pub enum TypeConstraint {
 }
 
 impl TypeConstraint {
-    fn from(k: Kind) -> Self {
-        match k {
-            Kind::All => TypeConstraint::None,
-            Kind::Copyable => TypeConstraint::Copyable,
-            Kind::Resource => TypeConstraint::Resource,
+    // TODO(tmn) migrate to abilities
+    fn from(abs: AbilitySet) -> Self {
+        match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
+            (true, true, false) => TypeConstraint::Copyable,
+            (false, false, true) => TypeConstraint::Resource,
+            (false, false, false) => TypeConstraint::None,
+            _ => panic!("Unsupported ability set"),
         }
     }
 }

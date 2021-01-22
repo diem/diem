@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_read_ref_transitive.move:5:9 ───
+   ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:5:9 ───
    │
  5 │         *&x
    │         ^^^ Invalid dereference. Can only dereference references to copyable types
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_read_ref_transitive.move:15:9 ───
+    ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:15:9 ───
     │
  15 │         x.s
     │         ^^^ Invalid implicit copy of field 's'.

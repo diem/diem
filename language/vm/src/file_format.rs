@@ -46,6 +46,7 @@ use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use ref_cast::RefCast;
+use std::ops::BitOr;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -203,7 +204,7 @@ pub const NO_TYPE_ARGUMENTS: SignatureIndex = SignatureIndex(0);
 
 /// A `ModuleHandle` is a reference to a MOVE module. It is composed by an `address` and a `name`.
 ///
-/// A `ModuleHandle` uniquely identifies a code resource in the blockchain.
+/// A `ModuleHandle` uniquely identifies a code entity in the blockchain.
 /// The `address` is a reference to the account that holds the code and the `name` is used as a
 /// key in order to load the module.
 ///
@@ -229,11 +230,11 @@ pub struct ModuleHandle {
 /// to perform resolution.
 ///
 /// The `StructHandle` is polymorphic: it can have type parameters in its fields and carries the
-/// kind constraints for these type parameters (empty list for non-generic structs). It also
-/// carries the kind (resource/copyable) of the struct itself so that the verifier can check
-/// resource semantic without having to load the referenced type.
+/// ability constraints for these type parameters (empty list for non-generic structs). It also
+/// carries the abilities of the struct itself so that the verifier can check
+/// ability semantics without having to load the referenced type.
 ///
-/// At link time kind checking is performed and an error is reported if there is a
+/// At link time ability/constraint checking is performed and an error is reported if there is a
 /// mismatch with the definition.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -243,15 +244,12 @@ pub struct StructHandle {
     pub module: ModuleHandleIndex,
     /// The name of the type.
     pub name: IdentifierIndex,
-    /// There are two ways for a type to have the Kind resource
-    /// 1) If it has a type argument of resource
-    /// 2) If it was declared as a resource
-    /// These "declared" resources are referred to as *nominal resources*
-    ///
-    /// If `is_nominal_resource` is true, it is a *nominal resource*
-    pub is_nominal_resource: bool,
-    /// The type formals (identified by their index into the vec) and their kind constraints
-    pub type_parameters: Vec<Kind>,
+    /// Contains the abilities for this struct
+    /// For any instantiation of this type, the abilities of this type are predicated on
+    /// that ability being satisfied for all type parameters.
+    pub abilities: AbilitySet,
+    /// The type formals (identified by their index into the vec) and their constraints
+    pub type_parameters: Vec<AbilitySet>,
 }
 
 /// A `FunctionHandle` is a reference to a function. It is composed by a
@@ -273,8 +271,8 @@ pub struct FunctionHandle {
     pub parameters: SignatureIndex,
     /// The list of return types.
     pub return_: SignatureIndex,
-    /// The type formals (identified by their index into the vec) and their kind constraints
-    pub type_parameters: Vec<Kind>,
+    /// The type formals (identified by their index into the vec) and their constraints
+    pub type_parameters: Vec<AbilitySet>,
 }
 
 /// A field access info (owner type and offset)
@@ -344,7 +342,7 @@ pub struct FieldInstantiation {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct StructDefinition {
-    /// The `StructHandle` for this `StructDefinition`. This has the name and the resource flag
+    /// The `StructHandle` for this `StructDefinition`. This has the name and the abilities
     /// for the type.
     pub struct_handle: StructHandleIndex,
     /// Contains either
@@ -422,15 +420,16 @@ pub struct FunctionDefinition {
     pub function: FunctionHandleIndex,
     /// The visibility of this function.
     pub visibility: Visibility,
-    /// List of nominal resources (declared in this module) that the procedure might access
-    /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
+    /// List of locally defined types (declared in this module) with the `Key` ability
+    /// that the procedure might access, either through: BorrowGlobal, MoveFrom, or transitively
+    /// through another procedure
     /// This list of acquires grants the borrow checker the ability to statically verify the safety
     /// of references into global storage
     ///
     /// Not in the signature as it is not needed outside of the declaring module
     ///
-    /// Note, there is no SignatureIndex with each struct definition index, as global
-    /// resources cannot currently take type arguments
+    /// Note, there is no SignatureIndex with each struct definition index, so all instantiations of
+    /// that type are considered as being acquired
     pub acquires_global_resources: Vec<StructDefinitionIndex>,
     /// Code for this function.
     #[cfg_attr(
@@ -481,8 +480,8 @@ pub struct FunctionSignature {
         proptest(strategy = "vec(any::<SignatureToken>(), 0..=params)")
     )]
     pub parameters: Vec<SignatureToken>,
-    /// The type formals (identified by their index into the vec) and their kind constraints
-    pub type_parameters: Vec<Kind>,
+    /// The type formals (identified by their index into the vec) and their constraints
+    pub type_parameters: Vec<AbilitySet>,
 }
 
 /// A `Signature` is the list of locals used by a function.
@@ -518,47 +517,236 @@ impl Signature {
 /// type parameter in the `FunctionHandle` and `StructHandle`.
 pub type TypeParameterIndex = u16;
 
-/// A `Kind` classifies types into sets with rules each set must follow.
-///
-/// Currently there are three kinds in Move: `All`, `Resource` and `Copyable`.
+/// An `Ability` classifies what operations are permitted for a given type
+#[repr(u8)]
 #[derive(Debug, Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub enum Kind {
-    /// Represents the super set of all types. The type might actually be a `Resource` or
-    /// `Copyable` A type might be in this set if it is not known to be a `Resource` or
-    /// `Copyable`
-    ///   - This occurs when there is a type parameter with this kind as a constraint
-    All,
-    /// `Resource` types must follow move semantics and various resource safety rules, namely:
-    /// - `Resource` values cannot be copied
-    /// - `Resource` values cannot be popped, i.e. they must be used
-    Resource,
-    /// `Copyable` types do not need to follow the `Resource` rules.
-    /// - `Copyable` values can be copied
-    /// - `Copyable` values can be popped
-    Copyable,
+pub enum Ability {
+    /// Allows values of types with this ability to be copied, via CopyLoc or ReadRef
+    Copy = 0x1,
+    /// Allows values of types with this ability to be dropped, via Pop, WriteRef, StLoc, Eq, Neq,
+    /// or if left in a local when Ret is invoked
+    /// Technically also needed for numeric operations (Add, BitAnd, Shift, etc), but all
+    /// of the types that can be used with those operations have Drop
+    Drop = 0x2,
+    /// Allows values of types with this ability to exist inside a struct in global storage
+    Store = 0x4,
+    /// Allows the type to serve as a key for global storage operations: MoveTo, MoveFrom, etc.
+    Key = 0x8,
 }
 
-impl Kind {
-    /// Checks if the given kind is a sub-kind of another.
-    #[inline]
-    pub fn is_sub_kind_of(self, k: Kind) -> bool {
-        use Kind::*;
-
-        matches!(
-            (self, k),
-            (_, All) | (Resource, Resource) | (Copyable, Copyable)
-        )
+impl Ability {
+    fn from_u8(u: u8) -> Option<Self> {
+        match u {
+            0x1 => Some(Ability::Copy),
+            0x2 => Some(Ability::Drop),
+            0x4 => Some(Ability::Store),
+            0x8 => Some(Ability::Key),
+            _ => None,
+        }
     }
 
-    /// Helper function to determine the kind of a struct instance by taking the kind of a type
-    /// argument and join it with the existing partial result.
-    pub fn join(self, other: Kind) -> Kind {
-        match (self, other) {
-            (Kind::All, _) | (_, Kind::All) => Kind::All,
-            (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
-            (Kind::Copyable, Kind::Copyable) => Kind::Copyable,
+    /// For a struct with ability `a`, each field needs to have the ability `a.requires()`.
+    /// Consider a generic type Foo<t1, ..., tn>, for Foo<t1, ..., tn> to have ability `a`, Foo must
+    /// have been declared with `a` and each type argument ti must have the ability `a.requires()`
+    pub fn requires(self) -> Self {
+        match self {
+            Self::Copy => Ability::Copy,
+            Self::Drop => Ability::Drop,
+            Self::Store => Ability::Store,
+            Self::Key => Ability::Store,
         }
+    }
+
+    /// An inverse of `requires`, where x is in a.required_by() iff x.requires() == a
+    pub fn required_by(self) -> AbilitySet {
+        match self {
+            Self::Copy => AbilitySet::EMPTY | Ability::Copy,
+            Self::Drop => AbilitySet::EMPTY | Ability::Drop,
+            Self::Store => AbilitySet::EMPTY | Ability::Store | Ability::Key,
+            Self::Key => AbilitySet::EMPTY,
+        }
+    }
+}
+
+/// A set of `Ability`s
+#[derive(Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
+pub struct AbilitySet(u8);
+
+impl AbilitySet {
+    /// The empty ability set
+    pub const EMPTY: Self = Self(0);
+    /// Abilities for `Bool`, `U8`, `U64`, `U128`, and `Address`
+    pub const PRIMITIVES: AbilitySet =
+        Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
+    /// Abilities for `Reference` and `MutableReference`
+    pub const REFERENCES: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
+    /// Abilities for `Signer`
+    pub const SIGNER: AbilitySet = Self(Ability::Drop as u8);
+    /// Abilities for `Vector`, note they are predicated on the type argument
+    pub const VECTOR: AbilitySet =
+        Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
+
+    /// Ability set containing all abilities
+    pub const ALL: Self = Self(
+        // Cannot use AbilitySet bitor because it is not const
+        (Ability::Copy as u8)
+            | (Ability::Drop as u8)
+            | (Ability::Store as u8)
+            | (Ability::Key as u8),
+    );
+
+    pub fn has_ability(self, ability: Ability) -> bool {
+        let a = ability as u8;
+        (a & self.0) == a
+    }
+
+    pub fn has_copy(self) -> bool {
+        self.has_ability(Ability::Copy)
+    }
+
+    pub fn has_drop(self) -> bool {
+        self.has_ability(Ability::Drop)
+    }
+
+    pub fn has_store(self) -> bool {
+        self.has_ability(Ability::Store)
+    }
+
+    pub fn has_key(self) -> bool {
+        self.has_ability(Ability::Key)
+    }
+
+    pub fn remove(self, ability: Ability) -> Self {
+        Self(self.0 & (!(ability as u8)))
+    }
+
+    pub fn intersect(self, other: Self) -> Self {
+        Self(self.0 & other.0)
+    }
+
+    pub fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    #[inline]
+    fn is_subset_bits(sub: u8, sup: u8) -> bool {
+        (sub & sup) == sub
+    }
+
+    pub fn is_subset(self, other: Self) -> bool {
+        Self::is_subset_bits(self.0, other.0)
+    }
+
+    /// For a polymorphic type, its actual abilities correspond to its declared abilities but
+    /// predicated on its type arguments having that ability. For `Key`, instead of needing
+    /// the same ability, the type arguments need `Store`
+    pub fn polymorphic_abilities(
+        declared_abilities: Self,
+        type_argument_abilities: impl IntoIterator<Item = Self>,
+    ) -> Self {
+        // Conceptually this is performing the following operation:
+        // For any ability 'a' in `declared_abilities`
+        // 'a' is in the result only if
+        //   for all 'ti' in `type_argument_abilities`, a.required() is a subset of ti
+        //
+        // So to do this efficiently, we can determine the required_by set for each ti
+        // and intersect them together along with the declared abilities
+        // This only works because for any ability y, |y.requires()| == 1
+        type_argument_abilities
+            .into_iter()
+            .map(|ty_arg_abilities| {
+                ty_arg_abilities
+                    .into_iter()
+                    .map(|a| a.required_by())
+                    .fold(AbilitySet::EMPTY, AbilitySet::union)
+            })
+            .fold(declared_abilities, |acc, ty_arg_abilities| {
+                acc.intersect(ty_arg_abilities)
+            })
+    }
+
+    pub fn from_u8(byte: u8) -> Option<Self> {
+        // If there is a bit set in the read `byte`, that bit must be set in the
+        // `AbilitySet` containing all `Ability`s
+        // This corresponds the byte being a bit set subset of ALL
+        // The byte is a subset of ALL if the intersection of the two is the original byte
+        if Self::is_subset_bits(byte, Self::ALL.0) {
+            Some(Self(byte))
+        } else {
+            None
+        }
+    }
+
+    pub fn into_u8(self) -> u8 {
+        self.0
+    }
+}
+
+impl BitOr<Ability> for AbilitySet {
+    type Output = Self;
+    fn bitor(self, rhs: Ability) -> Self {
+        AbilitySet(self.0 | (rhs as u8))
+    }
+}
+
+impl BitOr<AbilitySet> for AbilitySet {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        AbilitySet(self.0 | rhs.0)
+    }
+}
+
+pub struct AbilitySetIterator {
+    set: AbilitySet,
+    idx: u8,
+}
+
+impl Iterator for AbilitySetIterator {
+    type Item = Ability;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.idx <= 0x8 {
+            let next = Ability::from_u8(self.set.0 & self.idx);
+            self.idx <<= 1;
+            if next.is_some() {
+                return next;
+            }
+        }
+        None
+    }
+}
+
+impl IntoIterator for AbilitySet {
+    type Item = Ability;
+    type IntoIter = AbilitySetIterator;
+    fn into_iter(self) -> Self::IntoIter {
+        AbilitySetIterator {
+            idx: 0x1,
+            set: self,
+        }
+    }
+}
+
+impl std::fmt::Debug for AbilitySet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "[")?;
+        for ability in *self {
+            write!(f, "{:?}, ", ability)?;
+        }
+        write!(f, "]")
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for AbilitySet {
+    type Strategy = BoxedStrategy<Self>;
+    type Parameters = ();
+
+    fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
+        proptest::bits::u8::masked(AbilitySet::ALL.0)
+            .prop_map(|u| AbilitySet::from_u8(u).expect("proptest mask failed for AbilitySet"))
+            .boxed()
     }
 }
 
@@ -585,7 +773,7 @@ pub enum SignatureToken {
     Signer,
     /// Vector
     Vector(Box<SignatureToken>),
-    /// MOVE user type, resource or copyable
+    /// User defined type
     Struct(StructHandleIndex),
     StructInstantiation(StructHandleIndex, Vec<SignatureToken>),
     /// Reference to a type.
@@ -630,7 +818,8 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
     }
 }
 
-/// Alternative preorder traversal iterator for SignatureToken that also returns the depth at each node.
+/// Alternative preorder traversal iterator for SignatureToken that also returns the depth at each
+/// node.
 pub struct SignatureTokenPreorderTraversalIterWithDepth<'a> {
     stack: Vec<(&'a SignatureToken, usize)>,
 }
@@ -826,7 +1015,7 @@ impl SignatureToken {
     }
 }
 
-/// A `Constant` is a serialized value along with it's type. That type will be deserialized by the
+/// A `Constant` is a serialized value along with its type. That type will be deserialized by the
 /// loader/evauluator
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Constant {
@@ -930,7 +1119,7 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u128_value```
     CastU128,
-    /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to it's
+    /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to its
     /// type) from the the `ConstantPool` via `ConstantPoolIndex`
     ///
     /// Stack transition:
@@ -1009,8 +1198,8 @@ pub enum Bytecode {
     /// Read a reference. The reference is on the stack, it is consumed and the value read is
     /// pushed on the stack.
     ///
-    /// Reading a reference performs a copy of the value referenced. As such
-    /// ReadRef cannot be used on a reference to a Resource.
+    /// Reading a reference performs a copy of the value referenced.
+    /// As such, ReadRef requires that the type of the value has the `Copy` ability.
     ///
     /// Stack transition:
     ///
@@ -1019,7 +1208,8 @@ pub enum Bytecode {
     /// Write to a reference. The reference and the value are on the stack and are consumed.
     ///
     ///
-    /// The reference must be to an copyable type because Resources cannot be overwritten.
+    /// WriteRef requires that the type of the value has the `Drop` ability as the previous value
+    /// is lost
     ///
     /// Stack transition:
     ///
@@ -1168,7 +1358,7 @@ pub enum Bytecode {
     Not,
     /// Compare for equality the 2 value at the top of the stack and pushes the
     /// result on the stack.
-    /// The values on the stack cannot be resources or they will be consumed and so destroyed.
+    /// The values on the stack must have `Drop` as they will be consumed and destroyed.
     ///
     /// Stack transition:
     ///
@@ -1176,7 +1366,7 @@ pub enum Bytecode {
     Eq,
     /// Compare for inequality the 2 value at the top of the stack and pushes the
     /// result on the stack.
-    /// The values on the stack cannot be resources or they will be consumed and so destroyed.
+    /// The values on the stack must have `Drop` as they will be consumed and destroyed.
     ///
     /// Stack transition:
     ///
@@ -1427,7 +1617,7 @@ pub struct CompiledScriptMut {
     /// Constant pool. The constant values used in the transaction.
     pub constant_pool: ConstantPool,
 
-    pub type_parameters: Vec<Kind>,
+    pub type_parameters: Vec<AbilitySet>,
 
     pub parameters: SignatureIndex,
 
@@ -1675,7 +1865,7 @@ impl Arbitrary for CompiledScriptMut {
                 vec(any::<Identifier>(), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
-            vec(any::<Kind>(), 0..=size),
+            vec(any::<AbilitySet>(), 0..=size),
             any::<SignatureIndex>(),
             any::<CodeUnit>(),
         )
@@ -1942,7 +2132,7 @@ pub fn basic_test_module() -> CompiledModuleMut {
     m.struct_handles.push(StructHandle {
         module: ModuleHandleIndex(0),
         name: IdentifierIndex(m.identifiers.len() as u16),
-        is_nominal_resource: false,
+        abilities: AbilitySet::EMPTY,
         type_parameters: vec![],
     });
     m.identifiers

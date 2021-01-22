@@ -39,7 +39,7 @@ use std::{fs, io::Write, panic, thread};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, Kind, SignatureToken,
+        AbilitySet, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken,
         StructHandleIndex,
     },
 };
@@ -389,42 +389,34 @@ pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> Sign
     }
 }
 
-pub fn kind(module: &impl ModuleAccess, ty: &SignatureToken, constraints: &[Kind]) -> Kind {
+pub fn abilities(
+    module: &impl ModuleAccess,
+    ty: &SignatureToken,
+    constraints: &[AbilitySet],
+) -> AbilitySet {
     use SignatureToken::*;
 
     match ty {
-        // The primitive types & references have kind unrestricted.
-        Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
-        Signer => Kind::Resource,
+        Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+
+        Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
+        Signer => AbilitySet::SIGNER,
         TypeParameter(idx) => constraints[*idx as usize],
-        Vector(ty) => kind(module, ty, constraints),
+        Vector(ty) => AbilitySet::polymorphic_abilities(
+            AbilitySet::VECTOR,
+            vec![abilities(module, ty, constraints)].into_iter(),
+        ),
         Struct(idx) => {
             let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            }
+            sh.abilities
         }
         StructInstantiation(idx, type_args) => {
             let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                return Kind::Resource;
-            }
-            // Gather the kinds of the type actuals.
-            let kinds = type_args
+            let declared_abilities = sh.abilities;
+            let type_argument_abilities = type_args
                 .iter()
-                .map(|ty| kind(module, ty, constraints))
-                .collect::<Vec<_>>();
-            // Derive the kind of the struct.
-            //   - If any of the type actuals is `all`, then the struct is `all`.
-            //     - `all` means some part of the type can be either `resource` or
-            //       `unrestricted`.
-            //     - Therefore it is also impossible to determine the kind of the type as a
-            //       whole, and thus `all`.
-            //   - If none of the type actuals is `all`, then the struct is a resource if
-            //     and only if one of the type actuals is `resource`.
-            kinds.iter().cloned().fold(Kind::Copyable, Kind::join)
+                .map(|ty| abilities(module, ty, constraints));
+            AbilitySet::polymorphic_abilities(declared_abilities, type_argument_abilities)
         }
     }
 }

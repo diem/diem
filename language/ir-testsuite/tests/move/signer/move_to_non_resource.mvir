@@ -7,7 +7,7 @@ module M {
         return;
     }
 }
-// check: MOVETO_NO_RESOURCE_ERROR
+// check: MOVETO_WITHOUT_KEY_ABILITY
 
 //! new-transaction
 
@@ -18,4 +18,4 @@ module N {
         return;
     }
 }
-// check: MOVETO_NO_RESOURCE_ERROR
+// check: MOVETO_WITHOUT_KEY_ABILITY

@@ -10,4 +10,5 @@ module M {
     }
 }
 
-// check: UNSAFE_RET_UNUSED_RESOURCES
+// Used to be invalid
+// Now valid because signer has drop

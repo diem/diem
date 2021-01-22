@@ -393,8 +393,8 @@ fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle
 fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
     serialize_module_handle_index(binary, &struct_handle.module)?;
     serialize_identifier_index(binary, &struct_handle.name)?;
-    serialize_nominal_resource_flag(binary, struct_handle.is_nominal_resource)?;
-    serialize_kinds(binary, &struct_handle.type_parameters)
+    serialize_ability_set(binary, struct_handle.abilities)?;
+    serialize_ability_sets(binary, &struct_handle.type_parameters)
 }
 
 /// Serializes a `FunctionHandle`.
@@ -413,7 +413,7 @@ fn serialize_function_handle(
     serialize_identifier_index(binary, &function_handle.name)?;
     serialize_signature_index(binary, &function_handle.parameters)?;
     serialize_signature_index(binary, &function_handle.return_)?;
-    serialize_kinds(binary, &function_handle.type_parameters)
+    serialize_ability_sets(binary, &function_handle.type_parameters)
 }
 
 fn serialize_function_instantiation(
@@ -654,31 +654,15 @@ pub(crate) fn serialize_signature_token(
     Ok(())
 }
 
-fn serialize_nominal_resource_flag(
-    binary: &mut BinaryData,
-    is_nominal_resource: bool,
-) -> Result<()> {
-    binary.push(if is_nominal_resource {
-        SerializedNominalResourceFlag::NOMINAL_RESOURCE
-    } else {
-        SerializedNominalResourceFlag::NORMAL_STRUCT
-    } as u8)?;
+fn serialize_ability_set(binary: &mut BinaryData, set: AbilitySet) -> Result<()> {
+    write_as_uleb128(binary, set.into_u8(), AbilitySet::ALL.into_u8())?;
     Ok(())
 }
 
-fn serialize_kind(binary: &mut BinaryData, kind: Kind) -> Result<()> {
-    binary.push(match kind {
-        Kind::All => SerializedKind::ALL,
-        Kind::Resource => SerializedKind::RESOURCE,
-        Kind::Copyable => SerializedKind::COPYABLE,
-    } as u8)?;
-    Ok(())
-}
-
-fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
-    serialize_type_parameter_count(binary, kinds.len())?;
-    for kind in kinds {
-        serialize_kind(binary, *kind)?;
+fn serialize_ability_sets(binary: &mut BinaryData, sets: &[AbilitySet]) -> Result<()> {
+    serialize_type_parameter_count(binary, sets.len())?;
+    for set in sets {
+        serialize_ability_set(binary, *set)?;
     }
     Ok(())
 }
@@ -1297,7 +1281,7 @@ impl ScriptSerializer {
         binary: &mut BinaryData,
         script: &CompiledScriptMut,
     ) -> Result<()> {
-        serialize_kinds(binary, &script.type_parameters)?;
+        serialize_ability_sets(binary, &script.type_parameters)?;
         serialize_signature_index(binary, &script.parameters)?;
         serialize_code_unit(binary, &script.code)?;
         Ok(())

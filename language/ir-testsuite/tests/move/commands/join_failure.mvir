@@ -32,7 +32,7 @@ module M {
         return;
     }
 }
-// check: UNSAFE_RET_UNUSED_RESOURCES
+// check: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP
 
 //! new-transaction
 module M {
@@ -70,7 +70,7 @@ module M {
         return;
     }
 }
-// check: COPYLOC_RESOURCE_ERROR
+// check: COPYLOC_WITHOUT_COPY_ABILITY
 
 //! new-transaction
 module M {

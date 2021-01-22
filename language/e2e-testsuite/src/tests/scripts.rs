@@ -14,8 +14,8 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use vm::file_format::{
-    empty_script, AddressIdentifierIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
-    IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, SignatureIndex,
+    empty_script, AbilitySet, AddressIdentifierIndex, Bytecode, FunctionHandle,
+    FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -318,7 +318,7 @@ fn script_type_argument_module_does_not_exist() {
     };
     script.module_handles.push(module_handle);
     script.code.code = vec![Bytecode::Ret];
-    script.type_parameters = vec![Kind::All];
+    script.type_parameters = vec![AbilitySet::EMPTY];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender
@@ -383,7 +383,7 @@ fn script_nested_type_argument_module_does_not_exist() {
     };
     script.module_handles.push(module_handle);
     script.code.code = vec![Bytecode::Ret];
-    script.type_parameters = vec![Kind::All];
+    script.type_parameters = vec![AbilitySet::EMPTY];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender

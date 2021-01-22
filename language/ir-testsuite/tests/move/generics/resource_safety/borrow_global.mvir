@@ -15,4 +15,4 @@ module M {
     }
 }
 
-// check: BORROWGLOBAL_NO_RESOURCE_ERROR
+// check: BORROWGLOBAL_WITHOUT_KEY_ABILITY

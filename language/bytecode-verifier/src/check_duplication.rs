@@ -273,7 +273,7 @@ impl<'a> DuplicationChecker<'a> {
             let acquires = function_def.acquires_global_resources.iter();
             if Self::first_duplicate_element(acquires).is_some() {
                 return Err(verification_error(
-                    StatusCode::DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                    StatusCode::DUPLICATE_ACQUIRES_ANNOTATION,
                     IndexKind::FunctionDefinition,
                     idx as TableIndex,
                 ));

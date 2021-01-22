@@ -210,7 +210,7 @@ fn verify_imported_structs(context: &Context) -> PartialVMResult<()> {
         {
             Some(def_idx) => {
                 let def_handle = owner_module.struct_handle_at(*def_idx);
-                if struct_handle.is_nominal_resource != def_handle.is_nominal_resource
+                if struct_handle.abilities != def_handle.abilities
                     || struct_handle.type_parameters != def_handle.type_parameters
                 {
                     return Err(verification_error(

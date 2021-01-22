@@ -5,16 +5,16 @@ extern crate test_generation;
 use move_core_types::identifier::Identifier;
 use std::collections::HashMap;
 use test_generation::{
+    abilities,
     abstract_state::{AbstractState, AbstractValue, CallGraph},
-    kind,
 };
 use vm::{
     access::ModuleAccess,
     file_format::{
-        empty_module, Bytecode, CompiledModule, CompiledModuleMut, FieldDefinition, FieldHandle,
-        FieldHandleIndex, IdentifierIndex, Kind, ModuleHandleIndex, SignatureToken,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandle,
-        StructHandleIndex, TableIndex, TypeSignature,
+        empty_module, Ability, AbilitySet, Bytecode, CompiledModule, CompiledModuleMut,
+        FieldDefinition, FieldHandle, FieldHandleIndex, IdentifierIndex, ModuleHandleIndex,
+        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        StructHandle, StructHandleIndex, TableIndex, TypeSignature,
     },
     views::{StructDefinitionView, ViewInternals},
 };
@@ -48,7 +48,11 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     module.struct_handles = vec![StructHandle {
         module: ModuleHandleIndex::new(0),
         name: IdentifierIndex::new((struct_index + offset) as TableIndex),
-        is_nominal_resource: resource,
+        abilities: if resource {
+            AbilitySet::EMPTY | Ability::Key | Ability::Store
+        } else {
+            AbilitySet::PRIMITIVES
+        },
         type_parameters: vec![],
     }];
     module
@@ -63,23 +67,11 @@ fn create_struct_value(module: &CompiledModule) -> (AbstractValue, Vec<Signature
         .flatten()
         .map(|field| field.type_signature().token().as_inner().clone())
         .collect();
-    let struct_kind = if struct_def_view.is_nominal_resource() {
-        Kind::Resource
-    } else {
-        tokens.iter().map(|token| kind(module, token, &[])).fold(
-            Kind::Copyable,
-            |acc_kind, next_kind| match (acc_kind, next_kind) {
-                (Kind::All, _) | (_, Kind::All) => Kind::All,
-                (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
-                (Kind::Copyable, Kind::Copyable) => Kind::Copyable,
-            },
-        )
-    };
+    let struct_abilities = struct_def_view.abilities();
+    let type_argument_abilities = tokens.iter().map(|token| abilities(module, token, &[]));
+    let abilities = AbilitySet::polymorphic_abilities(struct_abilities, type_argument_abilities);
     (
-        AbstractValue::new_struct(
-            SignatureToken::Struct(struct_def.struct_handle),
-            struct_kind,
-        ),
+        AbstractValue::new_struct(SignatureToken::Struct(struct_def.struct_handle), abilities),
         tokens,
     )
 }
@@ -113,7 +105,7 @@ fn bytecode_pack() {
     for token in tokens {
         let abstract_value = AbstractValue {
             token: token.clone(),
-            kind: kind(&state1.module.module, &token, &[]),
+            abilities: abilities(&state1.module.module, &token, &[]),
         };
         state1.stack_push(abstract_value);
     }
@@ -236,7 +228,7 @@ fn bytecode_moveto() {
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-        Kind::Copyable,
+        AbilitySet::EMPTY | Ability::Drop,
     ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
     let (state2, _) =
@@ -252,7 +244,7 @@ fn bytecode_moveto_struct_is_not_resource() {
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-        Kind::Copyable,
+        AbilitySet::EMPTY | Ability::Drop,
     ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
     common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
@@ -266,7 +258,7 @@ fn bytecode_moveto_no_struct_on_stack() {
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-        Kind::Copyable,
+        AbilitySet::EMPTY | Ability::Drop,
     ));
     common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
 }
@@ -288,15 +280,15 @@ fn bytecode_mutborrowfield() {
     let struct_value = create_struct_value(&state1.module.module).0;
     state1.stack_push(AbstractValue {
         token: SignatureToken::MutableReference(Box::new(struct_value.token)),
-        kind: struct_value.kind,
+        abilities: struct_value.abilities,
     });
     let (state2, _) = common::run_instruction(Bytecode::MutBorrowField(field_handle_idx), state1);
-    let kind = kind(&state2.module.module, &field_signature, &[]);
+    let abilities = abilities(&state2.module.module, &field_signature, &[]);
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue {
             token: SignatureToken::MutableReference(Box::new(field_signature)),
-            kind,
+            abilities,
         }),
         "stack type postcondition not met"
     );
@@ -334,7 +326,7 @@ fn bytecode_mutborrowfield_ref_is_immutable() {
     let struct_value = create_struct_value(&state1.module.module).0;
     state1.stack_push(AbstractValue {
         token: SignatureToken::Reference(Box::new(struct_value.token)),
-        kind: struct_value.kind,
+        abilities: struct_value.abilities,
     });
     common::run_instruction(Bytecode::MutBorrowField(field_handle_idx), state1);
 }
@@ -356,15 +348,15 @@ fn bytecode_immborrowfield() {
     let struct_value = create_struct_value(&state1.module.module).0;
     state1.stack_push(AbstractValue {
         token: SignatureToken::Reference(Box::new(struct_value.token)),
-        kind: struct_value.kind,
+        abilities: struct_value.abilities,
     });
     let (state2, _) = common::run_instruction(Bytecode::ImmBorrowField(field_handle_idx), state1);
-    let kind = kind(&state2.module.module, &field_signature, &[]);
+    let abilities = abilities(&state2.module.module, &field_signature, &[]);
     assert_eq!(
         state2.stack_peek(0),
         Some(AbstractValue {
             token: SignatureToken::MutableReference(Box::new(field_signature)),
-            kind,
+            abilities,
         }),
         "stack type postcondition not met"
     );
@@ -402,7 +394,7 @@ fn bytecode_immborrowfield_ref_is_mutable() {
     let struct_value = create_struct_value(&state1.module.module).0;
     state1.stack_push(AbstractValue {
         token: SignatureToken::MutableReference(Box::new(struct_value.token)),
-        kind: struct_value.kind,
+        abilities: struct_value.abilities,
     });
     common::run_instruction(Bytecode::ImmBorrowField(field_handle_idx), state1);
 }
@@ -422,7 +414,7 @@ fn bytecode_borrowglobal() {
         state2.stack_peek(0),
         Some(AbstractValue {
             token: SignatureToken::MutableReference(Box::new(struct_value.token)),
-            kind: struct_value.kind,
+            abilities: struct_value.abilities,
         }),
         "stack type postcondition not met"
     );

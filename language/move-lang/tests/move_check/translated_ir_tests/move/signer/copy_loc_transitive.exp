@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_copy_loc_transitive.move:5:9 ───
+   ┌── tests/move_check/translated_ir_tests/move/signer/copy_loc_transitive.move:5:9 ───
    │
  5 │         copy x
    │         ^^^^^^ Invalid 'copy' of owned resource value

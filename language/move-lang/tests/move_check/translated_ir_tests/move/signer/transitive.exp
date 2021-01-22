@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_transitive.move:7:13 ───
+   ┌── tests/move_check/translated_ir_tests/move/signer/transitive.move:7:13 ───
    │
  7 │         let x = S<signer> { f: s };
    │             ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_transitive.move:7:35 ───
+   ┌── tests/move_check/translated_ir_tests/move/signer/transitive.move:7:35 ───
    │
  7 │         let x = S<signer> { f: s };
    │                                   ^ Invalid return

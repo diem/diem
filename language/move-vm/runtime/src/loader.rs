@@ -6,9 +6,9 @@ use crate::{
     native_functions::NativeFunction,
 };
 use bytecode_verifier::{
-    constants, cyclic_dependencies, dependencies, instantiation_loops::InstantiationLoopChecker,
-    script_signature, CodeUnitVerifier, DuplicationChecker, InstructionConsistency,
-    RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
+    ability_field_requirements, constants, cyclic_dependencies, dependencies,
+    instantiation_loops::InstantiationLoopChecker, script_signature, CodeUnitVerifier,
+    DuplicationChecker, InstructionConsistency, RecursiveStructDefChecker, SignatureChecker,
 };
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
@@ -28,10 +28,11 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
-        FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
-        FunctionInstantiationIndex, Kind, Signature, SignatureToken, StructDefInstantiationIndex,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex,
+        AbilitySet, Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex,
+        FieldHandleIndex, FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex,
+        FunctionHandleIndex, FunctionInstantiationIndex, Signature, SignatureToken,
+        StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, TableIndex,
     },
     IndexKind,
 };
@@ -204,13 +205,13 @@ impl ModuleCache {
         idx: StructDefinitionIndex,
     ) -> StructType {
         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-        let is_resource = struct_handle.is_nominal_resource;
+        let abilities = struct_handle.abilities;
         let name = module.identifier_at(struct_handle.name).to_owned();
         let type_parameters = struct_handle.type_parameters.clone();
         let module = module.self_id();
         StructType {
             fields: vec![],
-            is_resource,
+            abilities,
             type_parameters,
             name,
             module,
@@ -468,14 +469,14 @@ impl Loader {
         };
 
         // verify type arguments
-        let mut type_params = vec![];
+        let mut type_arguments = vec![];
         for ty in ty_args {
-            type_params.push(self.load_type(ty, data_store, log_context)?);
+            type_arguments.push(self.load_type(ty, data_store, log_context)?);
         }
-        self.verify_ty_args(main.type_parameters(), &type_params)
+        self.verify_ty_args(main.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Script))?;
 
-        Ok((main, type_params, parameter_tys))
+        Ok((main, type_arguments, parameter_tys))
     }
 
     // The process of deserialization and verification is not and it must not be under lock.
@@ -633,7 +634,7 @@ impl Loader {
         DuplicationChecker::verify_module(&module)?;
         SignatureChecker::verify_module(&module)?;
         InstructionConsistency::verify_module(&module)?;
-        ResourceTransitiveChecker::verify_module(&module)?;
+        ability_field_requirements::verify_module(&module)?;
         constants::verify_module(&module)?;
         RecursiveStructDefChecker::verify_module(&module)?;
         InstantiationLoopChecker::verify_module(&module)?;
@@ -863,20 +864,15 @@ impl Loader {
     // Verify the kind (constraints) of an instantiation.
     // Both function and script invocation use this function to verify correctness
     // of type arguments provided
-    fn verify_ty_args(&self, constraints: &[Kind], ty_args: &[Type]) -> PartialVMResult<()> {
+    fn verify_ty_args(&self, constraints: &[AbilitySet], ty_args: &[Type]) -> PartialVMResult<()> {
         if constraints.len() != ty_args.len() {
             return Err(PartialVMError::new(
                 StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
             ));
         }
         for (ty, expected_k) in ty_args.iter().zip(constraints) {
-            let k = if self.is_resource(ty) {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            };
-            if !k.is_sub_kind_of(*expected_k) {
-                return Err(PartialVMError::new(StatusCode::CONSTRAINT_KIND_MISMATCH));
+            if !expected_k.is_subset(self.abilities(ty)?) {
+                return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED));
             }
         }
         Ok(())
@@ -910,23 +906,36 @@ impl Loader {
         )
     }
 
-    fn is_resource(&self, type_: &Type) -> bool {
-        match type_ {
-            Type::Struct(idx) => self.module_cache.lock().struct_at(*idx).is_resource,
-            Type::StructInstantiation(idx, instantiation) => {
-                if self.module_cache.lock().struct_at(*idx).is_resource {
-                    true
-                } else {
-                    for ty in instantiation {
-                        if self.is_resource(ty) {
-                            return true;
-                        }
-                    }
-                    false
-                }
+    fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
+        match ty {
+            Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
+                Ok(AbilitySet::PRIMITIVES)
             }
-            Type::Vector(ty) => self.is_resource(ty),
-            _ => false,
+
+            // Technically unreachable but, no point in erroring if we don't have to
+            Type::Reference(_) | Type::MutableReference(_) => Ok(AbilitySet::REFERENCES),
+            Type::Signer => Ok(AbilitySet::SIGNER),
+
+            Type::TyParam(_) => Err(PartialVMError::new(StatusCode::UNREACHABLE).with_message(
+                "Unexpected TyParam type after translating from TypeTag to Type".to_string(),
+            )),
+
+            Type::Vector(ty) => Ok(AbilitySet::polymorphic_abilities(
+                AbilitySet::VECTOR,
+                vec![self.abilities(ty)?].into_iter(),
+            )),
+            Type::Struct(idx) => Ok(self.module_cache.lock().struct_at(*idx).abilities),
+            Type::StructInstantiation(idx, type_args) => {
+                let declared_abilities = self.module_cache.lock().struct_at(*idx).abilities;
+                let type_argument_abilities = type_args
+                    .iter()
+                    .map(|ty| self.abilities(ty))
+                    .collect::<PartialVMResult<Vec<_>>>()?;
+                Ok(AbilitySet::polymorphic_abilities(
+                    declared_abilities,
+                    type_argument_abilities,
+                ))
+            }
         }
     }
 }
@@ -1470,7 +1479,7 @@ pub(crate) struct Function {
     parameters: Signature,
     return_: Signature,
     locals: Signature,
-    type_parameters: Vec<Kind>,
+    type_parameters: Vec<AbilitySet>,
     native: Option<NativeFunction>,
     scope: Scope,
     name: Identifier,
@@ -1566,7 +1575,7 @@ impl Function {
         &self.code
     }
 
-    pub(crate) fn type_parameters(&self) -> &[Kind] {
+    pub(crate) fn type_parameters(&self) -> &[AbilitySet] {
         &self.type_parameters
     }
 

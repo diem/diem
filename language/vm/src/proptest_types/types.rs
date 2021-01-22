@@ -3,10 +3,11 @@
 
 use crate::{
     file_format::{
-        FieldDefinition, IdentifierIndex, ModuleHandleIndex, SignatureToken, StructDefinition,
-        StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
+        AbilitySet, FieldDefinition, IdentifierIndex, ModuleHandleIndex, SignatureToken,
+        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
+        TypeSignature,
     },
-    proptest_types::signature::{KindGen, SignatureTokenGen},
+    proptest_types::signature::{AbilitySetGen, SignatureTokenGen},
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -45,21 +46,32 @@ impl StDefnMaterializeState {
         }
     }
 
-    fn contains_nominal_resource(&self, signature: &SignatureToken) -> bool {
+    fn potential_abilities(&self, ty: &SignatureToken) -> AbilitySet {
         use SignatureToken::*;
 
-        match signature {
-            Signer => true,
-            Struct(struct_handle_index) => {
-                self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
+        match ty {
+            Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+
+            Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
+            Signer => AbilitySet::SIGNER,
+            TypeParameter(_) => AbilitySet::ALL,
+            Vector(ty) => {
+                let inner = self.potential_abilities(ty);
+                inner.intersect(AbilitySet::VECTOR)
             }
-            StructInstantiation(struct_handle_index, type_args) => {
-                self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
-                    || type_args.iter().any(|t| self.contains_nominal_resource(t))
+            Struct(idx) => {
+                let sh = &self.struct_handles[idx.0 as usize];
+                sh.abilities
             }
-            Vector(targ) => self.contains_nominal_resource(targ),
-            Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
-            Bool | U8 | U64 | U128 | Address | TypeParameter(_) => false,
+            StructInstantiation(idx, type_args) => {
+                let sh = &self.struct_handles[idx.0 as usize];
+
+                // Gather the abilities of the type actuals.
+                let type_args_abilities = type_args.iter().map(|ty| self.potential_abilities(ty));
+                type_args_abilities.fold(sh.abilities, |acc, ty_arg_abilities| {
+                    acc.intersect(ty_arg_abilities)
+                })
+            }
         }
     }
 }
@@ -68,26 +80,24 @@ impl StDefnMaterializeState {
 pub struct StructHandleGen {
     module_idx: PropIndex,
     name_idx: PropIndex,
-    is_nominal_resource: bool,
-    type_parameters: Vec<KindGen>,
+    abilities: AbilitySetGen,
+    type_parameters: Vec<AbilitySetGen>,
 }
 
 impl StructHandleGen {
-    pub fn strategy(kind_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
+    pub fn strategy(ability_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
         (
             any::<PropIndex>(),
             any::<PropIndex>(),
-            any::<bool>(),
-            vec(KindGen::strategy(), kind_count),
+            AbilitySetGen::strategy(),
+            vec(AbilitySetGen::strategy(), ability_count),
         )
-            .prop_map(
-                |(module_idx, name_idx, is_nominal_resource, type_parameters)| Self {
-                    module_idx,
-                    name_idx,
-                    is_nominal_resource,
-                    type_parameters,
-                },
-            )
+            .prop_map(|(module_idx, name_idx, abilities, type_parameters)| Self {
+                module_idx,
+                name_idx,
+                abilities,
+                type_parameters,
+            })
     }
 
     pub fn materialize(self, module_len: usize, identifiers_len: usize) -> StructHandle {
@@ -99,7 +109,7 @@ impl StructHandleGen {
         StructHandle {
             module: ModuleHandleIndex(idx as TableIndex),
             name: IdentifierIndex(self.name_idx.index(identifiers_len) as TableIndex),
-            is_nominal_resource: self.is_nominal_resource,
+            abilities: self.abilities.materialize(),
             type_parameters,
         }
     }
@@ -108,8 +118,8 @@ impl StructHandleGen {
 #[derive(Clone, Debug)]
 pub struct StructDefinitionGen {
     name_idx: PropIndex,
-    is_nominal_resource: bool,
-    type_parameters: Vec<KindGen>,
+    abilities: AbilitySetGen,
+    type_parameters: Vec<AbilitySetGen>,
     is_public: bool,
     field_defs: Option<Vec<FieldDefinitionGen>>,
 }
@@ -117,19 +127,19 @@ pub struct StructDefinitionGen {
 impl StructDefinitionGen {
     pub fn strategy(
         field_count: impl Into<SizeRange>,
-        kind_count: impl Into<SizeRange>,
+        type_parameter_count: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
         (
             any::<PropIndex>(),
-            any::<bool>(),
-            vec(KindGen::strategy(), kind_count),
+            AbilitySetGen::strategy(),
+            vec(AbilitySetGen::strategy(), type_parameter_count),
             any::<bool>(),
             option::of(vec(FieldDefinitionGen::strategy(), field_count)),
         )
             .prop_map(
-                |(name_idx, is_nominal_resource, type_parameters, is_public, field_defs)| Self {
+                |(name_idx, abilities, type_parameters, is_public, field_defs)| Self {
                     name_idx,
-                    is_nominal_resource,
+                    abilities,
                     type_parameters,
                     is_public,
                     field_defs,
@@ -154,24 +164,20 @@ impl StructDefinitionGen {
                 }
             }
         };
-        let is_nominal_resource = if fields.is_empty() {
-            self.is_nominal_resource
-        } else {
-            self.is_nominal_resource
-                || fields.iter().any(|field| {
-                    let field_sig = &field.signature.0;
-                    state.contains_nominal_resource(field_sig)
-                })
-        };
+        let abilities = fields
+            .iter()
+            .fold(self.abilities.materialize(), |acc, field| {
+                acc.intersect(state.potential_abilities(&field.signature.0))
+            });
         let handle = StructHandle {
             // 0 represents the current module
             module: ModuleHandleIndex(0),
             name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
-            is_nominal_resource,
+            abilities,
             type_parameters: self
                 .type_parameters
                 .into_iter()
-                .map(|kind| kind.materialize())
+                .map(|abilities| abilities.materialize())
                 .collect(),
         };
         match state.add_struct_handle(handle) {

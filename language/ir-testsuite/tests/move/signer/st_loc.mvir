@@ -5,4 +5,5 @@ module M {
     }
 }
 
-// check: STLOC_UNSAFE_TO_DESTROY_ERROR
+// Used to be invalid
+// Now valid because signer has drop

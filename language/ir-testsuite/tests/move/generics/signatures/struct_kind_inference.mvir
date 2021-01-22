@@ -9,7 +9,7 @@ module M1 {
     }
 }
 
-// check: UNSAFE_RET_UNUSED_RESOURCES
+// check: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP
 
 //! new-transaction
 module M2 {
@@ -36,7 +36,7 @@ module M3 {
     }
 }
 
-// check: READREF_RESOURCE_ERROR
+// check: READREF_WITHOUT_COPY_ABILITY
 
 //! new-transaction
 module M4 {
@@ -50,7 +50,7 @@ module M4 {
     }
 }
 
-// check: WRITEREF_RESOURCE_ERROR
+// check: WRITEREF_WITHOUT_DROP_ABILITY
 
 //! new-transaction
 module M5 {
@@ -63,4 +63,4 @@ module M5 {
     }
 }
 
-// check: COPYLOC_RESOURCE_ERROR
+// check: COPYLOC_WITHOUT_COPY_ABILITY

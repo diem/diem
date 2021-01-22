@@ -37,26 +37,26 @@ fn make_module() -> CompiledModuleMut {
             StructHandle {
                 module: ModuleHandleIndex(0),
                 name: IdentifierIndex(1),
-                is_nominal_resource: false,
+                abilities: AbilitySet::PRIMITIVES,
                 type_parameters: vec![],
             },
             StructHandle {
                 module: ModuleHandleIndex(0),
                 name: IdentifierIndex(2),
-                is_nominal_resource: false,
-                type_parameters: vec![Kind::Copyable],
+                abilities: AbilitySet::PRIMITIVES,
+                type_parameters: vec![AbilitySet::PRIMITIVES],
             },
             StructHandle {
                 module: ModuleHandleIndex(0),
                 name: IdentifierIndex(3),
-                is_nominal_resource: true,
+                abilities: AbilitySet::EMPTY | Ability::Key,
                 type_parameters: vec![],
             },
             StructHandle {
                 module: ModuleHandleIndex(0),
                 name: IdentifierIndex(4),
-                is_nominal_resource: true,
-                type_parameters: vec![Kind::Copyable],
+                abilities: AbilitySet::EMPTY | Ability::Key,
+                type_parameters: vec![AbilitySet::PRIMITIVES],
             },
         ],
         struct_defs: vec![
@@ -76,7 +76,7 @@ fn make_module() -> CompiledModuleMut {
                     signature: TypeSignature(SignatureToken::TypeParameter(0)),
                 }]),
             },
-            // resource R { f: u64 }
+            // key struct R { f: u64 }
             StructDefinition {
                 struct_handle: StructHandleIndex(2),
                 field_information: StructFieldInformation::Declared(vec![FieldDefinition {
@@ -84,7 +84,7 @@ fn make_module() -> CompiledModuleMut {
                     signature: TypeSignature(SignatureToken::U64),
                 }]),
             },
-            // resource GR<T> { f: T }
+            // key struct GR<T> { f: T }
             StructDefinition {
                 struct_handle: StructHandleIndex(3),
                 field_information: StructFieldInformation::Declared(vec![FieldDefinition {
@@ -102,13 +102,13 @@ fn make_module() -> CompiledModuleMut {
                 return_: SignatureIndex(0),
                 type_parameters: vec![],
             },
-            // fun g_fn<T>()
+            // fun g_fn<T: key>()
             FunctionHandle {
                 module: ModuleHandleIndex(0),
                 name: IdentifierIndex(7),
                 parameters: SignatureIndex(0),
                 return_: SignatureIndex(0),
-                type_parameters: vec![Kind::Resource],
+                type_parameters: vec![AbilitySet::EMPTY | Ability::Key],
             },
             // fun test_fn(Sender)
             FunctionHandle {

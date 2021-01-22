@@ -7,7 +7,7 @@ use move_core_types::language_storage::ModuleId;
 use move_vm::{
     access::ModuleAccess,
     file_format::{
-        CompiledModule, FunctionDefinition, Kind, SignatureToken, StructDefinition,
+        AbilitySet, CompiledModule, FunctionDefinition, SignatureToken, StructDefinition,
         StructFieldInformation, StructHandleIndex, TypeParameterIndex, Visibility,
     },
 };
@@ -133,10 +133,10 @@ fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
     let mut out = String::new();
 
     let shandle = ctx.module.struct_handle_at(sdef.struct_handle);
-    let resource_mod = if shandle.is_nominal_resource {
-        "resource "
-    } else {
-        ""
+    let resource_mod = match ability_to_kind(shandle.abilities) {
+        Kind::Resource => "resource ",
+        Kind::Copyable => "",
+        Kind::All => panic!("Unsupported ability set for struct"),
     };
 
     push_line!(
@@ -195,7 +195,7 @@ fn write_visibility(visibility: Visibility) -> String {
     .to_string()
 }
 
-fn write_type_paramters(tps: &[Kind]) -> String {
+fn write_type_paramters(tps: &[AbilitySet]) -> String {
     if tps.is_empty() {
         return "".to_string();
     }
@@ -203,11 +203,11 @@ fn write_type_paramters(tps: &[Kind]) -> String {
     let tp_and_constraints = tps
         .iter()
         .enumerate()
-        .map(|(idx, kind)| {
+        .map(|(idx, abs)| {
             format!(
                 "{}{}",
                 write_type_parameter(idx as TypeParameterIndex),
-                write_kind_contraint(kind)
+                write_kind_contraint(ability_to_kind(*abs))
             )
         })
         .collect::<Vec<_>>()
@@ -215,7 +215,7 @@ fn write_type_paramters(tps: &[Kind]) -> String {
     format!("<{}>", tp_and_constraints)
 }
 
-fn write_kind_contraint(kind: &Kind) -> String {
+fn write_kind_contraint(kind: Kind) -> String {
     match kind {
         Kind::All => "".to_string(),
         Kind::Resource => ": resource".to_string(),
@@ -300,4 +300,20 @@ fn write_struct_handle_type(ctx: &mut Context, idx: StructHandleIndex) -> String
 
 fn write_type_parameter(idx: TypeParameterIndex) -> String {
     format!("T{}", idx)
+}
+
+// Temporary helpers until abilities+constraints are added to the source language
+enum Kind {
+    Copyable,
+    Resource,
+    All,
+}
+
+fn ability_to_kind(abs: AbilitySet) -> Kind {
+    match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
+        (true, true, false) => Kind::Copyable,
+        (false, false, true) => Kind::Resource,
+        (false, false, false) => Kind::All,
+        _ => panic!("Unsupported ability set"),
+    }
 }

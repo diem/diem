@@ -122,25 +122,6 @@ pub enum SerializedType {
 #[allow(non_camel_case_types)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
-pub enum SerializedNominalResourceFlag {
-    NOMINAL_RESOURCE        = 0x1,
-    NORMAL_STRUCT           = 0x2,
-}
-
-#[rustfmt::skip]
-#[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug)]
-pub enum SerializedKind {
-    ALL                     = 0x1,
-    COPYABLE                = 0x2,
-    RESOURCE                = 0x3,
-}
-
-#[rustfmt::skip]
-#[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug)]
 pub enum SerializedNativeStructFlag {
     NATIVE                  = 0x1,
     DECLARED                = 0x2,

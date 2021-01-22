@@ -9,9 +9,9 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        empty_module, CompiledModule, CompiledModuleMut, FieldInstantiation,
+        empty_module, Ability, AbilitySet, CompiledModule, CompiledModuleMut, FieldInstantiation,
         FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiation,
-        FunctionInstantiationIndex, Kind, Signature, SignatureIndex, SignatureToken,
+        FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
     },
 };
@@ -30,8 +30,8 @@ pub struct AbstractValue {
     /// Represents the type of the value
     pub token: SignatureToken,
 
-    /// Represents the kind of the value
-    pub kind: Kind,
+    /// Represents the abilities of the value
+    pub abilities: AbilitySet,
 }
 
 /// This models the mutability of a reference
@@ -52,23 +52,30 @@ impl AbstractValue {
     /// Create a new primitive `AbstractValue` given its type; the kind will be `Copyable`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
         checked_precondition!(
-            !matches!(
-                token,
+            match token {
                 SignatureToken::Struct(_)
-                    | SignatureToken::StructInstantiation(_, _)
-                    | SignatureToken::Reference(_)
-                    | SignatureToken::MutableReference(_),
-            ),
+                | SignatureToken::StructInstantiation(_, _)
+                | SignatureToken::Reference(_)
+                | SignatureToken::MutableReference(_)
+                | SignatureToken::Signer
+                | SignatureToken::Vector(_)
+                | SignatureToken::TypeParameter(_) => false,
+                SignatureToken::Bool
+                | SignatureToken::Address
+                | SignatureToken::U8
+                | SignatureToken::U64
+                | SignatureToken::U128 => true,
+            },
             "AbstractValue::new_primitive must be applied with primitive type"
         );
         AbstractValue {
             token,
-            kind: Kind::Copyable,
+            abilities: AbilitySet::PRIMITIVES,
         }
     }
 
     /// Create a new reference `AbstractValue` given its type and kind
-    pub fn new_reference(token: SignatureToken, kind: Kind) -> AbstractValue {
+    pub fn new_reference(token: SignatureToken, abilities: AbilitySet) -> AbstractValue {
         checked_precondition!(
             matches!(
                 token,
@@ -76,20 +83,20 @@ impl AbstractValue {
             ),
             "AbstractValue::new_reference must be applied with a reference type"
         );
-        AbstractValue { token, kind }
+        AbstractValue { token, abilities }
     }
 
     /// Create a new struct `AbstractValue` given its type and kind
-    pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
+    pub fn new_struct(token: SignatureToken, abilities: AbilitySet) -> AbstractValue {
         checked_precondition!(
             matches!(token, SignatureToken::Struct(_)),
             "AbstractValue::new_struct must be applied with a struct type"
         );
-        AbstractValue { token, kind }
+        AbstractValue { token, abilities }
     }
 
-    pub fn new_value(token: SignatureToken, kind: Kind) -> AbstractValue {
-        AbstractValue { token, kind }
+    pub fn new_value(token: SignatureToken, abilities: AbilitySet) -> AbstractValue {
+        AbstractValue { token, abilities }
     }
 
     /// Predicate on whether the type of the abstract value is generic -- it is if it contains a
@@ -412,7 +419,7 @@ pub struct AbstractState {
 
     /// A vector of type kinds for any generic function type parameters of the function that we are
     /// in.
-    pub instantiation: Vec<Kind>,
+    pub instantiation: Vec<AbilitySet>,
 
     /// A HashMap mapping local indicies to `AbstractValue`s and `BorrowState`s
     locals: HashMap<usize, (AbstractValue, BorrowState)>,
@@ -468,7 +475,7 @@ impl AbstractState {
     pub fn from_locals(
         module: CompiledModuleMut,
         locals: HashMap<usize, (AbstractValue, BorrowState)>,
-        instantiation: Vec<Kind>,
+        instantiation: Vec<AbilitySet>,
         acquires_global_resources: Vec<StructDefinitionIndex>,
         call_graph: CallGraph,
     ) -> AbstractState {
@@ -593,7 +600,10 @@ impl AbstractState {
                     return Err(VMError::new("Mutability cannot be Either".to_string()))
                 }
             };
-            self.register = Some(AbstractValue::new_reference(ref_token, abstract_value.kind));
+            self.register = Some(AbstractValue::new_reference(
+                ref_token,
+                abstract_value.abilities,
+            ));
             Ok(())
         } else {
             Err(VMError::new(format!("Local does not exist at index {}", i)))
@@ -626,11 +636,11 @@ impl AbstractState {
         }
     }
 
-    /// Check whether a local is in a particular `Kind`
+    /// Check whether a local has a particular `Ability`
     /// If the local does not exist return a `VMError`.
-    pub fn local_kind_is(&self, i: usize, kind: Kind) -> Result<bool, VMError> {
+    pub fn local_has_ability(&self, i: usize, ability: Ability) -> Result<bool, VMError> {
         if let Some((abstract_value, _)) = self.locals.get(&i) {
-            Ok(abstract_value.kind == kind)
+            Ok(abstract_value.abilities.has_ability(ability))
         } else {
             Err(VMError::new(format!("Local does not exist at index {}", i)))
         }
@@ -710,6 +720,6 @@ impl Default for AbstractState {
 
 impl fmt::Display for AbstractValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({:?}: {:?})", self.token, self.kind)
+        write!(f, "({:?}: {:?})", self.token, self.abilities)
     }
 }

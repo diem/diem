@@ -22,10 +22,10 @@ Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000B:
     Added type 0x2::Test::R: [7, 0, 0, 0, 0, 0, 0, 0]
 Command `view storage/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::Test::R.bcs`:
-resource 0x2::Test::R {
+store key 0x2::Test::R {
     i: 6
 }
 Command `view storage/0x0000000000000000000000000000000B/resources/0x00000000000000000000000000000002::Test::R.bcs`:
-resource 0x2::Test::R {
+store key 0x2::Test::R {
     i: 7
 }

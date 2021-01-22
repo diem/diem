@@ -22,7 +22,10 @@ use std::{
     convert::TryInto,
     fmt::{Display, Formatter},
 };
-use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
+use vm::{
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    file_format::{Ability, AbilitySet},
+};
 
 mod fat_type;
 mod module_cache;
@@ -33,7 +36,7 @@ pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
 #[derive(Debug)]
 pub struct AnnotatedMoveStruct {
-    pub is_resource: bool,
+    pub abilities: AbilitySet,
     pub type_: StructTag,
     pub value: Vec<(Identifier, AnnotatedMoveValue)>,
 }
@@ -144,7 +147,7 @@ impl<'a> MoveValueAnnotator<'a> {
             annotated_fields.push(self.annotate_value(v, ty)?);
         }
         Ok(AnnotatedMoveStruct {
-            is_resource: ty.is_resource,
+            abilities: ty.abilities.0,
             type_: struct_tag,
             value: field_names
                 .into_iter()
@@ -228,12 +231,8 @@ fn pretty_print_struct(
     value: &AnnotatedMoveStruct,
     indent: u64,
 ) -> std::fmt::Result {
-    writeln!(
-        f,
-        "{}{} {{",
-        if value.is_resource { "resource " } else { "" },
-        value.type_
-    )?;
+    pretty_print_ability_modifiers(f, value.abilities)?;
+    writeln!(f, "{} {{", value.type_)?;
     for (field_name, v) in value.value.iter() {
         write_indent(f, indent + 4)?;
         write!(f, "{}: ", field_name)?;
@@ -242,6 +241,18 @@ fn pretty_print_struct(
     }
     write_indent(f, indent)?;
     write!(f, "}}")
+}
+
+fn pretty_print_ability_modifiers(f: &mut Formatter, abilities: AbilitySet) -> std::fmt::Result {
+    for ability in abilities {
+        match ability {
+            Ability::Copy => write!(f, "copy ")?,
+            Ability::Drop => write!(f, "drop ")?,
+            Ability::Store => write!(f, "store ")?,
+            Ability::Key => write!(f, "key ")?,
+        }
+    }
+    Ok(())
 }
 
 impl Display for AnnotatedMoveValue {

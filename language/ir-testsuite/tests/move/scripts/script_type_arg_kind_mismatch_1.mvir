@@ -2,4 +2,4 @@
 main<T: copyable>() {
     return;
 }
-// check: CONSTRAINT_KIND_MISMATCH
+// check: CONSTRAINT_NOT_SATISFIED

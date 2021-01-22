@@ -16,9 +16,9 @@ use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use vm::{
     errors::{PartialVMResult, VMResult},
     file_format::{
-        empty_module, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModuleMut,
+        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModuleMut,
         CompiledScriptMut, FieldDefinition, FunctionDefinition, FunctionHandle,
-        FunctionHandleIndex, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
+        FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
         SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation, StructHandle,
         StructHandleIndex, TableIndex, TypeSignature, Visibility,
     },
@@ -92,7 +92,7 @@ fn make_script_with_non_linking_structs(parameters: Signature) -> Vec<u8> {
         struct_handles: vec![StructHandle {
             module: ModuleHandleIndex(0),
             name: IdentifierIndex(1),
-            is_nominal_resource: false,
+            abilities: AbilitySet::EMPTY,
             type_parameters: vec![],
         }],
         function_handles: vec![FunctionHandle {
@@ -131,7 +131,7 @@ fn make_module_with_function(
     visibility: Visibility,
     parameters: Signature,
     return_: Signature,
-    type_parameters: Vec<Kind>,
+    type_parameters: Vec<AbilitySet>,
 ) -> (CompiledModule, Identifier) {
     let function_name = Identifier::new("foo").unwrap();
     let mut signatures = vec![Signature(vec![])];
@@ -162,7 +162,7 @@ fn make_module_with_function(
         struct_handles: vec![StructHandle {
             module: ModuleHandleIndex(0),
             name: IdentifierIndex(1),
-            is_nominal_resource: false,
+            abilities: AbilitySet::EMPTY,
             type_parameters: vec![],
         }],
         function_handles: vec![FunctionHandle {

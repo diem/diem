@@ -41,7 +41,7 @@ impl Compatibility {
                 .find(|s| s.name == old_struct.name)
             {
                 Some(new_struct) => {
-                    if new_struct.kind != old_struct.kind
+                    if new_struct.abilities != old_struct.abilities
                         || new_struct.type_parameters != old_struct.type_parameters
                     {
                         // Declared kind and/or type parameters changed. Existing modules that depend on this struct will fail to link with the new version of the module

@@ -13,9 +13,9 @@ use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex,
-        Kind, Signature, SignatureIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, TableIndex, TypeSignature, Visibility,
+        AbilitySet, Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition,
+        FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
+        StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature, Visibility,
     },
 };
 
@@ -810,12 +810,18 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
     fn disassemble_type_formals(
         source_map_ty_params: &[SourceName<Location>],
-        kinds: &[Kind],
+        ablities: &[AbilitySet],
     ) -> String {
         let ty_params: Vec<String> = source_map_ty_params
             .iter()
-            .zip(kinds.iter())
-            .map(|((name, _), kind)| format!("{}: {:#?}", name.as_str(), kind))
+            .zip(ablities)
+            .map(|((name, _), abs)| {
+                format!(
+                    "{}{}",
+                    name.as_str(),
+                    kind_to_constraint(ability_to_kind(*abs))
+                )
+            })
             .collect();
         Self::format_type_params(&ty_params)
     }
@@ -975,10 +981,10 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
         let native = if field_info.is_none() { "native " } else { "" };
 
-        let nominal_name = if struct_handle.is_nominal_resource {
-            "resource"
-        } else {
-            "struct"
+        let nominal_name = match ability_to_kind(struct_handle.abilities) {
+            Kind::Resource => "resource",
+            Kind::Copyable => "struct",
+            Kind::All => panic!("Unsupported ability set for struct"),
         };
 
         let name = self
@@ -1044,5 +1050,29 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             struct_defs = &struct_defs.join("\n"),
             function_defs = &function_defs.join("\n")
         ))
+    }
+}
+
+// Temporary helpers until abilities+constraints are added to the IR
+enum Kind {
+    Copyable,
+    Resource,
+    All,
+}
+
+fn ability_to_kind(abs: AbilitySet) -> Kind {
+    match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
+        (true, true, false) => Kind::Copyable,
+        (false, false, true) => Kind::Resource,
+        (false, false, false) => Kind::All,
+        _ => panic!("Unsupported ability set"),
+    }
+}
+
+fn kind_to_constraint(k: Kind) -> &'static str {
+    match k {
+        Kind::Copyable => ": copyable",
+        Kind::Resource => ": resource",
+        Kind::All => "",
     }
 }

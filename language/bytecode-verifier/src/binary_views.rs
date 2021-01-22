@@ -10,11 +10,11 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{PartialVMError, PartialVMResult},
     file_format::{
-        AddressIdentifierIndex, CodeUnit, CompiledScript, Constant, ConstantPoolIndex, FieldHandle,
-        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinition,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
-        FunctionInstantiationIndex, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex,
-        Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
+        AbilitySet, AddressIdentifierIndex, CodeUnit, CompiledScript, Constant, ConstantPoolIndex,
+        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
+        FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex,
+        FunctionInstantiation, FunctionInstantiationIndex, IdentifierIndex, ModuleHandle,
+        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
         StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex, StructHandle,
         StructHandleIndex,
     },
@@ -169,46 +169,32 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
-    // Return the `Kind` of a `SignatureToken` given a context.
-    // A `TypeParameter` used the kind of the `constraints`.
-    // `StructInstantiation` have to "merge" the kinds of the instantiation with that
-    // of the generic type.
-    pub(crate) fn kind(&self, ty: &SignatureToken, constraints: &[Kind]) -> Kind {
+    // Return the `AbilitySet` of a `SignatureToken` given a context.
+    // A `TypeParameter` has the abilities of its `constraints`.
+    // `StructInstantiation` abilities are predicated on the particular instantiation
+    pub(crate) fn abilities(&self, ty: &SignatureToken, constraints: &[AbilitySet]) -> AbilitySet {
         use SignatureToken::*;
 
         match ty {
-            // The primitive types & references have kind unrestricted.
-            Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
-            Signer => Kind::Resource,
+            Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+
+            Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
+            Signer => AbilitySet::SIGNER,
             TypeParameter(idx) => constraints[*idx as usize],
-            Vector(ty) => self.kind(ty, constraints),
+            Vector(ty) => AbilitySet::polymorphic_abilities(
+                AbilitySet::VECTOR,
+                vec![self.abilities(ty, constraints)].into_iter(),
+            ),
             Struct(idx) => {
                 let sh = self.struct_handle_at(*idx);
-                if sh.is_nominal_resource {
-                    Kind::Resource
-                } else {
-                    Kind::Copyable
-                }
+                sh.abilities
             }
             StructInstantiation(idx, type_args) => {
                 let sh = self.struct_handle_at(*idx);
-                if sh.is_nominal_resource {
-                    return Kind::Resource;
-                }
-                // Gather the kinds of the type actuals.
-                let kinds = type_args
-                    .iter()
-                    .map(|ty| self.kind(ty, constraints))
-                    .collect::<Vec<_>>();
-                // Derive the kind of the struct.
-                //   - If any of the type actuals is `all`, then the struct is `all`.
-                //     - `all` means some part of the type can be either `resource` or
-                //       `unrestricted`.
-                //     - Therefore it is also impossible to determine the kind of the type as a
-                //       whole, and thus `all`.
-                //   - If none of the type actuals is `all`, then the struct is a resource if
-                //     and only if one of the type actuals is `resource`.
-                kinds.iter().cloned().fold(Kind::Copyable, Kind::join)
+                let declared_abilities = sh.abilities;
+                let type_argument_abilities =
+                    type_args.iter().map(|ty| self.abilities(ty, constraints));
+                AbilitySet::polymorphic_abilities(declared_abilities, type_argument_abilities)
             }
         }
     }
@@ -249,7 +235,7 @@ pub(crate) struct FunctionView<'a> {
     parameters: &'a Signature,
     return_: &'a Signature,
     locals: &'a Signature,
-    type_parameters: &'a [Kind],
+    type_parameters: &'a [AbilitySet],
     cfg: VMControlFlowGraph,
 }
 
@@ -309,7 +295,7 @@ impl<'a> FunctionView<'a> {
         self.locals
     }
 
-    pub(crate) fn type_parameters(&self) -> &[Kind] {
+    pub(crate) fn type_parameters(&self) -> &[AbilitySet] {
         self.type_parameters
     }
 

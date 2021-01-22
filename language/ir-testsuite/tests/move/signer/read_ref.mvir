@@ -4,4 +4,4 @@ module M {
     }
 }
 
-// check: READREF_RESOURCE_ERROR
+// check: READREF_WITHOUT_COPY_ABILITY

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    fat_type::{FatStructType, FatType},
+    fat_type::{FatStructType, FatType, WrappedAbilitySet},
     module_cache::ModuleCache,
 };
 use anyhow::{anyhow, Result};
@@ -168,7 +168,7 @@ impl<'a> Resolver<'a> {
         let address = *module.address();
         let module_name = module.name().to_owned();
         let name = module.identifier_at(struct_handle.name).to_owned();
-        let is_resource = struct_handle.is_nominal_resource;
+        let abilities = struct_handle.abilities;
         let ty_args = (0..struct_handle.type_parameters.len())
             .map(FatType::TyParam)
             .collect();
@@ -178,7 +178,7 @@ impl<'a> Resolver<'a> {
                 address,
                 module: module_name,
                 name,
-                is_resource,
+                abilities: WrappedAbilitySet(abilities),
                 ty_args,
                 layout: defs
                     .iter()

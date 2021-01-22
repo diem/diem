@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/move/signer/is_resource_st_loc_partial.move:8:9 ───
+   ┌── tests/move_check/translated_ir_tests/move/signer/st_loc_partial.move:8:9 ───
    │
  8 │         s1 = s2;
    │         ^^ Invalid assignment to local 's1'

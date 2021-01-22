@@ -5,4 +5,5 @@ module M {
     }
 }
 
-// check: WRITEREF_RESOURCE_ERROR
+// Used to be invalid
+// Now valid because signer has drop

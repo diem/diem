@@ -66,16 +66,14 @@ impl<'a> AcquiresVerifier<'a> {
         for annotation in verifier.annotated_acquires {
             if !verifier.actual_acquires.contains(&annotation) {
                 return Err(PartialVMError::new(
-                    StatusCode::EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                    StatusCode::EXTRANEOUS_ACQUIRES_ANNOTATION,
                 ));
             }
 
             let struct_def = module.struct_defs().get(annotation.0 as usize).unwrap();
             let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-            if !struct_handle.is_nominal_resource {
-                return Err(PartialVMError::new(
-                    StatusCode::INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
-                ));
+            if !struct_handle.abilities.has_key() {
+                return Err(PartialVMError::new(StatusCode::INVALID_ACQUIRES_ANNOTATION));
             }
         }
 
@@ -116,10 +114,7 @@ impl<'a> AcquiresVerifier<'a> {
             self.function_acquired_resources(function_handle, fh_idx);
         for acquired_resource in &function_acquired_resources {
             if !self.annotated_acquires.contains(acquired_resource) {
-                return Err(self.error(
-                    StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
-                    offset,
-                ));
+                return Err(self.error(StatusCode::MISSING_ACQUIRES_ANNOTATION, offset));
             }
         }
         self.actual_acquires
@@ -136,10 +131,7 @@ impl<'a> AcquiresVerifier<'a> {
             self.actual_acquires.insert(sd_idx);
             Ok(())
         } else {
-            Err(self.error(
-                StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
-                offset,
-            ))
+            Err(self.error(StatusCode::MISSING_ACQUIRES_ANNOTATION, offset))
         }
     }
 

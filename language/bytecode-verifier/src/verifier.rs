@@ -3,9 +3,9 @@
 
 //! This module contains the public APIs supported by the bytecode verifier.
 use crate::{
-    check_duplication::DuplicationChecker, code_unit_verifier::CodeUnitVerifier, constants,
-    instantiation_loops::InstantiationLoopChecker, instruction_consistency::InstructionConsistency,
-    resources::ResourceTransitiveChecker, script_signature, signature::SignatureChecker,
+    ability_field_requirements, check_duplication::DuplicationChecker,
+    code_unit_verifier::CodeUnitVerifier, constants, instantiation_loops::InstantiationLoopChecker,
+    instruction_consistency::InstructionConsistency, script_signature, signature::SignatureChecker,
     struct_defs::RecursiveStructDefChecker,
 };
 use vm::{
@@ -24,7 +24,7 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     SignatureChecker::verify_module(&module)?;
     InstructionConsistency::verify_module(&module)?;
     constants::verify_module(&module)?;
-    ResourceTransitiveChecker::verify_module(&module)?;
+    ability_field_requirements::verify_module(&module)?;
     RecursiveStructDefChecker::verify_module(&module)?;
     InstantiationLoopChecker::verify_module(&module)?;
     CodeUnitVerifier::verify_module(&module)

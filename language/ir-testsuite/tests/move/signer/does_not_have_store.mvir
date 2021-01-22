@@ -1,0 +1,10 @@
+module M {
+    resource S<T> {
+        f: T,
+    }
+
+    t(account: &signer, s: signer) {
+        move_to<S<signer>>(copy(account), S<signer> { f: move(s) });
+        return;
+    }
+}

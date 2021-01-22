@@ -1,4 +1,4 @@
-// check: UNSAFE_RET_UNUSED_RESOURCES
+// check: UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP
 
 module A {
 import 0x1.XUS;
