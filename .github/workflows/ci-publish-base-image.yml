@@ -2,7 +2,7 @@ name: Publish Base CI Image To Dockerhub
 
 on:
   push:
-    branches: [main, master, release-*, gha-test-*]
+    branches: [main, master]
     paths:
       [
         .github/workflows/ci-publish-base-image.yml,
@@ -15,7 +15,6 @@ jobs:
   build_docker_images:
     runs-on: ubuntu-latest-xl
     continue-on-error: false
-    environment: Docker
     env:
       TAG: github-1
       DOCKERHUB_ORG: libra

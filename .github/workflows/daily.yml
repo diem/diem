@@ -12,8 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: libra/build_environment:github-1
+    strategy:
+      fail-fast: false
+      matrix:
+        #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
+        target-branch: [master, release-1.1]
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
       - name: install cargo-audit
         run: cargo install --force cargo-audit
