@@ -6,10 +6,7 @@ use crate::{
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSyncEvents, StateSyncSender},
 };
-use diem_config::{
-    config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
-    network_id::NodeNetworkId,
-};
+use diem_config::{config::NodeConfig, network_id::NodeNetworkId};
 use diem_types::waypoint::Waypoint;
 use executor_types::ChunkExecutor;
 use futures::channel::mpsc;
@@ -31,7 +28,7 @@ impl StateSyncBootstrapper {
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
-        config: &NodeConfig,
+        node_config: &NodeConfig,
         waypoint: Waypoint,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
@@ -46,10 +43,8 @@ impl StateSyncBootstrapper {
             runtime,
             network,
             state_sync_to_mempool_sender,
-            config.base.role,
+            node_config,
             waypoint,
-            &config.state_sync,
-            config.upstream.clone(),
             executor_proxy,
         )
     }
@@ -58,10 +53,8 @@ impl StateSyncBootstrapper {
         runtime: Runtime,
         network: Vec<(NodeNetworkId, StateSyncSender, StateSyncEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
-        role: RoleType,
+        node_config: &NodeConfig,
         waypoint: Waypoint,
-        state_sync_config: &StateSyncConfig,
-        upstream_config: UpstreamConfig,
         executor_proxy: E,
     ) -> Self {
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
@@ -77,10 +70,8 @@ impl StateSyncBootstrapper {
             coordinator_receiver,
             state_sync_to_mempool_sender,
             network_senders,
-            role,
+            node_config,
             waypoint,
-            state_sync_config.clone(),
-            upstream_config,
             executor_proxy,
             initial_state,
         )

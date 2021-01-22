@@ -309,10 +309,8 @@ impl StateSyncEnvironment {
             Runtime::new().unwrap(),
             network_handles,
             mempool_channel,
-            role,
+            &config,
             waypoint,
-            &config.state_sync,
-            config.upstream,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
 

@@ -172,7 +172,7 @@ pub(crate) mod test_utils {
 
     use channel::{diem_channel, message_queues::QueueStyle};
     use diem_config::{
-        config::{RoleType, StateSyncConfig, UpstreamConfig},
+        config::NodeConfig,
         network_id::{NetworkId, NodeNetworkId},
     };
     use diem_types::transaction::{Transaction, WriteSetPayload};
@@ -229,10 +229,8 @@ pub(crate) mod test_utils {
             coordinator_receiver,
             mempool_sender,
             network_senders,
-            RoleType::Validator,
+            &NodeConfig::default(),
             Waypoint::default(),
-            StateSyncConfig::default(),
-            UpstreamConfig::default(),
             executor_proxy,
             initial_state,
         )

@@ -18,7 +18,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{
-    config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
+    config::{NodeConfig, PeerNetworkId, RoleType, StateSyncConfig},
     network_id::NodeNetworkId,
 };
 use diem_logger::prelude::*;
@@ -100,40 +100,44 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<diem_mempool::CommitNotification>,
         network_senders: HashMap<NodeNetworkId, StateSyncSender>,
-        role: RoleType,
+        node_config: &NodeConfig,
         waypoint: Waypoint,
-        config: StateSyncConfig,
-        upstream_config: UpstreamConfig,
         executor_proxy: T,
         initial_state: SyncState,
     ) -> Result<Self> {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
+
+        // Create a new request manager.
+        let role = node_config.base.role;
+        let tick_interval_ms = node_config.state_sync.tick_interval_ms;
         let retry_timeout_val = match role {
-            RoleType::FullNode => config
-                .tick_interval_ms
-                .checked_add(config.long_poll_timeout_ms)
+            RoleType::FullNode => tick_interval_ms
+                .checked_add(node_config.state_sync.long_poll_timeout_ms)
                 .ok_or_else(|| format_err!("Fullnode retry timeout has overflown."))?,
-            RoleType::Validator => config
-                .tick_interval_ms
+            RoleType::Validator => tick_interval_ms
                 .checked_mul(2)
                 .ok_or_else(|| format_err!("Validator retry timeout has overflown!"))?,
         };
-        let multicast_timeout = Duration::from_millis(config.multicast_timeout_ms);
+        let request_manager = RequestManager::new(
+            node_config.upstream.clone(),
+            Duration::from_millis(retry_timeout_val),
+            Duration::from_millis(node_config.state_sync.multicast_timeout_ms),
+            network_senders.clone(),
+        );
+
+        // Create new pending ledger infos.
+        let pending_ledger_infos =
+            PendingLedgerInfos::new(node_config.state_sync.max_pending_li_limit);
 
         Ok(Self {
             client_events,
             state_sync_to_mempool_sender,
             local_state: initial_state,
-            pending_ledger_infos: PendingLedgerInfos::new(config.max_pending_li_limit),
-            config,
+            pending_ledger_infos,
+            config: node_config.state_sync.clone(),
             role,
             waypoint,
-            request_manager: RequestManager::new(
-                upstream_config,
-                Duration::from_millis(retry_timeout_val),
-                multicast_timeout,
-                network_senders.clone(),
-            ),
+            request_manager,
             network_senders,
             subscriptions: HashMap::new(),
             sync_request: None,

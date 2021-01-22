@@ -413,7 +413,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         state_sync_to_mempool_sender,
         Arc::clone(&db_rw.reader),
         chunk_executor,
-        &node_config,
+        node_config,
         genesis_waypoint,
         reconfig_subscriptions,
     );
