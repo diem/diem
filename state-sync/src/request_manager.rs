@@ -5,7 +5,7 @@ use crate::{
     chunk_request::GetChunkRequest,
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
-    network::{StateSyncSender, StateSynchronizerMsg},
+    network::{StateSyncMessage, StateSyncSender},
 };
 use anyhow::{bail, format_err, Result};
 use diem_config::{
@@ -273,7 +273,7 @@ impl RequestManager {
             .event(LogEvent::ChunkRequestInfo)
             .chunk_req_info(&req_info));
 
-        let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
+        let msg = StateSyncMessage::GetChunkRequest(Box::new(req));
         let mut failed_peer_sends = vec![];
 
         for peer in peers {

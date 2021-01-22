@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Interface between StateSynchronizer and Network layers.
+//! Interface between State Sync and Network layers.
 
 use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
 use channel::message_queues::QueueStyle;
@@ -17,9 +17,9 @@ use serde::{Deserialize, Serialize};
 
 const STATE_SYNC_MAX_BUFFER_SIZE: usize = 1;
 
-/// StateSynchronizer network messages
+/// State sync network messages
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum StateSynchronizerMsg {
+pub enum StateSyncMessage {
     GetChunkRequest(Box<GetChunkRequest>),
     GetChunkResponse(Box<GetChunkResponse>),
 }
@@ -27,22 +27,22 @@ pub enum StateSynchronizerMsg {
 /// The interface from Network to StateSync layer.
 ///
 /// `StateSyncEvents` is a `Stream` of `PeerManagerNotification` where the
-/// raw `Bytes` direct-send messages are deserialized into `StateSynchronizerMsg`
+/// raw `Bytes` direct-send messages are deserialized into `StateSyncMessage`
 /// types. `StateSyncEvents` is a thin wrapper around a
 /// `channel::Receiver<PeerManagerNotification>`.
-pub type StateSyncEvents = NetworkEvents<StateSynchronizerMsg>;
+pub type StateSyncEvents = NetworkEvents<StateSyncMessage>;
 
 /// The interface from StateSync to Networking layer.
 ///
-/// This is a thin wrapper around a `NetworkSender<StateSynchronizerMsg>`, so it
+/// This is a thin wrapper around a `NetworkSender<StateSyncMessage>`, so it
 /// is easy to clone and send off to a separate task. For example, the rpc
 /// requests return Futures that encapsulate the whole flow, from sending the
 /// request to remote, to finally receiving the response and deserializing. It
 /// therefore makes the most sense to make the rpc call on a separate async task,
-/// which requires the `StateSynchronizerSender` to be `Clone` and `Send`.
+/// which requires the `StateSyncSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct StateSyncSender {
-    inner: NetworkSender<StateSynchronizerMsg>,
+    inner: NetworkSender<StateSyncMessage>,
 }
 
 impl NewNetworkSender for StateSyncSender {
@@ -60,14 +60,14 @@ impl StateSyncSender {
     pub fn send_to(
         &mut self,
         recipient: PeerId,
-        message: StateSynchronizerMsg,
+        message: StateSyncMessage,
     ) -> Result<(), NetworkError> {
         let protocol = ProtocolId::StateSyncDirectSend;
         self.inner.send_to(recipient, protocol, message)
     }
 }
 
-/// Configuration for the network endpoints to support StateSynchronizer.
+/// Configuration for the network endpoints to support state sync.
 pub fn network_endpoint_config() -> (
     Vec<ProtocolId>,
     Vec<ProtocolId>,

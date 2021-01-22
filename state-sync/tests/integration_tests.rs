@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 use diem_config::config::RoleType;
 use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
 use netcore::transport::ConnectionOrigin::*;
-use state_sync::network::StateSynchronizerMsg;
+use state_sync::network::StateSyncMessage;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use test_harness::StateSyncEnvironment;
 
@@ -326,13 +326,11 @@ fn test_lagging_upstream_long_poll() {
 
     let (_, msg) = env.deliver_msg(full_node_vfn_network_peer_id);
     // expected: known_version 0, epoch 1, no target LI version
-    let req: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let req: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(req, 0, None);
 
     let (_, msg) = env.deliver_msg(validator_peer_id);
-    let resp: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 400, 1, 250);
     env.get_state_sync_peer(1).wait_for_version(250, None);
 
@@ -353,8 +351,7 @@ fn test_lagging_upstream_long_poll() {
 
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
     let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
-    let msg: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 250, Some(400));
 
     // update failover VFN from lagging state to updated state
@@ -384,32 +381,27 @@ fn test_lagging_upstream_long_poll() {
     env.get_state_sync_peer(0).commit(600);
     // failover fn sends chunk request to validator
     let (_, msg) = env.deliver_msg(failover_fn_vfn_network_peer_id);
-    let msg: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_request(msg, 500, None);
     let (_, msg) = env.deliver_msg(validator_peer_id);
-    let resp: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
 
     // failover sends long-poll subscription to fullnode
     let (_, msg) = env.deliver_msg(failover_fn_peer_id);
-    let resp: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 251, 250);
 
     // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
     let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
-    let msg: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     // here we check that the next requested version is not the older target LI 400 - that should be
     // pruned out from PendingLedgerInfos since it becomes outdated after the known_version advances to 500
     check_chunk_request(msg, 500, None);
 
     // check that fullnode successfully finishes sync to 600
     let (_, msg) = env.deliver_msg(failover_fn_peer_id);
-    let resp: StateSynchronizerMsg =
-        bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
+    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
     check_chunk_response(resp, 600, 501, 100);
     env.get_state_sync_peer(1).wait_for_version(600, Some(600));
 }
@@ -908,29 +900,29 @@ fn test_multicast_failover() {
     env.assert_no_message_sent(fn_0_public_peer_id);
 }
 
-fn check_chunk_request(msg: StateSynchronizerMsg, known_version: u64, target_version: Option<u64>) {
+fn check_chunk_request(msg: StateSyncMessage, known_version: u64, target_version: Option<u64>) {
     match msg {
-        StateSynchronizerMsg::GetChunkRequest(req) => {
+        StateSyncMessage::GetChunkRequest(req) => {
             assert_eq!(req.known_version, known_version);
             assert_eq!(req.target.version(), target_version);
         }
-        StateSynchronizerMsg::GetChunkResponse(_) => {
+        StateSyncMessage::GetChunkResponse(_) => {
             panic!("received chunk response when expecting chunk request");
         }
     }
 }
 
 fn check_chunk_response(
-    msg: StateSynchronizerMsg,
+    msg: StateSyncMessage,
     response_li_version: u64,
     chunk_start_version: u64,
     chunk_length: usize,
 ) {
     match msg {
-        StateSynchronizerMsg::GetChunkRequest(_) => {
+        StateSyncMessage::GetChunkRequest(_) => {
             panic!("received chunk response when expecting chunk request");
         }
-        StateSynchronizerMsg::GetChunkResponse(resp) => {
+        StateSyncMessage::GetChunkResponse(resp) => {
             assert_eq!(resp.response_li.version(), response_li_version);
             assert_eq!(
                 resp.txn_list_with_proof.first_transaction_version.unwrap(),

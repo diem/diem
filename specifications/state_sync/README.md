@@ -275,7 +275,7 @@ specification.
 
 ```rust
 /// Sends `message` to `recipient`
-fn send_to(recipient: PeerId, message: StateSynchronizerMsg)
+fn send_to(recipient: PeerId, message: StateSyncMessage)
 ```
 
 ### Consensus

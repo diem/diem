@@ -439,9 +439,8 @@ async fn state_sync_load_test(
     let mut bytes = 0_u64;
     let mut msg_num = 0_u64;
     while Instant::now().duration_since(task_start) < duration {
-        let msg = state_sync::network::StateSynchronizerMsg::GetChunkRequest(Box::new(
-            chunk_request.clone(),
-        ));
+        let msg =
+            state_sync::network::StateSyncMessage::GetChunkRequest(Box::new(chunk_request.clone()));
         bytes += bcs::to_bytes(&msg)?.len() as u64;
         msg_num += 1;
         sender.send_to(vfn, msg)?;
@@ -449,8 +448,7 @@ async fn state_sync_load_test(
         // await response from remote peer
         let response = events.select_next_some().await;
         if let Event::Message(_remote_peer, payload) = response {
-            if let state_sync::network::StateSynchronizerMsg::GetChunkResponse(chunk_response) =
-                payload
+            if let state_sync::network::StateSyncMessage::GetChunkResponse(chunk_response) = payload
             {
                 // TODO analyze response and update StateSyncResult with stats accordingly
                 served_txns += chunk_response.txn_list_with_proof.transactions.len() as u64;

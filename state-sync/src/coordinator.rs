@@ -8,7 +8,7 @@ use crate::{
     counters,
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
-    network::{StateSyncEvents, StateSyncSender, StateSynchronizerMsg},
+    network::{StateSyncEvents, StateSyncMessage, StateSyncSender},
     request_manager::RequestManager,
 };
 use anyhow::{bail, ensure, format_err, Result};
@@ -304,13 +304,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         }
     }
 
-    pub(crate) async fn process_one_message(
-        &mut self,
-        peer: PeerNetworkId,
-        msg: StateSynchronizerMsg,
-    ) {
+    pub(crate) async fn process_one_message(&mut self, peer: PeerNetworkId, msg: StateSyncMessage) {
         match msg {
-            StateSynchronizerMsg::GetChunkRequest(request) => {
+            StateSyncMessage::GetChunkRequest(request) => {
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
                         &peer.raw_network_id().to_string(),
@@ -339,7 +335,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     ])
                     .inc();
             }
-            StateSynchronizerMsg::GetChunkResponse(response) => {
+            StateSyncMessage::GetChunkResponse(response) => {
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
                         &peer.raw_network_id().to_string(),
@@ -769,7 +765,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         let log = LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::DeliverChunk)
             .chunk_response(chunk_response.clone())
             .peer(&peer);
-        let msg = StateSynchronizerMsg::GetChunkResponse(Box::new(chunk_response));
+        let msg = StateSyncMessage::GetChunkResponse(Box::new(chunk_response));
 
         let network_sender = self
             .network_senders

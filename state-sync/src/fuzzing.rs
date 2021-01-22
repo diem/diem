@@ -6,7 +6,7 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     coordinator::StateSyncCoordinator,
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
-    network::{StateSyncSender, StateSynchronizerMsg},
+    network::{StateSyncMessage, StateSyncSender},
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
@@ -101,7 +101,7 @@ proptest! {
     }
 }
 
-pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
+pub fn test_state_sync_msg_fuzzer_impl(msg: StateSyncMessage) {
     block_on(async move {
         STATE_SYNC_COORDINATOR
             .lock()
@@ -116,13 +116,13 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
     });
 }
 
-pub fn arb_state_sync_msg() -> impl Strategy<Value = StateSynchronizerMsg> {
+pub fn arb_state_sync_msg() -> impl Strategy<Value = StateSyncMessage> {
     prop_oneof![
         (any::<GetChunkRequest>()).prop_map(|chunk_request| {
-            StateSynchronizerMsg::GetChunkRequest(Box::new(chunk_request))
+            StateSyncMessage::GetChunkRequest(Box::new(chunk_request))
         }),
         (any::<GetChunkResponse>()).prop_map(|chunk_response| {
-            StateSynchronizerMsg::GetChunkResponse(Box::new(chunk_response))
+            StateSyncMessage::GetChunkResponse(Box::new(chunk_response))
         })
     ]
 }
