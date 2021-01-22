@@ -338,13 +338,9 @@ module ValidatorConfig {
 
     spec module {
 
-        /// Every address that has a ValidatorConfig also has a validator role.
-        invariant [global] forall addr: address where exists_config(addr):
-            Roles::spec_has_validator_role_addr(addr);
-
         /// DIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
         /// in DiemSystem so we don't have to check whether every validator address has a validator role.
-        invariant [global] forall addr: address where exists_config(addr):
+        invariant [global] forall addr: address: exists_config(addr) ==>
             Roles::spec_has_validator_role_addr(addr);
 
         /// DIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with

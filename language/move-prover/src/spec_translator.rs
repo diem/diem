@@ -5,7 +5,7 @@
 
 use std::{
     cell::RefCell,
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     rc::Rc,
 };
 
@@ -2173,6 +2173,116 @@ impl<'env> SpecTranslator<'env> {
         });
     }
 
+    // Attempt to compute a set of triggers from a boolean expression in DNF.
+    // * A "trigger" is a set of "pattern" expressions that must cover all the required local variables.
+    // * Every clause in the original DNF expression must have a valid trigger (otherwise we abort).
+    fn get_triggers<'a>(
+        &self,
+        mut required_vars: HashSet<Symbol>,
+        exp: &'a Exp,
+    ) -> Option<Vec<Vec<&'a Exp>>> {
+        match exp {
+            Exp::Call(_, Operation::Or, args) => {
+                let mut triggers = Vec::new();
+                for arg in args {
+                    triggers.extend(self.get_triggers(required_vars.clone(), arg)?);
+                }
+                Some(triggers)
+            }
+            _ => {
+                let (vars, patterns) = self.get_patterns(exp);
+                for var in vars {
+                    required_vars.remove(&var);
+                }
+                if required_vars.is_empty() {
+                    Some(vec![patterns])
+                } else {
+                    eprintln!(
+                        "Discarding trigger(s) because some variables are not covered: {:?}",
+                        required_vars
+                    );
+                    None
+                }
+            }
+        }
+    }
+
+    // Try to map the literals of a clause to a set of patterns.
+    // * Pattern expressions can only contain certain symbols.
+    // * If a literal contains a forbidden symbols, the literal is generally discarded (i.e. will generate no pattern)..
+    // * .. unless the unary symbol can be skipped (i.e. we generate a patterm from the subexpression).
+    fn get_patterns<'a>(&self, exp: &'a Exp) -> (HashSet<Symbol>, Vec<&'a Exp>) {
+        match exp {
+            Exp::Call(_, Operation::And, args) => {
+                let mut vars = HashSet::new();
+                let mut patterns = Vec::new();
+                for arg in args {
+                    let (v, p) = self.get_patterns(arg);
+                    vars.extend(v);
+                    patterns.extend(p);
+                }
+                (vars, patterns)
+            }
+            _ => match self.get_pattern(exp) {
+                Some((vars, pat)) => (vars, vec![pat]),
+                None => (HashSet::new(), Vec::new()),
+            },
+        }
+    }
+
+    fn get_pattern<'a>(&self, exp: &'a Exp) -> Option<(HashSet<Symbol>, &'a Exp)> {
+        use Operation::*;
+        match exp {
+            Exp::Call(_, unary, args) if matches!(unary, Not | Old) => {
+                // Skipping negated literals.
+                self.get_pattern(args.get(0)?)
+            }
+            _ => {
+                let vars = self.check_pattern(exp)?;
+                Some((vars, exp))
+            }
+        }
+    }
+
+    fn check_pattern(&self, exp: &Exp) -> Option<HashSet<Symbol>> {
+        use Operation::*;
+        match exp {
+            Exp::Value(..) => Some(HashSet::new()),
+
+            Exp::LocalVar(_, var) => {
+                let mut vars = HashSet::new();
+                vars.insert(*var);
+                Some(vars)
+            }
+
+            Exp::Call(node_id, op, args)
+                if !matches!(op, Not | Implies | And | Or | Lt | Le | Gt | Ge | Neq) =>
+            {
+                let mut vars = HashSet::new();
+                if matches!(op, Operation::Function(..)) {
+                    let instantiation = self.module_env().env.get_node_instantiation(*node_id);
+                    for ty in instantiation.iter() {
+                        if let Type::TypeLocal(symbol) = ty {
+                            vars.insert(*symbol);
+                        }
+                    }
+                }
+                for arg in args {
+                    vars.extend(self.check_pattern(arg)?);
+                }
+                Some(vars)
+            }
+
+            _ => {
+                println!(
+                    "Discarding pattern containing {}",
+                    exp.display(&self.module_env().env)
+                );
+                None
+            }
+        }
+    }
+
     fn translate_quant(
         &self,
         node_id: NodeId,
@@ -2190,34 +2300,84 @@ impl<'env> SpecTranslator<'env> {
                 quant_ty.skip_reference(),
                 Type::Vector(..) | Type::Primitive(PrimitiveType::Range)
             ) {
-                let var_name = self.module_env().symbol_pool().string(var.name);
                 let range_tmp = self.fresh_var_name("range");
                 emit!(self.writer, "(var {} := ", range_tmp);
                 self.translate_exp(&range);
                 emit!(self.writer, "; ");
-                range_tmps.insert(var_name, range_tmp);
+                range_tmps.insert(var.name, range_tmp);
             }
         }
         // Translate quantified variables.
         emit!(self.writer, "$Boolean(({} ", kind);
         let mut quant_vars = HashMap::new();
+        let mut primitive_quant_type_vars = Vec::new();
         let mut comma = "";
         for (var, range) in ranges {
             let var_name = self.module_env().symbol_pool().string(var.name);
             let quant_ty = self.module_env().env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
-                Type::TypeDomain(_) => {
+                Type::TypeDomain(ty) => {
                     emit!(self.writer, "{}{}: $Value", comma, var_name);
+                    quant_vars.insert(var.name, var_name.as_ref().clone());
+                    if matches!(**ty, Type::Primitive(..)) {
+                        primitive_quant_type_vars.push(var.name);
+                    }
                 }
                 _ => {
                     let quant_var = self.fresh_var_name("i");
                     emit!(self.writer, "{}{}: int", comma, quant_var);
-                    quant_vars.insert(var_name, quant_var);
+                    quant_vars.insert(var.name, quant_var);
                 }
             }
             comma = ", ";
         }
         emit!(self.writer, " :: ");
+        // Add condition as trigger.
+        if range_tmps.is_empty() {
+            if let Some(cond) = condition {
+                let mut required_vars: HashSet<Symbol> = quant_vars.keys().cloned().collect();
+                // Variables with a primitive types will be covered no matter what.
+                for local in primitive_quant_type_vars {
+                    required_vars.remove(&local);
+                }
+                if let Some(triggers) = self.get_triggers(required_vars, cond) {
+                    for trigger in triggers {
+                        emit!(self.writer, "{ ");
+                        print!("adding trigger: {{ ");
+                        let mut comma = "";
+                        // Emit patterns from primitive quantified types.
+                        for (var, range) in ranges {
+                            let var_name = self.module_env().symbol_pool().string(var.name);
+                            let quant_ty = self.module_env().env.get_node_type(range.node_id());
+                            if let Type::TypeDomain(domain_ty) = quant_ty.skip_reference() {
+                                if matches!(**domain_ty, Type::Primitive(..)) {
+                                    let type_check = boogie_well_formed_expr(
+                                        self.global_env(),
+                                        &var_name,
+                                        &domain_ty,
+                                        WellFormedMode::WithInvariant,
+                                    );
+                                    if !type_check.is_empty() {
+                                        emit!(self.writer, "{}{}", comma, type_check);
+                                        print!("{}{}", comma, type_check);
+                                    }
+                                }
+                            }
+                            comma = ", ";
+                        }
+                        // Emit patterns from the condition trigger.
+                        for pattern in trigger {
+                            emit!(self.writer, "{}", comma);
+                            print!("{}{}", comma, pattern.display(&self.module_env().env));
+                            self.translate_exp(pattern);
+                            comma = ", ";
+                        }
+                        emit!(self.writer, " } ");
+                        println!(" }}");
+                    }
+                }
+            }
+        }
         // Translate range constraints.
         let connective = match kind {
             QuantKind::Forall => " ==> ",
@@ -2252,8 +2412,8 @@ impl<'env> SpecTranslator<'env> {
                     }
                 }
                 Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InVectorRange({}, {})",
@@ -2263,8 +2423,8 @@ impl<'env> SpecTranslator<'env> {
                     );
                 }
                 Type::Primitive(PrimitiveType::Range) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InRange({}, {})",
@@ -2284,8 +2444,8 @@ impl<'env> SpecTranslator<'env> {
             let quant_ty = self.module_env().env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
                 Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "(var {} := $select_vector({}, {}); ",
@@ -2295,7 +2455,7 @@ impl<'env> SpecTranslator<'env> {
                     );
                 }
                 Type::Primitive(PrimitiveType::Range) => {
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "(var {} := $Integer({}); ",

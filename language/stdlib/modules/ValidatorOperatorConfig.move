@@ -74,7 +74,7 @@ module ValidatorOperatorConfig {
 
     /// If an address has a ValidatorOperatorConfig resource, it has a validator operator role.
     spec module {
-        invariant [global] forall addr: address where has_validator_operator_config(addr):
+        invariant [global] forall addr: address: has_validator_operator_config(addr) ==>
             Roles::spec_has_validator_operator_role_addr(addr);
     }
 
