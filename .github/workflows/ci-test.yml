@@ -222,14 +222,11 @@ jobs:
             echo -e "$num_fails test(s) failed:\n${failed_tests}"
           fi
           exit $num_fails
-      - name: output failed tests.
-        run: |
-          if [[ -n ${MESSAGE_PAYLOAD_FILE} ]] && [[ -f " ${MESSAGE_PAYLOAD_FILE}" ]]; then
-            cat ${MESSAGE_PAYLOAD_FILE}
-          else
-            echo No errors.
-          fi
-      - uses: ./.github/actions/build-teardown
+      - name: "Send Message"
+        uses: ./.github/actions/slack-file
+        with:
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          webhook: ${{ secret.WEBHOOK_FLAKY_TESTS }}
 
   crypto-unit-test:
     runs-on: ubuntu-latest

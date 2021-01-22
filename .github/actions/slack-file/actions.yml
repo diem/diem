@@ -1,0 +1,23 @@
+name: "Send Message"
+description: |
+  Sends the contents of a file as a slack message.
+inputs:
+  payload-file:
+    description: Message file.  If the file does not exist, silently proceed without sending a message.
+    required: false
+  webhook:
+    description: Webhook for the message.
+    required: true
+  url:
+    description: Link back to the job.
+    required: false
+    default: ${{ env.GITHUB_SERVER_URL }}/${{ env.GITHUB_REPOSITORY }}/actions/runs/${{ env.GITHUB_RUN_ID }}"
+runs:
+  using: "composite"
+  steps:
+    - run: ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f "${PAYLOAD_FILE}" -u "${URL}"
+      shell: bash
+      env:
+        PAYLOAD_FILE: ${{ inputs.payload-file }}
+        WEBHOOK: ${{ inputs.webhook }}
+        URL: ${{ inputs.url }}
