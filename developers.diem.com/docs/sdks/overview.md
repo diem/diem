@@ -12,16 +12,17 @@ Select a language to access its approved Diem resource package on GitHub:
 
 <CardsWrapper cardsPerRow={2}>
   <SDKCard
+    docs="https://javadoc.io/doc/com.diem/client-sdk-java/latest/index.html"
     icon="/img/docs/sdk-java.png"
     sdk="https://github.com/libra/client-sdk-java"
   />
   <SDKCard
-    docs="https://godoc.org"
+    docs="https://godoc.org/github.com/diem/client-sdk-go"
     icon="/img/docs/sdk-go.png"
     sdk="https://github.com/libra/client-sdk-go"
   />
   <SDKCard
-    docs="https://diem.github.io/client-sdk-python/"
+    docs="https://diem.github.io/client-sdk-python/diem/index.html"
     icon="/img/docs/sdk-python.png"
     sdk="https://github.com/libra/client-sdk-python"
   />
