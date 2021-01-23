@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    context::{Context, MaterializedPools, TABLE_MAX_SIZE},
+    context::{CompiledDependency, Context, MaterializedPools, TABLE_MAX_SIZE},
     errors::*,
 };
 use anyhow::{bail, format_err, Result};
@@ -22,7 +22,6 @@ use std::{
     },
 };
 use vm::{
-    access::ModuleAccess,
     errors::Location as VMErrorLocation,
     file_format::{
         Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
@@ -406,10 +405,10 @@ impl FunctionFrame {
 }
 
 /// Compile a transaction script.
-pub fn compile_script<'a, T: 'a + ModuleAccess>(
+pub fn compile_script<'a>(
     address: Option<AccountAddress>,
     script: Script,
-    dependencies: impl IntoIterator<Item = &'a T>,
+    dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<(CompiledScript, SourceMap<Loc>)> {
     let mut context = Context::new(HashMap::new(), None)?;
     for dep in dependencies {
@@ -418,15 +417,13 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 
     compile_imports(&mut context, address, script.imports.clone())?;
     // Add explicit handles/dependency declarations to `dependencies`
-    let explicit_deps = compile_explicit_dependency_declarations(
+    compile_explicit_dependency_declarations(
         &mut context,
         None,
         script.imports,
         script.explicit_dependency_declarations,
     )?;
-    for dep in &explicit_deps {
-        context.add_compiled_dependency(dep)?;
-    }
+
     for ir_constant in script.constants {
         let constant = compile_constant(&mut context, ir_constant.signature, ir_constant.value)?;
         context.declare_constant(ir_constant.name.clone(), constant.clone())?;
@@ -458,6 +455,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
             function_instantiations,
             ..
         },
+        _compiled_deps,
         source_map,
     ) = context.materialize_pools();
     let compiled_script = CompiledScriptMut {
@@ -483,10 +481,10 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
 }
 
 /// Compile a module.
-pub fn compile_module<'a, T: 'a + ModuleAccess>(
+pub fn compile_module<'a>(
     address: AccountAddress,
     module: ModuleDefinition,
-    dependencies: impl IntoIterator<Item = &'a T>,
+    dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<(CompiledModule, SourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
@@ -501,15 +499,12 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, Some(address), module.imports.clone())?;
     // Add explicit handles/dependency declarations to `dependencies`
-    let explicit_deps = compile_explicit_dependency_declarations(
+    compile_explicit_dependency_declarations(
         &mut context,
         Some(address),
         module.imports,
         module.explicit_dependency_declarations,
     )?;
-    for dep in &explicit_deps {
-        context.add_compiled_dependency(dep)?;
-    }
 
     // Explicitly declare all structs as they will be included even if not used
     for s in &module.structs {
@@ -552,6 +547,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
             struct_def_instantiations,
             field_instantiations,
         },
+        _compiled_deps,
         source_map,
     ) = context.materialize_pools();
     let compiled_module = CompiledModuleMut {
@@ -578,14 +574,16 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         .map(|frozen_module| (frozen_module, source_map))
 }
 
+// Note: DO NOT try to recover from this function as it zeros out the `outer_contexts` dependencies
+// and sets them after a successful result
+// Any `Error` should stop compilation in the caller
 fn compile_explicit_dependency_declarations(
     outer_context: &mut Context,
     address_opt: Option<AccountAddress>,
     imports: Vec<ImportDefinition>,
     dependencies: Vec<ModuleDependency>,
-) -> Result<Vec<CompiledModule>> {
-    let outer_depedencies = outer_context.dependencies().clone();
-    let mut compiled_deps = vec![];
+) -> Result<()> {
+    let mut dependencies_acc = outer_context.take_dependencies();
     for dependency in dependencies {
         let ModuleDependency {
             name: mname,
@@ -593,11 +591,7 @@ fn compile_explicit_dependency_declarations(
             functions,
         } = dependency;
         let current_module = outer_context.module_ident(&mname)?;
-        let mut context = Context::new(outer_depedencies.clone(), Some(current_module.clone()))?;
-        // TODO find a way to accumulate depedencies. Borrow issues galore on attempts
-        for compiled_dep in &compiled_deps {
-            context.add_compiled_dependency(compiled_dep)?;
-        }
+        let mut context = Context::new(dependencies_acc, Some(current_module.clone()))?;
         compile_imports(&mut context, address_opt, imports.clone())?;
         let self_module_handle_idx = context.module_handle_index(&mname)?;
         for struct_dep in structs {
@@ -630,6 +624,7 @@ fn compile_explicit_dependency_declarations(
                 struct_def_instantiations,
                 field_instantiations,
             },
+            compiled_deps,
             _source_map,
         ) = context.materialize_pools();
         let compiled_module = CompiledModuleMut {
@@ -652,10 +647,14 @@ fn compile_explicit_dependency_declarations(
         .map_err(|e| {
             InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined))
         })?;
-
-        compiled_deps.push(compiled_module)
+        dependencies_acc = compiled_deps;
+        dependencies_acc.insert(
+            current_module.clone(),
+            CompiledDependency::stored(compiled_module)?,
+        );
     }
-    Ok(compiled_deps)
+    outer_context.restore_dependencies(dependencies_acc);
+    Ok(())
 }
 
 fn compile_imports(

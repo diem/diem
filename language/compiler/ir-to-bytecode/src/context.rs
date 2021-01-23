@@ -23,6 +23,7 @@ use vm::{
         SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
         StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
     },
+    CompiledModule,
 };
 
 macro_rules! get_or_add_item_macro {
@@ -59,7 +60,7 @@ pub fn ident_str(s: &str) -> Result<&IdentStr> {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledDependency<'a> {
+pub struct CompiledDependencyView<'a> {
     structs: HashMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
     functions: HashMap<&'a IdentStr, TableIndex>,
 
@@ -71,8 +72,8 @@ pub struct CompiledDependency<'a> {
     signature_pool: &'a [Signature],
 }
 
-impl<'a> CompiledDependency<'a> {
-    fn new<T: 'a + ModuleAccess>(dep: &'a T) -> Result<Self> {
+impl<'a> CompiledDependencyView<'a> {
+    pub fn new(dep: &'a CompiledModule) -> Result<Self> {
         let mut structs = HashMap::new();
         let mut functions = HashMap::new();
 
@@ -157,6 +158,55 @@ impl<'a> CompiledDependency<'a> {
     }
 }
 
+use rental::rental;
+rental! {
+    mod rent_stored_compiled_dependency {
+        use super::CompiledDependencyView;
+        use vm::file_format::CompiledModule;
+
+        #[rental(covariant)]
+        pub(crate) struct StoredCompiledDependency {
+            module: Box<CompiledModule>,
+            view: CompiledDependencyView<'module>,
+        }
+    }
+}
+pub(crate) use rent_stored_compiled_dependency::StoredCompiledDependency;
+
+impl StoredCompiledDependency {
+    pub fn create(module: CompiledModule) -> Result<Self> {
+        Self::try_new(Box::new(module), move |module| {
+            CompiledDependencyView::new(module)
+        })
+        .map_err(|e| e.0)
+    }
+}
+
+pub(crate) enum CompiledDependency<'a> {
+    /// Simple `CompiledDependecyView` where the borrowed `CompiledModule` is held elsewehere,
+    /// Commonly, it is borrowed from outside of the compilers API
+    Borrowed(CompiledDependencyView<'a>),
+    /// `Stored` holds the `CompiledModule` as well as the `CompiledDependencyView` into the module
+    /// uses `rental` for a self referential struct
+    /// This is used to solve an issue of creating a `CompiledModule` and immediately needing to
+    /// borrow it for the `CompiledDependencyView`. The `StoredCompiledDependency` gets around this
+    /// by storing the module in it's first field, and then it's second field borrows the value in
+    /// the first field via the `rental` crate
+    Stored(StoredCompiledDependency),
+}
+
+impl<'a> CompiledDependency<'a> {
+    pub fn borrowed(module: &'a CompiledModule) -> Result<Self> {
+        Ok(Self::Borrowed(CompiledDependencyView::new(module)?))
+    }
+
+    pub fn stored(module: CompiledModule) -> Result<Self> {
+        Ok(Self::Stored(StoredCompiledDependency::create(module)?))
+    }
+}
+
+pub(crate) type CompiledDependencies<'a> = HashMap<QualifiedModuleIdent, CompiledDependency<'a>>;
+
 /// Represents all of the pools to be used in the file format, both by CompiledModule
 /// and CompiledScript.
 pub struct MaterializedPools {
@@ -188,8 +238,8 @@ pub struct MaterializedPools {
 /// Contains all of the pools as they are built up.
 /// Specific definitions to CompiledModule or CompiledScript are not stored.
 /// However, some fields, like struct_defs and fields, are not used in CompiledScript.
-pub struct Context<'a> {
-    dependencies: HashMap<QualifiedModuleIdent, CompiledDependency<'a>>,
+pub(crate) struct Context<'a> {
+    dependencies: CompiledDependencies<'a>,
 
     // helpers
     aliases: HashMap<QualifiedModuleIdent, ModuleName>,
@@ -230,7 +280,7 @@ impl<'a> Context<'a> {
     /// The current module is a dummy `Self` for CompiledScript.
     /// It initializes an "import" of `Self` as the alias for the current_module.
     pub fn new(
-        dependencies: HashMap<QualifiedModuleIdent, CompiledDependency<'a>>,
+        dependencies: CompiledDependencies<'a>,
         current_module_opt: Option<QualifiedModuleIdent>,
     ) -> Result<Self> {
         let context = Self {
@@ -261,14 +311,16 @@ impl<'a> Context<'a> {
         Ok(context)
     }
 
-    pub fn dependencies(&self) -> &HashMap<QualifiedModuleIdent, CompiledDependency<'a>> {
-        &self.dependencies
+    pub fn take_dependencies(&mut self) -> CompiledDependencies<'a> {
+        std::mem::take(&mut self.dependencies)
     }
 
-    pub fn add_compiled_dependency<T: 'a + ModuleAccess>(
-        &mut self,
-        compiled_dep: &'a T,
-    ) -> Result<()> {
+    pub fn restore_dependencies(&mut self, dependencies: CompiledDependencies<'a>) {
+        assert!(self.dependencies.is_empty());
+        self.dependencies = dependencies;
+    }
+
+    pub fn add_compiled_dependency(&mut self, compiled_dep: &'a CompiledModule) -> Result<()> {
         let ident = QualifiedModuleIdent {
             address: *compiled_dep.address(),
             name: ModuleName::new(compiled_dep.name().to_string()),
@@ -276,7 +328,7 @@ impl<'a> Context<'a> {
         match self.dependencies.get(&ident) {
             None => self
                 .dependencies
-                .insert(ident, CompiledDependency::new(compiled_dep)?),
+                .insert(ident, CompiledDependency::borrowed(compiled_dep)?),
             Some(_previous) => bail!("Duplicate dependency module for {}", ident),
         };
         Ok(())
@@ -299,7 +351,9 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> (MaterializedPools, SourceMap<Loc>) {
+    pub fn materialize_pools(
+        self,
+    ) -> (MaterializedPools, CompiledDependencies<'a>, SourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(
@@ -321,7 +375,7 @@ impl<'a> Context<'a> {
             struct_def_instantiations: Self::materialize_map(self.struct_instantiations),
             field_instantiations: Self::materialize_map(self.field_instantiations),
         };
-        (materialized_pools, self.source_map)
+        (materialized_pools, self.dependencies, self.source_map)
     }
 
     pub fn build_index_remapping(
@@ -644,10 +698,15 @@ impl<'a> Context<'a> {
     // Dependency Resolution
     //**********************************************************************************************
 
-    fn dependency(&self, m: &QualifiedModuleIdent) -> Result<&CompiledDependency> {
-        self.dependencies
+    fn dependency(&self, m: &QualifiedModuleIdent) -> Result<&CompiledDependencyView> {
+        let dep = self
+            .dependencies
             .get(m)
-            .ok_or_else(|| format_err!("Dependency not provided for {}", m))
+            .ok_or_else(|| format_err!("Dependency not provided for {}", m))?;
+        Ok(match dep {
+            CompiledDependency::Borrowed(v) => v,
+            CompiledDependency::Stored(stored) => stored.suffix(),
+        })
     }
 
     fn dep_struct_handle(&mut self, s: &QualifiedStructIdent) -> Result<(bool, Vec<Kind>)> {

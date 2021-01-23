@@ -3575,6 +3575,7 @@ dependencies = [
  "log",
  "move-core-types",
  "move-ir-types",
+ "rental",
  "thiserror",
  "vm",
 ]
