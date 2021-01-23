@@ -92,7 +92,7 @@ The account verification begins once the user completes registration. The user w
 >Note: Account verification demos the expected behavior of a hypothetical wallet. For the Reference Wallet local client, the verification succeeds automatically and the “pending” state is presented briefly to the user for demo purposes only. In addition, the identification document is always accepted and is not analysed or stored by the backend. Real-world user verification and risk management are beyond the scope of the reference wallet and contain many opportunities for further development.
 >
 
-Read more about the user verification [in the Risk section](risk-mod.md).
+Read more about the user verification [in the Risk section](/docs/wallet-app/develop-reference-wallet/#risk-module).
 
 ### Sign in
 The local web client is accessible only for authenticated users. When a user accesses the wallet website, the login page is the first page presented to the user. This is where the user is authenticated using their email id and password.

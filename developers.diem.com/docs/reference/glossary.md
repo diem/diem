@@ -284,7 +284,7 @@ These are FullNodes used by DPN Participants to forward transactions to the vali
 
 - **Move** is a new programming language that implements all the transactions on the Diem Blockchain.
 - It has two different kinds of code &mdash; [transaction scripts](#transaction-script) and [Move modules](#move-module).
-- For further information on Move, refer to the [Move technical paper](/move/move-paper.md)
+- For further information on Move, refer to the [Move technical paper](/docs/technical-papers/move-paper)
 
 ### Move Bytecode
 
