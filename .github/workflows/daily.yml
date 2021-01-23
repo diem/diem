@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: libra/build_environment:github-1
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
     strategy:
       fail-fast: false
       matrix:
@@ -24,15 +26,13 @@ jobs:
       - uses: ./.github/actions/build-setup
       - name: install cargo-audit
         run: cargo install --force cargo-audit
-      # NOTE ignored advisory rules
-      # RUSTSEC-2018-0015 - term
-      # RUSTSEC-2019-0031 - spin
       - name: audit crates
-        run: |
-          $CARGO $CARGOFLAGS audit --deny-warnings \
-            --ignore RUSTSEC-2018-0015 \
-            --ignore RUSTSEC-2019-0031 \
-            --ignore RUSTSEC-2020-0016
+        run: $CARGO $CARGOFLAGS audit
+      - uses: ./.github/actions/slack-file
+        with:
+          webhook: ${{ secrets.WEBHOOK_AUDIT }}
+          steps: ${{ env.MESSAGE_PAYLOAD_FILE }}
+        if: ${{ failure() }}
       - uses: ./.github/actions/build-teardown
 
   coverage:
