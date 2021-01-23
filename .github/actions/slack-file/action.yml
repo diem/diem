@@ -8,16 +8,13 @@ inputs:
   webhook:
     description: Webhook for the message.
     required: true
-  url:
-    description: Link back to the job.
-    required: false
-    default: ${{ env.GITHUB_SERVER_URL }}/${{ env.GITHUB_REPOSITORY }}/actions/runs/${{ env.GITHUB_RUN_ID }}"
 runs:
   using: "composite"
   steps:
-    - run: ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f "${PAYLOAD_FILE}" -u "${URL}"
+    - run: |
+        build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f "${PAYLOAD_FILE}" -u "${build_url}"
       shell: bash
       env:
         PAYLOAD_FILE: ${{ inputs.payload-file }}
         WEBHOOK: ${{ inputs.webhook }}
-        URL: ${{ inputs.url }}

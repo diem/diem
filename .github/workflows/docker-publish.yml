@@ -2,7 +2,7 @@ name: docker-publish.yml
 
 on:
   push:
-    branches: [main, master, gha-test-*]
+    branches: [auto, release-*]
 
 jobs:
   build-images:
@@ -78,10 +78,11 @@ jobs:
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
       - name: docker image pruning.
+        if: ${{ github.ref != 'refs/heads/auto' }}
         run: |
           scripts/dockerhub_prune.sh -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_PASSWORD }}" -x
       - name: push to novi ecr
-        if: ${{ always() }}
+        if: ${{ always() && github.ref != 'refs/heads/auto' }}
         run: |
           #push to novi ecr with standard names
           BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )

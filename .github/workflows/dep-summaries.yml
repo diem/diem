@@ -5,10 +5,11 @@ on:
     types:
       - opened
       - synchronize
-  pull_request_review:
-    types:
-      - submitted
-      - dismissed
+  #pull_request_review:
+  # Should we enforce reviews in the future, then re-enable this.
+  #  types:
+  #    - submitted
+  #    - dismissed
   push:
     branches:
       - auto

@@ -3,9 +3,9 @@ name: daily
 on:
   schedule:
     - cron: "14 14 * * *"
-  #Uncomment below to test.
+  # Uncomment below to test.
   #push:
-  #  branches: [gha-test-*]
+  #  branches: [gha-test-*, canary, auto]
 
 jobs:
   audit:
@@ -16,7 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
-        target-branch: [master, release-1.1]
+        #to test in canary add in canary here.....
+        target-branch: [master, release-1.1, canary]
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
       - uses: actions/checkout@v2
         with:
@@ -24,15 +27,14 @@ jobs:
       - uses: ./.github/actions/build-setup
       - name: install cargo-audit
         run: cargo install --force cargo-audit
-      # NOTE ignored advisory rules
-      # RUSTSEC-2018-0015 - term
-      # RUSTSEC-2019-0031 - spin
       - name: audit crates
         run: |
-          $CARGO $CARGOFLAGS audit --deny-warnings \
-            --ignore RUSTSEC-2018-0015 \
-            --ignore RUSTSEC-2019-0031 \
-            --ignore RUSTSEC-2020-0016
+          $CARGO $CARGOFLAGS audit >> $MESSAGE_PAYLOAD_FILE
+      - uses: ./.github/actions/slack-file
+        with:
+          webhook: ${{ secrets.WEBHOOK_AUDIT }}
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+        if: ${{ failure() }}
       - uses: ./.github/actions/build-teardown
 
   coverage:
@@ -66,12 +68,12 @@ jobs:
           aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
           aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
           echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+      - name: "Send Message"
+        uses: ./.github/actions/slack-file
+        with:
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          webhook: ${{ secrets.WEBHOOK_COVERAGE }}
       # Disabling for now as this is not critical for job success.   TODO: fix it up.
       #- name: publish to codecov.io
       #  run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
-      #- uses: ./.github/actions/slack-file
-      #  with:
-      #    webhook: ${{ secrets.COVERAGE_SLACK_WEBHOOK }}
-      #    steps: ${{ env.MESSAGE_PAYLOAD_FILE }}
-      #  if: always()
       #- uses: ./.github/actions/build-teardown
