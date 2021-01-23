@@ -264,36 +264,60 @@ where
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
         let mut txn_data = vec![];
-        let mut current_state_tree = Arc::clone(parent_trees.state_tree());
         // The hash of each individual TransactionInfo object. This will not include the
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
         let mut txn_info_hashes = vec![];
-        let mut next_epoch_state = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
         let new_epoch_event_key = on_chain_config::new_epoch_event_key();
-        for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
-            if next_epoch_state.is_some() {
-                txn_data.push(TransactionData::new(
-                    HashMap::new(),
-                    vec![],
-                    TransactionStatus::Retry,
-                    Arc::clone(&current_state_tree),
-                    Arc::new(InMemoryAccumulator::<EventAccumulatorHasher>::default()),
-                    0,
-                    None,
-                ));
-                continue;
-            }
-            let (blobs, state_tree) = process_write_set(
-                txn,
-                &mut account_to_state,
-                &proof_reader,
-                vm_output.write_set().clone(),
-                &current_state_tree,
-            )?;
 
+        let new_epoch_marker = vm_outputs
+            .iter()
+            .enumerate()
+            .find(|(_, output)| {
+                output
+                    .events()
+                    .iter()
+                    .any(|event| *event.key() == new_epoch_event_key)
+            })
+            // Off by one for exclusive index.
+            .map(|(idx, _)| idx + 1);
+        let transaction_count = new_epoch_marker.unwrap_or(vm_outputs.len());
+
+        let txn_blobs =
+            itertools::zip_eq(vm_outputs.iter(), transactions.iter())
+                .take(transaction_count)
+                .map(|(vm_output, txn)| {
+                    process_write_set(
+                        txn,
+                        &mut account_to_state,
+                        vm_output.write_set().clone(),
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+        let mut current_state_tree = Arc::clone(parent_trees.state_tree());
+        let mut txn_state_trees = vec![];
+        for updated_blobs in txn_blobs.iter() {
+            current_state_tree = Arc::new(
+                current_state_tree
+                    .update(
+                        updated_blobs
+                            .iter()
+                            .map(|(addr, value)| (addr.hash(), value.clone()))
+                            .collect(),
+                        &proof_reader,
+                    )
+                    .expect("Failed to update state tree."),
+            );
+            txn_state_trees.push(current_state_tree.clone());
+        }
+
+        for ((vm_output, txn), (state_tree, blobs)) in itertools::zip_eq(
+            itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()).take(transaction_count),
+            itertools::zip_eq(txn_state_trees, txn_blobs),
+        ) {
             let event_tree = {
                 let event_hashes: Vec<_> =
                     vm_output.events().iter().map(CryptoHash::hash).collect();
@@ -343,38 +367,47 @@ where
                 vm_output.gas_used(),
                 txn_info_hash,
             ));
-            current_state_tree = state_tree;
-
-            // check for change in validator set
-            next_epoch_state = if vm_output
-                .events()
-                .iter()
-                .any(|event| *event.key() == new_epoch_event_key)
-            {
-                let validator_set = account_to_state
-                    .get(&on_chain_config::config_address())
-                    .map(|state| {
-                        state
-                            .get_validator_set()?
-                            .ok_or_else(|| format_err!("ValidatorSet does not exist"))
-                    })
-                    .ok_or_else(|| format_err!("ValidatorSet account does not exist"))??;
-                let configuration = account_to_state
-                    .get(&on_chain_config::config_address())
-                    .map(|state| {
-                        state
-                            .get_configuration_resource()?
-                            .ok_or_else(|| format_err!("Configuration does not exist"))
-                    })
-                    .ok_or_else(|| format_err!("Association account does not exist"))??;
-                Some(EpochState {
-                    epoch: configuration.epoch(),
-                    verifier: (&validator_set).into(),
-                })
-            } else {
-                None
-            }
         }
+
+        // check for change in validator set
+        let next_epoch_state = if new_epoch_marker.is_some() {
+            // Pad the rest of transactions
+            txn_data.resize(
+                transactions.len(),
+                TransactionData::new(
+                    HashMap::new(),
+                    vec![],
+                    TransactionStatus::Retry,
+                    Arc::clone(&current_state_tree),
+                    Arc::new(InMemoryAccumulator::<EventAccumulatorHasher>::default()),
+                    0,
+                    None,
+                ),
+            );
+
+            let validator_set = account_to_state
+                .get(&on_chain_config::config_address())
+                .map(|state| {
+                    state
+                        .get_validator_set()?
+                        .ok_or_else(|| format_err!("ValidatorSet does not exist"))
+                })
+                .ok_or_else(|| format_err!("ValidatorSet account does not exist"))??;
+            let configuration = account_to_state
+                .get(&on_chain_config::config_address())
+                .map(|state| {
+                    state
+                        .get_configuration_resource()?
+                        .ok_or_else(|| format_err!("Configuration does not exist"))
+                })
+                .ok_or_else(|| format_err!("Association account does not exist"))??;
+            Some(EpochState {
+                epoch: configuration.epoch(),
+                verifier: (&validator_set).into(),
+            })
+        } else {
+            None
+        };
 
         let current_transaction_accumulator =
             parent_trees.txn_accumulator().append(&txn_info_hashes);
@@ -936,18 +969,12 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 }
 
 /// For all accounts modified by this transaction, find the previous blob and update it based
-/// on the write set. Returns the blob value of all these accounts as well as the newly
-/// constructed state tree.
+/// on the write set. Returns the blob value of all these accounts.
 pub fn process_write_set(
     transaction: &Transaction,
     account_to_state: &mut HashMap<AccountAddress, AccountState>,
-    proof_reader: &ProofReader,
     write_set: WriteSet,
-    previous_state_tree: &SparseMerkleTree,
-) -> Result<(
-    HashMap<AccountAddress, AccountStateBlob>,
-    Arc<SparseMerkleTree>,
-)> {
+) -> Result<HashMap<AccountAddress, AccountStateBlob>> {
     let mut updated_blobs = HashMap::new();
 
     // Find all addresses this transaction touches while processing each write op.
@@ -989,19 +1016,8 @@ pub fn process_write_set(
         let account_blob = AccountStateBlob::try_from(account_state)?;
         updated_blobs.insert(addr, account_blob);
     }
-    let state_tree = Arc::new(
-        previous_state_tree
-            .update(
-                updated_blobs
-                    .iter()
-                    .map(|(addr, value)| (addr.hash(), value.clone()))
-                    .collect(),
-                proof_reader,
-            )
-            .expect("Failed to update state tree."),
-    );
 
-    Ok((updated_blobs, state_tree))
+    Ok(updated_blobs)
 }
 
 fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
