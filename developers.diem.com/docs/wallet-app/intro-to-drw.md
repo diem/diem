@@ -14,9 +14,6 @@ The Reference Wallet and Public Demo Wallet include various references to transa
 > **Note:** Custodial wallet services like holding Diem Coins for customers, exchanging one type of Diem Coin for another, transferring customer Diem Coins to other users (whether in the same wallet or others), and exchanging Diem Coins for cash all potentially money transmission or money services business activities, depending on the state/federal jurisdictions involved.
 >
 > The functions described in this document may require the service provider to be licensed in the jurisdictions in which it operates and, to operate on the Diem Payment Network, it will need to be a Regulated VASP reviewed and onboarded by Diem Networks.
->
-> *Visit the [Prospective VASPs](reference/prospective-vasps.md) page to learn more.*
-
 
 ### The Lifecycle of a transaction
 

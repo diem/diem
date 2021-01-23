@@ -7,7 +7,7 @@ sidebar_label: Integration Guide
 ## Overview
 
 >
-> **Note:** This guide is intended to provide a [Regulated Virtual Asset Service Provider (VASP)](reference/glossary.md#Regulated-VASP), with the necessary information needed to integrate a wallet with the Diem Payment Network (DPN).  This guide assumes that you are a Regulated VASP, and that you have been permissioned by Diem Networks as a participant on DPN.   For more information on the Regulated VASP authorization process, please see [Prospective VASP](reference/prospective-vasps.md). This guide also assumes you have undergone and passed a Diem Networks security penetration test (PEN) to check for exploitable vulnerabilities.
+> **Note:** This guide is intended to provide a [Regulated Virtual Asset Service Provider (VASP)](reference/glossary.md#regulated-vasp), with the necessary information needed to integrate a wallet with the Diem Payment Network (DPN).  This guide assumes that you are a Regulated VASP, and that you have been permissioned by Diem Networks as a participant on DPN. This guide also assumes you have undergone and passed a Diem Networks security penetration test (PEN) to check for exploitable vulnerabilities.
 >
 
 ## Getting Started
@@ -21,7 +21,7 @@ Before you create your Regulated VASP account, you will need to become familiar 
 
 DPN supports the following on-chain institutional accounts:
 
-* Regulated VASP Accounts: These accounts are reserved for [Regulated VASP](/reference/glossary.md#Regulated-VASP) that operate on the DPN usually on behalf of end users. These are of two types - [ParentVASP and ChildVASP accounts](#account-roles).
+* Regulated VASP Accounts: These accounts are reserved for [Regulated VASP](/reference/glossary.md#regulated-vasp) that operate on the DPN usually on behalf of end users. These are of two types - [ParentVASP and ChildVASP accounts](#account-roles).
 * Designated Dealer Accounts: These accounts are reserved for designated dealers that have contracted with Diem Networks to mint and burn Diem Coins.
 
 

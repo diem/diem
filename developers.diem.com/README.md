@@ -22,6 +22,7 @@ Read our [Contributing guide](https://developers.diem.com/docs/community/contrib
 
 ### Learn About Diem
 * [Welcome](https://developers.diem.com/docs/welcome-to-diem)
+* [Diem Core Overview](https://developers.diem.com/docs/core/overview)
 * [Diem Protocol: Key Concepts](https://developers.diem.com/docs/diem-protocol)
 * [Life of a Transaction](https://developers.diem.com/docs/life-of-a-transaction)
 
@@ -37,21 +38,6 @@ Read our [Contributing guide](https://developers.diem.com/docs/community/contrib
 ### Blog
 * [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
 
-### Diem Codebase
-
-* [Diem Core Overview](https://developers.diem.com/docs/diem-core-overview)
-* [Admission Control](https://developers.diem.com/docs/crates/admission-control)
-* [Bytecode Verifier](https://developers.diem.com/docs/crates/bytecode-verifier)
-* [Consensus](https://developers.diem.com/docs/crates/consensus)
-* [Crypto](https://developers.diem.com/docs/crates/crypto)
-* [Execution](https://developers.diem.com/docs/crates/execution)
-* [Mempool](https://developers.diem.com/docs/crates/mempool)
-* [Move IR Compiler](https://developers.diem.com/docs/crates/ir-to-bytecode)
-* [Move Language](https://developers.diem.com/docs/crates/move-language)
-* [Network](https://developers.diem.com/docs/crates/network)
-* [Storage](https://developers.diem.com/docs/crates/storage)
-* [Virtual Machine](https://developers.diem.com/docs/crates/vm)
-
 
 ## Community
 
@@ -65,4 +51,4 @@ Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/master/L
 
 ## Docs Directory
 
-The [docs directory](./docs/) contains the source files for Diem's Docusaurus documentation. See the [website directory](./website/) [README](./website/README.md) for additional information.
+The [docs directory](./docs/) contains the source files for Diem's Docusaurus documentation.
