@@ -2314,18 +2314,14 @@ impl<'env> SpecTranslator<'env> {
         // Translate quantified variables.
         emit!(self.writer, "$Boolean(({} ", kind);
         let mut quant_vars = HashMap::new();
-        let mut primitive_quant_type_vars = Vec::new();
         let mut comma = "";
         for (var, range) in ranges {
             let var_name = self.module_env().symbol_pool().string(var.name);
             let quant_ty = self.module_env().env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
-                Type::TypeDomain(ty) => {
+                Type::TypeDomain(_) => {
                     emit!(self.writer, "{}{}: $Value", comma, var_name);
                     quant_vars.insert(var.name, var_name.as_ref().clone());
-                    if matches!(**ty, Type::Primitive(..)) {
-                        primitive_quant_type_vars.push(var.name);
-                    }
                 }
                 _ => {
                     let quant_var = self.fresh_var_name("i");
@@ -2339,36 +2335,12 @@ impl<'env> SpecTranslator<'env> {
         // Add condition as trigger.
         if range_tmps.is_empty() {
             if let Some(cond) = condition {
-                let mut required_vars: HashSet<Symbol> = quant_vars.keys().cloned().collect();
-                // Variables with a primitive types will be covered no matter what.
-                for local in primitive_quant_type_vars {
-                    required_vars.remove(&local);
-                }
+                let required_vars: HashSet<Symbol> = quant_vars.keys().cloned().collect();
                 if let Some(triggers) = self.get_triggers(required_vars, cond) {
                     for trigger in triggers {
                         emit!(self.writer, "{ ");
                         print!("adding trigger: {{ ");
                         let mut comma = "";
-                        // Emit patterns from primitive quantified types.
-                        for (var, range) in ranges {
-                            let var_name = self.module_env().symbol_pool().string(var.name);
-                            let quant_ty = self.module_env().env.get_node_type(range.node_id());
-                            if let Type::TypeDomain(domain_ty) = quant_ty.skip_reference() {
-                                if matches!(**domain_ty, Type::Primitive(..)) {
-                                    let type_check = boogie_well_formed_expr(
-                                        self.global_env(),
-                                        &var_name,
-                                        &domain_ty,
-                                        WellFormedMode::WithInvariant,
-                                    );
-                                    if !type_check.is_empty() {
-                                        emit!(self.writer, "{}{}", comma, type_check);
-                                        print!("{}{}", comma, type_check);
-                                    }
-                                }
-                            }
-                            comma = ", ";
-                        }
                         // Emit patterns from the condition trigger.
                         for pattern in trigger {
                             emit!(self.writer, "{}", comma);
