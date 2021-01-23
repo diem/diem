@@ -2481,13 +2481,12 @@
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
 
-"@libra-opensource/diem-docusaurus-components@0.1.12":
-  version "0.1.12"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.12.tgz#d4e37f187f6e7fb9860835f37bed684bd1e597a0"
-  integrity sha512-uvcQU9dqqFOVn30Xje/huuchUQKcr2b+BLYV3g37B1tErenumpj42NKDTyp2XoaK7wZBKvUqHyynCEKmb16e7w==
+"@libra-opensource/diem-docusaurus-components@0.1.15":
+  version "0.1.15"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.15.tgz#a37e980d1c75d36ea2fda1527fed346dd8ec434b"
+  integrity sha512-QxFXKYn0U7ZVP8Pz1Z0+JQIUqUXx1VZ29lvfhhtBCjLnBq+ywDjsy06c4Kox9rXUi/GFiZqnpwR3cWp9aPLdYA==
   dependencies:
     docsearch.js "^2.6.3"
-    lodash "^4.17.20"
     prism-react-renderer "^1.1.1"
     prop-types "^15.7.2"
     react "^16.13.1"

@@ -2,7 +2,7 @@ import React from 'react';
 import NativeComponents from '@theme-original/MDXComponents';
 import DocComponents from 'components/docs';
 
-import Link from 'src/components/Link';
+import {Link} from 'diem-docusaurus-components';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
