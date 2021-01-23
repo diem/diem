@@ -23,7 +23,9 @@ public bar() {
 Command `publish src2 -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Publishing failed with unexpected error CYCLIC_MODULE_DEPENDENCY
+Publishing module 00000000000000000000000000000043::N introduces cyclic dependencies.
+Cycle detected: 00000000000000000000000000000043::N -> 00000000000000000000000000000042::M -> 00000000000000000000000000000043::N
+Re-run with --ignore-breaking-changes to publish anyway.
 Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 

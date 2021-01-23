@@ -8,7 +8,9 @@ Publishing a new module 00000000000000000000000000000042::D
 Command `publish src2 -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Publishing failed with unexpected error CYCLIC_MODULE_DEPENDENCY
+Publishing module 00000000000000000000000000000042::C introduces cyclic dependencies.
+Cycle detected: 00000000000000000000000000000042::C -> 00000000000000000000000000000042::A -> 00000000000000000000000000000042::B -> 00000000000000000000000000000042::C
+Re-run with --ignore-breaking-changes to publish anyway.
 Command `publish src2 -v --ignore-breaking-changes`:
 Compiling Move modules...
 Found and compiled 1 modules
