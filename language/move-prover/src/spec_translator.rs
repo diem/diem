@@ -2197,6 +2197,10 @@ impl<'env> SpecTranslator<'env> {
                 if required_vars.is_empty() {
                     Some(vec![patterns])
                 } else {
+                    let required_vars = required_vars
+                        .iter()
+                        .map(|var| self.module_env().symbol_pool().string(*var))
+                        .collect::<Vec<_>>();
                     eprintln!(
                         "Discarding trigger(s) because some variables are not covered: {:?}",
                         required_vars
