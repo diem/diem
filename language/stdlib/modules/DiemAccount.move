@@ -1911,7 +1911,7 @@ module DiemAccount {
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
         /// or the key rotation capability for addr itself [[H17]][PERMISSION].
-        invariant [global] forall addr: address where exists_at(addr):
+        invariant [global] forall addr: address: exists_at(addr) ==>
             delegated_key_rotation_capability(addr) || spec_holds_own_key_rotation_cap(addr);
     }
 
@@ -1941,7 +1941,7 @@ module DiemAccount {
 
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
         /// or the withdraw capability for addr itself [[H18]][PERMISSION].
-        invariant [global] forall addr: address where exists_at(addr):
+        invariant [global] forall addr: address: exists_at(addr) ==>
             spec_holds_delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
     }
 
@@ -1965,7 +1965,7 @@ module DiemAccount {
     }
 
     spec schema AuthenticationKeyRemainsSame {
-        ensures forall addr: address where old(exists_at(addr)):
+        ensures forall addr: address: old(exists_at(addr)) ==>
             global<DiemAccount>(addr).authentication_key == old(global<DiemAccount>(addr).authentication_key);
     }
 
@@ -2016,7 +2016,7 @@ module DiemAccount {
     spec module {
 
         /// Every address that has a published account has a published RoleId
-        invariant [global] forall addr: address where exists_at(addr): exists<Roles::RoleId>(addr);
+        invariant [global] forall addr: address: exists_at(addr) ==> exists<Roles::RoleId>(addr);
 
         /// If an account has a balance, the role of the account is compatible with having a balance.
         invariant [global] forall token: type: forall addr: address where exists<Balance<token>>(addr):
@@ -2035,7 +2035,7 @@ module DiemAccount {
             || Roles::spec_has_parent_VASP_role_addr(addr);
 
         /// Every address that has a published account has a published FreezingBit
-        invariant [global] forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);
+        invariant [global] forall addr: address: exists_at(addr) ==> exists<AccountFreezing::FreezingBit>(addr);
     }
 
     /// # Helper Functions and Schemas

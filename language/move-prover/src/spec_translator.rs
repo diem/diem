@@ -2260,7 +2260,10 @@ impl<'env> SpecTranslator<'env> {
             }
 
             Exp::Call(node_id, op, args)
-                if !matches!(op, Not | Implies | And | Or | Lt | Le | Gt | Ge | Neq) =>
+                if !matches!(
+                    op,
+                    Not | Implies | And | Or | Lt | Le | Gt | Ge | Neq | Exists(..)
+                ) =>
             {
                 let mut vars = HashSet::new();
                 if matches!(op, Operation::Function(..)) {
