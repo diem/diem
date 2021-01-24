@@ -24,8 +24,10 @@ use functions::{
     FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
 };
 
-use crate::proptest_types::types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen};
-use std::collections::{BTreeSet, HashMap};
+use crate::proptest_types::types::{
+    FriendDeclarationGen, StDefnMaterializeState, StructDefinitionGen, StructHandleGen,
+};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;
@@ -171,12 +173,18 @@ impl CompiledModuleStrategyGen {
             1..=self.size,
         );
 
+        //
+        // Friend generator
+        //
+        let friends_strat = vec(FriendDeclarationGen::strategy(), 0..=self.size);
+
         // Note that prop_test only allows a tuple of length up to 10
         (
             (address_pool_strat, identifiers_strat, constant_pool_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
             (function_handles_strat, function_defs_strat),
+            friends_strat,
         )
             .prop_map(
                 |(
@@ -184,6 +192,7 @@ impl CompiledModuleStrategyGen {
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
                     (function_handle_gens, function_def_gens),
+                    friend_decl_gens,
                 )| {
                     //
                     // leaf pools
@@ -210,6 +219,14 @@ impl CompiledModuleStrategyGen {
                         }
                     }
                     let module_handles_len = module_handles.len();
+
+                    //
+                    // Friend Declarations
+                    let friend_decl_set: HashSet<_> = friend_decl_gens
+                        .into_iter()
+                        .map(|friend_decl_gen| friend_decl_gen.materialize(module_handles_len))
+                        .collect();
+                    let friend_decls = friend_decl_set.into_iter().collect();
 
                     //
                     // struct handles
@@ -296,6 +313,8 @@ impl CompiledModuleStrategyGen {
                         struct_handles,
                         function_handles,
                         field_handles,
+
+                        friend_decls,
 
                         struct_def_instantiations,
                         function_instantiations,

@@ -137,6 +137,15 @@ fn invalid_struct_as_type_actual_in_exists() {
     m.freeze().unwrap_err();
 }
 
+#[test]
+fn invalid_friend() {
+    let mut m = basic_test_module();
+    m.friend_decls.push(FriendDeclaration {
+        module: ModuleHandleIndex(m.module_handles.len() as TableIndex),
+    });
+    m.freeze().unwrap_err();
+}
+
 proptest! {
     #[test]
     fn valid_bounds(_module in CompiledModule::valid_strategy(20)) {

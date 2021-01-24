@@ -94,7 +94,7 @@ impl Module {
             .function_defs()
             .iter()
             .filter_map(|f| match f.visibility {
-                v @ Visibility::Public | v @ Visibility::Script => Some((
+                v @ Visibility::Public | v @ Visibility::Script | v @ Visibility::Friend => Some((
                     v,
                     FunctionSignature::new(m, m.function_handle_at(f.function)),
                 )),

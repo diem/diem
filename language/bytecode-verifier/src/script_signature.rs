@@ -41,7 +41,7 @@ pub fn verify_module_script_function(module: &CompiledModule, name: &IdentStr) -
 
     match fdef.visibility {
         Visibility::Script => (),
-        Visibility::Private | Visibility::Public => {
+        Visibility::Private | Visibility::Friend | Visibility::Public => {
             return Err(PartialVMError::new(
                 StatusCode::EXECUTE_SCRIPT_FUNCTION_CALLED_ON_NON_SCRIPT_VISIBLE,
             )

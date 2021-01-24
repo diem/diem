@@ -59,6 +59,7 @@ impl PointerKind {
             ],
             StructDefinition => &[One(StructHandle), Star(StructHandle)],
             FunctionDefinition => &[One(FunctionHandle), One(Signature)],
+            FriendDeclaration => &[One(ModuleHandle)],
             Signature => &[Star(StructHandle)],
             FieldHandle => &[One(StructDefinition)],
             _ => &[],
@@ -80,6 +81,7 @@ pub static VALID_POINTER_SRCS: &[IndexKind] = &[
     IndexKind::FieldHandle,
     IndexKind::StructDefinition,
     IndexKind::FunctionDefinition,
+    IndexKind::FriendDeclaration,
     IndexKind::Signature,
 ];
 
@@ -308,6 +310,9 @@ impl ApplyOutOfBoundsContext {
             }
             (FieldHandle, StructDefinition) => {
                 self.module.field_handles[src_idx].owner = StructDefinitionIndex(new_idx)
+            }
+            (FriendDeclaration, ModuleHandle) => {
+                self.module.friend_decls[src_idx].module = ModuleHandleIndex(new_idx)
             }
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }

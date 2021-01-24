@@ -861,7 +861,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .get_function_source_map(function_definition_index)?;
 
         if match function_definition.visibility {
-            Visibility::Script | Visibility::Public => false,
+            Visibility::Script | Visibility::Friend | Visibility::Public => false,
             Visibility::Private => self.options.only_externally_visible,
         } {
             return Ok("".to_string());
@@ -870,6 +870,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let visibility_modifier = match function_definition.visibility {
             Visibility::Private => "",
             Visibility::Script => "public(script) ",
+            Visibility::Friend => "public(friend) ",
             Visibility::Public => "public ",
         };
         let native_modifier = if function_definition.is_native() {
@@ -929,9 +930,9 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Ok(self.format_function_coverage(
             name,
             format!(
-                "{visibility_modifier}{native_modifier}{name}{ty_params}({params}){ret_type}{body}",
-                visibility_modifier = visibility_modifier,
+                "{native_modifier}{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
                 native_modifier = native_modifier,
+                visibility_modifier = visibility_modifier,
                 name = name,
                 ty_params = ty_params,
                 params = &parameters.join(", "),

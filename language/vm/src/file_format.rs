@@ -338,8 +338,17 @@ pub struct FieldInstantiation {
     pub type_parameters: SignatureIndex,
 }
 
-/// A `StructDefinition` is a type definition. It either indicates it is native or
-// defines all the user-specified fields declared on the type.
+/// A `FriendDeclaration` encapsulates information about a friend.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+pub struct FriendDeclaration {
+    /// Handle index to the friend module
+    pub module: ModuleHandleIndex,
+}
+
+/// A `StructDefinition` is a type definition. It either indicates it is native or defines all the
+/// user-specified fields declared on the type.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
@@ -363,6 +372,7 @@ impl StructDefinition {
         }
     }
 }
+
 /// A `FieldDefinition` is the definition of a field: its name and the field type.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -387,6 +397,8 @@ pub enum Visibility {
     Public = 0x1,
     /// Accessible by any script or other `Script` functions from any module
     Script = 0x2,
+    /// Accessible by this module as well as modules declared in the friend list.
+    Friend = 0x3,
 }
 
 impl Default for Visibility {
@@ -403,6 +415,7 @@ impl std::convert::TryFrom<u8> for Visibility {
             x if x == Visibility::Private as u8 => Ok(Visibility::Private),
             x if x == Visibility::Public as u8 => Ok(Visibility::Public),
             x if x == Visibility::Script as u8 => Ok(Visibility::Script),
+            x if x == Visibility::Friend as u8 => Ok(Visibility::Friend),
             _ => Err(()),
         }
     }
@@ -1578,6 +1591,8 @@ impl CompiledScriptMut {
             function_handles: self.function_handles,
             field_handles: vec![],
 
+            friend_decls: vec![],
+
             struct_def_instantiations: vec![],
             function_instantiations: self.function_instantiations,
             field_instantiations: vec![],
@@ -1620,6 +1635,8 @@ pub struct CompiledModuleMut {
     /// Handles to fields.
     pub field_handles: Vec<FieldHandle>,
 
+    /// Friend declarations.
+    pub friend_decls: Vec<FriendDeclaration>,
     /// Struct instantiations.
     pub struct_def_instantiations: Vec<StructDefInstantiation>,
     /// Function instantiations.
@@ -1711,6 +1728,7 @@ impl Arbitrary for CompiledModuleMut {
                 vec(any::<FunctionHandle>(), 0..=size),
             ),
             any::<ModuleHandleIndex>(),
+            vec(any::<FriendDeclaration>(), 0..=size),
             vec(any_with::<Signature>(size), 0..=size),
             (
                 vec(any::<Identifier>(), 0..=size),
@@ -1725,6 +1743,7 @@ impl Arbitrary for CompiledModuleMut {
                 |(
                     (module_handles, struct_handles, function_handles),
                     self_module_handle_idx,
+                    friend_decls,
                     signatures,
                     (identifiers, address_identifiers),
                     (struct_defs, function_defs),
@@ -1736,6 +1755,7 @@ impl Arbitrary for CompiledModuleMut {
                         function_handles,
                         self_module_handle_idx,
                         field_handles: vec![],
+                        friend_decls,
                         struct_def_instantiations: vec![],
                         function_instantiations: vec![],
                         field_instantiations: vec![],
@@ -1760,6 +1780,7 @@ impl CompiledModuleMut {
             IndexKind::StructHandle => self.struct_handles.len(),
             IndexKind::FunctionHandle => self.function_handles.len(),
             IndexKind::FieldHandle => self.field_handles.len(),
+            IndexKind::FriendDeclaration => self.friend_decls.len(),
             IndexKind::StructDefInstantiation => self.struct_def_instantiations.len(),
             IndexKind::FunctionInstantiation => self.function_instantiations.len(),
             IndexKind::FieldInstantiation => self.field_instantiations.len(),
@@ -1886,6 +1907,7 @@ pub fn empty_module() -> CompiledModuleMut {
         struct_handles: vec![],
         function_handles: vec![],
         field_handles: vec![],
+        friend_decls: vec![],
         struct_def_instantiations: vec![],
         function_instantiations: vec![],
         field_instantiations: vec![],

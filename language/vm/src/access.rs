@@ -176,6 +176,10 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_defs
     }
 
+    fn friend_decls(&self) -> &[FriendDeclaration] {
+        &self.as_module().as_inner().friend_decls
+    }
+
     fn module_id_for_handle(&self, module_handle_idx: &ModuleHandle) -> ModuleId {
         self.as_module().module_id_for_handle(module_handle_idx)
     }
@@ -190,6 +194,13 @@ pub trait ModuleAccess: Sync {
             .iter()
             .filter(|&handle| handle != self_handle)
             .map(|handle| self.module_id_for_handle(handle))
+            .collect()
+    }
+
+    fn friend_module_ids(&self) -> Vec<ModuleId> {
+        self.friend_decls()
+            .iter()
+            .map(|friend_decl| self.module_id_for_handle(self.module_handle_at(friend_decl.module)))
             .collect()
     }
 }

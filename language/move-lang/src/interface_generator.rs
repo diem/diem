@@ -61,7 +61,7 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
         .function_defs()
         .iter()
         .filter(|fdef| match fdef.visibility {
-            Visibility::Public | Visibility::Script => true,
+            Visibility::Public | Visibility::Script | Visibility::Friend => true,
             Visibility::Private => false,
         })
         .peekable();
@@ -187,10 +187,12 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
 
 fn write_visibility(visibility: Visibility) -> String {
     match visibility {
-        Visibility::Public => "public ".to_string(),
-        Visibility::Script => "public(script) ".to_string(),
-        Visibility::Private => "".to_string(),
+        Visibility::Public => "public ",
+        Visibility::Script => "public(script) ",
+        Visibility::Friend => "public(friend) ",
+        Visibility::Private => "",
     }
+    .to_string()
 }
 
 fn write_type_paramters(tps: &[Kind]) -> String {

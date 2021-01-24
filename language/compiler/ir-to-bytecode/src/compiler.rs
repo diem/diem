@@ -565,6 +565,8 @@ pub fn compile_module<'a>(
         constant_pool,
         struct_defs,
         function_defs,
+        // TODO (mengxu): add friend declarations when the IR compiler is ready
+        friend_decls: vec![],
     };
     compiled_module
         .freeze()
@@ -642,6 +644,8 @@ fn compile_explicit_dependency_declarations(
             constant_pool,
             struct_defs: vec![],
             function_defs: vec![],
+            // TODO (mengxu): add friend declarations when the IR compiler is ready
+            friend_decls: vec![],
         }
         .freeze()
         .map_err(|e| {

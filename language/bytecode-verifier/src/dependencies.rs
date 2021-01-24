@@ -5,7 +5,7 @@
 use crate::binary_views::BinaryIndexedView;
 use diem_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
@@ -23,7 +23,8 @@ struct Context<'a, 'b> {
     dependency_map: BTreeMap<ModuleId, &'b CompiledModule>,
     // (Module::StructName -> handle) for all types of all dependencies
     struct_id_to_handle_map: HashMap<(ModuleId, Identifier), StructHandleIndex>,
-    // (Module::FunctionName -> handle) for all non-private functions of all dependencies
+    // (Module::FunctionName -> handle) for all functions that can ever be called by this
+    // module/script in all dependencies
     func_id_to_handle_map: HashMap<(ModuleId, Identifier), FunctionHandleIndex>,
     // (handle -> visibility) for all function handles found in the module being checked
     function_visibilities: HashMap<FunctionHandleIndex, Visibility>,
@@ -71,6 +72,8 @@ impl<'a, 'b> Context<'a, 'b> {
 
         let mut dependency_visibilities = HashMap::new();
         for (module_id, module) in &context.dependency_map {
+            let friend_module_ids: BTreeSet<_> = module.friend_module_ids().into_iter().collect();
+
             // Module::StructName -> def handle idx
             for struct_def in module.struct_defs() {
                 let struct_handle = module.struct_handle_at(struct_def.struct_handle);
@@ -88,13 +91,17 @@ impl<'a, 'b> Context<'a, 'b> {
                     (module_id.clone(), func_name.to_owned()),
                     func_def.visibility,
                 );
-                match func_def.visibility {
-                    Visibility::Private => continue,
-                    Visibility::Public | Visibility::Script => {
-                        context
-                            .func_id_to_handle_map
-                            .insert((module_id.clone(), func_name.to_owned()), func_def.function);
-                    }
+                let may_be_called = match func_def.visibility {
+                    Visibility::Public | Visibility::Script => true,
+                    Visibility::Friend => self_module
+                        .as_ref()
+                        .map_or(false, |self_id| friend_module_ids.contains(self_id)),
+                    Visibility::Private => false,
+                };
+                if may_be_called {
+                    context
+                        .func_id_to_handle_map
+                        .insert((module_id.clone(), func_name.to_owned()), func_def.function);
                 }
             }
         }

@@ -46,7 +46,8 @@ impl<'a> DuplicationChecker<'a> {
         checker.check_field_instantiations()?;
         checker.check_function_defintions()?;
         checker.check_struct_definitions()?;
-        checker.check_struct_instantiations()
+        checker.check_struct_instantiations()?;
+        checker.check_friend_declarations()
     }
 
     pub fn verify_script(module: &'a CompiledScript) -> VMResult<()> {
@@ -304,6 +305,17 @@ impl<'a> DuplicationChecker<'a> {
                 StatusCode::UNIMPLEMENTED_HANDLE,
                 IndexKind::FunctionHandle,
                 idx as TableIndex,
+            ));
+        }
+        Ok(())
+    }
+
+    fn check_friend_declarations(&self) -> PartialVMResult<()> {
+        if let Some(idx) = Self::first_duplicate_element(self.module.friend_decls()) {
+            return Err(verification_error(
+                StatusCode::DUPLICATE_ELEMENT,
+                IndexKind::FriendDeclaration,
+                idx,
             ));
         }
         Ok(())

@@ -248,6 +248,7 @@ struct ModuleSerializer {
     function_defs: (u32, u32),
     field_handles: (u32, u32),
     field_instantiations: (u32, u32),
+    friend_decls: (u32, u32),
 }
 
 /// Holds data to compute the header of a transaction script binary.
@@ -560,6 +561,17 @@ fn serialize_field_instantiation(
     serialize_field_handle_index(binary, &field_inst.handle)?;
     serialize_signature_index(binary, &field_inst.type_parameters)?;
     Ok(())
+}
+
+/// Serializes a `FriendDeclaration`.
+///
+/// A `FriendDeclaration` gets serialized as follows:
+/// - `FriendDeclaration.module` as a ULEB128 (index into the `ModuleHandle` table)
+fn serialize_friend_declaration(
+    binary: &mut BinaryData,
+    friend_declaration: &FriendDeclaration,
+) -> Result<()> {
+    serialize_module_handle_index(binary, &friend_declaration.module)
 }
 
 /// Serializes a `Vec<StructDefinitionIndex>`.
@@ -1122,6 +1134,7 @@ impl ModuleSerializer {
             function_defs: (0, 0),
             field_handles: (0, 0),
             field_instantiations: (0, 0),
+            friend_decls: (0, 0),
         }
     }
 
@@ -1135,7 +1148,8 @@ impl ModuleSerializer {
         self.serialize_struct_def_instantiations(binary, &module.struct_def_instantiations)?;
         self.serialize_function_definitions(binary, &module.function_defs)?;
         self.serialize_field_handles(binary, &module.field_handles)?;
-        self.serialize_field_instantiations(binary, &module.field_instantiations)
+        self.serialize_field_instantiations(binary, &module.field_instantiations)?;
+        self.serialize_friend_declarations(binary, &module.friend_decls)
     }
 
     fn serialize_table_indices(&mut self, binary: &mut BinaryData) -> Result<()> {
@@ -1169,6 +1183,12 @@ impl ModuleSerializer {
             TableType::FIELD_INST,
             self.field_instantiations.0,
             self.field_instantiations.1,
+        )?;
+        serialize_table_index(
+            binary,
+            TableType::FRIEND_DECLS,
+            self.friend_decls.0,
+            self.friend_decls.1,
         )?;
         Ok(())
     }
@@ -1254,6 +1274,22 @@ impl ModuleSerializer {
                 serialize_function_definition(binary, function_definition)?;
             }
             self.function_defs.1 = checked_calculate_table_size(binary, self.function_defs.0)?;
+        }
+        Ok(())
+    }
+
+    fn serialize_friend_declarations(
+        &mut self,
+        binary: &mut BinaryData,
+        friend_declarations: &[FriendDeclaration],
+    ) -> Result<()> {
+        if !friend_declarations.is_empty() {
+            self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
+            self.friend_decls.0 = check_index_in_binary(binary.len())?;
+            for friend_declaration in friend_declarations {
+                serialize_friend_declaration(binary, friend_declaration)?;
+            }
+            self.friend_decls.1 = checked_calculate_table_size(binary, self.friend_decls.0)?;
         }
         Ok(())
     }

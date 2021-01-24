@@ -166,6 +166,7 @@ fn make_module() -> CompiledModuleMut {
         struct_def_instantiations: vec![],
         function_instantiations: vec![],
         field_instantiations: vec![],
+        friend_decls: vec![],
     }
 }
 

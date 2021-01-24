@@ -508,6 +508,15 @@ fn build_common_tables(
             | TableType::STRUCT_DEF_INST
             | TableType::FIELD_HANDLE
             | TableType::FIELD_INST => continue,
+            TableType::FRIEND_DECLS => {
+                // friend declarations do not exist before VERSION_2
+                if binary.version() < VERSION_2 {
+                    return Err(PartialVMError::new(StatusCode::MALFORMED).with_message(
+                        "Friend declarations not applicable in bytecode version 1".to_string(),
+                    ));
+                }
+                continue;
+            }
         }
     }
     Ok(())
@@ -535,6 +544,9 @@ fn build_module_tables(
             }
             TableType::FIELD_INST => {
                 load_field_instantiations(binary, table, &mut module.field_instantiations)?;
+            }
+            TableType::FRIEND_DECLS => {
+                load_friend_decls(binary, table, &mut module.friend_decls)?;
             }
             TableType::MODULE_HANDLES
             | TableType::STRUCT_HANDLES
@@ -573,7 +585,8 @@ fn build_script_tables(
             | TableType::STRUCT_DEF_INST
             | TableType::FUNCTION_DEFS
             | TableType::FIELD_INST
-            | TableType::FIELD_HANDLE => {
+            | TableType::FIELD_HANDLE
+            | TableType::FRIEND_DECLS => {
                 return Err(PartialVMError::new(StatusCode::MALFORMED)
                     .with_message("Bad table in Script".to_string()));
             }
@@ -1162,6 +1175,24 @@ fn load_struct_definition_indices(
     Ok(indices)
 }
 
+/// Builds the `FriendDeclaration` table.
+fn load_friend_decls(
+    binary: &VersionedBinary,
+    table: &Table,
+    friend_decls: &mut Vec<FriendDeclaration>,
+) -> BinaryLoaderResult<()> {
+    let start = table.offset as usize;
+    let end = start
+        .checked_add(table.count as usize)
+        .expect("Unexpected overflow as the error should be detected early by `check_tables`");
+    let mut cursor = binary.new_cursor(start, end);
+    while cursor.position() < u64::from(table.count) {
+        let module = load_module_handle_index(&mut cursor)?;
+        friend_decls.push(FriendDeclaration { module });
+    }
+    Ok(())
+}
+
 /// Deserializes a `CodeUnit`.
 fn load_code_unit(cursor: &mut VersionedCursor) -> BinaryLoaderResult<CodeUnit> {
     let locals = load_signature_index(cursor)?;
@@ -1293,6 +1324,7 @@ impl TableType {
             0xC => Ok(TableType::FUNCTION_DEFS),
             0xD => Ok(TableType::FIELD_HANDLE),
             0xE => Ok(TableType::FIELD_INST),
+            0xF => Ok(TableType::FRIEND_DECLS),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_TABLE_TYPE)),
         }
     }

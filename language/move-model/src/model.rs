@@ -2397,7 +2397,12 @@ impl<'env> FunctionEnv<'env> {
         self.module_env.is_script_module()
             || match self.definition_view().visibility() {
                 Visibility::Public => true,
-                Visibility::Script => panic!("Script visibility not yet supported"),
+                Visibility::Script => unimplemented!("Script visibility not yet supported"),
+                // TODO: for simplicity, we may treat `public(friend)` the same way as `public`
+                // based on the fact that they both expose the function to external modules. We may
+                // want to change the function name from `is_public` to `is_exposed` or have
+                // iner-grained return values (instead of just a bool) to indicate visibility.
+                Visibility::Friend => unimplemented!("Friend visibility not yet supported"),
                 Visibility::Private => false,
             }
     }

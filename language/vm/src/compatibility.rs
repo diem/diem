@@ -3,7 +3,7 @@
 
 use crate::normalized::Module;
 
-/// The result of a linking and layoutcompatibility check. Here is what the different combinations
+/// The result of a linking and layout compatibility check. Here is what the different combinations
 /// mean:
 /// `{ struct: true, struct_layout: true }`: fully backward compatible
 /// `{ struct_and_function_linking: true, struct_layout: false }`: Dependent modules that reference functions or types in this module may not link. However, fixing, recompiling, and redeploying all dependent modules will work--no data migration needed.
@@ -87,8 +87,12 @@ impl Compatibility {
         }
 
         // old module's public functions are a subset of the new module's public functions
-        for function in &old_module.externally_visible_functions {
-            if !new_module.externally_visible_functions.contains(&function) {
+        //
+        // TODO: the current implementation treats `public(friend)` function the same way as`public`
+        // for compatibility checking. We might need to change this in the future to allow
+        // `public(friend)` functions to update if none of its friends actually calls it.
+        for item in &old_module.externally_visible_functions {
+            if !new_module.externally_visible_functions.contains(&item) {
                 struct_and_function_linking = false;
             }
         }

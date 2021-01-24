@@ -8,9 +8,9 @@ use crate::{
     },
     file_format::{
         Bytecode, CodeOffset, CompiledModuleMut, Constant, FieldHandle, FieldInstantiation,
-        FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, FunctionInstantiation,
-        ModuleHandle, Signature, SignatureToken, StructDefInstantiation, StructDefinition,
-        StructFieldInformation, StructHandle, TableIndex,
+        FriendDeclaration, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
+        FunctionInstantiation, ModuleHandle, Signature, SignatureToken, StructDefInstantiation,
+        StructDefinition, StructFieldInformation, StructHandle, TableIndex,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -54,6 +54,9 @@ impl<'a> BoundsChecker<'a> {
         }
         for field_handle in &bounds_check.module.field_handles {
             bounds_check.check_field_handle(field_handle)?
+        }
+        for friend_decl in &bounds_check.module.friend_decls {
+            bounds_check.check_friend_decl(friend_decl)?
         }
         for struct_instantiation in &bounds_check.module.struct_def_instantiations {
             bounds_check.check_struct_instantiation(struct_instantiation)?
@@ -203,6 +206,10 @@ impl<'a> BoundsChecker<'a> {
             check_bounds_impl(&self.module.struct_defs, *ty)?;
         }
         self.check_code(function_def_idx, function_def)
+    }
+
+    fn check_friend_decl(&mut self, friend_declaration: &FriendDeclaration) -> PartialVMResult<()> {
+        check_bounds_impl(&self.module.module_handles, friend_declaration.module)
     }
 
     fn check_code(

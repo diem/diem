@@ -117,6 +117,7 @@ fn no_verify_locals_good() {
                 }),
             },
         ],
+        friend_decls: vec![],
     };
     assert!(verify_module(&compiled_module_good.freeze().unwrap()).is_ok());
 }
