@@ -7,7 +7,7 @@ use crate::{
     peer_manager::{conn_notifs_channel, ConnectionRequest},
     transport::ConnectionMetadata,
 };
-use channel::{diem_channel, message_queues::QueueStyle};
+use channel::{diem_channel, message_queues::QueueStyle, Sender};
 use core::str::FromStr;
 use diem_config::{
     config::{RoleType, TrustedPeer, TrustedPeerSet},
@@ -16,7 +16,7 @@ use diem_config::{
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_logger::info;
 use diem_network_address::NetworkAddress;
-use futures::SinkExt;
+use futures::{channel::mpsc::SendError, SinkExt};
 use rand::rngs::StdRng;
 use std::io;
 use tokio::runtime::Runtime;
@@ -263,6 +263,32 @@ async fn expect_num_dials(
     }
 }
 
+async fn send_update_discovered_peers(
+    conn_mgr_reqs_tx: &mut Sender<ConnectivityRequest>,
+    src: DiscoverySource,
+    peers: TrustedPeerSet,
+) -> Result<(), SendError> {
+    conn_mgr_reqs_tx
+        .send(ConnectivityRequest::UpdateDiscoveredPeers(src, peers))
+        .await
+}
+
+async fn send_update_addresses(
+    conn_mgr_reqs_tx: &mut Sender<ConnectivityRequest>,
+    src: DiscoverySource,
+    peer_addresses: HashMap<PeerId, Vec<NetworkAddress>>,
+) -> Result<(), SendError> {
+    send_update_discovered_peers(
+        conn_mgr_reqs_tx,
+        src,
+        peer_addresses
+            .into_iter()
+            .map(|(peer_id, addresses)| (peer_id, TrustedPeer::from(addresses)))
+            .collect(),
+    )
+    .await
+}
+
 #[test]
 fn connect_to_seeds_on_startup() {
     ::diem_logger::Logger::init_for_testing();
@@ -294,16 +320,16 @@ fn connect_to_seeds_on_startup() {
         // Sending an UpdateAddresses with the same seed address should not
         // trigger any dials.
         info!("Sending same address of seed peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(seed_peer_id, vec![seed_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(seed_peer_id, vec![seed_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -312,16 +338,16 @@ fn connect_to_seeds_on_startup() {
         let new_seed_addr = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
         // Send new address of seed peer.
         info!("Sending new address of seed peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(seed_peer_id, vec![new_seed_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(seed_peer_id, vec![new_seed_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -390,16 +416,16 @@ fn addr_change() {
     let f_peer_mgr = async move {
         // Send address of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(other_peer_id, vec![other_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -422,16 +448,16 @@ fn addr_change() {
         // attempt is hard to test explicitly. It will get implicitly tested if the dial
         // attempt arrives in place of some other expected message in the future.
         info!("Sending same address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(other_peer_id, vec![other_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -440,16 +466,16 @@ fn addr_change() {
         let other_addr_new = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
         // Send new address of other peer.
         info!("Sending new address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr_new.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(other_peer_id, vec![other_addr_new.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -505,16 +531,16 @@ fn lost_connection() {
     let f_peer_mgr = async move {
         // Send address of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(other_peer_id, vec![other_addr.clone()])]
+                .iter()
+                .cloned()
+                .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -578,25 +604,14 @@ fn disconnect() {
         setup_conn_mgr(&mut rt, eligible_peers, seed_addrs);
 
     let events_f = async move {
-        info!("Sending pubkey set of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
-            ))
-            .await
-            .unwrap();
+        info!("Sending pubkey & address of other peer");
 
-        // Send address of other peer.
-        info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -618,11 +633,12 @@ fn disconnect() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                HashMap::new(),
-            ))
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -660,25 +676,13 @@ fn retry_on_failure() {
         setup_conn_mgr(&mut rt, eligible_peers, seed_addrs);
 
     let events_f = async move {
-        info!("Sending pubkey set of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
-            ))
-            .await
-            .unwrap();
-
-        // Send address of other peer.
-        info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
+        info!("Sending pubkey set and addr of other peer");
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -718,11 +722,12 @@ fn retry_on_failure() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                HashMap::new(),
-            ))
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -779,25 +784,13 @@ fn no_op_requests() {
         setup_conn_mgr(&mut rt, eligible_peers, seed_addrs);
 
     let events_f = async move {
-        info!("Sending pubkey set of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
-            ))
-            .await
-            .unwrap();
-
-        // Send address of other peer.
-        info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(other_peer_id, vec![other_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
+        info!("Sending pubkey set and addr of other peer");
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -833,11 +826,12 @@ fn no_op_requests() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                HashMap::new(),
-            ))
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            other_peer_id,
+            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -888,40 +882,17 @@ fn backoff_on_failure() {
         let (peer_a, _, peer_a_keys, peer_a_addr) = gen_peer();
         let (peer_b, _, peer_b_keys, peer_b_addr) = gen_peer();
 
-        info!("Sending list of eligible peers");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateEligibleNodes(
-                DiscoverySource::OnChain,
-                [(peer_a, peer_a_keys), (peer_b, peer_b_keys)]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
-
-        // Send address of peer a.
-        info!("Sending address of peer a");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(peer_a, vec![peer_a_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
-            .await
-            .unwrap();
-        // Send address of peer b.
-        info!("Sending address of peer b");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(peer_b, vec![peer_b_addr.clone()])]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            ))
+        info!("Sending pubkey set and addr of peers");
+        let mut peers = TrustedPeerSet::new();
+        peers.insert(
+            peer_a,
+            TrustedPeer::new(vec![peer_a_addr.clone()], peer_a_keys),
+        );
+        peers.insert(
+            peer_b,
+            TrustedPeer::new(vec![peer_b_addr.clone()], peer_b_keys),
+        );
+        send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
 
@@ -980,19 +951,19 @@ fn multiple_addrs_basic() {
 
         // Send addresses of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(
-                    other_peer_id,
-                    vec![other_addr_1.clone(), other_addr_2.clone()],
-                )]
-                .iter()
-                .cloned()
-                .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(
+                other_peer_id,
+                vec![other_addr_1.clone(), other_addr_2.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -1053,19 +1024,19 @@ fn multiple_addrs_wrapping() {
 
         // Send addresses of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(
-                    other_peer_id,
-                    vec![other_addr_1.clone(), other_addr_2.clone()],
-                )]
-                .iter()
-                .cloned()
-                .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(
+                other_peer_id,
+                vec![other_addr_1.clone(), other_addr_2.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -1143,23 +1114,23 @@ fn multiple_addrs_shrinking() {
 
         // Send addresses of other peer.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(
-                    other_peer_id,
-                    vec![
-                        other_addr_1.clone(),
-                        other_addr_2.clone(),
-                        other_addr_3.clone(),
-                    ],
-                )]
-                .iter()
-                .cloned()
-                .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(
+                other_peer_id,
+                vec![
+                    other_addr_1.clone(),
+                    other_addr_2.clone(),
+                    other_addr_3.clone(),
+                ],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -1184,19 +1155,19 @@ fn multiple_addrs_shrinking() {
 
         // The peer issues a new, smaller set of listen addrs.
         info!("Sending address of other peer");
-        conn_mgr_reqs_tx
-            .send(ConnectivityRequest::UpdateAddresses(
-                DiscoverySource::OnChain,
-                [(
-                    other_peer_id,
-                    vec![other_addr_4.clone(), other_addr_5.clone()],
-                )]
-                .iter()
-                .cloned()
-                .collect(),
-            ))
-            .await
-            .unwrap();
+        send_update_addresses(
+            &mut conn_mgr_reqs_tx,
+            DiscoverySource::OnChain,
+            [(
+                other_peer_id,
+                vec![other_addr_4.clone(), other_addr_5.clone()],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        )
+        .await
+        .unwrap();
 
         // Trigger another connectivity check.
         info!("Sending tick to trigger connectivity check");
@@ -1267,9 +1238,8 @@ fn public_connection_limit() {
 }
 
 #[test]
-fn basic_update_eligible_peers() {
+fn basic_update_discovered_peers() {
     // setup a basic connectivity manager without starting its event loop
-
     let network_context = Arc::new(NetworkContext::new(
         NetworkId::Validator,
         RoleType::Validator,
@@ -1297,9 +1267,10 @@ fn basic_update_eligible_peers() {
     );
 
     // sample some example data
-
     let peer_id_a = PeerId::random();
     let peer_id_b = PeerId::random();
+    let addr_a = NetworkAddress::mock();
+    let addr_b = NetworkAddress::mock();
 
     let pubkey_1 = x25519::PrivateKey::generate(&mut rng).public_key();
     let pubkey_2 = x25519::PrivateKey::generate(&mut rng).public_key();
@@ -1308,48 +1279,58 @@ fn basic_update_eligible_peers() {
     let pubkeys_2: HashSet<_> = vec![pubkey_2].into_iter().collect();
     let pubkeys_1_2: HashSet<_, _> = vec![pubkey_1, pubkey_2].into_iter().collect();
 
+    let peer_a1 = TrustedPeer::new(vec![addr_a.clone()], pubkeys_1.clone());
+    let peer_a2 = TrustedPeer::new(vec![addr_a.clone()], pubkeys_2);
+    let peer_b1 = TrustedPeer::new(vec![addr_b], pubkeys_1.clone());
+    let peer_a_1_2 = TrustedPeer::new(vec![addr_a], pubkeys_1_2.clone());
+
     let pubkeys_map_empty = HashMap::new();
     let pubkeys_map_1: HashMap<_, _> = vec![(peer_id_a, pubkeys_1.clone())].into_iter().collect();
-    let pubkeys_map_2: HashMap<_, _> = vec![(peer_id_a, pubkeys_2), (peer_id_b, pubkeys_1.clone())]
-        .into_iter()
-        .collect();
     let pubkeys_map_1_2: HashMap<_, _> = vec![(peer_id_a, pubkeys_1_2), (peer_id_b, pubkeys_1)]
         .into_iter()
         .collect();
 
+    let peers_1: TrustedPeerSet = vec![(peer_id_a, peer_a1)].into_iter().collect();
+    let peers_2: TrustedPeerSet = vec![(peer_id_a, peer_a2), (peer_id_b, peer_b1.clone())]
+        .into_iter()
+        .collect();
+    let peers_1_2: TrustedPeerSet = vec![(peer_id_a, peer_a_1_2), (peer_id_b, peer_b1)]
+        .into_iter()
+        .collect();
+
     // basic one peer one discovery source
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
 
     // same update does nothing
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
 
     // reset
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_empty.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, TrustedPeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // basic union across multiple sources
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1);
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_2);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_2);
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // does nothing even if another source has same set
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_1_2.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1_2.clone());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_1_2.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_1_2);
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_empty.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, TrustedPeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // reset
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_empty.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, TrustedPeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // empty update again does nothing
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_empty.clone());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, TrustedPeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 }

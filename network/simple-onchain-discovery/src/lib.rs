@@ -193,17 +193,12 @@ impl ConfigurationChangeListener {
 
         // Ensure that the public key matches what's onchain for this peer
         for request in &updates {
-            match request {
-                ConnectivityRequest::UpdateEligibleNodes(_, peer_updates) => {
-                    self.find_key_mismatches(peer_updates.get(&self.network_context.peer_id()))
-                }
-                ConnectivityRequest::UpdateDiscoveredPeers(_, peer_updates) => self
-                    .find_key_mismatches(
-                        peer_updates
-                            .get(&self.network_context.peer_id())
-                            .map(|peer| &peer.keys),
-                    ),
-                _ => {}
+            if let ConnectivityRequest::UpdateDiscoveredPeers(_, peer_updates) = request {
+                self.find_key_mismatches(
+                    peer_updates
+                        .get(&self.network_context.peer_id())
+                        .map(|peer| &peer.keys),
+                )
             }
         }
 

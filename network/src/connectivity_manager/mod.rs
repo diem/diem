@@ -31,10 +31,7 @@ use crate::{
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
-use diem_config::{
-    config::{seeds_to_addrs, seeds_to_keys, TrustedPeerSet},
-    network_id::NetworkContext,
-};
+use diem_config::{config::TrustedPeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
@@ -132,18 +129,14 @@ impl fmt::Display for DiscoverySource {
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
 #[derive(Debug, Serialize)]
 pub enum ConnectivityRequest {
-    /// Request to update known addresses of peer with id `PeerId` to given list.
-    UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
-    /// Update set of nodes eligible to join the network.
-    UpdateEligibleNodes(DiscoverySource, HashMap<PeerId, HashSet<x25519::PublicKey>>),
+    /// Update set of discovered peers and associated info
+    UpdateDiscoveredPeers(DiscoverySource, TrustedPeerSet),
     /// Gets current size of connected peers. This is useful in tests.
     #[serde(skip)]
     GetConnectedSize(oneshot::Sender<usize>),
     /// Gets current size of dial queue. This is useful in tests.
     #[serde(skip)]
     GetDialQueueSize(oneshot::Sender<usize>),
-    /// Updates discovered peers all at once with one command
-    UpdateDiscoveredPeers(DiscoverySource, TrustedPeerSet),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
@@ -252,9 +245,7 @@ where
         };
 
         // set the initial config addresses and pubkeys
-        connmgr.handle_update_addresses(DiscoverySource::Config, seeds_to_addrs(seeds));
-        connmgr.handle_update_eligible_peers(DiscoverySource::Config, seeds_to_keys(seeds));
-
+        connmgr.handle_update_discovered_peers(DiscoverySource::Config, seeds.clone());
         connmgr
     }
 
@@ -546,24 +537,6 @@ where
                 );
                 self.handle_update_discovered_peers(src, discovered_peers);
             }
-            ConnectivityRequest::UpdateAddresses(src, new_peer_addrs) => {
-                trace!(
-                    NetworkSchema::new(&self.network_context),
-                    "{} Received updated list of peer addresses: src: {:?}",
-                    self.network_context,
-                    src,
-                );
-                self.handle_update_addresses(src, new_peer_addrs);
-            }
-            ConnectivityRequest::UpdateEligibleNodes(src, new_peer_pubkeys) => {
-                trace!(
-                    NetworkSchema::new(&self.network_context),
-                    "{} Received updated list of eligible nodes: src: {:?}",
-                    self.network_context,
-                    src,
-                );
-                self.handle_update_eligible_peers(src, new_peer_pubkeys);
-            }
             ConnectivityRequest::GetDialQueueSize(sender) => {
                 sender.send(self.dial_queue.len()).unwrap();
             }
@@ -659,113 +632,6 @@ where
 
         // update eligible peers accordingly
         if keys_updated {
-            // For each peer, union all of the pubkeys from each discovery source
-            // to generate the new eligible peers set.
-            let new_eligible = self
-                .discovered_peers
-                .0
-                .iter()
-                // Remove peers without keys, they can't be connected to
-                .filter(|(_, peer)| !peer.keys.is_empty())
-                .map(|(peer_id, peer)| (*peer_id, peer.keys.union()))
-                .collect();
-
-            // Swap in the new eligible peers set. Drop the old set after releasing
-            // the write lock.
-            let _old_eligible = {
-                let mut eligible = self.eligible.write();
-                mem::replace(&mut *eligible, new_eligible)
-            };
-        }
-    }
-
-    fn handle_update_addresses(
-        &mut self,
-        src: DiscoverySource,
-        new_peer_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    ) {
-        // TODO(philiphayes): do these two in next commit
-        // 1. set peers not in update to empty
-        // 2. remove all empty
-
-        // Keep track of if any peer's addresses have actually changed, so we can
-        // log without too much spam.
-        let self_peer_id = self.network_context.peer_id();
-
-        // 3. add or update intersection
-        for (peer_id, new_addrs) in new_peer_addrs {
-            // Do not include self_peer_id in the address list for dialing to
-            // avoid pointless self-dials.
-            if peer_id == self_peer_id {
-                continue;
-            }
-
-            let peer = self.discovered_peers.0.entry(peer_id).or_default();
-
-            // Update peer's addresses
-            if peer.addrs.update(src, new_addrs) {
-                info!(
-                    NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-                    network_addresses = &peer.addrs,
-                    "{} addresses updated for peer: {}, update src: {:?}, addrs: {}",
-                    self.network_context,
-                    peer_id.short_str(),
-                    src,
-                    &peer.addrs,
-                );
-
-                // If we're currently trying to dial this peer, we reset their
-                // dial state. As a result, we will begin our next dial attempt
-                // from the first address (which might have changed) and from a
-                // fresh backoff (since the current backoff delay might be maxed
-                // out if we can't reach any of their previous addresses).
-                self.reset_dial_state(&peer_id);
-            }
-        }
-    }
-
-    fn handle_update_eligible_peers(
-        &mut self,
-        src: DiscoverySource,
-        new_peer_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
-    ) {
-        let mut have_any_changed = false;
-        let self_peer_id = self.network_context.peer_id();
-
-        // 1. set peer entries not in update to empty for this source
-        for (peer_id, peer) in self.discovered_peers.0.iter_mut() {
-            if !new_peer_pubkeys.contains_key(peer_id) {
-                have_any_changed |= peer.keys.clear_src(src);
-            }
-        }
-
-        // 2. add or update pubkeys in intersection
-        for (peer_id, new_pubkeys) in new_peer_pubkeys {
-            if peer_id == self_peer_id {
-                continue;
-            }
-
-            let peer = self.discovered_peers.0.entry(peer_id).or_default();
-            if peer.keys.update(src, new_pubkeys) {
-                have_any_changed = true;
-                info!(
-                    NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer_id)
-                        .discovery_source(&src),
-                    "{} pubkey sets updated for peer: {}, pubkeys: {}",
-                    self.network_context,
-                    peer_id.short_str(),
-                    peer.keys
-                );
-                self.reset_dial_state(&peer_id);
-            }
-        }
-
-        // 3. remove all peer entries where all sources are empty
-        //have_any_changed |= self.peer_pubkeys.remove_empty();
-
-        // 4. set shared eligible peers to union
-        if have_any_changed {
             // For each peer, union all of the pubkeys from each discovery source
             // to generate the new eligible peers set.
             let new_eligible = self

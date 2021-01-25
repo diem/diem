@@ -42,21 +42,6 @@ pub const CONNECTION_BACKOFF_BASE: u64 = 2;
 pub const IP_BYTE_BUCKET_RATE: usize = 102400 /* 100 KiB */;
 pub const IP_BYTE_BUCKET_SIZE: usize = IP_BYTE_BUCKET_RATE;
 
-/// TODO: For migration compatibility remove later
-pub fn seeds_to_addrs(seeds: &TrustedPeerSet) -> HashMap<PeerId, Vec<NetworkAddress>> {
-    seeds
-        .iter()
-        .map(|(peer_id, TrustedPeer { addresses, .. })| (*peer_id, addresses.clone()))
-        .collect()
-}
-
-pub fn seeds_to_keys(seeds: &TrustedPeerSet) -> HashMap<PeerId, HashSet<x25519::PublicKey>> {
-    seeds
-        .iter()
-        .map(|(peer_id, TrustedPeer { keys, .. })| (*peer_id, keys.clone()))
-        .collect()
-}
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
