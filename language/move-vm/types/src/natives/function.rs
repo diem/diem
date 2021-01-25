@@ -55,6 +55,15 @@ pub trait NativeContext {
 /// None - The native function does not return any thing
 /// One  - The native function returns exactly one value
 /// Many - The native function returns a vector of values
+///
+/// In theory we could use a Vec<Value> to unify all cases. However, given that currently none of
+/// the native functions return more than one value, using a Vec may introduce extra overhead on
+/// heap allocation and de-allocation, especially for one-element vectors, hence this performance
+/// optimization that cases on the number of return values.
+///
+/// An alternative is to use `smallvec` which stores a small number of elements on stack and falls
+/// back to the heap for larger allocations. The reason not using `smallvec` now is just to avoid
+/// an extra dependency.
 pub enum NativeReturnValues {
     None,
     One(Value),
