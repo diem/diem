@@ -10,7 +10,7 @@ use diem_types::{
     },
 };
 use move_core_types::gas_schedule::{
-    AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits,
+    AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, ScaledGasUnits,
 };
 use std::convert::TryFrom;
 
@@ -18,7 +18,7 @@ pub struct TransactionMetadata {
     pub sender: AccountAddress,
     pub authentication_key_preimage: Vec<u8>,
     pub sequence_number: u64,
-    pub max_gas_amount: GasUnits<GasCarrier>,
+    pub max_gas_amount: ScaledGasUnits<GasCarrier>,
     pub gas_unit_price: GasPrice<GasCarrier>,
     pub transaction_size: AbstractMemorySize<GasCarrier>,
     pub expiration_timestamp_secs: u64,
@@ -35,7 +35,7 @@ impl TransactionMetadata {
                 .authentication_key_preimage()
                 .into_vec(),
             sequence_number: txn.sequence_number(),
-            max_gas_amount: GasUnits::new(txn.max_gas_amount()),
+            max_gas_amount: ScaledGasUnits::new(txn.max_gas_amount()),
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),
             transaction_size: AbstractMemorySize::new(txn.raw_txn_bytes_len() as u64),
             expiration_timestamp_secs: txn.expiration_timestamp_secs(),
@@ -48,7 +48,7 @@ impl TransactionMetadata {
         }
     }
 
-    pub fn max_gas_amount(&self) -> GasUnits<GasCarrier> {
+    pub fn max_gas_amount(&self) -> ScaledGasUnits<GasCarrier> {
         self.max_gas_amount
     }
 
@@ -90,7 +90,7 @@ impl Default for TransactionMetadata {
             sender: AccountAddress::ZERO,
             authentication_key_preimage: AuthenticationKeyPreimage::ed25519(&public_key).into_vec(),
             sequence_number: 0,
-            max_gas_amount: GasUnits::new(100_000_000),
+            max_gas_amount: ScaledGasUnits::new(100_000_000),
             gas_unit_price: GasPrice::new(0),
             transaction_size: AbstractMemorySize::new(0),
             expiration_timestamp_secs: 0,

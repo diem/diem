@@ -10,7 +10,7 @@ use mirai_annotations::*;
 use move_core_types::{
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
-        MAX_TRANSACTION_SIZE_IN_BYTES,
+        ScaledGasUnits, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_status::StatusCode,
 };
@@ -41,9 +41,9 @@ impl<'a> CostStrategy<'a> {
     /// is no more gas to pay for operations.
     ///
     /// This is the instantiation that must be used when executing a user script.
-    pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+    pub fn transaction(cost_table: &'a CostTable, gas_left: ScaledGasUnits<GasCarrier>) -> Self {
         Self {
-            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
+            gas_left: gas_left.original(),
             cost_table,
             charge: true,
         }
@@ -53,9 +53,9 @@ impl<'a> CostStrategy<'a> {
     ///
     /// It should be used by clients in very specific cases and when executing system
     /// code that does not have to charge the user.
-    pub fn system(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+    pub fn system(cost_table: &'a CostTable, gas_left: ScaledGasUnits<GasCarrier>) -> Self {
         Self {
-            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
+            gas_left: gas_left.original(),
             cost_table,
             charge: false,
         }
@@ -67,9 +67,8 @@ impl<'a> CostStrategy<'a> {
     }
 
     /// Return the gas left.
-    pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.gas_left
-            .map(|gas| gas / self.cost_table.gas_constants.gas_unit_scaling_factor)
+    pub fn remaining_gas(&self) -> ScaledGasUnits<GasCarrier> {
+        self.gas_left.scaled()
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.

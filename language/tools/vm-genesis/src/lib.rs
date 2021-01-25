@@ -29,7 +29,7 @@ use diem_types::{
 use diem_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, ScaledGasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
@@ -204,7 +204,7 @@ fn exec_function(
             ty_args,
             args,
             sender,
-            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, ScaledGasUnits::new(100_000_000)),
             log_context,
         )
         .unwrap_or_else(|e| {
@@ -229,7 +229,7 @@ fn exec_script(
             script.ty_args().to_vec(),
             convert_txn_args(script.args()),
             vec![sender],
-            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, ScaledGasUnits::new(100_000_000)),
             log_context,
         )
         .unwrap()
@@ -488,7 +488,7 @@ fn publish_stdlib(
             .publish_module(
                 module_vec,
                 *module.self_id().address(),
-                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, ScaledGasUnits::new(100_000_000)),
                 log_context,
             )
             .unwrap_or_else(|e| {

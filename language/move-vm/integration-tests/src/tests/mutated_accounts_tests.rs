@@ -48,7 +48,7 @@ fn mutated_accounts() {
     let mut sess = vm.new_session(&storage);
 
     let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
     let context = NoContextLog::new();
 
     let publish = Identifier::new("publish").unwrap();

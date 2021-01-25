@@ -23,7 +23,7 @@ use diem_types::{
 use fail::fail_point;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits, ScaledGasUnits},
     identifier::IdentStr,
 };
 
@@ -146,10 +146,7 @@ impl DiemVMImpl {
         // The submitted max gas units that the transaction can consume is greater than the
         // maximum number of gas units bound that we have set for any
         // transaction.
-        if txn_data
-            .max_gas_amount()
-            .map(|gas| gas * gas_constants.gas_unit_scaling_factor)
-            .get()
+        if txn_data.max_gas_amount().original().get()
             > gas_constants.maximum_number_of_gas_units.get()
         {
             warn!(
@@ -168,12 +165,7 @@ impl DiemVMImpl {
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
         let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
-        if txn_data
-            .max_gas_amount()
-            .map(|gas| gas * gas_constants.gas_unit_scaling_factor)
-            .get()
-            < min_txn_fee.get()
-        {
+        if txn_data.max_gas_amount().original().get() < min_txn_fee.get() {
             warn!(
                 *log_context,
                 "[VM] Gas unit error; min {}, submitted {}, with scaling_factor {}",
@@ -386,7 +378,7 @@ impl DiemVMImpl {
         let chain_id = txn_data.chain_id();
 
         let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, ScaledGasUnits::new(0));
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -416,7 +408,7 @@ impl DiemVMImpl {
         log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, ScaledGasUnits::new(0));
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,

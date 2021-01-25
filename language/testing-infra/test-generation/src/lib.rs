@@ -115,7 +115,7 @@ fn execute_function_in_module<S: StateView>(
             module
                 .serialize(&mut mod_blob)
                 .expect("Module serialization error");
-            let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
+            let mut cost_strategy = CostStrategy::system(gas_schedule, ScaledGasUnits::new(0));
             txn_context
                 .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
                 .map_err(|e| e.into_vm_status())?;

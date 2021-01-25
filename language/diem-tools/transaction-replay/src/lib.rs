@@ -15,7 +15,7 @@ use diem_validator_interface::{
 };
 use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, VMExecutor};
 use move_cli::OnDiskStateView;
-use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
+use move_core_types::gas_schedule::{GasAlgebra, ScaledGasUnits};
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::{ChangeSet as MoveChanges, DeltaStorage};
@@ -301,7 +301,7 @@ impl DiemDebugger {
         let gas_table = zero_cost_schedule();
         let is_version_ok = |version| {
             self.run_session_at_version(version, override_changeset.clone(), |session| {
-                let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
+                let mut cost_strategy = CostStrategy::system(&gas_table, ScaledGasUnits::new(0));
                 let log_context = NoContextLog::new();
                 session.execute_script(
                     predicate.clone(),

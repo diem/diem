@@ -57,7 +57,7 @@ impl Adapter {
         let mut session = self.vm.new_session(&self.store);
         let cost_table = zero_cost_schedule();
         let log_context = NoContextLog::new();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
         for module in modules {
             let mut binary = vec![];
             module
@@ -87,7 +87,8 @@ impl Adapter {
                 let data_store = self.store.clone();
                 children.push(thread::spawn(move || {
                     let cost_table = zero_cost_schedule();
-                    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+                    let mut cost_strategy =
+                        CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
                     let log_context = NoContextLog::new();
                     let mut session = vm.new_session(&data_store);
                     session
@@ -113,7 +114,7 @@ impl Adapter {
 
     fn call_function(&self, module: &ModuleId, name: &IdentStr) {
         let cost_table = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
         let log_context = NoContextLog::new();
         let mut session = self.vm.new_session(&self.store);
         session

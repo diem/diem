@@ -31,7 +31,7 @@ use diem_types::{
 use fail::fail_point;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasCarrier, ScaledGasUnits},
     identifier::IdentStr,
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::LogContext, session::Session};
@@ -62,7 +62,7 @@ impl DiemVM {
         &self,
         error_code: VMStatus,
         gas_schedule: &CostTable,
-        gas_left: GasUnits<GasCarrier>,
+        gas_left: ScaledGasUnits<GasCarrier>,
         txn_data: &TransactionMetadata,
         remote_cache: &StateViewCache<'_>,
         account_currency_symbol: &IdentStr,
@@ -84,7 +84,7 @@ impl DiemVM {
         &self,
         error_code: VMStatus,
         gas_schedule: &CostTable,
-        gas_left: GasUnits<GasCarrier>,
+        gas_left: ScaledGasUnits<GasCarrier>,
         txn_data: &TransactionMetadata,
         remote_cache: &StateViewCache<'_>,
         account_currency_symbol: &IdentStr,
@@ -125,7 +125,7 @@ impl DiemVM {
         &self,
         mut session: Session<R>,
         gas_schedule: &CostTable,
-        gas_left: GasUnits<GasCarrier>,
+        gas_left: ScaledGasUnits<GasCarrier>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
@@ -337,7 +337,7 @@ impl DiemVM {
         log_context: &impl LogContext,
     ) -> Result<ChangeSet, Result<(VMStatus, TransactionOutput), VMStatus>> {
         let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, ScaledGasUnits::new(0));
 
         Ok(match writeset_payload {
             WriteSetPayload::Direct(change_set) => change_set.clone(),
@@ -424,7 +424,7 @@ impl DiemVM {
         txn_data.sender = account_config::reserved_vm_address();
 
         let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, ScaledGasUnits::new(0));
         let mut session = self.0.new_session(remote_cache);
 
         let (round, timestamp, previous_vote, proposer) = block_metadata.into_inner();

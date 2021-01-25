@@ -9,7 +9,7 @@ use move_cli::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, ScaledGasUnits},
     language_storage::TypeTag,
     parser,
     transaction_argument::TransactionArgument,
@@ -421,10 +421,10 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
         if gas_budget >= max_gas_budget {
             bail!("Gas budget set too high; maximum is {}", max_gas_budget)
         }
-        CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
+        CostStrategy::transaction(gas_schedule, ScaledGasUnits::new(gas_budget))
     } else {
         // no budget specified. use CostStrategy::system, which disables gas metering
-        CostStrategy::system(gas_schedule, GasUnits::new(0))
+        CostStrategy::system(gas_schedule, ScaledGasUnits::new(0))
     };
     Ok(cost_strategy)
 }

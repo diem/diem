@@ -177,7 +177,7 @@ fn call_script_with_args_ty_args_signers(
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
     let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
     session.execute_script(
         script,
         ty_args,

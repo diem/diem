@@ -57,7 +57,7 @@ fn execute(
     let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&data_cache);
-    let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(100_000_000));
+    let mut cost_strategy = CostStrategy::system(&gas_schedule, ScaledGasUnits::new(100_000_000));
 
     let mut mod_blob = vec![];
     module

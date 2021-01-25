@@ -11,7 +11,7 @@ use diem_types::{
 };
 use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events};
 use move_core_types::{
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, ScaledGasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
@@ -49,7 +49,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
                 ty_args,
                 args,
                 sender,
-                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, ScaledGasUnits::new(100_000_000)),
                 &NoContextLog::new(),
             )
             .unwrap_or_else(|e| {
@@ -69,7 +69,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
                 script.ty_args().to_vec(),
                 convert_txn_args(script.args()),
                 vec![sender],
-                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, ScaledGasUnits::new(100_000_000)),
                 &NoContextLog::new(),
             )
             .unwrap()

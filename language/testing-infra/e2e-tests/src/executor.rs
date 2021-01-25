@@ -342,7 +342,8 @@ impl FakeExecutor {
     ) {
         let write_set = {
             let cost_table = zero_cost_schedule();
-            let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
+            let mut cost_strategy =
+                CostStrategy::system(&cost_table, ScaledGasUnits::new(100_000_000));
             let vm = MoveVM::new();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
@@ -382,7 +383,7 @@ impl FakeExecutor {
         sender: &AccountAddress,
     ) -> Result<WriteSet, VMStatus> {
         let cost_table = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
+        let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(100_000_000));
         let vm = MoveVM::new();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);

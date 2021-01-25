@@ -129,6 +129,24 @@ define_gas_unit! {
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
 
+define_gas_unit! {
+    name: ScaledGasUnits,
+    carrier: GasCarrier,
+    doc: "A newtype wrapper that represents gas cost after scaled."
+}
+
+impl GasUnits<GasCarrier> {
+    pub fn scaled(&self) -> ScaledGasUnits<GasCarrier> {
+        ScaledGasUnits(self.get() / GasConstants::default().gas_unit_scaling_factor)
+    }
+}
+
+impl ScaledGasUnits<GasCarrier> {
+    pub fn original(&self) -> GasUnits<GasCarrier> {
+        GasUnits(self.get() * GasConstants::default().gas_unit_scaling_factor)
+    }
+}
+
 /// One unit of gas
 pub const ONE_GAS_UNIT: GasUnits<GasCarrier> = GasUnits(1);
 

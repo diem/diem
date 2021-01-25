@@ -24,7 +24,7 @@ fn call_non_existent_module() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
     let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
     let context = NoContextLog::new();
 
     let err = sess
@@ -62,7 +62,7 @@ fn call_non_existent_function() {
 
     let fun_name = Identifier::new("foo").unwrap();
     let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system(&cost_table, ScaledGasUnits::new(0));
     let context = NoContextLog::new();
 
     let err = sess

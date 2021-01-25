@@ -18,7 +18,7 @@ use diem_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
-    gas_schedule::{GasAlgebra, GasUnits},
+    gas_schedule::{GasAlgebra, ScaledGasUnits},
     identifier::{IdentStr, Identifier},
     move_resource::MoveResource,
 };
@@ -148,7 +148,7 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     let txn_data = TransactionMetadata::new(transaction);
     let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
     let mut cost_strategy =
-        CostStrategy::system(vm.get_gas_schedule(&log_context)?, GasUnits::new(0));
+        CostStrategy::system(vm.get_gas_schedule(&log_context)?, ScaledGasUnits::new(0));
     let prologue_status = match transaction.payload() {
         TransactionPayload::Script(_script) => {
             vm.check_gas(&txn_data, &log_context)?;
