@@ -26,7 +26,7 @@ num = "0.3.0"
 once_cell = "1.4.1"
 regex = "1.4.3"
 anyhow = "1.0.38"
-serde = { version = "1.0.120", features = ["derive"] }
+serde = { version = "1.0.122", features = ["derive"] }
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }

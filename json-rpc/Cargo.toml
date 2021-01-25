@@ -18,7 +18,7 @@ hyper = "0.14.2"
 once_cell = "1.4.1"
 rand = "0.7.3"
 serde_json = "1.0.61"
-serde = { version = "1.0.120", default-features = false }
+serde = { version = "1.0.122", default-features = false }
 tokio = { version = "1.0.2", features = ["full"] }
 warp = { version = "0.3.0", features = ["tls"] }
 reqwest = { version = "0.11.0", features = ["blocking", "json"], default_features = false, optional = true }

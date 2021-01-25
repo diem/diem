@@ -12,5 +12,5 @@ guppy = "0.6.3"
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 once_cell = "1.4.1"
 toml = "0.5.8"
-serde = { version = "1.0.120", features = ["derive"] }
+serde = { version = "1.0.122", features = ["derive"] }
 x-core = { version = "0.1.0", path = "../x-core" }

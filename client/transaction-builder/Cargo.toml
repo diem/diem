@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 once_cell = "1.4.1"
-serde = { version = "1.0.120", features = ["derive"] }
+serde = { version = "1.0.122", features = ["derive"] }
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 bcs = "0.1.2"

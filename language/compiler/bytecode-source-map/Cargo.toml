@@ -16,7 +16,7 @@ vm = { path = "../../vm", version = "0.1.0" }
 bcs = "0.1.2"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
-serde = { version = "1.0.120", default-features = false }
+serde = { version = "1.0.122", default-features = false }
 
 [features]
 default = []
