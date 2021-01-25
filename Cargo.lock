@@ -684,6 +684,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cassowary"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df8670b8c7b9dae1793364eafadf7239c40d669904660c5960d74cfd80b46a53"
+
+[[package]]
 name = "cast"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4154,6 +4160,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-bytecode-viewer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode-source-map",
+ "codespan",
+ "diem-workspace-hack",
+ "disassembler",
+ "move-ir-types",
+ "regex",
+ "structopt 0.3.21",
+ "termion",
+ "tui",
+ "vm",
+]
+
+[[package]]
 name = "move-cli"
 version = "0.1.0"
 dependencies = [
@@ -7482,6 +7505,19 @@ dependencies = [
  "serde_json",
  "termcolor",
  "toml",
+]
+
+[[package]]
+name = "tui"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ced152a8e9295a5b168adc254074525c17ac4a83c90b2716274cc38118bddc9"
+dependencies = [
+ "bitflags",
+ "cassowary",
+ "termion",
+ "unicode-segmentation",
+ "unicode-width",
 ]
 
 [[package]]

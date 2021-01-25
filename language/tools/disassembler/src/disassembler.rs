@@ -132,6 +132,9 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     }
 
     fn format_function_coverage(&self, name: &IdentStr, function_body: String) -> String {
+        if self.coverage_map.is_none() {
+            return function_body;
+        }
         if self.is_function_called(name) {
             function_body.green()
         } else {
@@ -141,10 +144,14 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     }
 
     fn format_with_instruction_coverage(
+        &self,
         pc: usize,
         function_coverage_map: Option<&FunctionCoverage>,
         instruction: String,
     ) -> String {
+        if self.coverage_map.is_none() {
+            return format!("\t{}: {}", pc, instruction);
+        }
         let coverage = function_coverage_map.and_then(|map| map.get(&(pc as u64)));
         match coverage {
             Some(coverage) => format!("[{}]\t{}: {}", coverage, pc, instruction).green(),
@@ -780,7 +787,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .into_iter()
             .enumerate()
             .map(|(instr_index, dis_instr)| {
-                Self::format_with_instruction_coverage(
+                self.format_with_instruction_coverage(
                     instr_index,
                     function_code_coverage_map,
                     dis_instr,

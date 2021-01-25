@@ -1,0 +1,25 @@
+[package]
+name = "move-bytecode-viewer"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+structopt = "0.3.21"
+anyhow = "1.0.38"
+regex = "1.1.9"
+termion = "1.5"
+tui = "0.14.0"
+
+codespan = { version = "0.8.0", features = ["serialization"] }
+bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+disassembler = { path = "../disassembler", version = "0.1.0" }
+
+
+[features]
+default = []
