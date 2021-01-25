@@ -139,9 +139,10 @@ impl<'a> AsyncRead for ChildStdoutAsDataSource<'a> {
         buf: &mut ReadBuf<'_>,
     ) -> Poll<::std::io::Result<()>> {
         if self.child.is_some() {
+            let filled_before_poll = buf.filled().len();
             let res = Pin::new(self.child.as_mut().unwrap().stdout()).poll_read(cx, buf);
             match res {
-                Poll::Ready(Ok(())) if buf.filled().is_empty() => {
+                Poll::Ready(Ok(())) if buf.filled().len() == filled_before_poll => {
                     // hit EOF, start joining self.child
                     self.join_fut = Some(self.child.take().unwrap().join().boxed());
                 }
