@@ -1,14 +1,14 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun TestMutRefs::data_invariant(_x: &mut TestMutRefs::T) {
+pub fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
   0: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::decrement_invalid(x: &mut TestMutRefs::T) {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -25,23 +25,23 @@ pub fun TestMutRefs::decrement_invalid(x: &mut TestMutRefs::T) {
      var $t15: u64
      var $t16: &mut TestMutRefs::TSum
      var $t17: &mut u64
-  0: $t2 := copy(x)
+  0: $t2 := copy($t0)
   1: $t3 := borrow_field<TestMutRefs::T>.value($t2)
   2: $t4 := read_ref($t3)
   3: $t5 := 1
   4: $t6 := -($t4, $t5)
-  5: $t7 := move(x)
+  5: $t7 := move($t0)
   6: $t8 := borrow_field<TestMutRefs::T>.value($t7)
   7: write_ref($t8, $t6)
   8: $t9 := 0x0
   9: $t10 := borrow_global<TestMutRefs::TSum>($t9)
- 10: r := $t10
- 11: $t11 := copy(r)
+ 10: $t1 := $t10
+ 11: $t11 := copy($t1)
  12: $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
  13: $t13 := read_ref($t12)
  14: $t14 := 1
  15: $t15 := -($t13, $t14)
- 16: $t16 := move(r)
+ 16: $t16 := move($t1)
  17: $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
  18: write_ref($t17, $t15)
  19: return ()
@@ -49,9 +49,9 @@ pub fun TestMutRefs::decrement_invalid(x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::delete(x: TestMutRefs::T) {
-     var r: &mut TestMutRefs::TSum
-     var v: u64
+pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
+     var $t1|r: &mut TestMutRefs::TSum
+     var $t2|v: u64
      var $t3: address
      var $t4: &mut TestMutRefs::TSum
      var $t5: TestMutRefs::T
@@ -65,16 +65,16 @@ pub fun TestMutRefs::delete(x: TestMutRefs::T) {
      var $t13: &mut u64
   0: $t3 := 0x0
   1: $t4 := borrow_global<TestMutRefs::TSum>($t3)
-  2: r := $t4
-  3: $t5 := move(x)
+  2: $t1 := $t4
+  3: $t5 := move($t0)
   4: $t6 := unpack TestMutRefs::T($t5)
-  5: v := $t6
-  6: $t7 := copy(r)
+  5: $t2 := $t6
+  6: $t7 := copy($t1)
   7: $t8 := borrow_field<TestMutRefs::TSum>.sum($t7)
   8: $t9 := read_ref($t8)
-  9: $t10 := copy(v)
+  9: $t10 := copy($t2)
  10: $t11 := -($t9, $t10)
- 11: $t12 := move(r)
+ 11: $t12 := move($t1)
  12: $t13 := borrow_field<TestMutRefs::TSum>.sum($t12)
  13: write_ref($t13, $t11)
  14: return ()
@@ -82,8 +82,8 @@ pub fun TestMutRefs::delete(x: TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment(x: &mut TestMutRefs::T) {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -100,23 +100,23 @@ pub fun TestMutRefs::increment(x: &mut TestMutRefs::T) {
      var $t15: u64
      var $t16: &mut TestMutRefs::TSum
      var $t17: &mut u64
-  0: $t2 := copy(x)
+  0: $t2 := copy($t0)
   1: $t3 := borrow_field<TestMutRefs::T>.value($t2)
   2: $t4 := read_ref($t3)
   3: $t5 := 1
   4: $t6 := +($t4, $t5)
-  5: $t7 := move(x)
+  5: $t7 := move($t0)
   6: $t8 := borrow_field<TestMutRefs::T>.value($t7)
   7: write_ref($t8, $t6)
   8: $t9 := 0x0
   9: $t10 := borrow_global<TestMutRefs::TSum>($t9)
- 10: r := $t10
- 11: $t11 := copy(r)
+ 10: $t1 := $t10
+ 11: $t11 := copy($t1)
  12: $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
  13: $t13 := read_ref($t12)
  14: $t14 := 1
  15: $t15 := +($t13, $t14)
- 16: $t16 := move(r)
+ 16: $t16 := move($t1)
  17: $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
  18: write_ref($t17, $t15)
  19: return ()
@@ -124,7 +124,7 @@ pub fun TestMutRefs::increment(x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment_invalid(x: &mut TestMutRefs::T) {
+pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1: &mut TestMutRefs::T
      var $t2: &u64
      var $t3: u64
@@ -132,12 +132,12 @@ pub fun TestMutRefs::increment_invalid(x: &mut TestMutRefs::T) {
      var $t5: u64
      var $t6: &mut TestMutRefs::T
      var $t7: &mut u64
-  0: $t1 := copy(x)
+  0: $t1 := copy($t0)
   1: $t2 := borrow_field<TestMutRefs::T>.value($t1)
   2: $t3 := read_ref($t2)
   3: $t4 := 1
   4: $t5 := +($t3, $t4)
-  5: $t6 := move(x)
+  5: $t6 := move($t0)
   6: $t7 := borrow_field<TestMutRefs::T>.value($t6)
   7: write_ref($t7, $t5)
   8: return ()
@@ -145,8 +145,8 @@ pub fun TestMutRefs::increment_invalid(x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::new(x: u64): TestMutRefs::T {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: address
      var $t3: &mut TestMutRefs::TSum
      var $t4: &mut TestMutRefs::TSum
@@ -160,30 +160,30 @@ pub fun TestMutRefs::new(x: u64): TestMutRefs::T {
      var $t12: TestMutRefs::T
   0: $t2 := 0x0
   1: $t3 := borrow_global<TestMutRefs::TSum>($t2)
-  2: r := $t3
-  3: $t4 := copy(r)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
   4: $t5 := borrow_field<TestMutRefs::TSum>.sum($t4)
   5: $t6 := read_ref($t5)
-  6: $t7 := copy(x)
+  6: $t7 := copy($t0)
   7: $t8 := +($t6, $t7)
-  8: $t9 := move(r)
+  8: $t9 := move($t1)
   9: $t10 := borrow_field<TestMutRefs::TSum>.sum($t9)
  10: write_ref($t10, $t8)
- 11: $t11 := copy(x)
+ 11: $t11 := copy($t0)
  12: $t12 := pack TestMutRefs::T($t11)
  13: return $t12
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_data_invariant_invalid(_x: &mut TestMutRefs::T) {
+fun TestMutRefs::private_data_invariant_invalid($t0|_x: &mut TestMutRefs::T) {
   0: return ()
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_decrement(x: &mut TestMutRefs::T) {
-     var r: &mut TestMutRefs::TSum
+fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -200,23 +200,23 @@ fun TestMutRefs::private_decrement(x: &mut TestMutRefs::T) {
      var $t15: u64
      var $t16: &mut TestMutRefs::TSum
      var $t17: &mut u64
-  0: $t2 := copy(x)
+  0: $t2 := copy($t0)
   1: $t3 := borrow_field<TestMutRefs::T>.value($t2)
   2: $t4 := read_ref($t3)
   3: $t5 := 1
   4: $t6 := -($t4, $t5)
-  5: $t7 := move(x)
+  5: $t7 := move($t0)
   6: $t8 := borrow_field<TestMutRefs::T>.value($t7)
   7: write_ref($t8, $t6)
   8: $t9 := 0x0
   9: $t10 := borrow_global<TestMutRefs::TSum>($t9)
- 10: r := $t10
- 11: $t11 := copy(r)
+ 10: $t1 := $t10
+ 11: $t11 := copy($t1)
  12: $t12 := borrow_field<TestMutRefs::TSum>.sum($t11)
  13: $t13 := read_ref($t12)
  14: $t14 := 1
  15: $t15 := -($t13, $t14)
- 16: $t16 := move(r)
+ 16: $t16 := move($t1)
  17: $t17 := borrow_field<TestMutRefs::TSum>.sum($t16)
  18: write_ref($t17, $t15)
  19: return ()
@@ -224,9 +224,9 @@ fun TestMutRefs::private_decrement(x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-fun TestMutRefs::private_to_public_caller(r: &mut TestMutRefs::T) {
+fun TestMutRefs::private_to_public_caller($t0|r: &mut TestMutRefs::T) {
      var $t1: &mut TestMutRefs::T
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: TestMutRefs::increment($t1)
   2: return ()
 }
@@ -234,8 +234,8 @@ fun TestMutRefs::private_to_public_caller(r: &mut TestMutRefs::T) {
 
 [variant baseline]
 fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
-     var r: &mut TestMutRefs::T
-     var x: TestMutRefs::T
+     var $t0|r: &mut TestMutRefs::T
+     var $t1|x: TestMutRefs::T
      var $t2: u64
      var $t3: TestMutRefs::T
      var $t4: &mut TestMutRefs::T
@@ -243,12 +243,12 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
      var $t6: &mut TestMutRefs::T
   0: $t2 := 1
   1: $t3 := TestMutRefs::new($t2)
-  2: x := $t3
-  3: $t4 := borrow_local(x)
-  4: r := $t4
-  5: $t5 := copy(r)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t0 := $t4
+  5: $t5 := copy($t0)
   6: TestMutRefs::private_decrement($t5)
-  7: $t6 := move(r)
+  7: $t6 := move($t0)
   8: TestMutRefs::increment($t6)
   9: return ()
 }
@@ -256,17 +256,17 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
 
 [variant baseline]
 pub fun TestMutRefsUser::valid() {
-     var x: TestMutRefs::T
+     var $t0|x: TestMutRefs::T
      var $t1: u64
      var $t2: TestMutRefs::T
      var $t3: &mut TestMutRefs::T
      var $t4: TestMutRefs::T
   0: $t1 := 4
   1: $t2 := TestMutRefs::new($t1)
-  2: x := $t2
-  3: $t3 := borrow_local(x)
+  2: $t0 := $t2
+  3: $t3 := borrow_local($t0)
   4: TestMutRefs::increment($t3)
-  5: $t4 := move(x)
+  5: $t4 := move($t0)
   6: TestMutRefs::delete($t4)
   7: return ()
 }
@@ -274,18 +274,18 @@ pub fun TestMutRefsUser::valid() {
 ============ after pipeline `memory_instr` ================
 
 [variant baseline]
-pub fun TestMutRefs::data_invariant(_x: TestMutRefs::T): TestMutRefs::T {
+pub fun TestMutRefs::data_invariant($t0|_x: TestMutRefs::T): TestMutRefs::T {
      var $t1: TestMutRefs::T
      var $t2: &mut TestMutRefs::T
-  0: $t1 := move(_x)
+  0: $t1 := move($t0)
   1: $t2 := borrow_local($t1)
   2: return $t1
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::decrement_invalid(x: TestMutRefs::T): TestMutRefs::T {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::decrement_invalid($t0|x: TestMutRefs::T): TestMutRefs::T {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: TestMutRefs::T
      var $t3: &mut TestMutRefs::T
      var $t4: u64
@@ -297,7 +297,7 @@ pub fun TestMutRefs::decrement_invalid(x: TestMutRefs::T): TestMutRefs::T {
      var $t10: u64
      var $t11: u64
      var $t12: &mut u64
-  0: $t2 := move(x)
+  0: $t2 := move($t0)
   1: $t3 := borrow_local($t2)
   2: unpack_ref($t3)
   3: $t4 := get_field<TestMutRefs::T>.value($t3)
@@ -311,52 +311,52 @@ pub fun TestMutRefs::decrement_invalid(x: TestMutRefs::T): TestMutRefs::T {
  11: pack_ref($t3)
  12: write_back[LocalRoot($t2)]($t3)
  13: $t8 := 0x0
- 14: r := borrow_global<TestMutRefs::TSum>($t8)
- 15: unpack_ref(r)
- 16: $t9 := get_field<TestMutRefs::TSum>.sum(r)
+ 14: $t1 := borrow_global<TestMutRefs::TSum>($t8)
+ 15: unpack_ref($t1)
+ 16: $t9 := get_field<TestMutRefs::TSum>.sum($t1)
  17: $t10 := 1
  18: $t11 := -($t9, $t10)
- 19: $t12 := borrow_field<TestMutRefs::TSum>.sum(r)
+ 19: $t12 := borrow_field<TestMutRefs::TSum>.sum($t1)
  20: unpack_ref($t12)
  21: write_ref($t12, $t11)
  22: pack_ref($t12)
- 23: write_back[Reference(r)]($t12)
- 24: pack_ref(r)
- 25: write_back[TestMutRefs::TSum](r)
+ 23: write_back[Reference($t1)]($t12)
+ 24: pack_ref($t1)
+ 25: write_back[TestMutRefs::TSum]($t1)
  26: return $t2
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::delete(x: TestMutRefs::T) {
-     var r: &mut TestMutRefs::TSum
-     var v: u64
+pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
+     var $t1|r: &mut TestMutRefs::TSum
+     var $t2|v: u64
      var $t3: TestMutRefs::T
      var $t4: address
      var $t5: u64
      var $t6: u64
      var $t7: &mut u64
-  0: $t3 := move(x)
+  0: $t3 := move($t0)
   1: $t4 := 0x0
-  2: r := borrow_global<TestMutRefs::TSum>($t4)
-  3: unpack_ref(r)
-  4: v := unpack TestMutRefs::T($t3)
-  5: $t5 := get_field<TestMutRefs::TSum>.sum(r)
-  6: $t6 := -($t5, v)
-  7: $t7 := borrow_field<TestMutRefs::TSum>.sum(r)
+  2: $t1 := borrow_global<TestMutRefs::TSum>($t4)
+  3: unpack_ref($t1)
+  4: $t2 := unpack TestMutRefs::T($t3)
+  5: $t5 := get_field<TestMutRefs::TSum>.sum($t1)
+  6: $t6 := -($t5, $t2)
+  7: $t7 := borrow_field<TestMutRefs::TSum>.sum($t1)
   8: unpack_ref($t7)
   9: write_ref($t7, $t6)
  10: pack_ref($t7)
- 11: write_back[Reference(r)]($t7)
- 12: pack_ref(r)
- 13: write_back[TestMutRefs::TSum](r)
+ 11: write_back[Reference($t1)]($t7)
+ 12: pack_ref($t1)
+ 13: write_back[TestMutRefs::TSum]($t1)
  14: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::increment(x: TestMutRefs::T): TestMutRefs::T {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::increment($t0|x: TestMutRefs::T): TestMutRefs::T {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: TestMutRefs::T
      var $t3: &mut TestMutRefs::T
      var $t4: u64
@@ -368,7 +368,7 @@ pub fun TestMutRefs::increment(x: TestMutRefs::T): TestMutRefs::T {
      var $t10: u64
      var $t11: u64
      var $t12: &mut u64
-  0: $t2 := move(x)
+  0: $t2 := move($t0)
   1: $t3 := borrow_local($t2)
   2: unpack_ref($t3)
   3: $t4 := get_field<TestMutRefs::T>.value($t3)
@@ -382,31 +382,31 @@ pub fun TestMutRefs::increment(x: TestMutRefs::T): TestMutRefs::T {
  11: pack_ref($t3)
  12: write_back[LocalRoot($t2)]($t3)
  13: $t8 := 0x0
- 14: r := borrow_global<TestMutRefs::TSum>($t8)
- 15: unpack_ref(r)
- 16: $t9 := get_field<TestMutRefs::TSum>.sum(r)
+ 14: $t1 := borrow_global<TestMutRefs::TSum>($t8)
+ 15: unpack_ref($t1)
+ 16: $t9 := get_field<TestMutRefs::TSum>.sum($t1)
  17: $t10 := 1
  18: $t11 := +($t9, $t10)
- 19: $t12 := borrow_field<TestMutRefs::TSum>.sum(r)
+ 19: $t12 := borrow_field<TestMutRefs::TSum>.sum($t1)
  20: unpack_ref($t12)
  21: write_ref($t12, $t11)
  22: pack_ref($t12)
- 23: write_back[Reference(r)]($t12)
- 24: pack_ref(r)
- 25: write_back[TestMutRefs::TSum](r)
+ 23: write_back[Reference($t1)]($t12)
+ 24: pack_ref($t1)
+ 25: write_back[TestMutRefs::TSum]($t1)
  26: return $t2
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::increment_invalid(x: TestMutRefs::T): TestMutRefs::T {
+pub fun TestMutRefs::increment_invalid($t0|x: TestMutRefs::T): TestMutRefs::T {
      var $t1: TestMutRefs::T
      var $t2: &mut TestMutRefs::T
      var $t3: u64
      var $t4: u64
      var $t5: u64
      var $t6: &mut u64
-  0: $t1 := move(x)
+  0: $t1 := move($t0)
   1: $t2 := borrow_local($t1)
   2: unpack_ref($t2)
   3: $t3 := get_field<TestMutRefs::T>.value($t2)
@@ -424,45 +424,45 @@ pub fun TestMutRefs::increment_invalid(x: TestMutRefs::T): TestMutRefs::T {
 
 
 [variant baseline]
-pub fun TestMutRefs::new(x: u64): TestMutRefs::T {
-     var r: &mut TestMutRefs::TSum
+pub fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: address
      var $t4: u64
      var $t5: u64
      var $t6: &mut u64
      var $t7: TestMutRefs::T
-  0: $t2 := move(x)
+  0: $t2 := move($t0)
   1: $t3 := 0x0
-  2: r := borrow_global<TestMutRefs::TSum>($t3)
-  3: unpack_ref(r)
-  4: $t4 := get_field<TestMutRefs::TSum>.sum(r)
+  2: $t1 := borrow_global<TestMutRefs::TSum>($t3)
+  3: unpack_ref($t1)
+  4: $t4 := get_field<TestMutRefs::TSum>.sum($t1)
   5: $t5 := +($t4, $t2)
-  6: $t6 := borrow_field<TestMutRefs::TSum>.sum(r)
+  6: $t6 := borrow_field<TestMutRefs::TSum>.sum($t1)
   7: unpack_ref($t6)
   8: write_ref($t6, $t5)
   9: pack_ref($t6)
- 10: write_back[Reference(r)]($t6)
- 11: pack_ref(r)
- 12: write_back[TestMutRefs::TSum](r)
+ 10: write_back[Reference($t1)]($t6)
+ 11: pack_ref($t1)
+ 12: write_back[TestMutRefs::TSum]($t1)
  13: $t7 := pack TestMutRefs::T($t2)
  14: return $t7
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_data_invariant_invalid(_x: TestMutRefs::T): TestMutRefs::T {
+fun TestMutRefs::private_data_invariant_invalid($t0|_x: TestMutRefs::T): TestMutRefs::T {
      var $t1: TestMutRefs::T
      var $t2: &mut TestMutRefs::T
-  0: $t1 := move(_x)
+  0: $t1 := move($t0)
   1: $t2 := borrow_local($t1)
   2: return $t1
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_decrement(x: TestMutRefs::T): TestMutRefs::T {
-     var r: &mut TestMutRefs::TSum
+fun TestMutRefs::private_decrement($t0|x: TestMutRefs::T): TestMutRefs::T {
+     var $t1|r: &mut TestMutRefs::TSum
      var $t2: TestMutRefs::T
      var $t3: &mut TestMutRefs::T
      var $t4: u64
@@ -474,7 +474,7 @@ fun TestMutRefs::private_decrement(x: TestMutRefs::T): TestMutRefs::T {
      var $t10: u64
      var $t11: u64
      var $t12: &mut u64
-  0: $t2 := move(x)
+  0: $t2 := move($t0)
   1: $t3 := borrow_local($t2)
   2: $t4 := get_field<TestMutRefs::T>.value($t3)
   3: $t5 := 1
@@ -484,28 +484,28 @@ fun TestMutRefs::private_decrement(x: TestMutRefs::T): TestMutRefs::T {
   7: write_back[Reference($t3)]($t7)
   8: write_back[LocalRoot($t2)]($t3)
   9: $t8 := 0x0
- 10: r := borrow_global<TestMutRefs::TSum>($t8)
- 11: unpack_ref(r)
- 12: $t9 := get_field<TestMutRefs::TSum>.sum(r)
+ 10: $t1 := borrow_global<TestMutRefs::TSum>($t8)
+ 11: unpack_ref($t1)
+ 12: $t9 := get_field<TestMutRefs::TSum>.sum($t1)
  13: $t10 := 1
  14: $t11 := -($t9, $t10)
- 15: $t12 := borrow_field<TestMutRefs::TSum>.sum(r)
+ 15: $t12 := borrow_field<TestMutRefs::TSum>.sum($t1)
  16: unpack_ref($t12)
  17: write_ref($t12, $t11)
  18: pack_ref($t12)
- 19: write_back[Reference(r)]($t12)
- 20: pack_ref(r)
- 21: write_back[TestMutRefs::TSum](r)
+ 19: write_back[Reference($t1)]($t12)
+ 20: pack_ref($t1)
+ 21: write_back[TestMutRefs::TSum]($t1)
  22: return $t2
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_to_public_caller(r: TestMutRefs::T): TestMutRefs::T {
+fun TestMutRefs::private_to_public_caller($t0|r: TestMutRefs::T): TestMutRefs::T {
      var $t1: TestMutRefs::T
      var $t2: &mut TestMutRefs::T
      var $t3: TestMutRefs::T
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: $t2 := borrow_local($t1)
   2: $t3 := read_ref($t2)
   3: $t3 := TestMutRefs::increment($t3)
@@ -517,41 +517,41 @@ fun TestMutRefs::private_to_public_caller(r: TestMutRefs::T): TestMutRefs::T {
 
 [variant baseline]
 fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
-     var r: &mut TestMutRefs::T
-     var x: TestMutRefs::T
+     var $t0|r: &mut TestMutRefs::T
+     var $t1|x: TestMutRefs::T
      var $t2: u64
      var $t3: TestMutRefs::T
   0: $t2 := 1
-  1: x := TestMutRefs::new($t2)
-  2: r := borrow_local(x)
-  3: unpack_ref(r)
-  4: $t3 := read_ref(r)
+  1: $t1 := TestMutRefs::new($t2)
+  2: $t0 := borrow_local($t1)
+  3: unpack_ref($t0)
+  4: $t3 := read_ref($t0)
   5: $t3 := TestMutRefs::private_decrement($t3)
-  6: write_ref(r, $t3)
-  7: $t3 := read_ref(r)
+  6: write_ref($t0, $t3)
+  7: $t3 := read_ref($t0)
   8: $t3 := TestMutRefs::increment($t3)
-  9: write_ref(r, $t3)
- 10: pack_ref(r)
- 11: write_back[LocalRoot(x)](r)
+  9: write_ref($t0, $t3)
+ 10: pack_ref($t0)
+ 11: write_back[LocalRoot($t1)]($t0)
  12: return ()
 }
 
 
 [variant baseline]
 pub fun TestMutRefsUser::valid() {
-     var x: TestMutRefs::T
+     var $t0|x: TestMutRefs::T
      var $t1: u64
      var $t2: &mut TestMutRefs::T
      var $t3: TestMutRefs::T
   0: $t1 := 4
-  1: x := TestMutRefs::new($t1)
-  2: $t2 := borrow_local(x)
+  1: $t0 := TestMutRefs::new($t1)
+  2: $t2 := borrow_local($t0)
   3: unpack_ref($t2)
   4: $t3 := read_ref($t2)
   5: $t3 := TestMutRefs::increment($t3)
   6: write_ref($t2, $t3)
   7: pack_ref($t2)
-  8: write_back[LocalRoot(x)]($t2)
-  9: TestMutRefs::delete(x)
+  8: write_back[LocalRoot($t0)]($t2)
+  9: TestMutRefs::delete($t0)
  10: return ()
 }

@@ -392,4 +392,6 @@ pub(crate) struct LocalVarEntry {
     pub type_: Type,
     // If this local is associated with an operation, this is set.
     pub operation: Option<Operation>,
+    // If this a temporary from Move code, this is it's index.
+    pub temp_index: Option<usize>,
 }

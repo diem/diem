@@ -1,61 +1,61 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-fun TestBranching::branching(cond: bool): u64 {
-     var tmp#$1: u64
-     var x: u64
+fun TestBranching::branching($t0|cond: bool): u64 {
+     var $t1|tmp#$1: u64
+     var $t2|x: u64
      var $t3: bool
      var $t4: u64
      var $t5: u64
      var $t6: u64
      var $t7: u64
-  0: $t3 := copy(cond)
+  0: $t3 := copy($t0)
   1: if ($t3) goto L0 else goto L1
   2: L1:
   3: goto L2
   4: L0:
   5: $t4 := 3
-  6: tmp#$1 := $t4
+  6: $t1 := $t4
   7: goto L3
   8: L2:
   9: $t5 := 4
- 10: tmp#$1 := $t5
+ 10: $t1 := $t5
  11: goto L3
  12: L3:
- 13: $t6 := move(tmp#$1)
- 14: x := $t6
- 15: $t7 := copy(x)
+ 13: $t6 := move($t1)
+ 14: $t2 := $t6
+ 15: $t7 := copy($t2)
  16: return $t7
 }
 
 ============ after pipeline `reaching_def` ================
 
 [variant baseline]
-fun TestBranching::branching(cond: bool): u64 {
-     var tmp#$1: u64
-     var x: u64
+fun TestBranching::branching($t0|cond: bool): u64 {
+     var $t1|tmp#$1: u64
+     var $t2|x: u64
      var $t3: bool
      var $t4: u64
      var $t5: u64
      var $t6: u64
      var $t7: u64
      var $t8: bool
-  0: $t8 := move(cond)
+  0: $t8 := move($t0)
   1: $t3 := copy($t8)
   2: if ($t8) goto L0 else goto L1
   3: L1:
   4: goto L2
   5: L0:
   6: $t4 := 3
-  7: tmp#$1 := $t4
+  7: $t1 := $t4
   8: goto L3
   9: L2:
  10: $t5 := 4
- 11: tmp#$1 := $t5
+ 11: $t1 := $t5
  12: goto L3
  13: L3:
- 14: $t6 := move(tmp#$1)
- 15: x := tmp#$1
- 16: $t7 := copy(x)
- 17: return x
+ 14: $t6 := move($t1)
+ 15: $t2 := $t1
+ 16: $t7 := copy($t2)
+ 17: return $t2
 }

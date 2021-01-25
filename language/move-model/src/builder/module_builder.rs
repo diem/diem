@@ -34,7 +34,7 @@ use crate::{
         exp_translator::ExpTranslator,
         model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
-    exp_rewriter::ExpRewriter,
+    exp_rewriter::{ExpRewriter, RewriteTarget},
     model::{
         FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId,
         NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
@@ -314,7 +314,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let type_params = et.analyze_and_add_type_params(&def.signature.type_parameters);
         et.enter_scope();
-        let params = et.analyze_and_add_params(&def.signature.parameters);
+        let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
         let is_public = matches!(def.visibility, PA::FunctionVisibility::Public(..));
         let loc = et.to_loc(&def.loc);
@@ -403,7 +403,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let et = &mut ExpTranslator::new(self);
             let type_params = et.analyze_and_add_type_params(&signature.type_parameters);
             et.enter_scope();
-            let params = et.analyze_and_add_params(&signature.parameters);
+            let params = et.analyze_and_add_params(&signature.parameters, false);
             let result_type = et.translate_type(&signature.return_type);
             et.finalize_types();
             (type_params, params, result_type)
@@ -713,8 +713,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 et.define_type_param(&loc, *n, ty.clone());
             }
             et.enter_scope();
-            for (n, ty) in &params {
-                et.define_local(&loc, *n, ty.clone(), None);
+            for (idx, (n, ty)) in params.iter().enumerate() {
+                et.define_local(&loc, *n, ty.clone(), None, Some(idx));
             }
             let translated = et.translate_seq(&loc, &seq, &result_type);
             et.finalize_types();
@@ -1100,7 +1100,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
     }
 
-    /// Sets up an expression build for the given spec block context. If kind
+    /// Sets up an expression translator for the given spec block context. If kind
     /// is given, includes all the symbols which can be consumed by the condition,
     /// otherwise only defines type parameters.
     fn exp_translator_for_context<'module_translator>(
@@ -1130,8 +1130,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 if let Some(kind) = kind_opt {
                     et.enter_scope();
-                    for (n, ty) in &entry.params {
-                        et.define_local(loc, *n, ty.clone(), None);
+                    for (idx, (n, ty)) in entry.params.iter().enumerate() {
+                        et.define_local(loc, *n, ty.clone(), None, Some(idx));
                     }
                     // Define the placeholders for the result values of a function if this is an
                     // Ensures condition.
@@ -1145,7 +1145,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 } else {
                                     Some(Operation::Result(i))
                                 };
-                                et.define_local(loc, name, ty.clone(), oper);
+                                et.define_local(loc, name, ty.clone(), oper, None);
                             }
                         } else {
                             let name = et.symbol_pool().make("result");
@@ -1154,7 +1154,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             } else {
                                 Some(Operation::Result(0))
                             };
-                            et.define_local(loc, name, entry.result_type.clone(), oper);
+                            et.define_local(loc, name, entry.result_type.clone(), oper, None);
                         }
                     }
                 }
@@ -1182,7 +1182,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 "[internal] error in translating hlir type to prover type",
                             );
                         }
-                        et.define_local(loc, sym, ty, Some(Operation::Local(sym)));
+                        et.define_local(loc, sym, ty, None, Some(info.index as usize));
                     }
                 }
                 et
@@ -1212,6 +1212,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                     entry.struct_id,
                                     FieldId::new(*n),
                                 )),
+                                None,
                             );
                         }
                     }
@@ -1242,7 +1243,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 if kind_opt.is_some() {
                     et.enter_scope();
                     for (n, entry) in all_vars {
-                        et.define_local(loc, n, entry.type_, None);
+                        et.define_local(loc, n, entry.type_, None, None);
                     }
                 }
                 et
@@ -1622,7 +1623,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             et.enter_scope();
             for (n, ty) in params {
-                et.define_local(&loc, n, ty, None);
+                et.define_local(&loc, n, ty, None, None);
             }
             let translated = et.translate_seq(&loc, seq, &result_type);
             et.finalize_types();
@@ -1719,6 +1720,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         loc: loc.clone(),
                         type_: ty.clone(),
                         operation: None,
+                        temp_index: None,
                     },
                 )
             })
@@ -2098,6 +2100,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let node_id = et.new_node_id_with_type_loc(&entry.type_, loc);
                 let exp = if let Some(oper) = &entry.operation {
                     Exp::Call(node_id, oper.clone(), vec![])
+                } else if let Some(index) = &entry.temp_index {
+                    Exp::Temporary(node_id, *index)
                 } else {
                     Exp::LocalVar(node_id, *name)
                 };
@@ -2111,6 +2115,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         loc: loc.clone(),
                         type_: ty.clone(),
                         operation: None,
+                        temp_index: None,
                     },
                 );
             } else {
@@ -2139,7 +2144,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_spec.conditions.iter())
         {
-            let mut replacer = |_, sym: Symbol| argument_map.get(&sym).cloned();
+            let mut replacer = |_, target: RewriteTarget| {
+                if let RewriteTarget::LocalVar(sym) = target {
+                    argument_map.get(&sym).cloned()
+                } else {
+                    None
+                }
+            };
             let mut rewriter =
                 ExpRewriter::new(self.parent.env, &mut replacer).set_type_args(type_arguments);
             let mut exp = rewriter.rewrite(exp);
@@ -2190,7 +2201,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         Exp::Call(new_node_id, oper, vec![cond, exp])
     }
 
-    /// Creates an expression build for use in schema expression. This defines the context
+    /// Creates an expression translator for use in schema expression. This defines the context
     /// type parameters and the variables.
     fn exp_translator_for_schema<'module_translator>(
         &'module_translator mut self,
@@ -2204,7 +2215,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
         et.enter_scope();
         for (n, entry) in vars.iter() {
-            et.define_local(&entry.loc, *n, entry.type_.clone(), entry.operation.clone());
+            et.define_local(
+                &entry.loc,
+                *n,
+                entry.type_.clone(),
+                entry.operation.clone(),
+                entry.temp_index,
+            );
         }
         et
     }

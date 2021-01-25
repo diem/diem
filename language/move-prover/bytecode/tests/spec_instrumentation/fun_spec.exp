@@ -1,8 +1,8 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-fun Test::branching_result(is_div: bool, a: u64, b: u64): u64 {
-     var tmp#$3: u64
+fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
+     var $t3|tmp#$3: u64
      var $t4: bool
      var $t5: u64
      var $t6: u64
@@ -11,30 +11,30 @@ fun Test::branching_result(is_div: bool, a: u64, b: u64): u64 {
      var $t9: u64
      var $t10: u64
      var $t11: u64
-  0: $t4 := copy(is_div)
+  0: $t4 := copy($t0)
   1: if ($t4) goto L0 else goto L1
   2: L1:
   3: goto L2
   4: L0:
-  5: $t5 := copy(a)
-  6: $t6 := copy(b)
+  5: $t5 := copy($t1)
+  6: $t6 := copy($t2)
   7: $t7 := /($t5, $t6)
-  8: tmp#$3 := $t7
+  8: $t3 := $t7
   9: goto L3
  10: L2:
- 11: $t8 := copy(a)
- 12: $t9 := copy(b)
+ 11: $t8 := copy($t1)
+ 12: $t9 := copy($t2)
  13: $t10 := *($t8, $t9)
- 14: tmp#$3 := $t10
+ 14: $t3 := $t10
  15: goto L3
  16: L3:
- 17: $t11 := move(tmp#$3)
+ 17: $t11 := move($t3)
  18: return $t11
 }
 
 
 [variant baseline]
-fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
+fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
      var $t2: u64
      var $t3: u64
      var $t4: bool
@@ -42,7 +42,7 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
      var $t6: u64
      var $t7: u64
      var $t8: u64
-  0: $t2 := copy(b)
+  0: $t2 := copy($t1)
   1: $t3 := 0
   2: $t4 := !=($t2, $t3)
   3: if ($t4) goto L0 else goto L1
@@ -52,34 +52,34 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
   7: $t5 := 22
   8: abort($t5)
   9: L2:
- 10: $t6 := copy(a)
- 11: $t7 := copy(b)
+ 10: $t6 := copy($t0)
+ 11: $t7 := copy($t1)
  12: $t8 := /($t6, $t7)
  13: return $t8
 }
 
 
 [variant baseline]
-fun Test::multiple_results(a: u64, b: u64): (u64, u64) {
+fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
      var $t2: u64
      var $t3: u64
      var $t4: u64
      var $t5: u64
      var $t6: u64
      var $t7: u64
-  0: $t2 := copy(a)
-  1: $t3 := copy(b)
+  0: $t2 := copy($t0)
+  1: $t3 := copy($t1)
   2: $t4 := /($t2, $t3)
-  3: $t5 := copy(a)
-  4: $t6 := copy(b)
+  3: $t5 := copy($t0)
+  4: $t6 := copy($t1)
   5: $t7 := %($t5, $t6)
   6: return ($t4, $t7)
 }
 
 
 [variant baseline]
-fun Test::mut_ref_param(r: &mut Test::R): u64 {
-     var x: u64
+fun Test::mut_ref_param($t0|r: &mut Test::R): u64 {
+     var $t1|x: u64
      var $t2: &mut Test::R
      var $t3: &u64
      var $t4: u64
@@ -91,29 +91,29 @@ fun Test::mut_ref_param(r: &mut Test::R): u64 {
      var $t10: &mut Test::R
      var $t11: &mut u64
      var $t12: u64
-  0: $t2 := copy(r)
+  0: $t2 := copy($t0)
   1: $t3 := borrow_field<Test::R>.v($t2)
   2: $t4 := read_ref($t3)
-  3: x := $t4
-  4: $t5 := copy(r)
+  3: $t1 := $t4
+  4: $t5 := copy($t0)
   5: $t6 := borrow_field<Test::R>.v($t5)
   6: $t7 := read_ref($t6)
   7: $t8 := 1
   8: $t9 := -($t7, $t8)
-  9: $t10 := move(r)
+  9: $t10 := move($t0)
  10: $t11 := borrow_field<Test::R>.v($t10)
  11: write_ref($t11, $t9)
- 12: $t12 := copy(x)
+ 12: $t12 := copy($t1)
  13: return $t12
 }
 
 
 [variant baseline]
-fun Test::ref_param(r: &Test::R): u64 {
+fun Test::ref_param($t0|r: &Test::R): u64 {
      var $t1: &Test::R
      var $t2: &u64
      var $t3: u64
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<Test::R>.v($t1)
   2: $t3 := read_ref($t2)
   3: return $t3
@@ -121,18 +121,18 @@ fun Test::ref_param(r: &Test::R): u64 {
 
 
 [variant baseline]
-fun Test::ref_param_return_ref(r: &Test::R): &u64 {
+fun Test::ref_param_return_ref($t0|r: &Test::R): &u64 {
      var $t1: &Test::R
      var $t2: &u64
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<Test::R>.v($t1)
   2: return $t2
 }
 
 
 [variant baseline]
-fun Test::resource_with_old(val: u64) {
-     var r: &mut Test::R
+fun Test::resource_with_old($t0|val: u64) {
+     var $t1|r: &mut Test::R
      var $t2: address
      var $t3: bool
      var $t4: bool
@@ -158,13 +158,13 @@ fun Test::resource_with_old(val: u64) {
   9: L2:
  10: $t6 := 0x0
  11: $t7 := borrow_global<Test::R>($t6)
- 12: r := $t7
- 13: $t8 := copy(r)
+ 12: $t1 := $t7
+ 13: $t8 := copy($t1)
  14: $t9 := borrow_field<Test::R>.v($t8)
  15: $t10 := read_ref($t9)
- 16: $t11 := copy(val)
+ 16: $t11 := copy($t0)
  17: $t12 := +($t10, $t11)
- 18: $t13 := move(r)
+ 18: $t13 := move($t1)
  19: $t14 := borrow_field<Test::R>.v($t13)
  20: write_ref($t14, $t12)
  21: return ()
@@ -173,68 +173,68 @@ fun Test::resource_with_old(val: u64) {
 ============ after pipeline `spec_instrumentation` ================
 
 [variant baseline]
-fun Test::branching_result(is_div: bool, a: u64, b: u64): u64 {
-     var tmp#$3: u64
+fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
+     var $t3|tmp#$3: u64
      var $t4: num
-  0: if (is_div) goto L0 else goto L1
+  0: if ($t0) goto L0 else goto L1
   1: L1:
   2: goto L2
   3: L0:
-  4: tmp#$3 := /(a, b)
+  4: $t3 := /($t1, $t2)
   5: on_abort(L5, $t4)
   6: goto L3
   7: L2:
-  8: tmp#$3 := *(a, b)
+  8: $t3 := *($t1, $t2)
   9: on_abort(L5, $t4)
  10: L3:
  11: L4:
- 12: return tmp#$3
+ 12: return $t3
  13: L5:
  14: abort($t4)
 }
 
 
 [variant verification]
-fun Test::branching_result(is_div: bool, a: u64, b: u64): u64 {
-     var tmp#$3: u64
+fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
+     var $t3|tmp#$3: u64
      var $t4: num
-  0: if (is_div) goto L0 else goto L1
+  0: if ($t0) goto L0 else goto L1
   1: L1:
   2: goto L2
   3: L0:
-  4: tmp#$3 := /(a, b)
+  4: $t3 := /($t1, $t2)
   5: on_abort(L5, $t4)
   6: goto L3
   7: L2:
-  8: tmp#$3 := *(a, b)
+  8: $t3 := *($t1, $t2)
   9: on_abort(L5, $t4)
  10: L3:
  11: L4:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:27:6+50
- 12: assert Not(And(is_div, Eq<u64>(b, 0)))
+ 12: assert Not(And($t0, Eq<u64>($t2, 0)))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:28:6+35
- 13: assert Implies(is_div, Eq<u64>(tmp#$3, Div(a, b)))
+ 13: assert Implies($t0, Eq<u64>($t3, Div($t1, $t2)))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:29:6+36
- 14: assert Implies(Not(is_div), Eq<u64>(tmp#$3, Mul(a, b)))
- 15: return tmp#$3
+ 14: assert Implies(Not($t0), Eq<u64>($t3, Mul($t1, $t2)))
+ 15: return $t3
  16: L5:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:23:2+94
- 17: assert And(is_div, Eq<u64>(b, 0))
+ 17: assert And($t0, Eq<u64>($t2, 0))
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:27:38+17
- 18: assert Implies(And(is_div, Eq<u64>(b, 0)), Eq($t4, -1))
+ 18: assert Implies(And($t0, Eq<u64>($t2, 0)), Eq($t4, -1))
  19: abort($t4)
 }
 
 
 [variant baseline]
-fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
+fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
      var $t2: u64
      var $t3: bool
      var $t4: u64
      var $t5: num
      var $t6: u64
   0: $t2 := 0
-  1: $t3 := !=(b, $t2)
+  1: $t3 := !=($t1, $t2)
   2: if ($t3) goto L0 else goto L1
   3: L1:
   4: goto L2
@@ -243,7 +243,7 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
   7: $t5 := move($t4)
   8: goto L4
   9: L2:
- 10: $t6 := /(a, b)
+ 10: $t6 := /($t0, $t1)
  11: on_abort(L4, $t5)
  12: L3:
  13: return $t6
@@ -253,14 +253,14 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
 
 
 [variant verification]
-fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
+fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
      var $t2: u64
      var $t3: bool
      var $t4: u64
      var $t5: num
      var $t6: u64
   0: $t2 := 0
-  1: $t3 := !=(b, $t2)
+  1: $t3 := !=($t1, $t2)
   2: if ($t3) goto L0 else goto L1
   3: L1:
   4: goto L2
@@ -269,33 +269,33 @@ fun Test::implicit_and_explicit_abort(a: u64, b: u64): u64 {
   7: $t5 := move($t4)
   8: goto L4
   9: L2:
- 10: $t6 := /(a, b)
+ 10: $t6 := /($t0, $t1)
  11: on_abort(L4, $t5)
  12: L3:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:9:6+25
- 13: assert Not(Eq<u64>(b, 0))
+ 13: assert Not(Eq<u64>($t1, 0))
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:10:6+17
- 14: assert Not(Eq<u64>(a, 0))
+ 14: assert Not(Eq<u64>($t0, 0))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:11:6+24
- 15: assert Eq<u64>($t6, Div(a, b))
+ 15: assert Eq<u64>($t6, Div($t0, $t1))
  16: return $t6
  17: L4:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:4:2+96
- 18: assert Or(Eq<u64>(b, 0), Eq<u64>(a, 0))
+ 18: assert Or(Eq<u64>($t1, 0), Eq<u64>($t0, 0))
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:9:28+2
- 19: assert Implies(Eq<u64>(b, 0), Eq($t5, 22))
+ 19: assert Implies(Eq<u64>($t1, 0), Eq($t5, 22))
  20: abort($t5)
 }
 
 
 [variant baseline]
-fun Test::multiple_results(a: u64, b: u64): (u64, u64) {
+fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
      var $t2: u64
      var $t3: num
      var $t4: u64
-  0: $t2 := /(a, b)
+  0: $t2 := /($t0, $t1)
   1: on_abort(L2, $t3)
-  2: $t4 := %(a, b)
+  2: $t4 := %($t0, $t1)
   3: on_abort(L2, $t3)
   4: L1:
   5: return ($t2, $t4)
@@ -305,34 +305,34 @@ fun Test::multiple_results(a: u64, b: u64): (u64, u64) {
 
 
 [variant verification]
-fun Test::multiple_results(a: u64, b: u64): (u64, u64) {
+fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
      var $t2: u64
      var $t3: num
      var $t4: u64
-  0: $t2 := /(a, b)
+  0: $t2 := /($t0, $t1)
   1: on_abort(L2, $t3)
-  2: $t4 := %(a, b)
+  2: $t4 := %($t0, $t1)
   3: on_abort(L2, $t3)
   4: L1:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:18:6+40
-  5: assert Not(Eq<u64>(b, 0))
+  5: assert Not(Eq<u64>($t1, 0))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:19:6+26
-  6: assert Eq<u64>($t2, Div(a, b))
+  6: assert Eq<u64>($t2, Div($t0, $t1))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:20:6+26
-  7: assert Eq<u64>($t4, Mod(a, b))
+  7: assert Eq<u64>($t4, Mod($t0, $t1))
   8: return ($t2, $t4)
   9: L2:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:14:2+73
- 10: assert Eq<u64>(b, 0)
+ 10: assert Eq<u64>($t1, 0)
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:18:28+17
- 11: assert Implies(Eq<u64>(b, 0), Eq($t3, -1))
+ 11: assert Implies(Eq<u64>($t1, 0), Eq($t3, -1))
  12: abort($t3)
 }
 
 
 [variant baseline]
-fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
-     var x: u64
+fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
+     var $t1|x: u64
      var $t2: Test::R
      var $t3: &mut Test::R
      var $t4: u64
@@ -341,7 +341,7 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
      var $t7: u64
      var $t8: num
      var $t9: &mut u64
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := borrow_local($t2)
   2: $t4 := get_field<Test::R>.v($t3)
   3: $t5 := get_field<Test::R>.v($t3)
@@ -360,8 +360,8 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
 
 
 [variant verification]
-fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
-     var x: u64
+fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
+     var $t1|x: u64
      var $t2: Test::R
      var $t3: &mut Test::R
      var $t4: u64
@@ -370,7 +370,7 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
      var $t7: u64
      var $t8: num
      var $t9: &mut u64
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := borrow_local($t2)
   2: $t4 := get_field<Test::R>.v($t3)
   3: $t5 := get_field<Test::R>.v($t3)
@@ -383,64 +383,64 @@ fun Test::mut_ref_param(r: Test::R): (u64, Test::R) {
  10: write_back[LocalRoot($t2)]($t3)
  11: L1:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:67:6+42
- 12: assert Not(Eq<u64>(select Test::R.v(r), 0))
+ 12: assert Not(Eq<u64>(select Test::R.v($t0), 0))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:68:6+27
- 13: assert Eq<u64>($t4, select Test::R.v(r))
+ 13: assert Eq<u64>($t4, select Test::R.v($t0))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:69:6+28
- 14: assert Eq<u64>(select Test::R.v($t2), Add(select Test::R.v(r), 1))
+ 14: assert Eq<u64>(select Test::R.v($t2), Add(select Test::R.v($t0), 1))
  15: return ($t4, $t2)
  16: L2:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:61:2+83
- 17: assert Eq<u64>(select Test::R.v(r), 0)
+ 17: assert Eq<u64>(select Test::R.v($t0), 0)
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:67:30+17
- 18: assert Implies(Eq<u64>(select Test::R.v(r), 0), Eq($t8, -1))
+ 18: assert Implies(Eq<u64>(select Test::R.v($t0), 0), Eq($t8, -1))
  19: abort($t8)
 }
 
 
 [variant baseline]
-fun Test::ref_param(r: Test::R): u64 {
+fun Test::ref_param($t0|r: Test::R): u64 {
      var $t1: u64
-  0: $t1 := get_field<Test::R>.v(r)
+  0: $t1 := get_field<Test::R>.v($t0)
   1: L1:
   2: return $t1
 }
 
 
 [variant verification]
-fun Test::ref_param(r: Test::R): u64 {
+fun Test::ref_param($t0|r: Test::R): u64 {
      var $t1: u64
-  0: $t1 := get_field<Test::R>.v(r)
+  0: $t1 := get_field<Test::R>.v($t0)
   1: L1:
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:51:6+22
-  2: assert Eq<u64>($t1, select Test::R.v(r))
+  2: assert Eq<u64>($t1, select Test::R.v($t0))
   3: return $t1
 }
 
 
 [variant baseline]
-fun Test::ref_param_return_ref(r: Test::R): u64 {
+fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
      var $t1: u64
-  0: $t1 := get_field<Test::R>.v(r)
+  0: $t1 := get_field<Test::R>.v($t0)
   1: L1:
   2: return $t1
 }
 
 
 [variant verification]
-fun Test::ref_param_return_ref(r: Test::R): u64 {
+fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
      var $t1: u64
-  0: $t1 := get_field<Test::R>.v(r)
+  0: $t1 := get_field<Test::R>.v($t0)
   1: L1:
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:58:6+22
-  2: assert Eq<u64>($t1, select Test::R.v(r))
+  2: assert Eq<u64>($t1, select Test::R.v($t0))
   3: return $t1
 }
 
 
 [variant baseline]
-fun Test::resource_with_old(val: u64) {
-     var r: &mut Test::R
+fun Test::resource_with_old($t0|val: u64) {
+     var $t1|r: &mut Test::R
      var $t2: address
      var $t3: bool
      var $t4: bool
@@ -450,7 +450,7 @@ fun Test::resource_with_old(val: u64) {
      var $t8: u64
      var $t9: u64
      var $t10: &mut u64
-  0: assume Gt(val, 0)
+  0: assume Gt($t0, 0)
   1: $t2 := 0x0
   2: $t3 := exists<Test::R>($t2)
   3: $t4 := !($t3)
@@ -463,19 +463,19 @@ fun Test::resource_with_old(val: u64) {
  10: goto L4
  11: L2:
  12: $t7 := 0x0
- 13: r := borrow_global<Test::R>($t7)
+ 13: $t1 := borrow_global<Test::R>($t7)
  14: on_abort(L4, $t6)
- 15: unpack_ref(r)
- 16: $t8 := get_field<Test::R>.v(r)
- 17: $t9 := +($t8, val)
+ 15: unpack_ref($t1)
+ 16: $t8 := get_field<Test::R>.v($t1)
+ 17: $t9 := +($t8, $t0)
  18: on_abort(L4, $t6)
- 19: $t10 := borrow_field<Test::R>.v(r)
+ 19: $t10 := borrow_field<Test::R>.v($t1)
  20: unpack_ref($t10)
  21: write_ref($t10, $t9)
  22: pack_ref($t10)
- 23: write_back[Reference(r)]($t10)
- 24: pack_ref(r)
- 25: write_back[Test::R](r)
+ 23: write_back[Reference($t1)]($t10)
+ 24: pack_ref($t1)
+ 25: write_back[Test::R]($t1)
  26: L3:
  27: return ()
  28: L4:
@@ -484,8 +484,8 @@ fun Test::resource_with_old(val: u64) {
 
 
 [variant verification]
-fun Test::resource_with_old(val: u64) {
-     var r: &mut Test::R
+fun Test::resource_with_old($t0|val: u64) {
+     var $t1|r: &mut Test::R
      var $t2: address
      var $t3: bool
      var $t4: bool
@@ -495,7 +495,7 @@ fun Test::resource_with_old(val: u64) {
      var $t8: u64
      var $t9: u64
      var $t10: &mut u64
-  0: assume Gt(val, 0)
+  0: assume Gt($t0, 0)
   1: @0 := save_mem(Test::R)
   2: $t2 := 0x0
   3: $t3 := exists<Test::R>($t2)
@@ -509,31 +509,31 @@ fun Test::resource_with_old(val: u64) {
  11: goto L4
  12: L2:
  13: $t7 := 0x0
- 14: r := borrow_global<Test::R>($t7)
+ 14: $t1 := borrow_global<Test::R>($t7)
  15: on_abort(L4, $t6)
- 16: unpack_ref(r)
- 17: $t8 := get_field<Test::R>.v(r)
- 18: $t9 := +($t8, val)
+ 16: unpack_ref($t1)
+ 17: $t8 := get_field<Test::R>.v($t1)
+ 18: $t9 := +($t8, $t0)
  19: on_abort(L4, $t6)
- 20: $t10 := borrow_field<Test::R>.v(r)
+ 20: $t10 := borrow_field<Test::R>.v($t1)
  21: unpack_ref($t10)
  22: write_ref($t10, $t9)
  23: pack_ref($t10)
- 24: write_back[Reference(r)]($t10)
- 25: pack_ref(r)
- 26: write_back[Test::R](r)
+ 24: write_back[Reference($t1)]($t10)
+ 25: pack_ref($t1)
+ 26: write_back[Test::R]($t1)
  27: L3:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:41:6+34
- 28: assert Not(Not(exists<Test::R>[@0]<Test::R>(0)))
+ 28: assert Not(Not(exists[@0]<Test::R>(0)))
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:42:6+57
- 29: assert Not(Ge(Add(select Test::R.v(global<Test::R>[@0]<Test::R>(0)), val), 18446744073709551615))
+ 29: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:43:6+56
- 30: assert Eq<u64>(select Test::R.v(global<Test::R><Test::R>(0)), Add(select Test::R.v(global<Test::R>[@0]<Test::R>(0)), val))
+ 30: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
  31: return ()
  32: L4:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:34:2+145
- 33: assert Or(Not(exists<Test::R>[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global<Test::R>[@0]<Test::R>(0)), val), 18446744073709551615))
+ 33: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:41:37+2
- 34: assert Implies(Not(exists<Test::R>[@0]<Test::R>(0)), Eq($t6, 33))
+ 34: assert Implies(Not(exists[@0]<Test::R>(0)), Eq($t6, 33))
  35: abort($t6)
 }

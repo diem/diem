@@ -2,9 +2,9 @@
 
 [variant baseline]
 fun TestPackref::test1(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
-     var x_ref: &mut u64
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: TestPackref::R
      var $t5: &mut TestPackref::R
@@ -15,43 +15,43 @@ fun TestPackref::test1(): TestPackref::R {
      var $t10: TestPackref::R
   0: $t3 := 3
   1: $t4 := pack TestPackref::R($t3)
-  2: r := $t4
-  3: $t5 := borrow_local(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := borrow_local($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := borrow_field<TestPackref::R>.x($t6)
-  7: x_ref := $t7
+  7: $t2 := $t7
   8: $t8 := 0
-  9: $t9 := move(x_ref)
+  9: $t9 := move($t2)
  10: write_ref($t9, $t8)
- 11: $t10 := move(r)
+ 11: $t10 := move($t0)
  12: return $t10
 }
 
 
 [variant baseline]
-fun TestPackref::test2(x_ref: &mut u64, v: u64) {
+fun TestPackref::test2($t0|x_ref: &mut u64, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut u64
-  0: $t2 := copy(v)
-  1: $t3 := move(x_ref)
+  0: $t2 := copy($t1)
+  1: $t3 := move($t0)
   2: write_ref($t3, $t2)
   3: return ()
 }
 
 
 [variant baseline]
-pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
-     var x_ref: &mut u64
+pub fun TestPackref::test3($t0|r_ref: &mut TestPackref::R, $t1|v: u64) {
+     var $t2|x_ref: &mut u64
      var $t3: &mut TestPackref::R
      var $t4: &mut u64
      var $t5: &mut u64
      var $t6: u64
-  0: $t3 := move(r_ref)
+  0: $t3 := move($t0)
   1: $t4 := borrow_field<TestPackref::R>.x($t3)
-  2: x_ref := $t4
-  3: $t5 := move(x_ref)
-  4: $t6 := copy(v)
+  2: $t2 := $t4
+  3: $t5 := move($t2)
+  4: $t6 := copy($t1)
   5: TestPackref::test2($t5, $t6)
   6: return ()
 }
@@ -59,8 +59,8 @@ pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
 
 [variant baseline]
 fun TestPackref::test4(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
      var $t2: u64
      var $t3: TestPackref::R
      var $t4: &mut TestPackref::R
@@ -69,22 +69,22 @@ fun TestPackref::test4(): TestPackref::R {
      var $t7: TestPackref::R
   0: $t2 := 3
   1: $t3 := pack TestPackref::R($t2)
-  2: r := $t3
-  3: $t4 := borrow_local(r)
-  4: r_ref := $t4
-  5: $t5 := move(r_ref)
+  2: $t0 := $t3
+  3: $t4 := borrow_local($t0)
+  4: $t1 := $t4
+  5: $t5 := move($t1)
   6: $t6 := 0
   7: TestPackref::test3($t5, $t6)
-  8: $t7 := move(r)
+  8: $t7 := move($t0)
   9: return $t7
 }
 
 
 [variant baseline]
-pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
+pub fun TestPackref::test5($t0|r_ref: &mut TestPackref::R): &mut u64 {
      var $t1: &mut TestPackref::R
      var $t2: &mut u64
-  0: $t1 := move(r_ref)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<TestPackref::R>.x($t1)
   2: return $t2
 }
@@ -92,9 +92,9 @@ pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
 
 [variant baseline]
 fun TestPackref::test6(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
-     var x_ref: &mut u64
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: TestPackref::R
      var $t5: &mut TestPackref::R
@@ -105,25 +105,25 @@ fun TestPackref::test6(): TestPackref::R {
      var $t10: TestPackref::R
   0: $t3 := 3
   1: $t4 := pack TestPackref::R($t3)
-  2: r := $t4
-  3: $t5 := borrow_local(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := borrow_local($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := TestPackref::test5($t6)
-  7: x_ref := $t7
-  8: $t8 := move(x_ref)
+  7: $t2 := $t7
+  8: $t8 := move($t2)
   9: $t9 := 0
  10: TestPackref::test2($t8, $t9)
- 11: $t10 := move(r)
+ 11: $t10 := move($t0)
  12: return $t10
 }
 
 
 [variant baseline]
-fun TestPackref::test7(b: bool) {
-     var r1: TestPackref::R
-     var r2: TestPackref::R
-     var r_ref: &mut TestPackref::R
+fun TestPackref::test7($t0|b: bool) {
+     var $t1|r1: TestPackref::R
+     var $t2|r2: TestPackref::R
+     var $t3|r_ref: &mut TestPackref::R
      var $t4: u64
      var $t5: TestPackref::R
      var $t6: u64
@@ -136,24 +136,24 @@ fun TestPackref::test7(b: bool) {
      var $t13: u64
   0: $t4 := 3
   1: $t5 := pack TestPackref::R($t4)
-  2: r1 := $t5
+  2: $t1 := $t5
   3: $t6 := 4
   4: $t7 := pack TestPackref::R($t6)
-  5: r2 := $t7
-  6: $t8 := borrow_local(r1)
-  7: r_ref := $t8
-  8: $t9 := copy(b)
+  5: $t2 := $t7
+  6: $t8 := borrow_local($t1)
+  7: $t3 := $t8
+  8: $t9 := copy($t0)
   9: if ($t9) goto L0 else goto L1
  10: L1:
  11: goto L2
  12: L0:
- 13: $t10 := move(r_ref)
+ 13: $t10 := move($t3)
  14: destroy($t10)
- 15: $t11 := borrow_local(r2)
- 16: r_ref := $t11
+ 15: $t11 := borrow_local($t2)
+ 16: $t3 := $t11
  17: goto L2
  18: L2:
- 19: $t12 := move(r_ref)
+ 19: $t12 := move($t3)
  20: $t13 := 0
  21: TestPackref::test3($t12, $t13)
  22: return ()
@@ -161,10 +161,10 @@ fun TestPackref::test7(b: bool) {
 
 
 [variant baseline]
-fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
-     var r1: TestPackref::R
-     var r2: TestPackref::R
-     var t_ref: &mut TestPackref::R
+fun TestPackref::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestPackref::R) {
+     var $t3|r1: TestPackref::R
+     var $t4|r2: TestPackref::R
+     var $t5|t_ref: &mut TestPackref::R
      var $t6: u64
      var $t7: TestPackref::R
      var $t8: u64
@@ -193,24 +193,24 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
      var $t31: u64
   0: $t6 := 3
   1: $t7 := pack TestPackref::R($t6)
-  2: r1 := $t7
+  2: $t3 := $t7
   3: $t8 := 4
   4: $t9 := pack TestPackref::R($t8)
-  5: r2 := $t9
-  6: $t10 := borrow_local(r2)
-  7: t_ref := $t10
+  5: $t4 := $t9
+  6: $t10 := borrow_local($t4)
+  7: $t5 := $t10
   8: goto L7
   9: L7:
  10: $t11 := 0
- 11: $t12 := copy(n)
+ 11: $t12 := copy($t1)
  12: $t13 := <($t11, $t12)
  13: if ($t13) goto L0 else goto L1
  14: L1:
  15: goto L2
  16: L0:
- 17: $t14 := move(t_ref)
+ 17: $t14 := move($t5)
  18: destroy($t14)
- 19: $t15 := copy(n)
+ 19: $t15 := copy($t1)
  20: $t16 := 2
  21: $t17 := /($t15, $t16)
  22: $t18 := 0
@@ -219,35 +219,35 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
  25: L4:
  26: goto L5
  27: L3:
- 28: $t20 := borrow_local(r1)
- 29: t_ref := $t20
+ 28: $t20 := borrow_local($t3)
+ 29: $t5 := $t20
  30: goto L6
  31: L5:
- 32: $t21 := borrow_local(r2)
- 33: t_ref := $t21
+ 32: $t21 := borrow_local($t4)
+ 33: $t5 := $t21
  34: goto L6
  35: L6:
- 36: $t22 := copy(n)
+ 36: $t22 := copy($t1)
  37: $t23 := 1
  38: $t24 := -($t22, $t23)
- 39: n := $t24
+ 39: $t1 := $t24
  40: goto L7
  41: L2:
- 42: $t25 := copy(b)
+ 42: $t25 := copy($t0)
  43: if ($t25) goto L8 else goto L9
  44: L9:
  45: goto L10
  46: L8:
- 47: $t26 := move(t_ref)
+ 47: $t26 := move($t5)
  48: destroy($t26)
- 49: $t27 := move(r_ref)
+ 49: $t27 := move($t2)
  50: $t28 := 0
  51: TestPackref::test3($t27, $t28)
  52: goto L11
  53: L10:
- 54: $t29 := move(r_ref)
+ 54: $t29 := move($t2)
  55: destroy($t29)
- 56: $t30 := move(t_ref)
+ 56: $t30 := move($t5)
  57: $t31 := 0
  58: TestPackref::test3($t30, $t31)
  59: goto L11
@@ -259,34 +259,34 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: &mut TestPackref::R) {
 
 [variant baseline]
 fun TestPackref::test1(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
-     var x_ref: &mut u64
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: u64
   0: $t3 := 3
-  1: r := pack TestPackref::R($t3)
-  2: r_ref := borrow_local(r)
-  3: unpack_ref(r_ref)
-  4: x_ref := borrow_field<TestPackref::R>.x(r_ref)
-  5: unpack_ref(x_ref)
+  1: $t0 := pack TestPackref::R($t3)
+  2: $t1 := borrow_local($t0)
+  3: unpack_ref($t1)
+  4: $t2 := borrow_field<TestPackref::R>.x($t1)
+  5: unpack_ref($t2)
   6: $t4 := 0
-  7: write_ref(x_ref, $t4)
-  8: pack_ref(x_ref)
-  9: write_back[Reference(r_ref)](x_ref)
- 10: pack_ref(r_ref)
- 11: write_back[LocalRoot(r)](r_ref)
- 12: return r
+  7: write_ref($t2, $t4)
+  8: pack_ref($t2)
+  9: write_back[Reference($t1)]($t2)
+ 10: pack_ref($t1)
+ 11: write_back[LocalRoot($t0)]($t1)
+ 12: return $t0
 }
 
 
 [variant baseline]
-fun TestPackref::test2(x_ref: u64, v: u64): u64 {
+fun TestPackref::test2($t0|x_ref: u64, $t1|v: u64): u64 {
      var $t2: u64
      var $t3: u64
      var $t4: &mut u64
-  0: $t2 := move(x_ref)
-  1: $t3 := move(v)
+  0: $t2 := move($t0)
+  1: $t3 := move($t1)
   2: $t4 := borrow_local($t2)
   3: write_ref($t4, $t3)
   4: write_back[LocalRoot($t2)]($t4)
@@ -295,23 +295,23 @@ fun TestPackref::test2(x_ref: u64, v: u64): u64 {
 
 
 [variant baseline]
-pub fun TestPackref::test3(r_ref: TestPackref::R, v: u64): TestPackref::R {
-     var x_ref: &mut u64
+pub fun TestPackref::test3($t0|r_ref: TestPackref::R, $t1|v: u64): TestPackref::R {
+     var $t2|x_ref: &mut u64
      var $t3: TestPackref::R
      var $t4: u64
      var $t5: &mut TestPackref::R
      var $t6: u64
-  0: $t3 := move(r_ref)
-  1: $t4 := move(v)
+  0: $t3 := move($t0)
+  1: $t4 := move($t1)
   2: $t5 := borrow_local($t3)
   3: unpack_ref($t5)
-  4: x_ref := borrow_field<TestPackref::R>.x($t5)
-  5: unpack_ref(x_ref)
-  6: $t6 := read_ref(x_ref)
+  4: $t2 := borrow_field<TestPackref::R>.x($t5)
+  5: unpack_ref($t2)
+  6: $t6 := read_ref($t2)
   7: $t6 := TestPackref::test2($t6, $t4)
-  8: write_ref(x_ref, $t6)
-  9: pack_ref(x_ref)
- 10: write_back[Reference($t5)](x_ref)
+  8: write_ref($t2, $t6)
+  9: pack_ref($t2)
+ 10: write_back[Reference($t5)]($t2)
  11: pack_ref($t5)
  12: write_back[LocalRoot($t3)]($t5)
  13: return $t3
@@ -320,31 +320,31 @@ pub fun TestPackref::test3(r_ref: TestPackref::R, v: u64): TestPackref::R {
 
 [variant baseline]
 fun TestPackref::test4(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
      var $t2: u64
      var $t3: u64
      var $t4: TestPackref::R
   0: $t2 := 3
-  1: r := pack TestPackref::R($t2)
-  2: r_ref := borrow_local(r)
-  3: unpack_ref(r_ref)
+  1: $t0 := pack TestPackref::R($t2)
+  2: $t1 := borrow_local($t0)
+  3: unpack_ref($t1)
   4: $t3 := 0
-  5: $t4 := read_ref(r_ref)
+  5: $t4 := read_ref($t1)
   6: $t4 := TestPackref::test3($t4, $t3)
-  7: write_ref(r_ref, $t4)
-  8: pack_ref(r_ref)
-  9: write_back[LocalRoot(r)](r_ref)
- 10: return r
+  7: write_ref($t1, $t4)
+  8: pack_ref($t1)
+  9: write_back[LocalRoot($t0)]($t1)
+ 10: return $t0
 }
 
 
 [variant baseline]
-pub fun TestPackref::test5(r_ref: TestPackref::R): (&mut u64, TestPackref::R) {
+pub fun TestPackref::test5($t0|r_ref: TestPackref::R): (&mut u64, TestPackref::R) {
      var $t1: TestPackref::R
      var $t2: &mut TestPackref::R
      var $t3: &mut u64
-  0: $t1 := move(r_ref)
+  0: $t1 := move($t0)
   1: $t2 := borrow_local($t1)
   2: $t3 := borrow_field<TestPackref::R>.x($t2)
   3: write_back[Reference($t2)]($t3)
@@ -355,79 +355,79 @@ pub fun TestPackref::test5(r_ref: TestPackref::R): (&mut u64, TestPackref::R) {
 
 [variant baseline]
 fun TestPackref::test6(): TestPackref::R {
-     var r: TestPackref::R
-     var r_ref: &mut TestPackref::R
-     var x_ref: &mut u64
+     var $t0|r: TestPackref::R
+     var $t1|r_ref: &mut TestPackref::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: TestPackref::R
      var $t5: &mut u64
      var $t6: u64
      var $t7: u64
   0: $t3 := 3
-  1: r := pack TestPackref::R($t3)
-  2: r_ref := borrow_local(r)
-  3: unpack_ref_deep(r_ref)
-  4: $t4 := read_ref(r_ref)
+  1: $t0 := pack TestPackref::R($t3)
+  2: $t1 := borrow_local($t0)
+  3: unpack_ref_deep($t1)
+  4: $t4 := read_ref($t1)
   5: ($t5, $t4) := TestPackref::test5($t4)
-  6: write_ref(r_ref, $t4)
-  7: splice[0 -> r_ref]($t5)
-  8: x_ref := $t5
-  9: write_back[Reference(r_ref)]($t5)
+  6: write_ref($t1, $t4)
+  7: splice[0 -> $t1]($t5)
+  8: $t2 := $t5
+  9: write_back[Reference($t1)]($t5)
  10: $t6 := 0
- 11: $t7 := read_ref(x_ref)
+ 11: $t7 := read_ref($t2)
  12: $t7 := TestPackref::test2($t7, $t6)
- 13: write_ref(x_ref, $t7)
- 14: write_back[Reference(r_ref)](x_ref)
- 15: pack_ref_deep(r_ref)
- 16: write_back[LocalRoot(r)](r_ref)
- 17: return r
+ 13: write_ref($t2, $t7)
+ 14: write_back[Reference($t1)]($t2)
+ 15: pack_ref_deep($t1)
+ 16: write_back[LocalRoot($t0)]($t1)
+ 17: return $t0
 }
 
 
 [variant baseline]
-fun TestPackref::test7(b: bool) {
-     var r1: TestPackref::R
-     var r2: TestPackref::R
-     var r_ref: &mut TestPackref::R
+fun TestPackref::test7($t0|b: bool) {
+     var $t1|r1: TestPackref::R
+     var $t2|r2: TestPackref::R
+     var $t3|r_ref: &mut TestPackref::R
      var $t4: bool
      var $t5: u64
      var $t6: u64
      var $t7: u64
      var $t8: TestPackref::R
-  0: $t4 := move(b)
+  0: $t4 := move($t0)
   1: $t5 := 3
-  2: r1 := pack TestPackref::R($t5)
+  2: $t1 := pack TestPackref::R($t5)
   3: $t6 := 4
-  4: r2 := pack TestPackref::R($t6)
-  5: r_ref := borrow_local(r1)
-  6: unpack_ref(r_ref)
+  4: $t2 := pack TestPackref::R($t6)
+  5: $t3 := borrow_local($t1)
+  6: unpack_ref($t3)
   7: if ($t4) goto L0 else goto L1
   8: L1:
   9: goto L2
  10: L0:
- 11: destroy(r_ref)
- 12: pack_ref(r_ref)
- 13: write_back[LocalRoot(r1)](r_ref)
- 14: r_ref := borrow_local(r2)
- 15: unpack_ref(r_ref)
+ 11: destroy($t3)
+ 12: pack_ref($t3)
+ 13: write_back[LocalRoot($t1)]($t3)
+ 14: $t3 := borrow_local($t2)
+ 15: unpack_ref($t3)
  16: goto L2
  17: L2:
  18: $t7 := 0
- 19: $t8 := read_ref(r_ref)
+ 19: $t8 := read_ref($t3)
  20: $t8 := TestPackref::test3($t8, $t7)
- 21: write_ref(r_ref, $t8)
- 22: pack_ref(r_ref)
- 23: write_back[LocalRoot(r1)](r_ref)
- 24: write_back[LocalRoot(r2)](r_ref)
+ 21: write_ref($t3, $t8)
+ 22: pack_ref($t3)
+ 23: write_back[LocalRoot($t1)]($t3)
+ 24: write_back[LocalRoot($t2)]($t3)
  25: return ()
 }
 
 
 [variant baseline]
-fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
-     var r1: TestPackref::R
-     var r2: TestPackref::R
-     var t_ref: &mut TestPackref::R
+fun TestPackref::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestPackref::R): TestPackref::R {
+     var $t3|r1: TestPackref::R
+     var $t4|r2: TestPackref::R
+     var $t5|t_ref: &mut TestPackref::R
      var $t6: bool
      var $t7: u64
      var $t8: TestPackref::R
@@ -444,16 +444,16 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
      var $t19: u64
      var $t20: TestPackref::R
      var $t21: u64
-  0: $t6 := move(b)
-  1: $t7 := move(n)
-  2: $t8 := move(r_ref)
+  0: $t6 := move($t0)
+  1: $t7 := move($t1)
+  2: $t8 := move($t2)
   3: $t9 := borrow_local($t8)
   4: $t10 := 3
-  5: r1 := pack TestPackref::R($t10)
+  5: $t3 := pack TestPackref::R($t10)
   6: $t11 := 4
-  7: r2 := pack TestPackref::R($t11)
-  8: t_ref := borrow_local(r2)
-  9: unpack_ref(t_ref)
+  7: $t4 := pack TestPackref::R($t11)
+  8: $t5 := borrow_local($t4)
+  9: unpack_ref($t5)
  10: goto L7
  11: L7:
  12: $t12 := 0
@@ -462,10 +462,10 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
  15: L1:
  16: goto L2
  17: L0:
- 18: destroy(t_ref)
- 19: pack_ref(t_ref)
- 20: write_back[LocalRoot(r1)](t_ref)
- 21: write_back[LocalRoot(r2)](t_ref)
+ 18: destroy($t5)
+ 19: pack_ref($t5)
+ 20: write_back[LocalRoot($t3)]($t5)
+ 21: write_back[LocalRoot($t4)]($t5)
  22: $t14 := 2
  23: $t15 := /($t7, $t14)
  24: $t16 := 0
@@ -474,12 +474,12 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
  27: L4:
  28: goto L5
  29: L3:
- 30: t_ref := borrow_local(r1)
- 31: unpack_ref(t_ref)
+ 30: $t5 := borrow_local($t3)
+ 31: unpack_ref($t5)
  32: goto L6
  33: L5:
- 34: t_ref := borrow_local(r2)
- 35: unpack_ref(t_ref)
+ 34: $t5 := borrow_local($t4)
+ 35: unpack_ref($t5)
  36: goto L6
  37: L6:
  38: $t18 := 1
@@ -490,10 +490,10 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
  43: L9:
  44: goto L10
  45: L8:
- 46: destroy(t_ref)
- 47: pack_ref(t_ref)
- 48: write_back[LocalRoot(r1)](t_ref)
- 49: write_back[LocalRoot(r2)](t_ref)
+ 46: destroy($t5)
+ 47: pack_ref($t5)
+ 48: write_back[LocalRoot($t3)]($t5)
+ 49: write_back[LocalRoot($t4)]($t5)
  50: $t19 := 0
  51: $t20 := read_ref($t9)
  52: $t20 := TestPackref::test3($t20, $t19)
@@ -504,12 +504,12 @@ fun TestPackref::test8(b: bool, n: u64, r_ref: TestPackref::R): TestPackref::R {
  57: destroy($t9)
  58: write_back[LocalRoot($t8)]($t9)
  59: $t21 := 0
- 60: $t20 := read_ref(t_ref)
+ 60: $t20 := read_ref($t5)
  61: $t20 := TestPackref::test3($t20, $t21)
- 62: write_ref(t_ref, $t20)
- 63: pack_ref(t_ref)
- 64: write_back[LocalRoot(r1)](t_ref)
- 65: write_back[LocalRoot(r2)](t_ref)
+ 62: write_ref($t5, $t20)
+ 63: pack_ref($t5)
+ 64: write_back[LocalRoot($t3)]($t5)
+ 65: write_back[LocalRoot($t4)]($t5)
  66: goto L11
  67: L11:
  68: return $t8

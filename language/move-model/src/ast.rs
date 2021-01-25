@@ -295,6 +295,9 @@ pub struct GlobalInvariant {
 // =================================================================================================
 /// # Expressions
 
+/// A type alias for temporaries. Those are locals used in bytecode.
+pub type TempIndex = usize;
+
 /// The type of expressions.
 ///
 /// Expression layout follows the following design principles:
@@ -314,8 +317,11 @@ pub enum Exp {
     Invalid(NodeId),
     /// Represents a value.
     Value(NodeId, Value),
-    /// Represents a reference to a local variable.
+    /// Represents a reference to a local variable introduced by a specification construct,
+    /// e.g. a quantifier.
     LocalVar(NodeId, Symbol),
+    /// Represents a reference to a temporary used in bytecode.
+    Temporary(NodeId, TempIndex),
     /// Represents a reference to a global specification (ghost) variable.
     SpecVar(NodeId, ModuleId, SpecVarId, Option<MemoryLabel>),
     /// Represents a call to an operation. The `Operation` enum covers all builtin functions
@@ -347,6 +353,7 @@ impl Exp {
             Invalid(node_id)
             | Value(node_id, ..)
             | LocalVar(node_id, ..)
+            | Temporary(node_id, ..)
             | SpecVar(node_id, ..)
             | Call(node_id, ..)
             | Invoke(node_id, ..)
@@ -379,13 +386,16 @@ impl Exp {
         let mut visitor = |up: bool, e: &Exp| {
             use Exp::*;
             let decls = match e {
-                Lambda(_, decls, _) | Block(_, decls, _) => decls.as_slice(),
-                _ => &[],
+                Lambda(_, decls, _) | Block(_, decls, _) => {
+                    decls.iter().map(|d| d.name).collect_vec()
+                }
+                Quant(_, _, decls, ..) => decls.iter().map(|(d, _)| d.name).collect_vec(),
+                _ => vec![],
             };
             if !up {
-                shadowed.extend(decls.iter().map(|d| d.name));
+                shadowed.extend(decls.iter());
             } else {
-                for sym in decls.iter().map(|d| d.name) {
+                for sym in decls {
                     if let Some(pos) = shadowed.iter().position(|s| *s == sym) {
                         // Remove one instance of this symbol. The same symbol can appear
                         // multiple times in `shadowed`.
@@ -401,6 +411,18 @@ impl Exp {
         };
         self.visit_pre_post(&mut visitor);
         locals
+    }
+
+    /// Returns the temporaries used in this expression.
+    pub fn temporaries(&self) -> BTreeSet<TempIndex> {
+        let mut temps = BTreeSet::new();
+        let mut visitor = |e: &Exp| {
+            if let Exp::Temporary(_, idx) = e {
+                temps.insert(*idx);
+            }
+        };
+        self.visit(&mut visitor);
+        temps
     }
 
     /// Visits expression, calling visitor on each sub-expression, depth first.
@@ -492,7 +514,6 @@ pub enum Operation {
     Tuple,
     Select(ModuleId, StructId, FieldId),
     UpdateField(ModuleId, StructId, FieldId),
-    Local(Symbol),
     Result(usize),
     Index,
     Slice,
@@ -775,6 +796,7 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
             Invalid(_) => write!(f, "*invalid*"),
             Value(_, v) => write!(f, "{}", v),
             LocalVar(_, name) => write!(f, "{}", name.display(self.env.symbol_pool())),
+            Temporary(_, idx) => write!(f, "$t{}", idx),
             SpecVar(_, mid, vid, label) => {
                 let module_env = self.env.get_module(*mid);
                 let spec_var = module_env.get_spec_var(*vid);
@@ -908,14 +930,14 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
                 Ok(())
             }
             Global(label_opt) => {
-                write!(f, "global<{}>", self.resource_access_str(self.node_id))?;
+                write!(f, "global")?;
                 if let Some(label) = label_opt {
                     write!(f, "[{}]", label)?
                 }
                 Ok(())
             }
             Exists(label_opt) => {
-                write!(f, "exists<{}>", self.resource_access_str(self.node_id))?;
+                write!(f, "exists")?;
                 if let Some(label) = label_opt {
                     write!(f, "[{}]", label)?
                 }
@@ -928,7 +950,6 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
             UpdateField(mid, sid, fid) => {
                 write!(f, "update {}", self.field_str(mid, sid, fid))
             }
-            Local(s) => write!(f, "{}", s.display(self.env.symbol_pool())),
             Result(t) => write!(f, "result{}", t),
             _ => write!(f, "{:?}", self.oper),
         }?;
@@ -979,12 +1000,6 @@ impl<'a> OperationDisplay<'a> {
             self.struct_str(mid, sid),
             field_name.display(self.env.symbol_pool())
         )
-    }
-
-    fn resource_access_str(&self, node_id: NodeId) -> String {
-        let ty = &self.env.get_node_instantiation(node_id)[0];
-        let (mid, sid, _) = ty.require_struct();
-        self.struct_str(&mid, &sid)
     }
 }
 

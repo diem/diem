@@ -19,7 +19,7 @@ use bytecode::{
     stackless_bytecode::{
         AssignKind, BorrowNode,
         Bytecode::{self, *},
-        Constant, Label, Operation, SpecBlockId, TempIndex,
+        Constant, Label, Operation, SpecBlockId,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
@@ -53,6 +53,7 @@ use crate::{
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
 use bytecode::function_target_pipeline::FunctionVariant;
+use move_model::ast::TempIndex;
 
 const MODIFY_RESOURCE_FAILS_MESSAGE: &str =
     "caller does not have permission for this resource modification";

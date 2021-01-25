@@ -46,6 +46,7 @@ use crate::{
     },
     cli::Options,
 };
+use move_model::ast::TempIndex;
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
@@ -1750,6 +1751,10 @@ impl<'env> SpecTranslator<'env> {
                 self.set_writer_location(*node_id);
                 self.translate_local_var(*node_id, *name);
             }
+            Exp::Temporary(node_id, idx) => {
+                self.set_writer_location(*node_id);
+                self.translate_temporary(*node_id, *idx);
+            }
             Exp::SpecVar(node_id, module_id, var_id, _) => {
                 let instantiation = &self.module_env().env.get_node_instantiation(*node_id);
                 self.trace_value(
@@ -1912,6 +1917,11 @@ impl<'env> SpecTranslator<'env> {
         );
     }
 
+    fn translate_temporary(&self, node_id: NodeId, idx: TempIndex) {
+        let name = self.function_target().get_local_name(idx);
+        self.translate_local_var(node_id, name);
+    }
+
     fn auto_dref<F>(&self, ty: &Type, f: F)
     where
         F: Fn(),
@@ -1959,9 +1969,6 @@ impl<'env> SpecTranslator<'env> {
             }
             Operation::UpdateField(module_id, struct_id, field_id) => {
                 self.translate_update_field(*module_id, *struct_id, *field_id, args)
-            }
-            Operation::Local(sym) => {
-                self.translate_local_var(node_id, *sym);
             }
             Operation::Result(pos) => {
                 self.auto_dref(self.function_target().get_return_type(*pos), || {

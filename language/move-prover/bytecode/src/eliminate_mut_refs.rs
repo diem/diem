@@ -9,10 +9,10 @@ use crate::{
         Bytecode::{self, *},
         Operation,
         Operation::*,
-        TempIndex,
     },
 };
 use move_model::{
+    ast::TempIndex,
     model::{FunctionEnv, Loc},
     ty::Type,
 };

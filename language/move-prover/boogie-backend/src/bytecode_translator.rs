@@ -36,11 +36,8 @@ use crate::{
     options::BoogieOptions,
     spec_translator::SpecTranslator,
 };
-use bytecode::{
-    function_target_pipeline::FunctionVariant,
-    stackless_bytecode::{PropKind, TempIndex},
-};
-use move_model::{model::Loc, symbol::Symbol};
+use bytecode::{function_target_pipeline::FunctionVariant, stackless_bytecode::PropKind};
+use move_model::{ast::TempIndex, model::Loc};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -263,20 +260,14 @@ impl<'env> ModuleTranslator<'env> {
                 format!("{}: $TypeValue", s.display(func_target.symbol_pool()))
             })
             .chain((0..func_target.get_parameter_count()).map(|i| {
-                let s = func_target.get_local_name(i);
                 let ty = func_target.get_local_type(i);
                 // Boogie does not allow to assign to parameters, so we need to proxy them.
                 let prefix = if self.parameter_needs_to_be_mutable(func_target, i) {
-                    "$_"
+                    "_$"
                 } else {
-                    ""
+                    "$"
                 };
-                format!(
-                    "{}{}: {}",
-                    prefix,
-                    s.display(func_target.symbol_pool()),
-                    boogie_local_type(ty)
-                )
+                format!("{}t{}: {}", prefix, i, boogie_local_type(ty))
             }))
             .chain(func_target.get_modify_targets().keys().map(|ty| {
                 format!(
@@ -307,25 +298,19 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "// declare local variables");
         let num_args = func_target.get_parameter_count();
         for i in num_args..func_target.get_local_count() {
-            let local_name = func_target.get_local_name(i);
             let local_type = func_target.get_local_type(i);
             emitln!(
                 self.writer,
-                "var {}: {}; // {}",
-                local_name.display(func_target.symbol_pool()),
+                "var $t{}: {}; // {}",
+                i,
                 boogie_local_type(local_type),
                 boogie_type_value(self.module_env.env, local_type)
             );
         }
         // Generate declarations for renamed parameters.
-        let renamed_params = self.get_mutable_parameters(func_target);
-        for (name, ty) in &renamed_params {
-            emitln!(
-                self.writer,
-                "var {}: {};",
-                name.display(func_target.symbol_pool()),
-                boogie_local_type(ty)
-            );
+        let proxied_parameters = self.get_mutable_parameters(func_target);
+        for (idx, ty) in &proxied_parameters {
+            emitln!(self.writer, "var $t{}: {};", idx, boogie_local_type(ty));
         }
         // Generate declarations for modifies condition.
         func_target.get_modify_targets().keys().for_each(|ty| {
@@ -360,9 +345,8 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Initialize renamed parameters.
-        for (name, _) in renamed_params {
-            let d = name.display(func_target.symbol_pool());
-            emitln!(self.writer, "{} := $_{};", d, d);
+        for (idx, _) in proxied_parameters {
+            emitln!(self.writer, "$t{} := _$t{};", idx, idx);
         }
 
         // Initial assumptions
@@ -380,14 +364,11 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "}");
     }
 
-    fn get_mutable_parameters(&self, func_target: &FunctionTarget<'_>) -> Vec<(Symbol, Type)> {
+    fn get_mutable_parameters(&self, func_target: &FunctionTarget<'_>) -> Vec<(TempIndex, Type)> {
         (0..func_target.get_parameter_count())
             .filter_map(|i| {
                 if self.parameter_needs_to_be_mutable(func_target, i) {
-                    Some((
-                        func_target.get_local_name(i),
-                        func_target.get_local_type(i).clone(),
-                    ))
+                    Some((i, func_target.get_local_type(i).clone()))
                 } else {
                     None
                 }
@@ -428,16 +409,8 @@ impl<'env> ModuleTranslator<'env> {
         for i in 0..func_target.get_parameter_count() {
             let ty = func_target.get_local_type(i);
             if ty.is_reference() {
-                let name = func_target
-                    .symbol_pool()
-                    .string(func_target.get_local_name(i));
-                emitln!(
-                    self.writer,
-                    "assume l#$Mutation({}) == $Param({});",
-                    name,
-                    i
-                );
-                emitln!(self.writer, "assume size#Path(p#$Mutation({})) == 0;", name);
+                emitln!(self.writer, "assume l#$Mutation($t{}) == $Param({});", i, i);
+                emitln!(self.writer, "assume size#Path(p#$Mutation($t{})) == 0;", i);
             }
         }
 
@@ -490,12 +463,8 @@ impl<'env> ModuleTranslator<'env> {
             loc.display(self.module_env.env)
         );
 
-        // Helper function to get an Rc<String> for a local.
-        let str_local = |idx: usize| {
-            func_target
-                .symbol_pool()
-                .string(func_target.get_local_name(idx))
-        };
+        // Helper function to get a a string for a local
+        let str_local = |idx: usize| format!("$t{}", idx);
 
         // Translate the bytecode instruction.
         match bytecode {
@@ -682,17 +651,11 @@ impl<'env> ModuleTranslator<'env> {
                             func_target.func_env.module_env.env,
                             type_actuals,
                         ))
-                        .chain(
-                            srcs.iter()
-                                .map(|arg_idx| format!("{}", str_local(*arg_idx))),
-                        )
+                        .chain(srcs.iter().map(|arg_idx| str_local(*arg_idx)))
                         .filter(|s| !s.is_empty())
                         .join(", ");
 
-                        let dest_str = dests
-                            .iter()
-                            .map(|dest_idx| str_local(*dest_idx).to_string())
-                            .join(", ");
+                        let dest_str = dests.iter().map(|dest_idx| str_local(*dest_idx)).join(", ");
 
                         if dest_str.is_empty() {
                             emitln!(
@@ -752,7 +715,7 @@ impl<'env> ModuleTranslator<'env> {
                             );
                             let type_check = boogie_well_formed_check(
                                 self.module_env.env,
-                                &format!("{}", str_local(dests[i])),
+                                &str_local(dests[i]),
                                 &field_env.get_type(),
                             );
                             emit!(self.writer, &type_check);
@@ -1191,14 +1154,10 @@ impl<'env> ModuleTranslator<'env> {
         // In order to determine whether we need to dereference, use the type of the temporary
         // which actually holds the value, not the original temp we are tracing.
         let ty = func_target.get_local_type(idx);
-        let value = func_target
-            .symbol_pool()
-            .string(func_target.get_local_name(idx));
-        let value = if ty.is_reference() {
-            format!("$Dereference({})", value)
-        } else {
-            value.to_string()
-        };
+        let mut value = format!("$t{}", idx);
+        if ty.is_reference() {
+            value = format!("$Dereference({})", value);
+        }
         let file_idx = func_target
             .func_env
             .module_env
@@ -1220,14 +1179,10 @@ impl<'env> ModuleTranslator<'env> {
         idx: TempIndex,
     ) {
         let ty = func_target.get_local_type(idx);
-        let value = func_target
-            .symbol_pool()
-            .string(func_target.get_local_name(idx));
-        let value = if ty.is_reference() {
-            format!("$Dereference({})", value)
-        } else {
-            value.to_string()
-        };
+        let mut value = format!("$t{}", idx);
+        if ty.is_reference() {
+            value = format!("$Dereference({})", value);
+        }
         let file_idx = func_target
             .func_env
             .module_env
@@ -1251,9 +1206,7 @@ impl<'env> ModuleTranslator<'env> {
     ) {
         for local in locals {
             let ty = func_target.get_local_type(local);
-            let name = func_target
-                .symbol_pool()
-                .string(func_target.get_local_name(local));
+            let name = format!("$t{}", local);
             let check = boogie_well_formed_check(self.module_env.env, &name, ty);
             if !check.is_empty() {
                 emitln!(self.writer, &check);

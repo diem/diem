@@ -4,17 +4,14 @@
 use crate::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
-    ast::{Exp, MemoryLabel},
-    exp_rewriter::ExpRewriter,
+    ast::{Exp, MemoryLabel, TempIndex},
+    exp_rewriter::{ExpRewriter, RewriteTarget},
     model::{FunId, ModuleId, NodeId, QualifiedId, SpecVarId, StructId},
-    symbol::Symbol,
     ty::{Type, TypeDisplayContext},
 };
 use num::BigUint;
-use std::{collections::BTreeMap, fmt, fmt::Formatter, rc::Rc};
+use std::{collections::BTreeMap, fmt, fmt::Formatter};
 use vm::file_format::CodeOffset;
-
-pub type TempIndex = usize;
 
 /// A label for a branch destination.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -423,16 +420,9 @@ impl Bytecode {
     where
         F: FnMut(TempIndex) -> TempIndex,
     {
-        // TODO(refactoring): we need to get rid of symbols for locals in expressions, and
-        // instead represent them by a unique temp index similar as in the bytecode.
-        // The major blocker for this right now are spec blocks inside code, which
-        // require symbolic resolution the way they are wired with move-lang. Those
-        // should go away once refactoring is done.
-        let mut replacer = |node_id: NodeId, sym: Symbol| {
-            if let Some(idx) = func_target.get_local_index(sym) {
-                let new_idx = f(idx);
-                let new_sym = func_target.get_local_name(new_idx);
-                Some(Exp::LocalVar(node_id, new_sym))
+        let mut replacer = |node_id: NodeId, target: RewriteTarget| {
+            if let RewriteTarget::Temporary(idx) = target {
+                Some(Exp::Temporary(node_id, f(idx)))
             } else {
                 None
             }
@@ -607,10 +597,8 @@ impl<'env> BytecodeDisplay<'env> {
         Ok(())
     }
 
-    fn lstr(&self, idx: TempIndex) -> Rc<String> {
-        self.func_target
-            .symbol_pool()
-            .string(self.func_target.get_local_name(idx))
+    fn lstr(&self, idx: TempIndex) -> String {
+        format!("$t{}", idx)
     }
 }
 
@@ -746,13 +734,7 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                 f,
                 "splice[{}]",
                 map.iter()
-                    .map(|(idx, local)| format!(
-                        "{} -> {}",
-                        idx,
-                        self.func_target
-                            .symbol_pool()
-                            .string(self.func_target.get_local_name(*local))
-                    ))
+                    .map(|(idx, local)| format!("{} -> $t{}", idx, *local))
                     .join(", ")
             )?,
 
@@ -783,7 +765,14 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             Neq => write!(f, "!=")?,
 
             // Debugging
-            TraceLocal(l) => write!(f, "trace_local[{}]", self.lstr(*l))?,
+            TraceLocal(l) => {
+                let name = self.func_target.get_local_name(*l);
+                write!(
+                    f,
+                    "trace_local[{}]",
+                    name.display(self.func_target.symbol_pool())
+                )?
+            }
             TraceAbort => write!(f, "trace_abort")?,
             TraceReturn(r) => write!(f, "trace_return[{}]", r)?,
         }
@@ -817,12 +806,6 @@ impl<'env> OperationDisplay<'env> {
             type_param_names: None,
         };
         format!("{}", ty.display(&tctx))
-    }
-
-    fn lstr(&self, idx: TempIndex) -> Rc<String> {
-        self.func_target
-            .symbol_pool()
-            .string(self.func_target.get_local_name(idx))
     }
 }
 
@@ -873,22 +856,10 @@ impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
                 write!(f, "{}", ty.display(&tctx))?;
             }
             LocalRoot(idx) => {
-                write!(
-                    f,
-                    "LocalRoot({})",
-                    self.func_target
-                        .get_local_name(*idx)
-                        .display(self.func_target.symbol_pool())
-                )?;
+                write!(f, "LocalRoot($t{})", idx)?;
             }
             Reference(idx) => {
-                write!(
-                    f,
-                    "Reference({})",
-                    self.func_target
-                        .get_local_name(*idx)
-                        .display(self.func_target.symbol_pool())
-                )?;
+                write!(f, "Reference($t{})", idx)?;
             }
         }
         Ok(())

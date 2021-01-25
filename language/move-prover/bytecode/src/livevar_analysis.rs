@@ -8,11 +8,11 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{AttrId, Bytecode, Label, Operation, TempIndex},
+    stackless_bytecode::{AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::{model::FunctionEnv, ty::Type};
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
@@ -371,12 +371,9 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
                 state.remove(&[*dst]);
             }
             Prop(_, _, exp) => {
-                let usage = exp
-                    .locals()
-                    .iter()
-                    .filter_map(|name| self.func_target.get_local_index(*name))
-                    .collect_vec();
-                state.insert(&usage);
+                for idx in exp.temporaries() {
+                    state.insert(&[idx]);
+                }
             }
             _ => {}
         }

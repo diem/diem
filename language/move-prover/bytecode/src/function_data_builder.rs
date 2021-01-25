@@ -6,12 +6,12 @@
 
 use crate::{
     function_target::{FunctionData, FunctionTarget},
-    stackless_bytecode::{AttrId, Bytecode, Label, PropKind, TempIndex},
+    stackless_bytecode::{AttrId, Bytecode, Label, PropKind},
 };
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{Exp, Value},
+    ast::{Exp, TempIndex, Value},
     model::{
         ConditionInfo, ConditionTag, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId,
     },
@@ -196,8 +196,7 @@ impl<'env> FunctionDataBuilder<'env> {
     pub fn mk_local(&self, temp: TempIndex) -> Exp {
         let ty = self.data.local_types[temp].clone();
         let node_id = self.global_env().new_node(self.current_loc.clone(), ty);
-        let sym = self.fun_env.get_local_name(temp);
-        Exp::LocalVar(node_id, sym)
+        Exp::Temporary(node_id, temp)
     }
 
     /// Get's the memory associated with a Call(Global,..) or Call(Exists, ..) node. Crashes

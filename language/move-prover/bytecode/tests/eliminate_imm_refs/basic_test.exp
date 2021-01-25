@@ -2,9 +2,9 @@
 
 [variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
-     var r: TestEliminateImmRefs::R
-     var r_ref: &mut TestEliminateImmRefs::R
-     var x_ref: &mut u64
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: &mut TestEliminateImmRefs::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: TestEliminateImmRefs::R
      var $t5: &mut TestEliminateImmRefs::R
@@ -15,25 +15,25 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
      var $t10: TestEliminateImmRefs::R
   0: $t3 := 3
   1: $t4 := pack TestEliminateImmRefs::R($t3)
-  2: r := $t4
-  3: $t5 := borrow_local(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := borrow_local($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := borrow_field<TestEliminateImmRefs::R>.x($t6)
-  7: x_ref := $t7
+  7: $t2 := $t7
   8: $t8 := 0
-  9: $t9 := move(x_ref)
+  9: $t9 := move($t2)
  10: write_ref($t9, $t8)
- 11: $t10 := move(r)
+ 11: $t10 := move($t0)
  12: return $t10
 }
 
 
 [variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
-     var r: TestEliminateImmRefs::R
-     var r_ref: &TestEliminateImmRefs::R
-     var x_ref: &u64
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: &TestEliminateImmRefs::R
+     var $t2|x_ref: &u64
      var $t3: u64
      var $t4: TestEliminateImmRefs::R
      var $t5: &TestEliminateImmRefs::R
@@ -43,29 +43,29 @@ fun TestEliminateImmRefs::test2(): u64 {
      var $t9: u64
   0: $t3 := 3
   1: $t4 := pack TestEliminateImmRefs::R($t3)
-  2: r := $t4
-  3: $t5 := borrow_local(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := borrow_local($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := borrow_field<TestEliminateImmRefs::R>.x($t6)
-  7: x_ref := $t7
-  8: $t8 := move(x_ref)
+  7: $t2 := $t7
+  8: $t8 := move($t2)
   9: $t9 := read_ref($t8)
  10: return $t9
 }
 
 
 [variant baseline]
-fun TestEliminateImmRefs::test3(r_ref: &TestEliminateImmRefs::R): u64 {
-     var x_ref: &u64
+fun TestEliminateImmRefs::test3($t0|r_ref: &TestEliminateImmRefs::R): u64 {
+     var $t1|x_ref: &u64
      var $t2: &TestEliminateImmRefs::R
      var $t3: &u64
      var $t4: &u64
      var $t5: u64
-  0: $t2 := move(r_ref)
+  0: $t2 := move($t0)
   1: $t3 := borrow_field<TestEliminateImmRefs::R>.x($t2)
-  2: x_ref := $t3
-  3: $t4 := move(x_ref)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
   4: $t5 := read_ref($t4)
   5: return $t5
 }
@@ -73,8 +73,8 @@ fun TestEliminateImmRefs::test3(r_ref: &TestEliminateImmRefs::R): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
-     var r: TestEliminateImmRefs::R
-     var r_ref: &TestEliminateImmRefs::R
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: &TestEliminateImmRefs::R
      var $t2: u64
      var $t3: TestEliminateImmRefs::R
      var $t4: &TestEliminateImmRefs::R
@@ -82,10 +82,10 @@ fun TestEliminateImmRefs::test4(): u64 {
      var $t6: u64
   0: $t2 := 3
   1: $t3 := pack TestEliminateImmRefs::R($t2)
-  2: r := $t3
-  3: $t4 := borrow_local(r)
-  4: r_ref := $t4
-  5: $t5 := move(r_ref)
+  2: $t0 := $t3
+  3: $t4 := borrow_local($t0)
+  4: $t1 := $t4
+  5: $t5 := move($t1)
   6: $t6 := TestEliminateImmRefs::test3($t5)
   7: return $t6
 }
@@ -94,9 +94,9 @@ fun TestEliminateImmRefs::test4(): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
-     var r: TestEliminateImmRefs::R
-     var r_ref: &mut TestEliminateImmRefs::R
-     var x_ref: &mut u64
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: &mut TestEliminateImmRefs::R
+     var $t2|x_ref: &mut u64
      var $t3: u64
      var $t4: TestEliminateImmRefs::R
      var $t5: &mut TestEliminateImmRefs::R
@@ -107,25 +107,25 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
      var $t10: TestEliminateImmRefs::R
   0: $t3 := 3
   1: $t4 := pack TestEliminateImmRefs::R($t3)
-  2: r := $t4
-  3: $t5 := borrow_local(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := borrow_local($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := borrow_field<TestEliminateImmRefs::R>.x($t6)
-  7: x_ref := $t7
+  7: $t2 := $t7
   8: $t8 := 0
-  9: $t9 := move(x_ref)
+  9: $t9 := move($t2)
  10: write_ref($t9, $t8)
- 11: $t10 := move(r)
+ 11: $t10 := move($t0)
  12: return $t10
 }
 
 
 [variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
-     var r: TestEliminateImmRefs::R
-     var r_ref: TestEliminateImmRefs::R
-     var x_ref: u64
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: TestEliminateImmRefs::R
+     var $t2|x_ref: u64
      var $t3: u64
      var $t4: TestEliminateImmRefs::R
      var $t5: TestEliminateImmRefs::R
@@ -135,29 +135,29 @@ fun TestEliminateImmRefs::test2(): u64 {
      var $t9: u64
   0: $t3 := 3
   1: $t4 := pack TestEliminateImmRefs::R($t3)
-  2: r := $t4
-  3: $t5 := copy(r)
-  4: r_ref := $t5
-  5: $t6 := move(r_ref)
+  2: $t0 := $t4
+  3: $t5 := copy($t0)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := get_field<TestEliminateImmRefs::R>.x($t6)
-  7: x_ref := $t7
-  8: $t8 := move(x_ref)
+  7: $t2 := $t7
+  8: $t8 := move($t2)
   9: $t9 := move($t8)
  10: return $t9
 }
 
 
 [variant baseline]
-fun TestEliminateImmRefs::test3(r_ref: TestEliminateImmRefs::R): u64 {
-     var x_ref: u64
+fun TestEliminateImmRefs::test3($t0|r_ref: TestEliminateImmRefs::R): u64 {
+     var $t1|x_ref: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: u64
      var $t4: u64
      var $t5: u64
-  0: $t2 := move(r_ref)
+  0: $t2 := move($t0)
   1: $t3 := get_field<TestEliminateImmRefs::R>.x($t2)
-  2: x_ref := $t3
-  3: $t4 := move(x_ref)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
   4: $t5 := move($t4)
   5: return $t5
 }
@@ -165,8 +165,8 @@ fun TestEliminateImmRefs::test3(r_ref: TestEliminateImmRefs::R): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
-     var r: TestEliminateImmRefs::R
-     var r_ref: TestEliminateImmRefs::R
+     var $t0|r: TestEliminateImmRefs::R
+     var $t1|r_ref: TestEliminateImmRefs::R
      var $t2: u64
      var $t3: TestEliminateImmRefs::R
      var $t4: TestEliminateImmRefs::R
@@ -174,10 +174,10 @@ fun TestEliminateImmRefs::test4(): u64 {
      var $t6: u64
   0: $t2 := 3
   1: $t3 := pack TestEliminateImmRefs::R($t2)
-  2: r := $t3
-  3: $t4 := copy(r)
-  4: r_ref := $t4
-  5: $t5 := move(r_ref)
+  2: $t0 := $t3
+  3: $t4 := copy($t0)
+  4: $t1 := $t4
+  5: $t5 := move($t1)
   6: $t6 := TestEliminateImmRefs::test3($t5)
   7: return $t6
 }

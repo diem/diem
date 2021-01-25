@@ -1,6 +1,6 @@
+// flag: --v2
 module TestAssertAndAssume {
     // Tests that should verify
-
     spec module {
         pragma verify = true;
     }

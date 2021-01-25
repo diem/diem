@@ -8,10 +8,13 @@ use crate::{
     stackless_bytecode::{
         AttrId, BorrowNode,
         Bytecode::{self, *},
-        Operation, TempIndex,
+        Operation,
     },
 };
-use move_model::model::{FunctionEnv, Loc};
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, Loc},
+};
 use std::collections::BTreeMap;
 use vm::file_format::CodeOffset;
 

@@ -349,11 +349,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         name: Symbol,
         type_: Type,
         operation: Option<Operation>,
+        temp_index: Option<usize>,
     ) {
         let entry = LocalVarEntry {
             loc: loc.clone(),
             type_,
             operation,
+            temp_index,
         };
         if let Some(old) = self
             .local_table
@@ -364,25 +366,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let display = name.display(self.symbol_pool());
             self.error(loc, &format!("duplicate declaration of `{}`", display));
             self.error(&old.loc, &format!("previous declaration of `{}`", display));
-        } else {
-            // Check whether we do not shadow a variable.
-            // TODO(wrwg): remove once we have sorted out correct implementation of
-            //   shadowing. Currently there are some bugs, so better to disallow it.
-            for scope in self.local_table.iter().skip(1) {
-                if let Some(old_loc) = scope.get(&name).map(|e| e.loc.clone()) {
-                    let display = name.display(self.symbol_pool());
-                    self.error(
-                        loc,
-                        &format!(
-                            "shadowing of declaration of `{}` not allowed \
-                    (current implementation restriction)",
-                            display
-                        ),
-                    );
-                    self.error(&old_loc, &format!("previous declaration of `{}`", display));
-                    break;
-                }
-            }
         }
     }
 
@@ -426,13 +409,24 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     pub fn analyze_and_add_params(
         &mut self,
         params: &[(PA::Var, EA::Type)],
+        for_move_fun: bool,
     ) -> Vec<(Symbol, Type)> {
         params
             .iter()
-            .map(|(v, ty)| {
+            .enumerate()
+            .map(|(idx, (v, ty))| {
                 let ty = self.translate_type(ty);
                 let sym = self.symbol_pool().make(v.0.value.as_str());
-                self.define_local(&self.to_loc(&v.0.loc), sym, ty.clone(), None);
+                self.define_local(
+                    &self.to_loc(&v.0.loc),
+                    sym,
+                    ty.clone(),
+                    None,
+                    // If this is for a proper Move function (not spec function), add the
+                    // index so we can resolve this to a `Temporary` expression instead of
+                    // a `LocalVar`.
+                    if for_move_fun { Some(idx) } else { None },
+                );
                 (sym, ty)
             })
             .collect_vec()
@@ -953,7 +947,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             // thus entering a new scope.
                             self.enter_scope();
                             let name = self.symbol_pool().make(&name.value);
-                            self.define_local(&bind_loc, name, t.clone(), None);
+                            self.define_local(&bind_loc, name, t.clone(), None, None);
                             let id = self.new_node_id_with_type_loc(&t, &bind_loc);
                             decls.push(LocalVarDecl {
                                 id,
@@ -1098,11 +1092,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     ) -> Option<Exp> {
         if let Some(entry) = self.lookup_local(sym, in_old) {
             let oper_opt = entry.operation.clone();
+            let index_opt = entry.temp_index;
             let ty = entry.type_.clone();
             let ty = self.check_type(loc, &ty, expected_type, "in name expression");
             let id = self.new_node_id_with_type_loc(&ty, loc);
             if let Some(oper) = oper_opt {
                 Some(Exp::Call(id, oper, vec![]))
+            } else if let Some(index) =
+                index_opt.filter(|_| !self.translating_fun_as_spec_fun && !self.in_let)
+            {
+                // Only create a temporary if we are not currently translating a move function as
+                // a spec function, or a let. In this case, the LocalVarEntry has a bytecode index, but
+                // we do not want to use this if interpreted as a spec fun.
+                Some(Exp::Temporary(id, index))
             } else {
                 if self.in_let {
                     // Mangle the name for context local of let.
@@ -1134,8 +1136,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
 
         // Create the context args for this let.
-        // TODO(wrwg): here is a bug with name shadowing, which is also elsewhere.
-        //   A fix requires a rewrite to go away from symbols for locals to unique indices.
         let mut all_args = vec![];
         for (name, in_old) in decl
             .context_params
@@ -1760,7 +1760,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     let name = self.symbol_pool().make(&n.value);
                     let ty = self.fresh_type_var();
                     let id = self.new_node_id_with_type_loc(&ty, &loc);
-                    self.define_local(&loc, name, ty.clone(), None);
+                    self.define_local(&loc, name, ty.clone(), None, None);
                     arg_types.push(ty);
                     decls.push(LocalVarDecl {
                         id,
@@ -1847,7 +1847,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 ) => {
                     let name = self.symbol_pool().make(&n.value);
                     let id = self.new_node_id_with_type_loc(&ty, &loc);
-                    self.define_local(&loc, name, ty.clone(), None);
+                    self.define_local(&loc, name, ty.clone(), None, None);
                     let rbind = LocalVarDecl {
                         id,
                         name,

@@ -1,11 +1,11 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Signer::address_of(s: &signer): address {
+pub fun Signer::address_of($t0|s: &signer): address {
      var $t1: &signer
      var $t2: &address
      var $t3: address
-  0: $t1 := move(s)
+  0: $t1 := move($t0)
   1: $t2 := Signer::borrow_address($t1)
   2: $t3 := read_ref($t2)
   3: return $t3
@@ -13,13 +13,13 @@ pub fun Signer::address_of(s: &signer): address {
 
 
 [variant baseline]
-pub fun Signer::borrow_address(s: &signer): &address {
+pub fun Signer::borrow_address($t0|s: &signer): &address {
 }
 
 
 [variant baseline]
-fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
-     var c: u64
+fun SmokeTest::arithmetic_ops($t0|a: u64): (u64, u64) {
+     var $t1|c: u64
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -28,8 +28,8 @@ fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
      var $t7: u64
      var $t8: u64
   0: $t2 := 2
-  1: c := $t2
-  2: $t3 := copy(c)
+  1: $t1 := $t2
+  2: $t3 := copy($t1)
   3: $t4 := 2
   4: $t5 := !=($t3, $t4)
   5: if ($t5) goto L0 else goto L1
@@ -39,18 +39,18 @@ fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
   9: $t6 := 42
  10: abort($t6)
  11: L2:
- 12: $t7 := copy(c)
- 13: $t8 := copy(a)
+ 12: $t7 := copy($t1)
+ 13: $t8 := copy($t0)
  14: return ($t7, $t8)
 }
 
 
 [variant baseline]
-fun SmokeTest::bool_ops(a: u64, b: u64): (bool, bool) {
-     var c: bool
-     var d: bool
-     var tmp#$4: bool
-     var tmp#$5: bool
+fun SmokeTest::bool_ops($t0|a: u64, $t1|b: u64): (bool, bool) {
+     var $t2|c: bool
+     var $t3|d: bool
+     var $t4|tmp#$4: bool
+     var $t5|tmp#$5: bool
      var $t6: u64
      var $t7: u64
      var $t8: bool
@@ -74,46 +74,46 @@ fun SmokeTest::bool_ops(a: u64, b: u64): (bool, bool) {
      var $t26: u64
      var $t27: bool
      var $t28: bool
-  0: $t6 := copy(a)
-  1: $t7 := copy(b)
+  0: $t6 := copy($t0)
+  1: $t7 := copy($t1)
   2: $t8 := >($t6, $t7)
   3: if ($t8) goto L0 else goto L1
   4: L1:
   5: goto L2
   6: L0:
-  7: $t9 := copy(a)
-  8: $t10 := copy(b)
+  7: $t9 := copy($t0)
+  8: $t10 := copy($t1)
   9: $t11 := >=($t9, $t10)
- 10: tmp#$4 := $t11
+ 10: $t4 := $t11
  11: goto L3
  12: L2:
  13: $t12 := false
- 14: tmp#$4 := $t12
+ 14: $t4 := $t12
  15: goto L3
  16: L3:
- 17: $t13 := move(tmp#$4)
- 18: c := $t13
- 19: $t14 := copy(a)
- 20: $t15 := copy(b)
+ 17: $t13 := move($t4)
+ 18: $t2 := $t13
+ 19: $t14 := copy($t0)
+ 20: $t15 := copy($t1)
  21: $t16 := <($t14, $t15)
  22: if ($t16) goto L4 else goto L5
  23: L5:
  24: goto L6
  25: L4:
  26: $t17 := true
- 27: tmp#$5 := $t17
+ 27: $t5 := $t17
  28: goto L7
  29: L6:
- 30: $t18 := copy(a)
- 31: $t19 := copy(b)
+ 30: $t18 := copy($t0)
+ 31: $t19 := copy($t1)
  32: $t20 := <=($t18, $t19)
- 33: tmp#$5 := $t20
+ 33: $t5 := $t20
  34: goto L7
  35: L7:
- 36: $t21 := move(tmp#$5)
- 37: d := $t21
- 38: $t22 := copy(c)
- 39: $t23 := copy(d)
+ 36: $t21 := move($t5)
+ 37: $t3 := $t21
+ 38: $t22 := copy($t2)
+ 39: $t23 := copy($t3)
  40: $t24 := !=($t22, $t23)
  41: $t25 := !($t24)
  42: if ($t25) goto L8 else goto L9
@@ -123,42 +123,42 @@ fun SmokeTest::bool_ops(a: u64, b: u64): (bool, bool) {
  46: $t26 := 42
  47: abort($t26)
  48: L10:
- 49: $t27 := copy(c)
- 50: $t28 := copy(d)
+ 49: $t27 := copy($t2)
+ 50: $t28 := copy($t3)
  51: return ($t27, $t28)
 }
 
 
 [variant baseline]
-fun SmokeTest::borrow_global_mut_test(a: address) {
-     var r: &mut SmokeTest::R
-     var r2: &mut SmokeTest::R
+fun SmokeTest::borrow_global_mut_test($t0|a: address) {
+     var $t1|r: &mut SmokeTest::R
+     var $t2|r2: &mut SmokeTest::R
      var $t3: address
      var $t4: &mut SmokeTest::R
      var $t5: &mut SmokeTest::R
      var $t6: address
      var $t7: &mut SmokeTest::R
      var $t8: &mut SmokeTest::R
-  0: $t3 := copy(a)
+  0: $t3 := copy($t0)
   1: $t4 := borrow_global<SmokeTest::R>($t3)
-  2: r := $t4
-  3: $t5 := move(r)
+  2: $t1 := $t4
+  3: $t5 := move($t1)
   4: destroy($t5)
-  5: $t6 := copy(a)
+  5: $t6 := copy($t0)
   6: $t7 := borrow_global<SmokeTest::R>($t6)
-  7: r2 := $t7
-  8: $t8 := move(r2)
+  7: $t2 := $t7
+  8: $t8 := move($t2)
   9: destroy($t8)
  10: return ()
 }
 
 
 [variant baseline]
-fun SmokeTest::create_resource(sender: &signer) {
+fun SmokeTest::create_resource($t0|sender: &signer) {
      var $t1: &signer
      var $t2: u64
      var $t3: SmokeTest::R
-  0: $t1 := move(sender)
+  0: $t1 := move($t0)
   1: $t2 := 1
   2: $t3 := pack SmokeTest::R($t2)
   3: move_to<SmokeTest::R>($t3, $t1)
@@ -167,11 +167,11 @@ fun SmokeTest::create_resource(sender: &signer) {
 
 
 [variant baseline]
-fun SmokeTest::create_resoure_generic(sender: &signer) {
+fun SmokeTest::create_resoure_generic($t0|sender: &signer) {
      var $t1: &signer
      var $t2: u64
      var $t3: SmokeTest::G<u64>
-  0: $t1 := move(sender)
+  0: $t1 := move($t0)
   1: $t2 := 1
   2: $t3 := pack SmokeTest::G<u64>($t2)
   3: move_to<SmokeTest::G<u64>>($t3, $t1)
@@ -180,11 +180,11 @@ fun SmokeTest::create_resoure_generic(sender: &signer) {
 
 
 [variant baseline]
-fun SmokeTest::exists_resource(sender: &signer): bool {
+fun SmokeTest::exists_resource($t0|sender: &signer): bool {
      var $t1: &signer
      var $t2: address
      var $t3: bool
-  0: $t1 := move(sender)
+  0: $t1 := move($t0)
   1: $t2 := Signer::address_of($t1)
   2: $t3 := exists<SmokeTest::R>($t2)
   3: return $t3
@@ -192,28 +192,28 @@ fun SmokeTest::exists_resource(sender: &signer): bool {
 
 
 [variant baseline]
-fun SmokeTest::identity(a: SmokeTest::A, b: SmokeTest::B, c: SmokeTest::C): (SmokeTest::A, SmokeTest::B, SmokeTest::C) {
+fun SmokeTest::identity($t0|a: SmokeTest::A, $t1|b: SmokeTest::B, $t2|c: SmokeTest::C): (SmokeTest::A, SmokeTest::B, SmokeTest::C) {
      var $t3: SmokeTest::A
      var $t4: SmokeTest::B
      var $t5: SmokeTest::C
-  0: $t3 := move(a)
-  1: $t4 := move(b)
-  2: $t5 := move(c)
+  0: $t3 := move($t0)
+  1: $t4 := move($t1)
+  2: $t5 := move($t2)
   3: return ($t3, $t4, $t5)
 }
 
 
 [variant baseline]
-fun SmokeTest::move_from_addr(a: address) {
-     var r: SmokeTest::R
+fun SmokeTest::move_from_addr($t0|a: address) {
+     var $t1|r: SmokeTest::R
      var $t2: address
      var $t3: SmokeTest::R
      var $t4: SmokeTest::R
      var $t5: u64
-  0: $t2 := copy(a)
+  0: $t2 := copy($t0)
   1: $t3 := move_from<SmokeTest::R>($t2)
-  2: r := $t3
-  3: $t4 := move(r)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
   4: $t5 := unpack SmokeTest::R($t4)
   5: destroy($t5)
   6: return ()
@@ -221,9 +221,9 @@ fun SmokeTest::move_from_addr(a: address) {
 
 
 [variant baseline]
-fun SmokeTest::move_from_addr_to_sender(sender: &signer, a: address) {
-     var r: SmokeTest::R
-     var x: u64
+fun SmokeTest::move_from_addr_to_sender($t0|sender: &signer, $t1|a: address) {
+     var $t2|r: SmokeTest::R
+     var $t3|x: u64
      var $t4: address
      var $t5: SmokeTest::R
      var $t6: SmokeTest::R
@@ -231,14 +231,14 @@ fun SmokeTest::move_from_addr_to_sender(sender: &signer, a: address) {
      var $t8: &signer
      var $t9: u64
      var $t10: SmokeTest::R
-  0: $t4 := copy(a)
+  0: $t4 := copy($t1)
   1: $t5 := move_from<SmokeTest::R>($t4)
-  2: r := $t5
-  3: $t6 := move(r)
+  2: $t2 := $t5
+  3: $t6 := move($t2)
   4: $t7 := unpack SmokeTest::R($t6)
-  5: x := $t7
-  6: $t8 := move(sender)
-  7: $t9 := copy(x)
+  5: $t3 := $t7
+  6: $t8 := move($t0)
+  7: $t9 := copy($t3)
   8: $t10 := pack SmokeTest::R($t9)
   9: move_to<SmokeTest::R>($t10, $t8)
  10: return ()
@@ -246,21 +246,21 @@ fun SmokeTest::move_from_addr_to_sender(sender: &signer, a: address) {
 
 
 [variant baseline]
-fun SmokeTest::pack_A(a: address, va: u64): SmokeTest::A {
+fun SmokeTest::pack_A($t0|a: address, $t1|va: u64): SmokeTest::A {
      var $t2: address
      var $t3: u64
      var $t4: SmokeTest::A
-  0: $t2 := copy(a)
-  1: $t3 := copy(va)
+  0: $t2 := copy($t0)
+  1: $t3 := copy($t1)
   2: $t4 := pack SmokeTest::A($t2, $t3)
   3: return $t4
 }
 
 
 [variant baseline]
-fun SmokeTest::pack_B(a: address, va: u64, vb: u64): SmokeTest::B {
-     var var_a: SmokeTest::A
-     var var_b: SmokeTest::B
+fun SmokeTest::pack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): SmokeTest::B {
+     var $t3|var_a: SmokeTest::A
+     var $t4|var_b: SmokeTest::B
      var $t5: address
      var $t6: u64
      var $t7: SmokeTest::A
@@ -268,24 +268,24 @@ fun SmokeTest::pack_B(a: address, va: u64, vb: u64): SmokeTest::B {
      var $t9: SmokeTest::A
      var $t10: SmokeTest::B
      var $t11: SmokeTest::B
-  0: $t5 := copy(a)
-  1: $t6 := copy(va)
+  0: $t5 := copy($t0)
+  1: $t6 := copy($t1)
   2: $t7 := pack SmokeTest::A($t5, $t6)
-  3: var_a := $t7
-  4: $t8 := copy(vb)
-  5: $t9 := move(var_a)
+  3: $t3 := $t7
+  4: $t8 := copy($t2)
+  5: $t9 := move($t3)
   6: $t10 := pack SmokeTest::B($t8, $t9)
-  7: var_b := $t10
-  8: $t11 := move(var_b)
+  7: $t4 := $t10
+  8: $t11 := move($t4)
   9: return $t11
 }
 
 
 [variant baseline]
-fun SmokeTest::pack_C(a: address, va: u64, vb: u64, vc: u64): SmokeTest::C {
-     var var_a: SmokeTest::A
-     var var_b: SmokeTest::B
-     var var_c: SmokeTest::C
+fun SmokeTest::pack_C($t0|a: address, $t1|va: u64, $t2|vb: u64, $t3|vc: u64): SmokeTest::C {
+     var $t4|var_a: SmokeTest::A
+     var $t5|var_b: SmokeTest::B
+     var $t6|var_c: SmokeTest::C
      var $t7: address
      var $t8: u64
      var $t9: SmokeTest::A
@@ -296,30 +296,30 @@ fun SmokeTest::pack_C(a: address, va: u64, vb: u64, vc: u64): SmokeTest::C {
      var $t14: SmokeTest::B
      var $t15: SmokeTest::C
      var $t16: SmokeTest::C
-  0: $t7 := copy(a)
-  1: $t8 := copy(va)
+  0: $t7 := copy($t0)
+  1: $t8 := copy($t1)
   2: $t9 := pack SmokeTest::A($t7, $t8)
-  3: var_a := $t9
-  4: $t10 := copy(vb)
-  5: $t11 := move(var_a)
+  3: $t4 := $t9
+  4: $t10 := copy($t2)
+  5: $t11 := move($t4)
   6: $t12 := pack SmokeTest::B($t10, $t11)
-  7: var_b := $t12
-  8: $t13 := copy(vc)
-  9: $t14 := move(var_b)
+  7: $t5 := $t12
+  8: $t13 := copy($t3)
+  9: $t14 := move($t5)
  10: $t15 := pack SmokeTest::C($t13, $t14)
- 11: var_c := $t15
- 12: $t16 := move(var_c)
+ 11: $t6 := $t15
+ 12: $t16 := move($t6)
  13: return $t16
 }
 
 
 [variant baseline]
-fun SmokeTest::ref_A(a: address, b: bool): SmokeTest::A {
-     var b_val_ref: &u64
-     var b_var: u64
-     var tmp#$4: SmokeTest::A
-     var var_a: SmokeTest::A
-     var var_a_ref: &SmokeTest::A
+fun SmokeTest::ref_A($t0|a: address, $t1|b: bool): SmokeTest::A {
+     var $t2|b_val_ref: &u64
+     var $t3|b_var: u64
+     var $t4|tmp#$4: SmokeTest::A
+     var $t5|var_a: SmokeTest::A
+     var $t6|var_a_ref: &SmokeTest::A
      var $t7: bool
      var $t8: address
      var $t9: u64
@@ -338,34 +338,34 @@ fun SmokeTest::ref_A(a: address, b: bool): SmokeTest::A {
      var $t22: bool
      var $t23: u64
      var $t24: SmokeTest::A
-  0: $t7 := copy(b)
+  0: $t7 := copy($t1)
   1: if ($t7) goto L0 else goto L1
   2: L1:
   3: goto L2
   4: L0:
-  5: $t8 := copy(a)
+  5: $t8 := copy($t0)
   6: $t9 := 1
   7: $t10 := pack SmokeTest::A($t8, $t9)
-  8: tmp#$4 := $t10
+  8: $t4 := $t10
   9: goto L3
  10: L2:
- 11: $t11 := copy(a)
+ 11: $t11 := copy($t0)
  12: $t12 := 42
  13: $t13 := pack SmokeTest::A($t11, $t12)
- 14: tmp#$4 := $t13
+ 14: $t4 := $t13
  15: goto L3
  16: L3:
- 17: $t14 := move(tmp#$4)
- 18: var_a := $t14
- 19: $t15 := borrow_local(var_a)
- 20: var_a_ref := $t15
- 21: $t16 := move(var_a_ref)
+ 17: $t14 := move($t4)
+ 18: $t5 := $t14
+ 19: $t15 := borrow_local($t5)
+ 20: $t6 := $t15
+ 21: $t16 := move($t6)
  22: $t17 := borrow_field<SmokeTest::A>.val($t16)
- 23: b_val_ref := $t17
- 24: $t18 := move(b_val_ref)
+ 23: $t2 := $t17
+ 24: $t18 := move($t2)
  25: $t19 := read_ref($t18)
- 26: b_var := $t19
- 27: $t20 := copy(b_var)
+ 26: $t3 := $t19
+ 27: $t20 := copy($t3)
  28: $t21 := 42
  29: $t22 := !=($t20, $t21)
  30: if ($t22) goto L4 else goto L5
@@ -375,16 +375,16 @@ fun SmokeTest::ref_A(a: address, b: bool): SmokeTest::A {
  34: $t23 := 42
  35: abort($t23)
  36: L6:
- 37: $t24 := move(var_a)
+ 37: $t24 := move($t5)
  38: return $t24
 }
 
 
 [variant baseline]
-fun SmokeTest::unpack_A(a: address, va: u64): (address, u64) {
-     var aa: address
-     var v1: u64
-     var var_a: SmokeTest::A
+fun SmokeTest::unpack_A($t0|a: address, $t1|va: u64): (address, u64) {
+     var $t2|aa: address
+     var $t3|v1: u64
+     var $t4|var_a: SmokeTest::A
      var $t5: address
      var $t6: u64
      var $t7: SmokeTest::A
@@ -393,27 +393,27 @@ fun SmokeTest::unpack_A(a: address, va: u64): (address, u64) {
      var $t10: u64
      var $t11: address
      var $t12: u64
-  0: $t5 := copy(a)
-  1: $t6 := copy(va)
+  0: $t5 := copy($t0)
+  1: $t6 := copy($t1)
   2: $t7 := pack SmokeTest::A($t5, $t6)
-  3: var_a := $t7
-  4: $t8 := move(var_a)
+  3: $t4 := $t7
+  4: $t8 := move($t4)
   5: ($t9, $t10) := unpack SmokeTest::A($t8)
-  6: v1 := $t10
-  7: aa := $t9
-  8: $t11 := copy(aa)
-  9: $t12 := copy(v1)
+  6: $t3 := $t10
+  7: $t2 := $t9
+  8: $t11 := copy($t2)
+  9: $t12 := copy($t3)
  10: return ($t11, $t12)
 }
 
 
 [variant baseline]
-fun SmokeTest::unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
-     var aa: address
-     var v1: u64
-     var v2: u64
-     var var_a: SmokeTest::A
-     var var_b: SmokeTest::B
+fun SmokeTest::unpack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): (address, u64, u64) {
+     var $t3|aa: address
+     var $t4|v1: u64
+     var $t5|v2: u64
+     var $t6|var_a: SmokeTest::A
+     var $t7|var_b: SmokeTest::B
      var $t8: address
      var $t9: u64
      var $t10: SmokeTest::A
@@ -428,36 +428,36 @@ fun SmokeTest::unpack_B(a: address, va: u64, vb: u64): (address, u64, u64) {
      var $t19: address
      var $t20: u64
      var $t21: u64
-  0: $t8 := copy(a)
-  1: $t9 := copy(va)
+  0: $t8 := copy($t0)
+  1: $t9 := copy($t1)
   2: $t10 := pack SmokeTest::A($t8, $t9)
-  3: var_a := $t10
-  4: $t11 := copy(vb)
-  5: $t12 := move(var_a)
+  3: $t6 := $t10
+  4: $t11 := copy($t2)
+  5: $t12 := move($t6)
   6: $t13 := pack SmokeTest::B($t11, $t12)
-  7: var_b := $t13
-  8: $t14 := move(var_b)
+  7: $t7 := $t13
+  8: $t14 := move($t7)
   9: ($t15, $t16) := unpack SmokeTest::B($t14)
  10: ($t17, $t18) := unpack SmokeTest::A($t16)
- 11: v1 := $t18
- 12: aa := $t17
- 13: v2 := $t15
- 14: $t19 := copy(aa)
- 15: $t20 := copy(v1)
- 16: $t21 := copy(v2)
+ 11: $t4 := $t18
+ 12: $t3 := $t17
+ 13: $t5 := $t15
+ 14: $t19 := copy($t3)
+ 15: $t20 := copy($t4)
+ 16: $t21 := copy($t5)
  17: return ($t19, $t20, $t21)
 }
 
 
 [variant baseline]
-fun SmokeTest::unpack_C(a: address, va: u64, vb: u64, vc: u64): (address, u64, u64, u64) {
-     var aa: address
-     var v1: u64
-     var v2: u64
-     var v3: u64
-     var var_a: SmokeTest::A
-     var var_b: SmokeTest::B
-     var var_c: SmokeTest::C
+fun SmokeTest::unpack_C($t0|a: address, $t1|va: u64, $t2|vb: u64, $t3|vc: u64): (address, u64, u64, u64) {
+     var $t4|aa: address
+     var $t5|v1: u64
+     var $t6|v2: u64
+     var $t7|v3: u64
+     var $t8|var_a: SmokeTest::A
+     var $t9|var_b: SmokeTest::B
+     var $t10|var_c: SmokeTest::C
      var $t11: address
      var $t12: u64
      var $t13: SmokeTest::A
@@ -478,29 +478,29 @@ fun SmokeTest::unpack_C(a: address, va: u64, vb: u64, vc: u64): (address, u64, u
      var $t28: u64
      var $t29: u64
      var $t30: u64
-  0: $t11 := copy(a)
-  1: $t12 := copy(va)
+  0: $t11 := copy($t0)
+  1: $t12 := copy($t1)
   2: $t13 := pack SmokeTest::A($t11, $t12)
-  3: var_a := $t13
-  4: $t14 := copy(vb)
-  5: $t15 := move(var_a)
+  3: $t8 := $t13
+  4: $t14 := copy($t2)
+  5: $t15 := move($t8)
   6: $t16 := pack SmokeTest::B($t14, $t15)
-  7: var_b := $t16
-  8: $t17 := copy(vc)
-  9: $t18 := move(var_b)
+  7: $t9 := $t16
+  8: $t17 := copy($t3)
+  9: $t18 := move($t9)
  10: $t19 := pack SmokeTest::C($t17, $t18)
- 11: var_c := $t19
- 12: $t20 := move(var_c)
+ 11: $t10 := $t19
+ 12: $t20 := move($t10)
  13: ($t21, $t22) := unpack SmokeTest::C($t20)
  14: ($t23, $t24) := unpack SmokeTest::B($t22)
  15: ($t25, $t26) := unpack SmokeTest::A($t24)
- 16: v1 := $t26
- 17: aa := $t25
- 18: v2 := $t23
- 19: v3 := $t21
- 20: $t27 := copy(aa)
- 21: $t28 := copy(v1)
- 22: $t29 := copy(v2)
- 23: $t30 := copy(v3)
+ 16: $t5 := $t26
+ 17: $t4 := $t25
+ 18: $t6 := $t23
+ 19: $t7 := $t21
+ 20: $t27 := copy($t4)
+ 21: $t28 := copy($t5)
+ 22: $t29 := copy($t6)
+ 23: $t30 := copy($t7)
  24: return ($t27, $t28, $t29, $t30)
 }

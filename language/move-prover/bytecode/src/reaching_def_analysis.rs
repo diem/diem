@@ -10,11 +10,11 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{BorrowNode, Bytecode, Operation, TempIndex},
+    stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::model::FunctionEnv;
+use move_model::{ast::TempIndex, model::FunctionEnv};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 

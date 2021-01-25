@@ -1,8 +1,8 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun TestPackUnpack::call_private_violating_invariant(r: &mut TestPackUnpack::R) {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut TestPackUnpack::S
@@ -10,14 +10,14 @@ pub fun TestPackUnpack::call_private_violating_invariant(r: &mut TestPackUnpack:
      var $t6: u64
      var $t7: &mut TestPackUnpack::S
      var $t8: &mut u64
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
-  2: s := $t3
-  3: $t4 := copy(s)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
   4: $t5 := 0
   5: TestPackUnpack::private_update_value($t4, $t5)
   6: $t6 := 1
-  7: $t7 := move(s)
+  7: $t7 := move($t1)
   8: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
   9: write_ref($t8, $t6)
  10: return ()
@@ -25,8 +25,8 @@ pub fun TestPackUnpack::call_private_violating_invariant(r: &mut TestPackUnpack:
 
 
 [variant baseline]
-pub fun TestPackUnpack::call_public_violating_invariant_incorrect(r: &mut TestPackUnpack::R) {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut TestPackUnpack::S
@@ -34,14 +34,14 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect(r: &mut TestPa
      var $t6: u64
      var $t7: &mut TestPackUnpack::S
      var $t8: &mut u64
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
-  2: s := $t3
-  3: $t4 := copy(s)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
   4: $t5 := 0
   5: TestPackUnpack::public_update_value($t4, $t5)
   6: $t6 := 1
-  7: $t7 := move(s)
+  7: $t7 := move($t1)
   8: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
   9: write_ref($t8, $t6)
  10: return ()
@@ -61,28 +61,28 @@ pub fun TestPackUnpack::create(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::destroy(r: TestPackUnpack::R): u64 {
-     var nested: TestPackUnpack::S
-     var value: u64
+pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
+     var $t1|nested: TestPackUnpack::S
+     var $t2|value: u64
      var $t3: TestPackUnpack::R
      var $t4: TestPackUnpack::S
      var $t5: TestPackUnpack::S
      var $t6: u64
      var $t7: u64
-  0: $t3 := move(r)
+  0: $t3 := move($t0)
   1: $t4 := unpack TestPackUnpack::R($t3)
-  2: nested := $t4
-  3: $t5 := move(nested)
+  2: $t1 := $t4
+  3: $t5 := move($t1)
   4: $t6 := unpack TestPackUnpack::S($t5)
-  5: value := $t6
-  6: $t7 := copy(value)
+  5: $t2 := $t6
+  6: $t7 := copy($t2)
   7: return $t7
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::extract_and_update(r: TestPackUnpack::R): TestPackUnpack::S {
-     var nested: TestPackUnpack::S
+pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
+     var $t1|nested: TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: TestPackUnpack::S
      var $t4: &TestPackUnpack::S
@@ -93,28 +93,28 @@ pub fun TestPackUnpack::extract_and_update(r: TestPackUnpack::R): TestPackUnpack
      var $t9: &mut TestPackUnpack::S
      var $t10: &mut u64
      var $t11: TestPackUnpack::S
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := unpack TestPackUnpack::R($t2)
-  2: nested := $t3
-  3: $t4 := borrow_local(nested)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
   4: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
   5: $t6 := read_ref($t5)
   6: $t7 := 3
   7: $t8 := +($t6, $t7)
-  8: $t9 := borrow_local(nested)
+  8: $t9 := borrow_local($t1)
   9: $t10 := borrow_field<TestPackUnpack::S>.value($t9)
  10: write_ref($t10, $t8)
- 11: $t11 := move(nested)
+ 11: $t11 := move($t1)
  12: return $t11
 }
 
 
 [variant baseline]
-fun TestPackUnpack::get_value_ref(r: &mut TestPackUnpack::R): &mut u64 {
+fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): &mut u64 {
      var $t1: &mut TestPackUnpack::R
      var $t2: &mut TestPackUnpack::S
      var $t3: &mut u64
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<TestPackUnpack::R>.nested($t1)
   2: $t3 := borrow_field<TestPackUnpack::S>.value($t2)
   3: return $t3
@@ -122,7 +122,7 @@ fun TestPackUnpack::get_value_ref(r: &mut TestPackUnpack::R): &mut u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged(r1: &mut TestPackUnpack::R, r2: &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: &mut TestPackUnpack::R
      var $t3: &TestPackUnpack::S
      var $t4: &u64
@@ -141,23 +141,23 @@ pub fun TestPackUnpack::move_ref_unchanged(r1: &mut TestPackUnpack::R, r2: &mut 
      var $t17: &mut TestPackUnpack::R
      var $t18: &mut TestPackUnpack::S
      var $t19: &mut u64
-  0: $t2 := copy(r2)
+  0: $t2 := copy($t1)
   1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
   2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
   3: $t5 := read_ref($t4)
-  4: $t6 := copy(r1)
+  4: $t6 := copy($t0)
   5: $t7 := borrow_field<TestPackUnpack::R>.nested($t6)
   6: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
   7: $t9 := read_ref($t8)
   8: $t10 := +($t5, $t9)
   9: $t11 := 1
  10: $t12 := -($t10, $t11)
- 11: $t13 := move(r2)
+ 11: $t13 := move($t1)
  12: $t14 := borrow_field<TestPackUnpack::R>.nested($t13)
  13: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
  14: write_ref($t15, $t12)
  15: $t16 := 1
- 16: $t17 := move(r1)
+ 16: $t17 := move($t0)
  17: $t18 := borrow_field<TestPackUnpack::R>.nested($t17)
  18: $t19 := borrow_field<TestPackUnpack::S>.value($t18)
  19: write_ref($t19, $t16)
@@ -166,7 +166,7 @@ pub fun TestPackUnpack::move_ref_unchanged(r1: &mut TestPackUnpack::R, r2: &mut 
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: &mut TestPackUnpack::R, r2: &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: &mut TestPackUnpack::R
      var $t3: &TestPackUnpack::S
      var $t4: &u64
@@ -183,21 +183,21 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: &mut TestPack
      var $t15: &mut TestPackUnpack::R
      var $t16: &mut TestPackUnpack::S
      var $t17: &mut u64
-  0: $t2 := copy(r2)
+  0: $t2 := copy($t1)
   1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
   2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
   3: $t5 := read_ref($t4)
-  4: $t6 := copy(r1)
+  4: $t6 := copy($t0)
   5: $t7 := borrow_field<TestPackUnpack::R>.nested($t6)
   6: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
   7: $t9 := read_ref($t8)
   8: $t10 := +($t5, $t9)
-  9: $t11 := move(r2)
+  9: $t11 := move($t1)
  10: $t12 := borrow_field<TestPackUnpack::R>.nested($t11)
  11: $t13 := borrow_field<TestPackUnpack::S>.value($t12)
  12: write_ref($t13, $t10)
  13: $t14 := 0
- 14: $t15 := move(r1)
+ 14: $t15 := move($t0)
  15: $t16 := borrow_field<TestPackUnpack::R>.nested($t15)
  16: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
  17: write_ref($t17, $t14)
@@ -206,11 +206,11 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: &mut TestPack
 
 
 [variant baseline]
-fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: &mut TestPackUnpack::S): u64 {
+fun TestPackUnpack::private_pass_value_violating_invariant_incorrect($t0|s: &mut TestPackUnpack::S): u64 {
      var $t1: &mut TestPackUnpack::S
      var $t2: &TestPackUnpack::S
      var $t3: u64
-  0: $t1 := move(s)
+  0: $t1 := move($t0)
   1: $t2 := freeze_ref($t1)
   2: $t3 := TestPackUnpack::read_S_from_immutable($t2)
   3: return $t3
@@ -218,11 +218,11 @@ fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: &mut Tes
 
 
 [variant baseline]
-fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: &mut TestPackUnpack::R): u64 {
+fun TestPackUnpack::private_select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1: &mut TestPackUnpack::R
      var $t2: &TestPackUnpack::S
      var $t3: u64
-  0: $t1 := move(r)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<TestPackUnpack::R>.nested($t1)
   2: $t3 := TestPackUnpack::read_S_from_immutable($t2)
   3: return $t3
@@ -230,12 +230,12 @@ fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: &mut T
 
 
 [variant baseline]
-fun TestPackUnpack::private_update_value(s: &mut TestPackUnpack::S, v: u64) {
+fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut u64
-  0: $t2 := copy(v)
-  1: $t3 := move(s)
+  0: $t2 := copy($t1)
+  1: $t3 := move($t0)
   2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
   3: write_ref($t4, $t2)
   4: return ()
@@ -243,12 +243,12 @@ fun TestPackUnpack::private_update_value(s: &mut TestPackUnpack::S, v: u64) {
 
 
 [variant baseline]
-pub fun TestPackUnpack::public_update_value(s: &mut TestPackUnpack::S, v: u64) {
+pub fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut u64
-  0: $t2 := copy(v)
-  1: $t3 := move(s)
+  0: $t2 := copy($t1)
+  1: $t3 := move($t0)
   2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
   3: write_ref($t4, $t2)
   4: return ()
@@ -256,11 +256,11 @@ pub fun TestPackUnpack::public_update_value(s: &mut TestPackUnpack::S, v: u64) {
 
 
 [variant baseline]
-fun TestPackUnpack::read_S_from_immutable(s: &TestPackUnpack::S): u64 {
+fun TestPackUnpack::read_S_from_immutable($t0|s: &TestPackUnpack::S): u64 {
      var $t1: &TestPackUnpack::S
      var $t2: &u64
      var $t3: u64
-  0: $t1 := move(s)
+  0: $t1 := move($t0)
   1: $t2 := borrow_field<TestPackUnpack::S>.value($t1)
   2: $t3 := read_ref($t2)
   3: return $t3
@@ -268,21 +268,21 @@ fun TestPackUnpack::read_S_from_immutable(s: &TestPackUnpack::S): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::read_ref_unchanged(r: &mut TestPackUnpack::R): u64 {
-     var nested: &mut TestPackUnpack::S
-     var tmp#$2: &mut TestPackUnpack::R
+pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
+     var $t1|nested: &mut TestPackUnpack::S
+     var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
      var $t5: &mut TestPackUnpack::S
      var $t6: &mut TestPackUnpack::S
      var $t7: &u64
      var $t8: u64
-  0: $t3 := move(r)
-  1: tmp#$2 := $t3
-  2: $t4 := move(tmp#$2)
+  0: $t3 := move($t0)
+  1: $t2 := $t3
+  2: $t4 := move($t2)
   3: $t5 := borrow_field<TestPackUnpack::R>.nested($t4)
-  4: nested := $t5
-  5: $t6 := move(nested)
+  4: $t1 := $t5
+  5: $t6 := move($t1)
   6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
   7: $t8 := read_ref($t7)
   8: return $t8
@@ -290,8 +290,8 @@ pub fun TestPackUnpack::read_ref_unchanged(r: &mut TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: &mut TestPackUnpack::R): u64 {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
      var $t4: u64
@@ -300,14 +300,14 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: &mut TestP
      var $t7: &mut TestPackUnpack::S
      var $t8: &TestPackUnpack::S
      var $t9: u64
-  0: $t2 := move(r)
+  0: $t2 := move($t0)
   1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
-  2: s := $t3
+  2: $t1 := $t3
   3: $t4 := 0
-  4: $t5 := copy(s)
+  4: $t5 := copy($t1)
   5: $t6 := borrow_field<TestPackUnpack::S>.value($t5)
   6: write_ref($t6, $t4)
-  7: $t7 := move(s)
+  7: $t7 := move($t1)
   8: $t8 := freeze_ref($t7)
   9: $t9 := TestPackUnpack::read_S_from_immutable($t8)
  10: return $t9
@@ -315,9 +315,9 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: &mut TestP
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_ref_changed(r: &mut TestPackUnpack::R): u64 {
-     var nested: &mut TestPackUnpack::S
-     var tmp#$2: &mut TestPackUnpack::R
+pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
+     var $t1|nested: &mut TestPackUnpack::S
+     var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
      var $t5: &mut TestPackUnpack::S
@@ -331,20 +331,20 @@ pub fun TestPackUnpack::update_ref_changed(r: &mut TestPackUnpack::R): u64 {
      var $t13: &mut TestPackUnpack::S
      var $t14: &u64
      var $t15: u64
-  0: $t3 := move(r)
-  1: tmp#$2 := $t3
-  2: $t4 := move(tmp#$2)
+  0: $t3 := move($t0)
+  1: $t2 := $t3
+  2: $t4 := move($t2)
   3: $t5 := borrow_field<TestPackUnpack::R>.nested($t4)
-  4: nested := $t5
-  5: $t6 := copy(nested)
+  4: $t1 := $t5
+  5: $t6 := copy($t1)
   6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
   7: $t8 := read_ref($t7)
   8: $t9 := 2
   9: $t10 := +($t8, $t9)
- 10: $t11 := copy(nested)
+ 10: $t11 := copy($t1)
  11: $t12 := borrow_field<TestPackUnpack::S>.value($t11)
  12: write_ref($t12, $t10)
- 13: $t13 := move(nested)
+ 13: $t13 := move($t1)
  14: $t14 := borrow_field<TestPackUnpack::S>.value($t13)
  15: $t15 := read_ref($t14)
  16: return $t15
@@ -353,8 +353,8 @@ pub fun TestPackUnpack::update_ref_changed(r: &mut TestPackUnpack::R): u64 {
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: TestPackUnpack::R
@@ -366,22 +366,22 @@ pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
   2: $t4 := pack TestPackUnpack::R($t3)
-  3: r := $t4
-  4: $t5 := borrow_local(r)
+  3: $t0 := $t4
+  4: $t5 := borrow_local($t0)
   5: $t6 := TestPackUnpack::get_value_ref($t5)
-  6: v_ref := $t6
+  6: $t1 := $t6
   7: $t7 := 2
-  8: $t8 := move(v_ref)
+  8: $t8 := move($t1)
   9: write_ref($t8, $t7)
- 10: $t9 := move(r)
+ 10: $t9 := move($t0)
  11: return $t9
 }
 
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: TestPackUnpack::R
@@ -393,22 +393,22 @@ pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackU
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
   2: $t4 := pack TestPackUnpack::R($t3)
-  3: r := $t4
-  4: $t5 := borrow_local(r)
+  3: $t0 := $t4
+  4: $t5 := borrow_local($t0)
   5: $t6 := TestPackUnpack::get_value_ref($t5)
-  6: v_ref := $t6
+  6: $t1 := $t6
   7: $t7 := 0
-  8: $t8 := move(v_ref)
+  8: $t8 := move($t1)
   9: write_ref($t8, $t7)
- 10: $t9 := move(r)
+ 10: $t9 := move($t0)
  11: return $t9
 }
 
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: TestPackUnpack::R
@@ -420,139 +420,139 @@ pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack:
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
   2: $t4 := pack TestPackUnpack::R($t3)
-  3: r := $t4
-  4: $t5 := borrow_local(r)
+  3: $t0 := $t4
+  4: $t5 := borrow_local($t0)
   5: $t6 := TestPackUnpack::get_value_ref($t5)
-  6: v_ref := $t6
+  6: $t1 := $t6
   7: $t7 := 1
-  8: $t8 := move(v_ref)
+  8: $t8 := move($t1)
   9: write_ref($t8, $t7)
- 10: $t9 := move(r)
+ 10: $t9 := move($t0)
  11: return $t9
 }
 
 ============ after pipeline `borrow` ================
 
 [variant baseline]
-pub fun TestPackUnpack::call_private_violating_invariant(r: TestPackUnpack::R): TestPackUnpack::R {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::call_private_violating_invariant($t0|r: TestPackUnpack::R): TestPackUnpack::R {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
      var $t4: u64
      var $t5: TestPackUnpack::S
      var $t6: u64
      var $t7: &mut u64
-     // live_nodes: LocalRoot(r)
-  0: $t2 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t2 := move($t0)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t3 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), Reference($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t2) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t2)}
-  2: s := borrow_field<TestPackUnpack::R>.nested($t3)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  2: $t1 := borrow_field<TestPackUnpack::R>.nested($t3)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   3: $t4 := 0
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  4: $t5 := read_ref(s)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  4: $t5 := read_ref($t1)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   5: $t5 := TestPackUnpack::private_update_value($t5, $t4)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  6: write_ref(s, $t5)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  6: write_ref($t1, $t5)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   7: $t6 := 1
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  8: $t7 := borrow_field<TestPackUnpack::S>.value(s)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  8: $t7 := borrow_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t2), Reference($t7)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t7)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t7)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference($t1)}
   9: write_ref($t7, $t6)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t7)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t7)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference($t1)}
  10: return $t2
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::call_public_violating_invariant_incorrect(r: TestPackUnpack::R): TestPackUnpack::R {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: TestPackUnpack::R): TestPackUnpack::R {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
      var $t4: u64
      var $t5: TestPackUnpack::S
      var $t6: u64
      var $t7: &mut u64
-     // live_nodes: LocalRoot(r)
-  0: $t2 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t2 := move($t0)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t3 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), Reference($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t2) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t2)}
-  2: s := borrow_field<TestPackUnpack::R>.nested($t3)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  2: $t1 := borrow_field<TestPackUnpack::R>.nested($t3)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   3: $t4 := 0
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  4: $t5 := read_ref(s)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  4: $t5 := read_ref($t1)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   5: $t5 := TestPackUnpack::public_update_value($t5, $t4)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  6: write_ref(s, $t5)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  6: write_ref($t1, $t5)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   7: $t6 := 1
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  8: $t7 := borrow_field<TestPackUnpack::S>.value(s)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  8: $t7 := borrow_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t2), Reference($t7)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t7)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t7)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference($t1)}
   9: write_ref($t7, $t6)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t7)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t7)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t7) -> {Reference($t1)}
  10: return $t2
 }
 
@@ -570,96 +570,96 @@ pub fun TestPackUnpack::create(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::destroy(r: TestPackUnpack::R): u64 {
-     var nested: TestPackUnpack::S
-     var value: u64
+pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
+     var $t1|nested: TestPackUnpack::S
+     var $t2|value: u64
      var $t3: TestPackUnpack::R
-     // live_nodes: LocalRoot(r)
-  0: $t3 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t3 := move($t0)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
-  1: nested := unpack TestPackUnpack::R($t3)
+     // moved_nodes: LocalRoot($t0)
+  1: $t1 := unpack TestPackUnpack::R($t3)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
-  2: value := unpack TestPackUnpack::S(nested)
+     // moved_nodes: LocalRoot($t0)
+  2: $t2 := unpack TestPackUnpack::S($t1)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
-  3: return value
+     // moved_nodes: LocalRoot($t0)
+  3: return $t2
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::extract_and_update(r: TestPackUnpack::R): TestPackUnpack::S {
-     var nested: TestPackUnpack::S
+pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
+     var $t1|nested: TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: u64
      var $t4: u64
      var $t5: u64
      var $t6: &mut TestPackUnpack::S
      var $t7: &mut u64
-     // live_nodes: LocalRoot(r)
-  0: $t2 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t2 := move($t0)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-  1: nested := unpack TestPackUnpack::R($t2)
+     // moved_nodes: LocalRoot($t0)
+  1: $t1 := unpack TestPackUnpack::R($t2)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-  2: $t3 := get_field<TestPackUnpack::S>.value(nested)
+     // moved_nodes: LocalRoot($t0)
+  2: $t3 := get_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   3: $t4 := 3
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   4: $t5 := +($t3, $t4)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-  5: $t6 := borrow_local(nested)
+     // moved_nodes: LocalRoot($t0)
+  5: $t6 := borrow_local($t1)
      // live_nodes: LocalRoot($t2), Reference($t6)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot(nested) -> {Reference($t6)}
-     // borrows_from: Reference($t6) -> {LocalRoot(nested)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t1) -> {Reference($t6)}
+     // borrows_from: Reference($t6) -> {LocalRoot($t1)}
   6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
      // live_nodes: LocalRoot($t2), Reference($t7)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot(nested) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)}
-     // borrows_from: Reference($t6) -> {LocalRoot(nested)}, Reference($t7) -> {Reference($t6)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t1) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)}
+     // borrows_from: Reference($t6) -> {LocalRoot($t1)}, Reference($t7) -> {Reference($t6)}
   7: write_ref($t7, $t5)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot(nested) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)}
-     // borrows_from: Reference($t6) -> {LocalRoot(nested)}, Reference($t7) -> {Reference($t6)}
-  8: return nested
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t1) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)}
+     // borrows_from: Reference($t6) -> {LocalRoot($t1)}, Reference($t7) -> {Reference($t6)}
+  8: return $t1
 }
 
 
 [variant baseline]
-fun TestPackUnpack::get_value_ref(r: TestPackUnpack::R): (&mut u64, TestPackUnpack::R) {
+fun TestPackUnpack::get_value_ref($t0|r: TestPackUnpack::R): (&mut u64, TestPackUnpack::R) {
      var $t1: TestPackUnpack::R
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut u64
-     // live_nodes: LocalRoot(r)
-     // unchecked_nodes: LocalRoot(r)
-  0: $t1 := move(r)
+     // live_nodes: LocalRoot($t0)
+     // unchecked_nodes: LocalRoot($t0)
+  0: $t1 := move($t0)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t2 := borrow_local($t1)
      // live_nodes: LocalRoot($t1), Reference($t2)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   2: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
      // live_nodes: LocalRoot($t1), Reference($t3)
      // unchecked_nodes: LocalRoot($t1), Reference($t2), Reference($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}, Reference($t2) -> {Reference($t3)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}, Reference($t3) -> {Reference($t2)}
   3: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
      // live_nodes: LocalRoot($t1), Reference($t4)
      // unchecked_nodes: LocalRoot($t1), Reference($t2), Reference($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}, Reference($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t4)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}, Reference($t3) -> {Reference($t2)}, Reference($t4) -> {Reference($t3)}
   4: return ($t4, $t1)
@@ -667,7 +667,7 @@ fun TestPackUnpack::get_value_ref(r: TestPackUnpack::R): (&mut u64, TestPackUnpa
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged(r1: TestPackUnpack::R, r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged($t0|r1: TestPackUnpack::R, $t1|r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
      var $t2: TestPackUnpack::R
      var $t3: TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
@@ -684,91 +684,91 @@ pub fun TestPackUnpack::move_ref_unchanged(r1: TestPackUnpack::R, r2: TestPackUn
      var $t15: u64
      var $t16: &mut TestPackUnpack::S
      var $t17: &mut u64
-     // live_nodes: LocalRoot(r1), LocalRoot(r2)
-  0: $t2 := move(r1)
-     // live_nodes: LocalRoot(r2), LocalRoot($t2)
-     // moved_nodes: LocalRoot(r1)
-  1: $t3 := move(r2)
+     // live_nodes: LocalRoot($t0), LocalRoot($t1)
+  0: $t2 := move($t0)
+     // live_nodes: LocalRoot($t1), LocalRoot($t2)
+     // moved_nodes: LocalRoot($t0)
+  1: $t3 := move($t1)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
   2: $t4 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}
   3: $t5 := borrow_local($t3)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   4: $t6 := get_field<TestPackUnpack::R>.nested($t5)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   5: $t7 := get_field<TestPackUnpack::S>.value($t6)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   6: $t8 := get_field<TestPackUnpack::R>.nested($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   7: $t9 := get_field<TestPackUnpack::S>.value($t8)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   8: $t10 := +($t7, $t9)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   9: $t11 := 1
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
  10: $t12 := -($t10, $t11)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
  11: $t13 := borrow_field<TestPackUnpack::R>.nested($t5)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t13)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t13)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}
  12: $t14 := borrow_field<TestPackUnpack::S>.value($t13)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t14)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}
  13: write_ref($t14, $t12)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}
  14: $t15 := 1
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}
  15: $t16 := borrow_field<TestPackUnpack::R>.nested($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t16)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t16)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}, Reference($t16) -> {Reference($t4)}
  16: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t17)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t16)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}, Reference($t16) -> {Reference($t17)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}, Reference($t16) -> {Reference($t4)}, Reference($t17) -> {Reference($t16)}
  17: write_ref($t17, $t15)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t16)}, Reference($t5) -> {Reference($t13)}, Reference($t13) -> {Reference($t14)}, Reference($t16) -> {Reference($t17)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t13) -> {Reference($t5)}, Reference($t14) -> {Reference($t13)}, Reference($t16) -> {Reference($t4)}, Reference($t17) -> {Reference($t16)}
  18: return ($t2, $t3)
@@ -776,7 +776,7 @@ pub fun TestPackUnpack::move_ref_unchanged(r1: TestPackUnpack::R, r2: TestPackUn
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: TestPackUnpack::R, r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: TestPackUnpack::R, $t1|r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
      var $t2: TestPackUnpack::R
      var $t3: TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
@@ -791,81 +791,81 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: TestPackUnpac
      var $t13: u64
      var $t14: &mut TestPackUnpack::S
      var $t15: &mut u64
-     // live_nodes: LocalRoot(r1), LocalRoot(r2)
-  0: $t2 := move(r1)
-     // live_nodes: LocalRoot(r2), LocalRoot($t2)
-     // moved_nodes: LocalRoot(r1)
-  1: $t3 := move(r2)
+     // live_nodes: LocalRoot($t0), LocalRoot($t1)
+  0: $t2 := move($t0)
+     // live_nodes: LocalRoot($t1), LocalRoot($t2)
+     // moved_nodes: LocalRoot($t0)
+  1: $t3 := move($t1)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
   2: $t4 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}
   3: $t5 := borrow_local($t3)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   4: $t6 := get_field<TestPackUnpack::R>.nested($t5)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   5: $t7 := get_field<TestPackUnpack::S>.value($t6)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   6: $t8 := get_field<TestPackUnpack::R>.nested($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   7: $t9 := get_field<TestPackUnpack::S>.value($t8)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   8: $t10 := +($t7, $t9)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}
   9: $t11 := borrow_field<TestPackUnpack::R>.nested($t5)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t11)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t11)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}
  10: $t12 := borrow_field<TestPackUnpack::S>.value($t11)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4), Reference($t12)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}
  11: write_ref($t12, $t10)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}
  12: $t13 := 0
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}
  13: $t14 := borrow_field<TestPackUnpack::R>.nested($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t14)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t14)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}, Reference($t14) -> {Reference($t4)}
  14: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t15)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t14)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}, Reference($t14) -> {Reference($t15)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}, Reference($t14) -> {Reference($t4)}, Reference($t15) -> {Reference($t14)}
  15: write_ref($t15, $t13)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(r1), LocalRoot(r2)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, LocalRoot($t3) -> {Reference($t5)}, Reference($t4) -> {Reference($t14)}, Reference($t5) -> {Reference($t11)}, Reference($t11) -> {Reference($t12)}, Reference($t14) -> {Reference($t15)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {LocalRoot($t3)}, Reference($t11) -> {Reference($t5)}, Reference($t12) -> {Reference($t11)}, Reference($t14) -> {Reference($t4)}, Reference($t15) -> {Reference($t14)}
  16: return ($t2, $t3)
@@ -873,33 +873,33 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: TestPackUnpac
 
 
 [variant baseline]
-fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: TestPackUnpack::S): (u64, TestPackUnpack::S) {
+fun TestPackUnpack::private_pass_value_violating_invariant_incorrect($t0|s: TestPackUnpack::S): (u64, TestPackUnpack::S) {
      var $t1: TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: TestPackUnpack::S
      var $t4: u64
-     // live_nodes: LocalRoot(s)
-     // unchecked_nodes: LocalRoot(s)
-  0: $t1 := move(s)
+     // live_nodes: LocalRoot($t0)
+     // unchecked_nodes: LocalRoot($t0)
+  0: $t1 := move($t0)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
   1: $t2 := borrow_local($t1)
      // live_nodes: LocalRoot($t1), Reference($t2)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   2: $t3 := read_ref($t2)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   3: $t4 := TestPackUnpack::read_S_from_immutable($t3)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   4: return ($t4, $t1)
@@ -907,33 +907,33 @@ fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: TestPack
 
 
 [variant baseline]
-fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+fun TestPackUnpack::private_select_value_violating_invariant_incorrect($t0|r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
      var $t1: TestPackUnpack::R
      var $t2: &mut TestPackUnpack::R
      var $t3: TestPackUnpack::S
      var $t4: u64
-     // live_nodes: LocalRoot(r)
-     // unchecked_nodes: LocalRoot(r)
-  0: $t1 := move(r)
+     // live_nodes: LocalRoot($t0)
+     // unchecked_nodes: LocalRoot($t0)
+  0: $t1 := move($t0)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t2 := borrow_local($t1)
      // live_nodes: LocalRoot($t1), Reference($t2)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   2: $t3 := get_field<TestPackUnpack::R>.nested($t2)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   3: $t4 := TestPackUnpack::read_S_from_immutable($t3)
      // live_nodes: LocalRoot($t1)
      // unchecked_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
      // borrows_from: Reference($t2) -> {LocalRoot($t1)}
   4: return ($t4, $t1)
@@ -941,37 +941,37 @@ fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: TestPa
 
 
 [variant baseline]
-fun TestPackUnpack::private_update_value(s: TestPackUnpack::S, v: u64): TestPackUnpack::S {
+fun TestPackUnpack::private_update_value($t0|s: TestPackUnpack::S, $t1|v: u64): TestPackUnpack::S {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: &mut TestPackUnpack::S
      var $t5: &mut u64
-     // live_nodes: LocalRoot(s), LocalRoot(v)
-     // unchecked_nodes: LocalRoot(s)
-  0: $t2 := move(s)
-     // live_nodes: LocalRoot(v), LocalRoot($t2)
+     // live_nodes: LocalRoot($t0), LocalRoot($t1)
+     // unchecked_nodes: LocalRoot($t0)
+  0: $t2 := move($t0)
+     // live_nodes: LocalRoot($t1), LocalRoot($t2)
      // unchecked_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(s)
-  1: $t3 := move(v)
+     // moved_nodes: LocalRoot($t0)
+  1: $t3 := move($t1)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
      // unchecked_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
   2: $t4 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
      // unchecked_nodes: LocalRoot($t2), Reference($t4)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}
   3: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t5)
      // unchecked_nodes: LocalRoot($t2), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, Reference($t4) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t4)}
   4: write_ref($t5, $t3)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
      // unchecked_nodes: LocalRoot($t2), Reference($t4), Reference($t5)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, Reference($t4) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t4)}
   5: return $t2
@@ -979,31 +979,31 @@ fun TestPackUnpack::private_update_value(s: TestPackUnpack::S, v: u64): TestPack
 
 
 [variant baseline]
-pub fun TestPackUnpack::public_update_value(s: TestPackUnpack::S, v: u64): TestPackUnpack::S {
+pub fun TestPackUnpack::public_update_value($t0|s: TestPackUnpack::S, $t1|v: u64): TestPackUnpack::S {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: &mut TestPackUnpack::S
      var $t5: &mut u64
-     // live_nodes: LocalRoot(s), LocalRoot(v)
-  0: $t2 := move(s)
-     // live_nodes: LocalRoot(v), LocalRoot($t2)
-     // moved_nodes: LocalRoot(s)
-  1: $t3 := move(v)
+     // live_nodes: LocalRoot($t0), LocalRoot($t1)
+  0: $t2 := move($t0)
+     // live_nodes: LocalRoot($t1), LocalRoot($t2)
+     // moved_nodes: LocalRoot($t0)
+  1: $t3 := move($t1)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
   2: $t4 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}
   3: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
      // live_nodes: LocalRoot($t2), LocalRoot($t3), Reference($t5)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, Reference($t4) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t4)}
   4: write_ref($t5, $t3)
      // live_nodes: LocalRoot($t2), LocalRoot($t3)
-     // moved_nodes: LocalRoot(s), LocalRoot(v)
+     // moved_nodes: LocalRoot($t0), LocalRoot($t1)
      // borrowed_by: LocalRoot($t2) -> {Reference($t4)}, Reference($t4) -> {Reference($t5)}
      // borrows_from: Reference($t4) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t4)}
   5: return $t2
@@ -1011,106 +1011,106 @@ pub fun TestPackUnpack::public_update_value(s: TestPackUnpack::S, v: u64): TestP
 
 
 [variant baseline]
-fun TestPackUnpack::read_S_from_immutable(s: TestPackUnpack::S): u64 {
+fun TestPackUnpack::read_S_from_immutable($t0|s: TestPackUnpack::S): u64 {
      var $t1: TestPackUnpack::S
      var $t2: u64
-     // live_nodes: LocalRoot(s)
-  0: $t1 := move(s)
+     // live_nodes: LocalRoot($t0)
+  0: $t1 := move($t0)
      // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
   1: $t2 := get_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot(s)
+     // moved_nodes: LocalRoot($t0)
   2: return $t2
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::read_ref_unchanged(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
-     var nested: &mut TestPackUnpack::S
-     var tmp#$2: &mut TestPackUnpack::R
+pub fun TestPackUnpack::read_ref_unchanged($t0|r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var $t1|nested: &mut TestPackUnpack::S
+     var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
      var $t5: u64
-     // live_nodes: LocalRoot(r)
-  0: $t3 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t3 := move($t0)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t4 := borrow_local($t3)
      // live_nodes: LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t3) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t3)}
-  2: nested := borrow_field<TestPackUnpack::R>.nested($t4)
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
-  3: $t5 := get_field<TestPackUnpack::S>.value(nested)
+  2: $t1 := borrow_field<TestPackUnpack::R>.nested($t4)
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+  3: $t5 := get_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
   4: return ($t5, $t3)
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
-     var s: &mut TestPackUnpack::S
+pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var $t1|s: &mut TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
      var $t4: u64
      var $t5: &mut u64
      var $t6: TestPackUnpack::S
      var $t7: u64
-     // live_nodes: LocalRoot(r)
-  0: $t2 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t2 := move($t0)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t3 := borrow_local($t2)
      // live_nodes: LocalRoot($t2), Reference($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t2) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t2)}
-  2: s := borrow_field<TestPackUnpack::R>.nested($t3)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  2: $t1 := borrow_field<TestPackUnpack::R>.nested($t3)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
   3: $t4 := 0
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
-  4: $t5 := borrow_field<TestPackUnpack::S>.value(s)
-     // live_nodes: LocalRoot($t2), Reference(s), Reference($t5)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t5)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference(s)}
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}
+  4: $t5 := borrow_field<TestPackUnpack::S>.value($t1)
+     // live_nodes: LocalRoot($t2), Reference($t1), Reference($t5)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t5)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t1)}
   5: write_ref($t5, $t4)
-     // live_nodes: LocalRoot($t2), Reference(s)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t5)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference(s)}
-  6: $t6 := read_ref(s)
+     // live_nodes: LocalRoot($t2), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t5)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t1)}
+  6: $t6 := read_ref($t1)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t5)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t5)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t1)}
   7: $t7 := TestPackUnpack::read_S_from_immutable($t6)
      // live_nodes: LocalRoot($t2)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference(s) -> {Reference($t5)}, Reference($t3) -> {Reference(s)}
-     // borrows_from: Reference(s) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference(s)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t2) -> {Reference($t3)}, Reference($t1) -> {Reference($t5)}, Reference($t3) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t3)}, Reference($t3) -> {LocalRoot($t2)}, Reference($t5) -> {Reference($t1)}
   8: return ($t7, $t2)
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_ref_changed(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
-     var nested: &mut TestPackUnpack::S
-     var tmp#$2: &mut TestPackUnpack::R
+pub fun TestPackUnpack::update_ref_changed($t0|r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var $t1|nested: &mut TestPackUnpack::S
+     var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: TestPackUnpack::R
      var $t4: &mut TestPackUnpack::R
      var $t5: u64
@@ -1118,58 +1118,58 @@ pub fun TestPackUnpack::update_ref_changed(r: TestPackUnpack::R): (u64, TestPack
      var $t7: u64
      var $t8: &mut u64
      var $t9: u64
-     // live_nodes: LocalRoot(r)
-  0: $t3 := move(r)
+     // live_nodes: LocalRoot($t0)
+  0: $t3 := move($t0)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
   1: $t4 := borrow_local($t3)
      // live_nodes: LocalRoot($t3), Reference($t4)
-     // moved_nodes: LocalRoot(r)
+     // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t3) -> {Reference($t4)}
      // borrows_from: Reference($t4) -> {LocalRoot($t3)}
-  2: nested := borrow_field<TestPackUnpack::R>.nested($t4)
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
-  3: $t5 := get_field<TestPackUnpack::S>.value(nested)
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+  2: $t1 := borrow_field<TestPackUnpack::R>.nested($t4)
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+  3: $t5 := get_field<TestPackUnpack::S>.value($t1)
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
   4: $t6 := 2
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
   5: $t7 := +($t5, $t6)
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
-  6: $t8 := borrow_field<TestPackUnpack::S>.value(nested)
-     // live_nodes: LocalRoot($t3), Reference(nested), Reference($t8)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference(nested) -> {Reference($t8)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference(nested)}
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}
+  6: $t8 := borrow_field<TestPackUnpack::S>.value($t1)
+     // live_nodes: LocalRoot($t3), Reference($t1), Reference($t8)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t1) -> {Reference($t8)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference($t1)}
   7: write_ref($t8, $t7)
-     // live_nodes: LocalRoot($t3), Reference(nested)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference(nested) -> {Reference($t8)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference(nested)}
-  8: $t9 := get_field<TestPackUnpack::S>.value(nested)
+     // live_nodes: LocalRoot($t3), Reference($t1)
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t1) -> {Reference($t8)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference($t1)}
+  8: $t9 := get_field<TestPackUnpack::S>.value($t1)
      // live_nodes: LocalRoot($t3)
-     // moved_nodes: LocalRoot(r)
-     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference(nested) -> {Reference($t8)}, Reference($t4) -> {Reference(nested)}
-     // borrows_from: Reference(nested) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference(nested)}
+     // moved_nodes: LocalRoot($t0)
+     // borrowed_by: LocalRoot($t3) -> {Reference($t4)}, Reference($t1) -> {Reference($t8)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t3)}, Reference($t8) -> {Reference($t1)}
   9: return ($t9, $t3)
 }
 
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: &mut TestPackUnpack::R
@@ -1178,61 +1178,61 @@ pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
      var $t7: u64
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
-  2: r := pack TestPackUnpack::R($t3)
-  3: $t4 := borrow_local(r)
+  2: $t0 := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local($t0)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   4: $t5 := read_ref($t4)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   5: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   6: write_ref($t4, $t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   7: splice[0 -> $t4]($t6)
      // live_nodes: Reference($t6)
      // unchecked_nodes: Reference($t6)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}, Reference($t6) -> {Reference($t4)}
-  8: v_ref := $t6
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}, Reference($t6) -> {Reference($t4)}
+  8: $t1 := $t6
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
   9: $t7 := 2
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 10: write_ref(v_ref, $t7)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 10: write_ref($t1, $t7)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 11: return r
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 11: return $t0
 }
 
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: &mut TestPackUnpack::R
@@ -1241,61 +1241,61 @@ pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackU
      var $t7: u64
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
-  2: r := pack TestPackUnpack::R($t3)
-  3: $t4 := borrow_local(r)
+  2: $t0 := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local($t0)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   4: $t5 := read_ref($t4)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   5: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   6: write_ref($t4, $t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   7: splice[0 -> $t4]($t6)
      // live_nodes: Reference($t6)
      // unchecked_nodes: Reference($t6)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}, Reference($t6) -> {Reference($t4)}
-  8: v_ref := $t6
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}, Reference($t6) -> {Reference($t4)}
+  8: $t1 := $t6
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
   9: $t7 := 0
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 10: write_ref(v_ref, $t7)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 10: write_ref($t1, $t7)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 11: return r
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 11: return $t0
 }
 
 
 [variant baseline]
 pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
-     var r: TestPackUnpack::R
-     var v_ref: &mut u64
+     var $t0|r: TestPackUnpack::R
+     var $t1|v_ref: &mut u64
      var $t2: u64
      var $t3: TestPackUnpack::S
      var $t4: &mut TestPackUnpack::R
@@ -1304,52 +1304,52 @@ pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack:
      var $t7: u64
   0: $t2 := 1
   1: $t3 := pack TestPackUnpack::S($t2)
-  2: r := pack TestPackUnpack::R($t3)
-  3: $t4 := borrow_local(r)
+  2: $t0 := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local($t0)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   4: $t5 := read_ref($t4)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   5: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   6: write_ref($t4, $t5)
      // live_nodes: Reference($t4)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}
   7: splice[0 -> $t4]($t6)
      // live_nodes: Reference($t6)
      // unchecked_nodes: Reference($t6)
      // spliced_nodes: Reference($t4)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
-     // borrows_from: Reference($t4) -> {LocalRoot(r)}, Reference($t6) -> {Reference($t4)}
-  8: v_ref := $t6
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t6)}
+     // borrows_from: Reference($t4) -> {LocalRoot($t0)}, Reference($t6) -> {Reference($t4)}
+  8: $t1 := $t6
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
   9: $t7 := 1
-     // live_nodes: Reference(v_ref)
-     // unchecked_nodes: Reference(v_ref)
+     // live_nodes: Reference($t1)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 10: write_ref(v_ref, $t7)
-     // unchecked_nodes: Reference(v_ref)
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 10: write_ref($t1, $t7)
+     // unchecked_nodes: Reference($t1)
      // spliced_nodes: Reference($t4)
      // moved_nodes: Reference($t6)
-     // borrowed_by: LocalRoot(r) -> {Reference($t4)}, Reference($t4) -> {Reference(v_ref)}
-     // borrows_from: Reference(v_ref) -> {Reference($t4)}, Reference($t4) -> {LocalRoot(r)}
- 11: return r
+     // borrowed_by: LocalRoot($t0) -> {Reference($t4)}, Reference($t4) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {Reference($t4)}, Reference($t4) -> {LocalRoot($t0)}
+ 11: return $t0
 }

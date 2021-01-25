@@ -10,12 +10,12 @@ use crate::{
     livevar_analysis::LiveVarAnalysisProcessor,
     options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
     reaching_def_analysis::ReachingDefProcessor,
-    stackless_bytecode::{AssignKind, AttrId, Bytecode, Label, Operation, PropKind, TempIndex},
+    stackless_bytecode::{AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
 };
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{ConditionKind, Exp, LocalVarDecl, MemoryLabel},
+    ast::{ConditionKind, Exp, LocalVarDecl, MemoryLabel, TempIndex},
     model::{ConditionTag, FunId, FunctionEnv, Loc, ModuleId, QualifiedId, SpecVarId, StructId},
     pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA},
     symbol::Symbol,
@@ -514,7 +514,7 @@ struct SpecTranslator<'a, 'b> {
     /// The function for which we translate specifications.
     fun_env: &'b FunctionEnv<'a>,
     /// An optional substitution for parameters of the above function.
-    param_locals: Option<&'b [TempIndex]>,
+    param_substitution: Option<&'b [TempIndex]>,
     /// A substitution for return vales.
     ret_locals: &'b [TempIndex],
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
@@ -606,7 +606,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         let mut translator = SpecTranslator {
             builder,
             fun_env,
-            param_locals,
+            param_substitution: param_locals,
             ret_locals,
             shadowed: Default::default(),
             result: Default::default(),
@@ -671,31 +671,42 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         use ast::Operation::*;
         use Exp::*;
         match exp {
-            LocalVar(node_id, name) if !self.is_parameter(name) => {
+            Temporary(node_id, idx) => {
                 // Compute the effective name of parameter.
-                let (idx, mut_ret_opt) = self.get_param_index_and_ret_proxy(*name);
-                let effective_name = match (in_old, mut_ret_opt) {
+                let mut_ret_opt = self.get_ret_proxy(*idx);
+                let effective_idx = match (in_old, mut_ret_opt) {
                     (false, Some(mut_ret_idx)) => {
                         // We access a &mut outside of old context. Map it to the according return
                         // parameter. Notice the result of ret_locals[idx] needs to be interpreted
                         // in the builders function env, because we are substituting locals of the
                         // built function for parameters used by the function spec of this function.
-                        self.builder
-                            .fun_env
-                            .get_local_name(self.ret_locals[mut_ret_idx])
+                        self.ret_locals[mut_ret_idx]
                     }
                     _ => {
                         // We either access a regular parameter, or a &mut in old context, which is
                         // treated like a regular parameter.
-                        if let Some(map) = self.param_locals {
-                            // If there is parameter mapping, apply it.
-                            self.builder.fun_env.get_local_name(map[idx])
+                        if let Some(map) = self.param_substitution {
+                            map[*idx]
                         } else {
-                            *name
+                            *idx
                         }
                     }
                 };
-                LocalVar(*node_id, effective_name)
+                let node_id = if mut_ret_opt.is_some() {
+                    // Dereference the type stored with node_id. It might be still the original
+                    // &mut T, but now it is T.
+                    let ty = self
+                        .builder
+                        .global_env()
+                        .get_node_type(*node_id)
+                        .skip_reference()
+                        .clone();
+                    let loc = self.builder.global_env().get_node_loc(*node_id);
+                    self.builder.global_env().new_node(loc, ty)
+                } else {
+                    *node_id
+                };
+                Temporary(node_id, effective_idx)
             }
             SpecVar(node_id, mid, vid, None) if in_old => SpecVar(
                 *node_id,
@@ -796,42 +807,17 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         }
     }
 
-    /// Returns true if the local name is shadowed, i.e. declared in a block, lambda, or quant
-    /// instead of being a function parameter.
-    fn is_parameter(&self, name: &Symbol) -> bool {
-        self.shadowed.iter().any(|s| s.contains(name))
-    }
-
-    /// Get index of a parameter without having access to FunctionData (we do not have this access
-    /// because we also need to generate specs for called functions, not just the currently
-    /// processed one). Also, if the local is a &mut, return the proxy return parameter which
-    /// was introduced by memory instrumentation for it.
-    /// TODO(wrwg): to be removed after refactoring and once we switch to indices for locals,
-    ///   as well as made memory instrumentation explicit in rewritten specs.
-    fn get_param_index_and_ret_proxy(&self, name: Symbol) -> (TempIndex, Option<usize>) {
-        let mut mut_ref_count = 0;
-        for i in 0..self.fun_env.get_parameter_count() {
-            let is_mut_ref = self.fun_env.get_local_type(i).is_mutable_reference();
-            if name == self.fun_env.get_local_name(i) {
-                if is_mut_ref {
-                    return (i, Some(self.fun_env.get_return_count() + mut_ref_count));
-                } else {
-                    return (i, None);
-                }
-            }
-            if is_mut_ref {
-                mut_ref_count += 1;
-            }
+    /// If the parameter is a &mut, return the proxy return parameter which was introduced by
+    /// memory instrumentation for it.
+    fn get_ret_proxy(&self, idx: TempIndex) -> Option<usize> {
+        if self.fun_env.get_local_type(idx).is_mutable_reference() {
+            let mut_ref_pos = (0..idx)
+                .filter(|i| self.fun_env.get_local_type(*i).is_mutable_reference())
+                .count();
+            Some(self.fun_env.get_return_count() + mut_ref_pos)
+        } else {
+            None
         }
-        panic!(
-            "cannot determine index of parameter `{}` in `{}::{}`",
-            name.display(self.fun_env.symbol_pool()),
-            self.fun_env
-                .module_env
-                .get_name()
-                .display(self.fun_env.symbol_pool()),
-            self.fun_env.get_name().display(self.fun_env.symbol_pool()),
-        )
     }
 
     fn translate_exp_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {

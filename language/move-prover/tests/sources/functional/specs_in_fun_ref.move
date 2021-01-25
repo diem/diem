@@ -1,8 +1,8 @@
+// flag: --v2
 module TestAssertWithReferences {
     spec module {
         pragma verify = true;
     }
-
     // This function verifies.
     // Feature: An input parameter is mutated
     fun simple1(x: u64, y: u64) {

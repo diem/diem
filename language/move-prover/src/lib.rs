@@ -393,7 +393,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
     // Add function targets for all functions in the environment.
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
-            targets.add_target(&func_env)
+            targets.add_target(&func_env, options.trans_v2)
         }
     }
 

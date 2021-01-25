@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-fun TestSpecBlock::looping(x: u64): u64 {
+fun TestSpecBlock::looping($t0|x: u64): u64 {
      var $t1: u64
      var $t2: u64
      var $t3: bool
@@ -9,38 +9,38 @@ fun TestSpecBlock::looping(x: u64): u64 {
      var $t5: u64
      var $t6: u64
      var $t7: u64
-  0: spec at 592..616
+  0: assume Le($t0, 10)
   1: goto L3
   2: L3:
-  3: $t1 := copy(x)
+  3: $t1 := copy($t0)
   4: $t2 := 10
   5: $t3 := <($t1, $t2)
   6: if ($t3) goto L0 else goto L1
   7: L1:
   8: goto L2
   9: L0:
- 10: spec at 653..676
- 11: $t4 := copy(x)
+ 10: assume Lt($t0, 10)
+ 11: $t4 := copy($t0)
  12: $t5 := 1
  13: $t6 := +($t4, $t5)
- 14: x := $t6
+ 14: $t0 := $t6
  15: goto L3
  16: L2:
- 17: spec at 718..742
- 18: $t7 := copy(x)
+ 17: assert Eq<u64>($t0, 10)
+ 18: $t7 := copy($t0)
  19: return $t7
 }
 
 
 [variant baseline]
-fun TestSpecBlock::simple1(x: u64, y: u64) {
+fun TestSpecBlock::simple1($t0|x: u64, $t1|y: u64) {
      var $t2: u64
      var $t3: u64
      var $t4: bool
      var $t5: bool
      var $t6: u64
-  0: $t2 := copy(x)
-  1: $t3 := copy(y)
+  0: $t2 := copy($t0)
+  1: $t3 := copy($t1)
   2: $t4 := >($t2, $t3)
   3: $t5 := !($t4)
   4: if ($t5) goto L0 else goto L1
@@ -50,43 +50,45 @@ fun TestSpecBlock::simple1(x: u64, y: u64) {
   8: $t6 := 1
   9: abort($t6)
  10: L2:
- 11: spec at 97..139
+ 11: assert Gt($t0, $t1)
  12: return ()
 }
 
 
 [variant baseline]
-fun TestSpecBlock::simple2(x: u64) {
-     var y: u64
+fun TestSpecBlock::simple2($t0|x: u64) {
+     var $t1|y: u64
      var $t2: u64
      var $t3: u64
      var $t4: u64
-  0: $t2 := copy(x)
+  0: $t2 := copy($t0)
   1: $t3 := 1
   2: $t4 := +($t2, $t3)
-  3: y := $t4
-  4: spec at 220..267
+  3: $t1 := $t4
+  4: assert Eq<u64>($t0, Sub($t1, 1))
   5: return ()
 }
 
 
 [variant baseline]
-fun TestSpecBlock::simple3(x: u64, y: u64) {
-  0: spec at 317..386
-  1: return ()
+fun TestSpecBlock::simple3($t0|x: u64, $t1|y: u64) {
+  0: assume Gt($t0, $t1)
+  1: assert Ge($t0, $t1)
+  2: return ()
 }
 
 
 [variant baseline]
-fun TestSpecBlock::simple4(x: u64, y: u64) {
-     var z: u64
+fun TestSpecBlock::simple4($t0|x: u64, $t1|y: u64) {
+     var $t2|z: u64
      var $t3: u64
      var $t4: u64
      var $t5: u64
-  0: $t3 := copy(x)
-  1: $t4 := copy(y)
+  0: $t3 := copy($t0)
+  1: $t4 := copy($t1)
   2: $t5 := +($t3, $t4)
-  3: z := $t5
-  4: spec at 475..545
-  5: return ()
+  3: $t2 := $t5
+  4: assume Gt($t0, $t1)
+  5: assert Gt($t2, Mul(2, $t1))
+  6: return ()
 }

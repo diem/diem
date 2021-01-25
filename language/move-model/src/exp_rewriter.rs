@@ -4,7 +4,7 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use crate::{
-    ast::Exp,
+    ast::{Exp, TempIndex},
     model::{GlobalEnv, NodeId},
     symbol::Symbol,
     ty::Type,
@@ -15,16 +15,25 @@ use itertools::Itertools;
 /// types.
 pub struct ExpRewriter<'env, 'rewriter> {
     env: &'env GlobalEnv,
-    replacer: &'rewriter mut dyn FnMut(NodeId, Symbol) -> Option<Exp>,
+    replacer: &'rewriter mut dyn FnMut(NodeId, RewriteTarget) -> Option<Exp>,
     type_args: &'rewriter [Type],
     shadowed: VecDeque<BTreeSet<Symbol>>,
+}
+
+/// A target for expression rewrites of either an `Exp::LocalVar` or an `Exp::Temporary`.
+/// This is used as a parameter to the `replacer` function which defines the behavior of
+/// the rewriter. Notice we use a single function entry point for `replacer` to allow it
+/// to be a function which mutates it's context.
+pub enum RewriteTarget {
+    LocalVar(Symbol),
+    Temporary(TempIndex),
 }
 
 impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
     /// Creates a new rewriter with the given replacer map.
     pub fn new<F>(env: &'env GlobalEnv, replacer: &'rewriter mut F) -> Self
     where
-        F: FnMut(NodeId, Symbol) -> Option<Exp>,
+        F: FnMut(NodeId, RewriteTarget) -> Option<Exp>,
     {
         ExpRewriter {
             env,
@@ -46,6 +55,7 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
         use crate::ast::Exp::*;
         match exp {
             LocalVar(id, sym) => self.replace_local(*id, *sym),
+            Temporary(id, idx) => self.replace_temporary(*id, *idx),
             Call(id, oper, args) => Call(
                 self.rewrite_attrs(*id),
                 oper.clone(),
@@ -112,11 +122,20 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
                 return Exp::LocalVar(node_id, sym);
             }
         }
-        if let Some(exp) = (*self.replacer)(node_id, sym) {
+        if let Some(exp) = (*self.replacer)(node_id, RewriteTarget::LocalVar(sym)) {
             exp
         } else {
             let node_id = self.rewrite_attrs(node_id);
             Exp::LocalVar(node_id, sym)
+        }
+    }
+
+    fn replace_temporary(&mut self, node_id: NodeId, idx: TempIndex) -> Exp {
+        if let Some(exp) = (*self.replacer)(node_id, RewriteTarget::Temporary(idx)) {
+            exp
+        } else {
+            let node_id = self.rewrite_attrs(node_id);
+            Exp::Temporary(node_id, idx)
         }
     }
 

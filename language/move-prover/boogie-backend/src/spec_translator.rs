@@ -29,7 +29,7 @@ use crate::{
     },
     options::BoogieOptions,
 };
-use move_model::ast::{MemoryLabel, QuantKind};
+use move_model::ast::{MemoryLabel, QuantKind, TempIndex};
 use std::cell::RefCell;
 
 pub struct SpecTranslator<'env> {
@@ -54,6 +54,7 @@ pub struct SpecTranslator<'env> {
 enum TraceItem {
     // Automatically traced items when `options.prover.debug_trace_exp` is on.
     Local(Symbol),
+    Temporary(TempIndex),
     SpecVar(ModuleId, SpecVarId, Vec<Type>, Option<MemoryLabel>),
     Exp,
     // Explicitly traced item via user level trace function.
@@ -312,6 +313,10 @@ impl<'env> SpecTranslator<'env> {
                 self.set_writer_location(*node_id);
                 self.translate_local_var(*node_id, *name);
             }
+            Exp::Temporary(node_id, idx) => {
+                self.set_writer_location(*node_id);
+                self.translate_temporary(*node_id, *idx);
+            }
             Exp::SpecVar(node_id, module_id, var_id, mem_label) => {
                 let instantiation = &self.env.get_node_instantiation(*node_id);
                 self.trace_value(
@@ -434,6 +439,19 @@ impl<'env> SpecTranslator<'env> {
         });
     }
 
+    fn translate_temporary(&self, node_id: NodeId, idx: TempIndex) {
+        self.trace_value(node_id, TraceItem::Temporary(idx), || {
+            let mut_ref = self.env.get_node_type(node_id).is_mutable_reference();
+            if mut_ref {
+                emit!(self.writer, "$Dereference(");
+            }
+            emit!(self.writer, "$t{}", idx);
+            if mut_ref {
+                emit!(self.writer, ")")
+            }
+        });
+    }
+
     fn translate_block(&self, node_id: NodeId, vars: &[LocalVarDecl], exp: &Exp) {
         if vars.is_empty() {
             return self.translate_exp(exp);
@@ -464,9 +482,6 @@ impl<'env> SpecTranslator<'env> {
             }
             Operation::UpdateField(module_id, struct_id, field_id) => {
                 self.translate_update_field(*module_id, *struct_id, *field_id, args)
-            }
-            Operation::Local(sym) => {
-                self.translate_local_var(node_id, *sym);
             }
             Operation::Result(pos) => {
                 emit!(self.writer, "$ret{}", pos);

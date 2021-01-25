@@ -4,7 +4,7 @@
 use crate::{
     annotations::Annotations,
     borrow_analysis, livevar_analysis, reaching_def_analysis,
-    stackless_bytecode::{AttrId, Bytecode, Operation, SpecBlockId, TempIndex},
+    stackless_bytecode::{AttrId, Bytecode, Operation, SpecBlockId},
 };
 use itertools::Itertools;
 use move_model::{
@@ -14,6 +14,7 @@ use move_model::{
     ty::{Type, TypeDisplayContext},
 };
 
+use move_model::ast::TempIndex;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
@@ -188,17 +189,21 @@ impl<'env> FunctionTarget<'env> {
         0..self.func_env.get_parameter_count()
     }
 
-    /// Get the name to be used for a local. If the local is an argument, use that for naming,
+    /// Get the name to be used for a local. If the local has a user name, use that for naming,
     /// otherwise generate a unique name.
     pub fn get_local_name(&self, idx: usize) -> Symbol {
         self.func_env.get_local_name(idx)
     }
 
-    /// Get the index corresponding to a local name
+    /// Return true if this local has a user name.
+    pub fn has_local_user_name(&self, idx: usize) -> bool {
+        idx < self.get_user_local_count()
+    }
+
+    /// Get the index corresponding to a local name. The name must either match a user name,
+    /// or have the syntax `$t<N>$`.
     pub fn get_local_index(&self, name: Symbol) -> Option<usize> {
         self.data.name_to_index.get(&name).cloned().or_else(|| {
-            // TODO(wrwg): remove this hack once we have Exp::Local using an index
-            //   instead of a symbol.
             let str = self.global_env().symbol_pool().string(name);
             if let Some(s) = str.strip_prefix("$t") {
                 Some(s.parse::<usize>().unwrap())
@@ -496,17 +501,27 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
             env: self.global_env(),
             type_param_names: None,
         };
+        let write_decl = |f: &mut fmt::Formatter<'_>, i: TempIndex| {
+            let ty = self.get_local_type(i).display(&tctx);
+            if self.has_local_user_name(i) {
+                write!(
+                    f,
+                    "$t{}|{}: {}",
+                    i,
+                    self.get_local_name(i)
+                        .display(self.global_env().symbol_pool()),
+                    ty
+                )
+            } else {
+                write!(f, "$t{}: {}", i, ty)
+            }
+        };
         write!(f, "(")?;
         for i in 0..self.get_parameter_count() {
             if i > 0 {
                 write!(f, ", ")?;
             }
-            write!(
-                f,
-                "{}: {}",
-                self.get_local_name(i).display(self.symbol_pool()),
-                self.get_local_type(i).display(&tctx)
-            )?;
+            write_decl(f, i)?;
         }
         write!(f, ")")?;
         if self.get_return_count() > 0 {
@@ -526,12 +541,9 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         }
         writeln!(f, " {{")?;
         for i in self.get_parameter_count()..self.get_local_count() {
-            writeln!(
-                f,
-                "     var {}: {}",
-                self.get_local_name(i).display(self.symbol_pool()),
-                self.get_local_type(i).display(&tctx)
-            )?;
+            write!(f, "     var ")?;
+            write_decl(f, i)?;
+            writeln!(f)?;
         }
         let mut loc_vc_shown = BTreeSet::new();
         for (offset, code) in self.get_bytecode().iter().enumerate() {

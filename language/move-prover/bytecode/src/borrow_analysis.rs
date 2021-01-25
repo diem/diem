@@ -8,11 +8,14 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnnotation,
-    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation, TempIndex},
+    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::model::{FunctionEnv, QualifiedId};
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, QualifiedId},
+};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
