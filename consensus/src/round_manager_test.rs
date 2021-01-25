@@ -502,11 +502,11 @@ fn new_round_on_timeout_certificate() {
     let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![], 2, 2, genesis_qc.clone(), &node.signer);
-    let timeout = Timeout::new(1, 1);
+    let timeout = Timeout::new(1, 1, genesis_qc.clone());
     let timeout_signature = timeout.sign(&node.signer);
 
-    let mut tc = TimeoutCertificate::new(timeout);
-    tc.add_signature(node.signer.author(), timeout_signature);
+    let mut tc = TimeoutCertificate::new(timeout.clone());
+    tc.add(node.signer.author(), timeout, timeout_signature);
 
     timed_block_on(&mut runtime, async {
         let skip_round_proposal = ProposalMsg::new(
@@ -637,9 +637,10 @@ fn recover_on_restart() {
     // insert a few successful proposals
     for i in 1..=num_proposals {
         let proposal = inserter.create_block_with_qc(genesis_qc.clone(), i, i, vec![]);
-        let timeout = Timeout::new(1, i - 1);
+        let timeout = Timeout::new(1, i - 1, genesis_qc.clone());
         let mut tc = TimeoutCertificate::new(timeout.clone());
-        tc.add_signature(inserter.signer().author(), inserter.signer().sign(&timeout));
+        let signature = timeout.sign(inserter.signer());
+        tc.add(inserter.signer().author(), timeout, signature);
         data.push((proposal, tc));
     }
 

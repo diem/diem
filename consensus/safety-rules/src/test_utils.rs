@@ -117,7 +117,8 @@ pub fn make_proposal_with_parent_and_overrides(
     let proof = Proof::new(
         parent_output.frozen_subtree_roots().clone(),
         parent_output.num_leaves(),
-        vec![Timeout::new(0, round).hash()],
+        vec![],
+        // vec![Timeout::new(0, round).hash()],
     );
 
     let proposed_block = BlockInfo::new(

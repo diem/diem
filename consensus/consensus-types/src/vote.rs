@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::quorum_cert::QuorumCert;
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
 use diem_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
@@ -26,8 +27,8 @@ pub struct Vote {
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
     signature: Ed25519Signature,
-    /// The round signatures can be aggregated into a timeout certificate if present.
-    timeout_signature: Option<Ed25519Signature>,
+    /// The signature signed on Timeout can be aggregated into a timeout certificate if present.
+    timeout: Option<(Timeout, Ed25519Signature)>,
 }
 
 // this is required by structured log
@@ -76,18 +77,20 @@ impl Vote {
             author,
             ledger_info,
             signature,
-            timeout_signature: None,
+            timeout: None,
         }
     }
 
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
-    pub fn add_timeout_signature(&mut self, signature: Ed25519Signature) {
-        if self.timeout_signature.is_some() {
-            return; // round signature is already set
-        }
+    pub fn add_timeout(&mut self, timeout: Timeout, signature: Ed25519Signature) {
+        // if self.timeout.is_some() {
+        //     return; // round signature is already set
+        // }
+        assert_eq!(self.vote_data.proposed().epoch(), timeout.epoch());
+        assert_eq!(self.vote_data.proposed().round(), timeout.round());
 
-        self.timeout_signature.replace(signature);
+        self.timeout.replace((timeout, signature));
     }
 
     pub fn vote_data(&self) -> &VoteData {
@@ -109,12 +112,18 @@ impl Vote {
         &self.signature
     }
 
-    /// Returns the hash of the data represent by a timeout proposal
-    pub fn timeout(&self) -> Timeout {
+    /// Generate Timeout with the highest quorum cert.
+    pub fn generate_timeout(&self, quorum_cert: QuorumCert) -> Timeout {
         Timeout::new(
-            self.vote_data().proposed().epoch(),
+            self.epoch(),
             self.vote_data().proposed().round(),
+            quorum_cert,
         )
+    }
+
+    /// Returns the Timeout and corresponding signatures
+    pub fn timeout_and_signature(&self) -> Option<(Timeout, Ed25519Signature)> {
+        self.timeout.clone()
     }
 
     /// Return the epoch of the vote
@@ -125,13 +134,13 @@ impl Vote {
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
     pub fn timeout_signature(&self) -> Option<&Ed25519Signature> {
-        self.timeout_signature.as_ref()
+        self.timeout.as_ref().map(|(_, s)| s)
     }
 
     /// The vote message is considered a timeout vote message if it carries a signature on the
     /// round, which can then be used for aggregating it to the TimeoutCertificate.
     pub fn is_timeout(&self) -> bool {
-        self.timeout_signature.is_some()
+        self.timeout.is_some()
     }
 
     /// Verifies that the consensus data hash of LedgerInfo corresponds to the vote info,
@@ -144,10 +153,16 @@ impl Vote {
         validator
             .verify(self.author(), &self.ledger_info, &self.signature)
             .context("Failed to verify Vote")?;
-        if let Some(timeout_signature) = &self.timeout_signature {
+        if let Some((timeout, timeout_signature)) = &self.timeout {
+            // verify the QC
+            timeout
+                .quorum_cert()
+                .verify(validator)
+                .context("Failed to verify QC in Timeout Vote")?;
+            // verify the message
             validator
-                .verify(self.author(), &self.timeout(), timeout_signature)
-                .context("Failed to verify Timeout Vote")?;
+                .verify(self.author(), &timeout.signed_repr(), timeout_signature)
+                .context("Failed to verify Timeout signature")?;
         }
         // Let us verify the vote data as well
         self.vote_data().verify()?;

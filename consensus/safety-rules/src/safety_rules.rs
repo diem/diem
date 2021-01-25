@@ -10,6 +10,7 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     t_safety_rules::TSafetyRules,
 };
+use consensus_types::timeout::TimeoutForSigning;
 use consensus_types::{
     block::Block,
     block_data::BlockData,
@@ -318,7 +319,7 @@ impl SafetyRules {
                         author,
                         expected_key,
                     ));
-                    self.sign(&Timeout::new(0, 0))
+                    self.sign(&TimeoutForSigning::new(0, 0, 0))
                         .map(|_signature| ())
                         .map_err(|error| Error::ValidatorKeyNotFound(error.to_string()))
                 }
@@ -435,8 +436,9 @@ impl SafetyRules {
             self.verify_and_update_last_vote_round(timeout.round(), &mut safety_data)?;
             self.persistent_storage.set_safety_data(safety_data)?;
         }
+        // TODO: verify timeout hqc
 
-        let signature = self.sign(timeout)?;
+        let signature = self.sign(&timeout.signed_repr())?;
         Ok(signature)
     }
 }

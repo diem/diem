@@ -22,6 +22,7 @@ use crate::{
     state_replication::{StateComputer, TxnManager},
 };
 use anyhow::{bail, ensure, Context, Result};
+use consensus_types::timeout::Timeout;
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
@@ -455,13 +456,15 @@ impl RoundManager {
             }
         };
 
+        // TODO: need update if hqc changed?
         if !timeout_vote.is_timeout() {
-            let timeout = timeout_vote.timeout();
+            let timeout = timeout_vote
+                .generate_timeout(self.block_store.highest_quorum_cert().as_ref().clone());
             let signature = self
                 .safety_rules
                 .sign_timeout(&timeout)
                 .context("[RoundManager] SafetyRules signs timeout")?;
-            timeout_vote.add_timeout_signature(signature);
+            timeout_vote.add_timeout(timeout, signature);
         }
 
         self.round_state.record_vote(timeout_vote.clone());

@@ -149,21 +149,20 @@ impl PendingVotes {
         // 4. We couldn't form a QC, let's check if we can create a TC
         //
 
-        if let Some(timeout_signature) = vote.timeout_signature() {
+        if let Some((timeout, timeout_signature)) = vote.timeout_and_signature() {
             // form timeout struct
             // TODO(mimoo): stronger: pass the (epoch, round) tuple as arguments of this function
-            let timeout = vote.timeout();
 
             // if no partial TC exist, create one
             let partial_tc = self
                 .maybe_partial_tc
-                .get_or_insert_with(|| TimeoutCertificate::new(timeout));
+                .get_or_insert_with(|| TimeoutCertificate::new(timeout.clone()));
 
             // add the timeout signature
-            partial_tc.add_signature(vote.author(), timeout_signature.clone());
+            partial_tc.add(vote.author(), timeout, timeout_signature.clone());
 
             // did the TC reach a threshold?
-            match validator_verifier.check_voting_power(partial_tc.signatures().keys()) {
+            match validator_verifier.check_voting_power(partial_tc.signers()) {
                 // A quorum of signature was reached, a new TC was formed!
                 Ok(_) => {
                     return VoteReceptionResult::NewTimeoutCertificate(Arc::new(partial_tc.clone()))
@@ -208,7 +207,7 @@ impl fmt::Display for PendingVotes {
         let timeout_votes = self
             .maybe_partial_tc
             .as_ref()
-            .map(|partial_tc| partial_tc.signatures().keys().collect::<Vec<_>>());
+            .map(|partial_tc| partial_tc.signers().collect::<Vec<_>>());
 
         // write
         write!(f, "PendingVotes: [")?;
@@ -232,6 +231,8 @@ impl fmt::Display for PendingVotes {
 #[cfg(test)]
 mod tests {
     use super::{PendingVotes, VoteReceptionResult};
+    use consensus_types::block::block_test_utils::certificate_for_genesis;
+    use consensus_types::quorum_cert::QuorumCert;
     use consensus_types::{vote::Vote, vote_data::VoteData};
     use diem_crypto::HashValue;
     use diem_types::{
@@ -323,6 +324,7 @@ mod tests {
     /// Verify that votes are properly aggregated to TC based on their rounds
     fn test_tc_aggregation() {
         ::diem_logger::Logger::init_for_testing();
+        let qc = certificate_for_genesis();
 
         // set up 4 validators
         let (signers, validator) = random_validator_verifier(4, Some(2), false);
@@ -339,9 +341,9 @@ mod tests {
         );
 
         // submit the same vote but enhanced with a timeout -> VoteAdded
-        let timeout = vote1_author_0.timeout();
+        let timeout = vote1_author_0.generate_timeout(qc.clone());
         let signature = timeout.sign(&signers[0]);
-        vote1_author_0.add_timeout_signature(signature);
+        vote1_author_0.add_timeout(timeout, signature);
 
         assert_eq!(
             pending_votes.insert_vote(&vote1_author_0, &validator),
@@ -358,12 +360,12 @@ mod tests {
         );
 
         // if that vote is now enhanced with a timeout signature -> NewTimeoutCertificate
-        let timeout = vote2_author_1.timeout();
+        let timeout = vote2_author_1.generate_timeout(qc);
         let signature = timeout.sign(&signers[1]);
-        vote2_author_1.add_timeout_signature(signature);
+        vote2_author_1.add_timeout(timeout, signature);
         match pending_votes.insert_vote(&vote2_author_1, &validator) {
             VoteReceptionResult::NewTimeoutCertificate(tc) => {
-                assert!(validator.check_voting_power(tc.signatures().keys()).is_ok());
+                assert!(validator.check_voting_power(tc.signers()).is_ok());
             }
             _ => {
                 panic!("No TC formed.");
