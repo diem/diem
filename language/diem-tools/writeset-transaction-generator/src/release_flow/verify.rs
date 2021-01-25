@@ -98,14 +98,8 @@ pub(crate) fn verify_payload_change(
                     };
 
                     match old_modules.insert(module_id.clone(), updated_module.clone()) {
-                        Some(_) => println!(
-                            "Updating existing module: {:?} \n {:#?}",
-                            module_id, updated_module
-                        ),
-                        None => println!(
-                            "Adding new module: {:?} \n {:#?}",
-                            module_id, updated_module
-                        ),
+                        Some(_) => println!("Updating existing module: {:?}", module_id),
+                        None => println!("Adding new module: {:?}", module_id),
                     }
                 }
             }

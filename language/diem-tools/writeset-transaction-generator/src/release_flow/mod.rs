@@ -13,15 +13,12 @@ pub use create::create_release;
 pub use verify::verify_release;
 
 pub mod test_utils {
+    use compiled_stdlib::{stdlib_modules, StdLibOptions};
     use diem_types::account_config::CORE_CODE_ADDRESS;
-    use stdlib::build_stdlib;
     use vm::{file_format::empty_module, CompiledModule};
 
     pub fn release_modules() -> Vec<CompiledModule> {
-        let mut modules = build_stdlib()
-            .into_iter()
-            .map(|(_, m)| m)
-            .collect::<Vec<_>>();
+        let mut modules = stdlib_modules(StdLibOptions::Compiled).to_vec();
         // Publish a new dummy module
         let mut module = empty_module();
         module.address_identifiers[0] = CORE_CODE_ADDRESS;

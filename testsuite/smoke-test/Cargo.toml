@@ -24,6 +24,7 @@ tokio = { version = "1.1.0", features = ["full"] }
 
 backup-cli = { path = "../../storage/backup/backup-cli", version = "0.1.0" }
 cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
+compiled-stdlib = { path = "../../language/stdlib/compiled", version = "0.1.0" }
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 bcs = "0.1.2"
@@ -52,5 +53,4 @@ diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", fe
 diem-validator-interface = { path = "../../language/diem-tools/diem-validator-interface", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator", version = "0.1.0" }
-stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

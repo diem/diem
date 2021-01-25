@@ -6371,6 +6371,7 @@ dependencies = [
  "backup-cli",
  "bcs",
  "cli",
+ "compiled-stdlib",
  "debug-interface",
  "diem-config",
  "diem-crypto",
@@ -6407,7 +6408,6 @@ dependencies = [
  "rust_decimal",
  "rusty-fork",
  "statistical",
- "stdlib",
  "tokio",
  "transaction-builder",
 ]
