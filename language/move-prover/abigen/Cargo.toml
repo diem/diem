@@ -18,7 +18,7 @@ bcs = "0.1.2"
 log = "0.4.13"
 anyhow = "1.0.38"
 heck = "0.3.2"
-serde = { version = "1.0.122", features = ["derive"] }
+serde = { version = "1.0.123", features = ["derive"] }
 
 [dev-dependencies]
 codespan-reporting = "0.8.0"
