@@ -17,8 +17,8 @@ use crate::{
 use anyhow::{format_err, Result};
 use diem_crypto::HashValue;
 use diem_nibble::Nibble;
-use diem_types::{account_state_blob::AccountStateBlob, transaction::Version};
-use std::sync::Arc;
+use diem_types::transaction::Version;
+use std::{marker::PhantomData, sync::Arc};
 
 /// `NodeVisitInfo` keeps track of the status of an internal node during the iteration process. It
 /// indicates which ones of its children have been visited.
@@ -91,7 +91,7 @@ impl NodeVisitInfo {
 }
 
 /// The `JellyfishMerkleIterator` implementation.
-pub struct JellyfishMerkleIterator<R: TreeReader> {
+pub struct JellyfishMerkleIterator<R, V> {
     /// The storage engine from which we can read nodes using node keys.
     reader: Arc<R>,
 
@@ -105,11 +105,14 @@ pub struct JellyfishMerkleIterator<R: TreeReader> {
     /// `self.parent_stack` is empty. But in case of a tree with a single leaf, we need this
     /// additional bit.
     done: bool,
+
+    phantom_value: PhantomData<V>,
 }
 
-impl<R> JellyfishMerkleIterator<R>
+impl<R, V> JellyfishMerkleIterator<R, V>
 where
-    R: TreeReader,
+    R: TreeReader<V>,
+    V: crate::Value,
 {
     /// Constructs a new iterator. This puts the internal state in the correct position, so the
     /// following `next` call will yield the smallest key that is greater or equal to
@@ -155,6 +158,7 @@ where
                         version,
                         parent_stack,
                         done,
+                        phantom_value: PhantomData,
                     });
                 }
             }
@@ -178,6 +182,7 @@ where
             version,
             parent_stack,
             done,
+            phantom_value: PhantomData,
         })
     }
 
@@ -193,11 +198,12 @@ where
     }
 }
 
-impl<R> Iterator for JellyfishMerkleIterator<R>
+impl<R, V> Iterator for JellyfishMerkleIterator<R, V>
 where
-    R: TreeReader,
+    R: TreeReader<V>,
+    V: crate::Value,
 {
-    type Item = Result<(HashValue, AccountStateBlob)>;
+    type Item = Result<(HashValue, V)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -213,7 +219,7 @@ where
                     // true in `new`). Return the node and mark `self.done` so next time we return
                     // None.
                     self.done = true;
-                    return Some(Ok((leaf_node.account_key(), leaf_node.blob().clone())));
+                    return Some(Ok((leaf_node.account_key(), leaf_node.value().clone())));
                 }
                 Ok(Node::Internal(_)) => {
                     // This means `starting_key` is bigger than every key in this tree, or we have
@@ -246,7 +252,7 @@ where
                     self.parent_stack.push(visit_info);
                 }
                 Ok(Node::Leaf(leaf_node)) => {
-                    let ret = (leaf_node.account_key(), leaf_node.blob().clone());
+                    let ret = (leaf_node.account_key(), leaf_node.value().clone());
                     Self::cleanup_stack(&mut self.parent_stack);
                     return Some(Ok(ret));
                 }

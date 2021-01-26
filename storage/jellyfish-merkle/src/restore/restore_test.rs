@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    mock_tree_store::MockTreeStore, restore::JellyfishMerkleRestore, test_helper::init_mock_db,
+    mock_tree_store::MockTreeStore,
+    restore::JellyfishMerkleRestore,
+    test_helper::{init_mock_db, ValueBlob},
     JellyfishMerkleTree, TreeReader,
 };
 use diem_crypto::HashValue;
-use diem_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use diem_types::transaction::Version;
 use proptest::{collection::btree_map, prelude::*};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -15,7 +17,7 @@ proptest! {
 
     #[test]
     fn test_restore_without_interruption(
-        btree in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
+        btree in btree_map(any::<HashValue>(), any::<ValueBlob>(), 1..1000),
         target_version in 0u64..2000,
     ) {
         let restore_db = Arc::new(MockTreeStore::default());
@@ -25,7 +27,7 @@ proptest! {
 
     #[test]
     fn test_restore_with_interruption(
-        (all, batch1_size) in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 2..1000)
+        (all, batch1_size) in btree_map(any::<HashValue>(), any::<ValueBlob>(), 2..1000)
             .prop_flat_map(|btree| {
                 let len = btree.len();
                 (Just(btree), 1..len)
@@ -78,8 +80,8 @@ proptest! {
 
     #[test]
     fn test_overwrite(
-        btree1 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
-        btree2 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
+        btree1 in btree_map(any::<HashValue>(), any::<ValueBlob>(), 1..1000),
+        btree2 in btree_map(any::<HashValue>(), any::<ValueBlob>(), 1..1000),
         target_version in 0u64..2000,
     ) {
         let restore_db = Arc::new(MockTreeStore::new(true /* allow_overwrite */));
@@ -89,12 +91,14 @@ proptest! {
     }
 }
 
-fn assert_success(
-    db: &MockTreeStore,
+fn assert_success<V>(
+    db: &MockTreeStore<V>,
     expected_root_hash: HashValue,
-    btree: &BTreeMap<HashValue, AccountStateBlob>,
+    btree: &BTreeMap<HashValue, V>,
     version: Version,
-) {
+) where
+    V: crate::TestValue,
+{
     let tree = JellyfishMerkleTree::new(db);
     for (key, value) in btree {
         assert_eq!(tree.get(*key, version).unwrap(), Some(value.clone()));
@@ -104,12 +108,14 @@ fn assert_success(
     assert_eq!(actual_root_hash, expected_root_hash);
 }
 
-fn restore_without_interruption(
-    btree: &BTreeMap<HashValue, AccountStateBlob>,
+fn restore_without_interruption<V>(
+    btree: &BTreeMap<HashValue, V>,
     target_version: Version,
-    target_db: &Arc<MockTreeStore>,
+    target_db: &Arc<MockTreeStore<V>>,
     try_resume: bool,
-) {
+) where
+    V: crate::TestValue,
+{
     let (db, source_version) = init_mock_db(&btree.iter().map(|(k, v)| (*k, v.clone())).collect());
     let tree = JellyfishMerkleTree::new(&db);
     let expected_root_hash = tree.get_root_hash(source_version).unwrap();

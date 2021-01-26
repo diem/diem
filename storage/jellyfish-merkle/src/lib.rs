@@ -6,8 +6,8 @@
 //! This module implements [`JellyfishMerkleTree`] backed by storage module. The tree itself doesn't
 //! persist anything, but realizes the logic of R/W only. The write path will produce all the
 //! intermediate results in a batch for storage layer to commit and the read path will return
-//! results directly. The public APIs are only [`new`], [`put_blob_sets`], [`put_blob_set`] and
-//! [`get_with_proof`]. After each put with a `blob_set` based on a known version, the tree will
+//! results directly. The public APIs are only [`new`], [`put_value_sets`], [`put_value_set`] and
+//! [`get_with_proof`]. After each put with a `value_set` based on a known version, the tree will
 //! return a new root hash with a [`TreeUpdateBatch`] containing all the new nodes and indices of
 //! stale nodes.
 //!
@@ -50,7 +50,7 @@
 //!  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )  )
 //! (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
 //! ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■  ■
-//! ■: account_state_blob
+//! ■: the [`Value`] type this tree stores.
 //! ```
 //!
 //! A Jellyfish Merkle Tree consists of [`InternalNode`] and [`LeafNode`]. [`InternalNode`] is like
@@ -61,8 +61,8 @@
 //!
 //! [`JellyfishMerkleTree`]: struct.JellyfishMerkleTree.html
 //! [`new`]: struct.JellyfishMerkleTree.html#method.new
-//! [`put_blob_sets`]: struct.JellyfishMerkleTree.html#method.put_blob_sets
-//! [`put_blob_set`]: struct.JellyfishMerkleTree.html#method.put_blob_set
+//! [`put_value_sets`]: struct.JellyfishMerkleTree.html#method.put_value_sets
+//! [`put_value_set`]: struct.JellyfishMerkleTree.html#method.put_value_set
 //! [`get_with_proof`]: struct.JellyfishMerkleTree.html#method.get_with_proof
 //! [`TreeUpdateBatch`]: struct.TreeUpdateBatch.html
 //! [`InternalNode`]: node_type/struct.InternalNode.html
@@ -81,17 +81,22 @@ pub mod test_helper;
 mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
-use diem_crypto::HashValue;
+use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
-    account_state_blob::AccountStateBlob,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,
 };
 use nibble_path::{skip_common_prefix, NibbleIterator, NibblePath};
 use node_type::{Child, Children, InternalNode, LeafNode, Node, NodeKey};
 #[cfg(any(test, feature = "fuzzing"))]
+use proptest::arbitrary::Arbitrary;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use std::collections::{BTreeMap, BTreeSet};
+use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    marker::PhantomData,
+};
 use thiserror::Error;
 use tree_cache::TreeCache;
 
@@ -107,28 +112,46 @@ pub const ROOT_NIBBLE_HEIGHT: usize = HashValue::LENGTH * 2;
 /// `TreeReader` defines the interface between
 /// [`JellyfishMerkleTree`](struct.JellyfishMerkleTree.html)
 /// and underlying storage holding nodes.
-pub trait TreeReader {
+pub trait TreeReader<V> {
     /// Gets node given a node key. Returns error if the node does not exist.
-    fn get_node(&self, node_key: &NodeKey) -> Result<Node> {
+    fn get_node(&self, node_key: &NodeKey) -> Result<Node<V>> {
         self.get_node_option(node_key)?
             .ok_or_else(|| format_err!("Missing node at {:?}.", node_key))
     }
 
     /// Gets node given a node key. Returns `None` if the node does not exist.
-    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>>;
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node<V>>>;
 
     /// Gets the rightmost leaf. Note that this assumes we are in the process of restoring the tree
     /// and all nodes are at the same version.
-    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>>;
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode<V>)>>;
 }
 
-pub trait TreeWriter {
+pub trait TreeWriter<V> {
     /// Writes a node batch into storage.
-    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()>;
+    fn write_node_batch(&self, node_batch: &NodeBatch<V>) -> Result<()>;
 }
+
+/// `Value` defines the types of data that can be stored in a Jellyfish Merkle tree.
+pub trait Value: Clone + CryptoHash + Serialize + DeserializeOwned {}
+
+/// `TestValue` defines the types of data that can be stored in a Jellyfish Merkle tree and used in
+/// tests.
+#[cfg(any(test, feature = "fuzzing"))]
+pub trait TestValue:
+    Value + Arbitrary + Clone + std::fmt::Debug + Eq + PartialEq + 'static
+{
+}
+
+// This crate still depends on types for a few things, therefore we implement `Value` and
+// `TestValue` for `AccountStateBlob` here. Ideally the module that defines the specific value like
+// `AccountStateBlob` should import the `Value` trait and implement it there.
+impl Value for diem_types::account_state_blob::AccountStateBlob {}
+#[cfg(any(test, feature = "fuzzing"))]
+impl TestValue for diem_types::account_state_blob::AccountStateBlob {}
 
 /// Node batch that will be written into db atomically with other batches.
-pub type NodeBatch = BTreeMap<NodeKey, Node>;
+pub type NodeBatch<V> = BTreeMap<NodeKey, Node<V>>;
 /// [`StaleNodeIndex`](struct.StaleNodeIndex.html) batch that will be written into db atomically
 /// with other batches.
 pub type StaleNodeIndexBatch = BTreeSet<StaleNodeIndex>;
@@ -155,38 +178,43 @@ pub struct StaleNodeIndex {
 /// This is a wrapper of [`NodeBatch`](type.NodeBatch.html),
 /// [`StaleNodeIndexBatch`](type.StaleNodeIndexBatch.html) and some stats of nodes that represents
 /// the incremental updates of a tree and pruning indices after applying a write set,
-/// which is a vector of `hashed_account_address` and `new_account_state_blob` pairs.
+/// which is a vector of `hashed_account_address` and `new_value` pairs.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct TreeUpdateBatch {
-    pub node_batch: NodeBatch,
+pub struct TreeUpdateBatch<V> {
+    pub node_batch: NodeBatch<V>,
     pub stale_node_index_batch: StaleNodeIndexBatch,
     pub node_stats: Vec<NodeStats>,
 }
 
 /// The Jellyfish Merkle tree data structure. See [`crate`] for description.
-pub struct JellyfishMerkleTree<'a, R: 'a + TreeReader> {
+pub struct JellyfishMerkleTree<'a, R, V> {
     reader: &'a R,
+    phantom_value: PhantomData<V>,
 }
 
-impl<'a, R> JellyfishMerkleTree<'a, R>
+impl<'a, R, V> JellyfishMerkleTree<'a, R, V>
 where
-    R: 'a + TreeReader,
+    R: 'a + TreeReader<V>,
+    V: Value,
 {
     /// Creates a `JellyfishMerkleTree` backed by the given [`TreeReader`](trait.TreeReader.html).
     pub fn new(reader: &'a R) -> Self {
-        Self { reader }
+        Self {
+            reader,
+            phantom_value: PhantomData,
+        }
     }
 
     /// This is a convenient function that calls
-    /// [`put_blob_sets`](struct.JellyfishMerkleTree.html#method.put_blob_sets) with a single
-    /// `keyed_blob_set`.
+    /// [`put_value_sets`](struct.JellyfishMerkleTree.html#method.put_value_sets) with a single
+    /// `keyed_value_set`.
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn put_blob_set(
+    pub fn put_value_set(
         &self,
-        blob_set: Vec<(HashValue, AccountStateBlob)>,
+        value_set: Vec<(HashValue, V)>,
         version: Version,
-    ) -> Result<(HashValue, TreeUpdateBatch)> {
-        let (root_hashes, tree_update_batch) = self.put_blob_sets(vec![blob_set], version)?;
+    ) -> Result<(HashValue, TreeUpdateBatch<V>)> {
+        let (root_hashes, tree_update_batch) = self.put_value_sets(vec![value_set], version)?;
         assert_eq!(
             root_hashes.len(),
             1,
@@ -195,7 +223,7 @@ where
         Ok((root_hashes[0], tree_update_batch))
     }
 
-    /// Returns the new nodes and account state blobs in a batch after applying `blob_set`. For
+    /// Returns the new nodes and values in a batch after applying `value_set`. For
     /// example, if after transaction `T_i` the committed state of tree in the persistent storage
     /// looks like the following structure:
     ///
@@ -212,7 +240,7 @@ where
     /// ```
     ///
     /// where `A` and `B` denote the states of two adjacent accounts, and `x` is a sibling subtree
-    /// of the path from root to A and B in the tree. Then a `blob_set` produced by the next
+    /// of the path from root to A and B in the tree. Then a `value_set` produced by the next
     /// transaction `T_{i+1}` modifies other accounts `C` and `D` exist in the subtree under `x`, a
     /// new partial tree will be constructed in memory and the structure will be:
     ///
@@ -230,27 +258,27 @@ where
     /// ```
     ///
     /// With this design, we are able to query the global state in persistent storage and
-    /// generate the proposed tree delta based on a specific root hash and `blob_set`. For
+    /// generate the proposed tree delta based on a specific root hash and `value_set`. For
     /// example, if we want to execute another transaction `T_{i+1}'`, we can use the tree `S_i` in
-    /// storage and apply the `blob_set` of transaction `T_{i+1}`. Then if the storage commits
+    /// storage and apply the `value_set` of transaction `T_{i+1}`. Then if the storage commits
     /// the returned batch, the state `S_{i+1}` is ready to be read from the tree by calling
     /// [`get_with_proof`](struct.JellyfishMerkleTree.html#method.get_with_proof). Anything inside
     /// the batch is not reachable from public interfaces before being committed.
-    pub fn put_blob_sets(
+    pub fn put_value_sets(
         &self,
-        blob_sets: Vec<Vec<(HashValue, AccountStateBlob)>>,
+        value_sets: Vec<Vec<(HashValue, V)>>,
         first_version: Version,
-    ) -> Result<(Vec<HashValue>, TreeUpdateBatch)> {
+    ) -> Result<(Vec<HashValue>, TreeUpdateBatch<V>)> {
         let mut tree_cache = TreeCache::new(self.reader, first_version)?;
-        for (idx, blob_set) in blob_sets.into_iter().enumerate() {
+        for (idx, value_set) in value_sets.into_iter().enumerate() {
             assert!(
-                !blob_set.is_empty(),
+                !value_set.is_empty(),
                 "Transactions that output empty write set should not be included.",
             );
             let version = first_version + idx as u64;
-            blob_set
+            value_set
                 .into_iter()
-                .map(|(key, blob)| Self::put(key, blob, version, &mut tree_cache))
+                .map(|(key, value)| Self::put(key, value, version, &mut tree_cache))
                 .collect::<Result<_>>()?;
             // Freezes the current cache to make all contents in the current cache immutable.
             tree_cache.freeze();
@@ -261,9 +289,9 @@ where
 
     fn put(
         key: HashValue,
-        blob: AccountStateBlob,
+        value: V,
         version: Version,
-        tree_cache: &mut TreeCache<R>,
+        tree_cache: &mut TreeCache<R, V>,
     ) -> Result<()> {
         let nibble_path = NibblePath::new(key.to_vec());
 
@@ -277,7 +305,7 @@ where
             root_node_key.clone(),
             version,
             &mut nibble_iter,
-            blob,
+            value,
             tree_cache,
         )?;
 
@@ -293,9 +321,9 @@ where
         node_key: NodeKey,
         version: Version,
         nibble_iter: &mut NibbleIterator,
-        blob: AccountStateBlob,
-        tree_cache: &mut TreeCache<R>,
-    ) -> Result<(NodeKey, Node)> {
+        value: V,
+        tree_cache: &mut TreeCache<R, V>,
+    ) -> Result<(NodeKey, Node<V>)> {
         let node = tree_cache.get_node(&node_key)?;
         match node {
             Node::Internal(internal_node) => Self::insert_at_internal_node(
@@ -303,7 +331,7 @@ where
                 internal_node,
                 version,
                 nibble_iter,
-                blob,
+                value,
                 tree_cache,
             ),
             Node::Leaf(leaf_node) => Self::insert_at_leaf_node(
@@ -311,7 +339,7 @@ where
                 leaf_node,
                 version,
                 nibble_iter,
-                blob,
+                value,
                 tree_cache,
             ),
             Node::Null => {
@@ -328,7 +356,7 @@ where
                 Self::create_leaf_node(
                     NodeKey::new_empty_path(version),
                     &nibble_iter,
-                    blob,
+                    value,
                     tree_cache,
                 )
             }
@@ -343,9 +371,9 @@ where
         internal_node: InternalNode,
         version: Version,
         nibble_iter: &mut NibbleIterator,
-        blob: AccountStateBlob,
-        tree_cache: &mut TreeCache<R>,
-    ) -> Result<(NodeKey, Node)> {
+        value: V,
+        tree_cache: &mut TreeCache<R, V>,
+    ) -> Result<(NodeKey, Node<V>)> {
         // We always delete the existing internal node here because it will not be referenced anyway
         // since this version.
         tree_cache.delete_node(&node_key, false /* is_leaf */);
@@ -358,11 +386,11 @@ where
         let (_, new_child_node) = match internal_node.child(child_index) {
             Some(child) => {
                 let child_node_key = node_key.gen_child_node_key(child.version, child_index);
-                Self::insert_at(child_node_key, version, nibble_iter, blob, tree_cache)?
+                Self::insert_at(child_node_key, version, nibble_iter, value, tree_cache)?
             }
             None => {
                 let new_child_node_key = node_key.gen_child_node_key(version, child_index);
-                Self::create_leaf_node(new_child_node_key, nibble_iter, blob, tree_cache)?
+                Self::create_leaf_node(new_child_node_key, nibble_iter, value, tree_cache)?
             }
         };
 
@@ -386,12 +414,12 @@ where
     /// [`NodeKey`](node_type/struct.NodeKey.html).
     fn insert_at_leaf_node(
         mut node_key: NodeKey,
-        existing_leaf_node: LeafNode,
+        existing_leaf_node: LeafNode<V>,
         version: Version,
         nibble_iter: &mut NibbleIterator,
-        blob: AccountStateBlob,
-        tree_cache: &mut TreeCache<R>,
-    ) -> Result<(NodeKey, Node)> {
+        value: V,
+        tree_cache: &mut TreeCache<R, V>,
+    ) -> Result<(NodeKey, Node<V>)> {
         // We are on a leaf node but trying to insert another node, so we may diverge.
         // We always delete the existing leaf node here because it will not be referenced anyway
         // since this version.
@@ -426,11 +454,11 @@ where
             assert!(existing_leaf_nibble_iter_below_internal.is_finished());
             // The new leaf node will have the same nibble_path with a new version as node_key.
             node_key.set_version(version);
-            // Create the new leaf node with the same address but new blob content.
+            // Create the new leaf node with the same address but the new value.
             return Ok(Self::create_leaf_node(
                 node_key,
                 nibble_iter,
-                blob,
+                value,
                 tree_cache,
             )?);
         }
@@ -462,7 +490,7 @@ where
         let (_, new_leaf_node) = Self::create_leaf_node(
             node_key.gen_child_node_key(version, new_leaf_index),
             nibble_iter,
-            blob,
+            value,
             tree_cache,
         )?;
         children.insert(
@@ -496,30 +524,27 @@ where
     fn create_leaf_node(
         node_key: NodeKey,
         nibble_iter: &NibbleIterator,
-        blob: AccountStateBlob,
-        tree_cache: &mut TreeCache<R>,
-    ) -> Result<(NodeKey, Node)> {
+        value: V,
+        tree_cache: &mut TreeCache<R, V>,
+    ) -> Result<(NodeKey, Node<V>)> {
         // Get the underlying bytes of nibble_iter which must be a key, i.e., hashed account address
         // with `HashValue::LENGTH` bytes.
         let new_leaf_node = Node::new_leaf(
             HashValue::from_slice(nibble_iter.get_nibble_path().bytes())
                 .expect("LeafNode must have full nibble path."),
-            blob,
+            value,
         );
 
         tree_cache.put_node(node_key.clone(), new_leaf_node.clone())?;
         Ok((node_key, new_leaf_node))
     }
 
-    /// Returns the account state blob (if applicable) and the corresponding merkle proof.
+    /// Returns the value (if applicable) and the corresponding merkle proof.
     pub fn get_with_proof(
         &self,
         key: HashValue,
         version: Version,
-    ) -> Result<(
-        Option<AccountStateBlob>,
-        SparseMerkleProof<AccountStateBlob>,
-    )> {
+    ) -> Result<(Option<V>, SparseMerkleProof<V>)> {
         // Empty tree just returns proof with no sibling hash.
         let mut next_node_key = NodeKey::new_empty_path(version);
         let mut siblings = vec![];
@@ -560,7 +585,7 @@ where
                 Node::Leaf(leaf_node) => {
                     return Ok((
                         if leaf_node.account_key() == key {
-                            Some(leaf_node.blob().clone())
+                            Some(leaf_node.value().clone())
                         } else {
                             None
                         },
@@ -613,7 +638,7 @@ where
     }
 
     #[cfg(test)]
-    pub fn get(&self, key: HashValue, version: Version) -> Result<Option<AccountStateBlob>> {
+    pub fn get(&self, key: HashValue, version: Version) -> Result<Option<V>> {
         Ok(self.get_with_proof(key, version)?.0)
     }
 

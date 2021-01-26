@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    iterator::JellyfishMerkleIterator, mock_tree_store::MockTreeStore, test_helper::plus_one,
+    iterator::JellyfishMerkleIterator,
+    mock_tree_store::MockTreeStore,
+    test_helper::{plus_one, ValueBlob},
     JellyfishMerkleTree,
 };
 use anyhow::Result;
 use diem_crypto::HashValue;
-use diem_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use diem_types::transaction::Version;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -32,12 +34,12 @@ fn test_n_leaves_same_version(n: usize) {
     let mut btree = BTreeMap::new();
     for i in 0..n {
         let key = HashValue::random_with_rng(&mut rng);
-        let value = AccountStateBlob::from(i.to_be_bytes().to_vec());
+        let value = ValueBlob::from(i.to_be_bytes().to_vec());
         assert_eq!(btree.insert(key, value), None);
     }
 
     let (_root_hash, batch) = tree
-        .put_blob_set(btree.clone().into_iter().collect(), 0 /* version */)
+        .put_value_set(btree.clone().into_iter().collect(), 0 /* version */)
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
 
@@ -53,19 +55,20 @@ fn test_n_leaves_multiple_versions(n: usize) {
     let mut btree = BTreeMap::new();
     for i in 0..n {
         let key = HashValue::random_with_rng(&mut rng);
-        let value = AccountStateBlob::from(i.to_be_bytes().to_vec());
+        let value = ValueBlob::from(i.to_be_bytes().to_vec());
         assert_eq!(btree.insert(key, value.clone()), None);
-        let (_root_hash, batch) = tree.put_blob_set(vec![(key, value)], i as Version).unwrap();
+        let (_root_hash, batch) = tree
+            .put_value_set(vec![(key, value)], i as Version)
+            .unwrap();
         db.write_tree_update_batch(batch).unwrap();
         run_tests(Arc::clone(&db), &btree, i as Version);
     }
 }
 
-fn run_tests(
-    db: Arc<MockTreeStore>,
-    btree: &BTreeMap<HashValue, AccountStateBlob>,
-    version: Version,
-) {
+fn run_tests<V>(db: Arc<MockTreeStore<V>>, btree: &BTreeMap<HashValue, V>, version: Version)
+where
+    V: crate::TestValue,
+{
     {
         let iter =
             JellyfishMerkleIterator::new(Arc::clone(&db), version, HashValue::zero()).unwrap();

@@ -15,7 +15,7 @@ use diem_config::config::RocksdbConfig;
 use diem_crypto::HashValue;
 use diem_infallible::duration_since_epoch;
 use diem_jellyfish_merkle::{restore::JellyfishMerkleRestore, NodeBatch, TreeWriter};
-use diem_types::{transaction::Version, waypoint::Waypoint};
+use diem_types::{account_state_blob::AccountStateBlob, transaction::Version, waypoint::Waypoint};
 use diemdb::{backup::restore_handler::RestoreHandler, DiemDB, GetRestoreHandler};
 use std::{
     collections::HashMap,
@@ -98,8 +98,8 @@ pub enum RestoreRunMode {
 
 struct MockTreeWriter;
 
-impl TreeWriter for MockTreeWriter {
-    fn write_node_batch(&self, _node_batch: &NodeBatch) -> Result<()> {
+impl TreeWriter<AccountStateBlob> for MockTreeWriter {
+    fn write_node_batch(&self, _node_batch: &NodeBatch<AccountStateBlob>) -> Result<()> {
         Ok(())
     }
 }
@@ -123,7 +123,7 @@ impl RestoreRunMode {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<JellyfishMerkleRestore> {
+    ) -> Result<JellyfishMerkleRestore<AccountStateBlob>> {
         match self {
             Self::Restore { restore_handler } => {
                 restore_handler.get_state_restore_receiver(version, expected_root_hash)

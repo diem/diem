@@ -21,7 +21,6 @@ use diem_crypto::{
 };
 use diem_nibble::Nibble;
 use diem_types::{
-    account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleRangeProof},
     transaction::Version,
 };
@@ -29,17 +28,20 @@ use mirai_annotations::*;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum ChildInfo {
+enum ChildInfo<V> {
     /// This child is an internal node. The hash of the internal node is stored here if it is
     /// known, otherwise it is `None`. In the process of restoring a tree, we will only know the
     /// hash of an internal node after we see all the keys that share the same prefix.
     Internal { hash: Option<HashValue> },
 
     /// This child is a leaf node.
-    Leaf { node: LeafNode },
+    Leaf { node: LeafNode<V> },
 }
 
-impl ChildInfo {
+impl<V> ChildInfo<V>
+where
+    V: crate::Value,
+{
     /// Converts `self` to a child, assuming the hash is known if it's an internal node.
     fn into_child(self, version: Version) -> Child {
         match self {
@@ -58,16 +60,19 @@ impl ChildInfo {
 }
 
 #[derive(Clone, Debug)]
-struct InternalInfo {
+struct InternalInfo<V> {
     /// The node key of this internal node.
     node_key: NodeKey,
 
     /// The existing children. Every time a child appears, the corresponding position will be set
     /// to `Some`.
-    children: [Option<ChildInfo>; 16],
+    children: [Option<ChildInfo<V>>; 16],
 }
 
-impl InternalInfo {
+impl<V> InternalInfo<V>
+where
+    V: crate::Value,
+{
     /// Creates an empty internal node with no children.
     fn new_empty(node_key: NodeKey) -> Self {
         Self {
@@ -76,7 +81,7 @@ impl InternalInfo {
         }
     }
 
-    fn set_child(&mut self, index: usize, child_info: ChildInfo) {
+    fn set_child(&mut self, index: usize, child_info: ChildInfo<V>) {
         precondition!(index < 16);
         self.children[index] = Some(child_info);
     }
@@ -98,9 +103,9 @@ impl InternalInfo {
     }
 }
 
-pub struct JellyfishMerkleRestore {
+pub struct JellyfishMerkleRestore<V> {
     /// The underlying storage.
-    store: Arc<dyn TreeWriter>,
+    store: Arc<dyn TreeWriter<V>>,
 
     /// The version of the tree we are restoring.
     version: Version,
@@ -135,14 +140,14 @@ pub struct JellyfishMerkleRestore {
     /// might cause a few internal nodes to be created additionally. If it appears at position `C`,
     /// it will also cause `partial_nodes[1]` to be added to `frozen_nodes` as an internal node and
     /// be removed from `partial_nodes`.
-    partial_nodes: Vec<InternalInfo>,
+    partial_nodes: Vec<InternalInfo<V>>,
 
     /// The nodes that have been fully restored and are ready to be written to storage.
-    frozen_nodes: NodeBatch,
+    frozen_nodes: NodeBatch<V>,
 
     /// The most recently added leaf. This is used to ensure the keys come in increasing order and
     /// do proof verification.
-    previous_leaf: Option<LeafNode>,
+    previous_leaf: Option<LeafNode<V>>,
 
     /// The number of keys we have received since the most recent restart.
     num_keys_received: u64,
@@ -151,8 +156,11 @@ pub struct JellyfishMerkleRestore {
     expected_root_hash: HashValue,
 }
 
-impl JellyfishMerkleRestore {
-    pub fn new<D: 'static + TreeReader + TreeWriter>(
+impl<V> JellyfishMerkleRestore<V>
+where
+    V: crate::Value,
+{
+    pub fn new<D: 'static + TreeReader<V> + TreeWriter<V>>(
         store: Arc<D>,
         version: Version,
         expected_root_hash: HashValue,
@@ -185,7 +193,7 @@ impl JellyfishMerkleRestore {
         })
     }
 
-    pub fn new_overwrite<D: 'static + TreeWriter>(
+    pub fn new_overwrite<D: 'static + TreeWriter<V>>(
         store: Arc<D>,
         version: Version,
         expected_root_hash: HashValue,
@@ -204,10 +212,10 @@ impl JellyfishMerkleRestore {
     /// Recovers partial nodes from storage. We do this by looking at all the ancestors of the
     /// rightmost leaf. The ones do not exist in storage are the partial nodes.
     fn recover_partial_nodes(
-        store: &dyn TreeReader,
+        store: &dyn TreeReader<V>,
         version: Version,
         rightmost_leaf_node_key: NodeKey,
-    ) -> Result<Vec<InternalInfo>> {
+    ) -> Result<Vec<InternalInfo<V>>> {
         ensure!(
             rightmost_leaf_node_key.nibble_path().num_nibbles() > 0,
             "Root node would not be written until entire restoration process has completed \
@@ -273,7 +281,7 @@ impl JellyfishMerkleRestore {
     /// error will be returned and nothing will be written to storage.
     pub fn add_chunk(
         &mut self,
-        chunk: Vec<(HashValue, AccountStateBlob)>,
+        chunk: Vec<(HashValue, V)>,
         proof: SparseMerkleRangeProof,
     ) -> Result<()> {
         ensure!(!chunk.is_empty(), "Should not add empty chunks.");
@@ -301,7 +309,7 @@ impl JellyfishMerkleRestore {
     }
 
     /// Restores one account.
-    fn add_one(&mut self, new_key: HashValue, new_value: AccountStateBlob) {
+    fn add_one(&mut self, new_key: HashValue, new_value: V) {
         let nibble_path = NibblePath::new(new_key.to_vec());
         let mut nibbles = nibble_path.nibbles();
 
@@ -358,9 +366,9 @@ impl JellyfishMerkleRestore {
     fn insert_at_leaf<'b>(
         &mut self,
         child_index: usize,
-        existing_leaf: LeafNode,
+        existing_leaf: LeafNode<V>,
         new_key: HashValue,
-        new_value: AccountStateBlob,
+        new_value: V,
         mut remaining_nibbles: NibbleIterator<'b>,
     ) {
         let num_existing_partial_nodes = self.partial_nodes.len();
@@ -597,7 +605,7 @@ impl JellyfishMerkleRestore {
     }
 
     /// Computes the sibling on the left for the `n`-th child.
-    fn compute_left_sibling(partial_node: &InternalInfo, n: Nibble, height: u8) -> HashValue {
+    fn compute_left_sibling(partial_node: &InternalInfo<V>, n: Nibble, height: u8) -> HashValue {
         assert!(height < 4);
         let width = 1usize << height;
         let start = get_child_and_sibling_half_start(n, height).1 as usize;
@@ -605,7 +613,7 @@ impl JellyfishMerkleRestore {
     }
 
     /// Returns the hash for given portion of the subtree and whether this part is a leaf node.
-    fn compute_left_sibling_impl(children: &[Option<ChildInfo>]) -> (HashValue, bool) {
+    fn compute_left_sibling_impl(children: &[Option<ChildInfo<V>>]) -> (HashValue, bool) {
         assert!(!children.is_empty());
 
         let num_children = children.len();

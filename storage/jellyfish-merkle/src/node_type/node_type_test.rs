@@ -1,14 +1,24 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::*;
+use super::{
+    deserialize_u64_varint, serialize_u64_varint, Child, Children, InternalNode, NodeDecodeError,
+    NodeKey,
+};
+use crate::{nibble_path::NibblePath, test_helper::ValueBlob};
 use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
+use diem_nibble::Nibble;
+use diem_types::{
+    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
+    transaction::Version,
+};
 use proptest::prelude::*;
-use std::{panic, rc::Rc};
+use std::{io::Cursor, panic, rc::Rc};
+
+type Node = super::Node<crate::test_helper::ValueBlob>;
 
 fn hash_internal(left: HashValue, right: HashValue) -> HashValue {
     SparseMerkleInternalNode::new(left, right).hash()
@@ -44,9 +54,9 @@ fn test_encode_decode() {
     let internal_node_key = random_63nibbles_node_key();
 
     let leaf1_keys = gen_leaf_keys(0, internal_node_key.nibble_path(), Nibble::from(1));
-    let leaf1_node = Node::new_leaf(leaf1_keys.1, AccountStateBlob::from(vec![0x00]));
+    let leaf1_node = Node::new_leaf(leaf1_keys.1, ValueBlob::from(vec![0x00]));
     let leaf2_keys = gen_leaf_keys(0, internal_node_key.nibble_path(), Nibble::from(2));
-    let leaf2_node = Node::new_leaf(leaf2_keys.1, AccountStateBlob::from(vec![0x01]));
+    let leaf2_node = Node::new_leaf(leaf2_keys.1, ValueBlob::from(vec![0x01]));
 
     let mut children = Children::default();
     children.insert(
@@ -61,7 +71,7 @@ fn test_encode_decode() {
     let account_key = HashValue::random();
     let nodes = vec![
         Node::new_internal(children),
-        Node::new_leaf(account_key, AccountStateBlob::from(vec![0x02])),
+        Node::new_leaf(account_key, ValueBlob::from(vec![0x02])),
     ];
     for n in &nodes {
         let v = n.encode().unwrap();
@@ -125,7 +135,7 @@ fn test_internal_validity() {
 fn test_leaf_hash() {
     {
         let address = HashValue::random();
-        let blob = AccountStateBlob::from(vec![0x02]);
+        let blob = ValueBlob::from(vec![0x02]);
         let value_hash = blob.hash();
         let hash = hash_leaf(address, value_hash);
         let leaf_node = Node::new_leaf(address, blob);

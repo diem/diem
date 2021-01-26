@@ -10,20 +10,31 @@ use diem_infallible::RwLock;
 use diem_types::transaction::Version;
 use std::collections::{hash_map::Entry, BTreeSet, HashMap};
 
-#[derive(Default)]
-pub struct MockTreeStore {
-    data: RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>,
+pub struct MockTreeStore<V> {
+    data: RwLock<(HashMap<NodeKey, Node<V>>, BTreeSet<StaleNodeIndex>)>,
     allow_overwrite: bool,
 }
 
-impl TreeReader for MockTreeStore {
-    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
+impl<V> Default for MockTreeStore<V> {
+    fn default() -> Self {
+        Self {
+            data: RwLock::new((HashMap::new(), BTreeSet::new())),
+            allow_overwrite: false,
+        }
+    }
+}
+
+impl<V> TreeReader<V> for MockTreeStore<V>
+where
+    V: crate::TestValue,
+{
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node<V>>> {
         Ok(self.data.read().0.get(node_key).cloned())
     }
 
-    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode<V>)>> {
         let locked = self.data.read();
-        let mut node_key_and_node: Option<(NodeKey, LeafNode)> = None;
+        let mut node_key_and_node: Option<(NodeKey, LeafNode<V>)> = None;
 
         for (key, value) in locked.0.iter() {
             if let Node::Leaf(leaf_node) = value {
@@ -39,8 +50,11 @@ impl TreeReader for MockTreeStore {
     }
 }
 
-impl TreeWriter for MockTreeStore {
-    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
+impl<V> TreeWriter<V> for MockTreeStore<V>
+where
+    V: crate::TestValue,
+{
+    fn write_node_batch(&self, node_batch: &NodeBatch<V>) -> Result<()> {
         let mut locked = self.data.write();
         for (node_key, node) in node_batch.clone() {
             let replaced = locked.0.insert(node_key, node);
@@ -52,14 +66,17 @@ impl TreeWriter for MockTreeStore {
     }
 }
 
-impl MockTreeStore {
+impl<V> MockTreeStore<V>
+where
+    V: crate::TestValue,
+{
     pub fn new(allow_overwrite: bool) -> Self {
         let mut res = Self::default();
         res.allow_overwrite = allow_overwrite;
         res
     }
 
-    pub fn put_node(&self, node_key: NodeKey, node: Node) -> Result<()> {
+    pub fn put_node(&self, node_key: NodeKey, node: Node<V>) -> Result<()> {
         match self.data.write().0.entry(node_key) {
             Entry::Occupied(o) => bail!("Key {:?} exists.", o.key()),
             Entry::Vacant(v) => {
@@ -75,7 +92,7 @@ impl MockTreeStore {
         Ok(())
     }
 
-    pub fn write_tree_update_batch(&self, batch: TreeUpdateBatch) -> Result<()> {
+    pub fn write_tree_update_batch(&self, batch: TreeUpdateBatch<V>) -> Result<()> {
         batch
             .node_batch
             .into_iter()

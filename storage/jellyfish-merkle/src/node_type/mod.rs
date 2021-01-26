@@ -7,8 +7,7 @@
 //! and [`LeafNode`] as building blocks of a 256-bit
 //! [`JellyfishMerkleTree`](crate::JellyfishMerkleTree). [`InternalNode`] represents a 4-level
 //! binary tree to optimize for IOPS: it compresses a tree with 31 nodes into one node with 16
-//! chidren at the lowest level. [`LeafNode`] stores the full key and the account blob data
-//! associated.
+//! chidren at the lowest level. [`LeafNode`] stores the full key and the value associated.
 
 #[cfg(test)]
 mod node_type_test;
@@ -22,7 +21,6 @@ use diem_crypto::{
 };
 use diem_nibble::Nibble;
 use diem_types::{
-    account_state_blob::AccountStateBlob,
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
     transaction::Version,
 };
@@ -496,23 +494,26 @@ pub(crate) fn get_child_and_sibling_half_start(n: Nibble, height: u8) -> (u8, u8
 
 /// Represents an account.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LeafNode {
+pub struct LeafNode<V> {
     // The hashed account address associated with this leaf node.
     account_key: HashValue,
-    // The hash of the account state blob.
-    blob_hash: HashValue,
-    // The account blob associated with `account_key`.
-    blob: AccountStateBlob,
+    // The hash of the value.
+    value_hash: HashValue,
+    // The value stored in the leaf, associated with `account_key`.
+    value: V,
 }
 
-impl LeafNode {
+impl<V> LeafNode<V>
+where
+    V: crate::Value,
+{
     /// Creates a new leaf node.
-    pub fn new(account_key: HashValue, blob: AccountStateBlob) -> Self {
-        let blob_hash = blob.hash();
+    pub fn new(account_key: HashValue, value: V) -> Self {
+        let value_hash = value.hash();
         Self {
             account_key,
-            blob_hash,
-            blob,
+            value_hash,
+            value,
         }
     }
 
@@ -521,19 +522,19 @@ impl LeafNode {
         self.account_key
     }
 
-    /// Gets the associated blob itself.
-    pub fn blob(&self) -> &AccountStateBlob {
-        &self.blob
+    /// Gets the associated value itself.
+    pub fn value(&self) -> &V {
+        &self.value
     }
 
     pub fn hash(&self) -> HashValue {
-        SparseMerkleLeafNode::new(self.account_key, self.blob_hash).hash()
+        SparseMerkleLeafNode::new(self.account_key, self.value_hash).hash()
     }
 }
 
-impl From<LeafNode> for SparseMerkleLeafNode {
-    fn from(leaf_node: LeafNode) -> Self {
-        Self::new(leaf_node.account_key, leaf_node.blob_hash)
+impl<V> From<LeafNode<V>> for SparseMerkleLeafNode {
+    fn from(leaf_node: LeafNode<V>) -> Self {
+        Self::new(leaf_node.account_key, leaf_node.value_hash)
     }
 }
 
@@ -547,16 +548,16 @@ enum NodeTag {
 
 /// The concrete node type of [`JellyfishMerkleTree`](crate::JellyfishMerkleTree).
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Node {
+pub enum Node<V> {
     /// Represents `null`.
     Null,
     /// A wrapper of [`InternalNode`].
     Internal(InternalNode),
     /// A wrapper of [`LeafNode`].
-    Leaf(LeafNode),
+    Leaf(LeafNode<V>),
 }
 
-impl From<InternalNode> for Node {
+impl<V> From<InternalNode> for Node<V> {
     fn from(node: InternalNode) -> Self {
         Node::Internal(node)
     }
@@ -568,13 +569,16 @@ impl From<InternalNode> for Children {
     }
 }
 
-impl From<LeafNode> for Node {
-    fn from(node: LeafNode) -> Self {
+impl<V> From<LeafNode<V>> for Node<V> {
+    fn from(node: LeafNode<V>) -> Self {
         Node::Leaf(node)
     }
 }
 
-impl Node {
+impl<V> Node<V>
+where
+    V: crate::Value,
+{
     /// Creates the [`Null`](Node::Null) variant.
     pub fn new_null() -> Self {
         Node::Null
@@ -586,8 +590,8 @@ impl Node {
     }
 
     /// Creates the [`Leaf`](Node::Leaf) variant.
-    pub fn new_leaf(account_key: HashValue, blob: AccountStateBlob) -> Self {
-        Node::Leaf(LeafNode::new(account_key, blob))
+    pub fn new_leaf(account_key: HashValue, value: V) -> Self {
+        Node::Leaf(LeafNode::new(account_key, value))
     }
 
     /// Returns `true` if the node is a leaf node.
@@ -624,7 +628,7 @@ impl Node {
     }
 
     /// Recovers from serialized bytes in physical storage.
-    pub fn decode(val: &[u8]) -> Result<Node> {
+    pub fn decode(val: &[u8]) -> Result<Node<V>> {
         if val.is_empty() {
             return Err(NodeDecodeError::EmptyInput.into());
         }
