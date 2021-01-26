@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::cfg::BlockCFG;
-use crate::parser::ast::Var;
+use crate::{hlir::ast::FunctionSignature, parser::ast::Var};
 use std::collections::BTreeSet;
 
 /// returns true if anything changed
-pub fn optimize(cfg: &mut BlockCFG) -> bool {
+pub fn optimize(signature: &FunctionSignature, cfg: &mut BlockCFG) -> bool {
     let mut changed = super::remove_no_ops::optimize(cfg);
     loop {
         let ssa_temps = {
-            let s = count(cfg);
+            let s = count(signature, cfg);
             if s.is_empty() {
                 break changed;
             }
@@ -28,8 +28,8 @@ pub fn optimize(cfg: &mut BlockCFG) -> bool {
 // Count assignment and usage
 //**************************************************************************************************
 
-fn count(cfg: &BlockCFG) -> BTreeSet<Var> {
-    let mut context = count::Context::new();
+fn count(signature: &FunctionSignature, cfg: &BlockCFG) -> BTreeSet<Var> {
+    let mut context = count::Context::new(signature);
     for block in cfg.blocks().values() {
         for cmd in block {
             count::command(&mut context, cmd)
@@ -40,7 +40,7 @@ fn count(cfg: &BlockCFG) -> BTreeSet<Var> {
 
 mod count {
     use crate::{
-        hlir::ast::*,
+        hlir::ast::{FunctionSignature, *},
         parser::ast::{BinOp, UnaryOp, Var},
     };
     use std::collections::{BTreeMap, BTreeSet};
@@ -51,11 +51,15 @@ mod count {
     }
 
     impl Context {
-        pub fn new() -> Self {
-            Context {
+        pub fn new(signature: &FunctionSignature) -> Self {
+            let mut ctx = Context {
                 assigned: BTreeMap::new(),
                 used: BTreeMap::new(),
+            };
+            for (v, _) in &signature.parameters {
+                ctx.assign(v, false);
             }
+            ctx
         }
 
         fn assign(&mut self, var: &Var, substitutable: bool) {

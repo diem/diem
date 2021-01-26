@@ -42,13 +42,13 @@ pub fn refine_inference_and_verify(
 }
 
 pub fn optimize(
-    _signature: &FunctionSignature,
+    signature: &FunctionSignature,
     _locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
 ) {
     loop {
         let mut changed = false;
-        changed |= eliminate_locals::optimize(cfg);
+        changed |= eliminate_locals::optimize(signature, cfg);
         changed |= constant_fold::optimize(cfg);
         changed |= simplify_jumps::optimize(cfg);
         changed |= inline_blocks::optimize(cfg);
