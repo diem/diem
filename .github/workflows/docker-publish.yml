@@ -77,6 +77,14 @@ jobs:
           exit $success
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: Republish to diem.
+        if: ${{ always() && github.ref != 'refs/heads/auto' }}
+        run: |
+          GIT_REV=$(git rev-parse --short=8 HEAD)
+          BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
+          docker/docker_republish.sh -t ${BRANCH}_${GIT_REV}
+        env:
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
       - name: docker image pruning.
         if: ${{ github.ref != 'refs/heads/auto' }}
         run: |
@@ -89,4 +97,4 @@ jobs:
           GIT_REV=$(git rev-parse --short=8 HEAD)
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
-          docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
+          docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d

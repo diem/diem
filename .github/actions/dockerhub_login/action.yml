@@ -21,7 +21,7 @@ runs:
   steps:
     - run: |
         echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-        if [ -n ${DOCKERHUB_KEY_MATERIAL} ] && [ -n ${DOCKERHUB_KEY_NAME} ] && [ -n DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE ]; then
+        if [ -n ${DOCKERHUB_KEY_MATERIAL} ] && [ -n ${DOCKERHUB_KEY_NAME} ] && [ -n ${DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE} ]; then
           mkdir -p ~/.docker/trust/private/
           echo ${DOCKERHUB_KEY_MATERIAL} | base64 -d > ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
           chmod 600 ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
