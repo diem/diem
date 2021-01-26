@@ -85,24 +85,24 @@ usage: <command> <args>
 
 Use the following commands:
 
-account | a
+account | a 
 	Account operations
-query | q
+query | q 
 	Query operations
-transfer | transferb | t | tb
-	<sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 400_000)] Suffix 'b' is for blocking.
+transfer | transferb | t | tb 
+	<sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_diems (default=0)] [max_gas_amount_in_micro_diems (default 400_000)] Suffix 'b' is for blocking. 
 	Transfer coins from one account to another.
-info | i
+info | i 
 	Print cli config and client internal information
-help | h
+help | h 
 	Prints this help
-quit | q!
+quit | q! 
 	Exit this client
 
 
-Please, input commands:
+Please, input commands: 
 
-libra%
+diem%
 
 ```
 
@@ -120,24 +120,26 @@ Once your client is connected to the testnet, you can run CLI commands to create
 
 #### Step 1: Check if the CLI client Is running on your system
 
-A `libra%` command line prompt indicates that your Diem CLI client is running. To see the help information for the `account` command enter “account” as shown below:
+A `diem%` command line prompt indicates that your Diem CLI client is running. To see the help information for the `account` command enter “account” as shown below:
 
 ```
-libra% account
+diem% account
 usage: account <arg>
 
 Use the following args for this command:
 
-create | c
+Use the following args for this command:
+
+create | c 
 	Create a local account--no on-chain effect. Returns reference ID to use in other operations
-list | la
+list | la 
 	Print all accounts that were created or loaded
 recover | r <file_path>
-	Recover Libra wallet from the file path
+	Recover Diem wallet from the file path
 write | w <file_path>
-	Save Libra wallet mnemonic recovery seed to disk
+	Save Diem wallet mnemonic recovery seed to disk
 mint | mintb | m | mb <receiver_account_ref_id>|<receiver_account_address> <number_of_coins> <currency_code> [use_base_units (default=false)]
-	Send currency of the given type from the faucet address to the given recipient address. Creates an account at the recipient address if one does not already exist. Suffix 'b' is for blocking
+	Send currency of the given type from the faucet address to the given recipient address. Creates an account at the recipient address if one does not already exist.
 addc | addcb | ac | acb <account_address> <currency_code>
 	Add specified currency to the account. Suffix 'b' is for blocking
 
@@ -151,13 +153,13 @@ addc | addcb | ac | acb <account_address> <currency_code>
 
 To create Alice’s account, enter this command:
 
-`libra% account create`
+`diem% account create`
 
 Sample output on success:
 
 ```
 >> Creating/retrieving next local account from wallet
-Created/retrieved local account #0 address 5261f913eab22cfc448a815a0e672143
+Created/retrieved local account #0 address 9d02da2312d2687ca665ccf77f2435fc
 ```
 
 * 0 is the index of Alice’s account.
@@ -170,13 +172,13 @@ The index is just a way to refer to Alice’s account. Users can use the account
 
 To create Bob’s account, repeat the account creation command:
 
-`libra% account create`
+`diem% account create`
 
 Sample output on success:
 
 ```
 >> Creating/retrieving next local account from wallet
-Created/retrieved local account #1 address 701901dad4e06079cc701452ac48a99d
+Created/retrieved local account #1 address 3099d7230aa336f5dcfe13c1231454ce
 
 ```
 * 1 is the index for Bob’s account.
@@ -187,12 +189,12 @@ Created/retrieved local account #1 address 701901dad4e06079cc701452ac48a99d
 
 To list the accounts you have created, enter this command:
 
-`libra% account list`
+`diem% account list`
 
 Sample output on success:
 ```
-User account index: 0, address: 5261f913eab22cfc448a815a0e672143, private_key: "redacted_value", sequence number: 1, status: Persisted
-User account index: 1, address: 701901dad4e06079cc701452ac48a99d, private_key: "redacted_value", sequence number: 0, status: Persisted
+User account index: 0, address: 9d02da2312d2687ca665ccf77f2435fc, private_key: "1762350c5f5b56fc61d913fe9d25325eff69766d735d05e76ca780328b52a68d", sequence number: 0, status: Local
+User account index: 1, address: 3099d7230aa336f5dcfe13c1231454ce, private_key: "6a6704b403ebe52603baf16798b0c8f1ce54048321858d3d61bb4e6bafffda30", sequence number: 0, status: Local
 
 ```
 
@@ -208,11 +210,11 @@ Adding fake Diem Coins with no real-world value to accounts on testnet is done v
 To mint fake Diem Coins and add them to Alice’s account, enter this command:
 
 
-`libra% account mint 0 110 Coin1`
+`diem% account mint 0 110 XUS`
 
 * 0 is the index of Alice’s account.
 * 110 is the amount of fake Diem Coins to be added to Alice’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 A successful account “mint” command will also create Alice’s account on the blockchain.  Note that “minting” on Testnet means adding new fake Diem Coins to an account.
 
@@ -221,7 +223,9 @@ Sample output on success:
 
 ```
 >> Sending coins from faucet
-Request submitted to faucet
+..........................................................................................
+.....................
+Finished sending coins from faucet!
 ```
 
 When the request is submitted, it means that it has been added to the mempool (of a validator node on testnet) successfully. It does not necessarily imply that it will be successfully completed. Later, we will query the account balance to confirm whether the minting was successful.
@@ -233,11 +237,11 @@ If your account “mint” command did not submit your request successfully, ref
 To mint fake Diem Coins and add them to Bob’s account, enter this command:
 
 
-`libra% account mint 1 52 Coin1`
+`diem% account mint 1 52 XUS`
 
 * 1 is the index of Bob’s account.
 * 52 is the amount of Diem to be added to Bob’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 A successful account “mint” command can also create Bob’s account on the blockchain. Another way to create Bob’s account on the blockchain is to transfer money from Alice’s account to Bob’s account.
 
@@ -245,7 +249,9 @@ Sample output on success:
 
 ```
 >> Sending coins from faucet
-Request submitted to faucet
+....................................................................................................................
+......................
+Finished sending coins from faucet!
 ```
 
 If your account mint command did not submit your request successfully, refer to [Troubleshooting](#minting-and-adding-money-to-account)
@@ -255,19 +261,19 @@ If your account mint command did not submit your request successfully, refer to 
 
 To check the balance in Alice’s account, enter this command:
 
-`libra% query balance 0`
+`diem% query balance 0`
 
 Sample output on success:
 
-`Balance is: 110.000000Coin1`
+`Balance is: 110.000000XUS`
 
 To check the balance in Bob’s account, enter this command:
 
-`libra% query balance 1`
+`diem% query balance 1`
 
 Sample output on success:
 
-`Balance is: 52.000000Coin1`
+`Balance is: 52.000000XUS`
 
 ### Submit a transaction
 
@@ -276,10 +282,10 @@ Before we submit a transaction to transfer Diem Coins from Alice’s account to 
 #### Query the accounts’ sequence numbers
 
 ```plaintext
-libra% query sequence 0
+diem% query sequence 0
 >> Getting current sequence number
 Sequence number is: 0
-libra% query sequence 1
+diem% query sequence 1
 >> Getting current sequence number
 Sequence number is: 0
 ```
@@ -290,12 +296,12 @@ In `query sequence 0`, 0 is the index of Alice’s account. A sequence number of
 
 To submit a transaction to transfer 10 Diem Coins from Alice’s account to Bob’s account, enter this command:
 
-`libra% transfer 0 1 10 Diem`
+`diem% transfer 0 1 10 XUS`
 
 * 0 is the index of Alice’s account.
 * 1 is the index of Bob’s account.
 * 10 is the number of fake Diem Coins to transfer from Alice’s account to Bob’s account.
-* Coin1 is the currency code for the fake Diem Coins
+* XUS is the currency code for the fake Diem Coins
 
 
 Sample output on success:
@@ -314,17 +320,17 @@ To troubleshoot the transfer command, refer to [Troubleshooting](#the-transfer-c
 
 **The Blocking Transfer Command**: You can use the `transferb` command (as shown below), instead of the `transfer` command. `transferb` will submit the transaction and return to the client prompt only after the transaction has been committed to the blockchain. An example is shown below:
 
-`libra% transferb 0 1 10 Coin`
+`diem% transferb 0 1 10 XUS`
 
 Refer to [Life of a Transaction](life-of-a-transaction.md) for an understanding of the lifecycle of a transaction from submission to execution and storage.
 
 #### Query sequence number after transfer
 
 ```
-libra% query sequence 0
+diem% query sequence 0
 >> Getting current sequence number
 Sequence number is: 1
-libra% query sequence 1
+diem% query sequence 1
 >> Getting current sequence number
 Sequence number is: 0
 ```
@@ -336,10 +342,10 @@ The sequence number of 1 for Alice’s account (index 0) indicates that one tran
 To check the final balance in both accounts, query the balance again for each account as you did in [this step](#step-3-check-the-balance). If your transaction (transfer) executed successfully, you should see 100 fake Diem Coins in Alice’s account and 62 fake Diem Coins in Bob’s account.
 
 ```
-libra% query balance 0
-Balance is: 100.000000Coin1
-libra% query balance 1
-Balance is: 62.000000Coin1
+diem% query balance 0
+Balance is: 100.000000XUS
+diem% query balance 1
+Balance is: 62.000000XUS
 ```
 
 ### Congratulations!
@@ -376,7 +382,7 @@ If your client did not connect to the testnet:
 * If the validator node you connected to on testnet is unavailable, you will get a “Server unavailable” message as shown below:
 
 ```
-libra% account mint 0 110 Coin1
+diem% account mint 0 110 XUS
 >> Minting coins
 [ERROR] Error minting coins: Server unavailable, please retry and/or check **if** host passed to the client is running
 ```
@@ -385,14 +391,14 @@ libra% account mint 0 110 Coin1
 
 * To check if an account exists, query the account state. For an account with index 0 enter this:
 
-  `libra% query account_state 0`
+  `diem% query account_state 0`
 
 ### The transfer command
 
 If the testnet validator node (your client was connected to) is unavailable or your connection to the testnet has timed-out, you will see this error:
 
 ```
-libra% transfer 0 1 10 Coin1
+diem% transfer 0 1 10 XUS
 >> Transferring
 [ERROR] Failed to perform transaction: Server unavailable, please retry and/or check if host passed to the client is running
 ```
@@ -409,118 +415,129 @@ To troubleshoot transfer errors:
 This example will query for a single transaction's details using the account and sequence number.
 
 ```
-libra% query txn_acc_seq 0 0 true
->> Getting committed transaction by account and sequence number
-Committed transaction: TransactionView {
-    version: 3049426,
-    transaction: UserTransaction {
-        sender: "5261F913EAB22CFC448A815A0E672143",
-        signature_scheme: "Scheme::Ed25519",
-        signature: "4b357285fcf6919188ada95517dfab76717faadc54aaef37e22c4bd0fbe4a450b7ba20e41e2629bb5754dd0a51af0a4360af8ac07d8f32419d197ff0401e830f",
-        public_key: "43e9cc017c028e3a4537d7a434e10f4efe969e40b6874a9fded9a87fe8460cf8",
-        sequence_number: 0,
-        chain_id: 2,
-        max_gas_amount: 1000000,
-        gas_unit_price: 0,
-        gas_currency: "Coin1",
-        expiration_timestamp_secs: 1603827098,
-        script_hash: "61749d43d8f10940be6944df85ddf13f0f8fb830269c601f481cc5ee3de731c8",
-        script_bytes: BytesView(
-"e101a11ceb0b010000000701000202020403061004160205181d0735610896011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000c4c696272614163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b0511020201070000000000000000000000000000000105436f696e3105436f696e31000403701901dad4e06079cc701452ac48a99d01809698000000000004000400",
-        ),
-        script: ScriptView {
-            type: "peer_to_peer_with_metadata",
-            code: Some(
-                BytesView(
-                    "a11ceb0b010000000701000202020403061004160205181d0735610896011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000c4c696272614163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b05110202",
-                ),
-            ),
-            arguments: Some(
-                [
-                    "{ADDRESS: 701901DAD4E06079CC701452AC48A99D}",
-                    "{U64: 10000000}",
-                    "{U8Vector: 0x}",
-                    "{U8Vector: 0x}",
-                ],
-            ),
-            type_arguments: Some(
-                [
-                    "Coin1",
-                ],
-            ),
-            receiver: Some(
-                "701901DAD4E06079CC701452AC48A99D",
-            ),
-            amount: Some(
-                10000000,
-            ),
-            currency: Some(
-                "Coin1",
-            ),
-            metadata: Some(
-                BytesView(
-                    "",
-                ),
-            ),
-            metadata_signature: Some(
-                BytesView(
-                    "",
-                ),
-            ),
-        },
-    },
-    hash: "40de7d62d0a7583e8670a2b2b872c63c51060cc2d86acdd191a739af77f239e6",
-    bytes: BytesView(
-        "005261f913eab22cfc448a815a0e672143000000000000000001e101a11ceb0b010000000701000202020403061004160205181d0735610896011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000c4c696272614163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b0511020201070000000000000000000000000000000105436f696e3105436f696e31000403701901dad4e06079cc701452ac48a99d0180969800000000000400040040420f0000000000000000000000000005436f696e319a75985f0000000002002043e9cc017c028e3a4537d7a434e10f4efe969e40b6874a9fded9a87fe8460cf8404b357285fcf6919188ada95517dfab76717faadc54aaef37e22c4bd0fbe4a450b7ba20e41e2629bb5754dd0a51af0a4360af8ac07d8f32419d197ff0401e830f",
-    ),
-    events: [
-        EventView {
-            key: BytesView(
-                "03000000000000005261f913eab22cfc448a815a0e672143",
-            ),
+diem% query txn_acc_seq 0 0 true
+>>> Getting committed transaction by account and sequence number
+Committed transaction: Transaction {
+    version: 51985530,
+    transaction: Some(
+        TransactionData {
+            r#type: "user",
+            timestamp_usecs: 0,
+            sender: "9d02da2312d2687ca665ccf77f2435fc",
+            signature_scheme: "Scheme::Ed25519",
+            signature: "d542c1b81d500e31da30809abf27b3c77ca8ef7a14cf686e8aec904eb05a49ed70a7ab8344cafc89530720ae57bb2ab8f32d05bf05ef3214e172195e827a0801",
+            public_key: "eb25078db5c85fa8467083c16b7c3c2c35a81b9e68fd0a4f6297479f3bcfd349",
             sequence_number: 0,
-            transaction_version: 3049426,
-            data: SentPayment {
-                amount: AmountView {
+            chain_id: 2,
+            max_gas_amount: 1000000,
+            gas_unit_price: 0,
+            gas_currency: "XUS",
+            expiration_timestamp_secs: 1611792876,
+            script_hash: "04ea43107fafc12adcd09f6c68d63e194675d0ce843a7faf7cceb6c813db9d9a",
+            script_bytes: "e001a11ceb0b010000000701000202020403061004160205181d0735600895011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000b4469656d4163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b0511020201070000000000000000000000000000000103585553035855530004033099d7230aa336f5dcfe13c1231454ce01809698000000000004000400",
+            script: Some(
+                Script {
+                    r#type: "peer_to_peer_with_metadata",
+                    code: "a11ceb0b010000000701000202020403061004160205181d0735600895011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000b4469656d4163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b05110202",
+                    arguments: [
+                        "{ADDRESS: 3099D7230AA336F5DCFE13C1231454CE}",
+                        "{U64: 10000000}",
+                        "{U8Vector: 0x}",
+                        "{U8Vector: 0x}",
+                    ],
+                    type_arguments: [
+                        "XUS",
+                    ],
+                    receiver: "3099d7230aa336f5dcfe13c1231454ce",
                     amount: 10000000,
-                    currency: "Coin1",
+                    currency: "XUS",
+                    metadata: "",
+                    metadata_signature: "",
                 },
-                receiver: BytesView(
-                    "701901dad4e06079cc701452ac48a99d",
-                ),
-                sender: BytesView(
-                    "5261f913eab22cfc448a815a0e672143",
-                ),
-                metadata: BytesView(
-                    "",
-                ),
-            },
-        },
-        EventView {
-            key: BytesView(
-                "0200000000000000701901dad4e06079cc701452ac48a99d",
             ),
-            sequence_number: 1,
-            transaction_version: 3049426,
-            data: ReceivedPayment {
-                amount: AmountView {
-                    amount: 10000000,
-                    currency: "Coin1",
+        },
+    ),
+    hash: "90d44b788d4edeb4b9289c09f56ac8599cc3d9f60dd93d84eedd54bcd8210b43",
+    bytes: "009d02da2312d2687ca665ccf77f2435fc000000000000000001e001a11ceb0b010000000701000202020403061004160205181d0735600895011000000001010000020001000003020301010004010300010501060c0108000506080005030a020a020005060c05030a020a020109000b4469656d4163636f756e741257697468647261774361706162696c6974791b657874726163745f77697468647261775f6361706162696c697479087061795f66726f6d1b726573746f72655f77697468647261775f6361706162696c69747900000000000000000000000000000001010104010c0b0011000c050e050a010a020b030b0438000b0511020201070000000000000000000000000000000103585553035855530004033099d7230aa336f5dcfe13c1231454ce0180969800000000000400040040420f0000000000000000000000000003585553ec01126000000000020020eb25078db5c85fa8467083c16b7c3c2c35a81b9e68fd0a4f6297479f3bcfd34940d542c1b81d500e31da30809abf27b3c77ca8ef7a14cf686e8aec904eb05a49ed70a7ab8344cafc89530720ae57bb2ab8f32d05bf05ef3214e172195e827a0801",
+    events: [
+        Event {
+            key: "03000000000000009d02da2312d2687ca665ccf77f2435fc",
+            sequence_number: 0,
+            transaction_version: 51985530,
+            data: Some(
+                EventData {
+                    r#type: "sentpayment",
+                    amount: Some(
+                        Amount {
+                            amount: 10000000,
+                            currency: "XUS",
+                        },
+                    ),
+                    preburn_address: "",
+                    currency_code: "",
+                    new_to_xdx_exchange_rate: 0.0,
+                    sender: "9d02da2312d2687ca665ccf77f2435fc",
+                    receiver: "3099d7230aa336f5dcfe13c1231454ce",
+                    metadata: "",
+                    epoch: 0,
+                    round: 0,
+                    proposer: "",
+                    proposed_time: 0,
+                    destination_address: "",
+                    new_compliance_public_key: "",
+                    new_base_url: "",
+                    time_rotated_seconds: 0,
+                    created_address: "",
+                    role_id: 0,
+                    committed_timestamp_secs: 0,
                 },
-                sender: BytesView(
-                    "5261f913eab22cfc448a815a0e672143",
-                ),
-                receiver: BytesView(
-                    "701901dad4e06079cc701452ac48a99d",
-                ),
-                metadata: BytesView(
-                    "",
-                ),
-            },
+            ),
+        },
+        Event {
+            key: "02000000000000003099d7230aa336f5dcfe13c1231454ce",
+            sequence_number: 1,
+            transaction_version: 51985530,
+            data: Some(
+                EventData {
+                    r#type: "receivedpayment",
+                    amount: Some(
+                        Amount {
+                            amount: 10000000,
+                            currency: "XUS",
+                        },
+                    ),
+                    preburn_address: "",
+                    currency_code: "",
+                    new_to_xdx_exchange_rate: 0.0,
+                    sender: "9d02da2312d2687ca665ccf77f2435fc",
+                    receiver: "3099d7230aa336f5dcfe13c1231454ce",
+                    metadata: "",
+                    epoch: 0,
+                    round: 0,
+                    proposer: "",
+                    proposed_time: 0,
+                    destination_address: "",
+                    new_compliance_public_key: "",
+                    new_base_url: "",
+                    time_rotated_seconds: 0,
+                    created_address: "",
+                    role_id: 0,
+                    committed_timestamp_secs: 0,
+                },
+            ),
         },
     ],
-    vm_status: Executed,
-    gas_used: 489,
+    vm_status: Some(
+        VmStatus {
+            r#type: "executed",
+            location: "",
+            abort_code: 0,
+            function_index: 0,
+            code_offset: 0,
+            explanation: None,
+        },
+    ),
+    gas_used: 481,
 }
 
 ```
@@ -532,28 +549,39 @@ Committed transaction: TransactionView {
 In the following example, we will query for “sent” events from the account at reference index 0.  You will notice there is a single event since we sent one transaction from this account.  The proof of the current state is also returned so that verification can be performed that no events are missing - this is done when the query does not return “limit” events.
 
 ```
-libra% query event 0 sent 0 10
+diem% query event 0 sent 0 10
 >> Getting events by account and event type.
-EventView { key: BytesView("0100000000000000cc2219df031a68115fad9aee98e051e9"), sequence_number: 0, transaction_version: 2168, data: SentPayment { amount: AmountView { amount: 10000000, currency: "Coin1" }, receiver: BytesView("33138303ce638c8fa469435250f5f1c3"), metadata: BytesView("") } }
-Last event state: AccountView {
+Event { key: "03000000000000009d02da2312d2687ca665ccf77f2435fc", sequence_number: 0, transaction_version: 51985530, data: Some(EventData { r#type: "sentpayment", amount: Some(Amount { amount: 10000000, currency: "XUS" }), preburn_address: "", currency_code: "", new_to_xdx_exchange_rate: 0.0, sender: "9d02da2312d2687ca665ccf77f2435fc", receiver: "3099d7230aa336f5dcfe13c1231454ce", metadata: "", epoch: 0, round: 0, proposer: "", proposed_time: 0, destination_address: "", new_compliance_public_key: "", new_base_url: "", time_rotated_seconds: 0, created_address: "", role_id: 0, committed_timestamp_secs: 0 }) }
+Last event state: Account {
+    address: "9d02da2312d2687ca665ccf77f2435fc",
     balances: [
-        AmountView {
+        Amount {
             amount: 100000000,
-            currency: "Coin1",
+            currency: "XUS",
         },
     ],
     sequence_number: 1,
-    authentication_key: BytesView(
-        "1b72d1171fc0c2c41b06408c06e9d675cc2219df031a68115fad9aee98e051e9",
-    ),
-    sent_events_key: BytesView(
-        "0100000000000000cc2219df031a68115fad9aee98e051e9",
-    ),
-    received_events_key: BytesView(
-        "0000000000000000cc2219df031a68115fad9aee98e051e9",
-    ),
+    authentication_key: "961c7447e62a97eee93c2340742da2119d02da2312d2687ca665ccf77f2435fc",
+    sent_events_key: "03000000000000009d02da2312d2687ca665ccf77f2435fc",
+    received_events_key: "02000000000000009d02da2312d2687ca665ccf77f2435fc",
     delegated_key_rotation_capability: false,
     delegated_withdrawal_capability: false,
+    is_frozen: false,
+    role: Some(
+        AccountRole {
+            r#type: "parent_vasp",
+            parent_vasp_address: "",
+            human_name: "No. 30712 VASP",
+            base_url: "",
+            expiration_time: 18446744073709551615,
+            compliance_key: "",
+            compliance_key_rotation_events_key: "00000000000000009d02da2312d2687ca665ccf77f2435fc",
+            base_url_rotation_events_key: "01000000000000009d02da2312d2687ca665ccf77f2435fc",
+            num_children: 0,
+            received_mint_events_key: "",
+            preburn_balances: [],
+        },
+    ),
 }
 
 ```
@@ -563,52 +591,84 @@ Last event state: AccountView {
 In this example, we will query for the state of a single account.
 
 ```plaintext
-libra% query account_state 0
+diem% query account_state 0
 >> Getting latest account state
-Latest account state is:
+Latest account state is: 
  Account: (
-    cc2219df031a68115fad9aee98e051e9,
+    9D02DA2312D2687CA665CCF77F2435FC,
     Some(
         AuthenticationKey(
             [
-                27,114,209,23,31,192,194,196,27,6,64,140,6,233,214,117,204,34,25,223,3,26,104,17,95,173,154,238,152,224,81,233,
+                150,
+                28,
+                116,
+                71,
+                230,
+                42,
+                151,
+                238,
+                233,
+                60,
+                35,
+                64,
+                116,
+                45,
+                162,
+                17,
+                157,
+                2,
+                218,
+                35,
+                18,
+                210,
+                104,
+                124,
+                166,
+                101,
+                204,
+                247,
+                127,
+                36,
+                53,
+                252,
             ],
         ),
     ),
 )
  State: Some(
-    AccountView {
+    Account {
+        address: "9d02da2312d2687ca665ccf77f2435fc",
         balances: [
-            AmountView {
+            Amount {
                 amount: 100000000,
-                currency: "LBR",
+                currency: "XUS",
             },
         ],
         sequence_number: 1,
-        authentication_key: BytesView(
-            "1b72d1171fc0c2c41b06408c06e9d675cc2219df031a68115fad9aee98e051e9",
-        ),
-        sent_events_key: BytesView(
-            "0100000000000000cc2219df031a68115fad9aee98e051e9",
-        ),
-        received_events_key: BytesView(
-            "0000000000000000cc2219df031a68115fad9aee98e051e9",
-        ),
+        authentication_key: "961c7447e62a97eee93c2340742da2119d02da2312d2687ca665ccf77f2435fc",
+        sent_events_key: "03000000000000009d02da2312d2687ca665ccf77f2435fc",
+        received_events_key: "02000000000000009d02da2312d2687ca665ccf77f2435fc",
         delegated_key_rotation_capability: false,
         delegated_withdrawal_capability: false,
         is_frozen: false,
-        role: ParentVASP {
-            human_name: "testnet",
-            base_url: "https://libra.org",
-            expiration_time: 18446744073709551615,
-            compliance_key: BytesView(
-                "b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
-            ),
-            num_children: 0,
-        },
+        role: Some(
+            AccountRole {
+                r#type: "parent_vasp",
+                parent_vasp_address: "",
+                human_name: "No. 30712 VASP",
+                base_url: "",
+                expiration_time: 18446744073709551615,
+                compliance_key: "",
+                compliance_key_rotation_events_key: "00000000000000009d02da2312d2687ca665ccf77f2435fc",
+                base_url_rotation_events_key: "01000000000000009d02da2312d2687ca665ccf77f2435fc",
+                num_children: 0,
+                received_mint_events_key: "",
+                preburn_balances: [],
+            },
+        ),
     },
 )
- Blockchain Version: 8012
+ Blockchain Version: 51986212
 ```
 
 

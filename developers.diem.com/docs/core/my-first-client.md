@@ -15,7 +15,7 @@ _An introduction to client development on testnet using the official SDKs._
 
 ## Getting Started
 
-In this tutorial, we demonstrate the key elements of a basic client using the official SDKs to interact with the Blockchain. The code for the tutorial is available here: [my-first-client](https://github.com/diem/my-first-client). The code in this project can be run from the root of the project directory by issuing the `make` command..
+In this tutorial, we demonstrate the key elements of a basic client using the official SDKs to interact with the Blockchain. The code for the tutorial is available here: [my-first-client](https://github.com/diem/my-first-client). The code in this project can be run from the root of the project directory by issuing the `make` command.
 
 The example code uses the official Client SDKs. Currently, Go, Java, and Python are available. These libraries are developed to simplify aspects of the development process. If your language is not currently supported, or on the upcoming roadmap (Rust), then you will want to  refer to the low-level JSON-RPC API. To request additional functionality or to track when it is implemented, you can submit a GitHub issue on the corresponding project repository.
 
@@ -28,12 +28,11 @@ All code examples are shared in the [my-first-client](https://github.com/diem/my
 
 ### Clone the repo:
 
-_git clone [https://github.com/libra/my-first-client.git](https://github.com/diem/my-first-client.git)_
+_git clone [https://github.com/diem/my-first-client.git](https://github.com/diem/my-first-client.git)_
 
 Each SDK has the following system requirements:
 
 *   Java: Java 8+
-*   Go: Go v1.1+
 *   Python: Python v3.7+, pipenv
 
 ### Run the examples:
