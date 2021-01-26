@@ -20,7 +20,10 @@ fn remote_end_to_end() {
 
     DiemLogger::builder().address(addr).is_async(true).build();
 
-    std::thread::spawn(|| error!("Hello"));
+    let handle = std::thread::spawn(|| {
+        error!("Hello");
+        diem_logger::flush();
+    });
 
     let (stream, _) = listener.accept().unwrap();
 
@@ -30,4 +33,7 @@ fn remote_end_to_end() {
 
     let log: ErrorLog = serde_json::from_slice(&buf).unwrap();
     assert!(log.backtrace.is_some());
+
+    // Test that flush properly returns
+    handle.join().unwrap();
 }

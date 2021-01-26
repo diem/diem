@@ -162,6 +162,7 @@ pub use crate::diem_logger::{
 };
 pub use event::Event;
 pub use filter::{Filter, LevelFilter};
+pub use logger::flush;
 pub use metadata::{Level, Metadata};
 
 pub use diem_log_derive::Schema;

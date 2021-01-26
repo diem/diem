@@ -250,7 +250,7 @@ impl DiemFilter {
 }
 
 pub struct DiemLogger {
-    sender: Option<SyncSender<LogEntry>>,
+    sender: Option<SyncSender<LoggerServiceEvent>>,
     printer: Option<Box<dyn Writer>>,
     filter: RwLock<DiemFilter>,
 }
@@ -291,7 +291,7 @@ impl DiemLogger {
         }
 
         if let Some(sender) = &self.sender {
-            if let Err(e) = sender.try_send(entry) {
+            if let Err(e) = sender.try_send(LoggerServiceEvent::LogEntry(entry)) {
                 STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
                 eprintln!("Failed to send structured log: {}", e);
             }
@@ -309,10 +309,25 @@ impl Logger for DiemLogger {
 
         self.send_entry(entry)
     }
+
+    fn flush(&self) {
+        if let Some(sender) = &self.sender {
+            let (oneshot_sender, oneshot_receiver) = mpsc::sync_channel(1);
+            sender
+                .send(LoggerServiceEvent::Flush(oneshot_sender))
+                .unwrap();
+            oneshot_receiver.recv().unwrap();
+        }
+    }
+}
+
+enum LoggerServiceEvent {
+    LogEntry(LogEntry),
+    Flush(SyncSender<()>),
 }
 
 struct LoggerService {
-    receiver: Receiver<LogEntry>,
+    receiver: Receiver<LoggerServiceEvent>,
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
     facade: Arc<DiemLogger>,
@@ -322,31 +337,40 @@ impl LoggerService {
     pub fn run(mut self) {
         let mut writer = self.address.take().map(TcpWriter::new);
 
-        for entry in self.receiver {
-            PROCESSED_STRUCT_LOG_COUNT.inc();
+        for event in self.receiver {
+            match event {
+                LoggerServiceEvent::LogEntry(entry) => {
+                    PROCESSED_STRUCT_LOG_COUNT.inc();
 
-            if let Some(printer) = &self.printer {
-                if self
-                    .facade
-                    .filter
-                    .read()
-                    .local_filter
-                    .enabled(&entry.metadata)
-                {
-                    let s = format(&entry).expect("Unable to format");
-                    printer.write(s)
+                    if let Some(printer) = &self.printer {
+                        if self
+                            .facade
+                            .filter
+                            .read()
+                            .local_filter
+                            .enabled(&entry.metadata)
+                        {
+                            let s = format(&entry).expect("Unable to format");
+                            printer.write(s)
+                        }
+                    }
+
+                    if let Some(writer) = &mut writer {
+                        if self
+                            .facade
+                            .filter
+                            .read()
+                            .remote_filter
+                            .enabled(&entry.metadata)
+                        {
+                            Self::write_to_logstash(writer, entry);
+                        }
+                    }
                 }
-            }
-
-            if let Some(writer) = &mut writer {
-                if self
-                    .facade
-                    .filter
-                    .read()
-                    .remote_filter
-                    .enabled(&entry.metadata)
-                {
-                    Self::write_to_logstash(writer, entry);
+                LoggerServiceEvent::Flush(sender) => {
+                    // This is just to notify the other side, the logger doesn't actually care if
+                    // the listener is still listening
+                    let _ = sender.send(());
                 }
             }
         }
@@ -524,6 +548,8 @@ mod tests {
             let entry = LogEntry::new(event, ::std::thread::current().name());
             self.0.send(entry).unwrap();
         }
+
+        fn flush(&self) {}
     }
 
     fn set_test_logger() -> Receiver<LogEntry> {

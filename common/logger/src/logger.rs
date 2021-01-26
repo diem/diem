@@ -15,6 +15,9 @@ pub trait Logger: Sync + Send + 'static {
 
     /// Record an event
     fn record(&self, event: &Event);
+
+    /// Flush any buffered events
+    fn flush(&self);
 }
 
 pub(crate) fn dispatch(event: &Event) {
@@ -34,5 +37,11 @@ pub(crate) fn enabled(metadata: &Metadata) -> bool {
 pub fn set_global_logger(logger: Arc<dyn Logger>) {
     if LOGGER.set(logger).is_err() {
         eprintln!("Global logger has already been set");
+    }
+}
+
+pub fn flush() {
+    if let Some(logger) = LOGGER.get() {
+        logger.flush();
     }
 }
