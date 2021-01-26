@@ -763,7 +763,69 @@ fn peer_send_rpc_cancel() {
     rt.block_on(future::join(peer.start(), test));
 }
 
-// TODO(philiphayes): timeout test after integrating time service.
+#[test]
+fn peer_send_rpc_timeout() {
+    ::diem_logger::Logger::init_for_testing();
+    let rt = Runtime::new().unwrap();
+    let mock_time = MockTimeService::new();
+    let (peer, mut peer_handle, mut connection, _connection_notifs_rx, _peer_notifs_rx) =
+        build_test_peer(
+            rt.handle().clone(),
+            mock_time.clone().into(),
+            ConnectionOrigin::Inbound,
+        );
+    let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
+    let timeout = Duration::from_millis(10_000);
+
+    let test = async move {
+        // Client sends rpc request.
+        let (response_tx, mut response_rx) = oneshot::channel();
+        let request = PeerRequest::SendRpc(OutboundRpcRequest {
+            protocol_id: PROTOCOL,
+            data: Bytes::from(&b"hello world"[..]),
+            res_tx: response_tx,
+            timeout,
+        });
+        peer_handle.0.push(PROTOCOL, request).unwrap();
+
+        // Server receives the rpc request from client.
+        let received = server_stream.next().await.unwrap().unwrap();
+        let received = match received {
+            NetworkMessage::RpcRequest(request) => request,
+            _ => panic!("Expected RpcRequest; unexpected: {:?}", received),
+        };
+
+        assert_eq!(received.protocol_id, PROTOCOL);
+        assert_eq!(received.priority, 0);
+        assert_eq!(received.raw_request, b"hello world");
+
+        // Request should still be live. Ok(_) means the sender is not dropped.
+        // Ok(None) means there is no response yet.
+        assert!(matches!(response_rx.try_recv(), Ok(None)));
+
+        // Advancing time should cause the client request timeout to elapse.
+        mock_time.advance_async(timeout).await;
+
+        // Client cancels the request.
+        assert!(matches!(response_rx.await, Ok(Err(RpcError::TimedOut))));
+
+        // Server sending an expired response is fine.
+        let response = NetworkMessage::RpcResponse(RpcResponse {
+            request_id: received.request_id,
+            priority: 0,
+            raw_response: Vec::from(&b"goodbye world"[..]),
+        });
+        server_sink.send(&response).await.unwrap();
+
+        // Make sure the peer actor actually saw the message.
+        tokio::task::yield_now().await;
+
+        // Keep the peer_handle alive until the end to avoid prematurely closing
+        // the connection.
+        drop(peer_handle);
+    };
+    rt.block_on(future::join(peer.start(), test));
+}
 
 // PeerManager can request a Peer to shutdown.
 #[test]
