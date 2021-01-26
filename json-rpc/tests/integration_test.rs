@@ -411,7 +411,7 @@ fn create_test_cases() -> Vec<Test> {
                             "reason": "EINSUFFICIENT_BALANCE",
                             "reason_description": " The account does not hold a large enough balance in the specified currency"
                         },
-                        "location": "00000000000000000000000000000001::DiemAccount",
+                        "location": "0x1::DiemAccount",
                         "type": "move_abort"
                     })
                 );

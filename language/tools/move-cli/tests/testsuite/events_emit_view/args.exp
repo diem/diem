@@ -1,7 +1,7 @@
 Command `publish src/modules -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Publishing a new module 00000000000000000000000000000002::Events
+Publishing a new module 0x2::Events
 Command `run src/scripts/emit.move --signers 0xA --args 5 -v`:
 Compiling transaction script...
 Emitted 1 events:

@@ -141,7 +141,7 @@ impl ModuleId {
 
 impl Display for ModuleId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}::{}", self.address, self.name)
+        write!(f, "0x{}::{}", self.address.short_str_lossless(), self.name)
     }
 }
 
