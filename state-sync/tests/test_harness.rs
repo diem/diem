@@ -60,9 +60,9 @@ use rand::{rngs::StdRng, SeedableRng};
 use state_sync::{
     bootstrapper::StateSyncBootstrapper,
     client::StateSyncClient,
-    coordinator::SyncState,
     executor_proxy::ExecutorProxyTrait,
     network::{StateSyncEvents, StateSyncSender},
+    shared_components::SyncState,
 };
 use std::{
     cell::{Ref, RefCell},

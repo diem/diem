@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{coordinator::SyncState, counters};
+use crate::{counters, shared_components::SyncState};
 use anyhow::{format_err, Result};
 use diem_mempool::CommitResponse;
 use diem_types::{

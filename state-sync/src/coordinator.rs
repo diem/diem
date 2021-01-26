@@ -10,6 +10,7 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSyncEvents, StateSyncMessage, StateSyncSender},
     request_manager::RequestManager,
+    shared_components::{PendingLedgerInfos, SyncState},
 };
 use anyhow::{bail, ensure, format_err, Result};
 use diem_config::{
@@ -19,13 +20,10 @@ use diem_config::{
 use diem_logger::prelude::*;
 use diem_mempool::{CommitResponse, CommittedTransaction};
 use diem_types::{
-    epoch_change::Verifier,
-    epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
 };
-use executor_types::ExecutedTrees;
 use fail::fail_point;
 use futures::{
     channel::{mpsc, oneshot},
@@ -34,8 +32,7 @@ use futures::{
 };
 use network::protocols::network::Event;
 use std::{
-    collections::{BTreeMap, HashMap},
-    ops::Bound::Included,
+    collections::HashMap,
     time::{Duration, SystemTime},
 };
 use tokio::time::{interval, timeout};
@@ -47,90 +44,6 @@ struct PendingRequestInfo {
     known_version: u64,
     request_epoch: u64,
     limit: u64,
-}
-
-// DS to help sync requester to keep track of ledger infos in the future
-// if it is lagging far behind the upstream node
-// Should only be modified upon local storage sync
-struct PendingLedgerInfos {
-    // In-memory store of ledger infos that are pending commits
-    // (k, v) - (LI version, LI)
-    pending_li_queue: BTreeMap<Version, LedgerInfoWithSignatures>,
-    // max size limit on `pending_li_queue`, to prevent OOM
-    max_pending_li_limit: usize,
-    // target li
-    target_li: Option<LedgerInfoWithSignatures>,
-}
-
-impl PendingLedgerInfos {
-    fn new(max_pending_li_limit: usize) -> Self {
-        Self {
-            pending_li_queue: BTreeMap::new(),
-            max_pending_li_limit,
-            target_li: None,
-        }
-    }
-
-    /// Adds `new_li` to the queue of pending LI's
-    fn add_li(&mut self, new_li: LedgerInfoWithSignatures) {
-        if self.pending_li_queue.len() >= self.max_pending_li_limit {
-            warn!(
-                LogSchema::new(LogEntry::ProcessChunkResponse),
-                "pending LI store reached max capacity {}, failed to add LI {}",
-                self.max_pending_li_limit,
-                new_li
-            );
-            return;
-        }
-
-        // update pending_ledgers if new LI is ahead of target LI (in terms of version)
-        let target_version = self
-            .target_li
-            .as_ref()
-            .map_or(0, |li| li.ledger_info().version());
-        if new_li.ledger_info().version() > target_version {
-            self.pending_li_queue
-                .insert(new_li.ledger_info().version(), new_li);
-        }
-    }
-
-    fn update(&mut self, sync_state: &SyncState, chunk_limit: u64) -> Result<()> {
-        let highest_committed_li = sync_state.committed_version();
-        let highest_synced = sync_state.synced_version();
-
-        // prune any pending LIs that are older than the latest local synced version
-        let prune_version = highest_synced
-            .checked_add(1)
-            .ok_or_else(|| format_err!("Prune version has overflown!"))?;
-        self.pending_li_queue = self.pending_li_queue.split_off(&prune_version);
-
-        // pick target LI to use for sending ProgressiveTargetType requests.
-        self.target_li = if highest_committed_li == highest_synced {
-            // try to find LI with max version that will fit in a single chunk
-            let highest_version = highest_synced
-                .checked_add(chunk_limit)
-                .ok_or_else(|| format_err!("Highest version has overflown!"))?;
-            self.pending_li_queue
-                .range((Included(0), Included(highest_version)))
-                .rev()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        } else {
-            self.pending_li_queue
-                .iter()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        };
-        Ok(())
-    }
-
-    fn target_li(&self) -> Option<LedgerInfoWithSignatures> {
-        self.target_li.clone()
-    }
-
-    fn highest_version(&self) -> Option<Version> {
-        self.pending_li_queue.keys().last().cloned()
-    }
 }
 
 /// Coordination of the state sync process is driven by StateSyncCoordinator. The `start()`
@@ -1356,68 +1269,12 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 }
 
-/// SyncState contains the following fields:
-/// * `committed_ledger_info` holds the latest certified ledger info (committed to storage),
-///    i.e., the ledger info for the highest version for which storage has all ledger state.
-/// * `synced_trees` holds the latest transaction accumulator and state tree (which may
-///    or may not be committed to storage), i.e., some ledger state for the next highest
-///    ledger info version is missing.
-/// * `trusted_epoch_state` corresponds to the current epoch if the highest committed
-///    ledger info (`committed_ledger_info`) is in the middle of the epoch, otherwise, it
-///    corresponds to the next epoch if the highest committed ledger info ends the epoch.
-///
-/// Note: `committed_ledger_info` is used for helping other Diem nodes synchronize (i.e.,
-/// it corresponds to the highest version we have a proof for in storage). `synced_trees`
-/// is used locally for retrieving missing chunks for the local storage.
-#[derive(Clone)]
-pub struct SyncState {
-    committed_ledger_info: LedgerInfoWithSignatures,
-    synced_trees: ExecutedTrees,
-    trusted_epoch_state: EpochState,
-}
+#[cfg(test)]
+mod tests {
+    use crate::shared_components::test_utils;
 
-impl SyncState {
-    pub fn new(
-        committed_ledger_info: LedgerInfoWithSignatures,
-        synced_trees: ExecutedTrees,
-        current_epoch_state: EpochState,
-    ) -> Self {
-        let trusted_epoch_state = committed_ledger_info
-            .ledger_info()
-            .next_epoch_state()
-            .cloned()
-            .unwrap_or(current_epoch_state);
-
-        SyncState {
-            committed_ledger_info,
-            synced_trees,
-            trusted_epoch_state,
-        }
-    }
-
-    pub fn committed_epoch(&self) -> u64 {
-        self.committed_ledger_info.ledger_info().epoch()
-    }
-
-    pub fn committed_ledger_info(&self) -> LedgerInfoWithSignatures {
-        self.committed_ledger_info.clone()
-    }
-
-    pub fn committed_version(&self) -> u64 {
-        self.committed_ledger_info.ledger_info().version()
-    }
-
-    /// Returns the highest available version in the local storage, even if it's not
-    /// committed (i.e., covered by a ledger info).
-    pub fn synced_version(&self) -> u64 {
-        self.synced_trees.version().unwrap_or(0)
-    }
-
-    pub fn trusted_epoch(&self) -> u64 {
-        self.trusted_epoch_state.epoch
-    }
-
-    pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
-        self.trusted_epoch_state.verify(ledger_info)
+    #[test]
+    fn test_state_sync_coordinator() {
+        let mut _coordinator = test_utils::create_state_sync_coordinator_for_tests();
     }
 }
