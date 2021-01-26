@@ -101,7 +101,7 @@ jobs:
           shellcheck scripts/dockerhub_prune.sh && \
           shellcheck .github/actions/changes/get_pr_info.sh && \
           shellcheck docker/build_push.sh && \
-          shellcheck docker/dockerhub_to_novi_ecr.sh
+          shellcheck docker/docker_republish.sh
       - name: docker lints
         uses: ./.github/actions/docker-checks
 
