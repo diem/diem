@@ -11,10 +11,8 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
-use diem_crypto::x25519;
 use diem_logger::*;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
-use diem_network_address::NetworkAddress;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
 use futures::{sink::SinkExt, StreamExt};
 use network::{
@@ -23,7 +21,7 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use state_sync::network::{StateSyncEvents, StateSyncSender};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fmt,
     ops::Add,
     time::{Duration, Instant},
@@ -246,7 +244,8 @@ struct StubbedNode {
 impl StubbedNode {
     async fn launch(node_endpoint: String, runtime_handle: Handle, index: usize) -> Self {
         // generate seed peers config from querying node endpoint
-        let seed_peers = seed_peer_generator::utils::gen_seed_peer_config(node_endpoint);
+        let seed_peers =
+            seed_peer_generator::utils::gen_full_node_seed_peer_config(node_endpoint).unwrap();
 
         // build sparse network runner
 
@@ -286,28 +285,13 @@ impl StubbedNode {
             .conn_mgr_reqs_tx()
             .expect("expecting connectivity mgr to exist after adding protocol handler");
 
-        let new_peer_pubkeys: HashMap<_, _> = seed_peers
-            .iter()
-            .map(|(peer_id, addrs)| {
-                let pubkeys: HashSet<x25519::PublicKey> = addrs
-                    .iter()
-                    .filter_map(NetworkAddress::find_noise_proto)
-                    .collect();
-                (*peer_id, pubkeys)
-            })
-            .collect();
-
-        let conn_reqs = vec![
-            ConnectivityRequest::UpdateAddresses(DiscoverySource::OnChain, seed_peers),
-            ConnectivityRequest::UpdateEligibleNodes(DiscoverySource::OnChain, new_peer_pubkeys),
-        ];
-
-        for update in conn_reqs {
-            conn_req_tx
-                .send(update)
-                .await
-                .expect("failed to send conn req");
-        }
+        conn_req_tx
+            .send(ConnectivityRequest::UpdateDiscoveredPeers(
+                DiscoverySource::OnChain,
+                seed_peers,
+            ))
+            .await
+            .expect("failed to send conn req");
 
         Self {
             mempool_handle,

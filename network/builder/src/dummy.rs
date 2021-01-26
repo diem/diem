@@ -133,7 +133,6 @@ pub fn setup_network() -> DummyNetwork {
     seeds.insert(dialer_peer_id, TrustedPeer::from(dialer_pubkeys));
 
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
-
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
 
     // Set up the listener network
