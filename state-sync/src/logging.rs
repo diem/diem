@@ -125,6 +125,7 @@ pub enum LogEvent {
     ChunkRequestInfo,
 
     // ProcessChunkResponse events
+    ConsensusIsRunning,
     Received,
     SendChunkRequestFail,
     ApplyChunkSuccess,
