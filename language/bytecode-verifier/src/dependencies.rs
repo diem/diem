@@ -354,7 +354,8 @@ impl CyclicModuleDependencyChecker {
         module: &CompiledModule,
         immediate_module_dependencies: F,
     ) -> PartialVMResult<()> {
-        // A variant of the three-color DFS, visit each node at max once
+        // A variant of the three-color DFS, visit each node at max once.
+        // This function returns true if a back-edge is found during the DFS.
         fn dfs_visit<F: Fn(&ModuleId) -> Vec<ModuleId>>(
             cursor_module: ModuleId,
             modules_discovered: &mut BTreeSet<ModuleId>,
@@ -363,11 +364,11 @@ impl CyclicModuleDependencyChecker {
         ) -> bool {
             modules_discovered.insert(cursor_module.clone());
             for next_module in immediate_module_dependencies(&cursor_module) {
-                if modules_discovered.contains(&next_module) {
-                    return true;
+                if modules_finished.contains(&next_module) {
+                    continue;
                 }
-                if !modules_finished.contains(&next_module)
-                    && dfs_visit(
+                if modules_discovered.contains(&next_module)
+                    || dfs_visit(
                         next_module,
                         modules_discovered,
                         modules_finished,
@@ -387,15 +388,27 @@ impl CyclicModuleDependencyChecker {
 
         modules_discovered.insert(module.self_id());
         for dep in module.immediate_module_dependencies() {
-            if dfs_visit(
-                dep,
-                &mut modules_discovered,
-                &mut modules_finished,
-                &immediate_module_dependencies,
-            ) {
+            if modules_discovered.contains(&dep)
+                || dfs_visit(
+                    dep,
+                    &mut modules_discovered,
+                    &mut modules_finished,
+                    &immediate_module_dependencies,
+                )
+            {
                 return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
             }
         }
+
+        // NOTE: we cannot start `dfs_visit` from `module.self_id()`, instead, we have to run DFS
+        // over each of `module.immediate_module_dependencies()`. The reason is: it is possible that
+        // `immediate_module_dependencies(&module.self_id()) != module.immediate_module_dependencies()`
+        // (note these are two functions). The LHS returns what the loader has in cache, and the
+        // cache is accurate for every module EXCEPT for the module that is going to be republished,
+        // i.e., the module under cyclic dependency checking. More importantly, the loader may not
+        // even have `module` in cache (if we are publishing a new module), on that case, the LHS
+        // will abort. But loader will always have the dependencies of this module in cache,
+        // regardless of whether this module is a new one or to be updated.
 
         Ok(())
     }
