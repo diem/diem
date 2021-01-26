@@ -12,7 +12,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: comment
-        uses: libra/actions/hyperjump-comment@a9c5709
+        uses: diem/actions/hyperjump-comment@faa14430e68d54a269628f385e69a207e4e413d5
         with:
           github-token: ${{ secrets.HYPERJUMP_TOKEN }}
           number: ${{ github.event.client_payload.number }}
