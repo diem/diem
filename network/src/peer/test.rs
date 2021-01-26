@@ -26,6 +26,7 @@ use bytes::Bytes;
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
+use diem_time_service::TimeService;
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
@@ -78,6 +79,7 @@ fn build_test_peer(
     let peer = Peer::new(
         NetworkContext::mock(),
         executor,
+        TimeService::real(),
         connection,
         connection_notifs_tx,
         peer_reqs_rx,

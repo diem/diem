@@ -16,6 +16,7 @@ use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
 use diem_proptest_helpers::ValueGenerator;
+use diem_time_service::TimeService;
 use diem_types::PeerId;
 use futures::{executor::block_on, future, io::AsyncReadExt, sink::SinkExt, stream::StreamExt};
 use memsocket::MemorySocket;
@@ -108,6 +109,7 @@ pub fn fuzz(data: &[u8]) {
     let peer = Peer::new(
         network_context,
         executor.clone(),
+        TimeService::mock(),
         connection,
         connection_notifs_tx,
         peer_reqs_rx,

@@ -61,6 +61,7 @@ use bytes::Bytes;
 use channel::diem_channel;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
+use diem_time_service::{timeout, TimeService, TimeServiceTrait};
 use diem_types::PeerId;
 use error::RpcError;
 use futures::{
@@ -162,6 +163,8 @@ impl PartialEq for InboundRpcRequest {
 pub struct InboundRpcs {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// The PeerId of this connection's remote peer. Used for logging.
     remote_peer_id: PeerId,
     /// The core async queue of pending inbound rpc tasks. The tasks are driven
@@ -179,12 +182,14 @@ pub struct InboundRpcs {
 impl InboundRpcs {
     pub fn new(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         remote_peer_id: PeerId,
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
     ) -> Self {
         Self {
             network_context,
+            time_service,
             remote_peer_id,
             inbound_rpc_tasks: FuturesUnordered::new(),
             inbound_rpc_timeout,
@@ -240,7 +245,9 @@ impl InboundRpcs {
         }
 
         // Create a new task that waits for a response from the upper layer with a timeout.
-        let inbound_rpc_task = tokio::time::timeout(self.inbound_rpc_timeout, response_rx)
+        let inbound_rpc_task = self
+            .time_service
+            .timeout(self.inbound_rpc_timeout, response_rx)
             .map(move |result| {
                 // Flatten the errors
                 let maybe_response = match result {
@@ -251,7 +258,7 @@ impl InboundRpcs {
                     }),
                     Ok(Ok(Err(err))) => Err(err),
                     Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
-                    Err(_elapsed) => Err(RpcError::TimedOut),
+                    Err(timeout::Elapsed) => Err(RpcError::TimedOut),
                 };
                 // Only record latency of successful requests
                 match maybe_response {
@@ -324,6 +331,8 @@ impl InboundRpcs {
 pub struct OutboundRpcs {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// The PeerId of this connection's remote peer. Used for logging.
     remote_peer_id: PeerId,
     /// Generates the next RequestId to use for the next outbound RPC. Note that
@@ -349,11 +358,13 @@ pub struct OutboundRpcs {
 impl OutboundRpcs {
     pub fn new(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         remote_peer_id: PeerId,
         max_concurrent_outbound_rpcs: u32,
     ) -> Self {
         Self {
             network_context,
+            time_service,
             remote_peer_id,
             request_id_gen: RequestIdGenerator::new(),
             outbound_rpc_tasks: FuturesUnordered::new(),
@@ -437,14 +448,17 @@ impl OutboundRpcs {
         // A future that waits for the rpc response with a timeout. We create the
         // timeout out here to start the timer as soon as we push onto the queue
         // (as opposed to whenever it first gets polled on the queue).
-        let wait_for_response = tokio::time::timeout(timeout, response_rx).map(|result| {
-            // Flatten errors.
-            match result {
-                Ok(Ok(response)) => Ok(Bytes::from(response.raw_response)),
-                Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
-                Err(_elapsed) => Err(RpcError::TimedOut),
-            }
-        });
+        let wait_for_response = self
+            .time_service
+            .timeout(timeout, response_rx)
+            .map(|result| {
+                // Flatten errors.
+                match result {
+                    Ok(Ok(response)) => Ok(Bytes::from(response.raw_response)),
+                    Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
+                    Err(timeout::Elapsed) => Err(RpcError::TimedOut),
+                }
+            });
 
         // A future that waits for the response and sends it to the application.
         let notify_application = async move {

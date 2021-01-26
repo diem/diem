@@ -41,6 +41,7 @@ diem-metrics = { path = "../common/metrics", version = "0.1.0" }
 diem-network-address = { path = "../network/network-address", version = "0.1.0" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 diem-rate-limiter = { path = "../common/rate-limiter", version = "0.1.0"}
+diem-time-service = { path = "../common/time-service", version = "0.1.0", features = ["async"] }
 diem-types = { path = "../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }
@@ -62,8 +63,8 @@ socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.
 
 [features]
 default = []
-fuzzing = ["bitvec/fuzzing", "diem-proptest-helpers", "diem-types/fuzzing", "diem-network-address/fuzzing", "diem-crypto/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
-testing = ["diem-config/testing", "memsocket/testing", "netcore/testing"]
+fuzzing = ["bitvec/fuzzing", "diem-crypto/fuzzing", "diem-network-address/fuzzing", "diem-proptest-helpers", "diem-time-service/testing", "diem-types/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
+testing = ["diem-config/testing", "diem-time-service/testing", "memsocket/testing", "netcore/testing"]
 
 [[bench]]
 name = "socket_bench"
