@@ -98,7 +98,7 @@
 //! hasher.update("Test message".as_bytes());
 //! let hash_value = hasher.finish();
 //! ```
-
+#[allow(clippy::integer_arithmetic)]
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use diem_nibble::Nibble;

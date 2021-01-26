@@ -484,7 +484,9 @@ where
                 TransactionStatus::Keep(recorded_status) => recorded_status.clone(),
                 status @ TransactionStatus::Discard(_) => bail!(
                     "The transaction at version {}, got the status of 'Discard': {:?}",
-                    first_version + i as u64,
+                    first_version
+                        .checked_add(i as u64)
+                        .ok_or_else(|| format_err!("version + i overflows"))?,
                     status
                 ),
                 TransactionStatus::Retry => {
@@ -546,7 +548,11 @@ where
         ensure!(
             txns_to_retry.is_empty(),
             "The transaction at version {} got the status of 'Retry'",
-            num_txns - txns_to_retry.len() + first_version as usize,
+            num_txns
+                .checked_sub(txns_to_retry.len())
+                .ok_or_else(|| format_err!("integer overflow occurred"))?
+                .checked_add(first_version as usize)
+                .ok_or_else(|| format_err!("integer overflow occurred"))?,
         );
 
         Ok((processed_vm_output, txns_to_commit, events))
@@ -664,7 +670,10 @@ impl<V: VMExecutor> TransactionReplayer for Executor<V> {
     }
 
     fn expecting_version(&self) -> Version {
-        self.cache.synced_trees().version().map_or(0, |v| v + 1)
+        self.cache
+            .synced_trees()
+            .version()
+            .map_or(0, |v| v.checked_add(1).expect("Integer overflow occurred"))
     }
 }
 

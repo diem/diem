@@ -157,7 +157,9 @@ impl StateComputeResult {
 
 impl StateComputeResult {
     pub fn version(&self) -> Version {
-        max(self.num_leaves, 1) - 1
+        max(self.num_leaves, 1)
+            .checked_sub(1)
+            .expect("Integer overflow occurred")
     }
 
     pub fn root_hash(&self) -> HashValue {
@@ -259,11 +261,11 @@ impl ExecutedTrees {
 
     pub fn version(&self) -> Option<Version> {
         let num_elements = self.txn_accumulator().num_leaves() as u64;
-        if num_elements > 0 {
-            Some(num_elements - 1)
-        } else {
-            None
+        let version: (u64, bool) = num_elements.overflowing_sub(1);
+        if version.1 {
+            return None;
         }
+        Some(version.0)
     }
 
     pub fn state_id(&self) -> HashValue {
