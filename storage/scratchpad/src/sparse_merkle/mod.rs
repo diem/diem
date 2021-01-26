@@ -135,6 +135,34 @@ where
         Ok(SparseMerkleTree { root })
     }
 
+    /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree multiple times
+    /// with `update_batch`. The function will return the root hash of each individual update and
+    /// a Sparse Merkle Tree of the final state.
+    ///
+    /// The `update_batch` will take in a reference of value instead of an owned instance. This is
+    /// because it would be nicer for future parallelism.
+    pub fn batch_update(
+        &self,
+        update_batch: Vec<Vec<(HashValue, &V)>>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<(Vec<HashValue>, Self), UpdateError> {
+        let mut current_state_tree = Self {
+            root: Arc::clone(&self.root),
+        };
+        let mut result_hashes = Vec::with_capacity(update_batch.len());
+        for updates in update_batch {
+            current_state_tree = current_state_tree.update(
+                updates
+                    .into_iter()
+                    .map(|(hash, v_ref)| (hash, v_ref.clone()))
+                    .collect(),
+                proof_reader,
+            )?;
+            result_hashes.push(current_state_tree.root_hash());
+        }
+        Ok((result_hashes, current_state_tree))
+    }
+
     fn update_one(
         root: Arc<SparseMerkleNode<V>>,
         key: HashValue,

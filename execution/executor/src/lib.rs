@@ -65,7 +65,6 @@ use std::{
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
 type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
-type SparseMerkleTree = scratchpad::SparseMerkleTree<AccountStateBlob>;
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
@@ -285,38 +284,31 @@ where
             .map(|(idx, _)| idx + 1);
         let transaction_count = new_epoch_marker.unwrap_or(vm_outputs.len());
 
-        let txn_blobs =
-            itertools::zip_eq(vm_outputs.iter(), transactions.iter())
-                .take(transaction_count)
-                .map(|(vm_output, txn)| {
-                    process_write_set(
-                        txn,
-                        &mut account_to_state,
-                        vm_output.write_set().clone(),
-                    )
-                })
-                .collect::<Result<Vec<_>>>()?;
+        let txn_blobs = itertools::zip_eq(vm_outputs.iter(), transactions.iter())
+            .take(transaction_count)
+            .map(|(vm_output, txn)| {
+                process_write_set(txn, &mut account_to_state, vm_output.write_set().clone())
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-        let mut current_state_tree = Arc::clone(parent_trees.state_tree());
-        let mut txn_state_trees = vec![];
-        for updated_blobs in txn_blobs.iter() {
-            current_state_tree = Arc::new(
-                current_state_tree
-                    .update(
-                        updated_blobs
-                            .iter()
-                            .map(|(addr, value)| (addr.hash(), value.clone()))
-                            .collect(),
-                        &proof_reader,
-                    )
-                    .expect("Failed to update state tree."),
-            );
-            txn_state_trees.push(current_state_tree.clone());
-        }
+        let (txn_state_roots, current_state_tree) = parent_trees
+            .state_tree()
+            .batch_update(
+                txn_blobs
+                    .iter()
+                    .map(|m| {
+                        m.iter()
+                            .map(|(account, value)| (account.hash(), value))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect(),
+                &proof_reader,
+            )
+            .expect("Failed to update state tree.");
 
-        for ((vm_output, txn), (state_tree, blobs)) in itertools::zip_eq(
+        for ((vm_output, txn), (state_tree_hash, blobs)) in itertools::zip_eq(
             itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()).take(transaction_count),
-            itertools::zip_eq(txn_state_trees, txn_blobs),
+            itertools::zip_eq(txn_state_roots, txn_blobs),
         ) {
             let event_tree = {
                 let event_hashes: Vec<_> =
@@ -335,7 +327,7 @@ where
                     // transaction itself, the state root hash as well as the event root hash.
                     let txn_info = TransactionInfo::new(
                         txn.hash(),
-                        state_tree.root_hash(),
+                        state_tree_hash,
                         event_tree.root_hash(),
                         vm_output.gas_used(),
                         status.clone(),
@@ -362,7 +354,7 @@ where
                 blobs,
                 vm_output.events().to_vec(),
                 vm_output.status().clone(),
-                Arc::clone(&state_tree),
+                state_tree_hash,
                 Arc::new(event_tree),
                 vm_output.gas_used(),
                 txn_info_hash,
@@ -378,7 +370,7 @@ where
                     HashMap::new(),
                     vec![],
                     TransactionStatus::Retry,
-                    Arc::clone(&current_state_tree),
+                    current_state_tree.root_hash(),
                     Arc::new(InMemoryAccumulator::<EventAccumulatorHasher>::default()),
                     0,
                     None,
@@ -411,10 +403,11 @@ where
 
         let current_transaction_accumulator =
             parent_trees.txn_accumulator().append(&txn_info_hashes);
+
         Ok(ProcessedVMOutput::new(
             txn_data,
             ExecutedTrees::new_copy(
-                current_state_tree,
+                Arc::new(current_state_tree),
                 Arc::new(current_transaction_accumulator),
             ),
             next_epoch_state,
@@ -943,18 +936,16 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             )?;
         }
 
-        // Prune the tree.
-        for block in blocks {
-            for txn_data in block.output().transaction_data() {
-                txn_data.prune_state_tree();
-            }
-        }
         // Calculate committed transactions and reconfig events now that commit has succeeded
         let mut committed_txns = vec![];
         let mut reconfig_events = vec![];
         for txn in txns_to_commit.iter() {
             committed_txns.push(txn.transaction().clone());
             reconfig_events.append(&mut Self::extract_reconfig_events(txn.events().to_vec()));
+        }
+
+        for block in blocks {
+            block.output().executed_trees().state_tree().prune()
         }
 
         self.cache.prune(
