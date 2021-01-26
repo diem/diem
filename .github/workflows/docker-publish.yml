@@ -2,7 +2,7 @@ name: docker-publish.yml
 
 on:
   push:
-    branches: [auto, release-*]
+    branches: [auto, release-*, canary]
 
 jobs:
   build-images:
@@ -74,7 +74,10 @@ jobs:
           docker/build_push.sh -u -b ${BRANCH} -n validator || success=-1
           docker/build_push.sh -u -b ${BRANCH} -n validator-tcb || success=-1
           docker/build_push.sh -u -b ${BRANCH} -n cluster-test || success=-1
-          exit $success
+      - name: Republish to diem.
+        if: ${{ always() && github.ref != 'refs/heads/auto' }}
+        run: |
+          docker/docker_republish.sh
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
       - name: docker image pruning.
@@ -89,4 +92,4 @@ jobs:
           GIT_REV=$(git rev-parse --short=8 HEAD)
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
-          docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
+          docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
