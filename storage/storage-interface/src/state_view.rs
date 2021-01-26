@@ -12,6 +12,7 @@ use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_state::AccountState,
+    account_state_blob::AccountStateBlob,
     proof::SparseMerkleProof,
     transaction::{Version, PRE_GENESIS_VERSION},
 };
@@ -40,7 +41,7 @@ pub struct VerifiedStateView<'a> {
     latest_persistent_state_root: HashValue,
 
     /// The in-momery version of sparse Merkle tree of which the states haven't been committed.
-    speculative_state: &'a SparseMerkleTree,
+    speculative_state: &'a SparseMerkleTree<AccountStateBlob>,
 
     /// The cache of verified account states from `reader` and `speculative_state_view`,
     /// represented by a hashmap with an account address as key and a pair of an ordered
@@ -79,7 +80,7 @@ pub struct VerifiedStateView<'a> {
     ///        +---------------------------------------------------------+
     /// ```
     account_to_state_cache: RwLock<HashMap<AccountAddress, AccountState>>,
-    account_to_proof_cache: RwLock<HashMap<HashValue, SparseMerkleProof>>,
+    account_to_proof_cache: RwLock<HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>>,
 }
 
 impl<'a> VerifiedStateView<'a> {
@@ -91,7 +92,7 @@ impl<'a> VerifiedStateView<'a> {
         reader: Arc<dyn DbReader>,
         latest_persistent_version: Option<Version>,
         latest_persistent_state_root: HashValue,
-        speculative_state: &'a SparseMerkleTree,
+        speculative_state: &'a SparseMerkleTree<AccountStateBlob>,
     ) -> Self {
         // Hack: When there's no transaction in the db but state tree root hash is not the
         // placeholder hash, it implies that there's pre-genesis state present.
@@ -117,14 +118,14 @@ impl<'a> VerifiedStateView<'a> {
 impl<'a>
     Into<(
         HashMap<AccountAddress, AccountState>,
-        HashMap<HashValue, SparseMerkleProof>,
+        HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
     )> for VerifiedStateView<'a>
 {
     fn into(
         self,
     ) -> (
         HashMap<AccountAddress, AccountState>,
-        HashMap<HashValue, SparseMerkleProof>,
+        HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
     ) {
         (
             self.account_to_state_cache.into_inner(),

@@ -1531,7 +1531,7 @@ fn test_get_account_state_with_proof() {
     assert_eq!(account_blob, *expected_blob);
 
     // proof
-    let sm_proof: SparseMerkleProof = bcs::from_bytes(
+    let sm_proof: SparseMerkleProof<AccountStateBlob> = bcs::from_bytes(
         &received_proof
             .proof
             .transaction_info_to_account_proof

@@ -273,7 +273,10 @@ impl DbReader for MockDiemDB {
         &self,
         address: AccountAddress,
         _version: u64,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         Ok((
             self.get_latest_account_state(address)?,
             SparseMerkleProof::new(None, vec![]),

@@ -1,13 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::proof::{
-    AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-    SparseMerkleRangeProof, TestAccumulatorProof, TestAccumulatorRangeProof,
-    TransactionInfoWithProof, TransactionListProof,
+use crate::{
+    account_state_blob::AccountStateBlob,
+    proof::{
+        AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleRangeProof,
+        TestAccumulatorProof, TestAccumulatorRangeProof, TransactionInfoWithProof,
+        TransactionListProof,
+    },
 };
 use bcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
+
+type SparseMerkleProof = crate::proof::SparseMerkleProof<AccountStateBlob>;
 
 proptest! {
 

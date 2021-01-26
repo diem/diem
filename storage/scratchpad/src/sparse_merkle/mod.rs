@@ -69,23 +69,23 @@ mod sparse_merkle_test;
 
 use self::node::{LeafNode, LeafValue, Node, SparseMerkleNode};
 use diem_crypto::{
-    hash::{HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{CryptoHash, HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use diem_types::proof::SparseMerkleProof;
 use std::sync::Arc;
 
 /// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
 #[derive(Debug, Eq, PartialEq)]
-pub enum AccountStatus {
+pub enum AccountStatus<V> {
     /// The account exists in the tree, therefore we can give its value.
-    ExistsInScratchPad(AccountStateBlob),
+    ExistsInScratchPad(V),
 
     /// The account does not exist in the tree, but exists in DB. This happens when the search
     /// reaches a leaf node that has the requested account, but the node has only the value hash
     /// because it was loaded into memory as part of a non-inclusion proof. When we go to DB we
     /// don't need to traverse the tree to find the same leaf, instead we can use the value hash to
-    /// look up the account blob directly.
+    /// look up the account content directly.
     ExistsInDB,
 
     /// The account does not exist in either the tree or DB. This happens when the search reaches
@@ -99,11 +99,14 @@ pub enum AccountStatus {
 
 /// The Sparse Merkle Tree implementation.
 #[derive(Debug)]
-pub struct SparseMerkleTree {
-    root: Arc<SparseMerkleNode>,
+pub struct SparseMerkleTree<V> {
+    root: Arc<SparseMerkleNode<V>>,
 }
 
-impl SparseMerkleTree {
+impl<V> SparseMerkleTree<V>
+where
+    V: Clone + CryptoHash,
+{
     /// Constructs a Sparse Merkle Tree with a root hash. This is often used when we restart and
     /// the scratch pad and the storage have identical state, so we use a single root hash to
     /// represent the entire state.
@@ -122,22 +125,22 @@ impl SparseMerkleTree {
     /// the new one.
     pub fn update(
         &self,
-        updates: Vec<(HashValue, AccountStateBlob)>,
-        proof_reader: &impl ProofRead,
+        updates: Vec<(HashValue, V)>,
+        proof_reader: &impl ProofRead<V>,
     ) -> Result<Self, UpdateError> {
         let mut root = Arc::clone(&self.root);
-        for (key, new_blob) in updates {
-            root = Self::update_one(root, key, new_blob, proof_reader)?;
+        for (key, new_value) in updates {
+            root = Self::update_one(root, key, new_value, proof_reader)?;
         }
         Ok(SparseMerkleTree { root })
     }
 
     fn update_one(
-        root: Arc<SparseMerkleNode>,
+        root: Arc<SparseMerkleNode<V>>,
         key: HashValue,
-        new_blob: AccountStateBlob,
-        proof_reader: &impl ProofRead,
-    ) -> Result<Arc<SparseMerkleNode>, UpdateError> {
+        new_value: V,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<Arc<SparseMerkleNode<V>>, UpdateError> {
         let mut current_node = root;
         let mut bits = key.iter_bits();
 
@@ -168,7 +171,7 @@ impl SparseMerkleTree {
         // Now we are at the bottom of the tree and current_node can be either a leaf, a subtree or
         // empty. We construct a new subtree like we are inserting the key here.
         let new_node =
-            Self::construct_subtree_at_bottom(current_node, key, new_blob, bits, proof_reader)?;
+            Self::construct_subtree_at_bottom(current_node, key, new_value, bits, proof_reader)?;
 
         // Use the new node and all previous siblings on the path to construct the final tree.
         Ok(Self::construct_subtree(
@@ -184,19 +187,19 @@ impl SparseMerkleTree {
     /// construct a subtree using current_node, the new key-value pair and potentially the
     /// key-value pair in the proof.
     fn construct_subtree_at_bottom(
-        current_node: Arc<SparseMerkleNode>,
+        current_node: Arc<SparseMerkleNode<V>>,
         key: HashValue,
-        new_blob: AccountStateBlob,
+        new_value: V,
         remaining_bits: HashValueBitIterator,
-        proof_reader: &impl ProofRead,
-    ) -> Result<Arc<SparseMerkleNode>, UpdateError> {
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<Arc<SparseMerkleNode<V>>, UpdateError> {
         match &*current_node.read_lock() {
             Node::Internal(_) => {
                 unreachable!("Reached an internal node at the bottom of the tree.")
             }
             Node::Leaf(node) => Ok(Self::construct_subtree_with_new_leaf(
                 key,
-                new_blob,
+                new_value,
                 node,
                 HashValue::LENGTH_IN_BITS - remaining_bits.len(),
             )),
@@ -213,11 +216,11 @@ impl SparseMerkleTree {
                 let new_subtree = match proof.leaf() {
                     Some(existing_leaf) => Self::construct_subtree_with_new_leaf(
                         key,
-                        new_blob,
+                        new_value,
                         &existing_leaf.into(),
                         proof.siblings().len(),
                     ),
-                    None => Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Blob(new_blob))),
+                    None => Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Value(new_value))),
                 };
 
                 let num_remaining_bits = remaining_bits.len();
@@ -245,7 +248,7 @@ impl SparseMerkleTree {
                 // replace the empty node.
                 Ok(Arc::new(SparseMerkleNode::new_leaf(
                     key,
-                    LeafValue::Blob(new_blob),
+                    LeafValue::Value(new_value),
                 )))
             }
         }
@@ -287,11 +290,11 @@ impl SparseMerkleTree {
     /// ```
     fn construct_subtree_with_new_leaf(
         key: HashValue,
-        new_blob: AccountStateBlob,
-        existing_leaf: &LeafNode,
+        new_value: V,
+        existing_leaf: &LeafNode<V>,
         distance_from_root_to_existing_leaf: usize,
-    ) -> Arc<SparseMerkleNode> {
-        let new_leaf = Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Blob(new_blob)));
+    ) -> Arc<SparseMerkleNode<V>> {
+        let new_leaf = Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Value(new_value)));
 
         if key == existing_leaf.key() {
             // This implies that `key` already existed and the proof is an inclusion proof.
@@ -336,9 +339,9 @@ impl SparseMerkleTree {
     /// and this function will return `x`. Both `bits` and `siblings` start from the bottom.
     fn construct_subtree(
         bits: impl Iterator<Item = bool>,
-        siblings: impl Iterator<Item = Arc<SparseMerkleNode>>,
-        leaf: Arc<SparseMerkleNode>,
-    ) -> Arc<SparseMerkleNode> {
+        siblings: impl Iterator<Item = Arc<SparseMerkleNode<V>>>,
+        leaf: Arc<SparseMerkleNode<V>>,
+    ) -> Arc<SparseMerkleNode<V>> {
         itertools::zip_eq(bits, siblings).fold(leaf, |previous_node, (bit, sibling)| {
             Arc::new(if bit {
                 SparseMerkleNode::new_internal(sibling, previous_node)
@@ -349,7 +352,7 @@ impl SparseMerkleTree {
     }
 
     /// Queries a `key` in this `SparseMerkleTree`.
-    pub fn get(&self, key: HashValue) -> AccountStatus {
+    pub fn get(&self, key: HashValue) -> AccountStatus<V> {
         let mut current_node = Arc::clone(&self.root);
         let mut bits = key.iter_bits();
 
@@ -375,8 +378,8 @@ impl SparseMerkleTree {
             Node::Leaf(node) => {
                 if key == node.key() {
                     match node.value() {
-                        LeafValue::Blob(blob) => AccountStatus::ExistsInScratchPad(blob.clone()),
-                        LeafValue::BlobHash(_) => AccountStatus::ExistsInDB,
+                        LeafValue::Value(value) => AccountStatus::ExistsInScratchPad(value.clone()),
+                        LeafValue::ValueHash(_) => AccountStatus::ExistsInDB,
                     }
                 } else {
                     AccountStatus::DoesNotExist
@@ -415,7 +418,7 @@ impl SparseMerkleTree {
         Self::prune_node(root);
     }
 
-    fn prune_node(node: Arc<SparseMerkleNode>) {
+    fn prune_node(node: Arc<SparseMerkleNode<V>>) {
         let mut writable_node = node.write_lock();
         let node_hash = writable_node.hash();
 
@@ -435,16 +438,19 @@ impl SparseMerkleTree {
     }
 }
 
-impl Default for SparseMerkleTree {
+impl<V> Default for SparseMerkleTree<V>
+where
+    V: Clone + CryptoHash,
+{
     fn default() -> Self {
         SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH)
     }
 }
 
 /// A type that implements `ProofRead` can provide proof for keys in persistent storage.
-pub trait ProofRead {
+pub trait ProofRead<V> {
     /// Gets verified proof for this key in persistent storage.
-    fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof>;
+    fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof<V>>;
 }
 
 /// All errors `update` can possibly return.

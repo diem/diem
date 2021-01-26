@@ -688,7 +688,10 @@ mod test {
             &self,
             _address: AccountAddress,
             _version: u64,
-        ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        ) -> Result<(
+            Option<AccountStateBlob>,
+            SparseMerkleProof<AccountStateBlob>,
+        )> {
             unimplemented!()
         }
 

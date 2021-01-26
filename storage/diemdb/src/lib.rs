@@ -835,7 +835,10 @@ impl DbReader for DiemDB {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         gauged_api("get_account_state_with_proof_by_version", || {
             self.state_store
                 .get_account_state_with_proof_by_version(address, version)

@@ -16,12 +16,12 @@ use vm_genesis::generate_genesis_change_set_for_testing;
 // generate genesis state blob
 pub fn generate_genesis_state() -> (
     HashMap<AccountAddress, AccountStateBlob>,
-    Arc<SparseMerkleTree>,
+    Arc<SparseMerkleTree<AccountStateBlob>>,
 ) {
     let change_set = generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
     let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(change_set.clone()));
     let proof_reader = ProofReader::new(HashMap::new());
-    let tree: SparseMerkleTree = Default::default();
+    let tree = SparseMerkleTree::default();
     let mut account_states = HashMap::new();
 
     process_write_set(

@@ -43,7 +43,10 @@ impl StateStore {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         JellyfishMerkleTree::new(self).get_with_proof(address.hash(), version)
     }
 

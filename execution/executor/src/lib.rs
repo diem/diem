@@ -43,7 +43,7 @@ use diem_types::{
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config,
-    proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
+    proof::accumulator::InMemoryAccumulator,
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
@@ -56,7 +56,6 @@ use executor_types::{
     TransactionReplayer,
 };
 use fail::fail_point;
-use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
@@ -64,6 +63,9 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
+
+type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
+type SparseMerkleTree = scratchpad::SparseMerkleTree<AccountStateBlob>;
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {

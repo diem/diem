@@ -286,7 +286,10 @@ pub trait DbReader: Send + Sync {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )>;
 
     /// See [`DiemDB::get_latest_state_root`].
     ///

@@ -13,18 +13,22 @@ use diem_crypto::{
     HashValue,
 };
 use diem_types::{
+    account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof, SparseMerkleProof},
+    proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionStatus, Version,
     },
 };
-use scratchpad::{ProofRead, SparseMerkleTree};
+use scratchpad::ProofRead;
 use serde::{Deserialize, Serialize};
 use std::{cmp::max, collections::HashMap, sync::Arc};
 use storage_interface::TreeState;
+
+type SparseMerkleProof = diem_types::proof::SparseMerkleProof<AccountStateBlob>;
+type SparseMerkleTree = scratchpad::SparseMerkleTree<AccountStateBlob>;
 
 pub trait ChunkExecutor: Send {
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
@@ -299,7 +303,7 @@ impl ProofReader {
     }
 }
 
-impl ProofRead for ProofReader {
+impl ProofRead<AccountStateBlob> for ProofReader {
     fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof> {
         self.account_to_proof.get(&key)
     }

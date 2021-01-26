@@ -9,7 +9,9 @@ use crate::proof::{
     AccumulatorRangeProof, SparseMerkleLeafNode, SparseMerkleProof, SparseMerkleRangeProof,
 };
 use diem_crypto::{
-    hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    hash::{
+        CryptoHash, CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
+    },
     HashValue,
 };
 use proptest::{collection::vec, prelude::*};
@@ -69,7 +71,10 @@ where
     }
 }
 
-impl Arbitrary for SparseMerkleProof {
+impl<V> Arbitrary for SparseMerkleProof<V>
+where
+    V: std::fmt::Debug + CryptoHash,
+{
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 

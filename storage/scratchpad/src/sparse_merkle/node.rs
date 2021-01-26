@@ -9,8 +9,8 @@
 //!
 //! - A `LeafNode` represents a single account. Similar to what is in storage, a leaf node has a
 //! key which is the hash of the account address as well as a value hash which is the hash of the
-//! corresponding account blob. The difference is that a `LeafNode` does not always have the value,
-//! in the case when the leaf was loaded into memory as part of a non-inclusion proof.
+//! corresponding account content. The difference is that a `LeafNode` does not always have the
+//! value, in the case when the leaf was loaded into memory as part of a non-inclusion proof.
 //!
 //! - A `SubtreeNode` represents a subtree with one or more leaves. `SubtreeNode`s are generated
 //! when we get accounts from storage with proof. It stores the root hash of this subtree.
@@ -22,81 +22,81 @@ use diem_crypto::{
     HashValue,
 };
 use diem_infallible::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use diem_types::{
-    account_state_blob::AccountStateBlob,
-    proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
-};
+use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
 use std::sync::Arc;
 
 /// We wrap the node in `RwLock`. The only case when we will update the node is when we
 /// drop a subtree originated from this node and commit things to storage. In that case we will
 /// replace the an `InternalNode` or a `LeafNode` with a `SubtreeNode`.
 #[derive(Debug)]
-pub struct SparseMerkleNode {
-    node: RwLock<Node>,
+pub struct SparseMerkleNode<V> {
+    node: RwLock<Node<V>>,
 }
 
-impl SparseMerkleNode {
+impl<V> SparseMerkleNode<V>
+where
+    V: CryptoHash,
+{
     /// Constructs a new internal node given two children.
-    pub fn new_internal(
-        left_child: Arc<SparseMerkleNode>,
-        right_child: Arc<SparseMerkleNode>,
-    ) -> Self {
-        SparseMerkleNode {
+    pub fn new_internal(left_child: Arc<Self>, right_child: Arc<Self>) -> Self {
+        Self {
             node: RwLock::new(Node::new_internal(left_child, right_child)),
         }
     }
 
     /// Constructs a new leaf node using given key and value.
-    pub fn new_leaf(key: HashValue, value: LeafValue) -> Self {
-        SparseMerkleNode {
+    pub fn new_leaf(key: HashValue, value: LeafValue<V>) -> Self {
+        Self {
             node: RwLock::new(Node::new_leaf(key, value)),
         }
     }
 
     /// Constructs a new subtree node with given root hash.
     pub fn new_subtree(hash: HashValue) -> Self {
-        SparseMerkleNode {
+        Self {
             node: RwLock::new(Node::new_subtree(hash)),
         }
     }
 
     /// Constructs a new empty node.
     pub fn new_empty() -> Self {
-        SparseMerkleNode {
+        Self {
             node: RwLock::new(Node::new_empty()),
         }
     }
 
     /// Get the read access of the wrapped node.
-    pub fn read_lock(&self) -> RwLockReadGuard<Node> {
+    pub fn read_lock(&self) -> RwLockReadGuard<Node<V>> {
         self.node.read()
     }
 
     /// Get the write access of the wrapped node.
-    pub fn write_lock(&self) -> RwLockWriteGuard<Node> {
+    pub fn write_lock(&self) -> RwLockWriteGuard<Node<V>> {
         self.node.write()
     }
 }
 
 /// The underlying node is either `InternalNode`, `LeafNode`, `SubtreeNode` or `EmptyNode`.
 #[derive(Debug)]
-pub enum Node {
-    Internal(InternalNode),
-    Leaf(LeafNode),
+pub enum Node<V> {
+    Internal(InternalNode<V>),
+    Leaf(LeafNode<V>),
     Subtree(SubtreeNode),
     Empty,
 }
 
-impl Node {
+impl<V> Node<V>
+where
+    V: CryptoHash,
+{
     pub fn new_internal(
-        left_child: Arc<SparseMerkleNode>,
-        right_child: Arc<SparseMerkleNode>,
+        left_child: Arc<SparseMerkleNode<V>>,
+        right_child: Arc<SparseMerkleNode<V>>,
     ) -> Self {
         Node::Internal(InternalNode::new(left_child, right_child))
     }
 
-    pub fn new_leaf(key: HashValue, value: LeafValue) -> Self {
+    pub fn new_leaf(key: HashValue, value: LeafValue<V>) -> Self {
         Node::Leaf(LeafNode::new(key, value))
     }
 
@@ -130,19 +130,22 @@ impl Node {
 
 /// An internal node.
 #[derive(Debug)]
-pub struct InternalNode {
+pub struct InternalNode<V> {
     /// The hash of this internal node which is the root hash of the subtree.
     hash: HashValue,
 
     /// Pointer to left child.
-    left_child: Arc<SparseMerkleNode>,
+    left_child: Arc<SparseMerkleNode<V>>,
 
     /// Pointer to right child.
-    right_child: Arc<SparseMerkleNode>,
+    right_child: Arc<SparseMerkleNode<V>>,
 }
 
-impl InternalNode {
-    fn new(left_child: Arc<SparseMerkleNode>, right_child: Arc<SparseMerkleNode>) -> Self {
+impl<V> InternalNode<V>
+where
+    V: CryptoHash,
+{
+    fn new(left_child: Arc<SparseMerkleNode<V>>, right_child: Arc<SparseMerkleNode<V>>) -> Self {
         match (&*left_child.read_lock(), &*right_child.read_lock()) {
             (Node::Subtree(_), Node::Subtree(_)) => {
                 panic!("Two subtree children should have been merged into a single subtree node.")
@@ -161,7 +164,7 @@ impl InternalNode {
             right_child.read_lock().hash(),
         )
         .hash();
-        InternalNode {
+        Self {
             hash,
             left_child,
             right_child,
@@ -172,44 +175,47 @@ impl InternalNode {
         self.hash
     }
 
-    pub fn clone_left_child(&self) -> Arc<SparseMerkleNode> {
+    pub fn clone_left_child(&self) -> Arc<SparseMerkleNode<V>> {
         Arc::clone(&self.left_child)
     }
 
-    pub fn clone_right_child(&self) -> Arc<SparseMerkleNode> {
+    pub fn clone_right_child(&self) -> Arc<SparseMerkleNode<V>> {
         Arc::clone(&self.right_child)
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum LeafValue {
-    /// The account state blob.
-    Blob(AccountStateBlob),
+pub enum LeafValue<V> {
+    /// The content of the leaf.
+    Value(V),
 
-    /// The hash of the blob.
-    BlobHash(HashValue),
+    /// The hash of the leaf content.
+    ValueHash(HashValue),
 }
 
 /// A `LeafNode` represents a single account in the Sparse Merkle Tree.
 #[derive(Debug)]
-pub struct LeafNode {
+pub struct LeafNode<V> {
     /// The key is the hash of the address.
     key: HashValue,
 
-    /// The account blob or its hash. It's possible that we don't know the value here. For example,
-    /// this leaf was loaded into memory as part of an non-inclusion proof. In that case we
-    /// only know the value's hash.
-    value: LeafValue,
+    /// The account content or its hash. It's possible that we don't know the value here. For
+    /// example, this leaf was loaded into memory as part of an non-inclusion proof. In that case
+    /// we only know the value's hash.
+    value: LeafValue<V>,
 
     /// The hash of this leaf node which is Hash(key || Hash(value)).
     hash: HashValue,
 }
 
-impl LeafNode {
-    pub fn new(key: HashValue, value: LeafValue) -> Self {
+impl<V> LeafNode<V>
+where
+    V: CryptoHash,
+{
+    pub fn new(key: HashValue, value: LeafValue<V>) -> Self {
         let value_hash = match value {
-            LeafValue::Blob(ref val) => val.hash(),
-            LeafValue::BlobHash(ref val_hash) => *val_hash,
+            LeafValue::Value(ref val) => val.hash(),
+            LeafValue::ValueHash(ref val_hash) => *val_hash,
         };
         let hash = SparseMerkleLeafNode::new(key, value_hash).hash();
         LeafNode { key, value, hash }
@@ -219,7 +225,7 @@ impl LeafNode {
         self.key
     }
 
-    pub fn value(&self) -> &LeafValue {
+    pub fn value(&self) -> &LeafValue<V> {
         &self.value
     }
 
@@ -228,9 +234,15 @@ impl LeafNode {
     }
 }
 
-impl From<SparseMerkleLeafNode> for LeafNode {
+impl<V> From<SparseMerkleLeafNode> for LeafNode<V>
+where
+    V: CryptoHash,
+{
     fn from(leaf_node: SparseMerkleLeafNode) -> Self {
-        Self::new(leaf_node.key(), LeafValue::BlobHash(leaf_node.value_hash()))
+        Self::new(
+            leaf_node.key(),
+            LeafValue::ValueHash(leaf_node.value_hash()),
+        )
     }
 }
 

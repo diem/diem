@@ -516,7 +516,10 @@ where
         &self,
         key: HashValue,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         // Empty tree just returns proof with no sibling hash.
         let mut next_node_key = NodeKey::new_empty_path(version);
         let mut siblings = vec![];
