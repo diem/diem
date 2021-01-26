@@ -18,7 +18,11 @@ module 43.N {
 Command `publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
-Publishing failed with unexpected error CODE_CACHE_EXPIRED
+Only one module can be re-published per Move VM invocation.
+Re-run with --ignore-breaking-changes to publish anyway.
+Command `publish -v --ignore-breaking-changes`:
+Compiling Move modules...
+Found and compiled 2 modules
 Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 

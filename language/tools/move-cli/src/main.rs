@@ -655,6 +655,10 @@ fn explain_publish_error(
             }
             println!("Re-run with --ignore-breaking-changes to publish anyway.")
         }
+        VMStatus::Error(CODE_CACHE_EXPIRED) => {
+            println!("Only one module can be re-published per Move VM invocation.");
+            println!("Re-run with --ignore-breaking-changes to publish anyway.")
+        }
         VMStatus::Error(status_code) => {
             println!("Publishing failed with unexpected error {:?}", status_code)
         }
