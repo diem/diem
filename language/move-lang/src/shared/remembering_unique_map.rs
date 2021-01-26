@@ -177,6 +177,10 @@ impl<K: TName, V> Iterator for IntoIter<K, V> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
 
 impl<K: TName, V> IntoIterator for RememberingUniqueMap<K, V> {
@@ -199,6 +203,10 @@ impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
     }
 }
 
@@ -223,6 +231,10 @@ impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
     }
 }
 
