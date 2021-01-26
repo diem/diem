@@ -26,7 +26,7 @@ use bytes::Bytes;
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::network_id::NetworkContext;
 use diem_network_address::NetworkAddress;
-use diem_time_service::TimeService;
+use diem_time_service::{MockTimeService, TimeService};
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
@@ -47,6 +47,7 @@ static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
 fn build_test_peer(
     executor: Handle,
+    time_service: TimeService,
     origin: ConnectionOrigin,
 ) -> (
     Peer<MemorySocket>,
@@ -79,7 +80,7 @@ fn build_test_peer(
     let peer = Peer::new(
         NetworkContext::mock(),
         executor,
-        TimeService::real(),
+        time_service,
         connection,
         connection_notifs_tx,
         peer_reqs_rx,
@@ -98,6 +99,7 @@ fn build_test_peer(
 
 fn build_test_connected_peers(
     executor: Handle,
+    time_service: TimeService,
 ) -> (
     (
         Peer<MemorySocket>,
@@ -113,9 +115,13 @@ fn build_test_connected_peers(
     ),
 ) {
     let (peer_a, peer_handle_a, connection_a, connection_notifs_rx_a, peer_notifs_rx_a) =
-        build_test_peer(executor.clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            executor.clone(),
+            time_service.clone(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut peer_b, peer_handle_b, _connection_b, connection_notifs_rx_b, peer_notifs_rx_b) =
-        build_test_peer(executor, ConnectionOrigin::Outbound);
+        build_test_peer(executor, time_service, ConnectionOrigin::Outbound);
 
     // Make sure both peers are connected
     peer_b.connection = Some(connection_a);
@@ -196,7 +202,11 @@ fn peer_send_message() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, mut peer_handle, mut connection, _connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = Message {
@@ -235,7 +245,11 @@ fn peer_recv_message() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, _peer_handle, connection, _connection_notifs_rx, mut peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
 
     let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: PROTOCOL,
@@ -276,7 +290,7 @@ fn peers_send_message_concurrent() {
     let (
         (peer_a, mut peer_handle_a, mut connection_notifs_rx_a, mut peer_notifs_rx_a),
         (peer_b, mut peer_handle_b, mut connection_notifs_rx_b, mut peer_notifs_rx_b),
-    ) = build_test_connected_peers(rt.handle().clone());
+    ) = build_test_connected_peers(rt.handle().clone(), TimeService::mock());
 
     let remote_peer_id_a = peer_a.remote_peer_id();
     let remote_peer_id_b = peer_b.remote_peer_id();
@@ -328,7 +342,11 @@ fn peer_recv_rpc() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, _peer_handle, mut connection, _connection_notifs_rx, mut peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = NetworkMessage::RpcRequest(RpcRequest {
@@ -383,7 +401,11 @@ fn peer_recv_rpc_concurrent() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, _peer_handle, mut connection, _connection_notifs_rx, mut peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut client_sink, mut client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = NetworkMessage::RpcRequest(RpcRequest {
@@ -440,14 +462,17 @@ fn peer_recv_rpc_concurrent() {
     rt.block_on(future::join3(peer.start(), server, client));
 }
 
-// TODO(philiphayes): reenable this once mock time-service lands.
 #[test]
-#[ignore]
 fn peer_recv_rpc_timeout() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
+    let mock_time = MockTimeService::new();
     let (peer, _peer_handle, mut connection, _connection_notifs_rx, mut peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            mock_time.clone().into(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = NetworkMessage::RpcRequest(RpcRequest {
@@ -479,7 +504,8 @@ fn peer_recv_rpc_timeout() {
         // The rpc response channel should still be open since we haven't timed out yet.
         assert!(!res_tx.is_canceled());
 
-        // time.advance(Duration::from_millis(INBOUND_RPC_TIMEOUT_MS).await;
+        // Advancing time should trigger the timeout.
+        mock_time.advance_ms_async(INBOUND_RPC_TIMEOUT_MS).await;
 
         // The rpc response channel should be canceled from the timeout.
         assert!(res_tx.is_canceled());
@@ -500,7 +526,11 @@ fn peer_recv_rpc_cancel() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, _peer_handle, mut connection, _connection_notifs_rx, mut peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut client_sink, client_stream) = build_network_sink_stream(&mut connection);
 
     let send_msg = NetworkMessage::RpcRequest(RpcRequest {
@@ -550,7 +580,11 @@ fn peer_send_rpc() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, mut peer_handle, mut connection, _connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
     let timeout = Duration::from_millis(10_000);
 
@@ -605,7 +639,11 @@ fn peer_send_rpc_concurrent() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, peer_handle, mut connection, _connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
     let timeout = Duration::from_millis(10_000);
 
@@ -670,7 +708,11 @@ fn peer_send_rpc_cancel() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, mut peer_handle, mut connection, _connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let (mut server_sink, mut server_stream) = build_network_sink_stream(&mut connection);
     let timeout = Duration::from_millis(10_000);
 
@@ -729,7 +771,11 @@ fn peer_disconnect_request() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, peer_handle, _connection, mut connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let remote_peer_id = peer.remote_peer_id();
 
     let test = async move {
@@ -751,7 +797,11 @@ fn peer_disconnect_connection_lost() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
     let (peer, _peer_handle, mut connection, mut connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+        build_test_peer(
+            rt.handle().clone(),
+            TimeService::mock(),
+            ConnectionOrigin::Inbound,
+        );
     let remote_peer_id = peer.remote_peer_id();
 
     let test = async move {
@@ -770,8 +820,11 @@ fn peer_disconnect_connection_lost() {
 fn peer_terminates_when_request_tx_has_dropped() {
     ::diem_logger::Logger::init_for_testing();
     let rt = Runtime::new().unwrap();
-    let (peer, peer_handle, _connection, _connection_notifs_rx, _peer_notifs_rx) =
-        build_test_peer(rt.handle().clone(), ConnectionOrigin::Inbound);
+    let (peer, peer_handle, _connection, _connection_notifs_rx, _peer_notifs_rx) = build_test_peer(
+        rt.handle().clone(),
+        TimeService::mock(),
+        ConnectionOrigin::Inbound,
+    );
 
     let drop = async move {
         // Drop peer handle.
