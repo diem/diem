@@ -353,7 +353,7 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
     fn quote_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
-            Bool => "st.bool".into(),
+            Bool => "bool".into(),
             U8 => "st.uint8".into(),
             U64 => "st.uint64".into(),
             U128 => "st.uint128".into(),
