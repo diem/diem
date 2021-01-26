@@ -8,6 +8,7 @@ use move_vm_types::{
     natives::function::{native_gas, NativeContext, NativeResult},
     values::{Value, Vector, VectorRef},
 };
+use smallvec::smallvec;
 use std::collections::VecDeque;
 use vm::errors::PartialVMResult;
 
@@ -36,7 +37,7 @@ pub fn native_length(
     let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
 
     let len = r.len(&ty_args[0], context)?;
-    Ok(NativeResult::ok_one(cost, len))
+    Ok(NativeResult::ok(cost, smallvec![len]))
 }
 
 pub fn native_push_back(
@@ -57,7 +58,7 @@ pub fn native_push_back(
     );
 
     r.push_back(e, &ty_args[0], context)?;
-    Ok(NativeResult::ok_none(cost))
+    Ok(NativeResult::ok(cost, smallvec![]))
 }
 
 pub fn native_borrow(

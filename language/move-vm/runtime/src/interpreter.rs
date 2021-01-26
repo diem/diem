@@ -18,7 +18,6 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::runtime_types::Type,
-    natives::function::NativeReturnValues,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
@@ -288,10 +287,8 @@ impl<L: LogContext> Interpreter<L> {
         let return_values = result
             .result
             .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
-        match return_values {
-            NativeReturnValues::None => {}
-            NativeReturnValues::One(value) => self.operand_stack.push(value)?,
-            NativeReturnValues::Many(values) => self.operand_stack.pushn(values)?,
+        for value in return_values {
+            self.operand_stack.push(value)?;
         }
         Ok(())
     }
@@ -590,20 +587,6 @@ impl Stack {
         if self.0.len() < OPERAND_STACK_SIZE_LIMIT {
             self.0.push(value);
             Ok(())
-        } else {
-            Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
-        }
-    }
-
-    /// Push n values on the stack
-    fn pushn(&mut self, mut values: Vec<Value>) -> PartialVMResult<()> {
-        if let Some(new_len) = self.0.len().checked_add(values.len()) {
-            if new_len <= OPERAND_STACK_SIZE_LIMIT {
-                self.0.append(&mut values);
-                Ok(())
-            } else {
-                Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
-            }
         } else {
             Err(PartialVMError::new(StatusCode::EXECUTION_STACK_OVERFLOW))
         }

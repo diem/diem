@@ -7,6 +7,7 @@ use move_vm_types::{
     natives::function::{native_gas, NativeContext, NativeResult},
     values::{values_impl::SignerRef, Value},
 };
+use smallvec::smallvec;
 use std::collections::VecDeque;
 use vm::errors::PartialVMResult;
 
@@ -21,8 +22,8 @@ pub fn native_borrow_address(
     let signer_reference = pop_arg!(arguments, SignerRef);
     let cost = native_gas(context.cost_table(), NativeCostIndex::SIGNER_BORROW, 1);
 
-    Ok(NativeResult::ok_one(
+    Ok(NativeResult::ok(
         cost,
-        signer_reference.borrow_signer()?,
+        smallvec![signer_reference.borrow_signer()?],
     ))
 }

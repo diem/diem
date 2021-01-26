@@ -21,6 +21,7 @@ use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     value::MoveTypeLayout,
 };
+use smallvec::SmallVec;
 use std::fmt::Write;
 use vm::errors::PartialVMResult;
 
@@ -50,26 +51,6 @@ pub trait NativeContext {
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
 }
 
-/// The return value(s) of a native function
-///
-/// None - The native function does not return any thing
-/// One  - The native function returns exactly one value
-/// Many - The native function returns a vector of values
-///
-/// In theory we could use a Vec<Value> to unify all cases. However, given that currently none of
-/// the native functions return more than one value, using a Vec may introduce extra overhead on
-/// heap allocation and de-allocation, especially for one-element vectors, hence this performance
-/// optimization that cases on the number of return values.
-///
-/// An alternative is to use `smallvec` which stores a small number of elements on stack and falls
-/// back to the heap for larger allocations. The reason not using `smallvec` now is just to avoid
-/// an extra dependency.
-pub enum NativeReturnValues {
-    None,
-    One(Value),
-    Many(Vec<Value>),
-}
-
 /// Result of a native function execution requires charges for execution cost.
 ///
 /// An execution that causes an invariant violation would not return a `NativeResult` but
@@ -83,31 +64,15 @@ pub struct NativeResult {
     /// The cost for running that function, whether successfully or not.
     pub cost: GasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
-    pub result: Result<NativeReturnValues, u64>,
+    pub result: Result<SmallVec<[Value; 1]>, u64>,
 }
 
 impl NativeResult {
-    /// Return values of a successful execution (no return values).
-    pub fn ok_none(cost: GasUnits<GasCarrier>) -> Self {
+    /// Return values of a successful execution.
+    pub fn ok(cost: GasUnits<GasCarrier>, values: SmallVec<[Value; 1]>) -> Self {
         NativeResult {
             cost,
-            result: Ok(NativeReturnValues::None),
-        }
-    }
-
-    /// Return values of a successful execution (exactly one return value).
-    pub fn ok_one(cost: GasUnits<GasCarrier>, value: Value) -> Self {
-        NativeResult {
-            cost,
-            result: Ok(NativeReturnValues::One(value)),
-        }
-    }
-
-    /// Return values of a successful execution (many return values).
-    pub fn ok_many(cost: GasUnits<GasCarrier>, values: Vec<Value>) -> Self {
-        NativeResult {
-            cost,
-            result: Ok(NativeReturnValues::Many(values)),
+            result: Ok(values),
         }
     }
 

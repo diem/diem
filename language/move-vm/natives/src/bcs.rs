@@ -8,6 +8,7 @@ use move_vm_types::{
     natives::function::{native_gas, NativeContext, NativeResult},
     values::{values_impl::Reference, Value},
 };
+use smallvec::smallvec;
 use std::collections::VecDeque;
 use vm::errors::PartialVMResult;
 
@@ -43,8 +44,8 @@ pub fn native_to_bytes(
         serialized_value.len(),
     );
 
-    Ok(NativeResult::ok_one(
+    Ok(NativeResult::ok(
         cost,
-        Value::vector_u8(serialized_value),
+        smallvec![Value::vector_u8(serialized_value)],
     ))
 }

@@ -9,6 +9,7 @@ use move_vm_types::{
     natives::function::{NativeContext, NativeResult},
     values::Value,
 };
+use smallvec::smallvec;
 use std::collections::VecDeque;
 use vm::errors::PartialVMResult;
 
@@ -33,7 +34,7 @@ pub fn native_print(
         println!("[debug] {}", buf);
     }
 
-    Ok(NativeResult::ok_none(ONE_GAS_UNIT))
+    Ok(NativeResult::ok(ONE_GAS_UNIT, smallvec![]))
 }
 
 #[allow(unused_variables)]
@@ -52,5 +53,5 @@ pub fn native_print_stack_trace(
         println!("{}", s);
     }
 
-    Ok(NativeResult::ok_none(ONE_GAS_UNIT))
+    Ok(NativeResult::ok(ONE_GAS_UNIT, smallvec![]))
 }

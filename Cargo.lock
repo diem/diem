@@ -4283,6 +4283,7 @@ dependencies = [
  "move-vm-types",
  "once_cell",
  "sha2",
+ "smallvec",
  "vm",
 ]
 
@@ -4334,6 +4335,7 @@ dependencies = [
  "proptest",
  "serde",
  "sha2",
+ "smallvec",
  "vm",
 ]
 

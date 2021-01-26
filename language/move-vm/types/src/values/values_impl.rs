@@ -11,6 +11,7 @@ use move_core_types::{
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
+use smallvec::smallvec;
 use std::{
     cell::RefCell,
     fmt::{self, Debug, Display},
@@ -1763,7 +1764,10 @@ impl VectorRef {
         if idx >= c.len() {
             return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
         }
-        Ok(NativeResult::ok_one(cost, Value(self.0.borrow_elem(idx)?)))
+        Ok(NativeResult::ok(
+            cost,
+            smallvec![Value(self.0.borrow_elem(idx)?)],
+        ))
     }
 
     pub fn pop(
@@ -1813,7 +1817,7 @@ impl VectorRef {
 
         self.0.mark_dirty();
 
-        Ok(NativeResult::ok_one(cost, res))
+        Ok(NativeResult::ok(cost, smallvec![res]))
     }
 
     pub fn swap(
@@ -1850,7 +1854,7 @@ impl VectorRef {
 
         self.0.mark_dirty();
 
-        Ok(NativeResult::ok_none(cost))
+        Ok(NativeResult::ok(cost, smallvec![]))
     }
 }
 
@@ -1881,7 +1885,7 @@ impl Vector {
             }
         };
 
-        Ok(NativeResult::ok_one(cost, container))
+        Ok(NativeResult::ok(cost, smallvec![container]))
     }
 
     pub fn destroy_empty(
@@ -1904,7 +1908,7 @@ impl Vector {
         };
 
         if is_empty {
-            Ok(NativeResult::ok_none(cost))
+            Ok(NativeResult::ok(cost, smallvec![]))
         } else {
             Ok(NativeResult::err(cost, DESTROY_NON_EMPTY_VEC))
         }
