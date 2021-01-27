@@ -108,7 +108,7 @@ impl PendingLedgerInfos {
 /// Note: `committed_ledger_info` is used for helping other Diem nodes synchronize (i.e.,
 /// it corresponds to the highest version we have a proof for in storage). `synced_trees`
 /// is used locally for retrieving missing chunks for the local storage.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SyncState {
     committed_ledger_info: LedgerInfoWithSignatures,
     synced_trees: ExecutedTrees,

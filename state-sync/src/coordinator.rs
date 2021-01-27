@@ -8,7 +8,7 @@ use crate::{
     counters,
     error::{
         Error,
-        Error::{OldSyncRequestVersion, UninitializedError},
+        Error::{CallbackSendFailed, OldSyncRequestVersion, UninitializedError},
     },
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
@@ -188,7 +188,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                             }
                         }
                         CoordinatorMessage::GetSyncState(callback) => {
-                            self.get_state(callback);
+                            let _ = self.get_sync_state(callback);
                         }
                         CoordinatorMessage::WaitForInitialization(cb_sender) => {
                             self.set_initialization_listener(cb_sender);
@@ -494,15 +494,14 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(())
     }
 
-    fn get_state(&mut self, callback: oneshot::Sender<SyncState>) {
-        if let Err(e) = self.sync_state_with_local_storage() {
-            error!(
-                "[state sync] failed to sync with local storage for get_state request: {:?}",
-                e
-            );
-        }
-        if callback.send(self.local_state.clone()).is_err() {
-            error!("[state sync] failed to send internal state");
+    /// Returns the current SyncState of state sync.
+    /// Note: this is only used for testing and should be removed once integration/e2e tests
+    /// are updated to not rely on this.
+    fn get_sync_state(&mut self, callback: oneshot::Sender<SyncState>) -> Result<(), Error> {
+        self.sync_state_with_local_storage()?;
+        match callback.send(self.local_state.clone()) {
+            Err(error) => Err(CallbackSendFailed(format!("{:?}", error))),
+            _ => Ok(()),
         }
     }
 
@@ -1317,6 +1316,28 @@ mod tests {
 
         // TODO(joshlind): add a check for syncing to old versions once we support storage
         // modifications in unit tests.
+    }
+
+    #[test]
+    fn test_get_sync_state() {
+        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+
+        // Get the sync state from state sync
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        coordinator.get_sync_state(callback_sender).unwrap();
+        match callback_receiver.try_recv() {
+            Ok(Some(sync_state)) => {
+                assert_eq!(sync_state.committed_version(), 0);
+            }
+            _ => panic!("Expected error!"),
+        };
+
+        // Drop the callback receiver and verify error
+        let (callback_sender, _) = oneshot::channel();
+        match coordinator.get_sync_state(callback_sender) {
+            Err(Error::CallbackSendFailed(_)) => { /* Expected */ }
+            result => panic!("Expected error but got: {:?}", result),
+        }
     }
 
     fn create_ledger_info_at_version(version: Version) -> LedgerInfoWithSignatures {
