@@ -16,7 +16,7 @@ diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 itertools = "0.10.0"
-log = "0.4.13"
+log = "0.4.14"
 num = "0.3.0"
 regex = "1.4.3"
 anyhow = "1.0.38"

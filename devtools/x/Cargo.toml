@@ -18,7 +18,7 @@ guppy = { version = "0.6.3", features = ["summaries"] }
 indoc = "1.0.3"
 toml = "0.5.8"
 env_logger = "0.8.2"
-log = "0.4.13"
+log = "0.4.14"
 chrono = "0.4.19"
 globset = "0.4.6"
 regex = "1.4.3"
