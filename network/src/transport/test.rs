@@ -10,6 +10,7 @@ use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
 use diem_crypto::{test_utils::TEST_SEED, traits::Uniform, x25519};
 use diem_infallible::RwLock;
 use diem_network_address::{NetworkAddress, Protocol::*};
+use diem_time_service::MockTimeService;
 use diem_types::{chain_id::ChainId, PeerId};
 use futures::{future, io::AsyncWriteExt, stream::StreamExt};
 use netcore::{
@@ -51,6 +52,7 @@ fn setup<TTransport>(
     auth: Auth,
 ) -> (
     Runtime,
+    MockTimeService,
     (PeerId, DiemNetTransport<TTransport>),
     (PeerId, DiemNetTransport<TTransport>),
     Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
@@ -64,6 +66,7 @@ where
     TTransport::Listener: Send + 'static,
 {
     let rt = Runtime::new().unwrap();
+    let time_service = TimeService::mock();
 
     let mut rng = StdRng::from_seed(TEST_SEED);
     let listener_key = x25519::PrivateKey::generate(&mut rng);
@@ -130,6 +133,7 @@ where
     let listener_transport = DiemNetTransport::new(
         base_transport.clone(),
         NetworkContext::mock_with_peer_id(listener_peer_id),
+        time_service.clone(),
         listener_key,
         listener_auth_mode,
         HANDSHAKE_VERSION,
@@ -141,6 +145,7 @@ where
     let dialer_transport = DiemNetTransport::new(
         base_transport,
         NetworkContext::mock_with_peer_id(dialer_peer_id),
+        time_service.clone(),
         dialer_key,
         dialer_auth_mode,
         HANDSHAKE_VERSION,
@@ -151,6 +156,7 @@ where
 
     (
         rt,
+        time_service.into_mock(),
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
@@ -201,6 +207,7 @@ fn test_transport_success<TTransport>(
 {
     let (
         rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         _trusted_peers,
@@ -283,6 +290,7 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
 {
     let (
         rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
@@ -336,6 +344,7 @@ fn test_transport_maybe_mutual<TTransport>(
 {
     let (
         rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,

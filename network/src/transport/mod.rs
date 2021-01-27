@@ -16,6 +16,7 @@ use diem_config::{
 use diem_crypto::x25519;
 use diem_logger::prelude::*;
 use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
+use diem_time_service::{timeout, TimeService, TimeServiceTrait};
 use diem_types::{chain_id::ChainId, PeerId};
 use futures::{
     future::{Future, FutureExt},
@@ -35,7 +36,6 @@ use std::{
     },
     time::Duration,
 };
-use tokio::time::timeout;
 
 #[cfg(test)]
 mod test;
@@ -176,14 +176,14 @@ pub struct Connection<TSocket> {
 }
 
 /// Convenience function for adding a timeout to a Future that returns an `io::Result`.
-async fn timeout_io<F, T>(duration: Duration, fut: F) -> io::Result<T>
+async fn timeout_io<F, T>(time_service: TimeService, duration: Duration, fut: F) -> io::Result<T>
 where
     F: Future<Output = io::Result<T>>,
 {
-    let res = timeout(duration, fut).await;
+    let res = time_service.timeout(duration, fut).await;
     match res {
         Ok(out) => out,
-        Err(err) => Err(io::Error::new(io::ErrorKind::TimedOut, err)),
+        Err(timeout::Elapsed) => Err(io::Error::new(io::ErrorKind::TimedOut, timeout::Elapsed)),
     }
 }
 
@@ -387,6 +387,7 @@ async fn upgrade_outbound<T: TSocket>(
 pub struct DiemNetTransport<TTransport> {
     base_transport: TTransport,
     ctxt: Arc<UpgradeContext>,
+    time_service: TimeService,
     identity_pubkey: x25519::PublicKey,
     enable_proxy_protocol: bool,
 }
@@ -402,6 +403,7 @@ where
     pub fn new(
         base_transport: TTransport,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         identity_key: x25519::PrivateKey,
         auth_mode: HandshakeAuthMode,
         handshake_version: u8,
@@ -425,8 +427,9 @@ where
         };
 
         Self {
-            ctxt: Arc::new(upgrade_context),
             base_transport,
+            ctxt: Arc::new(upgrade_context),
+            time_service,
             identity_pubkey,
             enable_proxy_protocol,
         }
@@ -525,7 +528,7 @@ where
 
         // outbound dial upgrade task
         let upgrade_fut = upgrade_outbound(self.ctxt.clone(), fut_socket, addr, peer_id, pubkey);
-        let upgrade_fut = timeout_io(TRANSPORT_TIMEOUT, upgrade_fut);
+        let upgrade_fut = timeout_io(self.time_service.clone(), TRANSPORT_TIMEOUT, upgrade_fut);
         Ok(upgrade_fut)
     }
 
@@ -571,6 +574,7 @@ where
 
         // need to move a ctxt into stream task
         let ctxt = self.ctxt.clone();
+        let time_service = self.time_service.clone();
         let enable_proxy_protocol = self.enable_proxy_protocol;
         // stream of inbound upgrade tasks
         let inbounds = listener.map_ok(move |(fut_socket, addr)| {
@@ -581,7 +585,7 @@ where
                 addr.clone(),
                 enable_proxy_protocol,
             );
-            let fut_upgrade = timeout_io(TRANSPORT_TIMEOUT, fut_upgrade);
+            let fut_upgrade = timeout_io(time_service.clone(), TRANSPORT_TIMEOUT, fut_upgrade);
             (fut_upgrade, addr)
         });
 

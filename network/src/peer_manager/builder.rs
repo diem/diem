@@ -304,6 +304,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
+                        TimeService::real(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
@@ -320,6 +321,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         MemoryTransport,
                         self.network_context.clone(),
+                        TimeService::real(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
