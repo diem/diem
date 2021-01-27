@@ -232,7 +232,6 @@ impl fmt::Display for PendingVotes {
 mod tests {
     use super::{PendingVotes, VoteReceptionResult};
     use consensus_types::block::block_test_utils::certificate_for_genesis;
-    use consensus_types::quorum_cert::QuorumCert;
     use consensus_types::{vote::Vote, vote_data::VoteData};
     use diem_crypto::HashValue;
     use diem_types::{

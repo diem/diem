@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::quorum_cert::QuorumCert;
 use crate::timeout::TimeoutForSigning;
 use crate::{
     common::{Author, Round},

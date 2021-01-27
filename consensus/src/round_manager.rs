@@ -22,7 +22,6 @@ use crate::{
     state_replication::{StateComputer, TxnManager},
 };
 use anyhow::{bail, ensure, Context, Result};
-use consensus_types::timeout::Timeout;
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
@@ -578,7 +577,17 @@ impl RoundManager {
             "[RoundManager] sync_only flag is set, stop voting"
         );
 
-        let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
+        // Use timeout_cert to unlock the safety rule if there's gap between the block and the qc
+        let timeout_cert = self
+            .block_store
+            .highest_timeout_cert()
+            .filter(|tc| {
+                tc.round() == executed_block.round()
+                    && executed_block.quorum_cert().certified_block().round() + 1
+                        != executed_block.round()
+            })
+            .map(|tc| tc.as_ref().clone());
+        let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal(timeout_cert);
         let vote = self
             .safety_rules
             .construct_and_sign_vote(&maybe_signed_vote_proposal)

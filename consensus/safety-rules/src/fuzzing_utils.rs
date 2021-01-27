@@ -122,6 +122,7 @@ prop_compose! {
 
         MaybeSignedVoteProposal {
             vote_proposal,
+            timeout_cert: None,
             signature
         }
     }
@@ -150,8 +151,9 @@ prop_compose! {
     )(
         epoch in any::<u64>(),
         round in any::<u64>(),
+        quorum_cert in arb_quorum_cert(),
     ) -> Timeout {
-        Timeout::new(epoch, round)
+        Timeout::new(epoch, round, quorum_cert)
     }
 }
 

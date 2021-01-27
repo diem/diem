@@ -9,7 +9,6 @@ use consensus_types::{
     block::Block,
     common::{Payload, Round},
     quorum_cert::QuorumCert,
-    timeout::Timeout,
     vote::Vote,
     vote_data::VoteData,
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
@@ -75,6 +74,7 @@ pub fn make_proposal_with_qc_and_proof(
     let signature = exec_key.map(|key| key.sign(&vote_proposal));
     MaybeSignedVoteProposal {
         vote_proposal,
+        timeout_cert: None,
         signature,
     }
 }

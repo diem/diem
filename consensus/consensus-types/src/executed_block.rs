@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::timeout_certificate::TimeoutCertificate;
 use crate::{
     block::Block,
     common::{Payload, Round},
@@ -89,13 +90,17 @@ impl ExecutedBlock {
         )
     }
 
-    pub fn maybe_signed_vote_proposal(&self) -> MaybeSignedVoteProposal {
+    pub fn maybe_signed_vote_proposal(
+        &self,
+        timeout_cert: Option<TimeoutCertificate>,
+    ) -> MaybeSignedVoteProposal {
         MaybeSignedVoteProposal {
             vote_proposal: VoteProposal::new(
                 self.compute_result().extension_proof(),
                 self.block.clone(),
                 self.compute_result().epoch_state().clone(),
             ),
+            timeout_cert,
             signature: self.compute_result().signature().clone(),
         }
     }

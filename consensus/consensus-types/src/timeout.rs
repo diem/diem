@@ -3,10 +3,11 @@
 
 use crate::common::Round;
 use crate::quorum_cert::QuorumCert;
+#[cfg(any(test, feature = "fuzzing"))]
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
+#[cfg(any(test, feature = "fuzzing"))]
 use diem_types::validator_signer::ValidatorSigner;
-use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

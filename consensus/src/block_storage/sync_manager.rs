@@ -204,10 +204,10 @@ impl BlockStore {
         );
 
         let blocks = retriever
-            .retrieve_block_for_qc(&highest_commit_cert, 3)
+            .retrieve_block_for_qc(&highest_commit_cert, 2)
             .await?;
         assert_eq!(
-            blocks.last().expect("should have 3-chain").id(),
+            blocks.last().expect("should have 2-chain").id(),
             highest_commit_cert.commit_info().id(),
         );
         let mut quorum_certs = vec![highest_commit_cert.clone()];

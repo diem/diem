@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{test_utils, Error, SafetyRules, TSafetyRules};
+use consensus_types::timeout::TimeoutForSigning;
 use consensus_types::{
     block::block_test_utils::random_payload, common::Round, quorum_cert::QuorumCert,
     timeout::Timeout, vote_proposal::MaybeSignedVoteProposal,
@@ -98,7 +99,7 @@ fn test_bad_execution_output(safety_rules: &Callback) {
     let evil_proof = Proof::new(
         a1_output.frozen_subtree_roots().clone(),
         a1_output.num_leaves(),
-        vec![Timeout::new(0, a3.block().round()).hash()],
+        vec![TimeoutForSigning::new(0, a3.block().round(), 0).hash()],
     );
 
     let evil_a3 = make_proposal_with_qc_and_proof(
@@ -306,7 +307,8 @@ fn test_sign_timeout(safety_rules: &Callback) {
     let round = genesis_qc.certified_block().round();
     let epoch = genesis_qc.certified_block().epoch();
 
-    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
+    let p0 =
+        test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer, key.as_ref());
     let p1 = make_proposal_with_parent(round + 2, &p0, None, &signer, key.as_ref());
     let p2 = make_proposal_with_parent(round + 3, &p1, None, &signer, key.as_ref());
     let p3 = make_proposal_with_parent(round + 4, &p2, None, &signer, key.as_ref());
@@ -316,13 +318,13 @@ fn test_sign_timeout(safety_rules: &Callback) {
     safety_rules.construct_and_sign_vote(&p0).unwrap();
 
     // Verify multiple signings are the same
-    let timeout = Timeout::new(epoch, p0.block().round());
+    let timeout = Timeout::new(epoch, p0.block().round(), genesis_qc.clone());
     let sign1 = safety_rules.sign_timeout(&timeout).unwrap();
     let sign2 = safety_rules.sign_timeout(&timeout).unwrap();
     assert_eq!(sign1, sign2);
 
     // Verify can sign last_voted_round + 1
-    let timeout_plus_1 = Timeout::new(timeout.epoch(), timeout.round() + 1);
+    let timeout_plus_1 = Timeout::new(timeout.epoch(), timeout.round() + 1, genesis_qc.clone());
     safety_rules.sign_timeout(&timeout_plus_1).unwrap();
 
     // Verify cannot sign round older rounds now
@@ -333,13 +335,13 @@ fn test_sign_timeout(safety_rules: &Callback) {
     // Verify cannot sign last_voted_round < vote < preferred_round
     safety_rules.construct_and_sign_vote(&p4).unwrap();
     let preferred_round = p4.block().quorum_cert().parent_block().round();
-    let ptimeout = Timeout::new(timeout.epoch(), preferred_round - 1);
+    let ptimeout = Timeout::new(timeout.epoch(), preferred_round - 1, genesis_qc.clone());
     let actual_err = safety_rules.sign_timeout(&ptimeout).unwrap_err();
     let expected_err = Error::IncorrectPreferredRound(ptimeout.round(), preferred_round);
     assert_eq!(actual_err, expected_err);
 
     // Verify cannot sign for different epoch
-    let etimeout = Timeout::new(timeout.epoch() + 1, round + 1);
+    let etimeout = Timeout::new(timeout.epoch() + 1, round + 1, genesis_qc);
     let actual_err = safety_rules.sign_timeout(&etimeout).unwrap_err();
     let expected_err = Error::IncorrectEpoch(etimeout.epoch(), timeout.epoch());
     assert_eq!(actual_err, expected_err);

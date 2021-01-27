@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block::Block;
+use crate::timeout_certificate::TimeoutCertificate;
 use diem_crypto::{ed25519::Ed25519Signature, hash::TransactionAccumulatorHasher};
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
 use diem_types::{epoch_state::EpochState, proof::AccumulatorExtensionProof};
@@ -64,6 +65,9 @@ impl Display for VoteProposal {
 pub struct MaybeSignedVoteProposal {
     /// The vote proposal to be signed.
     pub vote_proposal: VoteProposal,
+
+    /// The optional timeout cert to unlock safety rule.
+    pub timeout_cert: Option<TimeoutCertificate>,
 
     /// The signature of this proposal's hash from Diem Execution Correctness service. It is
     /// an `Option` because the LEC can be configured to not sign the vote hash.
