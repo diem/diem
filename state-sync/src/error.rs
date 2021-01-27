@@ -8,7 +8,7 @@ use thiserror::Error;
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
-    #[error("Failed to send callback in method: {0}")]
+    #[error("Failed to send callback: {0}")]
     CallbackSendFailed(String),
     #[error("Received an old sync request for version {0}, but our known version is: {1}")]
     OldSyncRequestVersion(Version, Version),

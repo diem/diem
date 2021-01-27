@@ -191,7 +191,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                             let _ = self.get_sync_state(callback);
                         }
                         CoordinatorMessage::WaitForInitialization(cb_sender) => {
-                            self.set_initialization_listener(cb_sender);
+                            if let Err(e) = self.wait_for_initialization(cb_sender) {
+                                error!(LogSchema::new(LogEntry::Waypoint).error(&e.into()));
+                            }
                         }
                     };
                 },
@@ -288,14 +290,17 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         self.waypoint.version() <= self.local_state.committed_version()
     }
 
-    fn set_initialization_listener(&mut self, cb_sender: oneshot::Sender<Result<()>>) {
+    fn wait_for_initialization(
+        &mut self,
+        cb_sender: oneshot::Sender<Result<()>>,
+    ) -> Result<(), Error> {
         if self.is_initialized() {
-            if let Err(e) = Self::send_initialization_callback(cb_sender, Ok(())) {
-                error!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::CallbackFail).error(&e));
-            }
+            Self::send_initialization_callback(cb_sender)?;
         } else {
             self.initialization_listener = Some(cb_sender);
         }
+
+        Ok(())
     }
 
     /// This method requests state sync to sync to the target specified by the SyncRequest.
@@ -488,7 +493,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 .local_synced_version(synced_version)
                 .local_epoch(local_epoch));
             if let Some(listener) = self.initialization_listener.take() {
-                Self::send_initialization_callback(listener, Ok(()))?;
+                Self::send_initialization_callback(listener)?;
             }
         }
         Ok(())
@@ -1254,19 +1259,21 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         })
     }
 
-    fn send_initialization_callback(
-        cb: oneshot::Sender<Result<()>>,
-        msg: Result<()>,
-    ) -> Result<()> {
-        cb.send(msg).map_err(|failed_msg| {
-            counters::FAILED_CHANNEL_SEND
-                .with_label_values(&[counters::WAYPOINT_INIT_CALLBACK])
-                .inc();
-            format_err!(
-                "Waypoint initialization callback error - failed to send following msg: {:?}",
-                failed_msg
-            )
-        })
+    fn send_initialization_callback(callback: oneshot::Sender<Result<()>>) -> Result<(), Error> {
+        let callback_message = Ok(());
+
+        match callback.send(callback_message) {
+            Err(error) => {
+                counters::FAILED_CHANNEL_SEND
+                    .with_label_values(&[counters::WAYPOINT_INIT_CALLBACK])
+                    .inc();
+                Err(Error::CallbackSendFailed(format!(
+                    "Waypoint initialization callback error - failed to send following msg: {:?}",
+                    error
+                )))
+            }
+            _ => Ok(()),
+        }
     }
 }
 
@@ -1338,6 +1345,48 @@ mod tests {
             Err(Error::CallbackSendFailed(_)) => { /* Expected */ }
             result => panic!("Expected error but got: {:?}", result),
         }
+    }
+
+    #[test]
+    fn test_wait_for_initialization() {
+        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+
+        // Check already initialized returns immediately
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        coordinator
+            .wait_for_initialization(callback_sender)
+            .unwrap();
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => {
+                assert!(result.is_ok())
+            }
+            result => panic!("Expected okay but got: {:?}", result),
+        };
+
+        // Drop the callback receiver and verify error
+        let (callback_sender, _) = oneshot::channel();
+        match coordinator.wait_for_initialization(callback_sender) {
+            Err(Error::CallbackSendFailed(_)) => { /* Expected */ }
+            result => panic!("Expected error but got: {:?}", result),
+        }
+
+        // Set the waypoint version higher than storage
+        let waypoint_version = 10;
+        let waypoint_ledger_info = create_ledger_info_at_version(waypoint_version);
+        coordinator.waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+
+        // Verify callback is not executed as state sync is not yet initialized
+        let (callback_sender, mut callback_receiver) = oneshot::channel();
+        coordinator
+            .wait_for_initialization(callback_sender)
+            .unwrap();
+        match callback_receiver.try_recv() {
+            Ok(None) => { /* Expected */ }
+            result => panic!("Expected none but got: {:?}", result),
+        };
+
+        // TODO(joshlind): add a check that verifies the callback is executed once we can
+        // update storage in the unit tests.
     }
 
     fn create_ledger_info_at_version(version: Version) -> LedgerInfoWithSignatures {
