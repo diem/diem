@@ -6504,6 +6504,7 @@ dependencies = [
  "storage-interface",
  "storage-service",
  "subscription-service",
+ "thiserror",
  "tokio",
  "tokio-stream",
  "transaction-builder",

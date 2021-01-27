@@ -6,6 +6,10 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     client::{CoordinatorMessage, SyncRequest},
     counters,
+    error::{
+        Error,
+        Error::{OldSyncRequestVersion, UninitializedError},
+    },
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSyncEvents, StateSyncMessage, StateSyncSender},
@@ -161,8 +165,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                             let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
                                 .with_label_values(&[counters::SYNC_MSG_LABEL])
                                 .start_timer();
-                            if let Err(e) = self.request_sync(*request) {
-                                error!(LogSchema::new(LogEntry::SyncRequest).error(&e));
+                            if let Err(e) = self.process_sync_request(*request) {
+                                error!(LogSchema::new(LogEntry::SyncRequest).error(&e.into()));
                                 counters::SYNC_REQUEST_RESULT.with_label_values(&[counters::FAIL_LABEL]).inc();
                             }
                         }
@@ -262,7 +266,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 
     /// Sync up coordinator state with the local storage
-    /// and updates the pending ledger info accordingly
+    /// and updatesp the pending ledger info accordingly
     fn sync_state_with_local_storage(&mut self) -> Result<()> {
         let new_state = self.executor_proxy.get_local_storage_state().map_err(|e| {
             counters::STORAGE_READ_FAIL_COUNT.inc();
@@ -294,16 +298,17 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         }
     }
 
-    /// In case there has been another pending request it's going to be overridden.
-    /// The caller will be notified about request completion via request.callback oneshot:
-    /// at that moment it's guaranteed that the highest LI exposed by the storage is equal to the
-    /// target LI.
-    /// State sync assumes that it's the only one modifying the storage (consensus is not
-    /// trying to commit transactions concurrently).
-    fn request_sync(&mut self, request: SyncRequest) -> Result<()> {
-        fail_point!("state_sync::request_sync", |_| {
-            Err(anyhow::anyhow!("Injected error in request_sync"))
+    /// This method requests state sync to sync to the target specified by the SyncRequest.
+    /// If there is an existing sync request it will be overridden.
+    /// Note: when processing a sync request, state sync assumes that it's the only one
+    /// modifying storage, i.e., consensus is not trying to commit transactions concurrently.
+    fn process_sync_request(&mut self, request: SyncRequest) -> Result<(), Error> {
+        fail_point!("state_sync::process_sync_request_message", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_sync_request_message"
+            ))
         });
+
         let local_li_version = self.local_state.committed_version();
         let target_version = request.target.ledger_info().version();
         debug!(
@@ -313,28 +318,25 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         );
 
         self.sync_state_with_local_storage()?;
-        ensure!(
-            self.is_initialized(),
-            "[state sync] Sync request but initialization is not complete!"
-        );
-        if target_version == local_li_version {
-            return Self::send_sync_req_callback(request, Ok(()));
+        if !self.is_initialized() {
+            return Err(UninitializedError(
+                "Unable to process sync request message!".into(),
+            ));
         }
 
+        if target_version == local_li_version {
+            return Ok(Self::send_sync_req_callback(request, Ok(()))?);
+        }
         if target_version < local_li_version {
             Self::send_sync_req_callback(request, Err(format_err!("Sync request to old version")))?;
-            bail!(
-                "[state sync] Sync request for version {} < known version {}",
-                target_version,
-                local_li_version,
-            );
+            return Err(OldSyncRequestVersion(target_version, local_li_version));
         }
 
         self.sync_request = Some(request);
-        self.send_chunk_request(
+        Ok(self.send_chunk_request(
             self.local_state.synced_version(),
             self.local_state.trusted_epoch(),
-        )
+        )?)
     }
 
     /// The function is called after new txns have been applied to the local storage.
@@ -1271,10 +1273,73 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::shared_components::test_utils;
+    use crate::{client::SyncRequest, error::Error, shared_components::test_utils};
+    use anyhow::Result;
+    use diem_crypto::HashValue;
+    use diem_types::{
+        block_info::BlockInfo,
+        ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+        transaction::Version,
+        waypoint::Waypoint,
+    };
+    use futures::channel::oneshot;
+    use std::{collections::BTreeMap, time::SystemTime};
 
     #[test]
-    fn test_state_sync_coordinator() {
-        let mut _coordinator = test_utils::create_state_sync_coordinator_for_tests();
+    fn test_process_sync_request() {
+        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+
+        // Perform sync request for version that matches initial waypoint version
+        let (sync_request, mut callback_receiver) = create_sync_request_at_version(0);
+        coordinator.process_sync_request(sync_request).unwrap();
+        match callback_receiver.try_recv() {
+            Ok(Some(result)) => {
+                assert!(result.is_ok())
+            }
+            result => panic!("Expected okay but got: {:?}", result),
+        };
+
+        // Set coordinator waypoint to version higher than storage
+        let waypoint_version = 10;
+        let waypoint_ledger_info = create_ledger_info_at_version(waypoint_version);
+        coordinator.waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+
+        // Verify coordinator won't process sync requests as it's not yet initialized
+        let (sync_request, mut callback_receiver) = create_sync_request_at_version(10);
+        match coordinator.process_sync_request(sync_request) {
+            Err(Error::UninitializedError(..)) => { /* Expected */ }
+            result => panic!("Expected an uninitialized error, but got: {:?}", result),
+        };
+        match callback_receiver.try_recv() {
+            Err(_) => { /* Expected */ }
+            result => panic!("Expected error but got: {:?}", result),
+        };
+
+        // TODO(joshlind): add a check for syncing to old versions once we support storage
+        // modifications in unit tests.
+    }
+
+    fn create_ledger_info_at_version(version: Version) -> LedgerInfoWithSignatures {
+        let block_info =
+            BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), version, 0, None);
+        let ledger_info = LedgerInfo::new(block_info, HashValue::random());
+        LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
+    }
+
+    fn create_sync_request_at_version(
+        version: Version,
+    ) -> (SyncRequest, oneshot::Receiver<Result<()>>) {
+        // Create ledger info with signatures at given version
+        let ledger_info = create_ledger_info_at_version(version);
+
+        // Create sync request with target version and callback
+        let (callback_sender, callback_receiver) = oneshot::channel();
+        let sync_request = SyncRequest {
+            callback: callback_sender,
+            target: ledger_info,
+            last_progress_tst: SystemTime::now(),
+        };
+
+        (sync_request, callback_receiver)
     }
 }

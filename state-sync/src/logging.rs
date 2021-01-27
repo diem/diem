@@ -5,7 +5,6 @@ use crate::{
     chunk_request::GetChunkRequest, chunk_response::GetChunkResponse,
     request_manager::ChunkRequestInfo,
 };
-use anyhow::Error;
 use diem_config::config::PeerNetworkId;
 use diem_logger::Schema;
 use diem_types::{
@@ -18,7 +17,7 @@ pub struct LogSchema<'a> {
     name: LogEntry,
     event: Option<LogEvent>,
     #[schema(debug)]
-    error: Option<&'a Error>,
+    error: Option<&'a anyhow::Error>,
     #[schema(display)]
     peer: Option<&'a PeerNetworkId>,
     is_upstream_peer: Option<bool>,
