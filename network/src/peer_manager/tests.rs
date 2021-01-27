@@ -22,6 +22,7 @@ use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
 use diem_network_address::NetworkAddress;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
+use diem_time_service::TimeService;
 use diem_types::PeerId;
 use futures::{channel::oneshot, io::AsyncWriteExt, stream::StreamExt};
 use memsocket::MemorySocket;
@@ -95,6 +96,7 @@ fn build_test_peer_manager(
 
     let peer_manager = PeerManager::new(
         executor,
+        TimeService::mock(),
         build_test_transport(),
         NetworkContext::mock_with_peer_id(peer_id),
         "/memory/0".parse().unwrap(),

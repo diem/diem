@@ -30,7 +30,7 @@ use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_network_address::NetworkAddress;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
-use diem_time_service::TimeService;
+use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
@@ -245,6 +245,8 @@ where
     network_context: Arc<NetworkContext>,
     /// A handle to a tokio executor.
     executor: Handle,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// Address to listen on for incoming connections.
     listen_addr: NetworkAddress,
     /// Connection Listener, listening on `listen_addr`
@@ -301,6 +303,7 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         executor: Handle,
+        time_service: TimeService,
         transport: TTransport,
         network_context: Arc<NetworkContext>,
         listen_addr: NetworkAddress,
@@ -330,6 +333,7 @@ where
         let _guard = executor.enter();
         let (transport_handler, listen_addr) = TransportHandler::new(
             network_context.clone(),
+            time_service.clone(),
             transport,
             listen_addr,
             transport_reqs_rx,
@@ -339,6 +343,7 @@ where
         Self {
             network_context,
             executor,
+            time_service,
             listen_addr,
             transport_handler: Some(transport_handler),
             active_peers: HashMap::new(),
@@ -712,13 +717,15 @@ where
 
     fn disconnect(&mut self, connection: Connection<TSocket>) {
         let network_context = self.network_context.clone();
+        let time_service = self.time_service.clone();
 
         // Close connection, and drop it
         let drop_fut = async move {
             let mut connection = connection;
             let peer_id = connection.metadata.remote_peer_id;
-            if let Err(e) =
-                tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.socket.close()).await
+            if let Err(e) = time_service
+                .timeout(transport::TRANSPORT_TIMEOUT, connection.socket.close())
+                .await
             {
                 error!(
                     NetworkSchema::new(&network_context)
@@ -798,7 +805,7 @@ where
         let peer = Peer::new(
             self.network_context.clone(),
             self.executor.clone(),
-            TimeService::real(),
+            self.time_service.clone(),
             connection,
             self.transport_notifs_tx.clone(),
             peer_reqs_rx,
@@ -951,6 +958,7 @@ where
     TSocket: AsyncRead + AsyncWrite,
 {
     network_context: Arc<NetworkContext>,
+    time_service: TimeService,
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
@@ -968,6 +976,7 @@ where
 {
     fn new(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         transport: TTransport,
         listen_addr: NetworkAddress,
         transport_reqs_rx: channel::Receiver<TransportRequest>,
@@ -986,6 +995,7 @@ where
         (
             Self {
                 network_context,
+                time_service,
                 transport,
                 listener: listener.fuse(),
                 transport_reqs_rx,
@@ -1028,7 +1038,7 @@ where
                             )
                             .inc();
 
-                            let start_time = Instant::now();
+                            let start_time = self.time_service.now();
                             pending_inbound_connections.push(upgrade.map(move |out| (out, addr, start_time)));
                         }
                         Err(e) => {
@@ -1083,7 +1093,7 @@ where
                         )
                         .inc();
 
-                        let start_time = Instant::now();
+                        let start_time = self.time_service.now();
                         Some(
                             upgrade
                                 .map(move |out| (out, addr, peer_id, start_time, response_tx))
@@ -1120,7 +1130,7 @@ where
         counters::pending_connection_upgrades(&self.network_context, ConnectionOrigin::Outbound)
             .dec();
 
-        let elapsed_time = start_time.elapsed().as_secs_f64();
+        let elapsed_time = (self.time_service.now() - start_time).as_secs_f64();
         let upgrade = match upgrade {
             Ok(connection) => {
                 let dialed_peer_id = connection.metadata.remote_peer_id;
@@ -1207,7 +1217,7 @@ where
         counters::pending_connection_upgrades(&self.network_context, ConnectionOrigin::Inbound)
             .dec();
 
-        let elapsed_time = start_time.elapsed().as_secs_f64();
+        let elapsed_time = (self.time_service.now() - start_time).as_secs_f64();
         match upgrade {
             Ok(connection) => {
                 debug!(
