@@ -24,7 +24,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::BTreeMap,
+    collections::{btree_map, BTreeMap},
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -410,9 +410,9 @@ impl OnDiskStateView {
         self.iter_paths(move |p| self.is_event_path(p))
     }
 
-    /// Return a map of module ID -> module for all modules in the self.storage_dir.
-    /// Returns an Err if a module does not deserialize
-    pub fn get_all_modules(&self) -> Result<BTreeMap<ModuleId, CompiledModule>> {
+    /// Build the code cache based on all modules in the self.storage_dir.
+    /// Returns an Err if a module does not deserialize.
+    pub fn get_code_cache(&self) -> Result<CodeCache> {
         let mut modules = BTreeMap::new();
         for path in self.module_paths() {
             let module = CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
@@ -422,7 +422,7 @@ impl OnDiskStateView {
                 bail!("Duplicate module {:?}", id)
             }
         }
-        Ok(modules)
+        Ok(CodeCache(modules))
     }
 }
 
@@ -439,6 +439,60 @@ impl RemoteCache for OnDiskStateView {
     ) -> PartialVMResult<Option<Vec<u8>>> {
         self.get_resource_bytes(*address, struct_tag.clone())
             .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
+    }
+}
+
+/// Holds a closure of modules and provides operations against the closure (e.g., finding all
+/// dependencies of a module).
+pub struct CodeCache(BTreeMap<ModuleId, CompiledModule>);
+
+impl CodeCache {
+    pub fn all_modules(&self) -> Vec<&CompiledModule> {
+        self.0.values().collect()
+    }
+
+    pub fn get_module(&self, module_id: &ModuleId) -> Result<&CompiledModule> {
+        self.0
+            .get(module_id)
+            .ok_or_else(|| anyhow!("Cannot find module {}", module_id))
+    }
+
+    pub fn get_immediate_module_dependencies(
+        &self,
+        module: &CompiledModule,
+    ) -> Result<Vec<&CompiledModule>> {
+        module
+            .immediate_module_dependencies()
+            .into_iter()
+            .map(|module_id| self.get_module(&module_id))
+            .collect::<Result<Vec<_>>>()
+    }
+
+    pub fn get_all_module_dependencies(
+        &self,
+        module: &CompiledModule,
+    ) -> Result<BTreeMap<ModuleId, &CompiledModule>> {
+        fn get_all_module_dependencies_recursive<'a>(
+            all_deps: &mut BTreeMap<ModuleId, &'a CompiledModule>,
+            module_id: ModuleId,
+            loader: &'a CodeCache,
+        ) -> Result<()> {
+            if let btree_map::Entry::Vacant(entry) = all_deps.entry(module_id) {
+                let module = loader.get_module(entry.key())?;
+                let next_deps = module.immediate_module_dependencies();
+                entry.insert(module);
+                for next in next_deps {
+                    get_all_module_dependencies_recursive(all_deps, next, loader)?;
+                }
+            }
+            Ok(())
+        }
+
+        let mut all_deps = BTreeMap::new();
+        for dep in module.immediate_module_dependencies() {
+            get_all_module_dependencies_recursive(&mut all_deps, dep, self)?;
+        }
+        Ok(all_deps)
     }
 }
 

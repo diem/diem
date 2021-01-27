@@ -5,7 +5,7 @@
 use crate::binary_views::BinaryIndexedView;
 use diem_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
@@ -342,74 +342,21 @@ impl<'a> DependencyChecker<'a> {
 pub struct CyclicModuleDependencyChecker {}
 
 impl CyclicModuleDependencyChecker {
-    pub fn verify_module<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+    pub fn verify_module(
         module: &CompiledModule,
-        immediate_module_dependencies: F,
+        all_dependencies: BTreeMap<ModuleId, &CompiledModule>,
     ) -> VMResult<()> {
-        Self::verify_module_impl(module, immediate_module_dependencies)
+        Self::verify_module_impl(module, all_dependencies)
             .map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
-    fn verify_module_impl<F: Fn(&ModuleId) -> Vec<ModuleId>>(
+    fn verify_module_impl(
         module: &CompiledModule,
-        immediate_module_dependencies: F,
+        all_dependencies: BTreeMap<ModuleId, &CompiledModule>,
     ) -> PartialVMResult<()> {
-        // A variant of the three-color DFS, visit each node at max once.
-        // This function returns true if a back-edge is found during the DFS.
-        fn dfs_visit<F: Fn(&ModuleId) -> Vec<ModuleId>>(
-            cursor_module: ModuleId,
-            modules_discovered: &mut BTreeSet<ModuleId>,
-            modules_finished: &mut BTreeSet<ModuleId>,
-            immediate_module_dependencies: &F,
-        ) -> bool {
-            modules_discovered.insert(cursor_module.clone());
-            for next_module in immediate_module_dependencies(&cursor_module) {
-                if modules_finished.contains(&next_module) {
-                    continue;
-                }
-                if modules_discovered.contains(&next_module)
-                    || dfs_visit(
-                        next_module,
-                        modules_discovered,
-                        modules_finished,
-                        immediate_module_dependencies,
-                    )
-                {
-                    return true;
-                }
-            }
-            modules_discovered.remove(&cursor_module);
-            modules_finished.insert(cursor_module);
-            false
+        if all_dependencies.contains_key(&module.self_id()) {
+            return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
         }
-
-        let mut modules_discovered = BTreeSet::new();
-        let mut modules_finished = BTreeSet::new();
-
-        modules_discovered.insert(module.self_id());
-        for dep in module.immediate_module_dependencies() {
-            if modules_discovered.contains(&dep)
-                || dfs_visit(
-                    dep,
-                    &mut modules_discovered,
-                    &mut modules_finished,
-                    &immediate_module_dependencies,
-                )
-            {
-                return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY));
-            }
-        }
-
-        // NOTE: we cannot start `dfs_visit` from `module.self_id()`, instead, we have to run DFS
-        // over each of `module.immediate_module_dependencies()`. The reason is: it is possible that
-        // `immediate_module_dependencies(&module.self_id()) != module.immediate_module_dependencies()`
-        // (note these are two functions). The LHS returns what the loader has in cache, and the
-        // cache is accurate for every module EXCEPT for the module that is going to be republished,
-        // i.e., the module under cyclic dependency checking. More importantly, the loader may not
-        // even have `module` in cache (if we are publishing a new module), on that case, the LHS
-        // will abort. But loader will always have the dependencies of this module in cache,
-        // regardless of whether this module is a new one or to be updated.
-
         Ok(())
     }
 }

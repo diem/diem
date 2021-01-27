@@ -615,13 +615,13 @@ fn explain_publish_error(
                 module_id
             );
             // find all cycles with an iterative DFS
-            let all_modules = state.get_all_modules()?;
+            let code_cache = state.get_code_cache()?;
 
             let mut stack = vec![];
             let mut state = BTreeMap::new();
             state.insert(module_id.clone(), true);
             for dep in module.immediate_module_dependencies() {
-                stack.push((all_modules.get(&dep).unwrap(), false));
+                stack.push((code_cache.get_module(&dep)?, false));
             }
 
             while !stack.is_empty() {
@@ -648,7 +648,7 @@ fn explain_publish_error(
                                 );
                             }
                         } else {
-                            stack.push((all_modules.get(&next).unwrap(), false));
+                            stack.push((code_cache.get_module(&next)?, false));
                         }
                     }
                 }
@@ -808,26 +808,25 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
         p.parent().unwrap().parent().unwrap().file_name().unwrap()
     }
 
-    let modules = state.get_all_modules()?;
     // verify and link each module
-    for module in modules.values() {
+    let code_cache = state.get_code_cache()?;
+    for module in code_cache.all_modules() {
         if bytecode_verifier::verify_module(module).is_err() {
             bail!("Failed to verify module {:?}", module.self_id())
         }
-        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
+
+        let imm_deps = code_cache.get_immediate_module_dependencies(module)?;
+        if bytecode_verifier::DependencyChecker::verify_module(module, imm_deps).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
                 module.self_id()
             )
         }
-        let cyclic_check_result =
-            bytecode_verifier::CyclicModuleDependencyChecker::verify_module(module, |module_id| {
-                modules
-                    .get(module_id)
-                    .expect("Missing dependencies in cyclic checker is unexpected")
-                    .immediate_module_dependencies()
-            });
-        if cyclic_check_result.is_err() {
+
+        let all_deps = code_cache.get_all_module_dependencies(module)?;
+        if bytecode_verifier::CyclicModuleDependencyChecker::verify_module(module, all_deps)
+            .is_err()
+        {
             bail!(
                 "Cyclic module dependencies are detected with module {} in the loop",
                 module.self_id()
