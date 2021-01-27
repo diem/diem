@@ -6,7 +6,7 @@
 use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use diem_config::{
-    config::{Peer, PeerSet, RoleType, NETWORK_CHANNEL_SIZE},
+    config::{Peer, PeerRole, PeerSet, RoleType, NETWORK_CHANNEL_SIZE},
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
@@ -130,7 +130,10 @@ pub fn setup_network() -> DummyNetwork {
 
     // Setup seed peers
     let mut seeds = PeerSet::new();
-    seeds.insert(dialer_peer_id, Peer::from(dialer_pubkeys));
+    seeds.insert(
+        dialer_peer_id,
+        Peer::new(vec![], dialer_pubkeys, PeerRole::Validator),
+    );
 
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
@@ -156,7 +159,10 @@ pub fn setup_network() -> DummyNetwork {
 
     // Add the listener address with port
     let listener_addr = network_builder.listen_address();
-    seeds.insert(listener_peer_id, Peer::from(listener_addr));
+    seeds.insert(
+        listener_peer_id,
+        Peer::from_addrs(PeerRole::Validator, vec![listener_addr]),
+    );
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
 

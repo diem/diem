@@ -245,7 +245,8 @@ impl StubbedNode {
     async fn launch(node_endpoint: String, runtime_handle: Handle, index: usize) -> Self {
         // generate seed peers config from querying node endpoint
         let seed_peers =
-            seed_peer_generator::utils::gen_full_node_seed_peer_config(node_endpoint).unwrap();
+            seed_peer_generator::utils::gen_validator_full_node_seed_peer_config(node_endpoint)
+                .unwrap();
 
         // build sparse network runner
 

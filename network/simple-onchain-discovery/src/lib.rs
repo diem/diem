@@ -3,7 +3,7 @@
 
 use channel::diem_channel::{self, Receiver};
 use diem_config::{
-    config::{Peer, RoleType},
+    config::{Peer, PeerRole, RoleType},
     network_id::NetworkContext,
 };
 use diem_crypto::x25519::PublicKey;
@@ -123,7 +123,7 @@ fn extract_updates(
             })
             .unwrap_or_default();
 
-            (peer_id, Peer::from(addrs))
+            (peer_id, Peer::from_addrs(PeerRole::from(role), addrs))
         })
         .collect();
 

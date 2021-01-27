@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 
 use anyhow::Error;
 use diem_client::BlockingClient;
-use diem_config::config::{Peer, PeerSet};
+use diem_config::config::{Peer, PeerRole, PeerSet};
 use diem_logger::prelude::*;
 use diem_network_address::NetworkAddress;
 use diem_types::{
@@ -17,10 +17,16 @@ use diem_types::{
 };
 
 /// Retrieve the Fullnode seed peers from JSON-RPC
-pub fn gen_full_node_seed_peer_config(client_endpoint: String) -> anyhow::Result<PeerSet> {
+pub fn gen_validator_full_node_seed_peer_config(
+    client_endpoint: String,
+) -> anyhow::Result<PeerSet> {
     let validator_set = get_validator_set(client_endpoint)?;
 
-    gen_seed_peers(&validator_set, to_fullnode_addresses)
+    gen_seed_peers(
+        &validator_set,
+        PeerRole::ValidatorFullNode,
+        to_fullnode_addresses,
+    )
 }
 
 pub(crate) fn to_fullnode_addresses(
@@ -55,13 +61,14 @@ pub(crate) fn gen_seed_peers<
     ToAddresses: Fn(&ValidatorInfo) -> Result<Vec<NetworkAddress>, bcs::Error>,
 >(
     validator_set: &ValidatorSet,
+    role: PeerRole,
     to_addresses: ToAddresses,
 ) -> anyhow::Result<PeerSet> {
     let set = validator_set
         .payload()
         .iter()
         .filter_map(|validator_info| {
-            to_seed_peer(validator_info, &to_addresses).map_or_else(
+            to_seed_peer(validator_info, role, &to_addresses).map_or_else(
                 |error| {
                     warn!(
                         "Unable to generate seed for validator {} {}",
@@ -85,11 +92,12 @@ pub(crate) fn gen_seed_peers<
 /// Convert ValidatorInfo to a seed peer
 fn to_seed_peer<T: Fn(&ValidatorInfo) -> Result<Vec<NetworkAddress>, bcs::Error>>(
     validator_info: &ValidatorInfo,
+    role: PeerRole,
     to_addresses: &T,
 ) -> Result<(PeerId, Peer), bcs::Error> {
     let peer_id = *validator_info.account_address();
     let addrs = to_addresses(validator_info)?;
-    Ok((peer_id, Peer::from(addrs)))
+    Ok((peer_id, Peer::from_addrs(role, addrs)))
 }
 
 #[cfg(test)]
@@ -130,14 +138,15 @@ mod tests {
     }
 
     #[test]
-    fn fullnode_test() {
+    fn validator_fullnode_test() {
+        let role = PeerRole::ValidatorFullNode;
         let peer_id = PeerId::random();
         let fullnode_addresses = generate_network_addresses(3);
         let validator_set = validator_set(peer_id, &fullnode_addresses);
-        let result = gen_seed_peers(&validator_set, to_fullnode_addresses).unwrap();
+        let result = gen_seed_peers(&validator_set, role, to_fullnode_addresses).unwrap();
 
         let mut expected_peers = PeerSet::new();
-        expected_peers.insert(peer_id, Peer::from(fullnode_addresses));
+        expected_peers.insert(peer_id, Peer::from_addrs(role, fullnode_addresses));
         assert_eq!(expected_peers, result);
     }
 }

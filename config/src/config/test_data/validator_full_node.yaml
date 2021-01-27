@@ -33,6 +33,7 @@ full_node_networks:
           addresses:
             - "/ip4/127.0.0.1/tcp/58259/ln-noise-ik/c998dcd54c3daf48e0ad516d94b7be0b0b7a27caa00541f2b2c14b13500df10b/ln-handshake/0"
           keys: ["c998dcd54c3daf48e0ad516d94b7be0b0b7a27caa00541f2b2c14b13500df10b"]
+          role: "Validator"
     - discovery_method: "onchain"
       listen_address: "/ip4/0.0.0.0/tcp/8180"
       network_id: "public"

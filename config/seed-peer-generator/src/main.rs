@@ -26,7 +26,7 @@ fn main() {
 
     let seed_peers_config = match args.role {
         RoleType::FullNode => {
-            seed_peer_generator::utils::gen_full_node_seed_peer_config(args.endpoint)
+            seed_peer_generator::utils::gen_validator_full_node_seed_peer_config(args.endpoint)
         }
         _ => panic!("{} not yet supported", args.role),
     }

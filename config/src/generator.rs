@@ -6,7 +6,8 @@
 
 use crate::{
     config::{
-        DiscoveryMethod, NetworkConfig, NodeConfig, Peer, PeerSet, TestConfig, HANDSHAKE_VERSION,
+        DiscoveryMethod, NetworkConfig, NodeConfig, Peer, PeerRole, PeerSet, TestConfig,
+        HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
@@ -62,6 +63,17 @@ pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
 /// with a fully formatted `NetworkAddress` containing its network identity pubkey
 /// and handshake protocol version.
 pub fn build_seed_for_network(seed_config: &NetworkConfig) -> PeerSet {
+    let seed_role = match &seed_config.network_id {
+        NetworkId::Validator => PeerRole::Validator,
+        network_id => {
+            if network_id.is_vfn_network() {
+                PeerRole::ValidatorFullNode
+            } else {
+                PeerRole::Known
+            }
+        }
+    };
+
     let seed_pubkey = diem_crypto::PrivateKey::public_key(&seed_config.identity_key());
     let seed_addr = seed_config
         .listen_address
@@ -71,6 +83,9 @@ pub fn build_seed_for_network(seed_config: &NetworkConfig) -> PeerSet {
     let mut keys = HashSet::new();
     keys.insert(seed_pubkey);
     let mut seeds = HashMap::default();
-    seeds.insert(seed_config.peer_id(), Peer::new(vec![seed_addr], keys));
+    seeds.insert(
+        seed_config.peer_id(),
+        Peer::new(vec![seed_addr], keys, seed_role),
+    );
     seeds
 }

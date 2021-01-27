@@ -12,7 +12,7 @@
 use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
-        DiscoveryMethod, NetworkConfig, Peer, PeerSet, RateLimitConfig, RoleType,
+        DiscoveryMethod, NetworkConfig, Peer, PeerRole, PeerSet, RateLimitConfig, RoleType,
         CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_REQS,
         MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
         MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
@@ -224,10 +224,15 @@ impl NetworkBuilder {
             config
                 .seed_addrs
                 .iter()
-                .map(|(peer_id, addrs)| (peer_id, Peer::from(addrs.clone())))
+                .map(|(peer_id, addrs)| {
+                    (
+                        peer_id,
+                        Peer::from_addrs(PeerRole::from(role), addrs.clone()),
+                    )
+                })
                 .for_each(|(peer_id, peer)| {
                     let seed = seeds.entry(*peer_id).or_default();
-                    seed.extend(peer)
+                    seed.extend(peer).unwrap();
                 });
 
             network_builder.add_connectivity_manager(

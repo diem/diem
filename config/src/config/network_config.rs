@@ -342,53 +342,80 @@ impl Default for RateLimitConfig {
 
 pub type PeerSet = HashMap<PeerId, Peer>;
 
+// TODO: Combine with RoleType?
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub enum PeerRole {
+    Validator = 0,
+    ValidatorFullNode,
+    Preferred,
+    Upstream,
+    Known,
+    Unknown,
+}
+
+impl Default for PeerRole {
+    fn default() -> Self {
+        // Default to least trusted
+        PeerRole::Unknown
+    }
+}
+
+impl From<RoleType> for PeerRole {
+    fn from(role_type: RoleType) -> PeerRole {
+        match role_type {
+            RoleType::Validator => PeerRole::Validator,
+            RoleType::FullNode => PeerRole::ValidatorFullNode,
+        }
+    }
+}
+
 /// Represents a single seed configuration for a seed peer
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Peer {
     pub addresses: Vec<NetworkAddress>,
     pub keys: HashSet<x25519::PublicKey>,
+    pub role: PeerRole,
 }
 
 impl Peer {
     /// Combines `Vec<NetworkAddress>` keys with the `HashSet` given
-    pub fn new(addresses: Vec<NetworkAddress>, mut keys: HashSet<x25519::PublicKey>) -> Peer {
+    pub fn new(
+        addresses: Vec<NetworkAddress>,
+        mut keys: HashSet<x25519::PublicKey>,
+        role: PeerRole,
+    ) -> Peer {
         let addr_keys = addresses
             .iter()
             .filter_map(NetworkAddress::find_noise_proto);
         keys.extend(addr_keys);
-        Peer { addresses, keys }
+        Peer {
+            addresses,
+            keys,
+            role,
+        }
     }
 
     /// Combines two `Peer`.  Note: Does not merge duplicate addresses
-    pub fn extend(&mut self, other: Peer) {
+    /// TODO: Instead of rejecting, maybe pick one of the roles?
+    pub fn extend(&mut self, other: Peer) -> Result<(), Error> {
+        crate::config::invariant(
+            self.role != other.role,
+            format!(
+                "Roles don't match self {:?} vs other {:?}",
+                self.role, other.role
+            ),
+        )?;
         self.addresses.extend(other.addresses);
         self.keys.extend(other.keys);
+        Ok(())
     }
-}
 
-impl From<Vec<NetworkAddress>> for Peer {
-    /// Converts a `Vec<NetworkAddress>` to a `Peer`s by extracting the `x25519::PublicKey`s from the address
-    fn from(addresses: Vec<NetworkAddress>) -> Peer {
+    pub fn from_addrs(role: PeerRole, addresses: Vec<NetworkAddress>) -> Peer {
         let keys: HashSet<x25519::PublicKey> = addresses
             .iter()
             .filter_map(NetworkAddress::find_noise_proto)
             .collect();
-        Peer { addresses, keys }
-    }
-}
-
-impl From<NetworkAddress> for Peer {
-    fn from(address: NetworkAddress) -> Peer {
-        Peer::from(vec![address])
-    }
-}
-
-impl From<HashSet<x25519::PublicKey>> for Peer {
-    fn from(keys: HashSet<x25519::PublicKey>) -> Peer {
-        Peer {
-            addresses: Vec::new(),
-            keys,
-        }
+        Peer::new(addresses, keys, role)
     }
 }
