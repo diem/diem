@@ -13,7 +13,7 @@ use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
         seeds_to_addrs, seeds_to_keys, DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType,
-        TrustedPeerSet, CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS,
+        TrustedPeer, TrustedPeerSet, CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS,
         MAX_CONCURRENT_NETWORK_REQS, MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE,
         MAX_FULLNODE_OUTBOUND_CONNECTIONS, MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
     },
@@ -216,10 +216,21 @@ impl NetworkBuilder {
         // TODO:  Why not add ConnectivityManager always?
         if config.mutual_authentication
             || config.discovery_method != DiscoveryMethod::None
+            || !config.seed_addrs.is_empty()
             || !config.seeds.is_empty()
         {
+            let mut seeds = config.seeds.clone();
+            config
+                .seed_addrs
+                .iter()
+                .map(|(peer_id, addrs)| (peer_id, TrustedPeer::from(addrs.clone())))
+                .for_each(|(peer_id, peer)| {
+                    let seed = seeds.entry(*peer_id).or_default();
+                    seed.extend(peer)
+                });
+
             network_builder.add_connectivity_manager(
-                &config.seeds,
+                &seeds,
                 trusted_peers,
                 config.max_outbound_connections,
                 config.connection_backoff_base,

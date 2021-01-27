@@ -84,6 +84,10 @@ pub struct NetworkConfig {
     // Used to store network address encryption keys for validator nodes
     pub network_address_key_backend: Option<SecureBackend>,
     pub network_id: NetworkId,
+    // Addresses of initial peers to connect to. In a mutual_authentication network,
+    // we will extract the public keys from these addresses to set our initial
+    // trusted peers set.  TODO: Replace usage in configs with `seeds` this is for backwards compatibility
+    pub seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
     // The initial peers to connect to prior to onchain discovery
     pub seeds: TrustedPeerSet,
     // The maximum size of an inbound or outbound request frame
@@ -121,6 +125,8 @@ impl NetworkConfig {
             mutual_authentication: false,
             network_address_key_backend: None,
             network_id,
+            seed_addrs: HashMap::new(),
+            seeds: TrustedPeerSet::default(),
             max_frame_size: MAX_FRAME_SIZE,
             enable_proxy_protocol: false,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
@@ -135,7 +141,6 @@ impl NetworkConfig {
             max_inbound_connections: MAX_INBOUND_CONNECTIONS,
             inbound_rate_limit_config: None,
             outbound_rate_limit_config: None,
-            seeds: TrustedPeerSet::default(),
         };
         config.prepare_identity();
         config
@@ -245,17 +250,28 @@ impl NetworkConfig {
         self.identity = Identity::from_config(identity_key, peer_id);
     }
 
+    fn verify_address(peer_id: &PeerId, addr: &NetworkAddress) -> Result<(), Error> {
+        crate::config::invariant(
+            addr.is_diemnet_addr(),
+            format!(
+                "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
+                peer_id.short_str(),
+                addr,
+            ),
+        )
+    }
+
+    // Verifies both the `seed_addrs` and `seeds` before they're merged
     pub fn verify_seeds(&self) -> Result<(), Error> {
+        for (peer_id, addrs) in self.seed_addrs.iter() {
+            for addr in addrs {
+                Self::verify_address(peer_id, addr)?;
+            }
+        }
+
         for (peer_id, seed) in self.seeds.iter() {
             for addr in seed.addresses.iter() {
-                crate::config::invariant(
-                    addr.is_diemnet_addr(),
-                    format!(
-                        "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
-                        peer_id.short_str(),
-                        addr,
-                    ),
-                )?;
+                Self::verify_address(peer_id, addr)?;
             }
 
             // Require there to be a pubkey somewhere, either in the address (assumed by `is_diemnet_addr`)
@@ -360,6 +376,12 @@ impl TrustedPeer {
             .filter_map(NetworkAddress::find_noise_proto);
         keys.extend(addr_keys);
         TrustedPeer { addresses, keys }
+    }
+
+    /// Combines two `TrustedPeer`.  Note: Does not merge duplicate addresses
+    pub fn extend(&mut self, other: TrustedPeer) {
+        self.addresses.extend(other.addresses);
+        self.keys.extend(other.keys);
     }
 }
 
