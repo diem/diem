@@ -24,6 +24,7 @@ use diem_config::{
 use diem_logger::prelude::*;
 use diem_mempool::{CommitResponse, CommittedTransaction};
 use diem_types::{
+    contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
@@ -41,6 +42,8 @@ use std::{
 };
 use tokio::time::{interval, timeout};
 use tokio_stream::wrappers::IntervalStream;
+
+const MEMPOOL_COMMIT_ACK_TIMEOUT_SECS: u64 = 5;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {
@@ -171,20 +174,12 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                             }
                         }
                         CoordinatorMessage::CommitNotification(notification) => {
-                            {
-                                let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
-                                    .with_label_values(&[counters::COMMIT_MSG_LABEL])
-                                    .start_timer();
-                                if let Err(e) = self.process_commit(notification.committed_transactions, Some(notification.callback), None).await {
-                                    counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
-                                    error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e));
-                                }
-                            }
-                            if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(notification.reconfiguration_events) {
-                                counters::RECONFIG_PUBLISH_COUNT
-                                    .with_label_values(&[counters::FAIL_LABEL])
-                                    .inc();
-                                error!(LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&e));
+                            let _timer = counters::PROCESS_COORDINATOR_MSG_LATENCY
+                                .with_label_values(&[counters::COMMIT_MSG_LABEL])
+                                .start_timer();
+                            if let Err(e) = self.process_commit_notification(notification.committed_transactions, Some(notification.callback), notification.reconfiguration_events, None).await {
+                                counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
+                                error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e.into()));
                             }
                         }
                         CoordinatorMessage::GetSyncState(callback) => {
@@ -344,24 +339,212 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         )?)
     }
 
-    /// The function is called after new txns have been applied to the local storage.
-    /// As a result it might:
-    /// 1) help remote subscribers with long poll requests, 2) finish local sync request
-    async fn process_commit(
+    /// Notifies consensus of the given commit response.
+    /// Note: if a callback is not specified, the response isn't sent anywhere.
+    fn notify_consensus_of_commit_response(
+        &self,
+        commit_response_message: String,
+        callback: Option<oneshot::Sender<Result<CommitResponse>>>,
+    ) -> Result<(), Error> {
+        let commit_response = CommitResponse {
+            msg: commit_response_message,
+        };
+
+        if let Some(callback) = callback {
+            if let Err(error) = callback.send(Ok(commit_response)) {
+                counters::COMMIT_FLOW_FAIL
+                    .with_label_values(&[counters::CONSENSUS_LABEL])
+                    .inc();
+                return Err(Error::CallbackSendFailed(format!(
+                    "Failed to send commit ACK to consensus!: {:?}",
+                    error
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// This method updates state sync to process new transactions that have been committed
+    /// to storage (e.g., through consensus or through a chunk response).
+    /// When notified about a new commit we should: (i) respond to relevant long poll requests;
+    /// (ii) update local sync and initialization requests (where appropriate); and (iii) publish
+    /// on chain config updates.
+    async fn process_commit_notification(
         &mut self,
-        transactions: Vec<Transaction>,
+        committed_transactions: Vec<Transaction>,
         commit_callback: Option<oneshot::Sender<Result<CommitResponse>>>,
+        reconfiguration_events: Vec<ContractEvent>,
         chunk_sender: Option<&PeerNetworkId>,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         // We choose to re-sync the state with the storage as it's the simplest approach:
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
         self.sync_state_with_local_storage()?;
+        self.update_sync_state_metrics_and_logs()?;
+
+        // Notify mempool of commit
+        let commit_response_message = match self
+            .notify_mempool_of_committed_transactions(committed_transactions)
+            .await
+        {
+            Ok(()) => "".into(), // Empty message means success -- this is fixed in another PR!
+            Err(error) => {
+                error!(LogSchema::new(LogEntry::CommitFlow).error(&error.clone().into()));
+                format!("{}", error)
+            }
+        };
+
+        // Notify consensus of the commit response
+        if let Err(error) =
+            self.notify_consensus_of_commit_response(commit_response_message, commit_callback)
+        {
+            error!(LogSchema::new(LogEntry::CommitFlow).error(&error.into()),);
+        }
+
+        // Check long poll subscriptions, update peer requests and sync request timestamp
+        self.check_subscriptions();
+        let synced_version = self.local_state.synced_version();
+        self.request_manager.remove_requests(synced_version);
+        if let Some(peer) = chunk_sender {
+            self.request_manager.process_success_response(peer);
+        }
+        if let Some(mut req) = self.sync_request.as_mut() {
+            req.last_progress_tst = SystemTime::now();
+        }
+
+        // Check if we're now initialized or if we hit the sync request target
+        self.check_initialized_or_sync_request_completed(synced_version)?;
+
+        // Publish the on chain config updates
+        if let Err(error) = self
+            .executor_proxy
+            .publish_on_chain_config_updates(reconfiguration_events)
+        {
+            counters::RECONFIG_PUBLISH_COUNT
+                .with_label_values(&[counters::FAIL_LABEL])
+                .inc();
+            error!(LogSchema::event_log(LogEntry::Reconfig, LogEvent::Fail).error(&error));
+        }
+
+        Ok(())
+    }
+
+    /// Checks if we are now at the initialization point (i.e., the waypoint), or at the version
+    /// specified by a sync request made by consensus.
+    fn check_initialized_or_sync_request_completed(
+        &mut self,
+        synced_version: u64,
+    ) -> Result<(), Error> {
+        let committed_version = self.local_state.committed_version();
+        let local_epoch = self.local_state.trusted_epoch();
+
+        // Check if we're now initialized
+        if self.is_initialized() {
+            if let Some(initialization_listener) = self.initialization_listener.take() {
+                info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Complete)
+                    .local_li_version(committed_version)
+                    .local_synced_version(synced_version)
+                    .local_epoch(local_epoch));
+                Self::send_initialization_callback(initialization_listener)?;
+            }
+        }
+
+        // Check if we're now at the sync request target
+        if let Some(sync_request) = self.sync_request.as_ref() {
+            let sync_target_version = sync_request.target.ledger_info().version();
+            if synced_version > sync_target_version {
+                return Err(Error::SyncedBeyondTarget(
+                    synced_version,
+                    sync_target_version,
+                ));
+            }
+            if synced_version == sync_target_version {
+                debug!(
+                    LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Complete)
+                        .local_li_version(committed_version)
+                        .local_synced_version(synced_version)
+                        .local_epoch(local_epoch)
+                );
+                counters::SYNC_REQUEST_RESULT
+                    .with_label_values(&[counters::COMPLETE_LABEL])
+                    .inc();
+                if let Some(sync_request) = self.sync_request.take() {
+                    Self::send_sync_req_callback(sync_request, Ok(()))?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Notifies mempool that transactions have been committed.
+    async fn notify_mempool_of_committed_transactions(
+        &mut self,
+        committed_transactions: Vec<Transaction>,
+    ) -> Result<(), Error> {
+        // Get all user transactions from committed transactions
+        let mut user_transactions = vec![];
+        for transaction in committed_transactions {
+            if let Transaction::UserTransaction(signed_txn) = transaction {
+                user_transactions.push(CommittedTransaction {
+                    sender: signed_txn.sender(),
+                    sequence_number: signed_txn.sequence_number(),
+                });
+            }
+        }
+
+        // Create commit notification of user transactions for mempool
+        let (callback_sender, callback_receiver) = oneshot::channel();
+        let req = diem_mempool::CommitNotification {
+            transactions: user_transactions,
+            block_timestamp_usecs: self
+                .local_state
+                .committed_ledger_info()
+                .ledger_info()
+                .timestamp_usecs(),
+            callback: callback_sender,
+        };
+
+        // Notify mempool of committed transactions
+        if let Err(error) = self.state_sync_to_mempool_sender.try_send(req) {
+            counters::COMMIT_FLOW_FAIL
+                .with_label_values(&[counters::TO_MEMPOOL_LABEL])
+                .inc();
+            Err(Error::CallbackSendFailed(format!(
+                "Failed to notify mempool of committed transactions! Error: {:?}",
+                error
+            )))
+        } else if let Err(error) = timeout(
+            Duration::from_secs(MEMPOOL_COMMIT_ACK_TIMEOUT_SECS),
+            callback_receiver,
+        )
+        .await
+        {
+            counters::COMMIT_FLOW_FAIL
+                .with_label_values(&[counters::FROM_MEMPOOL_LABEL])
+                .inc();
+            Err(Error::CallbackSendFailed(format!(
+                "Did not receive ACK for commit notification from mempool! Error: {:?}",
+                error
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Updates the metrics and logs based on the current (local) sync state.
+    fn update_sync_state_metrics_and_logs(&mut self) -> Result<(), Error> {
+        // Get data from local sync state
         let synced_version = self.local_state.synced_version();
         let committed_version = self.local_state.committed_version();
         let local_epoch = self.local_state.trusted_epoch();
+
+        // Update versions
         counters::set_version(counters::VersionType::Synced, synced_version);
         counters::set_version(counters::VersionType::Committed, committed_version);
+        counters::EPOCH.set(local_epoch as i64);
+
+        // Update timestamps
         counters::set_timestamp(
             counters::TimestampType::Synced,
             self.executor_proxy.get_version_timestamp(synced_version)?,
@@ -375,127 +558,11 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             counters::TimestampType::Real,
             diem_infallible::duration_since_epoch().as_micros() as u64,
         );
-        counters::EPOCH.set(local_epoch as i64);
+
         debug!(LogSchema::new(LogEntry::LocalState)
             .local_li_version(committed_version)
             .local_synced_version(synced_version)
             .local_epoch(local_epoch));
-        let block_timestamp_usecs = self
-            .local_state
-            .committed_ledger_info()
-            .ledger_info()
-            .timestamp_usecs();
-
-        // send notif to shared mempool
-        // filter for user transactions here
-        let mut committed_user_txns = vec![];
-        for txn in transactions {
-            if let Transaction::UserTransaction(signed_txn) = txn {
-                committed_user_txns.push(CommittedTransaction {
-                    sender: signed_txn.sender(),
-                    sequence_number: signed_txn.sequence_number(),
-                });
-            }
-        }
-        let (callback, callback_rcv) = oneshot::channel();
-        let req = diem_mempool::CommitNotification {
-            transactions: committed_user_txns,
-            block_timestamp_usecs,
-            callback,
-        };
-        let mut mempool_channel = self.state_sync_to_mempool_sender.clone();
-        let mut msg = "";
-        if let Err(e) = mempool_channel.try_send(req) {
-            error!(
-                LogSchema::new(LogEntry::CommitFlow).error(&e.into()),
-                "failed to notify mempool of commit"
-            );
-            counters::COMMIT_FLOW_FAIL
-                .with_label_values(&[counters::TO_MEMPOOL_LABEL])
-                .inc();
-            msg = "state sync failed to send commit notif to shared mempool";
-        } else if let Err(e) = timeout(Duration::from_secs(5), callback_rcv).await {
-            error!(
-                LogSchema::new(LogEntry::CommitFlow).error(&e.into()),
-                "did not receive ACK for commit notification sent to mempool"
-            );
-            counters::COMMIT_FLOW_FAIL
-                .with_label_values(&[counters::FROM_MEMPOOL_LABEL])
-                .inc();
-            msg = "state sync did not receive ACK for commit notification sent to mempool";
-        }
-
-        if let Some(cb) = commit_callback {
-            // send back ACK to consensus
-            if cb
-                .send(Ok(CommitResponse {
-                    msg: msg.to_string(),
-                }))
-                .is_err()
-            {
-                counters::COMMIT_FLOW_FAIL
-                    .with_label_values(&[counters::CONSENSUS_LABEL])
-                    .inc();
-                error!(
-                    LogSchema::new(LogEntry::CommitFlow),
-                    "failed to send commit ACK to consensus"
-                );
-            }
-        }
-
-        self.check_subscriptions();
-        self.request_manager.remove_requests(synced_version);
-        if let Some(peer) = chunk_sender {
-            self.request_manager.process_success_response(peer);
-        }
-
-        if let Some(mut req) = self.sync_request.as_mut() {
-            req.last_progress_tst = SystemTime::now();
-        }
-        let sync_request_complete = match self.sync_request.as_ref() {
-            Some(sync_req) => {
-                // Each `ChunkResponse` is verified to make sure it never goes beyond the requested
-                // target version, hence, the local version should never go beyond sync req target.
-                let sync_target_version = sync_req.target.ledger_info().version();
-                ensure!(
-                    synced_version <= sync_target_version,
-                    "local version {} is beyond sync req target {}",
-                    synced_version,
-                    sync_target_version
-                );
-                sync_target_version == synced_version
-            }
-            None => false,
-        };
-
-        if sync_request_complete {
-            debug!(
-                LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Complete)
-                    .local_li_version(committed_version)
-                    .local_synced_version(synced_version)
-                    .local_epoch(local_epoch)
-            );
-            counters::SYNC_REQUEST_RESULT
-                .with_label_values(&[counters::COMPLETE_LABEL])
-                .inc();
-            if let Some(sync_request) = self.sync_request.take() {
-                Self::send_sync_req_callback(sync_request, Ok(()))?;
-            }
-        }
-
-        let initialization_complete = self
-            .initialization_listener
-            .as_ref()
-            .map_or(false, |_| self.is_initialized());
-        if initialization_complete {
-            info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Complete)
-                .local_li_version(committed_version)
-                .local_synced_version(synced_version)
-                .local_epoch(local_epoch));
-            if let Some(listener) = self.initialization_listener.take() {
-                Self::send_initialization_callback(listener)?;
-            }
-        }
         Ok(())
     }
 
@@ -505,7 +572,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     fn get_sync_state(&mut self, callback: oneshot::Sender<SyncState>) -> Result<(), Error> {
         self.sync_state_with_local_storage()?;
         match callback.send(self.local_state.clone()) {
-            Err(error) => Err(CallbackSendFailed(format!("{:?}", error))),
+            Err(error) => Err(CallbackSendFailed(format!(
+                "Failed to get sync state! Error: {:?}",
+                error
+            ))),
             _ => Ok(()),
         }
     }
@@ -894,10 +964,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             .inc();
 
         // Part 2: post-chunk-process stage: process commit
-        if let Err(e) = self.process_commit(new_txns, None, Some(peer)).await {
+        if let Err(error) = self
+            .process_commit_notification(new_txns, None, vec![], Some(peer))
+            .await
+        {
             error!(
                 LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::PostCommitFail)
-                    .error(&e)
+                    .error(&error.into())
             );
         }
     }
@@ -1281,14 +1354,22 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 mod tests {
     use crate::{client::SyncRequest, error::Error, shared_components::test_utils};
     use anyhow::Result;
-    use diem_crypto::HashValue;
+    use diem_crypto::{
+        ed25519::{Ed25519PrivateKey, Ed25519Signature},
+        HashValue, PrivateKey, Uniform,
+    };
+    use diem_mempool::CommitResponse;
     use diem_types::{
+        account_address::AccountAddress,
         block_info::BlockInfo,
+        chain_id::ChainId,
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-        transaction::Version,
+        transaction::{
+            RawTransaction, Script, SignedTransaction, Transaction, TransactionPayload, Version,
+        },
         waypoint::Waypoint,
     };
-    use futures::channel::oneshot;
+    use futures::{channel::oneshot, executor::block_on};
     use std::{collections::BTreeMap, time::SystemTime};
 
     #[test]
@@ -1387,6 +1468,75 @@ mod tests {
 
         // TODO(joshlind): add a check that verifies the callback is executed once we can
         // update storage in the unit tests.
+    }
+
+    #[test]
+    fn test_process_commit_notification() {
+        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+
+        // Verify that a commit notification with no transactions doesn't error!
+        block_on(coordinator.process_commit_notification(vec![], None, vec![], None)).unwrap();
+
+        // Verify that consensus is sent a commit ack when everything works
+        let (callback_sender, mut callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
+        block_on(coordinator.process_commit_notification(
+            vec![],
+            Some(callback_sender),
+            vec![],
+            None,
+        ))
+        .unwrap();
+        match callback_receiver.try_recv() {
+            Ok(Some(Ok(_))) => { /* Expected */ }
+            result => panic!("Expected an okay result but got: {:?}", result),
+        };
+
+        // TODO(joshlind): verify that mempool is sent the correct transactions!
+        let (callback_sender, _callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
+        let committed_transactions = vec![create_test_transaction()];
+        block_on(coordinator.process_commit_notification(
+            committed_transactions,
+            Some(callback_sender),
+            vec![],
+            None,
+        ))
+        .unwrap();
+
+        // TODO(joshlind): check initialized is fired when unit tests support storage
+        // modifications.
+
+        // TODO(joshlind): check sync request is called when unit tests support storage
+        // modifications.
+
+        // TODO(joshlind): test that long poll requests are handled appropriately when
+        // new unit tests support this.
+
+        // TODO(joshlind): test that reconfiguration events are handled appropriately
+        // and listeners are notified.
+    }
+
+    fn create_test_transaction() -> Transaction {
+        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let public_key = private_key.public_key();
+
+        let transaction_payload = TransactionPayload::Script(Script::new(vec![], vec![], vec![]));
+        let raw_transaction = RawTransaction::new(
+            AccountAddress::random(),
+            0,
+            transaction_payload,
+            0,
+            0,
+            "".into(),
+            0,
+            ChainId::new(10),
+        );
+        let signed_transaction = SignedTransaction::new(
+            raw_transaction,
+            public_key,
+            Ed25519Signature::dummy_signature(),
+        );
+
+        Transaction::UserTransaction(signed_transaction)
     }
 
     fn create_ledger_info_at_version(version: Version) -> LedgerInfoWithSignatures {
