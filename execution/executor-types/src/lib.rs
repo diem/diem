@@ -261,11 +261,7 @@ impl ExecutedTrees {
 
     pub fn version(&self) -> Option<Version> {
         let num_elements = self.txn_accumulator().num_leaves() as u64;
-        let version: (u64, bool) = num_elements.overflowing_sub(1);
-        if version.1 {
-            return None;
-        }
-        Some(version.0)
+        num_elements.checked_sub(1)
     }
 
     pub fn state_id(&self) -> HashValue {
