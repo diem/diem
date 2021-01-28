@@ -48,8 +48,6 @@ pub trait NativeContext {
     ) -> PartialVMResult<bool>;
     /// Get the a data layout via the type.
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
-    /// Whether a type is a resource or not.
-    fn is_resource(&self, ty: &Type) -> bool;
 }
 
 /// Result of a native function execution requires charges for execution cost.

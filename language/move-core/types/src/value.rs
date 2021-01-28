@@ -40,59 +40,6 @@ pub enum MoveTypeLayout {
     Signer,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum MoveKind {
-    Copyable,
-    Resource,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MoveKindInfo {
-    Base(MoveKind),
-    Vector(MoveKind, Box<MoveKindInfo>),
-    Struct(MoveKind, Vec<MoveKindInfo>),
-}
-
-impl MoveKind {
-    pub fn is_resource(&self) -> bool {
-        match self {
-            Self::Resource => true,
-            Self::Copyable => false,
-        }
-    }
-
-    pub fn is_copyable(&self) -> bool {
-        match self {
-            Self::Resource => false,
-            Self::Copyable => true,
-        }
-    }
-
-    pub fn from_bool(is_resource: bool) -> Self {
-        if is_resource {
-            Self::Resource
-        } else {
-            Self::Copyable
-        }
-    }
-}
-
-impl MoveKindInfo {
-    pub fn is_resource(&self) -> bool {
-        self.kind().is_resource()
-    }
-
-    pub fn is_copyable(&self) -> bool {
-        self.kind().is_copyable()
-    }
-
-    pub fn kind(&self) -> MoveKind {
-        match self {
-            Self::Base(k) | Self::Vector(k, _) | Self::Struct(k, _) => *k,
-        }
-    }
-}
-
 impl MoveValue {
     pub fn simple_deserialize(blob: &[u8], ty: &MoveTypeLayout) -> AResult<Self> {
         Ok(bcs::from_bytes_seed(ty, blob)?)

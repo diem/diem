@@ -97,7 +97,7 @@ fn mock_db() -> MockDiemDB {
         // Record all account states.
         for (address, blob) in account_states.into_iter() {
             let mut state = AccountState::try_from(&blob).unwrap();
-            let freezing_bit = Value::struct_(Struct::pack(vec![Value::bool(false)], true))
+            let freezing_bit = Value::struct_(Struct::pack(vec![Value::bool(false)]))
                 .value_as::<Struct>()
                 .unwrap()
                 .simple_serialize(&MoveStructLayout::new(vec![MoveTypeLayout::Bool]))

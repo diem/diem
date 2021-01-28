@@ -208,8 +208,7 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
 
             let gv = match self.remote.get_resource(&addr, &ty_tag) {
                 Ok(Some(blob)) => {
-                    let ty_kind_info = self.loader.type_to_kind_info(ty)?;
-                    let val = match Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout) {
+                    let val = match Value::simple_deserialize(&blob, &ty_layout) {
                         Some(val) => val,
                         None => {
                             let msg =

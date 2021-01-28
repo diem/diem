@@ -144,10 +144,6 @@ impl<L: LogContext> Interpreter<L> {
                     .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
-                    current_frame
-                        .locals
-                        .check_resources_for_return()
-                        .map_err(|e| set_err_info!(current_frame, e))?;
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
@@ -858,10 +854,9 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK, size)?;
-                        let is_resource = resolver.struct_from_definition(*sd_idx).is_resource;
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
+                            .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
@@ -871,11 +866,9 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
-                        let is_resource =
-                            resolver.instantiation_is_resource(*si_idx, self.ty_args())?;
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
+                            .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::Unpack(sd_idx) => {
                         let field_count = resolver.field_count(*sd_idx);
