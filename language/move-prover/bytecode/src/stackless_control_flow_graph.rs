@@ -98,14 +98,9 @@ impl StacklessControlFlowGraph {
             // Create a basic block
             if StacklessControlFlowGraph::is_end_of_block(co_pc, code, &bb_offsets) {
                 let mut successors = Bytecode::get_successors(co_pc, code, &label_offsets);
-                for successors in successors.iter_mut() {
-                    if offset_to_key.contains_key(&successors.clone()) {
-                        *successors = *offset_to_key.get(&successors.clone()).unwrap();
-                    } else {
-                        offset_to_key.insert(successors.clone(), bcounter);
-                        *successors = bcounter;
-                        bcounter = bcounter + 1;
-                    }
+                for successor in successors.iter_mut() {
+                    *successor = *offset_to_key.entry(*successor).or_insert(bcounter);
+                    bcounter = std::cmp::max(*successor + 1, bcounter);
                 }
                 if code[co_pc as usize].is_exit() {
                     successors.push(DUMMY_EXIT);
@@ -114,11 +109,8 @@ impl StacklessControlFlowGraph {
                     lower: block_entry,
                     upper: co_pc,
                 };
-                if !(offset_to_key.contains_key(&block_entry)) {
-                    offset_to_key.insert(block_entry, bcounter);
-                    bcounter = bcounter + 1;
-                }
-                let key = *offset_to_key.get(&block_entry).unwrap();
+                let key = *offset_to_key.entry(block_entry).or_insert(bcounter);
+                bcounter = std::cmp::max(key + 1, bcounter);
                 blocks.insert(
                     key,
                     Block {
@@ -184,7 +176,7 @@ impl StacklessControlFlowGraph {
     }
 
     pub fn entry_block(&self) -> BlockId {
-        self.entry_block_id.clone()
+        self.entry_block_id
     }
 
     pub fn exit_block(&self) -> BlockId {
@@ -210,9 +202,6 @@ impl StacklessControlFlowGraph {
     }
 
     pub fn is_dummmy(&self, block_id: BlockId) -> bool {
-        match self.blocks[&block_id].content {
-            BlockContent::Dummy => true,
-            _ => false,
-        }
+        matches!(self.blocks[&block_id].content, BlockContent::Dummy)
     }
 }
