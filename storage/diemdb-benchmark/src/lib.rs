@@ -1,0 +1,102 @@
+// Copyright (c) The Diem Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use byteorder::{BigEndian, WriteBytesExt};
+use diem_config::config::RocksdbConfig;
+use diem_types::{
+    account_address::AccountAddress,
+    account_state_blob::AccountStateBlob,
+    transaction::{ChangeSet, Transaction, TransactionToCommit, WriteSetPayload},
+    vm_status::KeptVMStatus,
+    write_set::WriteSetMut,
+};
+use diemdb::DiemDB;
+use indicatif::{ProgressBar, ProgressStyle};
+use itertools::Itertools;
+use rand::Rng;
+use std::{collections::HashMap, fs, path::PathBuf};
+use storage_interface::DbWriter;
+
+fn gen_account_from_index(account_index: u64) -> AccountAddress {
+    let mut array = [0u8; AccountAddress::LENGTH];
+    array
+        .as_mut()
+        .write_u64::<BigEndian>(account_index)
+        .expect("Unable to write u64 to array");
+    AccountAddress::new(array)
+}
+
+fn gen_random_blob<R: Rng>(size: usize, rng: &mut R) -> AccountStateBlob {
+    let mut v = vec![0u8; size];
+    rng.fill(v.as_mut_slice());
+    AccountStateBlob::from(v)
+}
+
+fn gen_txn_to_commit<R: Rng>(
+    max_accounts: u64,
+    blob_size: usize,
+    rng: &mut R,
+) -> TransactionToCommit {
+    let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
+        WriteSetMut::new(vec![])
+            .freeze()
+            .expect("freeze cannot fail"),
+        vec![],
+    )));
+    let account1 = gen_account_from_index(rng.gen_range(0, max_accounts));
+    let account2 = gen_account_from_index(rng.gen_range(0, max_accounts));
+    let mut states = HashMap::new();
+    let blob1 = gen_random_blob(blob_size, rng);
+    let blob2 = gen_random_blob(blob_size, rng);
+    states.insert(account1, blob1);
+    states.insert(account2, blob2);
+    TransactionToCommit::new(
+        txn,
+        states,
+        vec![], /* events */
+        0,      /* gas_used */
+        KeptVMStatus::Executed,
+    )
+}
+
+pub fn run_benchmark(num_accounts: usize, total_version: u64, blob_size: usize, db_dir: PathBuf) {
+    if db_dir.exists() {
+        fs::remove_dir_all(db_dir.join("diemdb")).unwrap();
+    }
+    // create if not exists
+    fs::create_dir_all(db_dir.clone()).unwrap();
+
+    let db = DiemDB::open(
+        &db_dir,
+        false, /* readonly */
+        None,  /* pruner */
+        RocksdbConfig::default(),
+    )
+    .expect("DB should open.");
+
+    let mut rng = ::rand::thread_rng();
+    let mut version = 0;
+
+    // Set a progressing bar
+    let bar = ProgressBar::new(total_version);
+    bar.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed}] {bar:100.cyan/blue} {pos:>7}/{len:7} {msg}"),
+    );
+
+    for chunk in &(0..total_version).chunks(1000 /* split by 1000 */) {
+        let txns_to_commit = chunk
+            .map(|_| gen_txn_to_commit(num_accounts as u64, blob_size, &mut rng))
+            .collect::<Vec<_>>();
+        let version_bump = txns_to_commit.len() as u64;
+        db.save_transactions(
+            &txns_to_commit,
+            version,
+            None, /* ledger_info_with_sigs */
+        )
+        .expect("commit cannot fail");
+        version = version.checked_add(version_bump).expect("Cannot overflow");
+        bar.inc(version_bump);
+    }
+    bar.finish();
+}

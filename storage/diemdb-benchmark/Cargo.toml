@@ -1,0 +1,27 @@
+[package]
+name = "diemdb-benchmark"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "DiemDb benchmark"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+byteorder = "1.4.2"
+indicatif = "0.15.0"
+itertools = { version = "0.10.0", default-features = false }
+rand = "0.7.3"
+structopt = "0.3.21"
+
+diemdb = { path = "../diemdb", version = "0.1.0" }
+diem-config = { path = "../../config", version = "0.1.0" }
+diem-types = { path = "../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+storage-interface = { path = "../storage-interface", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["diem-types/fuzzing"]

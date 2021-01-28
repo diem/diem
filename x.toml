@@ -125,6 +125,7 @@ members = [
     "diem-smoke-test-attribute",
     "diem-swarm",
     "diem-wallet",
+    "diemdb-benchmark",
     "executor-benchmark",
     "executor-test-helpers",
     "functional-tests",

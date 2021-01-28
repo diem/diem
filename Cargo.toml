@@ -129,6 +129,7 @@ members = [
     "storage/backup/backup-cli",
     "storage/backup/backup-service",
     "storage/diemdb",
+    "storage/diemdb-benchmark",
     "storage/diemsum",
     "storage/inspector",
     "storage/jellyfish-merkle",
