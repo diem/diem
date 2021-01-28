@@ -325,6 +325,41 @@ jobs:
           cargo xcheck -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - uses: ./.github/actions/build-teardown
 
+  perf-benchmarks:
+    name: run-perf-benchmarks
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs:
+      - prepare
+      - build-benchmarks
+    env:
+      CRITERION_HOME: /tmp/benches
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/cache@v2
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: Download the previous baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v2
+        with:
+          name: bench-baseline
+      - name: Run performance benchamrks
+        run: |
+          # Replace this with a cargo x bench
+          cargo bench --package language-benchmarks
+      - name: Archive criterion results
+        uses: actions/upload-artifact@v2
+        with:
+          name: bench-baseline
+          retention-days: 5
+          path: |
+              /tmp/benches
+
   success:
     name: ci-test-success
     runs-on: ubuntu-latest
